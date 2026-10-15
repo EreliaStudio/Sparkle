@@ -1,0 +1,765 @@
+#include "network/client.hpp"
+#include "network/internal/handshake.hpp"
+#include "network/internal/page.hpp"
+#include "network/internal/page_reassembler.hpp"
+#include "network/internal/page_scheduler.hpp"
+#include "network/internal/reassembly_budget.hpp"
+#include "network/internal/retired_transfer_ids.hpp"
+#include "network/internal/socket.hpp"
+#include "network/internal/transfer_response.hpp"
+#include "network/server.hpp"
+#include "network_test_utils.hpp"
+
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <future>
+#include <memory>
+#include <span>
+#include <stop_token>
+#include <thread>
+#include <utility>
+#include <vector>
+
+using namespace std::chrono_literals;
+
+namespace
+{
+	[[nodiscard]] spk::Message makeMessage(std::uint32_t type, std::size_t size)
+	{
+		spk::Message::Writer writer(type);
+		writer.setRequestID(0x123456789ull);
+		writer.resize(size);
+		for (std::size_t index = 0; index < size; ++index)
+		{
+			writer.data()[index] = static_cast<std::byte>(index % 251);
+		}
+		return std::move(writer).build();
+	}
+
+	void expectPayload(const spk::Message &message, std::size_t expectedSize)
+	{
+		ASSERT_EQ(message.size(), expectedSize);
+		EXPECT_EQ(message.requestID(), 0x123456789ull);
+		for (std::size_t index = 0; index < message.size(); ++index)
+		{
+			ASSERT_EQ(message.data()[index], static_cast<std::byte>(index % 251)) << index;
+		}
+	}
+
+	std::vector<std::byte> receiveRawFrame(spk::NetworkInternal::Socket &peer)
+	{
+		using namespace spk::NetworkInternal;
+		const auto deadline = std::chrono::steady_clock::now() + 3s;
+		std::array<std::byte, FrameHeaderSize> header{};
+		if (!peer.receiveAllUntil(header, deadline, {}))
+		{
+			throw spk::Exception("Timed out receiving a budget-regression frame header.");
+		}
+		const auto decoded = decode(header);
+		std::vector<std::byte> frame(FrameHeaderSize + decoded.payloadSize);
+		std::copy(header.begin(), header.end(), frame.begin());
+		if (!peer.receiveAllUntil(std::span(frame).subspan(FrameHeaderSize), deadline, {}))
+		{
+			throw spk::Exception("Timed out receiving a budget-regression frame payload.");
+		}
+		return frame;
+	}
+
+	std::size_t smallIncomingBudget()
+	{
+		using namespace spk::NetworkInternal;
+		auto budget = std::make_shared<ReassemblyBudget>(4096);
+		PageReassembler probe(4096, 4096, 60s, budget);
+		const auto small = makeMessage(990, 2);
+		(void)probe.accept(decodePage(*encodePage(Page{small, 1, small.size(), 0, 1})));
+		return budget->used();
+	}
+
+	enum class ServerIncomingBudget
+	{
+		Session,
+		Global
+	};
+
+	void verifyServerBudgetReduction(ServerIncomingBudget target)
+	{
+		using namespace spk::NetworkInternal;
+		spk::Server server;
+		server.setMaxIncomingBytes(4096);
+		server.setGlobalMaxIncomingBytes(4096);
+		server.start(0);
+		auto peer = Socket::connectTCP("127.0.0.1", server.port());
+		peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+		const auto accepted = Handshake::decode(receiveRawFrame(peer));
+		ASSERT_TRUE(Handshake::validAcceptance(accepted));
+		const auto id = accepted.connectionID;
+		const auto original = makeMessage(991, 128).withConnectionID(id);
+		peer.sendAll(*encodePage(Page{original, 1, original.size(), 0, 16}));
+		const auto probe = makeMessage(992, 1).withConnectionID(id);
+		// The probe ACK establishes that the earlier fragment on this stream was admitted.
+		peer.sendAll(*encodePage(Page{probe, 2, probe.size(), 0, probe.size()}));
+		ASSERT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).transferID, 2u);
+		if (target == ServerIncomingBudget::Session)
+		{
+			server.setMaxIncomingBytes(1);
+		}
+		else
+		{
+			server.setGlobalMaxIncomingBytes(1);
+		}
+		// Synchronous send admission runs after the queued per-session configuration.
+		const auto barrier = server.sendTo(server.connection(id), makeMessage(993, 1));
+		const auto barrierFrame = receiveRawFrame(peer);
+		ASSERT_EQ(decodePage(barrierFrame).transferID, barrier.id());
+		peer.sendAll(*TransferResponse::Codec::encode(TransferResponse{id, barrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}));
+		peer.sendAll(*encodePage(Page{original, 3, original.size(), 0, 16}));
+		const auto rejected = TransferResponse::Codec::decode(receiveRawFrame(peer));
+		EXPECT_EQ(rejected.transferID, 3u);
+		EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+		EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+		peer.sendAll(*encodePage(Page{original, 1, original.size(), 16, original.size() - 16}));
+		const auto completed = TransferResponse::Codec::decode(receiveRawFrame(peer));
+		EXPECT_EQ(completed.transferID, 1u);
+		EXPECT_EQ(completed.status, spk::Transfer::Status::Success);
+		const auto received = NetworkTestUtils::collect(server.messages(), 2, 3s);
+		ASSERT_EQ(received.size(), 2u);
+		EXPECT_EQ(received.back().message.type(), original.type());
+		expectPayload(received.back().message, original.size());
+		EXPECT_TRUE(server.connection(id).isConnected());
+		if (target == ServerIncomingBudget::Session)
+		{
+			server.setMaxIncomingBytes(smallIncomingBudget());
+		}
+		else
+		{
+			server.setGlobalMaxIncomingBytes(smallIncomingBudget());
+		}
+		const auto recoveryBarrier = server.sendTo(server.connection(id), makeMessage(994, 1));
+		const auto recoveryFrame = receiveRawFrame(peer);
+		ASSERT_EQ(decodePage(recoveryFrame).transferID, recoveryBarrier.id());
+		peer.sendAll(*TransferResponse::Codec::encode(TransferResponse{id, recoveryBarrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}));
+		peer.sendAll(*encodePage(Page{probe, 4, probe.size(), 0, probe.size()}));
+		EXPECT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
+		EXPECT_EQ(NetworkTestUtils::collect(server.messages(), 1, 3s).size(), 1u);
+		peer.close();
+		server.stop();
+	}
+}
+
+TEST(NetworkPagedIntegration, ServerLocalBudgetReductionPreservesAcceptedTransfer)
+{
+	verifyServerBudgetReduction(ServerIncomingBudget::Session);
+}
+
+TEST(NetworkPagedIntegration, ServerGlobalBudgetReductionPreservesAcceptedTransfer)
+{
+	verifyServerBudgetReduction(ServerIncomingBudget::Global);
+}
+
+TEST(NetworkPagedIntegration, ClientBudgetReductionPreservesAcceptedTransfer)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	client.setMaxIncomingBytes(4096);
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto peer = listener.accept();
+	EXPECT_EQ(Handshake::decode(receiveRawFrame(peer)).kind, Handshake::Kind::Hello);
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 989));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+	const auto original = makeMessage(995, 128).withConnectionID(989);
+	const auto probe = makeMessage(996, 1).withConnectionID(989);
+	peer.sendAll(*encodePage(Page{original, 1, original.size(), 0, 16}));
+	peer.sendAll(*encodePage(Page{probe, 2, probe.size(), 0, probe.size()}));
+	ASSERT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).transferID, 2u);
+	client.setMaxIncomingBytes(1);
+	peer.sendAll(*encodePage(Page{original, 3, original.size(), 0, 16}));
+	const auto rejected = TransferResponse::Codec::decode(receiveRawFrame(peer));
+	EXPECT_EQ(rejected.transferID, 3u);
+	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+	peer.sendAll(*encodePage(Page{original, 1, original.size(), 16, original.size() - 16}));
+	const auto completed = TransferResponse::Codec::decode(receiveRawFrame(peer));
+	EXPECT_EQ(completed.transferID, 1u);
+	EXPECT_EQ(completed.status, spk::Transfer::Status::Success);
+	const auto received = NetworkTestUtils::collect(client.messages(), 2, 3s);
+	ASSERT_EQ(received.size(), 2u);
+	expectPayload(received.back(), original.size());
+	EXPECT_TRUE(client.isConnected());
+	client.setMaxIncomingBytes(smallIncomingBudget());
+	peer.sendAll(*encodePage(Page{probe, 4, probe.size(), 0, probe.size()}));
+	EXPECT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
+	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 3s).size(), 1u);
+	client.disconnect();
+	peer.close();
+}
+
+TEST(NetworkPagedIntegration, LargeLogicalMessageCrossesFormerFrameLimit)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	constexpr std::size_t Size = 33u * 1024u * 1024u + 5u;
+	client.send(makeMessage(701, Size));
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 20s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 701u);
+	EXPECT_EQ(received.front().message.connectionID(), received.front().emitter);
+	expectPayload(received.front().message, Size);
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, InterleavedTransfersRestoreExactlyOneMessageEach)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	client.send(makeMessage(101, 600000), spk::Message::Priority::Low);
+	client.send(makeMessage(102, 17), spk::Message::Priority::High);
+	client.send(makeMessage(103, 200000), spk::Message::Priority::Normal);
+	auto received = NetworkTestUtils::collect(server.messages(), 3, 10s);
+	ASSERT_EQ(received.size(), 3u);
+	std::vector<std::uint32_t> types;
+	for (const auto &entry : received)
+	{
+		types.push_back(entry.message.type());
+		if (entry.message.type() == 101)
+		{
+			expectPayload(entry.message, 600000);
+		}
+		if (entry.message.type() == 102)
+		{
+			expectPayload(entry.message, 17);
+		}
+		if (entry.message.type() == 103)
+		{
+			expectPayload(entry.message, 200000);
+		}
+	}
+	std::sort(types.begin(), types.end());
+	EXPECT_EQ(types, (std::vector<std::uint32_t>{101, 102, 103}));
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, ServerSendsPagedResponseWithoutSynchronousSocketWrites)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
+	client.send(makeMessage(201, 1));
+	const auto requests = NetworkTestUtils::collect(server.messages(), 1, 5s);
+	ASSERT_EQ(requests.size(), 1u);
+
+	server.sendTo(server.connection(requests.front().emitter), makeMessage(202, 1200000), spk::Message::Priority::High);
+	const auto responses = NetworkTestUtils::collect(client.messages(), 1, 10s);
+	ASSERT_EQ(responses.size(), 1u);
+	EXPECT_EQ(responses.front().type(), 202u);
+	EXPECT_EQ(responses.front().connectionID(), requests.front().emitter);
+	expectPayload(responses.front(), 1200000);
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, TransferSuccessRequiresReceiverAcknowledgment)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	auto transfer = client.send(makeMessage(801, 200000));
+	EXPECT_NE(transfer.id(), spk::Transfer::InvalidID);
+	std::promise<spk::Transfer::Status> promise;
+	auto completed = promise.get_future();
+	auto contract = transfer.subscribeToCompletion([&](spk::Transfer::Status status, spk::Transfer::Reason reason) {
+		EXPECT_EQ(reason, spk::Transfer::Reason::None);
+		promise.set_value(status);
+	});
+
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 10s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 801u);
+	ASSERT_EQ(completed.wait_for(10s), std::future_status::ready);
+	EXPECT_EQ(completed.get(), spk::Transfer::Status::Success);
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
+	EXPECT_TRUE(client.isConnected());
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, IncompleteTransferExpiresWithoutDisconnectingServerSession)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setIncomingTransferTimeout(100ms);
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> helloResponse{};
+	ASSERT_TRUE(socket.receiveAllUntil(helloResponse, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(helloResponse);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer writer(900);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(12);
+	PageScheduler scheduler;
+	(void)scheduler.enqueue(std::move(writer).build());
+	const auto first = scheduler.nextPage(4);
+	ASSERT_TRUE(first.has_value());
+	socket.sendAll(*encodePage(*first));
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> reply{};
+	ASSERT_TRUE(socket.receiveAllUntil(reply, std::chrono::steady_clock::now() + 4s, {}));
+	const auto expired = TransferResponse::Codec::decode(reply);
+	EXPECT_EQ(expired.status, spk::Transfer::Status::Failed);
+	EXPECT_EQ(expired.reason, spk::Transfer::Reason::InactivityTimeout);
+	EXPECT_EQ(expired.transferID, first->transferID);
+	EXPECT_EQ(expired.connectionID, accepted.connectionID);
+
+	spk::Message::Writer healthy(901);
+	healthy.setConnectionID(accepted.connectionID);
+	healthy.resize(3);
+	(void)scheduler.enqueue(std::move(healthy).build());
+	while (const auto page = scheduler.nextPage(4))
+	{
+		if (page->transferID != first->transferID)
+		{
+			socket.sendAll(*encodePage(*page));
+		}
+	}
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 901u);
+	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, ConflictingPageFailsOnlyItsTransfer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer broken(910);
+	broken.setConnectionID(accepted.connectionID);
+	broken.resize(12);
+	PageScheduler scheduler;
+	(void)scheduler.enqueue(std::move(broken).build());
+	const auto first = scheduler.nextPage(4);
+	ASSERT_TRUE(first.has_value());
+	auto initial = encodePage(*first);
+	socket.sendAll(*initial);
+	auto conflicting = *initial;
+	conflicting[FrameHeaderSize + PageMetadataSize] = std::byte{0xEF};
+	socket.sendAll(conflicting);
+
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> reply{};
+	ASSERT_TRUE(socket.receiveAllUntil(reply, std::chrono::steady_clock::now() + 3s, {}));
+	const auto failed = TransferResponse::Codec::decode(reply);
+	EXPECT_EQ(failed.transferID, first->transferID);
+	EXPECT_EQ(failed.status, spk::Transfer::Status::Failed);
+	EXPECT_EQ(failed.reason, spk::Transfer::Reason::ConflictingPage);
+	EXPECT_TRUE(server.isRunning());
+
+	spk::Message::Writer healthy(911);
+	healthy.setConnectionID(accepted.connectionID);
+	healthy.resize(3);
+	(void)scheduler.enqueue(std::move(healthy).build());
+	while (const auto page = scheduler.nextPage(4))
+	{
+		if (page->transferID != first->transferID)
+		{
+			socket.sendAll(*encodePage(*page));
+		}
+	}
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 911u);
+	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, ServerGlobalIncomingLimitRejectsTransferWithoutClosingPeer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setGlobalMaxIncomingBytes(1);
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> responseBytes{};
+	ASSERT_TRUE(socket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(responseBytes);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer oversized(930);
+	oversized.setConnectionID(accepted.connectionID);
+	oversized.resize(16);
+	const auto rejectedMessage = std::move(oversized).build();
+	socket.sendAll(*encodePage(Page{rejectedMessage, 1, rejectedMessage.size(), 0, 4}));
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> rejectionBytes{};
+	ASSERT_TRUE(socket.receiveAllUntil(rejectionBytes, std::chrono::steady_clock::now() + 3s, {}));
+	const auto rejected = TransferResponse::Codec::decode(rejectionBytes);
+	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+	EXPECT_EQ(rejected.transferID, 1u);
+	socket.sendAll(*encodePage(Page{rejectedMessage, 1, rejectedMessage.size(), 4, 4}));
+	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
+
+	server.setGlobalMaxIncomingBytes(4096);
+	spk::Message::Writer healthy(931);
+	healthy.setConnectionID(accepted.connectionID);
+	healthy.resize(3);
+	const auto healthyMessage = std::move(healthy).build();
+	socket.sendAll(*encodePage(Page{healthyMessage, 2, healthyMessage.size(), 0, healthyMessage.size()}));
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 931u);
+	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, CompletedTransferReplayIsNotDispatchedTwice)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer writer(940);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(3);
+	const auto message = std::move(writer).build();
+	const auto frame = encodePage(Page{message, 7, message.size(), 0, message.size()});
+	socket.sendAll(*frame);
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> responseBytes{};
+	ASSERT_TRUE(socket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
+	EXPECT_EQ(TransferResponse::Codec::decode(responseBytes).status, spk::Transfer::Status::Success);
+
+	socket.sendAll(*frame);
+	const auto received = NetworkTestUtils::collect(server.messages(), 2, 200ms);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 940u);
+	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
+
+	spk::Message::Writer next(941);
+	next.setConnectionID(accepted.connectionID);
+	next.resize(3);
+	const auto healthy = std::move(next).build();
+	socket.sendAll(*encodePage(Page{healthy, 8, healthy.size(), 0, healthy.size()}));
+	const auto later = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(later.size(), 1u);
+	EXPECT_EQ(later.front().message.type(), 941u);
+	socket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, LateAcknowledgmentCannotChangeTimedOutTransfer)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	client.setAcknowledgmentTimeout(100ms);
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 987));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+
+	auto transfer = client.send(makeMessage(962, 8));
+	std::atomic_size_t callbacks = 0;
+	auto contract = transfer.subscribeToCompletion([&](spk::Transfer::Status, spk::Transfer::Reason) {
+		++callbacks;
+	});
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), 4s));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(transfer.reason(), spk::Transfer::Reason::AcknowledgmentTimeout);
+	EXPECT_EQ(callbacks.load(), 1u);
+
+	const TransferResponse late{987, transfer.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None};
+	peer.sendAll(*TransferResponse::Codec::encode(late));
+	std::this_thread::sleep_for(100ms);
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(callbacks.load(), 1u);
+	EXPECT_TRUE(client.isConnected());
+	client.disconnect();
+	peer.close();
+}
+
+TEST(NetworkPagedIntegration, GlobalIncomingBudgetIsSharedAcrossSimultaneousPeers)
+{
+	using namespace spk::NetworkInternal;
+	auto probeBudget = std::make_shared<ReassemblyBudget>(4096);
+	PageReassembler probe(1024, 4096, 60s, probeBudget);
+	const auto prototype = makeMessage(970, 128);
+	const auto probeFrame = encodePage(Page{prototype, 1, 128, 0, 16});
+	EXPECT_FALSE(probe.accept(decodePage(*probeFrame)).has_value());
+	const auto charge = probeBudget->used();
+	ASSERT_GT(charge, 128u);
+	probe.clear();
+
+	spk::Server server;
+	server.setGlobalMaxIncomingBytes(charge * 2 - 1);
+	server.start(0);
+	auto connectRaw = [&server] {
+		auto socket = Socket::connectTCP("127.0.0.1", server.port());
+		socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+		std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+		if (!socket.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}))
+		{
+			throw spk::Exception("Unable to receive raw peer acceptance.");
+		}
+		return std::make_pair(std::move(socket), Handshake::decode(hello));
+	};
+	auto [firstSocket, firstAcceptance] = connectRaw();
+	auto [secondSocket, secondAcceptance] = connectRaw();
+	ASSERT_TRUE(Handshake::validAcceptance(firstAcceptance));
+	ASSERT_TRUE(Handshake::validAcceptance(secondAcceptance));
+
+	const auto first = prototype.withConnectionID(firstAcceptance.connectionID);
+	const auto second = prototype.withConnectionID(secondAcceptance.connectionID);
+	firstSocket.sendAll(*encodePage(Page{first, 1, first.size(), 0, 16}));
+	const auto barrier = makeMessage(971, 0).withConnectionID(firstAcceptance.connectionID);
+	firstSocket.sendAll(*encodePage(Page{barrier, 2, 0, 0, 0}));
+	const auto admitted = TransferResponse::Codec::decode(receiveRawFrame(firstSocket));
+	ASSERT_EQ(admitted.transferID, 2u);
+	ASSERT_EQ(admitted.status, spk::Transfer::Status::Success);
+	ASSERT_EQ(NetworkTestUtils::collect(server.messages(), 1, 3s).size(), 1u);
+	secondSocket.sendAll(*encodePage(Page{second, 1, second.size(), 0, 16}));
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> responseBytes{};
+	ASSERT_TRUE(secondSocket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
+	const auto rejected = TransferResponse::Codec::decode(responseBytes);
+	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+	EXPECT_TRUE(server.connection(secondAcceptance.connectionID).isConnected());
+
+	firstSocket.sendAll(*encodePage(Page{first, 1, first.size(), 16, first.size() - 16}));
+	const auto receivedFirst = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(receivedFirst.size(), 1u);
+	EXPECT_EQ(receivedFirst.front().emitter, firstAcceptance.connectionID);
+
+	secondSocket.sendAll(*encodePage(Page{second, 2, second.size(), 0, second.size()}));
+	const auto receivedSecond = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(receivedSecond.size(), 1u);
+	EXPECT_EQ(receivedSecond.front().emitter, secondAcceptance.connectionID);
+	firstSocket.close();
+	secondSocket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, DisconnectInterruptsBlockedClientPayloadWrite)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 988));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+	const auto transfer = client.send(makeMessage(980, 8u * 1024u * 1024u));
+	ASSERT_EQ(decodePage(receiveRawFrame(peer)).transferID, transfer.id());
+	auto disconnected = std::async(std::launch::async, [&client] {
+		client.disconnect();
+	});
+	ASSERT_EQ(disconnected.wait_for(5s), std::future_status::ready);
+	EXPECT_NO_THROW(disconnected.get());
+	EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	EXPECT_TRUE(transfer.isComplete());
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	peer.close();
+}
+
+TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverRepublishes)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer writer(975);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(1);
+	const auto message = std::move(writer).build();
+	auto frame = encodePage(Page{message, 1, message.size(), 0, message.size()});
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> answer{};
+	for (std::uint64_t first = 1; first <= 1200; first += 32)
+	{
+		const auto last = std::min<std::uint64_t>(1200, first + 31);
+		for (std::uint64_t id = first; id <= last; ++id)
+		{
+			write64(frame->data() + FrameHeaderSize, id);
+			socket.sendAll(*frame);
+		}
+		for (std::uint64_t id = first; id <= last; ++id)
+		{
+			ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+			const auto response = TransferResponse::Codec::decode(answer);
+			ASSERT_EQ(response.transferID, id);
+			ASSERT_EQ(response.status, spk::Transfer::Status::Success);
+		}
+	}
+	write64(frame->data() + FrameHeaderSize, 1);
+	socket.sendAll(*frame);
+	write64(frame->data() + FrameHeaderSize, 1201);
+	socket.sendAll(*frame);
+	ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+	EXPECT_EQ(TransferResponse::Codec::decode(answer).transferID, 1201u);
+	const auto messages = NetworkTestUtils::collect(server.messages(), 1201, 5s);
+	EXPECT_EQ(messages.size(), 1201u);
+	EXPECT_TRUE(NetworkTestUtils::collect(server.messages(), 1, 0ms).empty());
+	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
+	socket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, ExpirationResponseCapacityFailureDisconnectsOnlyAffectedPeer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	spk::Client healthy;
+	server.setIncomingTransferTimeout(100ms);
+	server.start(0);
+	healthy.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(healthy));
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> reply{};
+	ASSERT_TRUE(peer.receiveAllUntil(reply, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(reply);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto victim = server.connection(accepted.connectionID);
+	const auto ready = [&] {
+		return victim.isConnected();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(ready, 3s));
+	server.setGlobalMaxQueuedBytes(1);
+	spk::Message::Writer writer(996);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(12);
+	auto incomplete = std::move(writer).build();
+	peer.sendAll(*encodePage(Page{incomplete, 1, incomplete.size(), 0, 4}));
+	const auto victimDisconnected = [&] {
+		return victim.status() == spk::Connection::Status::Disconnected;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(victimDisconnected, 5s));
+	EXPECT_TRUE(server.isRunning());
+	server.setGlobalMaxQueuedBytes(256u * 1024u * 1024u);
+	EXPECT_TRUE(healthy.isConnected());
+	auto transfer = healthy.send(makeMessage(997, 4));
+	const auto messages = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(messages.size(), 1u);
+	EXPECT_EQ(messages.front().message.type(), 997u);
+	const auto completed = [&] {
+		return transfer.isComplete();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(completed, 3s));
+	peer.close();
+	healthy.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, SparseReplayHistoryExhaustionDisconnectsOnlyOffendingPeer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	spk::Client healthy;
+	server.start(0);
+	healthy.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(healthy));
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(peer.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto victim = server.connection(accepted.connectionID);
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(victim));
+
+	spk::Message::Writer writer(998);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(1);
+	const auto message = std::move(writer).build();
+	auto frame = encodePage(Page{message, 2, message.size(), 0, message.size()});
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> answer{};
+	constexpr auto Count = RetiredTransferIDs::MaximumSparseRanges;
+	for (std::uint64_t first = 1; first <= Count; first += 32)
+	{
+		const auto last = std::min<std::uint64_t>(Count, first + 31);
+		for (std::uint64_t index = first; index <= last; ++index)
+		{
+			write64(frame->data() + FrameHeaderSize, index * 2);
+			peer.sendAll(*frame);
+		}
+		for (std::uint64_t index = first; index <= last; ++index)
+		{
+			ASSERT_TRUE(peer.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+			const auto response = TransferResponse::Codec::decode(answer);
+			EXPECT_EQ(response.transferID, index * 2);
+			EXPECT_EQ(response.status, spk::Transfer::Status::Success);
+		}
+	}
+	write64(frame->data() + FrameHeaderSize, (Count + 1) * 2);
+	peer.sendAll(*frame);
+	const auto disconnected = [&] {
+		return victim.status() == spk::Connection::Status::Disconnected;
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, 5s));
+	EXPECT_TRUE(server.isRunning());
+	EXPECT_TRUE(healthy.isConnected());
+	auto transfer = healthy.send(makeMessage(999, 1));
+	const auto received = NetworkTestUtils::collect(server.messages(), Count + 1, 10s);
+	ASSERT_EQ(received.size(), Count + 1);
+	EXPECT_EQ(received.back().message.type(), 999u);
+	const auto completed = [&] {
+		return transfer.isComplete();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(completed, 5s));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
+	peer.close();
+	healthy.disconnect();
+	server.stop();
+}

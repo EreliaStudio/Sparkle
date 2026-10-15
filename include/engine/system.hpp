@@ -1,13 +1,11 @@
 #pragma once
 
-#include "core/event/event_dispatcher.hpp"
+#include <string>
+
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
-#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/contextualizable_trait.hpp"
-
-#include <string>
 
 namespace spk
 {
@@ -17,12 +15,9 @@ namespace spk
 	class System : public ContextualizableTrait<Engine *>,
 				   public ActivableTrait,
 				   public NameTrait,
-				   public EventDispatcher,
-				   public UpdatableTrait,
-				   public RenderSnapshotContributorTrait
+				   public UpdatableTrait
 	{
 	protected:
-		[[nodiscard]] bool _isAcceptingEvent() const override;
 		[[nodiscard]] bool _canUpdate() const override;
 
 	public:

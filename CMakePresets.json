@@ -82,14 +82,16 @@
       "name": "testDebug",
       "configurePreset": "testDebug",
       "targets": [
-        "SparkleTestSuite"
+        "SparkleCoreTestSuite",
+        "SparkleGraphicsTestSuite"
       ]
     },
     {
       "name": "testRelease",
       "configurePreset": "testRelease",
       "targets": [
-        "SparkleTestSuite"
+        "SparkleCoreTestSuite",
+        "SparkleGraphicsTestSuite"
       ]
     }
   ],
@@ -99,11 +101,6 @@
       "configurePreset": "testDebug",
       "output": {
         "outputOnFailure": true
-      },
-      "filter": {
-        "include": {
-          "label": "unit"
-        }
       }
     },
     {
@@ -111,11 +108,6 @@
       "configurePreset": "testRelease",
       "output": {
         "outputOnFailure": true
-      },
-      "filter": {
-        "include": {
-          "label": "unit"
-        }
       }
     }
   ],

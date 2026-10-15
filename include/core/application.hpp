@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "core/window.hpp"
+#include "threading/task.hpp"
 
 namespace spk
 {
@@ -34,7 +35,7 @@ namespace spk
 		[[nodiscard]] Window &window(const Window::Identifier &identifier);
 		[[nodiscard]] const Window &window(const Window::Identifier &identifier) const;
 		Window &createWindow(const Window::Identifier &identifier, const Window::Configuration &configuration);
-		void closeWindow(const Window::Identifier &identifier);
+		[[nodiscard]] Task<void>::Answer closeWindow(const Window::Identifier &identifier);
 		void quit(int exitCode = EXIT_SUCCESS);
 		int run();
 	};

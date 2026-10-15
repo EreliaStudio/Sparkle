@@ -9,193 +9,145 @@ namespace spk
 	EngineWidget::EngineWidget(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
-		setTargetRenderPass(Engine::SceneRenderPassKey);
+		setTargetRenderPass(RenderingEngine::SceneRenderPassKey);
 	}
 
 	void EngineWidget::setEngine(Engine *engine) noexcept
 	{
-		_engine = engine;
-		if (_engine != nullptr)
+		_renderingEngine.setEngine(engine);
+		if (engine != nullptr)
 		{
-			_engine->handleGeometryChange(geometry());
+			engine->handleGeometryChange(geometry());
 		}
 	}
 
 	Engine *EngineWidget::engine() noexcept
 	{
-		return _engine;
+		return _renderingEngine.engine();
 	}
 
 	const Engine *EngineWidget::engine() const noexcept
 	{
-		return _engine;
+		return _renderingEngine.engine();
 	}
 
 	void EngineWidget::_onGeometryChange()
 	{
-		if (_engine != nullptr)
+		if (engine() != nullptr)
 		{
-			_engine->handleGeometryChange(geometry());
+			engine()->handleGeometryChange(geometry());
 		}
 	}
 
 	void EngineWidget::_buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->buildRenderSnapshot(builder);
-		}
+		_renderingEngine.buildRenderSnapshot(builder);
 	}
 
 	void EngineWidget::_updateState(UpdateContext &context)
 	{
-		if (_engine != nullptr)
+		if (engine() != nullptr)
 		{
-			_engine->updateState(context);
+			engine()->updateState(context);
 		}
+	}
+
+	void EngineWidget::_updateState(
+		UpdateContext &context,
+		DeviceContext &deviceContext)
+	{
+		_renderingEngine.updateState(context, deviceContext);
 	}
 
 	void EngineWidget::_onWindowResizedEvent(WindowResizedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onWindowMovedEvent(WindowMovedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onWindowFocusGainedEvent(WindowFocusGainedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onWindowFocusLostEvent(WindowFocusLostEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onMouseEnteredEvent(MouseEnteredEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onMouseLeftEvent(MouseLeftEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onMouseMovedEvent(MouseMovedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onMouseWheelScrolledEvent(MouseWheelScrolledEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onMouseButtonPressedEvent(MouseButtonPressedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onMouseButtonReleasedEvent(MouseButtonReleasedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
-	void EngineWidget::_onMouseButtonDoubleClickedEvent(MouseButtonDoubleClickedEvent &event)
+	void EngineWidget::_onMouseButtonDoubleClickedEvent(
+		MouseButtonDoubleClickedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onKeyPressedEvent(KeyPressedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onKeyReleasedEvent(KeyReleasedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onTextInputEvent(TextInputEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->dispatch(event);
-		}
+		_renderingEngine.dispatch(event);
 	}
 
 	void EngineWidget::_onPassiveMouseMovedEvent(MouseMovedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->observePointer(event);
-		}
+		_renderingEngine.observePointer(event);
 	}
 
-	void EngineWidget::_onPassiveMouseButtonPressedEvent(MouseButtonPressedEvent &event)
+	void EngineWidget::_onPassiveMouseButtonPressedEvent(
+		MouseButtonPressedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->observePointer(event);
-		}
+		_renderingEngine.observePointer(event);
 	}
 
 	void EngineWidget::_onPassiveKeyPressedEvent(KeyPressedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->observeKeyboard(event);
-		}
+		_renderingEngine.observeKeyboard(event);
 	}
 
 	void EngineWidget::_onPassiveKeyReleasedEvent(KeyReleasedEvent &event)
 	{
-		if (_engine != nullptr)
-		{
-			_engine->observeKeyboard(event);
-		}
+		_renderingEngine.observeKeyboard(event);
 	}
 }
