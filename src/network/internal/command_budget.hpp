@@ -56,7 +56,6 @@ namespace spk::NetworkInternal
 		explicit CommandBudget(std::size_t maximum);
 
 		[[nodiscard]] std::shared_ptr<Lease> reserve(std::size_t bytes, Stage stage = Stage::Command);
-		// Budget exhaustion returns null; allocator failures propagate to admission.
 		[[nodiscard]] std::shared_ptr<Lease> tryReserve(std::size_t bytes, Stage stage = Stage::Command);
 
 		void setMaximum(std::size_t maximum) noexcept;
