@@ -100,6 +100,17 @@ TEST(ReassemblyBudget, InvalidLimitDoesNotChangeAdmissionOrExistingAllowances)
 	EXPECT_NE(budget.reserve(100), nullptr);
 }
 
+TEST(ReassemblyBudget, ResizeBehaviourRejectsUnknownValue)
+{
+	ReassemblyBudget budget(100);
+	auto lease = budget.reserve(10);
+	ASSERT_NE(lease, nullptr);
+	EXPECT_THROW(budget.setMaximum(1, static_cast<ReassemblyBudget::ResizeBehaviour>(99)), spk::Exception);
+	EXPECT_NO_THROW(budget.setMaximum(50, ReassemblyBudget::ResizeBehaviour::PreserveAcceptedLeases));
+	EXPECT_TRUE(lease->reserve(90));
+	lease.reset();
+}
+
 TEST(ReassemblyBudget, RuntimeLimitsCanRaceLeaseAdmissionGrowthAndDestruction)
 {
 	constexpr std::size_t Count = 4;
