@@ -633,8 +633,12 @@ namespace spk
 		return _impl->connect(address, port, behaviour);
 	}
 
-	void Client::setHandshakeTimeout(std::chrono::milliseconds timeout)
+	void Client::setHandshakeTimeout(std::chrono::milliseconds timeout, HandshakeTimeoutBehaviour behaviour)
 	{
+		if (behaviour != HandshakeTimeoutBehaviour::FutureAttemptsOnly)
+		{
+			throw Exception("Unsupported client handshake timeout behaviour.");
+		}
 		_impl->setHandshakeTimeout(timeout);
 	}
 
@@ -657,13 +661,21 @@ namespace spk
 	{
 		_impl->setMaxMessageBytes(bytes);
 	}
-	void Client::setMaxPageBytes(std::size_t bytes)
+	void Client::setMaxPageBytes(std::size_t bytes, PageSizeBehaviour behaviour)
 	{
+		if (behaviour != PageSizeBehaviour::RespectNegotiatedLimit)
+		{
+			throw Exception("Unsupported client page size behaviour.");
+		}
 		_impl->setMaxPageBytes(bytes);
 	}
 
-	void Client::setMaxIncomingBytes(std::size_t bytes)
+	void Client::setMaxIncomingBytes(std::size_t bytes, IncomingBudgetBehaviour behaviour)
 	{
+		if (behaviour != IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted)
+		{
+			throw Exception("Unsupported client incoming budget behaviour.");
+		}
 		_impl->setMaxIncomingBytes(bytes);
 	}
 	void Client::setPageFailureLimits(PageFailureLimits limits)
@@ -671,8 +683,12 @@ namespace spk
 		_impl->setPageFailureLimits(limits);
 	}
 
-	Transfer Client::send(const Message &message, Message::Priority priority)
+	Transfer Client::send(const Message &message, Message::Priority priority, SendBehaviour behaviour)
 	{
+		if (behaviour != SendBehaviour::SynchronousAdmission)
+		{
+			throw Exception("Unsupported client send behaviour.");
+		}
 		try
 		{
 			return _impl->send(message, priority);
@@ -695,8 +711,12 @@ namespace spk
 		return _messageDispatcher;
 	}
 
-	void Client::treatMessages()
+	void Client::treatMessages(MessageDispatchBehaviour behaviour)
 	{
+		if (behaviour != MessageDispatchBehaviour::CallingThread)
+		{
+			throw Exception("Unsupported client message dispatch behaviour.");
+		}
 		_messageDispatcher.treatMessages(_messages);
 	}
 
