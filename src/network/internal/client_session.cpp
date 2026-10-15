@@ -42,6 +42,8 @@ namespace spk::NetworkInternal
 		std::jthread _sender;
 		std::jthread _expirationWorker;
 		mutable std::mutex _lifecycleMutex;
+		std::mutex _expirationMutex;
+		std::condition_variable _expirationWake;
 		std::atomic_bool _connected = false;
 		std::atomic_bool _active = false;
 		std::chrono::milliseconds _handshakeTimeout = NetworkInternal::Handshake::DefaultTimeout;
@@ -467,10 +469,12 @@ namespace spk::NetworkInternal
 
 		Transfer send(const Message &message, Message::Priority priority)
 		{
-			const std::scoped_lock lock(_lifecycleMutex);
-			if (!_connected || _session.status() != Connection::Status::Connected)
 			{
-				throw Exception("Cannot send through a pending or disconnected network client.");
+				const std::scoped_lock lock(_lifecycleMutex);
+				if (!_connected || _session.status() != Connection::Status::Connected)
+				{
+					throw Exception("Cannot send through a pending or disconnected network client.");
+				}
 			}
 			return _transmission.send(message, priority, _session.maxQueuedBytes(), _negotiatedPageBytes.load());
 		}
