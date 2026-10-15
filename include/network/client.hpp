@@ -87,25 +87,17 @@ namespace spk
 		[[nodiscard]] Connection connection() const;
 		[[nodiscard]] bool isConnected() const noexcept;
 		Connection connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour = ConnectBehaviour::Throw);
-		// Applies to attempts started after this call, not an active handshake.
 		void setHandshakeTimeout(std::chrono::milliseconds timeout, HandshakeTimeoutBehaviour behaviour = HandshakeTimeoutBehaviour::FutureAttemptsOnly);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
 		void setMaxMessageBytes(std::size_t bytes);
-		// Incomplete reassembly budget: logical payload plus modeled transfer/page metadata.
-		// This is not a process-wide RSS or allocator-capacity limit.
-		// Reductions constrain new transfers; accepted transfers retain their continuation allowance.
 		void setMaxIncomingBytes(std::size_t bytes, IncomingBudgetBehaviour behaviour = IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted);
-		// Outgoing page payload is bounded by both the configured and negotiated limits.
 		void setMaxPageBytes(std::size_t bytes, PageSizeBehaviour behaviour = PageSizeBehaviour::RespectNegotiatedLimit);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
-		// Synchronously rejects invalid or unaffordable submissions; accepted transfers
-		// report transport acknowledgment or failure asynchronously through the handle.
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal, SendBehaviour behaviour = SendBehaviour::SynchronousAdmission);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
-		// Dispatch a receive batch on the calling thread; do not also drain messages().
 		void treatMessages(MessageDispatchBehaviour behaviour = MessageDispatchBehaviour::CallingThread);
 	};
 }
