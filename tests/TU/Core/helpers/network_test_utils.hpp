@@ -30,6 +30,15 @@ namespace NetworkTestUtils
 		return predicate();
 	}
 
+	template <typename TClient>
+	[[nodiscard]] bool waitConnected(const TClient &client, std::chrono::milliseconds timeout = 5s)
+	{
+		const auto connected = [&] {
+			return client.isConnected();
+		};
+		return waitUntil(connected, timeout);
+	}
+
 	template <typename TValue>
 	[[nodiscard]] std::vector<TValue> collect(
 		spk::ThreadSafeFIFO<TValue> &queue,

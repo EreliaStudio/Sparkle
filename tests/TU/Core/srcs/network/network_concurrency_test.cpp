@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "exception.hpp"
 #include "network/client.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
@@ -12,6 +13,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -42,6 +44,7 @@ namespace
 		spk::Client &client)
 	{
 		client.connect("127.0.0.1", server.port());
+		EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 		client.send(makeMessage(1, std::uint32_t{0xCAFE}));
 
 		auto received = NetworkTestUtils::collect(server.messages(), 1);
@@ -51,6 +54,33 @@ namespace
 		}
 		return received.front().emitter;
 	}
+}
+
+TEST(NetworkConcurrencyTest, ClientDestructorDoesNotAccessOwnerAfterExplicitDisconnect)
+{
+	for (std::size_t attempt = 0; attempt < 64; ++attempt)
+	{
+		auto client = std::make_unique<spk::Client>();
+		client->disconnect();
+		EXPECT_FALSE(client->isConnected());
+	}
+}
+
+TEST(NetworkConcurrencyTest, ClientDestructorDisconnectsActiveWorkersBeforeDestroyingOwner)
+{
+	spk::Server server;
+	server.start(0);
+	for (std::uint32_t attempt = 0; attempt < 8; ++attempt)
+	{
+		auto client = std::make_unique<spk::Client>();
+		client->connect("127.0.0.1", server.port());
+		ASSERT_TRUE(NetworkTestUtils::waitConnected(*client));
+		(void)client->send(makeMessage(93, attempt));
+		auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
+		ASSERT_EQ(received.size(), 1u);
+		EXPECT_EQ(received.front().message.reader().get<std::uint32_t>(), attempt);
+	}
+	server.stop();
 }
 
 TEST(NetworkConcurrencyTest, ServerAndClientCanBeDrivenFromIndependentThreads)
@@ -72,6 +102,7 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanBeDrivenFromIndependentThreads)
 	std::jthread clientThread([&] {
 		failure.run([&] {
 			client.connect("127.0.0.1", port.load());
+			EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 			client.send(makeMessage(21, std::uint32_t{42}));
 		});
 	});
@@ -93,6 +124,7 @@ TEST(NetworkConcurrencyTest, LargePayloadCrossesReceptionBufferBoundaries)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	std::vector<std::byte> payload(512u * 1024u);
 	for (std::size_t index = 0; index < payload.size(); ++index)
@@ -125,6 +157,7 @@ TEST(NetworkConcurrencyTest, ClientBurstPreservesMessageOrder)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
@@ -155,7 +188,7 @@ TEST(NetworkConcurrencyTest, ServerQueuedBurstPreservesMessageOrder)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		server.sendTo(connection, makeMessage(24, sequence));
+		server.sendTo(server.connection(connection), makeMessage(24, sequence));
 	}
 
 	auto received = NetworkTestUtils::collect(client.messages(), MessageCount, 5s);
@@ -184,7 +217,7 @@ TEST(NetworkConcurrencyTest, TargetedSendDoesNotReachOtherClients)
 	ASSERT_NE(secondID, spk::InvalidConnectionID);
 	ASSERT_NE(firstID, secondID);
 
-	server.sendTo(firstID, makeMessage(25, std::uint32_t{91}));
+	server.sendTo(server.connection(firstID), makeMessage(25, std::uint32_t{91}));
 
 	auto firstMessages = NetworkTestUtils::collect(first.messages(), 1);
 	ASSERT_EQ(firstMessages.size(), 1u);
@@ -253,7 +286,7 @@ TEST(NetworkConcurrencyTest, ConcurrentServerProducersAreSerializedSafely)
 				for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 				{
 					server.sendTo(
-						connection,
+						server.connection(connection),
 						makeMessage(
 							27,
 							SequencePayload{producer, sequence}));
@@ -299,10 +332,14 @@ TEST(NetworkConcurrencyTest, DisconnectCallbacksIdentifyEachConnection)
 	std::mutex disconnectedMutex;
 	std::vector<spk::ConnectionID> disconnected;
 
-	auto contract = server.subscribeToDisconnection(
-		[&](spk::ConnectionID id) {
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status != spk::Connection::Status::Disconnected)
+			{
+				return;
+			}
 			const std::scoped_lock lock(disconnectedMutex);
-			disconnected.push_back(id);
+			disconnected.push_back(connection.id());
 		});
 
 	server.start(0);
@@ -338,6 +375,7 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanRestartAndExchangeAgain)
 	{
 		server.start(0);
 		client.connect("127.0.0.1", server.port());
+		EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 		client.send(makeMessage(28, iteration));
 
@@ -358,15 +396,21 @@ TEST(NetworkConcurrencyTest, ClientLifecycleCallbacksFireExactlyOnce)
 	spk::Client client;
 	std::atomic_uint32_t connected = 0;
 	std::atomic_uint32_t disconnected = 0;
-	auto connectionContract = client.subscribeToConnection([&] {
-		++connected;
-	});
-	auto disconnectionContract = client.subscribeToDisconnection([&] {
-		++disconnected;
-	});
+	auto statusContract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				++connected;
+			}
+			if (status == spk::Connection::Status::Disconnected)
+			{
+				++disconnected;
+			}
+		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 	client.disconnect();
 	client.disconnect();
 	server.stop();
@@ -380,12 +424,17 @@ TEST(NetworkConcurrencyTest, ServerStopDisconnectsConnectedClient)
 	spk::Server server;
 	spk::Client client;
 	std::atomic_uint32_t disconnected = 0;
-	auto contract = client.subscribeToDisconnection([&] {
-		++disconnected;
-	});
+	auto contract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Disconnected)
+			{
+				++disconnected;
+			}
+		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 	server.stop();
 
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
@@ -401,20 +450,56 @@ TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
 {
 	spk::Server server;
 	spk::Client client;
-	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
-		server.stop();
-	});
+	std::atomic_bool stopRequested = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				stopRequested = true;
+				server.stop();
+			}
+		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return stopRequested.load();
+	}));
 	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return !server.isRunning() && !client.isConnected();
 	}));
 	server.stop();
 }
 
-TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
+TEST(NetworkConcurrencyTest, HandshakeTimeoutCanChangeWhileConnectionsStartAndStop)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	std::atomic_bool updating = true;
+	NetworkTestUtils::ThreadFailure failure;
+	std::jthread setter([&] {
+		failure.run([&] {
+			std::uint32_t iteration = 0;
+			while (updating.load())
+			{
+				client.setHandshakeTimeout((++iteration % 2u) == 0 ? 100ms : 500ms);
+			}
+		});
+	});
+	for (std::uint32_t iteration = 0; iteration < 32; ++iteration)
+	{
+		const auto connection = client.connect("127.0.0.1", server.port());
+		client.disconnect();
+		EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	}
+	updating = false;
+	setter.join();
+	EXPECT_NO_THROW(failure.rethrow());
+	server.stop();
+}
+
+TEST(NetworkStressTest, ManyClientsConnectAndExchangeConcurrently)
 {
 	constexpr std::uint32_t ClientCount = 16;
 	spk::Server server;
@@ -430,6 +515,7 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 		threads.emplace_back([&, index] {
 			failure.run([&, index] {
 				clients[index]->connect("127.0.0.1", server.port());
+				EXPECT_TRUE(NetworkTestUtils::waitConnected(*clients[index]));
 				clients[index]->send(makeMessage(29, index));
 				responses[index] =
 					NetworkTestUtils::collect(
@@ -451,7 +537,7 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 			{
 				continue;
 			}
-			server.sendTo(request.emitter, makeMessage(30, index));
+			server.sendTo(server.connection(request.emitter), makeMessage(30, index));
 		}
 	}
 
@@ -482,6 +568,7 @@ TEST(NetworkConcurrencyTest, EmptyPayloadMessageRoundTrips)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	client.send(spk::Message::Writer(31).build());
 	auto received = NetworkTestUtils::collect(server.messages(), 1);
@@ -502,15 +589,135 @@ TEST(NetworkConcurrencyTest, SendingToUnknownConnectionDoesNotAffectConnectedCli
 	const spk::ConnectionID connection = connectAndIdentify(server, client);
 	ASSERT_NE(connection, spk::InvalidConnectionID);
 
-	server.sendTo(
-		connection + 100000u,
-		spk::Message::Writer(32).build());
+	EXPECT_THROW(server.connection(connection + 100000u), spk::Exception);
 	std::this_thread::sleep_for(50ms);
 
 	std::vector<spk::Message> received;
 	client.messages().drain(received);
 	EXPECT_TRUE(received.empty());
 
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkConcurrencyTest, ClientCanDisconnectFromConnectedStatusCallback)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_bool completed = false;
+	auto contract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				client.disconnect();
+				completed = true;
+			}
+		});
+	server.start(0);
+	const auto connection = client.connect("127.0.0.1", server.port());
+	const auto callbackCompleted = [&] {
+		return completed.load();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(callbackCompleted, 5s));
+	EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	EXPECT_FALSE(client.isConnected());
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkConcurrencyTest, ClientSendRacingRemoteShutdownCompletesEveryAdmittedTransfer)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	std::mutex mutex;
+	std::vector<spk::Transfer> accepted;
+	std::atomic_bool unexpectedFailure = false;
+	std::jthread producer([&] {
+		for (std::uint32_t attempt = 0; attempt < 512; ++attempt)
+		{
+			try
+			{
+				auto transfer = client.send(makeMessage(901, std::string(4096, 'x')));
+				const std::scoped_lock lock(mutex);
+				accepted.push_back(std::move(transfer));
+			} catch (const spk::Exception &)
+			{
+				return;
+			} catch (...)
+			{
+				unexpectedFailure = true;
+				return;
+			}
+		}
+	});
+	const auto submitted = [&] {
+		const std::scoped_lock lock(mutex);
+		return !accepted.empty();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(submitted, 3s));
+	server.stop();
+	producer.join();
+	client.disconnect();
+	EXPECT_FALSE(unexpectedFailure.load());
+	for (const auto &transfer : accepted)
+	{
+		EXPECT_TRUE(transfer.isComplete());
+	}
+}
+
+TEST(NetworkConcurrencyTest, NestedConnectionCallbackCannotPublishStaleServerReadyEvent)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_uint32_t staleReady = 0;
+	std::optional<spk::Connection::StatusContract> connectionContract;
+	auto statusContract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Pending)
+			{
+				connectionContract.emplace(connection.subscribeToStatusChange(
+					[&](spk::Connection::Status next, spk::Connection::Error) {
+						if (next == spk::Connection::Status::Connected)
+						{
+							server.stop();
+						}
+					}));
+			}
+			if (status == spk::Connection::Status::Connected)
+			{
+				++staleReady;
+			}
+		});
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	const auto stopped = [&] {
+		return !server.isRunning();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(stopped, 5s));
+	EXPECT_EQ(staleReady.load(), 0u);
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkConcurrencyTest, HandshakeConfigurationAndConnectionQueriesCanRunDuringConnect)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	std::jthread configure([&] {
+		for (std::size_t index = 0; index < 1000; ++index)
+		{
+			client.setHandshakeTimeout(index % 2 == 0 ? 5s : 6s);
+			(void)client.isConnected();
+		}
+	});
+	const auto session = client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	configure.join();
+	EXPECT_EQ(session.status(), spk::Connection::Status::Connected);
 	client.disconnect();
 	server.stop();
 }

@@ -4,8 +4,14 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <climits>
+#include <future>
+#include <memory>
+#include <semaphore>
+#include <stop_token>
 #include <string>
+#include <thread>
 
 #ifdef _WIN32
 #	include <winsock2.h>
@@ -100,6 +106,101 @@ namespace spk::NetworkInternal
 		}
 #endif
 
+		using AddressList = std::unique_ptr<addrinfo, decltype(&::freeaddrinfo)>;
+
+		struct DnsResult final
+		{
+			int error;
+			AddressList addresses;
+		};
+
+		class DnsPermit final
+		{
+		private:
+			bool _acquired = false;
+
+			[[nodiscard]] static std::shared_ptr<std::counting_semaphore<8>> _capacity()
+			{
+				static auto slots = std::make_shared<std::counting_semaphore<8>>(8);
+				return slots;
+			}
+
+			std::shared_ptr<std::counting_semaphore<8>> _slots = _capacity();
+
+		public:
+			[[nodiscard]] bool acquire() noexcept
+			{
+				_acquired = _slots->try_acquire();
+				return _acquired;
+			}
+
+			~DnsPermit()
+			{
+				if (_acquired)
+				{
+					_slots->release();
+				}
+			}
+		};
+
+		[[nodiscard]] AddressList resolveUntil(
+			std::string host,
+			std::string service,
+			addrinfo hints,
+			std::chrono::steady_clock::time_point deadline,
+			std::stop_token stop)
+		{
+			if (stop.stop_requested() || std::chrono::steady_clock::now() >= deadline)
+			{
+				throw Exception("Network name resolution was cancelled or timed out.");
+			}
+			addrinfo numericHints = hints;
+			numericHints.ai_flags |= AI_NUMERICHOST;
+			addrinfo *numeric = nullptr;
+			if (::getaddrinfo(host.c_str(), service.c_str(), &numericHints, &numeric) == 0)
+			{
+				return AddressList(numeric, &::freeaddrinfo);
+			}
+			auto permit = std::make_shared<DnsPermit>();
+			if (!permit->acquire())
+			{
+				throw Exception("Network name resolution capacity is exhausted.");
+			}
+			auto promise = std::make_shared<std::promise<DnsResult>>();
+			auto future = promise->get_future();
+			std::thread([promise, permit, host, service, hints] {
+				try
+				{
+					addrinfo *found = nullptr;
+					const int error = ::getaddrinfo(host.c_str(), service.c_str(), &hints, &found);
+					promise->set_value(DnsResult{error, AddressList(found, &::freeaddrinfo)});
+				} catch (...)
+				{
+					try
+					{
+						promise->set_exception(std::current_exception());
+					} catch (...)
+					{
+					}
+				}
+			}).detach();
+			while (!stop.stop_requested() && std::chrono::steady_clock::now() < deadline)
+			{
+				const auto remaining = deadline - std::chrono::steady_clock::now();
+				const auto interval = (std::min)(remaining, std::chrono::steady_clock::duration(std::chrono::milliseconds(25)));
+				if (future.wait_for(interval) == std::future_status::ready)
+				{
+					auto result = future.get();
+					if (result.error != 0)
+					{
+						throw Exception("Unable to resolve network address [" + host + "].");
+					}
+					return std::move(result.addresses);
+				}
+			}
+			throw Exception("Network name resolution was cancelled or timed out.");
+		}
+
 		[[nodiscard]] SystemSocket checkedTCP(int family)
 		{
 			const SystemSocket socket = createSystemSocket(family);
@@ -123,6 +224,70 @@ namespace spk::NetworkInternal
 		{
 			return std::to_string(static_cast<unsigned int>(port));
 		}
+
+		[[nodiscard]] bool connecting(int error) noexcept
+		{
+#ifdef _WIN32
+			return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS;
+#else
+			return error == EINPROGRESS || error == EWOULDBLOCK;
+#endif
+		}
+
+		[[nodiscard]] bool waiting(int error) noexcept
+		{
+#ifdef _WIN32
+			return error == WSAEWOULDBLOCK;
+#else
+			return error == EAGAIN || error == EWOULDBLOCK;
+#endif
+		}
+
+		[[nodiscard]] bool waitForSocket(
+			SystemSocket socket, bool writing, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			while (!stop.stop_requested() && std::chrono::steady_clock::now() < deadline)
+			{
+				fd_set sockets;
+				FD_ZERO(&sockets);
+				FD_SET(socket, &sockets);
+				const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+					deadline - std::chrono::steady_clock::now());
+				const auto duration = std::clamp(remaining, std::chrono::milliseconds(1), std::chrono::milliseconds(50));
+				timeval timeout{static_cast<long>(duration.count() / 1000), static_cast<long>((duration.count() % 1000) * 1000)};
+				const int ready = ::select(static_cast<int>(socket) + 1, writing ? nullptr : &sockets, writing ? &sockets : nullptr, nullptr, &timeout);
+				if (ready > 0)
+				{
+					return true;
+				}
+				if (ready < 0 && !interrupted(lastSocketError()))
+				{
+					throw Exception("Unable to poll TCP socket.");
+				}
+			}
+			return false;
+		}
+
+		[[nodiscard]] bool connectReady(SystemSocket socket, const addrinfo &entry, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			if (::connect(socket, entry.ai_addr, static_cast<int>(entry.ai_addrlen)) == 0)
+			{
+				return true;
+			}
+			if (!connecting(lastSocketError()) || !waitForSocket(socket, true, deadline, stop))
+			{
+				return false;
+			}
+			int error = 0;
+#ifdef _WIN32
+			int length = sizeof(error);
+			return ::getsockopt(socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char *>(&error), &length) == 0 && error == 0;
+#else
+			socklen_t length = sizeof(error);
+			return ::getsockopt(socket, SOL_SOCKET, SO_ERROR, &error, &length) == 0 && error == 0;
+#endif
+		}
+
 	}
 
 	Socket::Socket(NativeHandle handle) noexcept :
@@ -195,6 +360,38 @@ namespace spk::NetworkInternal
 
 		::freeaddrinfo(addresses);
 		throw Exception("Unable to connect to [" + host + ":" + service + "].");
+	}
+
+	Socket Socket::connectTCP(
+		std::string_view address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+	{
+		ensureSocketRuntime();
+		addrinfo hints{};
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
+		const std::string host(address);
+		auto resolved = resolveUntil(host, portString(port), hints, deadline, stop);
+		for (auto *entry = resolved.get(); entry != nullptr && !stop.stop_requested(); entry = entry->ai_next)
+		{
+			if (std::chrono::steady_clock::now() >= deadline)
+			{
+				break;
+			}
+			const auto native = createSystemSocket(entry->ai_family);
+			if (native == InvalidSystemSocket)
+			{
+				continue;
+			}
+			Socket candidate = adopt(static_cast<NativeHandle>(native));
+			candidate.setNonBlocking(true);
+			if (connectReady(native, *entry, deadline, stop))
+			{
+				candidate.setNonBlocking(false);
+				return candidate;
+			}
+		}
+		throw Exception("Unable to connect to [" + host + ":" + portString(port) + "].");
 	}
 
 	Socket Socket::listenTCP(std::uint16_t port)
@@ -275,81 +472,130 @@ namespace spk::NetworkInternal
 #endif
 	}
 
-	void Socket::sendAll(std::span<const std::byte> data) const
+	std::optional<std::size_t> Socket::sendSome(std::span<const std::byte> data, SendBehaviour behaviour) const
 	{
-		std::size_t offset = 0;
-		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
-		while (offset < data.size())
+		if (behaviour != SendBehaviour::ReturnEmptyOnWouldBlock)
 		{
-			const int requested = static_cast<int>(
-				std::min<std::size_t>(data.size() - offset, INT_MAX));
-#ifdef _WIN32
-			const int sent = ::send(
-				handle,
-				reinterpret_cast<const char *>(data.data() + offset),
-				requested,
-				0);
-#else
-			const int sent = static_cast<int>(::send(
-				handle,
-				data.data() + offset,
-				static_cast<std::size_t>(requested),
-				MSG_NOSIGNAL));
-#endif
-			if (sent > 0)
-			{
-				offset += static_cast<std::size_t>(sent);
-				continue;
-			}
-			const int error = lastSocketError();
-			if (sent < 0 && interrupted(error))
-			{
-				continue;
-			}
-			throw Exception("Unable to send TCP data [" + std::to_string(error) + "].");
+			throw Exception("Unsupported TCP send behaviour.");
 		}
-	}
-
-	Socket::ReceiveResult Socket::receive(std::span<std::byte> buffer) const
-	{
-		if (buffer.empty())
+		if (data.empty())
 		{
-			return {};
+			return 0;
 		}
-
-		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
+		const auto socket = static_cast<SystemSocket>(nativeHandle());
+		const int requested = static_cast<int>(std::min<std::size_t>(data.size(), INT_MAX));
 		while (true)
 		{
-			const int requested = static_cast<int>(
-				std::min<std::size_t>(buffer.size(), INT_MAX));
 #ifdef _WIN32
-			const int received = ::recv(
-				handle,
-				reinterpret_cast<char *>(buffer.data()),
-				requested,
-				0);
+			const int sent = ::send(socket, reinterpret_cast<const char *>(data.data()), requested, 0);
 #else
-			const int received = static_cast<int>(::recv(
-				handle,
-				buffer.data(),
-				static_cast<std::size_t>(requested),
-				0));
+			const int sent = static_cast<int>(::send(socket, data.data(), static_cast<std::size_t>(requested), MSG_NOSIGNAL));
 #endif
-			if (received > 0)
+			if (sent >= 0)
 			{
-				return ReceiveResult{static_cast<std::size_t>(received), false};
-			}
-			if (received == 0)
-			{
-				return ReceiveResult{0, true};
+				return static_cast<std::size_t>(sent);
 			}
 			const int error = lastSocketError();
 			if (interrupted(error))
 			{
 				continue;
 			}
+			if (waiting(error))
+			{
+				return std::nullopt;
+			}
+			throw Exception("Unable to send TCP data [" + std::to_string(error) + "].");
+		}
+	}
+
+	void Socket::sendAll(std::span<const std::byte> data) const
+	{
+		std::size_t offset = 0;
+		while (offset < data.size())
+		{
+			const auto sent = sendSome(data.subspan(offset));
+			if (!sent.has_value() || *sent == 0)
+			{
+				throw Exception("Unable to complete blocking TCP send.");
+			}
+			offset += *sent;
+		}
+	}
+
+	bool Socket::sendAllUntil(
+		std::span<const std::byte> data, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const
+	{
+		setNonBlocking(true);
+		std::size_t offset = 0;
+		try
+		{
+			while (offset < data.size() && waitForSocket(static_cast<SystemSocket>(nativeHandle()), true, deadline, stop))
+			{
+				const auto sent = sendSome(data.subspan(offset));
+				if (sent.has_value())
+				{
+					if (*sent == 0)
+					{
+						throw Exception("Unable to send handshake data.");
+					}
+					offset += *sent;
+				}
+			}
+		} catch (...)
+		{
+			if (valid())
+			{
+				setNonBlocking(false);
+			}
+			throw;
+		}
+		if (valid())
+		{
+			setNonBlocking(false);
+		}
+		return offset == data.size();
+	}
+
+	std::optional<Socket::ReceiveResult> Socket::receiveSome(std::span<std::byte> buffer) const
+	{
+		if (buffer.empty())
+		{
+			return ReceiveResult{};
+		}
+		const auto socket = static_cast<SystemSocket>(nativeHandle());
+		const int requested = static_cast<int>(std::min<std::size_t>(buffer.size(), INT_MAX));
+		while (true)
+		{
+#ifdef _WIN32
+			const int received = ::recv(socket, reinterpret_cast<char *>(buffer.data()), requested, 0);
+#else
+			const int received = static_cast<int>(::recv(socket, buffer.data(), static_cast<std::size_t>(requested), 0));
+#endif
+			if (received >= 0)
+			{
+				return ReceiveResult{static_cast<std::size_t>(received), received == 0};
+			}
+			const int error = lastSocketError();
+			if (interrupted(error))
+			{
+				continue;
+			}
+			if (waiting(error))
+			{
+				return std::nullopt;
+			}
 			throw Exception("Unable to receive TCP data [" + std::to_string(error) + "].");
 		}
+	}
+
+	Socket::ReceiveResult Socket::receive(std::span<std::byte> buffer) const
+	{
+		const auto result = receiveSome(buffer);
+		if (!result.has_value())
+		{
+			throw Exception("Unable to complete blocking TCP receive.");
+		}
+		return *result;
 	}
 
 	bool Socket::receiveAll(std::span<std::byte> buffer) const
@@ -365,6 +611,40 @@ namespace spk::NetworkInternal
 			offset += result.size;
 		}
 		return true;
+	}
+
+	bool Socket::receiveAllUntil(
+		std::span<std::byte> buffer, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const
+	{
+		setNonBlocking(true);
+		std::size_t offset = 0;
+		try
+		{
+			while (offset < buffer.size() && waitForSocket(static_cast<SystemSocket>(nativeHandle()), false, deadline, stop))
+			{
+				const auto received = receiveSome(buffer.subspan(offset));
+				if (received.has_value())
+				{
+					if (received->disconnected)
+					{
+						break;
+					}
+					offset += received->size;
+				}
+			}
+		} catch (...)
+		{
+			if (valid())
+			{
+				setNonBlocking(false);
+			}
+			throw;
+		}
+		if (valid())
+		{
+			setNonBlocking(false);
+		}
+		return offset == buffer.size();
 	}
 
 	void Socket::close() noexcept

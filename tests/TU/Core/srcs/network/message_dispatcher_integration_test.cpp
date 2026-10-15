@@ -56,11 +56,13 @@ TEST(MessageDispatcherIntegrationTest, DirectServerRepliesReachOnlyTheirEmitter)
 	auto contract = server.messageDispatcher().subscribeTo(70, [&](const spk::ReceivedMessage &received) {
 		EXPECT_EQ(std::this_thread::get_id(), owner);
 		emitters.push_back(received.emitter);
-		server.sendTo(received.emitter, response(received.message));
+		server.sendTo(server.connection(received.emitter), response(received.message));
 	});
 	server.start(0);
 	first.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(first));
 	second.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(second));
 	first.send(request(1));
 	second.send(request(2));
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
@@ -93,10 +95,12 @@ TEST(MessageDispatcherIntegrationTest, RoutedDelayedRepliesPreserveProxyAndOrigi
 	for (std::size_t index = 0; index < clients.size(); ++index)
 	{
 		remotes[index].connect("127.0.0.1", endpoint.port());
+		EXPECT_TRUE(NetworkTestUtils::waitConnected(remotes[index]));
 		routers[index].addNode("remote", remotes[index]);
 		routers[index].redirect(70, "remote");
 		routers[index].start(0);
 		clients[index].connect("127.0.0.1", routers[index].server().port());
+		EXPECT_TRUE(NetworkTestUtils::waitConnected(clients[index]));
 		clients[index].send(request(static_cast<std::uint32_t>(index + 1)));
 	}
 	auto pump = [&] {
@@ -120,7 +124,7 @@ TEST(MessageDispatcherIntegrationTest, RoutedDelayedRepliesPreserveProxyAndOrigi
 		return requests.size() == 2;
 	}));
 	EXPECT_NE(requests[0].proxyConnection, requests[1].proxyConnection);
-	EXPECT_EQ(requests[0].originConnection, requests[1].originConnection);
+	EXPECT_NE(requests[0].originConnection, requests[1].originConnection);
 	for (auto iterator = requests.rbegin(); iterator != requests.rend(); ++iterator)
 	{
 		endpoint.reply(*iterator, response(iterator->message));

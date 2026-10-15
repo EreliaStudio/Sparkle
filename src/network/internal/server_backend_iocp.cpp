@@ -3,28 +3,18 @@
 #ifdef _WIN32
 
 #	include "exception.hpp"
-#	include "network/internal/frame.hpp"
-#	include "network/internal/socket.hpp"
-
-#	include <algorithm>
+#	include "network/internal/exception_reporting.hpp"
+#	include "network/internal/connection_id.hpp"
 #	include <array>
-#	include <atomic>
 #	include <cstddef>
 #	include <cstdint>
-#	include <deque>
 #	include <memory>
-#	include <mutex>
 #	include <string>
-#	include <thread>
-#	include <unordered_map>
 #	include <utility>
 #	include <vector>
-
 #	include <winsock2.h>
-
 #	include <mswsock.h>
 #	include <ws2tcpip.h>
-
 #	include <Windows.h>
 
 namespace spk::NetworkInternal
@@ -35,107 +25,35 @@ namespace spk::NetworkInternal
 		constexpr ULONG_PTR WakeKey = 1;
 		constexpr std::size_t ReceptionBufferSize = 64u * 1024u;
 		constexpr std::size_t AcceptOperationCount = 4;
-		constexpr std::size_t MaximumQueuedBytes = 64u * 1024u * 1024u;
-
-		struct Session
-		{
-			ConnectionID id;
-			Socket socket;
-			std::vector<std::byte> receivedBytes;
-			std::deque<Frame> outgoing;
-			std::size_t outgoingOffset = 0;
-			std::size_t queuedBytes = 0;
-			bool writeInFlight = false;
-
-			Session(ConnectionID id, Socket socket) :
-				id(id),
-				socket(std::move(socket))
-			{
-			}
-		};
-
-		enum class OperationKind
-		{
-			Accept,
-			Read,
-			Write
-		};
-
-		struct Operation
-		{
-			OVERLAPPED overlapped{};
-			OperationKind kind;
-			std::shared_ptr<Session> session;
-			Socket acceptedSocket;
-			std::array<std::byte, ReceptionBufferSize> buffer{};
-			WSABUF wsabuf{};
-
-			explicit Operation(OperationKind kind) :
-				kind(kind)
-			{
-			}
-		};
-
-		enum class CommandKind
-		{
-			Send,
-			Broadcast,
-			Stop
-		};
-
-		struct Command
-		{
-			CommandKind kind;
-			ConnectionID connection = InvalidConnectionID;
-			Frame frame;
-		};
 
 		class IocpServerBackend final : public ServerBackend
 		{
 		private:
-			ServerCallbacks _callbacks;
-			Socket _listener;
-			std::jthread _worker;
-			std::atomic_bool _running = false;
-			std::atomic_uint16_t _port = 0;
+			enum class OperationKind
+			{
+				Accept,
+				Read,
+				Write
+			};
+
+			struct Operation
+			{
+				OVERLAPPED overlapped{};
+				OperationKind kind;
+				std::shared_ptr<Session> session;
+				Socket acceptedSocket;
+				std::array<std::byte, ReceptionBufferSize> buffer{};
+				WSABUF wsabuf{};
+
+				explicit Operation(OperationKind kind) :
+					kind(kind)
+				{
+				}
+			};
+
 			HANDLE _iocp = nullptr;
 			LPFN_ACCEPTEX _acceptEx = nullptr;
-			ConnectionID _nextConnectionID = 1;
-			std::unordered_map<ConnectionID, std::shared_ptr<Session>> _sessions;
-			std::mutex _commandMutex;
-			std::deque<Command> _commands;
 			std::size_t _pendingOperations = 0;
-			bool _stopping = false;
-
-			void _notifyConnection(ConnectionID id) noexcept
-			{
-				try
-				{
-					_callbacks.onConnection(id);
-				} catch (...)
-				{
-				}
-			}
-
-			void _notifyDisconnection(ConnectionID id) noexcept
-			{
-				try
-				{
-					_callbacks.onDisconnection(id);
-				} catch (...)
-				{
-				}
-			}
-
-			void _publish(ReceivedMessage message) noexcept
-			{
-				try
-				{
-					_callbacks.onMessage(std::move(message));
-				} catch (...)
-				{
-				}
-			}
 
 			void _associate(const Socket &socket)
 			{
@@ -217,10 +135,10 @@ namespace spk::NetworkInternal
 					return;
 				}
 
-				const ConnectionID id = _nextConnectionID++;
-				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket));
+				auto session = _makeSession(std::move(operation->acceptedSocket));
+				const ConnectionID id = session->id;
 				_associate(session->socket);
-				_sessions.emplace(id, session);
+				_registerSession(session);
 				_postRead(session);
 				_notifyConnection(id);
 				if (!_stopping)
@@ -266,15 +184,12 @@ namespace spk::NetworkInternal
 					return;
 				}
 
-				session->receivedBytes.insert(
-					session->receivedBytes.end(),
-					operation.buffer.begin(),
-					operation.buffer.begin() + static_cast<std::ptrdiff_t>(bytes));
 				try
 				{
-					_extractMessages(*session);
+					_appendReceived(*session, operation.buffer.data(), static_cast<std::size_t>(bytes));
 				} catch (...)
 				{
+					reportCurrentException("Network IOCP session receive failed.");
 					_disconnect(session->id);
 					return;
 				}
@@ -284,72 +199,13 @@ namespace spk::NetworkInternal
 				}
 			}
 
-			void _extractMessages(Session &session)
-			{
-				std::size_t consumed = 0;
-				while (_extractMessage(session, consumed))
-				{
-				}
-				if (consumed != 0)
-				{
-					session.receivedBytes.erase(
-						session.receivedBytes.begin(),
-						session.receivedBytes.begin() + static_cast<std::ptrdiff_t>(consumed));
-				}
-			}
-
-			[[nodiscard]] bool _extractMessage(Session &session, std::size_t &consumed)
-			{
-				const std::size_t remaining = session.receivedBytes.size() - consumed;
-				if (remaining < FrameHeaderSize)
-				{
-					return false;
-				}
-
-				const auto *data = session.receivedBytes.data() + consumed;
-				const auto header = decode(std::span<const std::byte, FrameHeaderSize>(data, FrameHeaderSize));
-				const std::size_t frameSize = FrameHeaderSize + header.payloadSize;
-				if (remaining < frameSize)
-				{
-					return false;
-				}
-
-				Message::Writer writer(header.type);
-				writer.setRequestID(header.requestID);
-				writer.resize(header.payloadSize);
-				std::copy_n(
-					data + FrameHeaderSize,
-					header.payloadSize,
-					writer.data().begin());
-				consumed += frameSize;
-				_publish(ReceivedMessage{session.id, std::move(writer).build()});
-				return true;
-			}
-
-			void _queueFrame(const std::shared_ptr<Session> &session, Frame frame)
-			{
-				if (frame->size() > MaximumQueuedBytes - session->queuedBytes)
-				{
-					_disconnect(session->id);
-					return;
-				}
-				session->queuedBytes += frame->size();
-				session->outgoing.push_back(std::move(frame));
-				if (!session->writeInFlight)
-				{
-					_postWrite(session);
-				}
-			}
-
 			void _postWrite(const std::shared_ptr<Session> &session)
 			{
-				if (session->outgoing.empty() || _stopping)
+				if (session->writeInFlight || !_prepareWrite(*session))
 				{
-					session->writeInFlight = false;
 					return;
 				}
-
-				const Frame &frame = session->outgoing.front();
+				const Frame &frame = session->outgoing.front().bytes;
 				auto *operation = new Operation(OperationKind::Write);
 				operation->session = session;
 				operation->wsabuf.buf = reinterpret_cast<char *>(
@@ -382,121 +238,18 @@ namespace spk::NetworkInternal
 			{
 				if (!success || bytes == 0 || !_sessions.contains(session->id))
 				{
+					session->writeInFlight = false;
 					_disconnect(session->id);
 					return;
 				}
 
-				session->outgoingOffset += static_cast<std::size_t>(bytes);
-				session->queuedBytes -= static_cast<std::size_t>(bytes);
-				const Frame &frame = session->outgoing.front();
-				if (session->outgoingOffset == frame->size())
+				_completeFrame(*session, static_cast<std::size_t>(bytes));
+				if (!_sessions.contains(session->id))
 				{
-					session->outgoing.pop_front();
-					session->outgoingOffset = 0;
+					return;
 				}
 				session->writeInFlight = false;
 				_postWrite(session);
-			}
-
-			void _disconnect(ConnectionID id) noexcept
-			{
-				const auto iterator = _sessions.find(id);
-				if (iterator == _sessions.end())
-				{
-					return;
-				}
-				auto session = std::move(iterator->second);
-				_sessions.erase(iterator);
-				session->socket.close();
-				_notifyDisconnection(id);
-			}
-
-			void _disconnectAll() noexcept
-			{
-				std::vector<ConnectionID> ids;
-				ids.reserve(_sessions.size());
-				for (const auto &entry : _sessions)
-				{
-					ids.push_back(entry.first);
-				}
-				for (const ConnectionID id : ids)
-				{
-					_disconnect(id);
-				}
-			}
-
-			void _enqueue(Command command)
-			{
-				{
-					const std::scoped_lock lock(_commandMutex);
-					_commands.push_back(std::move(command));
-				}
-				::PostQueuedCompletionStatus(_iocp, 0, WakeKey, nullptr);
-			}
-
-			[[nodiscard]] std::deque<Command> _takeCommands()
-			{
-				const std::scoped_lock lock(_commandMutex);
-				std::deque<Command> result;
-				result.swap(_commands);
-				return result;
-			}
-
-			void _processCommands()
-			{
-				for (Command &command : _takeCommands())
-				{
-					_processCommand(std::move(command));
-					if (_stopping)
-					{
-						return;
-					}
-				}
-			}
-
-			void _processCommand(Command command)
-			{
-				if (command.kind == CommandKind::Stop)
-				{
-					_beginStop();
-					return;
-				}
-				if (command.kind == CommandKind::Broadcast)
-				{
-					_broadcast(std::move(command.frame));
-					return;
-				}
-
-				const auto iterator = _sessions.find(command.connection);
-				if (iterator != _sessions.end())
-				{
-					_queueFrame(iterator->second, std::move(command.frame));
-				}
-			}
-
-			void _broadcast(Frame frame)
-			{
-				std::vector<std::shared_ptr<Session>> sessions;
-				sessions.reserve(_sessions.size());
-				for (const auto &entry : _sessions)
-				{
-					sessions.push_back(entry.second);
-				}
-				for (const auto &session : sessions)
-				{
-					if (_sessions.contains(session->id))
-					{
-						_queueFrame(session, frame);
-					}
-				}
-			}
-
-			void _beginStop() noexcept
-			{
-				_stopping = true;
-				_running = false;
-				_listener.close();
-				_disconnectAll();
 			}
 
 			void _handleCompletion(
@@ -535,7 +288,7 @@ namespace spk::NetworkInternal
 				}
 			}
 
-			void _run() noexcept
+			void _run() noexcept override
 			{
 				while (!_stopping || _pendingOperations != 0)
 				{
@@ -547,13 +300,28 @@ namespace spk::NetworkInternal
 						&bytes,
 						&key,
 						&overlapped,
-						INFINITE);
-					_handleCompletion(success, bytes, key, overlapped);
+						1000);
+					try
+					{
+						if (overlapped != nullptr || success)
+						{
+							_handleCompletion(success, bytes, key, overlapped);
+						}
+						if (!_stopping)
+						{
+							_expireReassemblies();
+						}
+					} catch (...)
+					{
+						reportCurrentException("Network IOCP worker failed.");
+						_beginStop();
+					}
 				}
 			}
 
-			void _openIocp()
+			void _openEvents() override
 			{
+				_pendingOperations = 0;
 				_iocp = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
 				if (_iocp == nullptr)
 				{
@@ -561,7 +329,7 @@ namespace spk::NetworkInternal
 				}
 			}
 
-			void _closeIocp() noexcept
+			void _closeEvents() noexcept override
 			{
 				if (_iocp != nullptr)
 				{
@@ -570,104 +338,43 @@ namespace spk::NetworkInternal
 				}
 			}
 
+			void _listen() override
+			{
+				_associate(_listener);
+				_loadAcceptEx();
+				for (std::size_t index = 0; index < AcceptOperationCount; ++index)
+				{
+					_postAccept();
+				}
+			}
+
+			void _wake() noexcept override
+			{
+				if (_iocp != nullptr)
+				{
+					::PostQueuedCompletionStatus(_iocp, 0, WakeKey, nullptr);
+				}
+			}
+
+			void _requestWrite(Session &session) override
+			{
+				_postWrite(_sessions.at(session.id));
+			}
+
+			void _writeSession(const std::shared_ptr<Session> &session) override
+			{
+				_postWrite(session);
+			}
+
 		public:
 			explicit IocpServerBackend(ServerCallbacks callbacks) :
-				_callbacks(std::move(callbacks))
+				ServerBackend(std::move(callbacks))
 			{
 			}
 
 			~IocpServerBackend() override
 			{
 				stop();
-			}
-
-			[[nodiscard]] bool isRunning() const noexcept override
-			{
-				return _running.load();
-			}
-
-			[[nodiscard]] std::uint16_t port() const noexcept override
-			{
-				return _port.load();
-			}
-
-			void start(std::uint16_t port) override
-			{
-				stop();
-				{
-					const std::scoped_lock lock(_commandMutex);
-					_commands.clear();
-				}
-				_stopping = false;
-				_pendingOperations = 0;
-				_openIocp();
-				try
-				{
-					_listener = Socket::listenTCP(port);
-					_port = _listener.localPort();
-					_associate(_listener);
-					_loadAcceptEx();
-					for (std::size_t index = 0; index < AcceptOperationCount; ++index)
-					{
-						_postAccept();
-					}
-				} catch (...)
-				{
-					_listener.close();
-					_closeIocp();
-					throw;
-				}
-
-				_running = true;
-				_worker = std::jthread([this] {
-					_run();
-				});
-			}
-
-			void stop() override
-			{
-				if (_worker.joinable() &&
-					_worker.get_id() == std::this_thread::get_id())
-				{
-					_beginStop();
-					return;
-				}
-				if (_worker.joinable())
-				{
-					if (_running)
-					{
-						_enqueue(Command{CommandKind::Stop});
-					}
-					else if (_iocp != nullptr)
-					{
-						::PostQueuedCompletionStatus(_iocp, 0, WakeKey, nullptr);
-					}
-					_worker.join();
-				}
-				_listener.close();
-				_disconnectAll();
-				_closeIocp();
-				_port = 0;
-				_running = false;
-				_stopping = true;
-			}
-
-			void sendTo(ConnectionID connection, const Message &message) override
-			{
-				if (!_running)
-				{
-					throw Exception("Unable to send through a stopped network server.");
-				}
-				_enqueue(Command{CommandKind::Send, connection, encode(message)});
-			}
-
-			void sendToAll(const Message &message) override
-			{
-				if (!_running)
-				{
-					throw Exception("Unable to send through a stopped network server.");
-				}
-				_enqueue(Command{CommandKind::Broadcast, InvalidConnectionID, encode(message)});
 			}
 		};
 	}

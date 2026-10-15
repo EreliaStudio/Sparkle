@@ -13,14 +13,19 @@
 
 namespace spk::NetworkInternal
 {
-	inline constexpr std::size_t FrameHeaderSize = 24;
-	inline constexpr std::uint16_t ProtocolVersion = 2;
+	inline constexpr std::size_t FrameHeaderSize = 32;
+	inline constexpr std::uint16_t ProtocolVersion = 4;
+	inline constexpr std::uint16_t PageFrameKind = 1;
+	inline constexpr std::size_t PageMetadataSize = 24;
+	inline constexpr std::size_t DefaultMaximumPageBytes = 64u * 1024u;
+	inline constexpr std::size_t MaximumSupportedPageBytes = 1024u * 1024u;
 	inline constexpr std::uint32_t MaximumPayloadSize = 32u * 1024u * 1024u;
 
 	struct FrameHeader
 	{
 		Message::Type type;
 		Message::RequestID requestID;
+		Connection::ID connectionID;
 		std::uint32_t payloadSize;
 	};
 
@@ -90,7 +95,8 @@ namespace spk::NetworkInternal
 		write16(bytes + 6, 0);
 		write32(bytes + 8, message.type());
 		write64(bytes + 12, message.requestID());
-		write32(bytes + 20, static_cast<std::uint32_t>(message.size()));
+		write64(bytes + 20, message.connectionID());
+		write32(bytes + 28, static_cast<std::uint32_t>(message.size()));
 		std::copy(message.data().begin(), message.data().end(), result->begin() + FrameHeaderSize);
 		return result;
 	}
@@ -107,14 +113,17 @@ namespace spk::NetworkInternal
 			throw Exception("Unsupported Sparkle network protocol version.");
 		}
 
-		const std::uint32_t payloadSize = read32(bytes.data() + 20);
-		if (payloadSize > MaximumPayloadSize)
+		const std::uint32_t payloadSize = read32(bytes.data() + 28);
+		if (payloadSize > MaximumPayloadSize ||
+			(read16(bytes.data() + 6) == PageFrameKind &&
+			 payloadSize > PageMetadataSize + MaximumSupportedPageBytes))
 		{
 			throw Exception("Network frame payload exceeds the configured limit.");
 		}
 		return FrameHeader{
 			read32(bytes.data() + 8),
 			read64(bytes.data() + 12),
+			read64(bytes.data() + 20),
 			payloadSize};
 	}
 }

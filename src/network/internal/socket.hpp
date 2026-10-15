@@ -1,9 +1,12 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
+#include <stop_token>
 #include <string_view>
 
 namespace spk::NetworkInternal
@@ -12,6 +15,11 @@ namespace spk::NetworkInternal
 	{
 	public:
 		using NativeHandle = std::uintptr_t;
+
+		enum class SendBehaviour
+		{
+			ReturnEmptyOnWouldBlock
+		};
 
 		struct ReceiveResult
 		{
@@ -39,14 +47,19 @@ namespace spk::NetworkInternal
 		[[nodiscard]] static Socket createTCPv4();
 		[[nodiscard]] static Socket adopt(NativeHandle handle) noexcept;
 		[[nodiscard]] static Socket connectTCP(std::string_view address, std::uint16_t port);
+		[[nodiscard]] static Socket connectTCP(std::string_view address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop);
 		[[nodiscard]] static Socket listenTCP(std::uint16_t port);
 
 		[[nodiscard]] Socket accept() const;
 		[[nodiscard]] std::uint16_t localPort() const;
 		void setNonBlocking(bool value) const;
+		[[nodiscard]] std::optional<std::size_t> sendSome(std::span<const std::byte> data, SendBehaviour behaviour = SendBehaviour::ReturnEmptyOnWouldBlock) const;
+		[[nodiscard]] std::optional<ReceiveResult> receiveSome(std::span<std::byte> buffer) const;
 		void sendAll(std::span<const std::byte> data) const;
+		[[nodiscard]] bool sendAllUntil(std::span<const std::byte> data, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;
 		[[nodiscard]] ReceiveResult receive(std::span<std::byte> buffer) const;
 		[[nodiscard]] bool receiveAll(std::span<std::byte> buffer) const;
+		[[nodiscard]] bool receiveAllUntil(std::span<std::byte> buffer, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;
 
 		void close() noexcept;
 		[[nodiscard]] bool valid() const noexcept;

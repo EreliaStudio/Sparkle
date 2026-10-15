@@ -112,7 +112,7 @@ namespace spk
 		{
 			if (outgoing.recipient.has_value())
 			{
-				_server.sendTo(*outgoing.recipient, outgoing.message);
+				_server.sendTo(_server.connection(*outgoing.recipient), outgoing.message);
 				continue;
 			}
 			_server.sendToAll(outgoing.message);

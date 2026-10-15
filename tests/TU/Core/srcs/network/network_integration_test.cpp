@@ -2,6 +2,7 @@
 
 #include "network/client.hpp"
 #include "network/server.hpp"
+#include "network_test_utils.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -40,6 +41,7 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	spk::Message::Writer requestWriter(12);
 	requestWriter.setRequestID(0x1020304050607080ull);
@@ -63,7 +65,7 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	responseWriter.setRequestID(0x8877665544332211ull);
 	responseWriter << std::string("pong");
 	server.sendTo(
-		receivedByServer.front().emitter,
+		server.connection(receivedByServer.front().emitter),
 		std::move(responseWriter).build());
 
 	auto receivedByClient = waitForMessages(client.messages());
@@ -78,4 +80,48 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 
 	client.disconnect();
 	server.stop();
+}
+
+TEST(NetworkIntegrationTest, ExplicitDisconnectDiscardsUnreadIncomingMessages)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	const auto recipient = server.connection(client.connection().id());
+	const auto transfer = server.sendTo(recipient, spk::Message::Writer(991).build());
+	const auto delivered = [&] {
+		return transfer.status() == spk::Transfer::Status::Success;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(delivered, 5s));
+	client.disconnect();
+	std::vector<spk::Message> messages;
+	client.messages().drain(messages);
+	EXPECT_TRUE(messages.empty());
+	server.stop();
+}
+
+TEST(NetworkIntegrationTest, RemoteDisconnectDiscardsUnreadIncomingMessages)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	const auto recipient = server.connection(client.connection().id());
+	const auto transfer = server.sendTo(recipient, spk::Message::Writer(992).build());
+	const auto delivered = [&] {
+		return transfer.status() == spk::Transfer::Status::Success;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(delivered, 5s));
+	server.stop();
+	const auto disconnected = [&] {
+		return client.connection().status() == spk::Connection::Status::Disconnected;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(disconnected, 5s));
+	std::vector<spk::Message> messages;
+	client.messages().drain(messages);
+	EXPECT_TRUE(messages.empty());
+	client.disconnect();
 }

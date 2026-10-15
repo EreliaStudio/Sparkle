@@ -1,5 +1,7 @@
 #include "network/server.hpp"
 
+#include "exception.hpp"
+#include "network/internal/outgoing_message_validator.hpp"
 #include "network/internal/server_backend.hpp"
 
 #include <utility>
@@ -20,8 +22,14 @@ namespace spk
 			result.onConnection = [&owner](ConnectionID connection) {
 				owner._notifyConnection(connection);
 			};
-			result.onDisconnection = [&owner](ConnectionID connection) {
-				owner._notifyDisconnection(connection);
+			result.snapshotConnections = [&owner] {
+				return owner._snapshotConnections();
+			};
+			result.onReady = [&owner](ConnectionID connection) {
+				owner._notifyReady(connection);
+			};
+			result.onDisconnection = [&owner](ConnectionID connection, Connection::Error error) {
+				owner._notifyDisconnection(connection, error);
 			};
 			return result;
 		}
@@ -35,6 +43,11 @@ namespace spk
 		[[nodiscard]] bool isRunning() const noexcept
 		{
 			return _backend->isRunning();
+		}
+
+		[[nodiscard]] bool isWorkerThread() const noexcept
+		{
+			return _backend->isWorkerThread();
 		}
 
 		[[nodiscard]] std::uint16_t port() const noexcept
@@ -52,14 +65,50 @@ namespace spk
 			_backend->stop();
 		}
 
-		void sendTo(ConnectionID connection, const Message &message)
+		void setPageFailureLimits(PageFailureLimits limits)
 		{
-			_backend->sendTo(connection, message);
+			_backend->setPageFailureLimits(limits);
 		}
 
-		void sendToAll(const Message &message)
+		void setHandshakeTimeout(std::chrono::milliseconds timeout)
 		{
-			_backend->sendToAll(message);
+			_backend->setHandshakeTimeout(timeout);
+		}
+
+		void setIncomingTransferTimeout(std::chrono::milliseconds timeout)
+		{
+			_backend->setIncomingTransferTimeout(timeout);
+		}
+
+		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+		{
+			_backend->setAcknowledgmentTimeout(timeout);
+		}
+
+		void setGlobalMaxQueuedBytes(std::size_t bytes)
+		{
+			_backend->setGlobalMaxQueuedBytes(bytes);
+		}
+
+		void setMaxMessageBytes(std::size_t bytes)
+		{
+			_backend->setMaxMessageBytes(bytes);
+		}
+		void setMaxIncomingBytes(std::size_t bytes)
+		{
+			_backend->setMaxIncomingBytes(bytes);
+		}
+		void setMaxPageBytes(std::size_t bytes)
+		{
+			_backend->setMaxPageBytes(bytes);
+		}
+		void setGlobalMaxIncomingBytes(std::size_t bytes)
+		{
+			_backend->setGlobalMaxIncomingBytes(bytes);
+		}
+		void send(std::shared_ptr<NetworkInternal::ServerSendBatch> batch)
+		{
+			_backend->send(std::move(batch));
 		}
 	};
 
@@ -68,16 +117,38 @@ namespace spk
 	{
 	}
 
-	Server::~Server() = default;
-
-	Server::ConnectionContract Server::subscribeToConnection(ConnectionCallback callback)
+	Server::~Server()
 	{
-		return _connectionProvider.subscribe(std::move(callback));
+		stop();
 	}
 
-	Server::DisconnectionContract Server::subscribeToDisconnection(DisconnectionCallback callback)
+	Server::StatusContract Server::subscribeToConnectionStatusChange(StatusCallback callback)
 	{
-		return _disconnectionProvider.subscribe(std::move(callback));
+		return _statusProvider.subscribe(std::move(callback));
+	}
+
+	std::vector<Connection> Server::_snapshotConnections() const
+	{
+		const std::scoped_lock lock(_connectionsMutex);
+		std::vector<Connection> result;
+		result.reserve(_connections.size());
+		for (const auto &[id, connection] : _connections)
+		{
+			(void)id;
+			result.push_back(connection);
+		}
+		return result;
+	}
+
+	Connection Server::connection(ConnectionID id) const
+	{
+		const std::scoped_lock lock(_connectionsMutex);
+		const auto it = _connections.find(id);
+		if (it == _connections.end())
+		{
+			throw Exception("Unknown or disconnected network connection.");
+		}
+		return it->second;
 	}
 
 	bool Server::isRunning() const noexcept
@@ -90,8 +161,20 @@ namespace spk
 		return _impl->port();
 	}
 
-	void Server::start(std::uint16_t port)
+	void Server::start(std::uint16_t port, StartBehaviour behaviour)
 	{
+		if (behaviour != StartBehaviour::Throw && behaviour != StartBehaviour::Restart)
+		{
+			throw Exception("Unsupported server start behavior.");
+		}
+		if (_impl->isWorkerThread())
+		{
+			throw Exception("Cannot start the network server from its transport worker callback.");
+		}
+		if (behaviour == StartBehaviour::Restart && isRunning())
+		{
+			stop();
+		}
 		_impl->start(port);
 	}
 
@@ -100,22 +183,125 @@ namespace spk
 		_impl->stop();
 	}
 
-	void Server::sendTo(ConnectionID connection, const Message &message)
+	void Server::setPageFailureLimits(PageFailureLimits limits)
 	{
-		_impl->sendTo(connection, message);
+		_impl->setPageFailureLimits(limits);
 	}
 
-	void Server::sendTo(std::span<const ConnectionID> connections, const Message &message)
+	void Server::setHandshakeTimeout(std::chrono::milliseconds timeout, HandshakeTimeoutBehaviour behaviour)
 	{
-		for (const ConnectionID connection : connections)
+		if (behaviour != HandshakeTimeoutBehaviour::FutureAttemptsOnly)
 		{
-			sendTo(connection, message);
+			throw Exception("Unsupported server handshake timeout behaviour.");
 		}
+		_impl->setHandshakeTimeout(timeout);
 	}
 
-	void Server::sendToAll(const Message &message)
+	void Server::setIncomingTransferTimeout(std::chrono::milliseconds timeout)
 	{
-		_impl->sendToAll(message);
+		_impl->setIncomingTransferTimeout(timeout);
+	}
+
+	void Server::setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setAcknowledgmentTimeout(timeout);
+	}
+
+	void Server::setGlobalMaxQueuedBytes(std::size_t bytes, OutgoingBudgetBehaviour behaviour)
+	{
+		if (behaviour != OutgoingBudgetBehaviour::AccountReservedTransportStagesPreservingAccepted)
+		{
+			throw Exception("Unsupported server outgoing budget behaviour.");
+		}
+		_impl->setGlobalMaxQueuedBytes(bytes);
+	}
+
+	void Server::setMaxMessageBytes(std::size_t bytes)
+	{
+		_impl->setMaxMessageBytes(bytes);
+		_maxMessageBytes.store(bytes);
+	}
+	void Server::setMaxIncomingBytes(std::size_t bytes, IncomingBudgetBehaviour behaviour)
+	{
+		if (behaviour != IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted)
+		{
+			throw Exception("Unsupported server incoming budget behaviour.");
+		}
+		_impl->setMaxIncomingBytes(bytes);
+	}
+	void Server::setMaxPageBytes(std::size_t bytes, PageSizeBehaviour behaviour)
+	{
+		if (behaviour != PageSizeBehaviour::RespectNegotiatedLimit)
+		{
+			throw Exception("Unsupported server page size behaviour.");
+		}
+		_impl->setMaxPageBytes(bytes);
+	}
+	void Server::setGlobalMaxIncomingBytes(std::size_t bytes, SharedIncomingBudgetBehaviour behaviour)
+	{
+		if (behaviour != SharedIncomingBudgetBehaviour::ShareAcrossSessionsPreservingAccepted)
+		{
+			throw Exception("Unsupported server shared incoming budget behaviour.");
+		}
+		_impl->setGlobalMaxIncomingBytes(bytes);
+	}
+	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour)
+	{
+		const ConnectionSet recipients{connection};
+		return sendTo(recipients, message, priority, policy, behaviour).at(connection.id());
+	}
+
+	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour)
+	{
+		if (behaviour != SendBehaviour::SynchronousAdmission)
+		{
+			throw Exception("Unsupported server send behaviour.");
+		}
+		if (connections.empty())
+		{
+			throw Exception("Cannot send to an empty connection set.");
+		}
+		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
+		NetworkInternal::OutgoingMessageValidator::validatePolicy(policy);
+		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
+		TransferResults results;
+		batch->recipients.reserve(connections.size());
+		results.reserve(connections.size());
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			for (const Connection &connection : connections)
+			{
+				const auto it = _connections.find(connection.id());
+				if (it == _connections.end() || it->second._data != connection._data || !connection.isConnected())
+				{
+					throw Exception("Unable to send to an unknown or disconnected network connection.");
+				}
+				batch->recipients.push_back({connection, Transfer{}});
+				results.emplace(connection.id(), batch->recipients.back().transfer);
+			}
+		}
+		_impl->send(std::move(batch));
+		return results;
+	}
+
+	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour, EmptyAudienceBehaviour emptyAudience)
+	{
+		if (behaviour != SendBehaviour::SynchronousAdmission || emptyAudience != EmptyAudienceBehaviour::ReturnEmpty)
+		{
+			throw Exception("Unsupported server broadcast behaviour.");
+		}
+		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
+		NetworkInternal::OutgoingMessageValidator::validatePolicy(policy);
+		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
+		batch->allRecipients = true;
+		_impl->send(batch);
+		TransferResults results;
+		results.reserve(batch->recipients.size());
+		for (const auto &recipient : batch->recipients)
+		{
+			results.emplace(recipient.connection.id(), recipient.transfer);
+		}
+		return results;
 	}
 
 	Server::MessageQueue &Server::messages() noexcept
@@ -128,8 +314,12 @@ namespace spk
 		return _messageDispatcher;
 	}
 
-	void Server::treatMessages()
+	void Server::treatMessages(MessageDispatchBehaviour behaviour)
 	{
+		if (behaviour != MessageDispatchBehaviour::CallingThread)
+		{
+			throw Exception("Unsupported server message dispatch behaviour.");
+		}
 		_messageDispatcher.treatMessages(_messages);
 	}
 
@@ -138,13 +328,54 @@ namespace spk
 		_messages.publish(std::move(message));
 	}
 
-	void Server::_notifyConnection(ConnectionID connection)
+	void Server::_notifyConnection(ConnectionID id)
 	{
-		_connectionProvider.trigger(connection);
+		Connection connection;
+		connection._assignID(id);
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			_connections.insert_or_assign(id, connection);
+		}
+		connection._setStatus(Connection::Status::Pending);
+		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
 	}
 
-	void Server::_notifyDisconnection(ConnectionID connection)
+	void Server::_notifyReady(ConnectionID id)
 	{
-		_disconnectionProvider.trigger(connection);
+		Connection connection;
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			const auto it = _connections.find(id);
+			if (it == _connections.end())
+			{
+				return;
+			}
+			connection = it->second;
+		}
+		if (connection.status() != Connection::Status::Pending)
+		{
+			return;
+		}
+		if (connection._setStatus(Connection::Status::Connected) && connection.isConnected())
+		{
+			_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
+		}
+	}
+
+	void Server::_notifyDisconnection(ConnectionID id, Connection::Error error)
+	{
+		Connection connection;
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			const auto it = _connections.find(id);
+			if (it == _connections.end())
+			{
+				return;
+			}
+			connection = it->second;
+			_connections.erase(it);
+		}
+		connection._setStatus(Connection::Status::Disconnected, error);
+		_statusProvider.trigger(connection, Connection::Status::Disconnected, error);
 	}
 }

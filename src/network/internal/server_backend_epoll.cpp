@@ -3,88 +3,36 @@
 #if defined(__linux__) || defined(__ANDROID__)
 
 #	include "exception.hpp"
-#	include "network/internal/frame.hpp"
-#	include "network/internal/socket.hpp"
-
-#	include <algorithm>
+#	include "network/internal/exception_reporting.hpp"
+#	include "network/internal/connection_id.hpp"
 #	include <array>
-#	include <atomic>
-#	include <cerrno>
 #	include <cstddef>
 #	include <cstdint>
-#	include <deque>
 #	include <memory>
-#	include <mutex>
-#	include <optional>
 #	include <string>
+#	include <utility>
+#	include <vector>
+#	include <cerrno>
 #	include <sys/epoll.h>
 #	include <sys/eventfd.h>
 #	include <sys/socket.h>
-#	include <thread>
-#	include <unordered_map>
 #	include <unistd.h>
-#	include <utility>
-#	include <vector>
 
 namespace spk::NetworkInternal
 {
 	namespace
 	{
-		using Frame = std::shared_ptr<std::vector<std::byte>>;
-
 		constexpr std::uint64_t WakeToken = 0;
 		constexpr std::uint64_t ListenerToken = 1;
-		constexpr std::uint64_t ConnectionTokenOffset = 2;
 		constexpr std::size_t EventBatchSize = 128;
 		constexpr std::size_t ReceptionBufferSize = 64u * 1024u;
-		constexpr std::size_t MaximumQueuedBytes = 64u * 1024u * 1024u;
 		constexpr std::size_t WriteBudget = 256u * 1024u;
-
-		struct Session
-		{
-			ConnectionID id;
-			Socket socket;
-			std::vector<std::byte> receivedBytes;
-			std::deque<Frame> outgoing;
-			std::size_t outgoingOffset = 0;
-			std::size_t queuedBytes = 0;
-
-			Session(ConnectionID id, Socket socket) :
-				id(id),
-				socket(std::move(socket))
-			{
-			}
-		};
-
-		enum class CommandKind
-		{
-			Send,
-			Broadcast,
-			Stop
-		};
-
-		struct Command
-		{
-			CommandKind kind;
-			ConnectionID connection = InvalidConnectionID;
-			Frame frame;
-		};
 
 		class EpollServerBackend final : public ServerBackend
 		{
 		private:
-			ServerCallbacks _callbacks;
-			Socket _listener;
-			std::jthread _worker;
-			std::atomic_bool _running = false;
-			std::atomic_uint16_t _port = 0;
 			int _epoll = -1;
 			int _wakeEvent = -1;
-			ConnectionID _nextConnectionID = 1;
-			std::unordered_map<ConnectionID, std::shared_ptr<Session>> _sessions;
-			std::mutex _commandMutex;
-			std::deque<Command> _commands;
-			bool _stopping = false;
 
 			[[nodiscard]] static std::uint64_t _token(ConnectionID id)
 			{
@@ -119,41 +67,11 @@ namespace spk::NetworkInternal
 				::epoll_ctl(_epoll, EPOLL_CTL_MOD, static_cast<int>(session.socket.nativeHandle()), &event);
 			}
 
-			void _unregister(const Socket &socket) noexcept
+			void _unregisterSocket(const Socket &socket) noexcept override
 			{
 				if (_epoll >= 0 && socket.valid())
 				{
 					::epoll_ctl(_epoll, EPOLL_CTL_DEL, static_cast<int>(socket.nativeHandle()), nullptr);
-				}
-			}
-
-			void _notifyConnection(ConnectionID id) noexcept
-			{
-				try
-				{
-					_callbacks.onConnection(id);
-				} catch (...)
-				{
-				}
-			}
-
-			void _notifyDisconnection(ConnectionID id) noexcept
-			{
-				try
-				{
-					_callbacks.onDisconnection(id);
-				} catch (...)
-				{
-				}
-			}
-
-			void _publish(ReceivedMessage message) noexcept
-			{
-				try
-				{
-					_callbacks.onMessage(std::move(message));
-				} catch (...)
-				{
 				}
 			}
 
@@ -183,104 +101,48 @@ namespace spk::NetworkInternal
 			void _addSession(Socket socket)
 			{
 				socket.setNonBlocking(true);
-				const ConnectionID id = _nextConnectionID++;
-				auto session = std::make_shared<Session>(id, std::move(socket));
+				auto session = _makeSession(std::move(socket));
+				const ConnectionID id = session->id;
 				_register(
 					static_cast<int>(session->socket.nativeHandle()),
 					_token(id),
 					EPOLLIN | EPOLLRDHUP | EPOLLERR);
-				_sessions.emplace(id, session);
+				_registerSession(session);
 				_notifyConnection(id);
 			}
 
 			void _readSession(const std::shared_ptr<Session> &session)
 			{
 				std::array<std::byte, ReceptionBufferSize> buffer{};
-				while (true)
+				try
 				{
-					const auto result = ::recv(
-						static_cast<int>(session->socket.nativeHandle()),
-						buffer.data(),
-						buffer.size(),
-						0);
-					if (result > 0)
+					while (_sessions.contains(session->id))
 					{
-						_appendReceived(*session, buffer.data(), static_cast<std::size_t>(result));
-						continue;
+						const auto received = session->socket.receiveSome(buffer);
+						if (!received.has_value())
+						{
+							return;
+						}
+						if (received->disconnected)
+						{
+							_disconnect(session->id);
+							return;
+						}
+						_appendReceived(*session, buffer.data(), received->size);
 					}
-					if (result == 0)
-					{
-						_disconnect(session->id);
-						return;
-					}
-					if (errno == EINTR)
-					{
-						continue;
-					}
-					if (errno == EAGAIN || errno == EWOULDBLOCK)
-					{
-						return;
-					}
+				} catch (...)
+				{
+					reportCurrentException("Network epoll session receive failed.");
 					_disconnect(session->id);
-					return;
 				}
 			}
 
-			void _appendReceived(Session &session, const std::byte *data, std::size_t size)
-			{
-				session.receivedBytes.insert(session.receivedBytes.end(), data, data + size);
-				_extractMessages(session);
-			}
-
-			void _extractMessages(Session &session)
-			{
-				std::size_t consumed = 0;
-				while (_extractMessage(session, consumed))
-				{
-				}
-				if (consumed != 0)
-				{
-					session.receivedBytes.erase(
-						session.receivedBytes.begin(),
-						session.receivedBytes.begin() + static_cast<std::ptrdiff_t>(consumed));
-				}
-			}
-
-			[[nodiscard]] bool _extractMessage(Session &session, std::size_t &consumed)
-			{
-				const std::size_t remaining = session.receivedBytes.size() - consumed;
-				if (remaining < FrameHeaderSize)
-				{
-					return false;
-				}
-
-				const auto *data = session.receivedBytes.data() + consumed;
-				const auto header = decode(std::span<const std::byte, FrameHeaderSize>(data, FrameHeaderSize));
-				const std::size_t frameSize = FrameHeaderSize + header.payloadSize;
-				if (remaining < frameSize)
-				{
-					return false;
-				}
-
-				Message::Writer writer(header.type);
-				writer.setRequestID(header.requestID);
-				writer.resize(header.payloadSize);
-				std::copy_n(
-					data + FrameHeaderSize,
-					header.payloadSize,
-					writer.data().begin());
-				consumed += frameSize;
-				_publish(ReceivedMessage{session.id, std::move(writer).build()});
-				return true;
-			}
-
-			void _flushSession(const std::shared_ptr<Session> &session)
+			void _writeSession(const std::shared_ptr<Session> &session) override
 			{
 				std::size_t budget = WriteBudget;
-				while (!session->outgoing.empty() && budget != 0)
+				while (budget != 0 && _prepareWrite(*session))
 				{
-					const Frame &frame = session->outgoing.front();
-					const auto sent = _send(*session, *frame);
+					const auto sent = session->socket.sendSome(std::span<const std::byte>(*session->outgoing.front().bytes).subspan(session->outgoingOffset));
 					if (!sent.has_value())
 					{
 						_modify(*session, true);
@@ -291,108 +153,17 @@ namespace spk::NetworkInternal
 						_disconnect(session->id);
 						return;
 					}
-					session->outgoingOffset += *sent;
-					session->queuedBytes -= *sent;
 					budget = *sent >= budget ? 0 : budget - *sent;
-					if (session->outgoingOffset == frame->size())
+					_completeFrame(*session, *sent);
+					if (!_sessions.contains(session->id))
 					{
-						session->outgoing.pop_front();
-						session->outgoingOffset = 0;
+						return;
 					}
 				}
-				_modify(*session, !session->outgoing.empty());
+				_modify(*session, !session->outgoing.empty() || session->transfers.pendingTransfers() != 0);
 			}
 
-			[[nodiscard]] std::optional<std::size_t> _send(
-				const Session &session,
-				const std::vector<std::byte> &frame)
-			{
-				while (true)
-				{
-					const auto *data = frame.data() + session.outgoingOffset;
-					const std::size_t size = frame.size() - session.outgoingOffset;
-					const auto sent = ::send(
-						static_cast<int>(session.socket.nativeHandle()),
-						data,
-						size,
-						MSG_NOSIGNAL);
-					if (sent >= 0)
-					{
-						return static_cast<std::size_t>(sent);
-					}
-					if (errno == EINTR)
-					{
-						continue;
-					}
-					if (errno == EAGAIN || errno == EWOULDBLOCK)
-					{
-						return std::nullopt;
-					}
-					throw Exception("Unable to send TCP data [" + std::to_string(errno) + "].");
-				}
-			}
-
-			void _queueFrame(const std::shared_ptr<Session> &session, Frame frame)
-			{
-				if (frame->size() > MaximumQueuedBytes - session->queuedBytes)
-				{
-					_disconnect(session->id);
-					return;
-				}
-				const bool wasEmpty = session->outgoing.empty();
-				session->queuedBytes += frame->size();
-				session->outgoing.push_back(std::move(frame));
-				if (wasEmpty)
-				{
-					try
-					{
-						_flushSession(session);
-					} catch (...)
-					{
-						_disconnect(session->id);
-					}
-				}
-			}
-
-			void _disconnect(ConnectionID id) noexcept
-			{
-				const auto iterator = _sessions.find(id);
-				if (iterator == _sessions.end())
-				{
-					return;
-				}
-
-				auto session = std::move(iterator->second);
-				_sessions.erase(iterator);
-				_unregister(session->socket);
-				session->socket.close();
-				_notifyDisconnection(id);
-			}
-
-			void _disconnectAll() noexcept
-			{
-				std::vector<ConnectionID> ids;
-				ids.reserve(_sessions.size());
-				for (const auto &entry : _sessions)
-				{
-					ids.push_back(entry.first);
-				}
-				for (const ConnectionID id : ids)
-				{
-					_disconnect(id);
-				}
-			}
-
-			void _enqueue(Command command)
-			{
-				{
-					const std::scoped_lock lock(_commandMutex);
-					_commands.push_back(std::move(command));
-				}
-				_wake();
-			}
-
-			void _wake() noexcept
+			void _wake() noexcept override
 			{
 				if (_wakeEvent < 0)
 				{
@@ -411,77 +182,11 @@ namespace spk::NetworkInternal
 				}
 			}
 
-			[[nodiscard]] std::deque<Command> _takeCommands()
-			{
-				const std::scoped_lock lock(_commandMutex);
-				std::deque<Command> result;
-				result.swap(_commands);
-				return result;
-			}
-
-			void _processCommands()
-			{
-				_drainWake();
-				for (Command &command : _takeCommands())
-				{
-					_processCommand(std::move(command));
-					if (_stopping)
-					{
-						return;
-					}
-				}
-			}
-
-			void _processCommand(Command command)
-			{
-				if (command.kind == CommandKind::Stop)
-				{
-					_beginStop();
-					return;
-				}
-				if (command.kind == CommandKind::Broadcast)
-				{
-					_broadcast(std::move(command.frame));
-					return;
-				}
-
-				const auto iterator = _sessions.find(command.connection);
-				if (iterator != _sessions.end())
-				{
-					_queueFrame(iterator->second, std::move(command.frame));
-				}
-			}
-
-			void _broadcast(Frame frame)
-			{
-				std::vector<std::shared_ptr<Session>> sessions;
-				sessions.reserve(_sessions.size());
-				for (const auto &entry : _sessions)
-				{
-					sessions.push_back(entry.second);
-				}
-				for (const auto &session : sessions)
-				{
-					if (_sessions.contains(session->id))
-					{
-						_queueFrame(session, frame);
-					}
-				}
-			}
-
-			void _beginStop() noexcept
-			{
-				_stopping = true;
-				_running = false;
-				_unregister(_listener);
-				_listener.close();
-				_disconnectAll();
-			}
-
 			void _handleEvent(const epoll_event &event)
 			{
 				if (event.data.u64 == WakeToken)
 				{
+					_drainWake();
 					_processCommands();
 					return;
 				}
@@ -509,9 +214,10 @@ namespace spk::NetworkInternal
 				{
 					try
 					{
-						_flushSession(session);
+						_writeSession(session);
 					} catch (...)
 					{
+						reportCurrentException("Network epoll session write failed.");
 						_disconnect(id);
 					}
 				}
@@ -522,14 +228,14 @@ namespace spk::NetworkInternal
 				}
 			}
 
-			void _run() noexcept
+			void _run() noexcept override
 			{
 				std::array<epoll_event, EventBatchSize> events{};
 				try
 				{
 					while (!_stopping)
 					{
-						const int count = ::epoll_wait(_epoll, events.data(), events.size(), -1);
+						const int count = ::epoll_wait(_epoll, events.data(), events.size(), 1000);
 						if (count < 0 && errno == EINTR)
 						{
 							continue;
@@ -542,14 +248,16 @@ namespace spk::NetworkInternal
 						{
 							_handleEvent(events[static_cast<std::size_t>(index)]);
 						}
+						_expireReassemblies();
 					}
 				} catch (...)
 				{
+					reportCurrentException("Network epoll worker failed.");
 					_beginStop();
 				}
 			}
 
-			void _openKernelEvents()
+			void _openEvents() override
 			{
 				_epoll = ::epoll_create1(EPOLL_CLOEXEC);
 				if (_epoll < 0)
@@ -564,7 +272,7 @@ namespace spk::NetworkInternal
 				_register(_wakeEvent, WakeToken, EPOLLIN);
 			}
 
-			void _closeKernelEvents() noexcept
+			void _closeEvents() noexcept override
 			{
 				if (_wakeEvent >= 0)
 				{
@@ -578,101 +286,26 @@ namespace spk::NetworkInternal
 				}
 			}
 
+			void _requestWrite(Session &session) override
+			{
+				_modify(session, true);
+			}
+
+			void _listen() override
+			{
+				_listener.setNonBlocking(true);
+				_register(static_cast<int>(_listener.nativeHandle()), ListenerToken, EPOLLIN | EPOLLERR);
+			}
+
 		public:
 			explicit EpollServerBackend(ServerCallbacks callbacks) :
-				_callbacks(std::move(callbacks))
+				ServerBackend(std::move(callbacks))
 			{
 			}
 
 			~EpollServerBackend() override
 			{
 				stop();
-			}
-
-			[[nodiscard]] bool isRunning() const noexcept override
-			{
-				return _running.load();
-			}
-
-			[[nodiscard]] std::uint16_t port() const noexcept override
-			{
-				return _port.load();
-			}
-
-			void start(std::uint16_t port) override
-			{
-				stop();
-				{
-					const std::scoped_lock lock(_commandMutex);
-					_commands.clear();
-				}
-				_stopping = false;
-				_openKernelEvents();
-				try
-				{
-					_listener = Socket::listenTCP(port);
-					_listener.setNonBlocking(true);
-					_port = _listener.localPort();
-					_register(
-						static_cast<int>(_listener.nativeHandle()),
-						ListenerToken,
-						EPOLLIN | EPOLLERR);
-				} catch (...)
-				{
-					_listener.close();
-					_closeKernelEvents();
-					throw;
-				}
-				_running = true;
-				_worker = std::jthread([this] {
-					_run();
-				});
-			}
-
-			void stop() override
-			{
-				if (_worker.joinable() &&
-					_worker.get_id() == std::this_thread::get_id())
-				{
-					_beginStop();
-					return;
-				}
-				if (_worker.joinable())
-				{
-					if (_running)
-					{
-						_enqueue(Command{CommandKind::Stop});
-					}
-					else
-					{
-						_wake();
-					}
-					_worker.join();
-				}
-				_listener.close();
-				_disconnectAll();
-				_closeKernelEvents();
-				_port = 0;
-				_running = false;
-				_stopping = true;
-			}
-
-			void sendTo(ConnectionID connection, const Message &message) override
-			{
-				if (!_running)
-				{
-					throw Exception("Unable to send through a stopped network server.");
-				}
-				_enqueue(Command{CommandKind::Send, connection, encode(message)});
-			}
-
-			void sendToAll(const Message &message) override
-			{
-				if (!_running)
-				{
-					throw Exception("Unable to send through a stopped network server.");
-				}
-				_enqueue(Command{CommandKind::Broadcast, InvalidConnectionID, encode(message)});
 			}
 		};
 	}

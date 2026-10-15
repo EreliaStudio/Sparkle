@@ -1,5 +1,6 @@
 #pragma once
 
+#include "network/connection.hpp"
 #include "network/message.hpp"
 
 #include <cstdint>
@@ -8,8 +9,8 @@
 
 namespace spk
 {
-	using ConnectionID = std::uint64_t;
-	inline constexpr ConnectionID InvalidConnectionID = 0;
+	using ConnectionID = Connection::ID;
+	inline constexpr ConnectionID InvalidConnectionID = Connection::InvalidID;
 
 	struct ReceivedMessage
 	{
