@@ -419,15 +419,24 @@ namespace spk
 			}
 		}
 
-		Connection connect(std::string_view address, std::uint16_t port)
+		Connection connect(std::string_view address, std::uint16_t port, Client::ConnectBehaviour behaviour)
 		{
 			if (address.empty() || port == 0)
 			{
 				throw Exception("Client::connect requires a nonempty address and nonzero port.");
 			}
-			if (_active.load())
+			switch (behaviour)
 			{
-				throw Exception("Disconnect the current network session before connecting again.");
+			case Client::ConnectBehaviour::Throw:
+				if (_active.load())
+				{
+					throw Exception("Disconnect the current network session before connecting again.");
+				}
+				break;
+			case Client::ConnectBehaviour::DisconnectPrevious:
+				break;
+			default:
+				throw Exception("Unsupported client connection behavior.");
 			}
 			disconnect();
 			{
@@ -597,9 +606,9 @@ namespace spk
 		return _impl->isConnected();
 	}
 
-	Connection Client::connect(std::string_view address, std::uint16_t port)
+	Connection Client::connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour)
 	{
-		return _impl->connect(address, port);
+		return _impl->connect(address, port, behaviour);
 	}
 
 	void Client::setHandshakeTimeout(std::chrono::milliseconds timeout)
