@@ -14,6 +14,13 @@ namespace spk::NetworkInternal
 		_accepting = true;
 	}
 
+	void ClientTransmission::stop() noexcept
+	{
+		const std::scoped_lock lock(_mutex);
+		_accepting = false;
+		_available.notify_all();
+	}
+
 	Transfer ClientTransmission::send(const Message &message, Message::Priority priority, std::size_t queuedCapacity, std::size_t maxPageBytes)
 	{
 		std::unique_lock lock(_mutex);
