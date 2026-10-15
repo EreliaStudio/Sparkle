@@ -8,6 +8,12 @@ namespace spk::NetworkInternal
 {
 	class ReassemblyBudget final
 	{
+	public:
+		enum class ResizeBehaviour
+		{
+			PreserveAcceptedLeases
+		};
+
 	private:
 		struct Data;
 
@@ -44,7 +50,7 @@ namespace spk::NetworkInternal
 		ReassemblyBudget &operator=(const ReassemblyBudget &) = delete;
 		ReassemblyBudget &operator=(ReassemblyBudget &&) = delete;
 		[[nodiscard]] std::unique_ptr<Lease> reserve(std::size_t bytes);
-		void setMaximum(std::size_t bytes);
+		void setMaximum(std::size_t bytes, ResizeBehaviour behaviour = ResizeBehaviour::PreserveAcceptedLeases);
 		[[nodiscard]] std::size_t used() const noexcept;
 	};
 }
