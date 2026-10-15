@@ -28,6 +28,7 @@ namespace spk::NetworkInternal
 
 	public:
 		void start();
+		void stop() noexcept;
 		Transfer send(const Message &message, Message::Priority priority, std::size_t queuedCapacity, std::size_t maxPageBytes);
 		void queueResponse(const TransferResponse &response);
 		void acknowledge(const TransferResponse &response);
