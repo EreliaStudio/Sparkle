@@ -197,22 +197,21 @@ namespace spk
 		}
 
 		auto registration = std::make_shared<Registration>(id, part, flags);
-		const std::scoped_lock lock(_state->registrationsMutex);
-		if (_state->registrations.contains(id))
-		{
-			throw spk::Exception("Publishable Part ID is already registered.");
-		}
-		for (const auto &[otherID, existing] : _state->registrations)
-		{
-			if (existing->part == part)
-			{
-				throw spk::Exception("Publishable Part is already registered.");
-			}
-		}
-
 		part->_subscribe(_state, registration);
 		try
 		{
+			const std::scoped_lock lock(_state->registrationsMutex);
+			if (_state->registrations.contains(id))
+			{
+				throw spk::Exception("Publishable Part ID is already registered.");
+			}
+			for (const auto &[otherID, existing] : _state->registrations)
+			{
+				if (existing->part == part)
+				{
+					throw spk::Exception("Publishable Part is already registered.");
+				}
+			}
 			_state->registrations.emplace(id, registration);
 		} catch (...)
 		{
