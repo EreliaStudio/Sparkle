@@ -527,8 +527,7 @@ TEST(PublishableTest, NewInvalidationsSurviveAnEncodingFailure)
 		try
 		{
 			(void)publisher.encodeEdited();
-		}
-		catch (const spk::Exception &)
+		} catch (const spk::Exception &)
 		{
 			failed.store(true);
 		}
