@@ -61,8 +61,12 @@ namespace spk
 
 	Publishable::Part::Part() :
 		_snapshot{
-			CachedData<ByteStream>([this]() { return _buildEdition(); }),
-			CachedData<ByteStream>([this]() { return _buildUpdate(); })}
+			CachedData<ByteStream>([this]() {
+				return _buildEdition();
+			}),
+			CachedData<ByteStream>([this]() {
+				return _buildUpdate();
+			})}
 	{
 	}
 
@@ -212,8 +216,7 @@ namespace spk
 		try
 		{
 			part->_subscribe(_state, registration);
-		}
-		catch (...)
+		} catch (...)
 		{
 			_state->detach(registration);
 			throw;
