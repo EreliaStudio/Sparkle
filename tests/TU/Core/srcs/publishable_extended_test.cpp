@@ -111,6 +111,7 @@ namespace
 	private:
 		std::atomic<int> _value{0};
 		mutable std::atomic<bool> _blockOnce{true};
+		mutable std::atomic<bool> _failOnce{false};
 		mutable std::binary_semaphore _started{0};
 		mutable std::binary_semaphore _resume{0};
 
@@ -119,6 +120,11 @@ namespace
 		{
 			_value.store(value);
 			invalidate();
+		}
+
+		void failNextCapture()
+		{
+			_failOnce.store(true);
 		}
 
 		void awaitEncoding() const
@@ -139,6 +145,10 @@ namespace
 			{
 				_started.release();
 				_resume.acquire();
+			}
+			if (_failOnce.exchange(false))
+			{
+				throw spk::Exception("Requested test capture failure.");
 			}
 			writer << captured;
 		}
@@ -499,4 +509,45 @@ TEST(PublishableStressTest, ConcurrentIndependentPartsEventuallyDeliverLatestSta
 		EXPECT_EQ(part->value.load(), Iterations);
 	}
 	EXPECT_TRUE(source.encodeEdited().empty());
+}
+
+TEST(PublishableTest, NewInvalidationsSurviveAnEncodingFailure)
+{
+	TestPublisher publisher;
+	GatedPart gated;
+	AtomicValuePart independent;
+	publisher.add(1, &gated, spk::Publishable::Publication::Edition);
+	publisher.add(2, &independent, spk::Publishable::Publication::Edition);
+	gated.set(5);
+	independent.set(7);
+	gated.failNextCapture();
+
+	std::atomic<bool> failed{false};
+	std::thread encoding([&]() {
+		try
+		{
+			(void)publisher.encodeEdited();
+		}
+		catch (const spk::Exception &)
+		{
+			failed.store(true);
+		}
+	});
+	gated.awaitEncoding();
+	independent.set(8);
+	gated.resumeEncoding();
+	encoding.join();
+
+	EXPECT_TRUE(failed.load());
+
+	TestPublisher receiver;
+	AtomicValuePart first;
+	AtomicValuePart second;
+	receiver.add(1, &first);
+	receiver.add(2, &second);
+	receiver.decode(publisher.encodeEdited().reader());
+	receiver.decode(publisher.encodeEdited().reader());
+	EXPECT_TRUE(publisher.encodeEdited().empty());
+	EXPECT_EQ(first.value.load(), 5);
+	EXPECT_EQ(second.value.load(), 8);
 }
