@@ -51,10 +51,13 @@ TEST(DoubleBufferTest, WritesAfterSwapDoNotChangeCurrentReadBatch)
 TEST(DoubleBufferTest, ModificationExceptionDoesNotLeaveBufferLocked)
 {
 	spk::DoubleBuffer<std::vector<int>> buffer;
-	EXPECT_THROW(buffer.modify([](auto &pending) {
-		pending.push_back(3);
-		throw std::runtime_error("Injected modification failure.");
-	}), std::runtime_error);
+	auto failingModification = [&]() {
+		buffer.modify([](auto &pending) {
+			pending.push_back(3);
+			throw std::runtime_error("Injected modification failure.");
+		});
+	};
+	EXPECT_THROW(failingModification(), std::runtime_error);
 	EXPECT_NO_THROW(buffer.modify([](auto &pending) {
 		pending.push_back(4);
 	}));
