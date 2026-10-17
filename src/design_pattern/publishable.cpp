@@ -18,6 +18,13 @@ namespace spk
         Part *part;
         Flags<Publication> flags;
         std::atomic<bool> active = true;
+
+        Registration(PartID partID, Part *registeredPart, Flags<Publication> publicationFlags) :
+            id(partID),
+            part(registeredPart),
+            flags(publicationFlags)
+        {
+        }
     };
 
     struct Publishable::State
