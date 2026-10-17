@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <latch>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -15,7 +16,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include <latch>
 
 namespace
 {
@@ -281,8 +281,7 @@ TEST(PublishableTest, IDsAtBothUint32BoundariesAreEncodedWithoutRemapping)
 	EXPECT_EQ(unpackIntegers(publisher.encodeUpdate(), 2), expected);
 	highest.change(80);
 	lowest.change(20);
-	EXPECT_EQ(unpackIntegers(publisher.encodeEdited(), 1),
-		(std::vector<std::pair<std::uint32_t, int>>{{0, 20}, {lastID, 80}}));
+	EXPECT_EQ(unpackIntegers(publisher.encodeEdited(), 1), (std::vector<std::pair<std::uint32_t, int>>{{0, 20}, {lastID, 80}}));
 }
 
 TEST(PublishableTest, IndependentRegistrationOrdersProduceSameWireBytes)
@@ -460,8 +459,7 @@ TEST(PublishableTest, RepeatedInitializationDoesNotConsumeEditedEvents)
 	const auto second = publisher.encodeInitialization();
 	EXPECT_EQ(first.data().size(), second.data().size());
 	EXPECT_EQ(part.fullCaptures, 1);
-	EXPECT_EQ(unpackIntegers(publisher.encodeEdited(), 1),
-		(std::vector<std::pair<std::uint32_t, int>>{{1, 123}}));
+	EXPECT_EQ(unpackIntegers(publisher.encodeEdited(), 1), (std::vector<std::pair<std::uint32_t, int>>{{1, 123}}));
 	EXPECT_TRUE(publisher.encodeEdited().empty());
 }
 
@@ -472,10 +470,8 @@ TEST(PublishableTest, UpdateOnlyPartIsNeverPublishedAsEdited)
 	publisher.add(9, &part, Publisher::Publication::Update);
 	part.change(123);
 	EXPECT_TRUE(publisher.encodeEdited().empty());
-	EXPECT_EQ(unpackIntegers(publisher.encodeUpdate(), 2),
-		(std::vector<std::pair<std::uint32_t, int>>{{9, 123}}));
-	EXPECT_EQ(unpackIntegers(publisher.encodeInitialization(), 0),
-		(std::vector<std::pair<std::uint32_t, int>>{{9, 123}}));
+	EXPECT_EQ(unpackIntegers(publisher.encodeUpdate(), 2), (std::vector<std::pair<std::uint32_t, int>>{{9, 123}}));
+	EXPECT_EQ(unpackIntegers(publisher.encodeInitialization(), 0), (std::vector<std::pair<std::uint32_t, int>>{{9, 123}}));
 }
 
 TEST(PublishableTest, InvalidatingOnePartDoesNotRebuildOtherPartCache)
@@ -527,8 +523,7 @@ TEST(PublishableStressTest, ConcurrentRegistrationAndInvalidationCanRecoverFinal
 	part.change(1001);
 	const auto latest = publisher.encodeEdited();
 	ASSERT_FALSE(latest.empty());
-	EXPECT_EQ(unpackIntegers(latest, 1),
-		(std::vector<std::pair<std::uint32_t, int>>{{4, 1001}}));
+	EXPECT_EQ(unpackIntegers(latest, 1), (std::vector<std::pair<std::uint32_t, int>>{{4, 1001}}));
 }
 
 TEST(PublishableStressTest, RepeatedMalformedInputCannotMutateValidParts)
