@@ -78,8 +78,8 @@ namespace
 	{
 	public:
 		using Publishable::add;
-		using Publishable::remove;
 		using Publishable::contains;
+		using Publishable::remove;
 	};
 
 	spk::ByteStream collection(
@@ -170,8 +170,7 @@ TEST(PublishableTest, LazyCachesGenerateOnlyOnDemandAndAreReused)
 {
 	TestPublishable object;
 	TestPart part;
-	object.add(0, &part, spk::Publishable::Publication::Edition |
-							spk::Publishable::Publication::Update);
+	object.add(0, &part, spk::Publishable::Publication::Edition | spk::Publishable::Publication::Update);
 	part.set(1);
 	part.set(2);
 	part.set(3);
@@ -268,11 +267,7 @@ TEST(PublishableTest, DecodeAcceptsUnorderedPartsAndSkipPolicy)
 	object.add(1, &first);
 	object.add(2, &second);
 
-	const auto input = collection(0, {
-		{2, integerPayload(20)},
-		{99, integerPayload(999)},
-		{1, integerPayload(10)}
-	});
+	const auto input = collection(0, {{2, integerPayload(20)}, {99, integerPayload(999)}, {1, integerPayload(10)}});
 	EXPECT_THROW(object.decode(input.reader()), spk::Exception);
 	EXPECT_EQ(first.value, 0);
 	EXPECT_EQ(second.value, 0);
@@ -294,9 +289,7 @@ TEST(PublishableTest, DecodeRejectsMalformedHeadersDuplicateIDsAndTruncatedPaylo
 	EXPECT_THROW(object.decode(truncated.reader()), spk::Exception);
 
 	EXPECT_THROW(object.decode(collection(99, {}).reader()), spk::Exception);
-	EXPECT_THROW(object.decode(collection(0, {
-		{1, integerPayload(1)}, {1, integerPayload(2)}
-	}).reader()), spk::Exception);
+	EXPECT_THROW(object.decode(collection(0, {{1, integerPayload(1)}, {1, integerPayload(2)}}).reader()), spk::Exception);
 
 	spk::ByteStream::Writer oversized;
 	oversized << std::uint8_t{1} << std::uint32_t{1};
