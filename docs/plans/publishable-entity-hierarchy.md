@@ -1,76 +1,86 @@
 # Publishable simplification and EntityHierarchy multiplayer plan
 
-> **Status:** Design plan, not an implementation PR. Agreed decisions through 19 October 2026; details explicitly marked *Open* are not settled.
+> **Status:** Documentation-only design plan, updated 21 October 2026. This PR does not implement the design.
 >
-> **Target:** `Version-0.1.3`. Existing draft [PR #31](https://github.com/EreliaStudio/Sparkle/pull/31) implements an earlier, more complex generic `Publishable`; its proposed API should be revised before it is considered the foundation of this work. This plan is separate so PR #31's current code/test claims are not misrepresented.
+> **Target:** `Version-0.1.3`. Draft [PR #31](https://github.com/EreliaStudio/Sparkle/pull/31) contains an earlier generic `Publishable` proposal; revise that API in its own implementation work before treating it as the foundation of this plan.
 >
-> **Guideline:** Follow `docs/ai-development-guidelines.md`: coherent responsibilities, explicit policies, no speculative mechanisms, exceptions for invalid operations, and no explanatory comments in new/modified headers.
+> **Development rules:** Follow `docs/ai-development-guidelines.md`: small coherent responsibilities, explicit behavior and ownership, C++23, `spk::Exception` for invalid operations, and no explanatory comments in newly modified public headers. Do not make unrelated Engine changes.
 
-## 1. Goal and usage model
+## 1. Intended Erelia usage and scope
 
-Allow Erelia to build its ordinary Sparkle Entity/Component/Behaviour object model, with a lightweight, reusable serialization mechanism and a central network-facing hierarchy.
-
-- Server game code constructs, simulates, and modifies Entities normally.
-- Game code defines concrete Entity types, their fixed publishable Parts, Part IDs and wire layouts.
-- Game code provides an Interest-selection callback for each connected client; Sparkle adds required ancestors.
-- Server game code explicitly invokes `ServerEntityHierarchy::publish()` at its desired interval.
-- Client code receives publications, initializes unknown Entities on demand, applies updates, and reconciles the hierarchy.
-- Ordinary Engine Systems are not required to know about publication, sessions, or networking.
-
-**Do not** reintroduce per-Entity-type publishing Systems, a special Interest inheritance tree, separate "partial Entity" types, per-client historical publication inventories on the server, or game-specific message semantics into generic `Publishable`.
-
-## 2. Simplify generic `spk::Publishable`
-
-### 2.1 One Part serialization contract
-
-A `Publishable` is a non-template object with nested abstract `Publishable::Part`. It registers non-owned Parts by explicit zero-based `PartID` (`uint32_t`). The only required Part encoding hooks are:
+Erelia creates and uses ordinary Engine Entities and Components. Sparkle observes the server-side Engine subtree, selects which publishable Entities each client needs, and synchronizes their state.
 
 ```cpp
-virtual void _encode(ByteStream::Writer &writer) const = 0;
-virtual void _decode(const ByteStream::Reader &reader) = 0;
+serverHierarchy.registerType<Monster>(42);
+auto monster = std::make_unique<Monster>(
+    "Orc Warrior",
+    &world,
+    PublishableEntity::Mode::Source);
+monster->transform().setPosition({10, 5, 0});
+
+auto result = serverHierarchy.publish(UpdateSelection::Modified);
+// Erelia periodically invokes publish(UpdateSelection::All).
 ```
 
-Remove the old distinct Edition and Update encoding/decoding hooks, `encodeEdited()`, and separate Edition/Update caches. **Everything that must be serialized is a Part.** Remove dedicated initialization encoder/decoder callbacks.
+The client instead registers a factory for the same numeric type ID. It constructs detached Replicants from initialization responses, then attaches them to an Erelia-owned Engine root after successful decoding.
 
-### 2.2 Flags describe publication, not Part validity
+Key constraints:
 
-Keep a single outgoing `Publication::Update` flag. Every registered Part is always included in initialization. A Part without `Update` is initialization-only.
+- **Erelia owns server Entities**. `ServerEntityHierarchy` observes them; it does not construct, retain ownership of, or delete them.
+- **`ClientEntityHierarchy` owns its Replicants**. Local client Entities remain Erelia-owned and are never removed by network reconciliation.
+- Ordinary Systems need not know about networking. Erelia chooses when to publish and how to determine Interest.
+- No per-Entity-type network publisher Systems, special Interest class tree, partial/structural Entity types, network-owned gameplay systems, or implicit networking worker threads.
+- The design is Entity-specific. Do not introduce `NetworkReplicationHierarchy<T>` without an actual non-Entity use case.
 
-| Operation | Parts included | Pending modified state |
-| --- | --- | --- |
-| `encodeInitialization()` | All Parts | Leave untouched |
-| `encodeUpdate(UpdateSelection::Modified)` | Invalidated Parts with `Update` | Consume only the successfully captured modifications |
-| `encodeUpdate(UpdateSelection::All)` | All Parts with `Update` | Leave untouched |
+## 2. Simplify generic `spk::Publishable` (revise PR #31)
 
-Use an explicit `UpdateSelection { Modified, All }` enum; `Modified` is the proposed default. Both update modes use exactly the same Part bytes and format. When nothing is selected, return an empty stream.
+### 2.1 Unified Part model
 
-An initialization-only Part **may** be invalidated. Its next initialization uses the new data, but ordinary updates never transmit it to already initialized clients. A separate explicit resend mechanism could be considered later; **do not implement one now**.
+`Publishable` is a non-template reusable object containing non-owning registrations of abstract `Publishable::Part` instances.
 
-### 2.3 Lazy, immutable cached snapshots and per-Part generations
+Each Part implements only:
 
-Each Part owns **one** cached serialization and one authoritative generation counter (e.g. `uint64_t`):
+```cpp
+virtual void _encode(ByteStream::Writer&) const = 0;
+virtual void _decode(const ByteStream::Reader&) = 0;
+```
 
-- First encoding request builds and caches its `ByteStream` lazily.
-- Repeated encoding returns/reuses that baked snapshot, without invoking `_encode()` again.
-- `invalidate()` increments the generation, invalidates the cache, and marks relevant `Update` registrations as modified. It does not serialize or send.
-- A snapshot binds **bytes and generation from the same state**, and remains immutable after capture. Later invalidation must not relabel an earlier snapshot.
-- Serializing a Part after multiple invalidations may skip intermediate generations. That's acceptable: a generation identifies **state freshness**, not an event that must be replayed.
-- All outgoing Part sections (including initialization) carry Part ID, generation, and length-framed bytes.
-- The first received snapshot must initialize a Part even if its generation is zero. Once initialized, snapshots with `generation <= lastAppliedGeneration` are ignored. Decoding received data must not increment the server-authoritative generation.
-- The caller/implementation must coordinate mutation with snapshot capture; avoid a data race or pairing old serialized bytes with a newer generation.
+All serializable data belongs to Parts. Remove separate Edition transport, `encodeEdited()`, distinct Edition/Update encoders and caches, and initialization encoder/decoder callbacks.
 
-`encodeUpdate(Modified)` drains pending modifications only after successful capture. An invalidation that occurs during capture **remains pending** for the next call; do not lose it while clearing the previous batch.
+- Every registered Part is included in initialization.
+- A single outgoing `Publication::Update` flag enables ordinary updates. Without that flag, the Part is initialization-only.
+- An initialization-only Part may still be invalidated; its new value appears in later initializations, but not in periodic updates.
+- `encodeUpdate(UpdateSelection::Modified)` includes modified update-enabled Parts and consumes only modifications captured successfully.
+- `encodeUpdate(UpdateSelection::All)` includes every update-enabled Part and **does not** consume pending modifications.
+- `encodeInitialization()` includes every Part and **does not** consume pending modifications.
+- Empty selections encode as empty streams. All modes use the same Part wire representation.
 
-Publishable decoding preserves strict framing, validation, bounded Part readers, and an explicit unknown-Part policy (networked Entities should use the strict/throw behavior). Existing reusable registration/lifetime protections remain relevant.
+Each Part maintains one lazily baked, immutable `ByteStream` snapshot and **one `uint64_t` generation**. Snapshots bind their generation and bytes atomically with respect to game-thread mutation. `invalidate()` normally increments the Part generation, invalidates its cache, and marks update-enabled registration as modified. Multiple invalidations may be coalesced; intermediate states need not be published.
 
-### 2.4 Illustrative public shape (not final header)
+Each framed Part section contains its Part ID, generation, length and bytes. Initialization accepts generation zero on the first decode. After that, only a strictly newer received generation may decode; advance the stored generation **only after successful decoding**. Partial failures may leave already decoded Parts applied; there is no cross-Part transactional rollback. A game-defined decoder must preserve its own invariants if it throws. Malformed framing, unknown Part IDs in strict network mode, and unread/invalid section data throw.
+
+**One Part may be registered in only one Publishable at a time.** Unregistration and destruction must be safe for non-owning references and existing registration lifetimes.
+
+### 2.2 Source/Replicant generation policy
+
+The generic `Publishable::Part` must not depend on Entity or network role types. Its owning publication/registration context can supply generic permission for local invalidation.
+
+- In a **Source**, a local `invalidate()` increments its generation and queues publication.
+- In a **Replicant**, a local `invalidate()` **does not increment the generation and does not queue outgoing work**. Local gameplay setters may still modify state.
+- Incoming authoritative decoding sets that same generation to the received newer value after successful decode.
+- No extra local-vs-remote generation counters and no timestamps.
+- Replicants do not publish authoritative state; a repeated snapshot with an equal generation is not reapplied even if local prediction diverged. Erelia owns prediction reconciliation.
+- Generic `Publishable` remains usable independently of Entity; role enforcement is configured by `PublishableEntity`, not baked into the Part type.
+
+Game-thread-only mutation, invalidation, snapshot encoding and decode are assumed for this Engine integration. The network transports already captured immutable bytes asynchronously. Do not add gameplay data locks or silent background synchronization.
+
+### 2.3 Illustrative generic API (not final header)
 
 ```cpp
 class Publishable
 {
 public:
     using PartID = std::uint32_t;
-
     enum class Publication : std::uint8_t { Update = 1 << 0 };
     enum class UpdateSelection { Modified, All };
 
@@ -78,169 +88,266 @@ public:
     {
     protected:
         void invalidate();
-        virtual void _encode(ByteStream::Writer &) const = 0;
-        virtual void _decode(const ByteStream::Reader &) = 0;
-    public:
-        std::uint64_t generation() const;
+        virtual void _encode(ByteStream::Writer&) const = 0;
+        virtual void _decode(const ByteStream::Reader&) = 0;
     };
 
     ByteStream encodeInitialization() const;
-    ByteStream encodeUpdate(UpdateSelection selection = UpdateSelection::Modified) const;
-    void decode(const ByteStream::Reader &reader);
+    ByteStream encodeUpdate(
+        UpdateSelection selection = UpdateSelection::Modified) const;
+    void decode(const ByteStream::Reader& reader);
 
 protected:
-    void add(PartID id, Part *part, Flags<Publication> flags = {});
+    void add(PartID id, Part* part, Flags<Publication> flags = {});
 };
 ```
 
-This sketch omits lifetime/unknown-ID policy declarations already implemented in PR #31. Preserve those when they are useful; do not make API choices solely from this sketch.
+Preserve useful framing, lifetime and explicit unknown-Part safety from PR #31; do not copy the earlier Edition-based API.
 
-## 3. Publishable Engine objects
+## 3. Entity publication capabilities and Parts
 
-- `PublishableEntity` is an Engine `Entity` and a `Publishable`. It has a stable `spk::UUID` and a stored numeric `EntityTypeID`.
-- `PublishableComponent` / `PublishableBehaviour` are their corresponding Engine types and `Publishable::Part` implementations.
-- Concrete game Entity constructors create/register their fixed Parts; no dynamic network-driven creation/removal of individual Parts, no Part tombstones, and no separate requests for missing Parts.
-- Part IDs are local to each Entity; Parts do not need individual UUIDs.
-- Client and server may use different C++ concrete types with the same game-defined numeric type IDs, Part IDs and compatible wire formats. Erelia owns that compatibility contract.
-- Component/Behaviour activation is synchronized automatically by the Sparkle wrapper, including activation changes. An inactive Part may still carry its normal state; Interest does not decide Part activation.
-- Structural geometry/transform data is synchronized as part of the Entity contract. Use existing Engine capabilities rather than a new spatial inheritance hierarchy.
+### 3.1 Inheritance without an Entity diamond
 
-## 4. EntityHierarchy responsibilities
+`PublishableEntity` is a capability inheriting `Publishable`, **not `spk::Entity`**.
 
-Use one shared base `EntityHierarchy` for Entity ownership, UUID lookup, type construction/registration, and hierarchy relationships. Keep network direction-specific responsibilities in:
+```cpp
+class PublishableEntity : public Publishable
+{
+public:
+    enum class Mode { Source, Replicant };
+    // Immutable UUID, stored EntityTypeID after first resolution.
+protected:
+    void addReservedPart(PartID internalID, Part& part);
+    void addPart(PartID publicID, Part& part, Flags<Publication> flags = {});
+};
 
-- **`ServerEntityHierarchy`**: server binding, Interest expansion, publication/snapshot fan-out, initialization request authorization/responses.
-- **`ClientEntityHierarchy`**: client binding, selected-UUID reconciliation, batched initialization requests, buffered unknown-Entity Part snapshots, and client-side reparenting/removal.
+class PublishableEntity2D : public Entity2D, public PublishableEntity
+{
+    // Activation Part + PublishableTransform2D adapter
+};
+class PublishableEntity3D : public Entity3D, public PublishableEntity
+{
+    // Activation Part + PublishableTransform3D adapter
+};
+```
 
-The split avoids linking server publication/Interest logic into the client.
+A non-spatial Entity can combine `Entity` and the publication capability and register an activation-only built-in Part. The hierarchy requires both polymorphic contracts and never assumes all publishable Entities are 2D or 3D.
 
-Use the existing Sparkle Server/Client messaging and dispatcher facilities. Binding should have clear RAII subscription lifetimes; normal network dispatch occurs through the existing explicit `treatMessages()` flow. Do not add hidden networking threads/timers to these classes.
+`PublishableEntity::Mode` is an explicit immutable constructor argument. Source construction generates a stable process-lifetime-unique UUID; Replicant construction takes the authoritative server UUID. An Entity UUID is never reassigned or reused for a different server Entity lifetime. A temporarily untracked Source preserves its UUID.
 
-### 4.1 Type registration and construction
+`PublishableEntity` manages its identity, resolved numeric network type, reserved/public Part registration and local invalidation permissions. It knows neither spatial types nor Engine parenting nor connections.
 
-- Erelia explicitly registers and unregisters each game-defined `EntityTypeID` and its construction callback on the relevant hierarchy.
-- An internal C++ `std::type_index -> EntityTypeID` lookup can provide convenient typed registration/lookup, while `EntityTypeID -> constructor` supports receiving network initialization.
-- Never transmit RTTI hash codes as protocol identifiers.
-- The hierarchy assigns the numeric type ID **once at construction**, and the Entity stores it privately thereafter. Existing Entities retain their type ID after a type registration is removed.
-- Reject construction when a type is not registered. Do not silently rebind an incompatible numeric type ID while existing Entities with that ID still exist.
-- Erelia may organize registrations inside game Systems' `bind(EntityHierarchy &)`, but Sparkle's generic `System` has no such requirement.
-- Registration/unregistration is explicit; **no RAII type-registration contract** is planned.
+### 3.2 Reserved Part IDs and adapters
 
-## 5. Server selection and publication
+Reserve internal Part IDs **0–15** for Sparkle:
 
-### 5.1 Interest is a game callback
+| Internal ID | Purpose |
+| --- | --- |
+| 0 | Entity activation |
+| 1 | Transform2D or Transform3D (only for spatial Entities) |
+| 2–15 | Reserved for future Sparkle Parts |
+| 16 onward | Erelia Parts: `internalID = publicID + 16` |
 
-Erelia provides a callback yielding the complete collection of directly interesting Entities for a client/connection. It can use Registry, Query, range checks, game rules, or spatial structures.
+Public Erelia Part IDs remain zero-based; reject overflow above `UINT32_MAX - 16`. Generic `Publishable` keeps normal zero-based IDs without translation. Reserved and user IDs cannot collide; reject duplicate registrations.
 
-Sparkle takes the closure of that collection over **all ancestors**:
+The concrete 2D/3D wrappers own their built-in adapters as members, construct them, then call `addReservedPart(id, part)` in the constructor body. `PublishableEntity` registers non-owning Part references; it does not allocate adapters or take an `Entity&` in its base constructor. This avoids accessing not-yet-constructed derived members.
 
-- Interesting child -> include all parents transitively.
-- Interesting parent -> **do not** automatically include its other children.
-- All selected ancestors are normal, fully publishable Entities, not special structural/partial copies.
-- A client's range/Interest settings are changed by **ordinary game-defined messages**, validated/stored by Erelia; Sparkle need not define an Interest type hierarchy.
+- `PublishableTransform2D` / `PublishableTransform3D` are **Part adapters**, not Engine Components.
+- They hold non-owning references to existing `Transform2D` / `Transform3D` Components and subscribe to their edition events via RAII.
+- The activation adapter likewise observes the existing `ActivableTrait` state.
+- Both adapters may observe editions on either side; the publication role suppresses local generation advancement in Replicants. Decode must retain normal Engine notifications without generating outbound changes.
+- Activation and Transform are **separate Parts**, with independent generations and cached snapshots.
+- Synchronize local Transform position/rotation/scale (and 2D depth where applicable), not visual `Rect2D` geometry. The server may have no visual state.
+- Ordinary Engine `Entity`, `Entity2D`, `Entity3D`, Transform, geometry, and parenting semantics must not be modified to embed network behavior.
 
-### 5.2 One publication cycle and global ordering
+`PublishableComponent` and `PublishableBehaviour` each combine the corresponding Engine attachment with `Publishable::Part`; activation is automatically part of each wrapper's serialized state. Game-defined Parts have fixed registration and schema for the Entity lifetime. No network-driven dynamic Part factories, removal tombstones or missing-Part requests.
 
-`ServerEntityHierarchy::publish()` is explicitly invoked by game code. On each call:
+Server and client concrete C++ classes may differ for a shared numeric type ID, but Erelia is responsible for compatible reserved/game Part layouts. Sparkle verifies framing/IDs/generations, not application schema versions.
 
-1. Increment **one global `uint64_t` publication counter** for the cycle (not per client).
-2. Calculate each client's selected Entity UUID set plus ancestor closure.
-3. Form the union of selected Entities across clients.
-4. Capture each union Entity's required cached Part update **once for this cycle**; `Modified` encoding consumes pending changes.
-5. Fan out/reuse the captured immutable bytes while building the per-client publication containing its **complete selected UUID list** and relevant Entity data.
+## 4. Structural observation and type discovery
 
-Do not let encoding for client A drain changes before client B can receive them. The server does not retain each client's previously published Entity set.
+### 4.1 Enhance `InherenceTrait`
 
-Per-Entity publication entries contain the Entity UUID and **current parent UUID in every update**, plus the encoded Part state where selected. A null/root parent has an explicit representation.
+Add a direct-child subscription based on existing `ContractProvider` RAII contracts:
 
-The global publication generation orders complete Interest selections. Individual Part generations independently order serialized Part data.
+```cpp
+enum class RelationEdition { Added, Removed };
 
-### 5.3 Initialization request authorization
+subscribeToChildEdition(callback);   // (child pointer, relation edition)
+subscribeToParentEdition(callback);  // (parent pointer, relation edition)
+```
 
-- Clients batch requests for unknown Entity UUIDs; no per-Part initialization requests.
-- On the server, a request is authorized against the requesting client's **current** selected closure including ancestors.
-- Requests for nonexistent or unauthorized UUIDs receive an explicit expected-failure response; don't leak Part state.
-- Authorization is **not** satisfied just because the client knows a UUID from a parent's child list.
+Notifications identify the affected pointer and whether it was Added or Removed. A reparent generates the corresponding removal and addition events. Child subscriptions report **direct children only**, not every descendant. Preserve existing Engine parent-context propagation and 2D/3D world-cache invalidation when adapting current parent subscription consumers. Define safe notifications during detach and destruction.
 
-An Entity initialization response contains at least its UUID, game-defined `EntityTypeID`, current parent UUID, **all direct child UUIDs**, and **all registered Part snapshots** with generations.
+`ServerEntityHierarchy` subscribes to the supplied replication root and recursively subscribes to discovered children. When an already populated subtree is attached, traverse **that subtree once** to install subscriptions. An initial scan installs subscriptions for an existing root tree; do not rescan the entire Engine world on every publication.
 
-The full child UUID list includes uninteresting children. That intentionally exposes their IDs, **not** their initialization data.
+**Construction-order constraint:** `Entity` can call `setParent()` from its base constructor before `PublishableEntity` and the concrete game class exist. On Child Added, record/observe the structural change **without dynamic-casting or reading UUID/type**. Resolve pending identity/type only at safe game-thread boundaries (`publish()` and initialization-request handling), when construction has completed. On removal/destruction, withdraw pending/tracked references without inspecting destroyed derived state. Construction/destruction must not overlap synchronization processing.
 
-## 6. Client synchronization and hierarchy reconstruction
+### 4.2 Source type registration
 
-### 6.1 Complete selected-Entity reconciliation
+- Erelia registers exact concrete C++ types to explicit numeric `EntityTypeID` values, e.g. `registerType<Monster>(42)`.
+- Resolve first discovery with `std::type_index(typeid(*entity))`. No implicit registration of derived types through a registered base.
+- Keep RTTI local; transmit only numeric type IDs. Store the resolved type ID on the publishable Entity so removing/re-adding it to a root does not change its identity or type.
+- Missing exact type registration is a configuration error: throw `spk::Exception` on safe discovery.
+- Client registers the same numeric type ID with an explicit construction callback receiving `const UUID&` and returning a detached, owned Replicant `Entity`.
+- Missing client-side numeric type registration throws `spk::Exception`; no placeholder or delayed-registration cache.
+- Type registrations/unregistrations are explicit (not RAII). Reject conflicting numeric registrations and unsafe rebinding while affected instances exist.
 
-The client remembers only the latest accepted authoritative selected-Entity set. On receiving a newer publication cycle:
+## 5. Hierarchy organization, ownership and boundaries
 
-- Compare the complete set with currently managed remote Entities.
-- Request initialization of unknown selected UUIDs, batching all unknowns from the publication and suppressing duplicate outstanding requests.
-- Remove/release remote Entities absent from the latest set.
-- Apply current Part snapshots by generation; stale Part data cannot overwrite newer Part data.
-- Ignore old/duplicate **selection sets** using the global publication counter.
+`EntityHierarchy` itself is **not an Entity and is not templated**. It tracks non-owning references, UUID lookup, authoritative parent UUID relationships, pending-parent relationships, registered types and RAII structural subscriptions.
 
-**Important implementation issue:** discarding every Part payload from an older *publication* can permanently lose a disjoint `Modified`-only Part change if a newer publication updated other Parts. Determine how to reject stale **selection** without losing safe, newer-per-Part snapshots for Entities still selected. Do not accidentally resurrect unselected Entities.
+- `ServerEntityHierarchy` observes **Erelia-owned Source Entities** below an Erelia-owned replication root. It never destroys them.
+- `ClientEntityHierarchy` owns its constructed Replicants in addition to using the common base's non-owning tracking. It destroys only those replicas when they leave Interest or on explicit clear.
+- Client-local child Entities remain Erelia-owned and follow existing Engine detach/destruction behavior when a replicated parent disappears. The hierarchy does not implicitly reparent or delete them.
+- Each hierarchy receives **one explicit Erelia-owned Engine root**. The logical UUID graph is separate from this physical attachment root.
+- On the server, the root is the replication boundary: the path from each publishable descendant to the boundary must contain only publishable ancestors, excluding the boundary itself. Non-publishable children are allowed if they do not lead to publishable descendants. Invalid intermediate ancestry throws.
+- A Source moved outside the boundary stops being tracked automatically; reattaching it rediscovers the same Entity and UUID. A move inside the boundary is reparenting, not destruction/recreation.
+- On the client, replicas whose authoritative parent is null or not yet initialized are temporarily attached to the Erelia-owned attachment root. Keep their desired parent UUID and reparent when the parent arrives.
+- Erelia ensures server/client root coordinate systems are compatible. Sparkle does not serialize the root's Transform or perform world-space conversion.
 
-### 6.2 Unknown Entities and pending Part snapshots
+A `Server` or `Client` supports **at most one bound EntityHierarchy**. A second binding to the same endpoint throws. Do not add hierarchy IDs to the wire protocol. Network bindings use RAII dispatcher contracts; the hierarchy never disconnects a Client/Server on its own.
 
-For an unknown Entity receiving updates, queue/request **Entity** initialization only; retain at most the **latest snapshot per Part ID** (highest generation), not an unbounded replay log. Once initialization arrives:
+## 6. Server Interest and publication
 
-- Construct the Entity and decode its full initial Part state.
-- Apply buffered snapshots only if their Part generation is newer.
-- Discard the buffer when completed or when no longer applicable.
+### 6.1 Interest is Erelia's selection callback
 
-This relies on each Part snapshot representing its **complete replacement state**, not an incremental command or patch.
+For each connected recipient, Erelia supplies the directly interesting Source Entities. It may use Registry/Query, proximity, unlocked/revealed state, and other game rules.
 
-### 6.3 Parents and children
+Sparkle computes the **upward ancestor closure**:
 
-- Every ongoing Entity publication includes current parent UUID, enabling reparenting without reconstruction.
-- A newly constructed Entity whose parent is unknown attaches to a **local-only common construction root**.
-- When a parent initializes, its full direct child UUID list is used to attach **already existing** children to that parent, unless a newer known parent relationship supersedes it.
-- Unknown child UUIDs are **ignored**, not queued or recursively initialized.
-- Missing needed parents are requested through the same batched Entity initialization path.
-- Use existing Engine Entity parenting APIs; do not introduce network-specific partial Entity classes.
-- The current hierarchy must not be undone by a delayed parent/child initialization response.
+- Interesting child implies all parents up to the replication boundary are selected.
+- Interesting parent does **not** imply selection of its children.
+- Unselected Entities and their UUIDs are not exposed through initialization child lists (those lists have been removed).
+- All selected ancestors are ordinary, fully publishable Entities: no partial Entity representation.
+- A returned Entity must be a tracked Source inside this hierarchy's boundary; otherwise throw `spk::Exception` rather than filtering it silently.
+- Sparkle does not implement gameplay authorization or conditional per-recipient Part encoding. **Each Part snapshot is recipient-independent and cached once**. Erelia models per-player visibility by selecting different Entities via Interest or using its own targeted messages. Never put secret per-player data in shared Parts of an otherwise selected Entity.
 
-### 6.4 Late initialization response policy — **Option B**
+### 6.2 One publication counter and per-Part generations
 
-If an initialization was requested while an Entity was interesting but arrives after a newer selection removed it, **process initialization normally, then run reconciliation**. The newly created Entity may immediately be removed. Do not retain it as an indefinite cache and do not cancel the response solely because Interest changed.
+- One global monotonically increasing `uint64_t` publication counter **per server hierarchy**, incremented on each `publish()`.
+- Each Part independently has its own monotonically increasing generation on the Source. No timestamps, reset epochs, or shared counter between Parts.
+- `clear(ClearMode::Runtime)` preserves the publication counter; client runtime clear preserves its latest accepted publication counter for the same bound session.
+- Each publication contains the **complete selected UUID set** and, for each selected Entity, its authoritative **parent UUID** (or explicit null/root representation) and included Part snapshots.
+- Interest selection and parent relationships are ordered by the publication counter; Part payloads are ordered by their **own Part generations**.
+- On receiving an old publication, ignore its selection and parent relationships, but still apply newer-generation Part snapshots for Entities remaining in the latest accepted selection. Never resurrect unselected Entities from stale publications.
 
-## 7. Responsibility and scope boundaries
+### 6.3 Publication execution and transport
 
-`Publishable` knows: Part IDs, registration, one Part encoder/decoder, cache invalidation, per-Part generations, selection of modified/all update sections, and safe serialization/decoding.
+`ServerEntityHierarchy::publish(UpdateSelection)` is called explicitly by Erelia:
 
-`EntityHierarchy` knows: owned Entity identity/type/hierarchy, remote construction, Interest-selected Entity collections, publication-cycle version, initialization requests, recipient selection, and hierarchy reconciliation.
+1. Get recipients from the new read-only `Server::connections()` snapshot, returning **only Connected** connections.
+2. Resolve pending structural events, validate Source identity/type and calculate each recipient's Interest closure. Abort on invalid Interest/configuration before consuming pending modified state.
+3. Form the union of selected Entities across recipients.
+4. Capture each required Entity/Part immutable snapshot **once** for the cycle; a Modified capture consumes successful pending invalidations only after capture.
+5. Build each personalized publication from the shared captured bytes and its complete selection/parent metadata.
+6. Submit personalized messages independently at `Message::Priority::Low`. An admission failure for one client does not roll back accepted messages for others.
 
-Erelia knows: concrete Entity/Part layouts, meaningful numeric type IDs, Interest rules, view range settings, ordinary gameplay requests and their validation, simulation/scheduling, and client presentation.
+`publish()` returns a `PublicationResult` containing per-recipient accepted `Transfer` handles and per-recipient **expected admission failures** (e.g. queue capacity); it attempts every eligible recipient. Invalid configuration, framing/serialization failures and unexpected exceptions still throw. Transport acknowledgment means network delivery, not successful application by the remote game.
 
-Not planned: separate Edition transport, callbacks for initialization-only data, special partial Entities, automatic recursive loading of all children, per-Part dynamic network factories, per-client server-side publication histories, and background networking jobs in the hierarchy.
+A failed or lost Modified-only publication **does not** retain per-client Part history. Erelia periodically invokes `publish(UpdateSelection::All)` to repair missed updates. `All` does not consume pending Modified state, and the client skips redundant/equal-generation snapshots.
 
-## 8. Implementation sequence
+## 7. Initialization protocol and client reconciliation
 
-1. **Revise PR #31's generic Publishable proposal:** reduce to Initialization + Update, unify Part snapshot serialization, add generations and Update-only flag, eliminate callbacks and Edition, retain safety and reuse.
-2. **Implement Engine wrappers:** fixed registration of Publishable Components/Behaviours, Entity UUID/type ID, activation and structural synchronization.
-3. **Implement EntityHierarchy base and type registration:** ownership, lookup, construction, relationship operations and construction root.
-4. **Implement server/client direction-specific hierarchies:** Interest callbacks, publication capture and fan-out, initialization requests, client reconciliation.
-5. **Add focused unit/integration/stress coverage on Linux and Windows**, document examples and verify real CI on the implementing PR heads.
+### 7.1 Three explicit message types
 
-The documentation/planning PR itself does **not** claim these tasks are implemented.
+Erelia supplies **three distinct** `Message::Type` IDs for:
 
-## 9. Required test scenarios
+1. Publication.
+2. Initialization request.
+3. Initialization response.
 
-- Lazy cache reuse; no extra `_encode()` calls until invalidation; generation increments per invalidation; old captured snapshots remain unchanged.
-- Modified vs All inclusion; initialization-only Parts; pending invalidations survive failed encoding and concurrent capture; shared snapshots across multiple recipients.
-- Generation 0 first decode; duplicate/older generation skipped; initialization older than buffered updates; different Parts at different generations; malformed frames and unknown IDs rejected.
-- Two clients with disjoint and overlapping Interest; ancestor closure; one encoded snapshot per Entity per publication; complete selection counter ordering.
-- Child arrives before parent; construction root; complete child UUID list; unknown children ignored; reparent without recreation; stale relationships do not override newer ones.
-- Batched unknown-Entity requests; unauthorized init requests rejected; late authorized init response constructed and then removed when no longer selected.
-- Out-of-order publication snapshots where stale selection must be ignored **without losing non-overlapping modified Part data**.
-- Subscription and object lifetimes, type unregister/re-register invariants, inactive Component/Behaviour state, server/client differing C++ types with compatible Part IDs.
+Use Sparkle's existing `MessageDispatcher` and `Message::RequestID` header field. Do not duplicate the RequestID in every payload or introduce another message router. Initialization requests and responses use `Message::Priority::High`; publications use `Low`.
 
-## 10. Open design/implementation checks (do not silently choose)
+### 7.2 Client discovery and requests
 
-1. Resolve the precise rule for applying late Part payloads from a publication whose **selection** is stale; see section 6.1.
-2. Specify correct concurrency and version/bytes capture when mutable Part state changes during `_encode()`, including what thread may call `invalidate()`.
-3. Verify activation changes and structural transforms are reliably invalidated/serialized by the chosen Engine wrappers, without creating hidden extra message types.
-4. Define authoritative ownership boundaries between remote Entities in `ClientEntityHierarchy` and game-local Entities so reconciliation never removes locally owned objects.
-5. Confirm wire-format/version compatibility policy and handling of Part-generation overflow or replicated Entity incarnation changes (if UUIDs can ever be reused).
+The client remembers its latest accepted **complete** selected-UUID set and each selected Entity's authoritative parent UUID.
 
-These are follow-up design checks, not justification for introducing extra abstractions prematurely.
+- On a newer publication, validate **all framing and structural metadata first**; accept its generation; reconcile the complete selected set **before applying Part data**, immediately destroying out-of-Interest Replicants.
+- Then update parent relationships and apply newer-generation Part snapshots. A game-defined decoder failure propagates without rolling back accepted Interest or previously applied Parts.
+- Unknown selected UUIDs are requested in **batches**, with one unique RequestID for each request batch.
+- The client tracks pending UUIDs, request IDs and configurable timeouts. It retries failed or timed-out requests **when subsequent server publications arrive**, not from a hidden background timer or a periodic client update method.
+- Explicit server rejection suppresses automatic retries while that UUID remains continuously in Interest. Once it leaves and later reappears, it can be requested anew. Obsolete rejections from earlier RequestIDs must not suppress newer attempts.
+- A failed transport Transfer makes a request eligible for retry. Transport ACK alone does not establish application initialization success.
+- For still-unknown Entities, retain at most the **highest-generation snapshot per Part ID**, not an unbounded event log. Drop no-longer-applicable buffers on selection change.
+- Receiving an older publication never restores its obsolete membership or parenting. Its Part snapshots may still contribute valid state to Entities selected by the newest publication.
+
+### 7.3 Server initialization authorization and response
+
+- Authorization is checked **at request-processing time** against the current Interest-selected ancestor closure for that client; do not grant an initialization simply because the requester knows an UUID.
+- The server returns **one response per requested UUID**, carrying the batch RequestID and that UUID; each has an independent success or rejection result.
+- Nonexistent, outside-Interest and otherwise inaccessible UUIDs use **one generic `Rejected` outcome**, without disclosing existence or private Part data. Sparkle implements selection checks, not Erelia's gameplay-specific permission system.
+- A successful response contains **only Entity UUID, numeric EntityTypeID and all registered Part snapshots with generations**. It contains **no parent UUID and no child UUID list**: authoritative relationships come solely from publications.
+- Source snapshots are independent of the recipient; initialization always contains all registered Parts of a selected Entity.
+
+### 7.4 Client construction and parenting
+
+- Resolve the numeric EntityTypeID using Erelia's registered construction callback receiving the authoritative UUID; construct a **detached** `Mode::Replicant` object.
+- Validate its expected network mode, type contract and Part registration.
+- Decode its full initialization and apply any buffered strictly newer Part snapshots **before attaching it to the Engine**. On initialization failure, destroy the detached temporary Entity.
+- If still applicable, retain ownership and attach under its initialized authoritative parent, otherwise temporarily under Erelia's attachment root. When the desired parent initializes, attach waiting children using their stored parent UUIDs.
+- When a newer publication changes an Entity's parent to an uninitialized selected Entity, move it immediately to the attachment root and request that parent. Late initialization never overrides newer publication parenting.
+- A successful initialization that arrives after the Entity has left Interest follows the previously chosen **process-then-reconcile** rule: it may be constructed and immediately discarded; it is not retained in an unbounded cache.
+- The client relies on existing Engine `Registry` and `Query` mechanisms for Entity lifecycle visibility, not new dedicated hierarchy add/remove notifications.
+
+**Parent/child UUID lists are not duplicated in initialization**. Children can attach when their parent appears because the logical hierarchy already stores each child's authoritative parent UUID from the latest publication.
+
+## 8. Runtime clearing and network lifecycle
+
+Provide explicit `clear(EntityHierarchy::ClearMode mode)` with no implicit default:
+
+- **Runtime:** clear tracked runtime data/subscriptions and rebuild observation of the existing server root; on the client, remove owned replicas and clear selection, pending initialization, buffers and rejected UUID state. Preserve type registration, current network binding, and **publication ordering baselines/counters**.
+- **Full:** additionally remove registrations and release message/endpoint bindings, **without** disconnecting the Client or stopping the Server.
+
+The hierarchy does not auto-clear on disconnection; Erelia decides when to call `clear()`. A new synchronization session requires Erelia to establish a new baseline; do not infer cross-session ordering from the old counter. No protocol epoch or timestamp is currently planned.
+
+## 9. Ownership and non-goals summary
+
+| Concern | Owner |
+| --- | --- |
+| Cached immutable Part snapshots, registration, generation validation | `Publishable` |
+| Source/Replicant role, immutable UUID, reserved Parts, public ID translation | `PublishableEntity` and concrete wrappers |
+| Engine parenting and ordinary Component/Behaviour/Transform behavior | Existing Engine |
+| UUID/type lookup, structural observation, parent UUID graph | `EntityHierarchy` |
+| Source observation, Interest closure, fan-out, initialization authorization | `ServerEntityHierarchy` |
+| Replica lifetime, initialization/retries, selection reconciliation | `ClientEntityHierarchy` |
+| Game entity construction and server lifetime, numeric schemas, Interest decisions, reveal/unlock rules, update cadence, predictions, local visual Entities | Erelia |
+| Delivery, message priority, connection snapshot, Transfer outcomes | Existing Server/Client/Transport (plus `Server::connections()`) |
+
+Not in scope: per-recipient Part serialization, gameplay-specific security/permissions, per-client server publication history, implicit retries for missed modified Part updates, auto-disconnect/auto-clear behavior, automatic recursive child initialization, dynamic network Part removal, hidden scheduling, replacing generic Engine hierarchy or visual geometry code.
+
+## 10. Implementation work to perform in subsequent PRs
+
+1. **Revise generic Publishable (PR #31 scope).** Remove Edition API and init callbacks; implement one cached immutable snapshot per Part, one generation, `Modified/All` policy, correct decode semantics, strict validation, single-owner Part registration, and a generic owning-registration permission for Replicant no-op invalidation.
+2. **Minimal Engine observation change.** Add direct-child `subscribeToChildEdition` and Added/Removed parent/child event semantics to `InherenceTrait`, with RAII and safe constructor/destructor notifications. Adapt existing `Entity` context propagation and `Entity2D/Entity3D` parent-cache subscription consumers without changing their intended behavior.
+3. **Engine publication adapters.** Implement independent `PublishableEntity` capability, Source/Replicant mode, UUID/type identity, reserved ID 0–15/public +16 mapping, activation Part and Transform2D/3D Part adapters, plus `PublishableComponent` / `PublishableBehaviour` activation and normal data serialization.
+4. **Shared EntityHierarchy.** Implement non-owning UUID/type lookup, one root, structural subscriptions, deferred safe discovery, precise type registration via `typeid`, parent UUID graph, binding uniqueness, and explicit Runtime/Full clear policy.
+5. **Server infrastructure and hierarchy.** Add `Server::connections()` returning Connected-only snapshot; add three explicit message ID bindings; Interest callback and ancestor closure; Source validation, global publication counter, captured update union and personalized messages, low priority, `PublicationResult` for per-recipient results.
+6. **Client hierarchy.** Add factory-based Replicant construction, strict unknown-type rejection, batched RequestIDs and independent per-Entity responses, timeout/rejection state, buffered latest-per-Part data, selection-first reconciliation, fallback attachment root, pending parent resolution and RAII subscriptions.
+7. **Validate with unit, integration, stress and sanitizer tests** on Linux and Windows; document Erelia-facing examples and verify actual CI runs in the implementation PRs.
+
+This PR **only documents the plan** and must not claim implemented code or passing CI.
+
+## 11. Required test cases
+
+- Generic Part laziness, immutable cached bytes and captured generation agreement; repeated reads; Modified/All semantics; initialization-only Parts; pending invalidation preserved if capture fails.
+- Part single-owner registration, unregistration/destruction safety, Source invalidation increments, Replicant invalidation does not increment, successful remote decode advances same counter, duplicate/older generation ignored, first-generation-zero snapshot accepted.
+- Reserved IDs 0 activation, 1 Transform, 2–15 reserved, game IDs offset +16, duplicates/overflow rejected; two separate built-in generations; Transform2D/3D local spatial state without `Rect2D`.
+- Existing `InherenceTrait`/Engine behavior preserved under two-event parent changes, child addition/removal and destruction; initial and newly attached subtree subscriptions; base-constructor attachment does not trigger unsafe dynamic cast; subtree move within vs outside replication root.
+- Source concrete type lookup, exact RTTI mapping, missing registrations, duplicate IDs, immutable UUID across root detach/re-attach; client differing C++ types with matching Part schemas; no Entity diamond.
+- Client initialization off-Engine, callback returns detached Replicant with correct UUID/mode; initialization failure destroys temporary instance; local Entities remain owned by Erelia.
+- Two or more Connected recipients with distinct/overlapping Interest; upward ancestor closure, no sibling selection, invalid callback selection throws before Part drain, no disclosure of unselected child UUIDs.
+- Publication capture once over recipient union, generation ordering and independent Part generations; old selection cannot resurrect Entities while a newer Part from an older publication can still be applied; immediate out-of-Interest removal even when an unrelated decoder throws.
+- Parent arrives after child, reparent to unknown parent moves child to attachment root, pending relationships resolve without child UUID lists, older parent relationships cannot override newer.
+- Request batches, unique RequestID from Message header, one success/rejection per UUID, generic rejection, stale rejection vs newer retry, timeout checked on new publications, late success process-then-reconcile, no auto-disconnect.
+- Admission failure for one recipient does not prevent others being attempted; return accepted Transfers and failures; no per-client resend; `All` repairs loss without consuming Modified.
+- Runtime clear retains network binding and ordering while cleaning client/observer runtime; Full releases bindings/registrations without disconnecting; single hierarchy per endpoint enforced; Connected-only Server snapshot.
+- Baseline performance tests for changed Part caching and recipient fan-out; ASAN/UBSAN and cross-platform CI coverage as applicable.
+
+## 12. Remaining implementation checks (do not silently choose new policy)
+
+- Precisely define how structural event buffering avoids dangling pointers if an Entity is attached and destroyed before the next safe discovery boundary; never dereference an unfinished or destructed polymorphic object.
+- Ensure the Part's single generation and cache remain consistent when invalidation is suppressed for Replicants, and when decode calls ordinary Engine setters that emit edition events. Confirm actual Engine activation subscription APIs.
+- Confirm exception-safety across staged per-client publication building and `PublicationResult` collection; invalid selections must not consume pending modified state.
+- Define `uint64_t` counter overflow behavior and wire bounds/limits, with strict decoding and protocol tests.
+- Keep source/client endpoint session changes explicit: runtime clearing is **not** an automatic new session or epoch. No additional session-reset protocol unless future concrete requirements demand it.
