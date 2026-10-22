@@ -1,6 +1,7 @@
 #include "engine/client_entity_hierarchy.hpp"
 #include "engine/publishable_entity3d.hpp"
 #include "network_test_utils.hpp"
+#include "network/server.hpp"
 
 #include <gtest/gtest.h>
 
