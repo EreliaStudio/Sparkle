@@ -129,11 +129,11 @@ namespace spk
 			{
 				throw spk::Exception("Invalid Publishable publication flags.");
 			}
-			if (!uniqueParts.insert(&item.part).second)
+			if (!uniqueParts.insert(&item.part.get()).second)
 			{
 				throw spk::Exception("Publishable Part registered more than once.");
 			}
-			if (item.part._owner != nullptr && item.part._owner != this)
+			if (item.part.get()._owner != nullptr && item.part.get()._owner != this)
 			{
 				throw spk::Exception("Publishable Part belongs to another Publishable.");
 			}
@@ -144,14 +144,14 @@ namespace spk
 
 			auto previous = _registrations.find(item.id);
 			if (previous != _registrations.end() &&
-				previous->second->part == &item.part &&
+				previous->second->part == &item.part.get() &&
 				previous->second->flags.raw() == item.flags.raw())
 			{
 				replacement.emplace(item.id, previous->second);
 			}
 			else
 			{
-				replacement.emplace(item.id, std::make_shared<Registration>(item.part, item.flags));
+				replacement.emplace(item.id, std::make_shared<Registration>(item.part.get(), item.flags));
 			}
 		}
 
@@ -164,7 +164,7 @@ namespace spk
 		}
 		for (const PartRegistration &item : registrations)
 		{
-			item.part._owner = this;
+			item.part.get()._owner = this;
 		}
 		_registrations.swap(replacement);
 	}

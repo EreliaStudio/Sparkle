@@ -65,8 +65,14 @@ namespace spk
 	{
 		PartRegistry all;
 		all.reserve(_internalParts.size() + _gameParts.size());
-		all.insert(all.end(), _internalParts.begin(), _internalParts.end());
-		all.insert(all.end(), _gameParts.begin(), _gameParts.end());
+		for (const PartRegistration &registration : _internalParts)
+		{
+			all.push_back(registration);
+		}
+		for (const PartRegistration &registration : _gameParts)
+		{
+			all.push_back(registration);
+		}
 		Publishable::setPartRegistry(std::move(all));
 	}
 

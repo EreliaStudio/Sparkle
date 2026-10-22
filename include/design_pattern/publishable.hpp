@@ -4,6 +4,7 @@
 #include "container/flags.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -64,7 +65,7 @@ namespace spk
 		struct PartRegistration
 		{
 			PartID id;
-			Part &part;
+			std::reference_wrapper<Part> part;
 			Flags<Publication> flags;
 		};
 
