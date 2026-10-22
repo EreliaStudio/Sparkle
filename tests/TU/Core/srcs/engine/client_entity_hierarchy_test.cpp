@@ -235,3 +235,73 @@ TEST(ClientEntityHierarchyTest, IntervalPreventsRapidRetriesButNoTimerSendsByIts
 	client.disconnect();
 	server.stop();
 }
+
+TEST(ClientEntityHierarchyTest, StalePublicationCannotRestoreOldSelection)
+{
+	spk::Client client;
+	spk::Entity root("root");
+	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	Remote source;
+	deliver(client, selection(10, {}));
+	EXPECT_NO_THROW(deliver(client, selection(9, {{source.uuid(), spk::UUID::null()}})));
+	EXPECT_EQ(hierarchy.size(), 0u);
+}
+
+TEST(ClientEntityHierarchyTest, CyclicParentSelectionIsRejectedBeforeAcceptance)
+{
+	spk::Client client;
+	spk::Entity root("root");
+	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	Remote first;
+	Remote second;
+	const auto cyclic = selection(1, {{first.uuid(), second.uuid()}, {second.uuid(), first.uuid()}});
+	EXPECT_THROW(deliver(client, cyclic), spk::Exception);
+	EXPECT_NO_THROW(deliver(client, selection(1, {})));
+	EXPECT_EQ(hierarchy.size(), 0u);
+}
+
+TEST(ClientEntityHierarchyTest, InternalErrorRemainsRetryableButTooLargeStopsRetries)
+{
+	spk::Server server;
+	spk::Client client;
+	spk::Entity root("root");
+	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	Remote source;
+	server.start(0);
+	(void)client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	deliver(client, selection(1, {{source.uuid(), spk::UUID::null()}}));
+	auto sent = requests(server);
+	ASSERT_EQ(sent.size(), 1u);
+	auto internalError = response(
+		sent[0].message.requestID(), source.uuid(), spk::EntityHierarchy::InitializationOutcome::InternalError);
+	deliver(client, std::move(internalError));
+	deliver(client, selection(2, {{source.uuid(), spk::UUID::null()}}));
+	sent = requests(server);
+	ASSERT_EQ(sent.size(), 1u);
+	auto tooLarge = response(
+		sent[0].message.requestID(), source.uuid(), spk::EntityHierarchy::InitializationOutcome::TooLarge);
+	deliver(client, std::move(tooLarge));
+	deliver(client, selection(3, {{source.uuid(), spk::UUID::null()}}));
+	std::this_thread::sleep_for(50ms);
+	std::vector<spk::ReceivedMessage> none;
+	server.messages().drain(none);
+	EXPECT_TRUE(none.empty());
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ClientEntityHierarchyTest, RuntimeClearPreservesPublicationOrderWhileFullClearUnbinds)
+{
+	spk::Client client;
+	spk::Entity root("root");
+	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	Remote source;
+	deliver(client, selection(10, {}));
+	hierarchy.clear(spk::EntityHierarchy::ClearMode::Runtime);
+	EXPECT_NO_THROW(deliver(client, selection(9, {{source.uuid(), spk::UUID::null()}})));
+	hierarchy.clear(spk::EntityHierarchy::ClearMode::Full);
+	EXPECT_NO_THROW(deliver(client, selection(11, {{source.uuid(), spk::UUID::null()}})));
+	EXPECT_EQ(hierarchy.size(), 0u);
+}

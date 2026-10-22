@@ -42,7 +42,7 @@ namespace spk
 			});
 	}
 
-	void ServerEntityHierarchy::_withdraw(Entity *entity) noexcept
+	void ServerEntityHierarchy::_withdraw(Entity *entity)
 	{
 		for (auto it = _pending.begin(); it != _pending.end();)
 		{

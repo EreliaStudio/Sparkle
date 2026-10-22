@@ -58,7 +58,7 @@ namespace spk
 
 		static std::map<PublishableEntity *, ServerEntityHierarchy *> _owners;
 
-		void _withdraw(Entity *entity) noexcept;
+		void _withdraw(Entity *entity);
 		void _observe(Entity *entity, Entity *parent);
 		void _resolvePending();
 		[[nodiscard]] std::map<UUID, Source> _select(const Connection &connection);
