@@ -62,7 +62,8 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 	std::vector<spk::PublishableEntity *> selected{&child};
 
 	spk::ServerEntityHierarchy serverHierarchy(
-		server, root,
+		server,
+		root,
 		[&](const spk::Connection &) {
 			return selected;
 		},

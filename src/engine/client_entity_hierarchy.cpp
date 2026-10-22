@@ -397,6 +397,13 @@ namespace spk
 		_replicas.emplace(uuid, std::move(entity));
 		_requests.erase(uuid);
 		_attach(uuid);
+		for (const auto &[child, parent] : _selection)
+		{
+			if (parent == uuid)
+			{
+				_attach(child);
+			}
+		}
 	}
 
 	void ClientEntityHierarchy::clear(ClearMode mode)
