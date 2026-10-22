@@ -321,8 +321,7 @@ namespace spk
 				registration.receivedGeneration = section.generation;
 				registration.received = true;
 				registration.part->_cachedSnapshot.reset();
-			}
-			catch (...)
+			} catch (...)
 			{
 				if (!firstFailure)
 				{

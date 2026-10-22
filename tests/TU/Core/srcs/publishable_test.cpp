@@ -251,9 +251,8 @@ TEST(PublishableTest, FailedEncodeLeavesModifiedPending)
 	Publisher publisher;
 	ValuePart first;
 	ValuePart second;
-	publisher.setPartRegistry({
-		{0, first, Publisher::Publication::Update},
-		{1, second, Publisher::Publication::Update}});
+	publisher.setPartRegistry(
+		{{0, first, Publisher::Publication::Update}, {1, second, Publisher::Publication::Update}});
 	second.failEncode = true;
 	EXPECT_THROW((void)publisher.encodeUpdate(), spk::Exception);
 	second.failEncode = false;

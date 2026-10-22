@@ -220,8 +220,7 @@ TEST(PublishableContractTest, FirstDecoderFailurePropagatesWithoutSkippingOthers
 	{
 		replica.decode(std::move(writer).build().reader());
 		FAIL() << "Expected the first decoder exception.";
-	}
-	catch (const spk::Exception &exception)
+	} catch (const spk::Exception &exception)
 	{
 		EXPECT_NE(std::string(exception.what()).find("First failure."), std::string::npos);
 	}

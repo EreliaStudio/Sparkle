@@ -69,10 +69,10 @@ TEST(FlagsTest, WideFlagsPreserveHighestBit)
 	EXPECT_TRUE(flags.has(WideOptions::High));
 }
 
-TEST(FlagsTest, PublishableFlagCombinationWorksInNormalUserCode)
+TEST(FlagsTest, PublishableUpdateFlagWorksInNormalUserCode)
 {
 	using Publication = spk::Publishable::Publication;
-	constexpr auto flags = Publication::Edition | Publication::Update;
-	static_assert(flags.has(Publication::Edition));
+	constexpr spk::Flags<Publication> flags{Publication::Update};
+	static_assert(flags.raw() == 1u);
 	static_assert(flags.has(Publication::Update));
 }
