@@ -8,7 +8,7 @@
 
 ## 1. Intended Erelia usage and responsibilities
 
-Erelia owns its server Entities and creates Components/Behaviours through the existing Engine API. Sparkle observes an Engine subtree, selects interesting Source Entities, and publishes their Parts to replicas owned by the client hierarchy.
+Erelia owns its server Entities and creates Components/Behaviours through the existing Engine API. Sparkle observes an Engine subtree, expands the directly selected Source Entities to include their ancestors, and publishes Parts to replicas owned by the client hierarchy. Erelia selects both the recipients and the directly selected Entities.
 
 ```cpp
 class Monster : public spk::PublishableEntity3D
@@ -29,15 +29,17 @@ public:
 // Erelia-owned Source Entity:
 serverHierarchy.registerType<Monster>(42);
 auto monster = std::make_unique<Monster>(/* Erelia constructor arguments */);
-auto result = serverHierarchy.publish(UpdateSelection::Modified);
-// Erelia also periodically invokes publish(UpdateSelection::All).
+auto result = serverHierarchy.publish(
+    server.connections(), UpdateSelection::Modified);
+// Erelia chooses recipients and periodically invokes publish(connections, UpdateSelection::All).
 ```
 
 The registry example is illustrative: constructor signatures, flags qualification, and API naming must be finalized during implementation. The **semantics** of replacing the registry, rather than individual registration operations, are agreed.
 
 - **Erelia owns server Entities**, their Component/Behaviour composition, and gameplay rules. The server hierarchy only observes.
 - **`ClientEntityHierarchy` owns Replicants**, which Erelia constructs through a registered factory. Ordinary client-local Entities are not network-owned.
-- Erelia decides when to publish, Interest selection, client/server registry compatibility, and when registered Parts may be destroyed.
+- Erelia decides when to publish, which connections are recipients, the direct `EntitySelector` selection, client/server registry compatibility, and when registered Parts may be destroyed.
+- Sparkle implements configurable initialization retry/recovery policies and transport message priorities; Erelia supplies policy values and explicitly invokes retry processing.
 - No implicit multiplayer publisher Systems, auto-update threads, generic gameplay replication factories, per-recipient codecs, or implicit registry synchronization.
 - The hierarchy is Entity-specific; do not generalize it to `NetworkReplicationHierarchy<T>` without a concrete requirement.
 
@@ -149,7 +151,7 @@ class PublishableEntity3D : public Entity3D, public PublishableEntity {};
 
 A nonspatial wrapper may combine `Entity` and `PublishableEntity` similarly.
 
-- `PublishableEntity::Mode { Source, Replicant }` is explicit and immutable. Sources obtain a stable UUID; Replicants receive the exact authoritative UUID.
+- `PublishableEntity::Mode { Source, Replicant }` is explicit and immutable. **Sparkle always generates the Source UUID**, which stays stable for the Entity lifetime; Replicants receive the exact authoritative UUID. Erelia manages persistent gameplay/database identifiers separately; no caller-supplied Source UUID overload.
 - Concrete server and client C++ Entity types may differ for the same numeric `EntityTypeID`, provided their Part codecs and registries are compatible.
 - Erelia still constructs Components and Behaviours through the normal `addComponent<T>()` and `addBehaviour<T>()` APIs. There is **no** dedicated `addPublishableComponent()` factory.
 - `PublishableEntity` exposes the whole-registry setter for **game-defined** Parts, with public ID translation. Replacement **must not remove Sparkle's reserved internal Parts**.
@@ -168,7 +170,7 @@ Internal IDs **0–15** belong to Sparkle:
 
 Erelia's public Part IDs start at zero. Reject overflow above `UINT32_MAX - 16`, duplicate IDs, and collisions with reserved IDs. Generic `Publishable` IDs remain direct, zero-based numeric IDs.
 
-The concrete 2D/3D wrappers own activation and Transform **Part adapters**. They observe existing Engine activation/Transform edition callbacks with RAII subscriptions and invalidate their Source Parts automatically. Transform Components themselves remain networking-free. Synchronize local position, rotation, scale and any applicable 2D depth; **not** visual `Rect2D` geometry. Activation and Transform have separate snapshots/generations.
+The concrete 2D/3D wrappers **always** own and register activation and Transform **Part adapters**; Erelia cannot selectively disable these mandatory built-in synchronization capabilities. They observe existing Engine activation/Transform edition callbacks with RAII subscriptions and invalidate their Source Parts automatically. Transform Components themselves remain networking-free. Synchronize local position, rotation, scale and any applicable 2D depth; **not** visual `Rect2D` geometry. Activation and Transform have separate snapshots/generations.
 
 **Decoding Entity activation Part ID 0 occurs after other Entity Parts** in an initialization or update, regardless of wire order. No special deferral based on Engine attachment: a detached Replicant decodes data and activation immediately and fires ordinary Engine notifications. Detaching an Entity does not artificially deactivate it.
 
@@ -213,16 +215,18 @@ The structural parent/child graph must be **committed consistently before editio
 - Client root attachment applies only to **top-level Replicants** whose authoritative parent is null/root. **Do not temporarily attach an Entity to the root if its authoritative parent is missing.** Keep it detached, initialized, and accepting Part/activation updates until the parent appears.
 - When an already attached parent becomes detached, its existing child subtree stays attached to that parent; do not flatten the hierarchy.
 - If a client parenting operation throws, retain the initialized Replicant and retry the relationship in a later publication. Compare authoritative desired parent with the actual Engine parent; do not reinitialize the Entity for a parenting failure.
-- If a parent never appears, keep selected children detached and updated until Interest removes them.
+- If a parent never appears, keep selected children detached and updated until they leave the authoritative EntitySelection.
 - Erelia owns the root coordinate-system compatibility; Sparkle does not serialize the Engine root or convert world-space positions.
 
-Only **one hierarchy may bind to a given Server/Client endpoint**. Use normal RAII dispatcher subscriptions and explicit release; do not add wire hierarchy IDs or implicit endpoint disconnection.
+**Multiple hierarchy instances may share the same Server or Client endpoint.** Each hierarchy binds to one endpoint, retains independent runtime state, and processes messages delivered through its configured dispatcher subscriptions. Erelia configures routing; Sparkle adds **no hierarchy UUID, wire namespace, or global per-endpoint uniqueness restriction**. Erelia must ensure messages received by each hierarchy are appropriate, including when subscriptions share Message::Type IDs. Use ordinary RAII subscriptions and explicit release; never disconnect an endpoint implicitly.
 
-## 6. Server Interest, publication and transport
+**A Source Entity is tracked by at most one ServerEntityHierarchy at a time.** Nested/overlapping observation roots can discover the same descendant even though `InherenceTrait` permits only one parent; detect and reject concurrent tracking with `spk::Exception`. No cross-hierarchy publication manager is needed. On normal Engine reparenting between hierarchy roots, the prior observation releases the Source and the new hierarchy discovers it automatically; preserve its UUID and Part state. This is Engine membership, not a special migration protocol.
 
-### 6.1 Per-recipient selection
+## 6. Server EntitySelection, publication and transport
 
-Erelia supplies an Interest callback selecting directly interesting tracked Source Entities per connected recipient. Sparkle includes the **transitive parent closure** up to the replication boundary: child implies ancestors; parent does not imply children.
+### 6.1 Per-recipient `EntitySelector`
+
+Erelia supplies an `EntitySelector` callback returning directly selected tracked Source Entities for a recipient. Sparkle constructs the resulting `EntitySelection` by adding the **transitive parent closure** up to the replication boundary: child implies ancestors; parent does not imply children. Sparkle uses the same selector and ancestor closure when authorizing initialization requests.
 
 - Invalid, out-of-bound or non-Source selections throw instead of silently filtering.
 - All selected entities are ordinary fully publishable Entities. No partial Entity classes.
@@ -239,27 +243,29 @@ Erelia supplies an Interest callback selecting directly interesting tracked Sour
 
 ### 6.3 Publication cycle
 
-`ServerEntityHierarchy::publish(UpdateSelection)` is **explicitly** called by Erelia:
+`ServerEntityHierarchy::publish(connections, UpdateSelection)` is **explicitly** called by Erelia:
 
-1. Enumerate recipients using new read-only `Server::connections()` returning a snapshot of **Connected-only** connections.
-2. Resolve safe structural discovery, validate types and per-recipient Interest, and calculate parent closure.
+1. Use **exactly** the caller-supplied recipient connections, e.g. `hierarchy.publish(server.connections(), UpdateSelection::Modified)`; never enumerate recipients implicitly or retain a persistent membership list. `Server::connections()` remains a read-only way for Erelia to obtain Connected-only connections.
+2. Resolve safe structural discovery, validate types and per-recipient `EntitySelector` results, and calculate parent closure.
 3. Build the **union of selected Entities**. Unselected Entities' pending Modified bits remain pending.
 4. Capture snapshots for selected Parts **once per cycle** with recipient-independent cached bytes.
 5. **Transactional preparation:** invalid selection, framing or unexpected serialization failure during payload preparation aborts the cycle **without consuming Modified invalidations**. After all payloads are successfully prepared, commit captured Modified consumption.
-6. Submit each valid personalized message at `Message::Priority::Low` independently. Per-recipient admission/transport failures go into `PublicationResult.failures`; valid recipients continue. A personalized message exceeding the transport limit is also a **per-recipient** failure, not a global serializer failure.
+6. Submit each valid personalized message at the **Erelia-configured publication priority** (default `Message::Priority::Low`) independently. Per-recipient admission/transport failures go into `PublicationResult.failures`; valid recipients continue. A personalized message exceeding the transport limit is also a **per-recipient** failure, not a global serializer failure.
 
 `PublicationResult` holds accepted per-recipient `Transfer` handles and failures; an accepted Transfer/ACK confirms transport, not successful gameplay decoding. Do not maintain per-client resend history. Failed/lost modified-only delivery is repaired by Erelia's periodic `publish(UpdateSelection::All)`, which does not consume Modified changes. Persistent per-recipient oversize payloads require Erelia to alter selection/state; `All` cannot repair those.
 
 ## 7. Client publication and initialization protocol
 
-### 7.1 Message IDs and batching
+### 7.1 Message IDs, configurable priorities and batching
 
-Erelia supplies **three explicit, distinct** `Message::Type` IDs: publication (Low), initialization request (High), initialization response (High). Use the existing `MessageDispatcher` and existing `Message::RequestID` header; do not introduce another dispatcher or duplicate RequestID in the payload.
+Each hierarchy accepts **three explicit, distinct** Erelia-configured `Message::Type` IDs for publication, initialization request and initialization response. Use the existing `MessageDispatcher` and `Message::RequestID` header; do not introduce another dispatcher, duplicate RequestID in the payload, or introduce a hierarchy UUID. **Erelia is responsible for routing messages to the intended hierarchy** when multiple hierarchy instances share an endpoint; Sparkle processes messages delivered to each configured subscription.
+
+Sparkle applies three independently configurable priorities: publication defaults to `Message::Priority::Low`, initialization requests to `High`, and initialization responses to `High`. Erelia chooses configuration values; Sparkle handles actual transport submission.
 
 The client holds the newest complete selected-UUID set and desired parent UUID for each selected Entity. On a newer publication:
 
 1. Strictly validate framing and structural metadata before acceptance.
-2. Reconcile selection and remove out-of-Interest Replicants immediately, even if later Part decoding fails.
+2. Reconcile selection and **automatically destroy Replicants no longer selected** immediately, even if later Part decoding fails. Sparkle owns replica lifetime; Erelia can preserve separate gameplay data independently.
 3. Update authoritative parenting, retaining detached children whose parent is missing.
 4. Decode independent, newer-generation Parts; continue after one Part fails and aggregate exceptions as **one regular contextual `spk::Exception`**.
 5. Batch initialization requests for unknown selected UUIDs. Buffer at most the latest received snapshot per Part until initialization succeeds. Never resurrect Entities from stale membership snapshots.
@@ -268,21 +274,23 @@ If `MessageDispatcher::treatMessages()` throws from handling a message, the fail
 
 ### 7.2 Server authorization and responses
 
-- Authorize each UUID at **request processing time** against that connection's currently selected ancestor closure.
+- Authorize each UUID at **request processing time** by evaluating Erelia's `EntitySelector` for the requesting connection and applying the same ancestor closure as publication. Sparkle enforces this rule without maintaining a list of previously published recipient connections.
 - Respond **independently once per UUID**, echoing the batch RequestID. There is no unsolicited initialization push.
-- Invalid/nonexistent/out-of-Interest UUIDs use a single generic `Rejected` outcome, without leaking existence.
+- Invalid/nonexistent/out-of-selection UUIDs use a single generic `Rejected` outcome, without leaking existence.
 - Authorized success contains only **UUID, numeric EntityTypeID and all currently registered Part snapshots with generations**. No parent UUID, child UUID list or registry manifest.
-- A response too large for the transport returns `TooLarge` for that UUID, suppressing retry until it leaves/re-enters Interest.
-- An unexpected per-UUID Source encoding failure returns `InternalError` (without exposing server diagnostics), continues processing other UUIDs, and aggregates server-side diagnostic exceptions for Erelia. Client suppresses retry until Interest changes.
+- A response too large for transport returns `TooLarge` for that UUID.
+- An unexpected per-UUID Source encoding failure returns `InternalError` (without exposing server diagnostics), continues processing other UUIDs and aggregates server-side diagnostics for Erelia.
+- On the client, Sparkle handles `Rejected`, `TooLarge` and `InternalError` using **independently Erelia-configured recovery policies**. The default for each is to stop retrying until the UUID leaves and re-enters the authoritative EntitySelection. This remains a Sparkle retry mechanism, not an Erelia-implemented retry manager.
 
 ### 7.3 Client construction, reception and failure accounting
 
 - Use Erelia's registered callback `(const UUID&) -> unique_ptr<Entity>` to create a **detached Replicant** with exactly that UUID; server/client concrete C++ classes may differ.
 - Decode full initialization and any buffered newer Parts while detached. **Never defer Part decode or activation just because Engine parenting is unresolved.** Decode Entity activation after other Entity Parts; wrapper Component/Behaviour activation after their own gameplay data.
 - On successful initialization, the client owns the replica and attaches it to its known initialized parent, or to the Engine root **only for a true top-level Entity**; missing-parent descendants remain detached.
-- If construction or initial decoding fails, discard the temporary Entity. Allow at most **four attempts in total (one initial + three retries)** for these application-level failures, across a shared counter per selected UUID. After four failures, suppress until the UUID leaves and reenters Interest.
-- Network Transfer failures/timeouts are a **separate retry category** and are checked only on later server publications; no implicit background retry loop or client update timer.
-- Explicit `Rejected`, `TooLarge` and `InternalError` suppress retries until selection changes. Obsolete responses from previous RequestIDs cannot suppress newer attempts.
+- If construction or initial decoding fails, discard the temporary Entity. Sparkle tracks a **configurable maximum number of application-level initialization attempts**, default **four total attempts** (one initial + three retries), shared across game factory and initial-decoder failures per continuously selected UUID. The configured ceiling governs suppression; defaults reproduce the original stop-until-selection-change behavior.
+- Network Transfer failures/timeouts are a **separate retry category** and follow Sparkle's generic timeout/retry state. They do not consume the factory/initial-decoder attempt count.
+- **Erelia explicitly calls** an operation such as `clientHierarchy.processPendingRequests()` to evaluate request timeouts and perform eligible retries under the configured policy. Processing is **not automatically scheduled by incoming publications**, timers, worker threads or an implicit client update loop. Initial unknown-UUID requests still arise through normal incoming EntitySelection publication handling.
+- Server outcomes follow Erelia-configured `Rejected`, `TooLarge`, and `InternalError` recovery policies, defaulting to stop-until-selection-change. Obsolete responses from earlier RequestIDs cannot suppress newer attempts.
 - Once a UUID is successfully initialized, **ignore every subsequent initialization response for that UUID**, even if the response contains newer generations. Later authoritative updates come only from publications.
 - If an ordinary Part update fails decoding after successful initialization, keep the Entity and previously decoded Parts; do **not** count it toward initialization retries or force reinitialization. The failed Part's generation does not advance; future snapshots of that generation may retry.
 - Client parenting failures do not destroy a correctly initialized Entity, and are retried on later publications. No permanent "failed parent" state or activation deferral.
@@ -306,8 +314,10 @@ Provide explicit `clear(EntityHierarchy::ClearMode mode)`:
 | Component/Behaviour/Transform ownership and dynamic composition | Existing Engine and Erelia |
 | Registry compatibility across network peers, live Part object lifetime, ID reuse safety | **Erelia** |
 | UUID/type mapping, structural observation, logical parent graph | `EntityHierarchy` |
-| Interest closure, Source observation and publication fan-out | `ServerEntityHierarchy` |
-| Replica ownership, initiation/retries, selection and parenting reconciliation | `ClientEntityHierarchy` |
+| `EntitySelector` evaluation, ancestor closure, Source observation and publication fan-out | `ServerEntityHierarchy` |
+| Replica ownership/destruction, initiation/retries, selection and parenting reconciliation | `ClientEntityHierarchy` |
+| Retry limits/outcome recovery policy, three message priority values, recipient choice, hierarchy routing and retry-processing cadence | **Erelia configuration and explicit calls** (Sparkle implements the mechanisms) |
+| Source membership exclusivity across ServerEntityHierarchies and automatic reparent-based migration | Sparkle EntityHierarchy observation |
 | Paged transport, priorities, connections and Transfer outcomes | Server/Client/transport, plus `Server::connections()` |
 
 **Not in scope:** implicit network Part-registry synchronization; automatic creation/removal of Component objects based on wire IDs; Part-manifest or tombstone messages; gameplay-driven registry version/compatibility checks; client-specific cached Part encodings; server per-client Part history; automatic update/retry loops; partial Entity types; visual geometry serialization; generic Engine redesign.
@@ -318,8 +328,8 @@ Provide explicit `clear(EntityHierarchy::ClearMode mode)`:
 2. **Engine observation:** extend `InherenceTrait` with direct-child/parent Added/Removed subscriptions, consistent graph-before-notification order, all-subscriber diagnostics for explicit operations, and best-effort nonthrowing destructor notifications. Preserve existing Engine use.
 3. **Entity wrappers and adapters:** implement Source/Replicant identity, reserved IDs, Transform/activation adapters, normal `addComponent`/`addBehaviour` usage, and internal fixed Sparkle adapters alongside **replaceable game-defined Part registry**. Add final activation codec wrappers and optional gameplay hooks for publishable attachments.
 4. **Shared EntityHierarchy:** UUID/type lookup, root discovery, safe deferred construction observation, RAII contracts, detached parent resolution and explicit clear modes.
-5. **Server hierarchy:** Connected-only recipients; Erelia Interest callback and ancestor closure; global publication counter; transactional union capture; independent per-recipient admission/oversize results; authorization and init replies.
-6. **Client hierarchy:** Replicant factories; selection-first reconciliation; batched RequestIDs, response outcomes, four-attempt constructor/decode ceiling; detached missing-parent processing, no activation deferral, robust per-Part error aggregation.
+5. **Server hierarchy:** Erelia-supplied recipient collection via `publish(connections, selection)`; `EntitySelector` and ancestor closure; no persistent recipient list; global publication counter; transactional union capture; configurable publication priority; independent admission/oversize outcomes and selection-based initialization authorization.
+6. **Client hierarchy:** Replicant factories and automatic out-of-selection destruction; selection-first reconciliation; batched RequestIDs, configurable per-outcome recovery and application-attempt maximum (default four), explicit `processPendingRequests()` scheduling, configurable priorities; detached missing-parent processing, no activation deferral and independent Part-error aggregation. Support multiple hierarchies per endpoint with Erelia-configured dispatcher routing and exclusive Source membership, including Engine reparent-based migration.
 7. **Unit/integration/stress/sanitizer testing** across Linux and Windows. Confirm actual CI results in implementation PRs; this design PR has no implementation CI claim.
 
 ## 11. Required test coverage
@@ -330,13 +340,13 @@ Provide explicit `clear(EntityHierarchy::ClearMode mode)`:
 - 0 activation, 1 Transform, 2–15 reserved, game +16 offset/overflow, fixed reserved adapters unaffected by game registry replacement, Transform events, no `Rect2D`; attachment activation serialized automatically and decoded after optional data.
 - Game-created attachments through normal Engine methods; optional empty data hooks; activation-only Parts; `Publication::Update` gates both activation and gameplay changes; removal from registry precedes Erelia destruction of referenced attachments.
 - `InherenceTrait` direct-child notifications, final consistent parenting before callbacks, callback error collection without rollback, destructor logging without throwing; constructor-time defer/no unsafe downcasts, rapid add/remove before cycle.
-- Source exact type mapping/UUID persistence, client different C++ classes, ancestor Interest union and no sibling leakage.
+- Source UUID generated by Sparkle (no user-provided Source UUID), exact RTTI-based C++ type mapping to registered numeric IDs, client different C++ classes, `EntitySelector` ancestor closure and no sibling leakage.
 - Publication preparation failure preserves all Modified state; union captures selected Parts once, unselected invalidations remain pending; personalized transport capacity/oversize failure doesn't block other recipients; `All` recovery.
 - Stale structural publication cannot restore old membership, but newer Part generations may apply for still-selected Entities; selection reconciled before Part failures; errors aggregated without undoing independent decoded Parts.
-- Initialization request batching, response per UUID, RequestID header reuse, request-time permission, generic `Rejected`, `TooLarge`, `InternalError`, no parent lists or Part manifests; later retry on new publication only.
+- Initialization request batching, response per UUID, RequestID header reuse, authorization through `EntitySelector` plus ancestor closure, generic `Rejected`, `TooLarge`, `InternalError`, no parent lists or Part manifests; **Erelia-invoked** pending-request processing for timeouts/retries, including when no publication arrives. Test default and custom retry limits and distinct response-recovery policies.
 - Four combined game factory/initial-decode attempts; unrelated network retries do not consume that count; failed ordinary Part update doesn't discard initialized replica; extra initialization responses ignored after success.
 - Missing parent => initialized **detached** Replicant; decode activation and other updates detached; attach when parent available; later reparent failure retried without reinitialization; existing detached subtrees preserved; top-level attaches root.
-- Runtime/Full clear boundaries, same-endpoint unique binding, queued old-session messages handled by Erelia; no automatic disconnect.
+- Runtime/Full clear boundaries, **multiple hierarchies sharing one endpoint** with Erelia-configured dispatcher routing; no hierarchy UUID and no implicit endpoint-wide uniqueness. Overlapping Source observation rejected, reparent-based migration releases/rebinds tracking while preserving UUID and Part state. Queued old-session messages handled by Erelia; no automatic disconnect.
 - Performance/stress/sanitizer and cross-platform coverage as appropriate.
 
 ## 12. Implementation boundaries and remaining technical checks
@@ -346,4 +356,5 @@ Provide explicit `clear(EntityHierarchy::ClearMode mode)`:
 - Ensure replacing a Part binding correctly resets *binding-specific* receive tracking without changing the independent Part's intrinsic Source cache/generation; recognize that stale packets and schema drift remain Erelia's problem.
 - Ensure decode/activation notifications cannot accidentally advance Replicant generations; Replicant invalidation remains a complete no-op.
 - Implement transactional publication preparation with no Modified consumption on a whole-cycle serialization failure, while preserving independent recipient transport failures.
-- Keep network wire bounds, counter overflow and structural validation explicit and tested. Do not introduce registry versioning, synchronization handshakes, factory registries or reentrancy controls absent a concrete requirement.
+- Keep network wire bounds, counter overflow and structural validation explicit and tested. Do not introduce registry versioning, hierarchy UUIDs/routing infrastructure, synchronization handshakes, factory registries or reentrancy controls absent a concrete requirement.
+- Configuration is limited to **agreed policies**: initialization attempt ceiling, per-outcome recovery and three message priorities. Avoid speculative per-client persistence or global coordinator machinery. Erelia invokes retry processing and chooses publication recipients.
