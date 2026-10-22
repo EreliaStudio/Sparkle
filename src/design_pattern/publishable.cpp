@@ -2,6 +2,8 @@
 
 #include "exception.hpp"
 
+#include <algorithm>
+
 #include <exception>
 #include <limits>
 #include <unordered_set>
@@ -78,6 +80,11 @@ namespace spk
 		{
 			registration->part->_owner = nullptr;
 		}
+	}
+
+	bool Publishable::_decodeLast(PartID) const
+	{
+		return false;
 	}
 
 	Publishable::Mode Publishable::mode() const noexcept
@@ -266,6 +273,7 @@ namespace spk
 
 		struct Parsed
 		{
+			PartID id;
 			std::shared_ptr<Registration> registration;
 			std::uint64_t generation;
 			std::size_t begin;
@@ -294,13 +302,17 @@ namespace spk
 				throw spk::Exception("Unknown Publishable Part ID.");
 			}
 			const std::size_t begin = reader.readOffset();
-			sections.push_back({binding->second, generation, begin, begin + static_cast<std::size_t>(length)});
+			sections.push_back({id, binding->second, generation, begin, begin + static_cast<std::size_t>(length)});
 			reader.skip(static_cast<std::size_t>(length));
 		}
 		if (reader.remaining() != 0)
 		{
 			throw spk::Exception("Trailing bytes in Publishable message.");
 		}
+
+		std::stable_partition(sections.begin(), sections.end(), [this](const Parsed &section) {
+			return !_decodeLast(section.id);
+		});
 
 		std::exception_ptr firstFailure;
 		for (const Parsed &section : sections)

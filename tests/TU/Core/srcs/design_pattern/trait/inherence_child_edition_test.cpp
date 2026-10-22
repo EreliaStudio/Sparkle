@@ -92,8 +92,7 @@ TEST(InherenceChildEditionTest, FirstSubscriberFailureDoesNotSuppressRemainingSu
 	{
 		child.setParent(parent);
 		FAIL() << "Expected callback failure.";
-	}
-	catch (const std::runtime_error &exception)
+	} catch (const std::runtime_error &exception)
 	{
 		EXPECT_STREQ(exception.what(), "first");
 	}

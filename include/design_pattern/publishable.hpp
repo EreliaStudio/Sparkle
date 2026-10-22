@@ -80,6 +80,7 @@ namespace spk
 		void _forget(Part &part) noexcept;
 
 	protected:
+		virtual bool _decodeLast(PartID id) const;
 		void setPartRegistry(PartRegistry registrations);
 
 	public:
