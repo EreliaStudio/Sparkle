@@ -18,6 +18,11 @@ namespace spk
 		}
 	}
 
+	EntityHierarchy::EntityHierarchy(MessageTypes types) :
+		EntityHierarchy(types, Priorities{})
+	{
+	}
+
 	void EntityHierarchy::_registerSourceType(std::type_index type, EntityTypeID id)
 	{
 		if (_sourceTypes.contains(type))

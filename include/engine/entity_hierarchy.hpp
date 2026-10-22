@@ -61,7 +61,8 @@ namespace spk
 		[[nodiscard]] const Priorities &priorities() const noexcept;
 
 	public:
-		explicit EntityHierarchy(MessageTypes types, Priorities priorities = {});
+		explicit EntityHierarchy(MessageTypes types, Priorities priorities);
+		explicit EntityHierarchy(MessageTypes types);
 		virtual ~EntityHierarchy() = default;
 
 		EntityHierarchy(const EntityHierarchy &) = delete;
