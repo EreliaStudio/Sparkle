@@ -35,6 +35,18 @@ namespace spk
 			All
 		};
 
+		class UpdateCapture
+		{
+			friend class Publishable;
+
+		private:
+			struct Data;
+			std::shared_ptr<Data> _data;
+
+		public:
+			[[nodiscard]] const ByteStream &bytes() const;
+		};
+
 		class Part
 		{
 			friend class Publishable;
@@ -96,6 +108,8 @@ namespace spk
 		[[nodiscard]] Mode mode() const noexcept;
 		[[nodiscard]] ByteStream encodeInitialization() const;
 		[[nodiscard]] ByteStream encodeUpdate(UpdateSelection selection = UpdateSelection::Modified) const;
+		[[nodiscard]] UpdateCapture captureUpdate(UpdateSelection selection = UpdateSelection::Modified) const;
+		void commitUpdate(const UpdateCapture &capture) const;
 		void decode(const ByteStream::Reader &reader);
 	};
 }

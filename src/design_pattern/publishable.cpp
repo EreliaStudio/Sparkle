@@ -3,7 +3,6 @@
 #include "exception.hpp"
 
 #include <algorithm>
-
 #include <exception>
 #include <limits>
 #include <unordered_set>
@@ -26,6 +25,17 @@ namespace spk
 		{
 		}
 	};
+
+	struct Publishable::UpdateCapture::Data
+	{
+		ByteStream bytes;
+		std::vector<std::pair<std::shared_ptr<Registration>, std::uint64_t>> captured;
+	};
+
+	const ByteStream &Publishable::UpdateCapture::bytes() const
+	{
+		return _data->bytes;
+	}
 
 	Publishable::Part::~Part()
 	{
@@ -216,15 +226,16 @@ namespace spk
 		return encodeSections(InitializationMode, sections);
 	}
 
-	ByteStream Publishable::encodeUpdate(UpdateSelection selection) const
+	Publishable::UpdateCapture Publishable::captureUpdate(UpdateSelection selection) const
 	{
 		if (selection != UpdateSelection::Modified && selection != UpdateSelection::All)
 		{
 			throw spk::Exception("Invalid Publishable update selection.");
 		}
+		UpdateCapture capture;
+		capture._data = std::make_shared<UpdateCapture::Data>();
 		const auto registrations = _registrations;
 		std::vector<Section> sections;
-		std::vector<std::pair<std::shared_ptr<Registration>, std::uint64_t>> captured;
 		for (const auto &[id, registration] : registrations)
 		{
 			if (!registration->flags.has(Publication::Update) ||
@@ -234,21 +245,36 @@ namespace spk
 			}
 			auto [generation, bytes] = registration->part->_snapshot();
 			sections.push_back({id, generation, std::move(bytes)});
-			captured.emplace_back(registration, generation);
-		}
-
-		ByteStream result = encodeSections(UpdateMode, sections);
-		if (selection == UpdateSelection::Modified)
-		{
-			for (const auto &[registration, generation] : captured)
+			if (selection == UpdateSelection::Modified)
 			{
-				if (registration->part->_generation == generation)
-				{
-					registration->modified = false;
-				}
+				capture._data->captured.emplace_back(registration, generation);
 			}
 		}
-		return result;
+		capture._data->bytes = encodeSections(UpdateMode, sections);
+		return capture;
+	}
+
+	void Publishable::commitUpdate(const UpdateCapture &capture) const
+	{
+		if (!capture._data)
+		{
+			throw spk::Exception("Invalid Publishable update capture.");
+		}
+		for (const auto &[registration, generation] : capture._data->captured)
+		{
+			if (registration->part->_generation == generation)
+			{
+				registration->modified = false;
+			}
+		}
+	}
+
+	ByteStream Publishable::encodeUpdate(UpdateSelection selection) const
+	{
+		auto capture = captureUpdate(selection);
+		ByteStream bytes = capture.bytes();
+		commitUpdate(capture);
+		return bytes;
 	}
 
 	void Publishable::decode(const ByteStream::Reader &reader)

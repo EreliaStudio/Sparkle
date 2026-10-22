@@ -140,6 +140,24 @@ namespace spk
 		return result;
 	}
 
+	ConnectionSet Server::connections() const
+	{
+		ConnectionSet result;
+		for (const Connection &connection : _snapshotConnections())
+		{
+			if (connection.isConnected())
+			{
+				result.insert(connection);
+			}
+		}
+		return result;
+	}
+
+	std::size_t Server::maxMessageBytes() const noexcept
+	{
+		return _maxMessageBytes.load();
+	}
+
 	Connection Server::connection(ConnectionID id) const
 	{
 		const std::scoped_lock lock(_connectionsMutex);
