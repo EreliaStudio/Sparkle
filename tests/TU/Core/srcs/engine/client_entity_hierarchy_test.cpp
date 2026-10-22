@@ -165,11 +165,12 @@ TEST(ClientEntityHierarchyTest, LateInitializationPersistsUntilNextSelection)
 	const auto sent = requests(server);
 	ASSERT_EQ(sent.size(), 1u);
 	deliver(client, selection(2, {}));
-	deliver(client, response(
+	auto lateResponse = response(
 		sent[0].message.requestID(),
 		source.uuid(),
 		spk::EntityHierarchy::InitializationOutcome::Success,
-		source.encodeInitialization()));
+		source.encodeInitialization());
+	deliver(client, std::move(lateResponse));
 	EXPECT_NE(hierarchy.find(source.uuid()), nullptr);
 	EXPECT_EQ(hierarchy.find(source.uuid())->parent(), nullptr);
 

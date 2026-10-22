@@ -120,7 +120,8 @@ TEST(EntityHierarchyIntegrationTest, ReparentingPreservesUUIDAndReconstructsHier
 	Monster child("child", &first);
 
 	spk::ServerEntityHierarchy serverHierarchy(
-		server, root,
+		server,
+		root,
 		[&](const spk::Connection &) {
 			return std::vector<spk::PublishableEntity *>{&child};
 		},
