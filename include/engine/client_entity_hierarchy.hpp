@@ -4,8 +4,8 @@
 #include "network/client.hpp"
 
 #include <chrono>
-#include <functional>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
