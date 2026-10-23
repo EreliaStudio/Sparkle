@@ -109,6 +109,77 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 	server.stop();
 }
 
+TEST(EntityHierarchyIntegrationTest, DifferentConnectionsReceiveIndependentSelections)
+{
+	spk::Server server;
+	spk::Client firstClient;
+	spk::Client secondClient;
+	spk::Entity root("server root");
+	spk::Entity firstRoot("first client root");
+	spk::Entity secondRoot("second client root");
+	Monster first("first", &root);
+	Monster second("second", &root);
+
+	spk::Connection::ID firstConnectionID{};
+	TestServerEntityHierarchy serverHierarchy(
+		server,
+		root,
+		[&](const spk::Connection &connection) {
+			return connection.id() == firstConnectionID
+				? std::vector<spk::PublishableEntity *>{&first}
+				: std::vector<spk::PublishableEntity *>{&second};
+		},
+		Types);
+	serverHierarchy.registerType<Monster>(42);
+	spk::ClientEntityHierarchy firstHierarchy(firstClient, firstRoot, Types);
+	spk::ClientEntityHierarchy secondHierarchy(secondClient, secondRoot, Types);
+	firstHierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
+		return std::make_unique<Monster>(uuid);
+	});
+	secondHierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
+		return std::make_unique<Monster>(uuid);
+	});
+
+	server.start(0);
+	(void)firstClient.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(firstClient));
+	{
+		const auto recipients = server.connections();
+		ASSERT_EQ(recipients.size(), 1u);
+		firstConnectionID = recipients.begin()->id();
+	}
+	(void)secondClient.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(secondClient));
+	ASSERT_EQ(server.connections().size(), 2u);
+
+	const auto result = serverHierarchy.publish(server.connections(), spk::Publishable::UpdateSelection::All);
+	ASSERT_EQ(result.accepted.size(), 2u);
+	ASSERT_TRUE(result.failures.empty());
+	const auto deadline = std::chrono::steady_clock::now() + 5s;
+	bool initialized = false;
+	while (std::chrono::steady_clock::now() < deadline)
+	{
+		server.treatMessages();
+		firstClient.treatMessages();
+		secondClient.treatMessages();
+		if (firstHierarchy.find(first.uuid()) != nullptr && secondHierarchy.find(second.uuid()) != nullptr)
+		{
+			initialized = true;
+			break;
+		}
+		std::this_thread::sleep_for(5ms);
+	}
+	ASSERT_TRUE(initialized);
+	EXPECT_EQ(firstHierarchy.find(second.uuid()), nullptr);
+	EXPECT_EQ(secondHierarchy.find(first.uuid()), nullptr);
+	EXPECT_EQ(firstHierarchy.size(), 1u);
+	EXPECT_EQ(secondHierarchy.size(), 1u);
+
+	firstClient.disconnect();
+	secondClient.disconnect();
+	server.stop();
+}
+
 TEST(EntityHierarchyIntegrationTest, ReparentingPreservesUUIDAndReconstructsHierarchy)
 {
 	spk::Server server;
