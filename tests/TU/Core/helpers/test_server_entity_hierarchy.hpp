@@ -21,8 +21,8 @@ protected:
 	}
 
 public:
-	TestServerEntityHierarchy(Selection selection, MessageTypes types, Priorities priorities = {}) :
-		ServerEntityHierarchy(types, priorities),
+	TestServerEntityHierarchy(Selection selection, MessageConfiguration messages) :
+		ServerEntityHierarchy(messages),
 		_selection(std::move(selection))
 	{
 	}
