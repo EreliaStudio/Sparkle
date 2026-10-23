@@ -17,8 +17,12 @@ namespace spk
 		void _decode(const ByteStream::Reader &reader) final;
 
 	protected:
-		virtual void _encodeData(ByteStream::Writer &writer) const;
-		virtual void _decodeData(const ByteStream::Reader &reader);
+		virtual void _encodeData(ByteStream::Writer &) const
+		{
+		}
+		virtual void _decodeData(const ByteStream::Reader &)
+		{
+		}
 
 	public:
 		PublishableBehaviour(const std::string &name = "Unnamed publishable behaviour", Entity *owner = nullptr);

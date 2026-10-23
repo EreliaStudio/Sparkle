@@ -45,11 +45,4 @@ namespace spk
 		}
 	}
 
-	void PublishableComponent::_encodeData(ByteStream::Writer &) const
-	{
-	}
-
-	void PublishableComponent::_decodeData(const ByteStream::Reader &)
-	{
-	}
 }
