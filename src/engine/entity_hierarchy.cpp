@@ -23,6 +23,16 @@ namespace spk
 	{
 	}
 
+	Entity &EntityHierarchy::root() noexcept
+	{
+		return _root;
+	}
+
+	const Entity &EntityHierarchy::root() const noexcept
+	{
+		return _root;
+	}
+
 	void EntityHierarchy::_registerSourceType(std::type_index type, EntityTypeID id)
 	{
 		if (_sourceTypes.contains(type))
