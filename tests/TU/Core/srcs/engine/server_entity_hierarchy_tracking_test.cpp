@@ -28,22 +28,20 @@ TEST(EntityHierarchyMemorySafetyTest, ConstructedAndDestroyedBetweenCyclesIsNeve
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
 	TrackedSource *current = nullptr;
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return current == nullptr ? std::vector<spk::PublishableEntity *>{} : std::vector<spk::PublishableEntity *>{current};
 		},
 		FirstTypes);
+	hierarchy.bind(server);
 	hierarchy.registerType<TrackedSource>(7);
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
 	(void)hierarchy.publish(server.connections());
 	{
-		TrackedSource transient(&root);
+		TrackedSource transient(&hierarchy.root());
 		current = &transient;
 		EXPECT_NO_THROW((void)hierarchy.publish(server.connections()));
 	}
@@ -57,24 +55,21 @@ TEST(ServerEntityHierarchyTrackingTest, SourceMigratesBetweenHierarchyRootsWitho
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity firstRoot("first");
-	spk::Entity secondRoot("second");
-	TrackedSource source(&firstRoot);
+	TrackedSource source(nullptr);
 	bool moved = false;
 	TestServerEntityHierarchy first(
-		server,
-		firstRoot,
 		[&](const spk::Connection &) {
 			return moved ? std::vector<spk::PublishableEntity *>{} : std::vector<spk::PublishableEntity *>{&source};
 		},
 		FirstTypes);
 	TestServerEntityHierarchy second(
-		server,
-		secondRoot,
 		[&](const spk::Connection &) {
 			return moved ? std::vector<spk::PublishableEntity *>{&source} : std::vector<spk::PublishableEntity *>{};
 		},
 		SecondTypes);
+	first.bind(server);
+	second.bind(server);
+	source.setParent(first.root());
 	first.registerType<TrackedSource>(7);
 	second.registerType<TrackedSource>(7);
 	server.start(0);
@@ -84,7 +79,7 @@ TEST(ServerEntityHierarchyTrackingTest, SourceMigratesBetweenHierarchyRootsWitho
 	EXPECT_NO_THROW((void)first.publish(server.connections()));
 	EXPECT_NO_THROW((void)second.publish(server.connections()));
 	const auto uuid = source.uuid();
-	source.setParent(secondRoot);
+	source.setParent(second.root());
 	moved = true;
 	EXPECT_NO_THROW((void)first.publish(server.connections()));
 	EXPECT_NO_THROW((void)second.publish(server.connections()));
@@ -93,33 +88,35 @@ TEST(ServerEntityHierarchyTrackingTest, SourceMigratesBetweenHierarchyRootsWitho
 	server.stop();
 }
 
-TEST(ServerEntityHierarchyTrackingTest, OverlappingHierarchiesAreCallerResponsibility)
+TEST(ServerEntityHierarchyTrackingTest, IndependentHierarchiesKeepSeparateOwnedRoots)
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	TrackedSource intermediate(&root);
-	TrackedSource child(&intermediate);
+	TrackedSource outerSource(nullptr);
+	TrackedSource innerSource(nullptr);
 	TestServerEntityHierarchy outer(
-		server,
-		root,
 		[&](const spk::Connection &) {
-			return std::vector<spk::PublishableEntity *>{&child};
+			return std::vector<spk::PublishableEntity *>{&outerSource};
 		},
 		FirstTypes);
 	TestServerEntityHierarchy inner(
-		server,
-		intermediate,
 		[&](const spk::Connection &) {
-			return std::vector<spk::PublishableEntity *>{&child};
+			return std::vector<spk::PublishableEntity *>{&innerSource};
 		},
 		SecondTypes);
+	outerSource.setParent(outer.root());
+	innerSource.setParent(inner.root());
+	outer.bind(server);
+	inner.bind(server);
 	outer.registerType<TrackedSource>(7);
 	inner.registerType<TrackedSource>(7);
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
 
+	EXPECT_NE(&outer.root(), &inner.root());
+	EXPECT_EQ(outerSource.parent(), &outer.root());
+	EXPECT_EQ(innerSource.parent(), &inner.root());
 	EXPECT_NO_THROW((void)outer.publish(server.connections(), spk::Publishable::UpdateSelection::All));
 	EXPECT_NO_THROW((void)inner.publish(server.connections(), spk::Publishable::UpdateSelection::All));
 	client.disconnect();
@@ -130,15 +127,13 @@ TEST(EntityHierarchyStressTest, RepeatedSourceConstructionAndRemovalDuringPublic
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
 	TrackedSource *current = nullptr;
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return current == nullptr ? std::vector<spk::PublishableEntity *>{} : std::vector<spk::PublishableEntity *>{current};
 		},
 		FirstTypes);
+	hierarchy.bind(server);
 	hierarchy.registerType<TrackedSource>(7);
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
@@ -147,7 +142,7 @@ TEST(EntityHierarchyStressTest, RepeatedSourceConstructionAndRemovalDuringPublic
 
 	for (int index = 0; index < 250; ++index)
 	{
-		auto source = std::make_unique<TrackedSource>(&root);
+		auto source = std::make_unique<TrackedSource>(&hierarchy.root());
 		current = source.get();
 		if (index % 2 == 0)
 		{
@@ -160,7 +155,7 @@ TEST(EntityHierarchyStressTest, RepeatedSourceConstructionAndRemovalDuringPublic
 			(void)hierarchy.publish(server.connections());
 		}
 	}
-	EXPECT_TRUE(root.children().empty());
+	EXPECT_TRUE(hierarchy.root().children().empty());
 	EXPECT_NO_THROW((void)hierarchy.publish(server.connections()));
 	client.disconnect();
 	server.stop();
