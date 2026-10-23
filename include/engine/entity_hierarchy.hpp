@@ -49,6 +49,7 @@ namespace spk
 	private:
 		MessageTypes _messageTypes;
 		Priorities _priorities;
+		Entity _root{"EntityHierarchy root"};
 
 	protected:
 		std::map<std::type_index, EntityTypeID> _sourceTypes;
@@ -67,6 +68,9 @@ namespace spk
 
 		EntityHierarchy(const EntityHierarchy &) = delete;
 		EntityHierarchy &operator=(const EntityHierarchy &) = delete;
+
+		[[nodiscard]] Entity &root() noexcept;
+		[[nodiscard]] const Entity &root() const noexcept;
 
 		virtual void clear(ClearMode mode) = 0;
 	};
