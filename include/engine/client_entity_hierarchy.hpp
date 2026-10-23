@@ -58,7 +58,6 @@ namespace spk
 		std::map<UUID, RequestState> _requests;
 		Message::RequestID _nextRequestID = 0;
 
-		void _registerReplicantType(EntityTypeID id, ReplicantFactory factory);
 		void _onPublished(const Message &message);
 		void _onInitialized(const Message &message);
 		void _attach(const UUID &uuid);
