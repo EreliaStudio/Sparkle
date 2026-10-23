@@ -9,9 +9,9 @@ Choose the folder by the reader's question:
 - `reference/`: the current public contract of individual important classes.
 - `guides/`: how to accomplish one task with API usage.
 - `contributing/`: contribution style, workflow and quality criteria.
-- `internal/`: historical evidence, validation reports and still-relevant legacy material, clearly marked as such.
+- `internal/`: exceptional transitional project notes; avoid retaining completed feature plans, dated reviews, or one-off validation reports in the active documentation tree.
 
-Keep new feature design and implementation plans in GitHub issues rather than creating new planning documents in `docs/`. When a historical plan is completed or superseded, remove it unless it contains distinctive evidence still worth retaining. Git history preserves prior versions.
+Keep new feature design and implementation plans in GitHub issues rather than creating new planning documents in `docs/`. When a plan is completed or superseded, remove the obsolete documentation. Git history preserves earlier revisions and past review evidence.
 
 ## Class reference template
 
@@ -29,4 +29,4 @@ Keep Mermaid diagrams inline with the page they explain; use flowcharts for navi
 
 ## Validation
 
-Check that all relative Markdown links resolve, that Mermaid parses, that source links point to real headers, and that runnable examples compile on their intended target. Change documentation alongside public API behavior. When moving documents, update all known internal links to the new canonical location. Do not keep placeholder forwarding files unless a real compatibility requirement justifies them; old content remains available in Git history.
+Check that all relative Markdown links resolve, that Mermaid parses, that source links point to real headers, and that runnable examples compile on their intended target. Change documentation alongside public API behavior. Keep old URLs usable via small forwarding pages when moving existing content.
