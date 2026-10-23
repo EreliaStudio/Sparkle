@@ -5,10 +5,6 @@
 #include "network/message.hpp"
 
 #include <cstdint>
-#include <functional>
-#include <map>
-#include <memory>
-#include <typeindex>
 
 namespace spk
 {
@@ -16,7 +12,6 @@ namespace spk
 	{
 	public:
 		using EntityTypeID = std::uint32_t;
-		using ReplicantFactory = std::function<std::unique_ptr<Entity>(const UUID &)>;
 
 		struct MessageConfiguration
 		{
@@ -50,12 +45,6 @@ namespace spk
 		Entity _root{"EntityHierarchy root"};
 
 	protected:
-		std::map<std::type_index, EntityTypeID> _sourceTypes;
-		std::map<EntityTypeID, ReplicantFactory> _replicantFactories;
-
-		void _registerSourceType(std::type_index type, EntityTypeID id);
-		void _registerReplicantType(EntityTypeID id, ReplicantFactory factory);
-		void _clearTypes() noexcept;
 		[[nodiscard]] const MessageConfiguration &messageConfiguration() const noexcept;
 
 	public:
