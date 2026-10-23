@@ -56,8 +56,8 @@ namespace spk
 		void _validateParentGraph(const std::map<UUID, PublicationEntry> &entries) const;
 
 	public:
-		ClientEntityHierarchy(MessageTypes types, InitializationConfig configuration, Priorities priorities = {});
-		ClientEntityHierarchy(MessageTypes types, Priorities priorities = {});
+		ClientEntityHierarchy(MessageConfiguration messages, InitializationConfig configuration);
+		ClientEntityHierarchy(MessageConfiguration messages);
 		~ClientEntityHierarchy() override;
 
 		void bind(Client &client);
