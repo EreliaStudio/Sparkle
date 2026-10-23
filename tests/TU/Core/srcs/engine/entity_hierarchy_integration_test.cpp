@@ -31,7 +31,7 @@ namespace
 		}
 	};
 
-	constexpr spk::EntityHierarchy::MessageTypes Types{700001, 700002, 700003};
+	constexpr spk::EntityHierarchy::MessageConfiguration Types{{ 700001, spk::Message::Priority::Low }, { 700002, spk::Message::Priority::High }, { 700003, spk::Message::Priority::High }};
 
 	bool pumpUntil(spk::Server &server, spk::Client &client, const std::function<bool()> &condition)
 	{
@@ -234,7 +234,7 @@ TEST(EntityHierarchyProtocolTest, MalformedPublicationDoesNotChangeSelection)
 	hierarchy.bind(client);
 	spk::Client::MessageQueue queue;
 
-	spk::Message::Writer writer(Types.publication);
+	spk::Message::Writer writer(Types.publication.type);
 	writer << std::uint64_t{1} << std::uint32_t{1};
 	queue.publish(std::move(writer).build());
 	EXPECT_THROW(client.messageDispatcher().treatMessages(queue), spk::Exception);
@@ -245,7 +245,7 @@ TEST(EntityHierarchyProtocolTest, MalformedPublicationDoesNotChangeSelection)
 TEST(EntityHierarchyProtocolTest, DistinctMessageIdentifiersAreRequired)
 {
 	spk::Client client;
-	EXPECT_THROW((void)spk::ClientEntityHierarchy({7, 7, 8}), spk::Exception);
+	EXPECT_THROW((void)spk::ClientEntityHierarchy({{7, spk::Message::Priority::Low}, {7, spk::Message::Priority::High}, {8, spk::Message::Priority::High}}), spk::Exception);
 }
 
 TEST(EntityHierarchyProtocolTest, InvalidRetryConfigurationIsRejected)
