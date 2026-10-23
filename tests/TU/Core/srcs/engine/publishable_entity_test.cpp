@@ -196,12 +196,18 @@ TEST(PublishableEntityTest, ActivationOnlyAttachmentsNeedNoDataHooks)
 	Character3D replica(source.uuid(), "replica");
 	auto &flag = source.addComponent<spk::PublishableComponent>();
 	auto &replicated = replica.addComponent<spk::PublishableComponent>();
-	source.setPartRegistry({{0, flag, Character3D::Publication::Update}});
-	replica.setPartRegistry({{0, replicated, Character3D::Publication::Update}});
+	auto &behaviour = source.addBehaviour<spk::PublishableBehaviour>();
+	auto &replicatedBehaviour = replica.addBehaviour<spk::PublishableBehaviour>();
+	source.setPartRegistry({{0, flag, Character3D::Publication::Update}, {1, behaviour, Character3D::Publication::Update}});
+	replica.setPartRegistry({{0, replicated, Character3D::Publication::Update}, {1, replicatedBehaviour, Character3D::Publication::Update}});
 	flag.deactivate();
+	behaviour.deactivate();
 	replica.decode(source.encodeInitialization().reader());
 	EXPECT_FALSE(replicated.isActive());
+	EXPECT_FALSE(replicatedBehaviour.isActive());
 	flag.activate();
+	behaviour.activate();
 	replica.decode(source.encodeUpdate().reader());
 	EXPECT_TRUE(replicated.isActive());
+	EXPECT_TRUE(replicatedBehaviour.isActive());
 }
