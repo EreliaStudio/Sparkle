@@ -25,6 +25,13 @@ namespace
 	public:
 		bool fail = false;
 		int value = 13;
+		mutable int encodes = 0;
+
+		void edit(int next)
+		{
+			value = next;
+			invalidate();
+		}
 
 	protected:
 		void _encode(spk::ByteStream::Writer &writer) const override
@@ -33,6 +40,7 @@ namespace
 			{
 				throw spk::Exception("Intentional publication encoding failure.");
 			}
+			++encodes;
 			writer << value;
 		}
 
@@ -252,5 +260,56 @@ TEST(ServerEntityHierarchyTest, InvalidAncestorsAndUnregisteredTypesRejectPublic
 	EXPECT_NO_THROW((void)hierarchy.publish(server.connections()));
 
 	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChangesRemainPending)
+{
+	spk::Server server;
+	spk::Client firstClient;
+	spk::Client secondClient;
+	spk::Entity root("root");
+	Source first(&root);
+	Source unselected(&root);
+	FailablePart firstPart;
+	FailablePart unselectedPart;
+	first.setPartRegistry({{0, firstPart, spk::Publishable::Publication::Update}});
+	unselected.setPartRegistry({{0, unselectedPart, spk::Publishable::Publication::Update}});
+	std::vector<spk::PublishableEntity *> selected{&first};
+	TestServerEntityHierarchy hierarchy(
+		server,
+		root,
+		[&](const spk::Connection &) {
+			return selected;
+		},
+		Types);
+	hierarchy.registerType<Source>(42);
+
+	server.start(0);
+	(void)firstClient.connect("127.0.0.1", server.port());
+	(void)secondClient.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(firstClient));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(secondClient));
+	const auto recipients = server.connections();
+	ASSERT_EQ(recipients.size(), 2u);
+
+	firstPart.edit(25);
+	unselectedPart.edit(30);
+	const auto firstResult = hierarchy.publish(recipients);
+	EXPECT_EQ(firstResult.accepted.size(), 2u);
+	EXPECT_TRUE(firstResult.failures.empty());
+	EXPECT_EQ(firstPart.encodes, 1);
+	EXPECT_EQ(unselectedPart.encodes, 0);
+	EXPECT_FALSE(unselected.captureUpdate().bytes().empty());
+
+	selected = {&unselected};
+	const auto secondResult = hierarchy.publish(recipients);
+	EXPECT_EQ(secondResult.accepted.size(), 2u);
+	EXPECT_TRUE(secondResult.failures.empty());
+	EXPECT_EQ(unselectedPart.encodes, 1);
+	EXPECT_TRUE(unselected.captureUpdate().bytes().empty());
+
+	firstClient.disconnect();
+	secondClient.disconnect();
 	server.stop();
 }
