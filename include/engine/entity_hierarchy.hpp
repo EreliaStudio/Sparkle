@@ -18,18 +18,17 @@ namespace spk
 		using EntityTypeID = std::uint32_t;
 		using ReplicantFactory = std::function<std::unique_ptr<Entity>(const UUID &)>;
 
-		struct MessageTypes
+		struct MessageConfiguration
 		{
-			Message::Type publication;
-			Message::Type initializationRequest;
-			Message::Type initializationResponse;
-		};
+			struct Entry
+			{
+				Message::Type type;
+				Message::Priority priority;
+			};
 
-		struct Priorities
-		{
-			Message::Priority publication = Message::Priority::Low;
-			Message::Priority initializationRequest = Message::Priority::High;
-			Message::Priority initializationResponse = Message::Priority::High;
+			Entry publication{0, Message::Priority::Low};
+			Entry initializationRequest{0, Message::Priority::High};
+			Entry initializationResponse{0, Message::Priority::High};
 		};
 
 		enum class ClearMode
@@ -47,8 +46,7 @@ namespace spk
 		};
 
 	private:
-		MessageTypes _messageTypes;
-		Priorities _priorities;
+		MessageConfiguration _messageConfiguration;
 		Entity _root{"EntityHierarchy root"};
 
 	protected:
@@ -58,12 +56,10 @@ namespace spk
 		void _registerSourceType(std::type_index type, EntityTypeID id);
 		void _registerReplicantType(EntityTypeID id, ReplicantFactory factory);
 		void _clearTypes() noexcept;
-		[[nodiscard]] const MessageTypes &messageTypes() const noexcept;
-		[[nodiscard]] const Priorities &priorities() const noexcept;
+		[[nodiscard]] const MessageConfiguration &messageConfiguration() const noexcept;
 
 	public:
-		explicit EntityHierarchy(MessageTypes types, Priorities priorities);
-		explicit EntityHierarchy(MessageTypes types);
+		explicit EntityHierarchy(MessageConfiguration configuration);
 		virtual ~EntityHierarchy() = default;
 
 		EntityHierarchy(const EntityHierarchy &) = delete;
