@@ -21,13 +21,8 @@ protected:
 	}
 
 public:
-	TestServerEntityHierarchy(
-		spk::Server &server,
-		spk::Entity &root,
-		Selection selection,
-		MessageTypes types,
-		Priorities priorities = {}) :
-		ServerEntityHierarchy(server, root, types, priorities),
+	TestServerEntityHierarchy(Selection selection, MessageTypes types, Priorities priorities = {}) :
+		ServerEntityHierarchy(types, priorities),
 		_selection(std::move(selection))
 	{
 	}
