@@ -95,7 +95,7 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 	std::size_t failures = 0;
 	for (const auto &entry : results)
 	{
-		if (!entry.second)
+		if (std::holds_alternative<std::exception_ptr>(entry.second))
 		{
 			++failures;
 		}
@@ -303,7 +303,7 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	const auto firstResult = hierarchy.publish(recipients);
 	EXPECT_EQ(firstResult.size(), 2u);
 	EXPECT_TRUE(std::ranges::all_of(firstResult, [](const auto &entry) {
-		return entry.second.has_value();
+		return std::holds_alternative<spk::Transfer>(entry.second);
 	}));
 	EXPECT_EQ(firstPart.encodes, 1);
 	EXPECT_EQ(unselectedPart.encodes, 0);
@@ -313,7 +313,7 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	const auto secondResult = hierarchy.publish(recipients);
 	EXPECT_EQ(secondResult.size(), 2u);
 	EXPECT_TRUE(std::ranges::all_of(secondResult, [](const auto &entry) {
-		return entry.second.has_value();
+		return std::holds_alternative<spk::Transfer>(entry.second);
 	}));
 	EXPECT_EQ(unselectedPart.encodes, 1);
 	EXPECT_TRUE(unselected.captureUpdate().bytes().empty());
