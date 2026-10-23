@@ -309,3 +309,25 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	secondClient.disconnect();
 	server.stop();
 }
+
+TEST(ServerEntityHierarchyTest, ConstructsBeforeServerAndBindsExplicitly)
+{
+	Source *selected = nullptr;
+	TestServerEntityHierarchy hierarchy(
+		[&](const spk::Connection &) {
+			return selected == nullptr ? std::vector<spk::PublishableEntity *>{} : std::vector<spk::PublishableEntity *>{selected};
+		},
+		Types);
+	EXPECT_THROW((void)hierarchy.publish({}), spk::Exception);
+
+	spk::Server server;
+	hierarchy.bind(server);
+	EXPECT_THROW(hierarchy.bind(server), spk::Exception);
+	Source source(&hierarchy.root());
+	selected = &source;
+	hierarchy.registerType<Source>(42);
+	EXPECT_EQ(source.parent(), &hierarchy.root());
+	EXPECT_NO_THROW((void)hierarchy.publish({}));
+	hierarchy.clear(spk::EntityHierarchy::ClearMode::Full);
+	EXPECT_NO_THROW(hierarchy.bind(server));
+}
