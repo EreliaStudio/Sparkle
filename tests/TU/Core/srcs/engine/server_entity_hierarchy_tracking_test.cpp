@@ -1,5 +1,5 @@
 #include "engine/publishable_entity3d.hpp"
-#include "engine/server_entity_hierarchy.hpp"
+#include "test_server_entity_hierarchy.hpp"
 #include "exception.hpp"
 #include "network/client.hpp"
 #include "network_test_utils.hpp"
@@ -29,7 +29,7 @@ TEST(EntityHierarchyMemorySafetyTest, ConstructedAndDestroyedBetweenCyclesIsNeve
 	spk::Server server;
 	spk::Client client;
 	spk::Entity root("root");
-	spk::ServerEntityHierarchy hierarchy(
+	TestServerEntityHierarchy hierarchy(
 		server,
 		root,
 		[](const spk::Connection &) {
@@ -57,14 +57,14 @@ TEST(ServerEntityHierarchyTrackingTest, SourceMigratesBetweenHierarchyRootsWitho
 	spk::Entity secondRoot("second");
 	TrackedSource source(&firstRoot);
 	bool moved = false;
-	spk::ServerEntityHierarchy first(
+	TestServerEntityHierarchy first(
 		server,
 		firstRoot,
 		[&](const spk::Connection &) {
 			return moved ? std::vector<spk::PublishableEntity *>{} : std::vector<spk::PublishableEntity *>{&source};
 		},
 		FirstTypes);
-	spk::ServerEntityHierarchy second(
+	TestServerEntityHierarchy second(
 		server,
 		secondRoot,
 		[&](const spk::Connection &) {
@@ -96,14 +96,14 @@ TEST(ServerEntityHierarchyTrackingTest, OverlappingSourceObservationIsRejected)
 	spk::Entity root("root");
 	TrackedSource intermediate(&root);
 	TrackedSource child(&intermediate);
-	spk::ServerEntityHierarchy outer(
+	TestServerEntityHierarchy outer(
 		server,
 		root,
 		[&](const spk::Connection &) {
 			return std::vector<spk::PublishableEntity *>{&child};
 		},
 		FirstTypes);
-	spk::ServerEntityHierarchy inner(
+	TestServerEntityHierarchy inner(
 		server,
 		intermediate,
 		[&](const spk::Connection &) {
@@ -127,7 +127,7 @@ TEST(EntityHierarchyStressTest, RepeatedSourceConstructionAndRemovalDuringPublic
 	spk::Server server;
 	spk::Client client;
 	spk::Entity root("root");
-	spk::ServerEntityHierarchy hierarchy(
+	TestServerEntityHierarchy hierarchy(
 		server,
 		root,
 		[](const spk::Connection &) {
