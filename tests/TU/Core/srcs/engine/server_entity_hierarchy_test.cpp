@@ -92,7 +92,9 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 	recipients.insert(spk::Connection{});
 	auto results = hierarchy.publish(recipients);
 	EXPECT_EQ(results.size(), 2u);
-	EXPECT_EQ(std::ranges::count_if(results, [](const auto &entry) { return !entry.second.has_value(); }), 1);
+	EXPECT_EQ(std::ranges::count_if(results, [](const auto &entry) {
+		return !entry.second.has_value();
+	}), 1);
 	EXPECT_TRUE(source.captureUpdate().bytes().empty());
 	client.disconnect();
 	server.stop();
@@ -294,7 +296,9 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	unselectedPart.edit(30);
 	const auto firstResult = hierarchy.publish(recipients);
 	EXPECT_EQ(firstResult.size(), 2u);
-	EXPECT_TRUE(std::ranges::all_of(firstResult, [](const auto &entry) { return entry.second.has_value(); }));
+	EXPECT_TRUE(std::ranges::all_of(firstResult, [](const auto &entry) {
+		return entry.second.has_value();
+	}));
 	EXPECT_EQ(firstPart.encodes, 1);
 	EXPECT_EQ(unselectedPart.encodes, 0);
 	EXPECT_FALSE(unselected.captureUpdate().bytes().empty());
@@ -302,7 +306,9 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	selected = {&unselected};
 	const auto secondResult = hierarchy.publish(recipients);
 	EXPECT_EQ(secondResult.size(), 2u);
-	EXPECT_TRUE(std::ranges::all_of(secondResult, [](const auto &entry) { return entry.second.has_value(); }));
+	EXPECT_TRUE(std::ranges::all_of(secondResult, [](const auto &entry) {
+		return entry.second.has_value();
+	}));
 	EXPECT_EQ(unselectedPart.encodes, 1);
 	EXPECT_TRUE(unselected.captureUpdate().bytes().empty());
 
