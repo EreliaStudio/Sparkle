@@ -8,23 +8,15 @@
 
 namespace spk
 {
-	ClientEntityHierarchy::ClientEntityHierarchy(
-		Client &client,
-		Entity &root,
-		MessageTypes types,
-		InitializationConfig configuration,
-		Priorities priorities) :
+	ClientEntityHierarchy::ClientEntityHierarchy(MessageTypes types, InitializationConfig configuration, Priorities priorities) :
 		EntityHierarchy(types, priorities),
-		_client(&client),
-		_root(&root),
 		_configuration(configuration)
 	{
 		setInitializationConfig(configuration);
-		_bind();
 	}
 
-	ClientEntityHierarchy::ClientEntityHierarchy(Client &client, Entity &root, MessageTypes types, Priorities priorities) :
-		ClientEntityHierarchy(client, root, types, InitializationConfig{}, priorities)
+	ClientEntityHierarchy::ClientEntityHierarchy(MessageTypes types, Priorities priorities) :
+		ClientEntityHierarchy(types, InitializationConfig{}, priorities)
 	{
 	}
 
@@ -35,18 +27,25 @@ namespace spk
 		_replicas.clear();
 	}
 
-	void ClientEntityHierarchy::_bind()
+	void ClientEntityHierarchy::bind(Client &client)
 	{
-		_onPublication = _client->messageDispatcher().subscribeTo(
+		if (_client != nullptr)
+		{
+			throw spk::Exception("ClientEntityHierarchy is already bound.");
+		}
+		auto publication = client.messageDispatcher().subscribeTo(
 			messageTypes().publication,
 			[this](const Message &message) {
 				_onPublished(message);
 			});
-		_onResponse = _client->messageDispatcher().subscribeTo(
+		auto response = client.messageDispatcher().subscribeTo(
 			messageTypes().initializationResponse,
 			[this](const Message &message) {
 				_onInitialized(message);
 			});
+		_onPublication = std::move(publication);
+		_onResponse = std::move(response);
+		_client = &client;
 	}
 
 	void ClientEntityHierarchy::registerType(EntityTypeID id, ReplicantFactory factory)
@@ -109,7 +108,7 @@ namespace spk
 		Entity *parent = nullptr;
 		if (selected->second.isNull())
 		{
-			parent = _root;
+			parent = &root();
 		}
 		else
 		{
@@ -423,7 +422,9 @@ namespace spk
 			_onResponse.resign();
 			_clearTypes();
 			_client = nullptr;
-			_root = nullptr;
+			_nextRequestID = 0;
+			_sequence = 0;
+			_hasSelection = false;
 		}
 	}
 }
