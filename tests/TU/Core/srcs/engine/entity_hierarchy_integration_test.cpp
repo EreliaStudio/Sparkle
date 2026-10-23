@@ -82,7 +82,9 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 
 	auto result = serverHierarchy.publish(server.connections(), spk::Publishable::UpdateSelection::All);
 	ASSERT_EQ(result.size(), 1u);
-	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) { return entry.second.has_value(); }));
+	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) {
+		return entry.second.has_value();
+	}));
 	ASSERT_TRUE(pumpUntil(server, client, [&]() {
 		return clientHierarchy.find(parent.uuid()) != nullptr && clientHierarchy.find(child.uuid()) != nullptr;
 	}));
@@ -93,7 +95,9 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 
 	child.transform().place(spk::Vector3{3, 4, 5});
 	result = serverHierarchy.publish(server.connections());
-	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) { return entry.second.has_value(); }));
+	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) {
+		return entry.second.has_value();
+	}));
 	ASSERT_TRUE(pumpUntil(server, client, [&]() {
 		auto *replica = dynamic_cast<Monster *>(clientHierarchy.find(child.uuid()));
 		return replica != nullptr && replica->transform().position() == spk::Vector3{3, 4, 5};
@@ -101,7 +105,9 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 
 	selected.clear();
 	result = serverHierarchy.publish(server.connections());
-	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) { return entry.second.has_value(); }));
+	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) {
+		return entry.second.has_value();
+	}));
 	ASSERT_TRUE(pumpUntil(server, client, [&]() {
 		return clientHierarchy.size() == 0;
 	}));
@@ -157,7 +163,9 @@ TEST(EntityHierarchyIntegrationTest, DifferentConnectionsReceiveIndependentSelec
 
 	const auto result = serverHierarchy.publish(server.connections(), spk::Publishable::UpdateSelection::All);
 	ASSERT_EQ(result.size(), 2u);
-	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) { return entry.second.has_value(); }));
+	ASSERT_TRUE(std::ranges::all_of(result, [](const auto &entry) {
+		return entry.second.has_value();
+	}));
 	const auto deadline = std::chrono::steady_clock::now() + 5s;
 	bool initialized = false;
 	while (std::chrono::steady_clock::now() < deadline)
