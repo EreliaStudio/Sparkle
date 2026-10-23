@@ -11,8 +11,8 @@
 
 namespace
 {
-	constexpr spk::EntityHierarchy::MessageTypes FirstTypes{730001, 730002, 730003};
-	constexpr spk::EntityHierarchy::MessageTypes SecondTypes{730011, 730012, 730013};
+	constexpr spk::EntityHierarchy::MessageConfiguration FirstTypes{{ 730001, spk::Message::Priority::Low }, { 730002, spk::Message::Priority::High }, { 730003, spk::Message::Priority::High }};
+	constexpr spk::EntityHierarchy::MessageConfiguration SecondTypes{{ 730011, spk::Message::Priority::Low }, { 730012, spk::Message::Priority::High }, { 730013, spk::Message::Priority::High }};
 
 	class TrackedSource : public spk::PublishableEntity3D
 	{
