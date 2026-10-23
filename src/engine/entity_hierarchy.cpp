@@ -27,37 +27,6 @@ namespace spk
 		return _root;
 	}
 
-	void EntityHierarchy::_registerSourceType(std::type_index type, EntityTypeID id)
-	{
-		if (_sourceTypes.contains(type))
-		{
-			throw spk::Exception("EntityHierarchy concrete Source type already registered.");
-		}
-		for (const auto &[existingType, existingID] : _sourceTypes)
-		{
-			if (existingID == id)
-			{
-				throw spk::Exception("EntityHierarchy EntityTypeID is already registered.");
-			}
-		}
-		_sourceTypes.emplace(type, id);
-	}
-
-	void EntityHierarchy::_registerReplicantType(EntityTypeID id, ReplicantFactory factory)
-	{
-		if (!factory || _replicantFactories.contains(id))
-		{
-			throw spk::Exception("Invalid or duplicate EntityHierarchy Replicant factory.");
-		}
-		_replicantFactories.emplace(id, std::move(factory));
-	}
-
-	void EntityHierarchy::_clearTypes() noexcept
-	{
-		_sourceTypes.clear();
-		_replicantFactories.clear();
-	}
-
 	const EntityHierarchy::MessageConfiguration &EntityHierarchy::messageConfiguration() const noexcept
 	{
 		return _messageConfiguration;
