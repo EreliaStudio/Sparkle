@@ -1,5 +1,6 @@
 #include "engine/client_entity_hierarchy.hpp"
 #include "engine/publishable_entity3d.hpp"
+#include "exception.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
 
@@ -88,8 +89,8 @@ TEST(ClientEntityHierarchyTest, RetriesOnlyOnNewerPublicationsAndStopsAfterFourS
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	Remote source;
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
@@ -124,8 +125,8 @@ TEST(ClientEntityHierarchyTest, RejectedStopsRetriesUntilSelectionReentry)
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	Remote source;
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
@@ -152,8 +153,8 @@ TEST(ClientEntityHierarchyTest, LateInitializationPersistsUntilNextSelection)
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	hierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
 		return std::make_unique<Remote>(uuid);
 	});
@@ -185,8 +186,8 @@ TEST(ClientEntityHierarchyTest, ChildInitializesDetachedAndAttachesWhenParentArr
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	hierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
 		return std::make_unique<Remote>(uuid);
 	});
@@ -206,7 +207,7 @@ TEST(ClientEntityHierarchyTest, ChildInitializesDetachedAndAttachesWhenParentArr
 
 	deliver(client, response(requestID, parent.uuid(), spk::EntityHierarchy::InitializationOutcome::Success, parent.encodeInitialization()));
 	ASSERT_NE(hierarchy.find(parent.uuid()), nullptr);
-	EXPECT_EQ(hierarchy.find(parent.uuid())->parent(), &root);
+	EXPECT_EQ(hierarchy.find(parent.uuid())->parent(), &hierarchy.root());
 	EXPECT_EQ(hierarchy.find(child.uuid())->parent(), hierarchy.find(parent.uuid()));
 	client.disconnect();
 	server.stop();
@@ -216,8 +217,8 @@ TEST(ClientEntityHierarchyTest, IntervalPreventsRapidRetriesButNoTimerSendsByIts
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types, {4, 150ms});
+	spk::ClientEntityHierarchy hierarchy(Types, {4, 150ms});
+	hierarchy.bind(client);
 	Remote source;
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
@@ -239,8 +240,8 @@ TEST(ClientEntityHierarchyTest, IntervalPreventsRapidRetriesButNoTimerSendsByIts
 TEST(ClientEntityHierarchyTest, StalePublicationCannotRestoreOldSelection)
 {
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	Remote source;
 	deliver(client, selection(10, {}));
 	EXPECT_NO_THROW(deliver(client, selection(9, {{source.uuid(), spk::UUID::null()}})));
@@ -250,8 +251,8 @@ TEST(ClientEntityHierarchyTest, StalePublicationCannotRestoreOldSelection)
 TEST(ClientEntityHierarchyTest, CyclicParentSelectionIsRejectedBeforeAcceptance)
 {
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	Remote first;
 	Remote second;
 	const auto cyclic = selection(1, {{first.uuid(), second.uuid()}, {second.uuid(), first.uuid()}});
@@ -264,8 +265,8 @@ TEST(ClientEntityHierarchyTest, InternalErrorRemainsRetryableButTooLargeStopsRet
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	Remote source;
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
@@ -295,8 +296,8 @@ TEST(ClientEntityHierarchyTest, InternalErrorRemainsRetryableButTooLargeStopsRet
 TEST(ClientEntityHierarchyTest, RuntimeClearPreservesPublicationOrderWhileFullClearUnbinds)
 {
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	Remote source;
 	deliver(client, selection(10, {}));
 	hierarchy.clear(spk::EntityHierarchy::ClearMode::Runtime);
@@ -310,8 +311,8 @@ TEST(ClientEntityHierarchyTest, ReparentingReversesExistingParentChildRelationsh
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	hierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
 		return std::make_unique<Remote>(uuid);
 	});
@@ -335,9 +336,28 @@ TEST(ClientEntityHierarchyTest, ReparentingReversesExistingParentChildRelationsh
 	EXPECT_EQ(hierarchy.find(second->uuid())->parent(), hierarchy.find(first->uuid()));
 
 	EXPECT_NO_THROW(deliver(client, selection(2, {{first->uuid(), second->uuid()}, {second->uuid(), spk::UUID::null()}})));
-	EXPECT_EQ(hierarchy.find(second->uuid())->parent(), &root);
+	EXPECT_EQ(hierarchy.find(second->uuid())->parent(), &hierarchy.root());
 	EXPECT_EQ(hierarchy.find(first->uuid())->parent(), hierarchy.find(second->uuid()));
 
 	client.disconnect();
 	server.stop();
+}
+
+TEST(ClientEntityHierarchyTest, ConstructBeforeClientAndBindLater)
+{
+	spk::ClientEntityHierarchy hierarchy(Types);
+	EXPECT_TRUE(hierarchy.root().children().empty());
+	EXPECT_EQ(hierarchy.size(), 0u);
+
+	spk::Client client;
+	EXPECT_NO_THROW(hierarchy.bind(client));
+	EXPECT_THROW(hierarchy.bind(client), spk::Exception);
+
+	Remote source;
+	deliver(client, selection(10, {}));
+	hierarchy.clear(spk::EntityHierarchy::ClearMode::Full);
+	EXPECT_NO_THROW(hierarchy.bind(client));
+	EXPECT_NO_THROW(deliver(client, selection(1, {})));
+	EXPECT_EQ(hierarchy.size(), 0u);
+	EXPECT_TRUE(hierarchy.root().children().empty());
 }
