@@ -5,9 +5,7 @@
 
 #include <concepts>
 #include <exception>
-#include <functional>
 #include <map>
-#include <set>
 #include <typeindex>
 #include <utility>
 #include <vector>
@@ -17,8 +15,6 @@ namespace spk
 	class ServerEntityHierarchy : public EntityHierarchy
 	{
 	public:
-		using EntitySelector = std::function<std::vector<PublishableEntity *>(const Connection &)>;
-
 		struct PublicationResult
 		{
 			std::map<Connection::ID, Transfer> accepted;
@@ -32,41 +28,28 @@ namespace spk
 		};
 
 	private:
-		struct Observation
-		{
-			Entity *parent;
-			InherenceTrait<Entity>::OnChildEditionContract subscription;
-		};
-
 		struct Source
 		{
-			Entity *entity;
 			PublishableEntity *publishable;
 			EntityTypeID type;
+			UUID parentUUID;
 		};
 
 		Server *_server;
 		Entity *_root;
-		EntitySelector _selector;
 		Server::MessageDispatcher::Contract _onRequest;
-		std::map<Entity *, Observation> _observed;
-		std::map<Entity *, Entity *> _pending;
-		std::map<Entity *, UUID> _trackedUUIDs;
-		std::map<UUID, Source> _sources;
 		std::uint64_t _sequence = 0;
 		std::vector<InitializationFailure> _initializationFailures;
 
-		static std::map<PublishableEntity *, ServerEntityHierarchy *> _owners;
-
-		void _withdraw(Entity *entity);
-		void _observe(Entity *entity, Entity *parent);
-		void _resolvePending();
-		[[nodiscard]] std::map<UUID, Source> _select(const Connection &connection);
+		[[nodiscard]] std::map<UUID, Source> _select(const Connection &connection) const;
 		void _onInitializationRequest(const ReceivedMessage &received);
 		void _bind();
 
+	protected:
+		virtual std::vector<PublishableEntity *> selectEntities(const Connection &connection) const = 0;
+
 	public:
-		ServerEntityHierarchy(Server &server, Entity &root, EntitySelector selector, MessageTypes types, Priorities priorities = {});
+		ServerEntityHierarchy(Server &server, Entity &root, MessageTypes types, Priorities priorities = {});
 		~ServerEntityHierarchy() override;
 
 		template <typename TEntity>
