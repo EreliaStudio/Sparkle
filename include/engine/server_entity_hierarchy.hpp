@@ -47,7 +47,7 @@ namespace spk
 		virtual std::vector<PublishableEntity *> selectEntities(const Connection &connection) const = 0;
 
 	public:
-		ServerEntityHierarchy(MessageTypes types, Priorities priorities = {});
+		ServerEntityHierarchy(MessageConfiguration messages);
 		~ServerEntityHierarchy() override;
 
 		template <typename TEntity>
