@@ -17,7 +17,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr spk::EntityHierarchy::MessageTypes Types{710001, 710002, 710003};
+	constexpr spk::EntityHierarchy::MessageConfiguration Types{{ 710001, spk::Message::Priority::Low }, { 710002, spk::Message::Priority::High }, { 710003, spk::Message::Priority::High }};
 
 	class Remote : public spk::PublishableEntity3D
 	{
@@ -35,7 +35,7 @@ namespace
 
 	spk::Message selection(std::uint64_t sequence, const std::vector<std::pair<spk::UUID, spk::UUID>> &members)
 	{
-		spk::Message::Writer writer(Types.publication);
+		spk::Message::Writer writer(Types.publication.type);
 		writer << sequence << static_cast<std::uint32_t>(members.size());
 		for (const auto &[uuid, parent] : members)
 		{
@@ -50,7 +50,7 @@ namespace
 		spk::EntityHierarchy::InitializationOutcome outcome,
 		const spk::ByteStream &parts = {})
 	{
-		spk::Message::Writer writer(Types.initializationResponse);
+		spk::Message::Writer writer(Types.initializationResponse.type);
 		writer.setRequestID(requestID);
 		writer << uuid.bytes() << static_cast<std::uint8_t>(outcome);
 		if (outcome == spk::EntityHierarchy::InitializationOutcome::Success)
@@ -101,7 +101,7 @@ TEST(ClientEntityHierarchyTest, RetriesOnlyOnNewerPublicationsAndStopsAfterFourS
 		deliver(client, selection(sequence, {{source.uuid(), spk::UUID::null()}}));
 		const auto sent = requests(server);
 		ASSERT_EQ(sent.size(), 1u);
-		EXPECT_EQ(sent[0].message.type(), Types.initializationRequest);
+		EXPECT_EQ(sent[0].message.type(), Types.initializationRequest.type);
 		EXPECT_EQ(sent[0].message.requestID(), sequence);
 	}
 	std::this_thread::sleep_for(30ms);
