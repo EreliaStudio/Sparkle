@@ -53,6 +53,6 @@ The standard workflow for a new feature or significant fix is **Issue → approv
 
 - Favor minimal coherent code with explicit decisions and clear ownership. No speculative defensive frameworks, retries or recovery states.
 - Keep test fixtures and sample code aligned with the actual API. If tests cannot be run, say so; never invent success.
-- Preserve old documentation links where practical; do not delete engineering history silently.
+- When reorganizing documentation, update references to canonical pages and remove redundant forwarding files. Retain meaningful historical evidence when needed; Git history preserves removed drafts.
 - Follow `.clang-format` for C++ changes and write user-facing docs in English.
 - Never commit, merge, or mark an architectural decision approved merely because an AI considers it preferable; the maintainer validates the design.

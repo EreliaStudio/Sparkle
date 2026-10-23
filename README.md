@@ -106,4 +106,4 @@ The bundled Liberation Sans default font is distributed under the SIL Open Font 
 
 ## Network message subscriptions
 
-Clients, servers, and routed node endpoints expose typed `messageDispatcher()` subscriptions. Call `treatMessages()` from the owning update loop to process received messages. See [network message dispatch](docs/guides/network-message-dispatch.md) for callbacks, reply routing, and lifetime rules.
+Clients, servers, and routed node endpoints expose typed `messageDispatcher()` subscriptions. Call `treatMessages()` from the owning update loop to process received messages. See [send network messages](docs/guides/send-network-messages.md) for subscriptions and receiving messages, and the [networking architecture](docs/architecture/networking.md) for the transport and dispatch model.

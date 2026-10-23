@@ -29,4 +29,4 @@ Keep Mermaid diagrams inline with the page they explain; use flowcharts for navi
 
 ## Validation
 
-Check that all relative Markdown links resolve, that Mermaid parses, that source links point to real headers, and that runnable examples compile on their intended target. Change documentation alongside public API behavior. Keep old URLs usable via small forwarding pages when moving existing content.
+Check that all relative Markdown links resolve, that Mermaid parses, that source links point to real headers, and that runnable examples compile on their intended target. Change documentation alongside public API behavior. When moving documents, update all known internal links to the new canonical location. Do not keep placeholder forwarding files unless a real compatibility requirement justifies them; old content remains available in Git history.

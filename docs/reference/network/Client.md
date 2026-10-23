@@ -11,4 +11,4 @@ Client manages one connection attempt/session, outgoing messages, incoming messa
 - `messages()` exposes the incoming queue. Alternatively, subscribe through `messageDispatcher()` and call `treatMessages()` on the calling thread.
 - Configuration methods control handshake, incoming reassembly, pages, timeouts and failures.
 
-The default `ConnectBehaviour::Throw` rejects replacing an existing session unless `DisconnectPrevious` is requested. Sending while disconnected is invalid. See [Connection](Connection.md), [send network messages](../../guides/send-network-messages.md) and [message dispatch](../../guides/network-message-dispatch.md).
+The default `ConnectBehaviour::Throw` rejects replacing an existing session unless `DisconnectPrevious` is requested. Sending while disconnected is invalid. See [Connection](Connection.md), [send network messages](../../guides/send-network-messages.md) and [message subscription examples](../../guides/send-network-messages.md#subscribe-to-incoming-messages).
