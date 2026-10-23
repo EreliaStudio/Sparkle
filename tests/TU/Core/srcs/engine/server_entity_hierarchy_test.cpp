@@ -93,9 +93,9 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 	auto results = hierarchy.publish(recipients);
 	EXPECT_EQ(results.size(), 2u);
 	std::size_t failures = 0;
-	for (const auto &[connectionID, outcome] : results)
+	for (const auto &entry : results)
 	{
-		if (!outcome)
+		if (!entry.second)
 		{
 			++failures;
 		}
