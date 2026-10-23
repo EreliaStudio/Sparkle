@@ -9,7 +9,9 @@ Choose the folder by the reader's question:
 - `reference/`: the current public contract of individual important classes.
 - `guides/`: how to accomplish one task with API usage.
 - `contributing/`: contribution style, workflow and quality criteria.
-- `internal/`: historical plans and validation reports, clearly marked as such.
+- `internal/`: historical evidence, validation reports and still-relevant legacy material, clearly marked as such.
+
+Keep new feature design and implementation plans in GitHub issues rather than creating new planning documents in `docs/`. When a historical plan is completed or superseded, remove it unless it contains distinctive evidence still worth retaining. Git history preserves prior versions.
 
 ## Class reference template
 

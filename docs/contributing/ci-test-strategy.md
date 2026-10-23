@@ -11,7 +11,7 @@ Sparkle separates test responsibilities so a failure identifies the kind of defe
 | Coverage | Instrumented test coverage and reports | Existing LLVM coverage job |
 | Packaging | Install, relocation, vcpkg consumers | Existing packaging jobs |
 
-The implementation of this PR adds **only network-specific memory-safety and stress tests**. It establishes test naming and CI routing that later pull requests can reuse for other Core modules without rewriting the workflow.
+The test naming and CI routing conventions are intended to support multiple Core domains without mixing functional, memory-safety and stress workloads.
 
 ## Functional tests
 
@@ -27,7 +27,7 @@ Name a suite `<Domain>MemorySafetyTest` (for example `NetworkMemorySafetyTest`).
 - Run sanitizer tests once per CI matrix execution rather than repeating randomized/stress workloads here.
 - Keep explicit leak tests small and reproducible. A clean ASan run does not prove that every possible resource leak or race has been eliminated.
 
-Additional domains will contribute their own `*MemorySafetyTest` suites in later PRs.
+Add `*MemorySafetyTest` suites for other domains when concrete lifecycle and ownership risks warrant the coverage.
 
 ## Stress and randomized tests
 
@@ -50,6 +50,6 @@ Existing networking stress coverage is grouped under `NetworkStressTest`, includ
 
 Do not add a CI job until it has real relevant tests, clear failure criteria, and an acceptable execution budget.
 
-## Pull-request scope and progression
+## Updating the CI strategy
 
-PR #29 establishes the functional / memory-safety / stress separation for Sparkle Core and implements the network-specific fixtures only. Subsequent PRs should add tests for ByteStream, containers, worker pools, UI, rendering, and other components to their appropriate categories without broadening this PR's production-code scope. Keep the full workflow matrix green at the latest branch head before concluding that CI passes.
+A feature's [approved GitHub issue](feature-workflow.md) should define the relevant test levels and proposed CI changes. Add tests for ByteStream, containers, worker pools, UI, rendering, and other domains to the appropriate existing categories. Propose new CI jobs only when an existing category cannot validate the intended contract. Check the full required workflow matrix against the latest pull-request head before concluding that CI passes.
