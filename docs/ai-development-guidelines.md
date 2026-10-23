@@ -227,6 +227,7 @@ Traits are **inherited behavioral capabilities**, not a collection of free funct
 
 - Prefer **one class per file** by default, with meaningful nested types/close helpers where cohesive.
 - Put non-template declarations in `.hpp` and method implementations in `.cpp`. Keep template definitions in headers; **no `.tpp` files**.
+- **Exception for empty virtual hooks:** when a virtual method's entire default implementation is `{}`, define the empty body directly in the header instead of declaring it there and placing an empty definition in a `.cpp`. A declaration ending in `;` should signal that a substantive out-of-line implementation exists. Keep `= 0` for genuinely abstract methods whose overrides are mandatory: `{}` instead provides an optional no-op implementation and is not semantically equivalent.
 - Favor domain-first directories (such as `network/` and `rendering/`), subdivided by architecture where it improves navigation.
 - Prefer direct includes; use forward declarations to break circular dependencies; use PImpl for large or platform-specific internals.
 - For class declarations, preferred logical order is:

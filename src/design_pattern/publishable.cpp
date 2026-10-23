@@ -1,12 +1,10 @@
 #include "design_pattern/publishable.hpp"
 
-#include "container/double_buffer.hpp"
 #include "exception.hpp"
 
 #include <algorithm>
-#include <atomic>
+#include <exception>
 #include <limits>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -14,250 +12,191 @@ namespace spk
 {
 	struct Publishable::Registration
 	{
-		PartID id;
 		Part *part;
 		Flags<Publication> flags;
-		std::atomic<bool> active = true;
+		bool modified;
+		bool received = false;
+		std::uint64_t receivedGeneration = 0;
 
-		Registration(PartID partID, Part *registeredPart, Flags<Publication> publicationFlags) :
-			id(partID),
-			part(registeredPart),
-			flags(publicationFlags)
+		Registration(Part &registeredPart, Flags<Publication> publicationFlags) :
+			part(&registeredPart),
+			flags(publicationFlags),
+			modified(publicationFlags.has(Publication::Update))
 		{
 		}
 	};
 
-	struct Publishable::State
+	struct Publishable::UpdateCapture::Data
 	{
-		mutable std::mutex registrationsMutex;
-		mutable std::mutex editionMutex;
-		std::unordered_map<PartID, std::shared_ptr<Registration>> registrations;
-		mutable DoubleBuffer<std::unordered_set<std::shared_ptr<Registration>>> edited;
-
-		void markEdited(const std::shared_ptr<Registration> &registration)
-		{
-			if (!registration->active.load(std::memory_order_acquire) ||
-				!registration->flags.has(Publication::Edition))
-			{
-				return;
-			}
-
-			edited.modify([&](auto &pending) {
-				pending.insert(registration);
-			});
-		}
-
-		void detach(const std::shared_ptr<Registration> &registration) noexcept
-		{
-			const std::scoped_lock lock(registrationsMutex);
-			registration->active.store(false, std::memory_order_release);
-			const auto it = registrations.find(registration->id);
-			if (it != registrations.end() && it->second == registration)
-			{
-				registrations.erase(it);
-			}
-		}
+		ByteStream bytes;
+		const Publishable *owner = nullptr;
+		std::vector<std::pair<std::shared_ptr<Registration>, std::uint64_t>> captured;
 	};
 
-	Publishable::Part::Part() :
-		_snapshot{
-			CachedData<ByteStream>([this]() {
-				return _buildEdition();
-			}),
-			CachedData<ByteStream>([this]() {
-				return _buildUpdate();
-			})}
+	const ByteStream &Publishable::UpdateCapture::bytes() const
 	{
+		if (!_data)
+		{
+			throw spk::Exception("Invalid Publishable update capture.");
+		}
+		return _data->bytes;
 	}
 
 	Publishable::Part::~Part()
 	{
-		std::vector<Subscriber> subscribers;
+		if (_owner != nullptr)
 		{
-			const std::scoped_lock lock(_cacheMutex);
-			subscribers.swap(_subscribers);
-		}
-
-		for (const Subscriber &subscriber : subscribers)
-		{
-			const auto state = subscriber.state.lock();
-			const auto registration = subscriber.registration.lock();
-			if (state && registration)
-			{
-				state->detach(registration);
-			}
+			_owner->_forget(*this);
 		}
 	}
 
 	void Publishable::Part::invalidate()
 	{
-		std::vector<Subscriber> subscribers;
+		if (_owner != nullptr && _owner->_mode == Mode::Replicant)
 		{
-			const std::scoped_lock lock(_cacheMutex);
-			_snapshot.edition.invalidate();
-			_snapshot.update.invalidate();
-			subscribers = _subscribers;
+			return;
+		}
+		if (_generation == std::numeric_limits<std::uint64_t>::max())
+		{
+			throw spk::Exception("Publishable Part generation overflow.");
 		}
 
-		for (const Subscriber &subscriber : subscribers)
+		++_generation;
+		_cachedSnapshot.reset();
+		if (_owner != nullptr)
 		{
-			const auto state = subscriber.state.lock();
-			const auto registration = subscriber.registration.lock();
-			if (state && registration)
-			{
-				state->markEdited(registration);
-			}
+			_owner->_markModified(*this);
 		}
 	}
 
-	ByteStream Publishable::Part::_buildEdition() const
+	std::pair<std::uint64_t, ByteStream> Publishable::Part::_snapshot() const
 	{
-		ByteStream::Writer writer;
-		_encode(writer);
-		return std::move(writer).build();
+		if (!_cachedSnapshot.has_value())
+		{
+			ByteStream::Writer writer;
+			_encode(writer);
+			_cachedSnapshot.emplace(std::move(writer).build());
+		}
+		return {_generation, *_cachedSnapshot};
 	}
 
-	ByteStream Publishable::Part::_buildUpdate() const
+	Publishable::Publishable(Mode mode) :
+		_mode(mode)
 	{
-		ByteStream::Writer writer;
-		_encodeUpdate(writer);
-		return std::move(writer).build();
-	}
-
-	ByteStream Publishable::Part::_editionSnapshot() const
-	{
-		const std::scoped_lock lock(_cacheMutex);
-		return _snapshot.edition.get();
-	}
-
-	ByteStream Publishable::Part::_updateSnapshot() const
-	{
-		const std::scoped_lock lock(_cacheMutex);
-		return _snapshot.update.get();
-	}
-
-	void Publishable::Part::_subscribe(
-		const std::shared_ptr<State> &state,
-		const std::shared_ptr<Registration> &registration)
-	{
-		const std::scoped_lock lock(_cacheMutex);
-		_subscribers.push_back({state, registration});
-	}
-
-	void Publishable::Part::_unsubscribe(const std::shared_ptr<Registration> &registration) noexcept
-	{
-		const std::scoped_lock lock(_cacheMutex);
-		std::erase_if(_subscribers, [&](const Subscriber &subscriber) {
-			return subscriber.registration.lock() == registration;
-		});
-	}
-
-	void Publishable::Part::_encodeUpdate(ByteStream::Writer &writer) const
-	{
-		_encode(writer);
-	}
-
-	void Publishable::Part::_decodeUpdate(const ByteStream::Reader &reader)
-	{
-		_decode(reader);
-	}
-
-	Publishable::Publishable() :
-		_state(std::make_shared<State>())
-	{
+		if (mode != Mode::Source && mode != Mode::Replicant)
+		{
+			throw spk::Exception("Invalid Publishable mode.");
+		}
 	}
 
 	Publishable::~Publishable()
 	{
-		std::unordered_map<PartID, std::shared_ptr<Registration>> registrations;
+		for (const auto &[id, registration] : _registrations)
 		{
-			const std::scoped_lock lock(_state->registrationsMutex);
-			registrations.swap(_state->registrations);
-			for (const auto &[id, registration] : registrations)
-			{
-				registration->active.store(false, std::memory_order_release);
-			}
-		}
-
-		for (const auto &[id, registration] : registrations)
-		{
-			registration->part->_unsubscribe(registration);
+			registration->part->_owner = nullptr;
 		}
 	}
 
-	void Publishable::add(PartID id, Part *part, Flags<Publication> flags)
+	bool Publishable::_decodeLast(PartID) const
 	{
-		if (part == nullptr)
-		{
-			throw spk::Exception("Cannot register a null Publishable Part.");
-		}
-		if ((flags.raw() & ~static_cast<Flags<Publication>::Mask>(3)) != 0)
-		{
-			throw spk::Exception("Invalid Publishable publication flags.");
-		}
+		return false;
+	}
 
-		auto registration = std::make_shared<Registration>(id, part, flags);
-		part->_subscribe(_state, registration);
-		try
+	Publishable::Mode Publishable::mode() const noexcept
+	{
+		return _mode;
+	}
+
+	void Publishable::_markModified(Part &part) noexcept
+	{
+		for (const auto &[id, registration] : _registrations)
 		{
-			const std::scoped_lock lock(_state->registrationsMutex);
-			if (_state->registrations.contains(id))
+			if (registration->part == &part && registration->flags.has(Publication::Update))
 			{
-				throw spk::Exception("Publishable Part ID is already registered.");
+				registration->modified = true;
 			}
-			for (const auto &[otherID, existing] : _state->registrations)
-			{
-				if (existing->part == part)
-				{
-					throw spk::Exception("Publishable Part is already registered.");
-				}
-			}
-			_state->registrations.emplace(id, registration);
-		} catch (...)
-		{
-			registration->active.store(false, std::memory_order_release);
-			part->_unsubscribe(registration);
-			throw;
 		}
 	}
 
-	void Publishable::remove(PartID id)
+	void Publishable::_forget(Part &part) noexcept
 	{
-		std::shared_ptr<Registration> registration;
+		for (auto it = _registrations.begin(); it != _registrations.end();)
 		{
-			const std::scoped_lock lock(_state->registrationsMutex);
-			const auto it = _state->registrations.find(id);
-			if (it == _state->registrations.end())
+			if (it->second->part == &part)
 			{
-				throw spk::Exception("Cannot remove an unknown Publishable Part ID.");
+				it = _registrations.erase(it);
 			}
-			registration = it->second;
-			registration->active.store(false, std::memory_order_release);
-			_state->registrations.erase(it);
+			else
+			{
+				++it;
+			}
 		}
-		registration->part->_unsubscribe(registration);
+		part._owner = nullptr;
 	}
 
-	bool Publishable::contains(PartID id) const
+	void Publishable::setPartRegistry(PartRegistry registrations)
 	{
-		const std::scoped_lock lock(_state->registrationsMutex);
-		return _state->registrations.contains(id);
+		std::map<PartID, std::shared_ptr<Registration>> replacement;
+		std::unordered_set<Part *> uniqueParts;
+		for (const PartRegistration &item : registrations)
+		{
+			if (item.flags.raw() & ~static_cast<Flags<Publication>::Mask>(Publication::Update))
+			{
+				throw spk::Exception("Invalid Publishable publication flags.");
+			}
+			if (!uniqueParts.insert(&item.part.get()).second)
+			{
+				throw spk::Exception("Publishable Part registered more than once.");
+			}
+			if (item.part.get()._owner != nullptr && item.part.get()._owner != this)
+			{
+				throw spk::Exception("Publishable Part belongs to another Publishable.");
+			}
+			if (replacement.contains(item.id))
+			{
+				throw spk::Exception("Duplicate Publishable Part ID.");
+			}
+
+			auto previous = _registrations.find(item.id);
+			if (previous != _registrations.end() &&
+				previous->second->part == &item.part.get() &&
+				previous->second->flags.raw() == item.flags.raw())
+			{
+				replacement.emplace(item.id, previous->second);
+			}
+			else
+			{
+				replacement.emplace(item.id, std::make_shared<Registration>(item.part.get(), item.flags));
+			}
+		}
+
+		for (const auto &[id, registration] : _registrations)
+		{
+			if (!uniqueParts.contains(registration->part))
+			{
+				registration->part->_owner = nullptr;
+			}
+		}
+		for (const PartRegistration &item : registrations)
+		{
+			item.part.get()._owner = this;
+		}
+		_registrations.swap(replacement);
 	}
 
 	namespace
 	{
-		using Mode = std::uint8_t;
-		constexpr Mode InitializationMode = 0;
-		constexpr Mode EditionMode = 1;
-		constexpr Mode UpdateMode = 2;
+		constexpr std::uint8_t InitializationMode = 0;
+		constexpr std::uint8_t UpdateMode = 1;
 
 		struct Section
 		{
 			Publishable::PartID id;
-			ByteStream payload;
+			std::uint64_t generation;
+			ByteStream bytes;
 		};
 
-		[[nodiscard]] ByteStream encodeSections(Mode mode, const std::vector<Section> &sections)
+		[[nodiscard]] ByteStream encodeSections(std::uint8_t mode, const std::vector<Section> &sections)
 		{
 			if (sections.empty())
 			{
@@ -265,15 +204,15 @@ namespace spk
 			}
 			if (sections.size() > std::numeric_limits<std::uint32_t>::max())
 			{
-				throw spk::Exception("Publishable Part count exceeds the binary format.");
+				throw spk::Exception("Publishable section count overflow.");
 			}
 
 			ByteStream::Writer writer;
 			writer << mode << static_cast<std::uint32_t>(sections.size());
 			for (const Section &section : sections)
 			{
-				writer << section.id << static_cast<std::uint64_t>(section.payload.size());
-				writer.append(section.payload.data().data(), section.payload.size());
+				writer << section.id << section.generation << static_cast<std::uint64_t>(section.bytes.size());
+				writer.append(section.bytes.data().data(), section.bytes.size());
 			}
 			return std::move(writer).build();
 		}
@@ -281,175 +220,162 @@ namespace spk
 
 	ByteStream Publishable::encodeInitialization() const
 	{
-		std::vector<std::shared_ptr<Registration>> registrations;
-		{
-			const std::scoped_lock lock(_state->registrationsMutex);
-			for (const auto &[id, registration] : _state->registrations)
-			{
-				registrations.push_back(registration);
-			}
-		}
-
-		std::sort(registrations.begin(), registrations.end(), [](const auto &lhs, const auto &rhs) {
-			return lhs->id < rhs->id;
-		});
-
+		const auto registrations = _registrations;
 		std::vector<Section> sections;
 		sections.reserve(registrations.size());
-		for (const auto &registration : registrations)
+		for (const auto &[id, registration] : registrations)
 		{
-			sections.push_back({registration->id, registration->part->_editionSnapshot()});
+			auto [generation, bytes] = registration->part->_snapshot();
+			sections.push_back({id, generation, std::move(bytes)});
 		}
 		return encodeSections(InitializationMode, sections);
 	}
 
-	ByteStream Publishable::encodeEdited() const
+	Publishable::UpdateCapture Publishable::captureUpdate(UpdateSelection selection) const
 	{
-		const std::scoped_lock editionLock(_state->editionMutex);
-		auto &batch = _state->edited.read();
-		if (batch.empty())
+		if (selection != UpdateSelection::Modified && selection != UpdateSelection::All)
 		{
-			_state->edited.swap();
+			throw spk::Exception("Invalid Publishable update selection.");
 		}
-
-		std::vector<std::shared_ptr<Registration>> registrations;
-		registrations.reserve(batch.size());
-		for (const auto &registration : batch)
+		UpdateCapture capture;
+		capture._data = std::make_shared<UpdateCapture::Data>();
+		capture._data->owner = this;
+		const auto registrations = _registrations;
+		std::vector<Section> sections;
+		for (const auto &[id, registration] : registrations)
 		{
-			if (registration->active.load(std::memory_order_acquire))
+			if (!registration->flags.has(Publication::Update) ||
+				(selection == UpdateSelection::Modified && !registration->modified))
 			{
-				registrations.push_back(registration);
+				continue;
+			}
+			auto [generation, bytes] = registration->part->_snapshot();
+			sections.push_back({id, generation, std::move(bytes)});
+			if (selection == UpdateSelection::Modified)
+			{
+				capture._data->captured.emplace_back(registration, generation);
 			}
 		}
-		std::sort(registrations.begin(), registrations.end(), [](const auto &lhs, const auto &rhs) {
-			return lhs->id < rhs->id;
-		});
-
-		std::vector<Section> sections;
-		sections.reserve(registrations.size());
-		for (const auto &registration : registrations)
-		{
-			sections.push_back({registration->id, registration->part->_editionSnapshot()});
-		}
-
-		ByteStream result = encodeSections(EditionMode, sections);
-		batch.clear();
-		return result;
+		capture._data->bytes = encodeSections(UpdateMode, sections);
+		return capture;
 	}
 
-	ByteStream Publishable::encodeUpdate() const
+	void Publishable::commitUpdate(const UpdateCapture &capture) const
 	{
-		std::vector<std::shared_ptr<Registration>> registrations;
+		if (!capture._data || capture._data->owner != this)
 		{
-			const std::scoped_lock lock(_state->registrationsMutex);
-			for (const auto &[id, registration] : _state->registrations)
+			throw spk::Exception("Publishable update capture does not belong to this instance.");
+		}
+		for (const auto &[registration, generation] : capture._data->captured)
+		{
+			if (registration->part->_generation == generation)
 			{
-				if (registration->flags.has(Publication::Update))
-				{
-					registrations.push_back(registration);
-				}
+				registration->modified = false;
 			}
 		}
-		std::sort(registrations.begin(), registrations.end(), [](const auto &lhs, const auto &rhs) {
-			return lhs->id < rhs->id;
-		});
-
-		std::vector<Section> sections;
-		sections.reserve(registrations.size());
-		for (const auto &registration : registrations)
-		{
-			sections.push_back({registration->id, registration->part->_updateSnapshot()});
-		}
-		return encodeSections(UpdateMode, sections);
 	}
 
-	void Publishable::decode(const ByteStream::Reader &reader, UnknownPartBehaviour behaviour)
+	ByteStream Publishable::encodeUpdate(UpdateSelection selection) const
 	{
-		if (behaviour != UnknownPartBehaviour::Throw && behaviour != UnknownPartBehaviour::Skip)
-		{
-			throw spk::Exception("Invalid unknown-Part decoding behaviour.");
-		}
+		auto capture = captureUpdate(selection);
+		ByteStream bytes = capture.bytes();
+		commitUpdate(capture);
+		return bytes;
+	}
+
+	void Publishable::decode(const ByteStream::Reader &reader)
+	{
 		if (reader.remaining() == 0)
 		{
 			return;
 		}
-
-		Mode mode;
+		const auto registrations = _registrations;
+		std::uint8_t mode;
 		std::uint32_t count;
 		reader >> mode >> count;
-		if (mode != InitializationMode && mode != EditionMode && mode != UpdateMode)
+		if (mode != InitializationMode && mode != UpdateMode)
 		{
 			throw spk::Exception("Invalid Publishable publication mode.");
 		}
-
-		constexpr std::size_t SectionHeaderSize = sizeof(PartID) + sizeof(std::uint64_t);
+		constexpr std::size_t SectionHeaderSize = sizeof(PartID) + 2 * sizeof(std::uint64_t);
 		if (count > reader.remaining() / SectionHeaderSize)
 		{
-			throw spk::Exception("Publishable collection is truncated.");
+			throw spk::Exception("Truncated Publishable section headers.");
 		}
 
-		struct DecodedSection
+		struct Parsed
 		{
-			Part *part;
+			PartID id;
+			std::shared_ptr<Registration> registration;
+			std::uint64_t generation;
 			std::size_t begin;
 			std::size_t end;
 		};
-
-		std::vector<DecodedSection> sections;
+		std::vector<Parsed> sections;
 		std::unordered_set<PartID> seen;
 		sections.reserve(count);
-		seen.reserve(count);
-
 		for (std::uint32_t index = 0; index < count; ++index)
 		{
 			PartID id;
+			std::uint64_t generation;
 			std::uint64_t length;
-			reader >> id >> length;
+			reader >> id >> generation >> length;
 			if (!seen.insert(id).second)
 			{
-				throw spk::Exception("Duplicate Publishable Part ID in collection.");
+				throw spk::Exception("Duplicate Publishable Part ID in message.");
 			}
 			if (length > reader.remaining())
 			{
-				throw spk::Exception("Publishable Part payload exceeds reader bounds.");
+				throw spk::Exception("Publishable payload exceeds message bounds.");
 			}
-
-			Part *part = nullptr;
-			{
-				const std::scoped_lock lock(_state->registrationsMutex);
-				const auto it = _state->registrations.find(id);
-				if (it != _state->registrations.end())
-				{
-					part = it->second->part;
-				}
-			}
-			if (part == nullptr && behaviour == UnknownPartBehaviour::Throw)
+			const auto binding = registrations.find(id);
+			if (binding == registrations.end())
 			{
 				throw spk::Exception("Unknown Publishable Part ID.");
 			}
-			if (part != nullptr)
-			{
-				const std::size_t begin = reader.readOffset();
-				sections.push_back({part, begin, begin + static_cast<std::size_t>(length)});
-			}
+			const std::size_t begin = reader.readOffset();
+			sections.push_back({id, binding->second, generation, begin, begin + static_cast<std::size_t>(length)});
 			reader.skip(static_cast<std::size_t>(length));
 		}
-
-		for (const DecodedSection &section : sections)
+		if (reader.remaining() != 0)
 		{
-			const auto payload = reader.subreader(section.begin, section.end);
-			if (mode == UpdateMode)
+			throw spk::Exception("Trailing bytes in Publishable message.");
+		}
+
+		std::stable_partition(sections.begin(), sections.end(), [this](const Parsed &section) {
+			return !_decodeLast(section.id);
+		});
+
+		std::exception_ptr firstFailure;
+		for (const Parsed &section : sections)
+		{
+			auto &registration = *section.registration;
+			if (registration.received && section.generation <= registration.receivedGeneration)
 			{
-				section.part->_decodeUpdate(payload);
+				continue;
 			}
-			else
+			try
 			{
-				section.part->_decode(payload);
-			}
-			if (payload.remaining() != 0)
+				const auto payload = reader.subreader(section.begin, section.end);
+				registration.part->_decode(payload);
+				if (payload.remaining() != 0)
+				{
+					throw spk::Exception("Publishable Part payload not fully consumed.");
+				}
+				registration.receivedGeneration = section.generation;
+				registration.received = true;
+				registration.part->_cachedSnapshot.reset();
+			} catch (...)
 			{
-				throw spk::Exception("Publishable Part payload not fully consumed.");
+				if (!firstFailure)
+				{
+					firstFailure = std::current_exception();
+				}
 			}
+		}
+		if (firstFailure)
+		{
+			std::rethrow_exception(firstFailure);
 		}
 	}
 }

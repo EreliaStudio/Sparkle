@@ -1,81 +1,69 @@
 #pragma once
 
 #include "container/byte_stream.hpp"
-#include "container/cached_data.hpp"
 #include "container/flags.hpp"
 
 #include <cstdint>
+#include <functional>
+#include <map>
 #include <memory>
-#include <mutex>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace spk
 {
 	class Publishable
 	{
-	private:
-		struct Registration;
-		struct State;
-
 	public:
 		using PartID = std::uint32_t;
 
-		enum class Publication : std::uint8_t
+		enum class Mode
 		{
-			Edition = 1 << 0,
-			Update = 1 << 1
+			Source,
+			Replicant
 		};
 
-		[[nodiscard]] friend constexpr Flags<Publication> operator|(Publication lhs, Publication rhs) noexcept
+		enum class Publication : std::uint8_t
 		{
-			return Flags<Publication>(lhs) | Flags<Publication>(rhs);
-		}
+			Update = 1 << 0
+		};
 
-		enum class UnknownPartBehaviour
+		enum class UpdateSelection
 		{
-			Throw,
-			Skip
+			Modified,
+			All
+		};
+
+		class UpdateCapture
+		{
+			friend class Publishable;
+
+		private:
+			struct Data;
+			std::shared_ptr<Data> _data;
+
+		public:
+			[[nodiscard]] const ByteStream &bytes() const;
 		};
 
 		class Part
 		{
 			friend class Publishable;
 
-		public:
-			static constexpr Flags<Publication> InitializationOnlyFlag{};
-
 		private:
-			struct Snapshot
-			{
-				CachedData<ByteStream> edition;
-				CachedData<ByteStream> update;
-			};
+			Publishable *_owner = nullptr;
+			std::uint64_t _generation = 0;
+			mutable std::optional<ByteStream> _cachedSnapshot;
 
-			struct Subscriber
-			{
-				std::weak_ptr<State> state;
-				std::weak_ptr<Registration> registration;
-			};
-
-			mutable std::mutex _cacheMutex;
-			mutable Snapshot _snapshot;
-			std::vector<Subscriber> _subscribers;
-
-			[[nodiscard]] ByteStream _editionSnapshot() const;
-			[[nodiscard]] ByteStream _updateSnapshot() const;
-			void _subscribe(const std::shared_ptr<State> &state, const std::shared_ptr<Registration> &registration);
-			void _unsubscribe(const std::shared_ptr<Registration> &registration) noexcept;
-			[[nodiscard]] ByteStream _buildEdition() const;
-			[[nodiscard]] ByteStream _buildUpdate() const;
+			[[nodiscard]] std::pair<std::uint64_t, ByteStream> _snapshot() const;
 
 		protected:
-			Part();
+			Part() = default;
 			void invalidate();
 
 			virtual void _encode(ByteStream::Writer &writer) const = 0;
 			virtual void _decode(const ByteStream::Reader &reader) = 0;
-			virtual void _encodeUpdate(ByteStream::Writer &writer) const;
-			virtual void _decodeUpdate(const ByteStream::Reader &reader);
 
 		public:
 			virtual ~Part();
@@ -86,19 +74,30 @@ namespace spk
 			Part &operator=(Part &&) = delete;
 		};
 
+		struct PartRegistration
+		{
+			PartID id;
+			std::reference_wrapper<Part> part;
+			Flags<Publication> flags;
+		};
+
+		using PartRegistry = std::vector<PartRegistration>;
+
 	private:
-		std::shared_ptr<State> _state;
+		struct Registration;
+
+		Mode _mode;
+		std::map<PartID, std::shared_ptr<Registration>> _registrations;
+
+		void _markModified(Part &part) noexcept;
+		void _forget(Part &part) noexcept;
 
 	protected:
-		void add(
-			PartID id,
-			Part *part,
-			Flags<Publication> flags = Part::InitializationOnlyFlag);
-		void remove(PartID id);
-		[[nodiscard]] bool contains(PartID id) const;
+		virtual bool _decodeLast(PartID id) const;
+		void setPartRegistry(PartRegistry registrations);
 
 	public:
-		Publishable();
+		explicit Publishable(Mode mode);
 		virtual ~Publishable();
 
 		Publishable(const Publishable &) = delete;
@@ -106,12 +105,11 @@ namespace spk
 		Publishable(Publishable &&) = delete;
 		Publishable &operator=(Publishable &&) = delete;
 
+		[[nodiscard]] Mode mode() const noexcept;
 		[[nodiscard]] ByteStream encodeInitialization() const;
-		[[nodiscard]] ByteStream encodeEdited() const;
-		[[nodiscard]] ByteStream encodeUpdate() const;
-
-		void decode(
-			const ByteStream::Reader &reader,
-			UnknownPartBehaviour behaviour = UnknownPartBehaviour::Throw);
+		[[nodiscard]] ByteStream encodeUpdate(UpdateSelection selection = UpdateSelection::Modified) const;
+		[[nodiscard]] UpdateCapture captureUpdate(UpdateSelection selection = UpdateSelection::Modified) const;
+		void commitUpdate(const UpdateCapture &capture) const;
+		void decode(const ByteStream::Reader &reader);
 	};
 }

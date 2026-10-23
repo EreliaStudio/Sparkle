@@ -1,11 +1,14 @@
 #include <gtest/gtest.h>
 
+#include "diagnostics/logger.hpp"
 #include "exception.hpp"
 
 #include <exception>
 #include <source_location>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -164,4 +167,46 @@ TEST(ExceptionTest, ExactFormattingContract)
 
 	const auto emptyLocation = captureLocation();
 	EXPECT_EQ(spk::Exception("", emptyLocation).what(), frame(0, "", emptyLocation));
+}
+
+TEST(ExceptionTest, LogExceptionUsesCallerContextAndStandardMessage)
+{
+	std::vector<std::pair<spk::Logger::Level, std::string>> records;
+	auto contract = spk::logger.subscribeToEntry([&](const spk::Logger::Level &level, const std::string &message) {
+		records.emplace_back(level, message);
+	});
+
+	spk::logException(std::make_exception_ptr(std::runtime_error("sample failure")), "while processing notification");
+
+	ASSERT_EQ(records.size(), 1u);
+	EXPECT_EQ(records.front().first, spk::Logger::Level::Error);
+	EXPECT_EQ(records.front().second, "while processing notification: sample failure");
+}
+
+TEST(ExceptionTest, LogExceptionReportsUnknownErrorForNonStandardExceptions)
+{
+	std::vector<std::string> records;
+	auto contract = spk::logger.subscribeToEntry([&](const spk::Logger::Level &level, const std::string &message) {
+		if (level == spk::Logger::Level::Error)
+		{
+			records.push_back(message);
+		}
+	});
+
+	spk::logException(std::make_exception_ptr(42), "while cleaning up");
+
+	ASSERT_EQ(records.size(), 1u);
+	EXPECT_EQ(records.front(), "while cleaning up: unknown error (unexpected exception type)");
+}
+
+TEST(ExceptionTest, LogExceptionIgnoresEmptyExceptionPointer)
+{
+	std::vector<std::string> records;
+	auto contract = spk::logger.subscribeToEntry([&](const spk::Logger::Level &, const std::string &message) {
+		records.push_back(message);
+	});
+
+	spk::logException(nullptr, "nothing failed");
+
+	EXPECT_TRUE(records.empty());
 }

@@ -101,6 +101,8 @@ namespace spk
 
 		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
 		[[nodiscard]] Connection connection(ConnectionID id) const;
+		[[nodiscard]] ConnectionSet connections() const;
+		[[nodiscard]] std::size_t maxMessageBytes() const noexcept;
 		[[nodiscard]] bool isRunning() const noexcept;
 		[[nodiscard]] std::uint16_t port() const noexcept;
 		void start(std::uint16_t port, StartBehaviour behaviour = StartBehaviour::Throw);
