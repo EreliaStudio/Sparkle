@@ -250,7 +250,6 @@ TEST(ServerEntityHierarchyTest, InvalidAncestorsAndUnregisteredTypesRejectPublic
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	EXPECT_THROW((void)hierarchy.publish(server.connections()), spk::Exception);
-	hierarchy.bind(server);
 	hierarchy.registerType<Source>(42);
 	EXPECT_THROW((void)hierarchy.publish(server.connections()), spk::Exception);
 	child.setParent(hierarchy.root());
