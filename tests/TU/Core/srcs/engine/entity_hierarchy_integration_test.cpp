@@ -54,22 +54,22 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("server root");
-	spk::Entity clientRoot("client root");
-	Monster parent("parent", &root);
+	Monster parent("parent");
 	Monster child("child", &parent);
-	Monster sibling("sibling", &root);
+	Monster sibling("sibling");
 	std::vector<spk::PublishableEntity *> selected{&child};
 
 	TestServerEntityHierarchy serverHierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return selected;
 		},
 		Types);
 	serverHierarchy.registerType<Monster>(42);
-	spk::ClientEntityHierarchy clientHierarchy(client, clientRoot, Types);
+	parent.setParent(serverHierarchy.root());
+	sibling.setParent(serverHierarchy.root());
+	serverHierarchy.bind(server);
+	spk::ClientEntityHierarchy clientHierarchy(Types);
+	clientHierarchy.bind(client);
 	clientHierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
 		return std::make_unique<Monster>(uuid);
 	});
@@ -87,7 +87,7 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 	}));
 	EXPECT_EQ(clientHierarchy.size(), 2u);
 	EXPECT_EQ(clientHierarchy.find(sibling.uuid()), nullptr);
-	EXPECT_EQ(clientHierarchy.find(parent.uuid())->parent(), &clientRoot);
+	EXPECT_EQ(clientHierarchy.find(parent.uuid())->parent(), &clientHierarchy.root());
 	EXPECT_EQ(clientHierarchy.find(child.uuid())->parent(), clientHierarchy.find(parent.uuid()));
 
 	child.transform().place(spk::Vector3{3, 4, 5});
@@ -104,7 +104,7 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 	ASSERT_TRUE(pumpUntil(server, client, [&]() {
 		return clientHierarchy.size() == 0;
 	}));
-	EXPECT_TRUE(clientRoot.children().empty());
+	EXPECT_TRUE(clientHierarchy.root().children().empty());
 	client.disconnect();
 	server.stop();
 }
@@ -114,16 +114,11 @@ TEST(EntityHierarchyIntegrationTest, DifferentConnectionsReceiveIndependentSelec
 	spk::Server server;
 	spk::Client firstClient;
 	spk::Client secondClient;
-	spk::Entity root("server root");
-	spk::Entity firstRoot("first client root");
-	spk::Entity secondRoot("second client root");
-	Monster first("first", &root);
-	Monster second("second", &root);
+	Monster first("first");
+	Monster second("second");
 
 	spk::Connection::ID firstConnectionID{};
 	TestServerEntityHierarchy serverHierarchy(
-		server,
-		root,
 		[&](const spk::Connection &connection) {
 			if (connection.id() == firstConnectionID)
 			{
@@ -133,8 +128,13 @@ TEST(EntityHierarchyIntegrationTest, DifferentConnectionsReceiveIndependentSelec
 		},
 		Types);
 	serverHierarchy.registerType<Monster>(42);
-	spk::ClientEntityHierarchy firstHierarchy(firstClient, firstRoot, Types);
-	spk::ClientEntityHierarchy secondHierarchy(secondClient, secondRoot, Types);
+	first.setParent(serverHierarchy.root());
+	second.setParent(serverHierarchy.root());
+	serverHierarchy.bind(server);
+	spk::ClientEntityHierarchy firstHierarchy(Types);
+	spk::ClientEntityHierarchy secondHierarchy(Types);
+	firstHierarchy.bind(firstClient);
+	secondHierarchy.bind(secondClient);
 	firstHierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
 		return std::make_unique<Monster>(uuid);
 	});
@@ -186,21 +186,21 @@ TEST(EntityHierarchyIntegrationTest, ReparentingPreservesUUIDAndReconstructsHier
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("server root");
-	spk::Entity clientRoot("client root");
-	Monster first("first", &root);
-	Monster second("second", &root);
+	Monster first("first");
+	Monster second("second");
 	Monster child("child", &first);
 
 	TestServerEntityHierarchy serverHierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return std::vector<spk::PublishableEntity *>{&child};
 		},
 		Types);
 	serverHierarchy.registerType<Monster>(42);
-	spk::ClientEntityHierarchy clientHierarchy(client, clientRoot, Types);
+	first.setParent(serverHierarchy.root());
+	second.setParent(serverHierarchy.root());
+	serverHierarchy.bind(server);
+	spk::ClientEntityHierarchy clientHierarchy(Types);
+	clientHierarchy.bind(client);
 	clientHierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
 		return std::make_unique<Monster>(uuid);
 	});
@@ -230,8 +230,8 @@ TEST(EntityHierarchyIntegrationTest, ReparentingPreservesUUIDAndReconstructsHier
 TEST(EntityHierarchyProtocolTest, MalformedPublicationDoesNotChangeSelection)
 {
 	spk::Client client;
-	spk::Entity root("replica root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	spk::Client::MessageQueue queue;
 
 	spk::Message::Writer writer(Types.publication);
@@ -239,21 +239,20 @@ TEST(EntityHierarchyProtocolTest, MalformedPublicationDoesNotChangeSelection)
 	queue.publish(std::move(writer).build());
 	EXPECT_THROW(client.messageDispatcher().treatMessages(queue), spk::Exception);
 	EXPECT_EQ(hierarchy.size(), 0u);
-	EXPECT_TRUE(root.children().empty());
+	EXPECT_TRUE(hierarchy.root().children().empty());
 }
 
 TEST(EntityHierarchyProtocolTest, DistinctMessageIdentifiersAreRequired)
 {
 	spk::Client client;
-	spk::Entity root("replica root");
-	EXPECT_THROW((void)spk::ClientEntityHierarchy(client, root, {7, 7, 8}), spk::Exception);
+	EXPECT_THROW((void)spk::ClientEntityHierarchy({7, 7, 8}), spk::Exception);
 }
 
 TEST(EntityHierarchyProtocolTest, InvalidRetryConfigurationIsRejected)
 {
 	spk::Client client;
-	spk::Entity root("replica root");
-	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
 	EXPECT_THROW(hierarchy.setInitializationConfig({0, 1ms}), spk::Exception);
 	EXPECT_THROW(hierarchy.setInitializationConfig({4, -1ms}), spk::Exception);
 }
