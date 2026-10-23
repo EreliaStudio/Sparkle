@@ -4,8 +4,8 @@
 #include "network/server.hpp"
 
 #include <concepts>
-#include <expected>
 #include <exception>
+#include <expected>
 #include <map>
 #include <typeindex>
 #include <utility>
