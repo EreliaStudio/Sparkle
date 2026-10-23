@@ -1,5 +1,5 @@
 #include "engine/publishable_entity3d.hpp"
-#include "engine/server_entity_hierarchy.hpp"
+#include "test_server_entity_hierarchy.hpp"
 #include "exception.hpp"
 #include "network/client.hpp"
 #include "network_test_utils.hpp"
@@ -61,7 +61,7 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 	Source source(&root);
 	FailablePart part;
 	source.setPartRegistry({{0, part, spk::Publishable::Publication::Update}});
-	spk::ServerEntityHierarchy hierarchy(
+	TestServerEntityHierarchy hierarchy(
 		server,
 		root,
 		[&](const spk::Connection &) {
@@ -94,7 +94,7 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizationDoesNotRevealUnknownE
 	spk::Server server;
 	spk::Client client;
 	spk::Entity root("root");
-	spk::ServerEntityHierarchy hierarchy(
+	TestServerEntityHierarchy hierarchy(
 		server,
 		root,
 		[](const spk::Connection &) {
