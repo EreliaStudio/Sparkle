@@ -48,6 +48,15 @@ namespace spk
 		_client = &client;
 	}
 
+	void ClientEntityHierarchy::_registerReplicantType(EntityTypeID id, ReplicantFactory factory)
+	{
+		if (!factory || _replicantFactories.contains(id))
+		{
+			throw spk::Exception("Invalid or duplicate EntityHierarchy Replicant factory.");
+		}
+		_replicantFactories.emplace(id, std::move(factory));
+	}
+
 	void ClientEntityHierarchy::registerType(EntityTypeID id, ReplicantFactory factory)
 	{
 		_registerReplicantType(id, std::move(factory));
@@ -420,7 +429,7 @@ namespace spk
 		{
 			_onPublication.resign();
 			_onResponse.resign();
-			_clearTypes();
+			_replicantFactories.clear();
 			_client = nullptr;
 			_nextRequestID = 0;
 			_sequence = 0;
