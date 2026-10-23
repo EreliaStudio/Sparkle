@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <vector>
 
@@ -31,6 +32,13 @@ namespace spk
 			std::chrono::steady_clock::time_point lastSent{};
 			Message::RequestID lastRequest = 0;
 			bool blocked = false;
+			std::set<Message::RequestID> outstanding;
+		};
+
+		struct SelectionState
+		{
+			std::map<UUID, UUID> entities;
+			std::optional<std::uint64_t> sequence;
 		};
 
 		struct PublicationEntry
@@ -46,12 +54,9 @@ namespace spk
 		Client::MessageDispatcher::Contract _onPublication;
 		Client::MessageDispatcher::Contract _onResponse;
 		std::map<UUID, std::unique_ptr<Entity>> _replicas;
-		std::map<UUID, UUID> _selection;
+		SelectionState _selection;
 		std::map<UUID, RequestState> _requests;
-		std::map<Message::RequestID, std::set<UUID>> _batches;
 		Message::RequestID _nextRequestID = 0;
-		std::uint64_t _sequence = 0;
-		bool _hasSelection = false;
 
 		void _registerReplicantType(EntityTypeID id, ReplicantFactory factory);
 		void _onPublished(const Message &message);
