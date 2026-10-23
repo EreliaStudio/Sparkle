@@ -17,7 +17,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr spk::EntityHierarchy::MessageConfiguration Types{{ 710001, spk::Message::Priority::Low }, { 710002, spk::Message::Priority::High }, { 710003, spk::Message::Priority::High }};
+	constexpr spk::EntityHierarchy::MessageConfiguration Types{{710001, spk::Message::Priority::Low}, {710002, spk::Message::Priority::High}, {710003, spk::Message::Priority::High}};
 
 	class Remote : public spk::PublishableEntity3D
 	{
