@@ -5,10 +5,10 @@
 
 #include <concepts>
 #include <exception>
-#include <variant>
 #include <map>
 #include <typeindex>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace spk
