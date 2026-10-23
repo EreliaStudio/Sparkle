@@ -149,6 +149,42 @@ TEST(ClientEntityHierarchyTest, RejectedStopsRetriesUntilSelectionReentry)
 	server.stop();
 }
 
+TEST(ClientEntityHierarchyTest, ReentryIgnoresRejectedResponseFromPreviousSelection)
+{
+	spk::Server server;
+	spk::Client client;
+	spk::ClientEntityHierarchy hierarchy(Types);
+	hierarchy.bind(client);
+	Remote source;
+	server.start(0);
+	(void)client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	deliver(client, selection(1, {{source.uuid(), spk::UUID::null()}}));
+	const auto first = requests(server);
+	ASSERT_EQ(first.size(), 1u);
+	const auto oldRequestID = first[0].message.requestID();
+
+	deliver(client, selection(2, {}));
+	deliver(client, selection(3, {{source.uuid(), spk::UUID::null()}}));
+	const auto second = requests(server);
+	ASSERT_EQ(second.size(), 1u);
+	const auto currentRequestID = second[0].message.requestID();
+	EXPECT_NE(oldRequestID, currentRequestID);
+
+	deliver(client, response(oldRequestID, source.uuid(), spk::EntityHierarchy::InitializationOutcome::Rejected));
+	deliver(client, selection(4, {{source.uuid(), spk::UUID::null()}}));
+	const auto third = requests(server);
+	ASSERT_EQ(third.size(), 1u);
+	EXPECT_NE(third[0].message.requestID(), currentRequestID);
+
+	deliver(client, response(currentRequestID, source.uuid(), spk::EntityHierarchy::InitializationOutcome::Rejected));
+	deliver(client, selection(5, {{source.uuid(), spk::UUID::null()}}));
+	EXPECT_EQ(requests(server).size(), 1u);
+	client.disconnect();
+	server.stop();
+}
+
 TEST(ClientEntityHierarchyTest, LateInitializationPersistsUntilNextSelection)
 {
 	spk::Server server;
