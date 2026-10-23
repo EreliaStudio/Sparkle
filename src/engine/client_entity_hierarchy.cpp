@@ -56,7 +56,7 @@ namespace spk
 
 	void ClientEntityHierarchy::setInitializationConfig(InitializationConfig configuration)
 	{
-		if (configuration.maximumRequests == 0 || configuration.minimumDelay.count() < 0)
+		if (configuration.maximumRequests == 0 || configuration.delay.count() < 0)
 		{
 			throw spk::Exception("Invalid EntityHierarchy initialization request configuration.");
 		}
@@ -157,7 +157,7 @@ namespace spk
 			}
 			const RequestState &state = found->second;
 			if (!state.blocked && state.count < _configuration.maximumRequests &&
-				(state.count == 0 || now - state.lastSent >= _configuration.minimumDelay))
+				(state.count == 0 || now - state.lastSent >= _configuration.delay))
 			{
 				pending.push_back(uuid);
 			}

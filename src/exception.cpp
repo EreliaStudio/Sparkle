@@ -1,5 +1,7 @@
 #include "exception.hpp"
 
+#include "diagnostics/logger.hpp"
+
 #include <utility>
 
 namespace spk
@@ -84,5 +86,23 @@ namespace spk
 	const std::exception_ptr &Exception::cause() const noexcept
 	{
 		return _cause;
+	}
+
+	void logException(std::exception_ptr failure, std::string_view context, std::source_location location) noexcept
+	{
+		if (!failure)
+		{
+			return;
+		}
+		try
+		{
+			std::rethrow_exception(failure);
+		} catch (const std::exception &exception)
+		{
+			SPK_LOG_LOCATED(Error, location) << context << ": " << exception.what() << std::endl;
+		} catch (...)
+		{
+			SPK_LOG_LOCATED(Error, location) << context << ": unknown error (unexpected exception type)" << std::endl;
+		}
 	}
 }

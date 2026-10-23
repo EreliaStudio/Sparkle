@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "design_pattern/contract_provider.hpp"
-#include "diagnostics/logger.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -211,34 +211,17 @@ namespace spk
 		virtual ~InherenceTrait()
 		{
 			_destroying = true;
-			auto logFailure = [](std::exception_ptr failure) noexcept {
-				if (!failure)
-				{
-					return;
-				}
-				try
-				{
-					std::rethrow_exception(failure);
-				} catch (const std::exception &exception)
-				{
-					SPK_LOG(Error) << "InherenceTrait notification failed during destruction: " << exception.what() << std::endl;
-				} catch (...)
-				{
-					SPK_LOG(Error) << "InherenceTrait notification failed during destruction." << std::endl;
-				}
-			};
-
 			if (TType *parent = std::exchange(_parent, nullptr))
 			{
 				parent->_removeChild(static_cast<TType *>(this));
-				logFailure(parent->_notifyChild(static_cast<TType *>(this), ChildEdition::Removed));
+				logException(parent->_notifyChild(static_cast<TType *>(this), ChildEdition::Removed), "InherenceTrait notification failed during destruction");
 			}
 			while (!_children.empty())
 			{
 				TType *child = _children.back();
 				_children.pop_back();
 				child->_parent = nullptr;
-				logFailure(child->_notifyParent());
+				logException(child->_notifyParent(), "InherenceTrait notification failed during destruction");
 			}
 		}
 

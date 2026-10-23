@@ -18,7 +18,7 @@ namespace spk
 		struct InitializationConfig
 		{
 			std::uint32_t maximumRequests = 4;
-			std::chrono::milliseconds minimumDelay{0};
+			std::chrono::milliseconds delay{0};
 		};
 
 	private:
