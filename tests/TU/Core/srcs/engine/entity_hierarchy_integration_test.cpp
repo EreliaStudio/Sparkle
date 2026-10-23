@@ -31,7 +31,7 @@ namespace
 		}
 	};
 
-	constexpr spk::EntityHierarchy::MessageConfiguration Types{{ 700001, spk::Message::Priority::Low }, { 700002, spk::Message::Priority::High }, { 700003, spk::Message::Priority::High }};
+	constexpr spk::EntityHierarchy::MessageConfiguration Types{{700001, spk::Message::Priority::Low}, {700002, spk::Message::Priority::High}, {700003, spk::Message::Priority::High}};
 
 	bool pumpUntil(spk::Server &server, spk::Client &client, const std::function<bool()> &condition)
 	{
