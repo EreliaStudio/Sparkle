@@ -35,21 +35,19 @@ namespace spk
 			UUID parentUUID;
 		};
 
-		Server *_server;
-		Entity *_root;
+		Server *_server = nullptr;
 		Server::MessageDispatcher::Contract _onRequest;
 		std::uint64_t _sequence = 0;
 		std::vector<InitializationFailure> _initializationFailures;
 
 		[[nodiscard]] std::map<UUID, Source> _select(const Connection &connection) const;
 		void _onInitializationRequest(const ReceivedMessage &received);
-		void _bind();
 
 	protected:
 		virtual std::vector<PublishableEntity *> selectEntities(const Connection &connection) const = 0;
 
 	public:
-		ServerEntityHierarchy(Server &server, Entity &root, MessageTypes types, Priorities priorities = {});
+		ServerEntityHierarchy(MessageTypes types, Priorities priorities = {});
 		~ServerEntityHierarchy() override;
 
 		template <typename TEntity>
@@ -58,6 +56,8 @@ namespace spk
 		{
 			_registerSourceType(std::type_index(typeid(TEntity)), id);
 		}
+
+		void bind(Server &server);
 
 		[[nodiscard]] PublicationResult publish(
 			const ConnectionSet &connections,
