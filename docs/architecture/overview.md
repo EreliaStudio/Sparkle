@@ -12,4 +12,4 @@ Sparkle is organized around a headless Core and an optional application/renderin
 | Rendering | `RenderSnapshot`, `RenderPass`, render commands | `include/rendering/` |
 | UI | `Widget`, layouts, `ModelView` | `include/ui/` |
 
-Follow each domain through the [architecture index](README.md). For implementation rules see [architecture guidelines](../contributing/architecture-guidelines.md).
+Follow each domain through the [architecture index](README.md). For implementation rules see the [AI Development and Code Review Guide](../ai-development-guidelines.md).
