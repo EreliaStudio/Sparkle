@@ -66,19 +66,18 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	Source source(&root);
+	Source source(nullptr);
 	FailablePart part;
 	source.setPartRegistry({{0, part, spk::Publishable::Publication::Update}});
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return std::vector<spk::PublishableEntity *>{&source};
 		},
 		Types);
+	hierarchy.bind(server);
 	hierarchy.registerType<Source>(42);
 
+	source.setParent(hierarchy.root());
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
@@ -102,14 +101,12 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizationDoesNotRevealUnknownE
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[](const spk::Connection &) {
 			return std::vector<spk::PublishableEntity *>{};
 		},
 		Types);
+	hierarchy.bind(server);
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
@@ -151,22 +148,22 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizesCurrentDirectAndAncestor
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	Source parent(&root);
+	Source parent(nullptr);
 	Source child(&parent);
-	Source sibling(&root);
+	Source sibling(nullptr);
 	std::vector<spk::PublishableEntity *> selected{&child};
 	int selectionCalls = 0;
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			++selectionCalls;
 			return selected;
 		},
 		Types);
+	hierarchy.bind(server);
 	hierarchy.registerType<Source>(42);
 
+	parent.setParent(hierarchy.root());
+	sibling.setParent(hierarchy.root());
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
@@ -239,24 +236,24 @@ TEST(ServerEntityHierarchyTest, InvalidAncestorsAndUnregisteredTypesRejectPublic
 {
 	spk::Server server;
 	spk::Client client;
-	spk::Entity root("root");
-	spk::Entity nonPublishable("boundary", &root);
+	spk::Entity nonPublishable("boundary");
 	Source child(&nonPublishable);
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return std::vector<spk::PublishableEntity *>{&child};
 		},
 		Types);
+	hierarchy.bind(server);
+	nonPublishable.setParent(hierarchy.root());
 	server.start(0);
 	(void)client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	EXPECT_THROW((void)hierarchy.publish(server.connections()), spk::Exception);
+	hierarchy.bind(server);
 	hierarchy.registerType<Source>(42);
 	EXPECT_THROW((void)hierarchy.publish(server.connections()), spk::Exception);
-	child.setParent(root);
+	child.setParent(hierarchy.root());
 	EXPECT_NO_THROW((void)hierarchy.publish(server.connections()));
 
 	client.disconnect();
@@ -268,23 +265,23 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	spk::Server server;
 	spk::Client firstClient;
 	spk::Client secondClient;
-	spk::Entity root("root");
-	Source first(&root);
-	Source unselected(&root);
+	Source first(nullptr);
+	Source unselected(nullptr);
 	FailablePart firstPart;
 	FailablePart unselectedPart;
 	first.setPartRegistry({{0, firstPart, spk::Publishable::Publication::Update}});
 	unselected.setPartRegistry({{0, unselectedPart, spk::Publishable::Publication::Update}});
 	std::vector<spk::PublishableEntity *> selected{&first};
 	TestServerEntityHierarchy hierarchy(
-		server,
-		root,
 		[&](const spk::Connection &) {
 			return selected;
 		},
 		Types);
+	hierarchy.bind(server);
 	hierarchy.registerType<Source>(42);
 
+	first.setParent(hierarchy.root());
+	unselected.setParent(hierarchy.root());
 	server.start(0);
 	(void)firstClient.connect("127.0.0.1", server.port());
 	(void)secondClient.connect("127.0.0.1", server.port());
