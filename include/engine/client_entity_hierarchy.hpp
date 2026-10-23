@@ -37,8 +37,7 @@ namespace spk
 			std::size_t end;
 		};
 
-		Client *_client;
-		Entity *_root;
+		Client *_client = nullptr;
 		InitializationConfig _configuration;
 		Client::MessageDispatcher::Contract _onPublication;
 		Client::MessageDispatcher::Contract _onResponse;
@@ -50,7 +49,6 @@ namespace spk
 		std::uint64_t _sequence = 0;
 		bool _hasSelection = false;
 
-		void _bind();
 		void _onPublished(const Message &message);
 		void _onInitialized(const Message &message);
 		void _attach(const UUID &uuid);
@@ -58,15 +56,11 @@ namespace spk
 		void _validateParentGraph(const std::map<UUID, PublicationEntry> &entries) const;
 
 	public:
-		ClientEntityHierarchy(
-			Client &client,
-			Entity &root,
-			MessageTypes types,
-			InitializationConfig configuration,
-			Priorities priorities = {});
-		ClientEntityHierarchy(Client &client, Entity &root, MessageTypes types, Priorities priorities = {});
+		ClientEntityHierarchy(MessageTypes types, InitializationConfig configuration, Priorities priorities = {});
+		ClientEntityHierarchy(MessageTypes types, Priorities priorities = {});
 		~ClientEntityHierarchy() override;
 
+		void bind(Client &client);
 		void registerType(EntityTypeID id, ReplicantFactory factory);
 		void setInitializationConfig(InitializationConfig configuration);
 
