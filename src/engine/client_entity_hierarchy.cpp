@@ -106,9 +106,9 @@ namespace spk
 
 	void ClientEntityHierarchy::_attach(const UUID &uuid)
 	{
-		auto selected = _selection.find(uuid);
+		auto selected = _selection.entities.find(uuid);
 		auto owned = _replicas.find(uuid);
-		if (owned == _replicas.end() || selected == _selection.end())
+		if (owned == _replicas.end() || selected == _selection.entities.end())
 		{
 			return;
 		}
@@ -151,7 +151,7 @@ namespace spk
 		}
 		std::vector<UUID> pending;
 		const auto now = std::chrono::steady_clock::now();
-		for (const auto &[uuid, parent] : _selection)
+		for (const auto &[uuid, parent] : _selection.entities)
 		{
 			if (_replicas.contains(uuid))
 			{
@@ -193,11 +193,11 @@ namespace spk
 			return;
 		}
 		_nextRequestID = requestID;
-		auto &batch = _batches[requestID];
+
 		for (const UUID &uuid : pending)
 		{
-			batch.insert(uuid);
 			RequestState &state = _requests[uuid];
+			state.outstanding.insert(requestID);
 			++state.count;
 			state.lastSent = now;
 			state.lastRequest = requestID;
@@ -240,21 +240,20 @@ namespace spk
 		}
 		_validateParentGraph(entries);
 
-		const bool newer = !_hasSelection || sequence > _sequence;
+		const bool newer = !_selection.sequence || sequence > *_selection.sequence;
 		std::exception_ptr firstFailure;
 		if (newer)
 		{
-			_sequence = sequence;
-			_hasSelection = true;
+			_selection.sequence = sequence;
 			std::map<UUID, UUID> selection;
 			for (const auto &[uuid, entry] : entries)
 			{
 				selection.emplace(uuid, entry.parent);
 			}
-			_selection.swap(selection);
+			_selection.entities.swap(selection);
 			for (auto it = _replicas.begin(); it != _replicas.end();)
 			{
-				if (!_selection.contains(it->first))
+				if (!_selection.entities.contains(it->first))
 				{
 					it = _replicas.erase(it);
 				}
@@ -265,16 +264,23 @@ namespace spk
 			}
 			for (auto it = _requests.begin(); it != _requests.end();)
 			{
-				if (!_selection.contains(it->first))
+				if (_selection.entities.contains(it->first))
+				{
+					++it;
+				}
+				else if (it->second.outstanding.empty())
 				{
 					it = _requests.erase(it);
 				}
 				else
 				{
+					it->second.count = 0;
+					it->second.lastRequest = 0;
+					it->second.blocked = false;
 					++it;
 				}
 			}
-			for (const auto &[uuid, parent] : _selection)
+			for (const auto &[uuid, parent] : _selection.entities)
 			{
 				try
 				{
@@ -291,7 +297,7 @@ namespace spk
 
 		for (const auto &[uuid, entry] : entries)
 		{
-			if (!_selection.contains(uuid))
+			if (!_selection.entities.contains(uuid))
 			{
 				continue;
 			}
@@ -366,30 +372,38 @@ namespace spk
 		{
 			throw spk::Exception("Trailing EntityHierarchy initialization response bytes.");
 		}
-		auto batch = _batches.find(message.requestID());
-		if (batch == _batches.end() || !batch->second.erase(uuid))
+		auto request = _requests.find(uuid);
+		if (request == _requests.end() || !request->second.outstanding.erase(message.requestID()))
 		{
 			return;
 		}
-		if (batch->second.empty())
-		{
-			_batches.erase(batch);
-		}
+		const bool expired = !_selection.entities.contains(uuid) && request->second.outstanding.empty();
 		if (_replicas.contains(uuid))
 		{
+			if (expired)
+			{
+				_requests.erase(request);
+			}
 			return;
 		}
-		auto request = _requests.find(uuid);
 		if (outcome != InitializationOutcome::Success)
 		{
-			if (request != _requests.end() && request->second.lastRequest == message.requestID() &&
+			if (request->second.lastRequest == message.requestID() &&
 				(outcome == InitializationOutcome::Rejected || outcome == InitializationOutcome::TooLarge))
 			{
 				request->second.blocked = true;
 			}
+			if (expired)
+			{
+				_requests.erase(request);
+			}
 			return;
 		}
 
+		if (expired)
+		{
+			_requests.erase(request);
+		}
 		auto factory = _replicantFactories.find(type);
 		if (factory == _replicantFactories.end())
 		{
@@ -422,9 +436,8 @@ namespace spk
 			throw spk::Exception("Invalid EntityHierarchy clear mode.");
 		}
 		_replicas.clear();
-		_selection.clear();
+		_selection.entities.clear();
 		_requests.clear();
-		_batches.clear();
 		if (mode == ClearMode::Full)
 		{
 			_onPublication.resign();
@@ -432,8 +445,7 @@ namespace spk
 			_replicantFactories.clear();
 			_client = nullptr;
 			_nextRequestID = 0;
-			_sequence = 0;
-			_hasSelection = false;
+			_selection.sequence.reset();
 		}
 	}
 }
