@@ -92,9 +92,15 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 	recipients.insert(spk::Connection{});
 	auto results = hierarchy.publish(recipients);
 	EXPECT_EQ(results.size(), 2u);
-	EXPECT_EQ(std::ranges::count_if(results, [](const auto &entry) {
-		return !entry.second.has_value();
-	}), 1);
+	std::size_t failures = 0;
+	for (const auto &[connectionID, outcome] : results)
+	{
+		if (!outcome)
+		{
+			++failures;
+		}
+	}
+	EXPECT_EQ(failures, 1u);
 	EXPECT_TRUE(source.captureUpdate().bytes().empty());
 	client.disconnect();
 	server.stop();
