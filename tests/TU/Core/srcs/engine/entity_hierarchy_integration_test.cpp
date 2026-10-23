@@ -1,6 +1,6 @@
 #include "engine/client_entity_hierarchy.hpp"
 #include "engine/publishable_entity3d.hpp"
-#include "engine/server_entity_hierarchy.hpp"
+#include "test_server_entity_hierarchy.hpp"
 #include "network_test_utils.hpp"
 
 #include <gtest/gtest.h>
@@ -61,7 +61,7 @@ TEST(EntityHierarchyIntegrationTest, SelectedChildIncludesAncestorButNotSibling)
 	Monster sibling("sibling", &root);
 	std::vector<spk::PublishableEntity *> selected{&child};
 
-	spk::ServerEntityHierarchy serverHierarchy(
+	TestServerEntityHierarchy serverHierarchy(
 		server,
 		root,
 		[&](const spk::Connection &) {
@@ -119,7 +119,7 @@ TEST(EntityHierarchyIntegrationTest, ReparentingPreservesUUIDAndReconstructsHier
 	Monster second("second", &root);
 	Monster child("child", &first);
 
-	spk::ServerEntityHierarchy serverHierarchy(
+	TestServerEntityHierarchy serverHierarchy(
 		server,
 		root,
 		[&](const spk::Connection &) {
