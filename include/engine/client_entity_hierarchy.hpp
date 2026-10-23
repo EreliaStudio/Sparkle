@@ -32,7 +32,6 @@ namespace spk
 			std::chrono::steady_clock::time_point lastSent{};
 			Message::RequestID lastRequest = 0;
 			bool blocked = false;
-			std::set<Message::RequestID> outstanding;
 		};
 
 		struct SelectionState
@@ -56,6 +55,7 @@ namespace spk
 		std::map<UUID, std::unique_ptr<Entity>> _replicas;
 		SelectionState _selection;
 		std::map<UUID, RequestState> _requests;
+		std::map<Message::RequestID, std::set<UUID>> _batches;
 		Message::RequestID _nextRequestID = 0;
 
 		void _onPublished(const Message &message);
