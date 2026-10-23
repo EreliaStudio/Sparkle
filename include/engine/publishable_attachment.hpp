@@ -8,6 +8,8 @@
 
 namespace spk
 {
+	class Entity;
+
 	template <typename TAttachment>
 	class PublishableAttachment : public TAttachment, public Publishable::Part
 	{
