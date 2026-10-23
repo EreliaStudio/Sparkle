@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "exception.hpp"
 #include "diagnostics/logger.hpp"
+#include "exception.hpp"
 
 #include <exception>
 #include <source_location>
