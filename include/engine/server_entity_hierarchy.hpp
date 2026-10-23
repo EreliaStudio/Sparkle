@@ -4,6 +4,7 @@
 #include "network/server.hpp"
 
 #include <concepts>
+#include <expected>
 #include <exception>
 #include <map>
 #include <typeindex>
@@ -15,11 +16,7 @@ namespace spk
 	class ServerEntityHierarchy : public EntityHierarchy
 	{
 	public:
-		struct PublicationResult
-		{
-			std::map<Connection::ID, Transfer> accepted;
-			std::map<Connection::ID, std::exception_ptr> failures;
-		};
+		using PublicationResult = std::map<Connection::ID, std::expected<Transfer, std::exception_ptr>>;
 
 		struct InitializationFailure
 		{
@@ -35,11 +32,13 @@ namespace spk
 			UUID parentUUID;
 		};
 
+		std::map<std::type_index, EntityTypeID> _sourceTypes;
 		Server *_server = nullptr;
 		Server::MessageDispatcher::Contract _onRequest;
 		std::uint64_t _sequence = 0;
 		std::vector<InitializationFailure> _initializationFailures;
 
+		void _registerSourceType(std::type_index type, EntityTypeID id);
 		[[nodiscard]] std::map<UUID, Source> _select(const Connection &connection) const;
 		void _onInitializationRequest(const ReceivedMessage &received);
 
