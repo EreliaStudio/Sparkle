@@ -1,7 +1,7 @@
 #include "engine/client_entity_hierarchy.hpp"
 #include "engine/publishable_entity3d.hpp"
-#include "test_server_entity_hierarchy.hpp"
 #include "network_test_utils.hpp"
+#include "test_server_entity_hierarchy.hpp"
 
 #include <gtest/gtest.h>
 
@@ -125,9 +125,11 @@ TEST(EntityHierarchyIntegrationTest, DifferentConnectionsReceiveIndependentSelec
 		server,
 		root,
 		[&](const spk::Connection &connection) {
-			return connection.id() == firstConnectionID
-				? std::vector<spk::PublishableEntity *>{&first}
-				: std::vector<spk::PublishableEntity *>{&second};
+			if (connection.id() == firstConnectionID)
+			{
+				return std::vector<spk::PublishableEntity *>{&first};
+			}
+			return std::vector<spk::PublishableEntity *>{&second};
 		},
 		Types);
 	serverHierarchy.registerType<Monster>(42);
