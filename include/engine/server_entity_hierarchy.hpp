@@ -5,7 +5,7 @@
 
 #include <concepts>
 #include <exception>
-#include <expected>
+#include <variant>
 #include <map>
 #include <typeindex>
 #include <utility>
@@ -16,7 +16,7 @@ namespace spk
 	class ServerEntityHierarchy : public EntityHierarchy
 	{
 	public:
-		using PublicationResult = std::map<Connection::ID, std::expected<Transfer, std::exception_ptr>>;
+		using PublicationResult = std::map<Connection::ID, std::variant<Transfer, std::exception_ptr>>;
 
 		struct InitializationFailure
 		{
