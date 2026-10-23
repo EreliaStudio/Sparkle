@@ -30,7 +30,6 @@ Some Markdown renderers, including secured GitHub views, disable Mermaid click l
 | Change the library or write tests | [Contributing](contributing/README.md) |
 | Plan and deliver a feature | [Issue-first feature workflow](contributing/feature-workflow.md) |
 | Give a coding agent its required context | [Agent instructions](AGENTS.md) |
-| Find transitional publication notes | [Internal project notes](internal/README.md) |
 
 ## Documentation policy
 

@@ -11,4 +11,4 @@ Read the [coding style](coding-style.md), [architecture guidelines](architecture
 - [CI testing strategy](ci-test-strategy.md)
 - [Write and maintain documentation](writing-documentation.md)
 
-Read the relevant public header, implementation and test before changing behavior. Scope changes to agreed responsibilities. Historic review findings and past implementation plans are in [internal material](../internal/README.md), not the authoritative description of currently shipped behavior.
+Read the relevant public header, implementation and test before changing behavior. Scope changes to agreed responsibilities. Historical implementation plans and review snapshots remain accessible in Git history; they are not the authoritative description of shipped behavior.

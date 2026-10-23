@@ -16,7 +16,7 @@ find_package(sparkle CONFIG REQUIRED COMPONENTS Core Graphics)
 target_link_libraries(my_target PRIVATE sparkle::sparkle)
 ~~~
 
-The staged overlay port is named `erelia-sparkle`; it has not been described here as already accepted into the official vcpkg curated registry. See the [vcpkg publication plan](../internal/plans/vcpkg-publication.md).
+The staged overlay port is named `erelia-sparkle`; it has not yet been published in the official vcpkg curated registry. The outstanding work is tracked in [GitHub issue #34](https://github.com/EreliaStudio/Sparkle/issues/34).
 
 ## Build from source
 

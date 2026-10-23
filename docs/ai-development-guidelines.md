@@ -327,27 +327,6 @@ For architectural choices with several valid options, ask the maintainer a **foc
 - Format changed code, review final diff, run relevant tests, and report exact verification.
 - Do not merge, mark ready, change unrelated API families, or undertake adjacent refactors without authorization.
 
-### 9.4 PR #29 context — task-specific notes, not general coding rules
-
-At the time this guide was added, **Sparkle PR #29** is a **draft transport-infrastructure PR** on `feat/network-connection-and-paged-transport` targeting `Version-0.1.3`. Its PR description is the authoritative source for up-to-date acceptance criteria and test status:
-
-https://github.com/EreliaStudio/Sparkle/pull/29
-
-A reviewing AI should particularly check:
-
-- Explicit connection lifecycle and Pending/Connected/Disconnected contract.
-- No implicit reconnect, retry, silent Pending queueing, or invented transfer cancellation.
-- Correct separation of synchronous send **admission** from asynchronous transfer **outcome/acknowledgment**.
-- Atomic multi-recipient broadcast admission under the chosen capacity policy.
-- Shared outgoing memory reservations and incoming reassembly memory reclamation on every termination path.
-- Page framing, malicious/duplicate fragments, replay protection, transfer timeouts, handshake, and peer isolation.
-- Cross-thread read/write, callback reentrancy, asynchronous borrowed-data lifetime, and shutdown races.
-- Linux/Windows backend parity, transport-only scope, real-thread and real-socket tests.
-
-**Do not silently change PR #29 decisions based on a generic principle in this guide.** Where the PR specifies a concrete transport policy, honor that policy; report concerns separately.
-
----
-
 ## 10. Quick decision checklist for AI-generated code
 
 Before submitting a patch, answer **yes** to these questions or explicitly explain the exception:

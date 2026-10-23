@@ -63,7 +63,7 @@ find_package(sparkle CONFIG REQUIRED)
 target_link_libraries(my_target PRIVATE sparkle::sparkle)
 ```
 
-See [docs/vcpkg-publication.md](docs/internal/plans/vcpkg-publication.md) for the publication and validation process.
+See [GitHub issue #34](https://github.com/EreliaStudio/Sparkle/issues/34) for the remaining publication and validation work.
 
 ## Optional TestLibrary
 
