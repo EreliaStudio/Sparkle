@@ -8,15 +8,15 @@
 
 namespace spk
 {
-	ClientEntityHierarchy::ClientEntityHierarchy(MessageTypes types, InitializationConfig configuration, Priorities priorities) :
-		EntityHierarchy(types, priorities),
+	ClientEntityHierarchy::ClientEntityHierarchy(MessageConfiguration messages, InitializationConfig configuration) :
+		EntityHierarchy(messages),
 		_configuration(configuration)
 	{
 		setInitializationConfig(configuration);
 	}
 
-	ClientEntityHierarchy::ClientEntityHierarchy(MessageTypes types, Priorities priorities) :
-		ClientEntityHierarchy(types, InitializationConfig{}, priorities)
+	ClientEntityHierarchy::ClientEntityHierarchy(MessageConfiguration messages) :
+		ClientEntityHierarchy(messages, InitializationConfig{})
 	{
 	}
 
@@ -34,12 +34,12 @@ namespace spk
 			throw spk::Exception("ClientEntityHierarchy is already bound.");
 		}
 		auto publication = client.messageDispatcher().subscribeTo(
-			messageTypes().publication,
+			messageConfiguration().publication.type,
 			[this](const Message &message) {
 				_onPublished(message);
 			});
 		auto response = client.messageDispatcher().subscribeTo(
-			messageTypes().initializationResponse,
+			messageConfiguration().initializationResponse.type,
 			[this](const Message &message) {
 				_onInitialized(message);
 			});
@@ -171,14 +171,14 @@ namespace spk
 			throw spk::Exception("EntityHierarchy initialization request counter overflow.");
 		}
 		const Message::RequestID requestID = _nextRequestID + 1;
-		Message::Writer writer(messageTypes().initializationRequest);
+		Message::Writer writer(messageConfiguration().initializationRequest.type);
 		writer.setRequestID(requestID);
 		writer << static_cast<std::uint32_t>(pending.size());
 		for (const UUID &uuid : pending)
 		{
 			writer << uuid.bytes();
 		}
-		Transfer transfer = _client->send(std::move(writer).build(), priorities().initializationRequest);
+		Transfer transfer = _client->send(std::move(writer).build(), messageConfiguration().initializationRequest.priority);
 		if (transfer.status() == Transfer::Status::Rejected)
 		{
 			return;
