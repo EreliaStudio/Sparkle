@@ -18,7 +18,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr spk::EntityHierarchy::MessageTypes Types{720001, 720002, 720003};
+	constexpr spk::EntityHierarchy::MessageConfiguration Types{{ 720001, spk::Message::Priority::Low }, { 720002, spk::Message::Priority::High }, { 720003, spk::Message::Priority::High }};
 
 	class FailablePart : public spk::Publishable::Part
 	{
@@ -112,7 +112,7 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizationDoesNotRevealUnknownE
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	const spk::UUID unknown = spk::UUID::generate();
-	spk::Message::Writer request(Types.initializationRequest);
+	spk::Message::Writer request(Types.initializationRequest.type);
 	request.setRequestID(88);
 	request << std::uint32_t{1} << unknown.bytes();
 	(void)client.send(std::move(request).build());
@@ -170,7 +170,7 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizesCurrentDirectAndAncestor
 
 	const spk::UUID unknown = spk::UUID::generate();
 	auto request = [&](std::uint32_t requestID, const std::vector<spk::UUID> &ids) {
-		spk::Message::Writer writer(Types.initializationRequest);
+		spk::Message::Writer writer(Types.initializationRequest.type);
 		writer.setRequestID(requestID);
 		writer << static_cast<std::uint32_t>(ids.size());
 		for (const auto &uuid : ids)
