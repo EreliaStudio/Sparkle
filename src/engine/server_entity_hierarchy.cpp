@@ -8,8 +8,8 @@
 
 namespace spk
 {
-	ServerEntityHierarchy::ServerEntityHierarchy(MessageTypes types, Priorities priorities) :
-		EntityHierarchy(types, priorities)
+	ServerEntityHierarchy::ServerEntityHierarchy(MessageConfiguration messages) :
+		EntityHierarchy(messages)
 	{
 	}
 
@@ -25,7 +25,7 @@ namespace spk
 			throw spk::Exception("ServerEntityHierarchy is already bound.");
 		}
 		_onRequest = server.messageDispatcher().subscribeTo(
-			messageTypes().initializationRequest,
+			messageConfiguration().initializationRequest.type,
 			[this](const ReceivedMessage &message) {
 				_onInitializationRequest(message);
 			});
@@ -131,7 +131,7 @@ namespace spk
 			{
 				throw spk::Exception("EntitySelection exceeds the publication wire count.");
 			}
-			Message::Writer writer(messageTypes().publication);
+			Message::Writer writer(messageConfiguration().publication.type);
 			writer << nextSequence << static_cast<std::uint32_t>(selected.size());
 			for (const auto &[uuid, source] : selected)
 			{
@@ -151,7 +151,7 @@ namespace spk
 		{
 			try
 			{
-				result.accepted.emplace(connection.id(), _server->sendTo(connection, outgoing.at(connection.id()), priorities().publication));
+				result.accepted.emplace(connection.id(), _server->sendTo(connection, outgoing.at(connection.id()), messageConfiguration().publication.priority));
 			} catch (...)
 			{
 				result.failures.emplace(connection.id(), std::current_exception());
@@ -189,7 +189,7 @@ namespace spk
 			try
 			{
 				auto makeResponse = [&](InitializationOutcome outcome, EntityTypeID typeID, const ByteStream &bytes) {
-					Message::Writer writer(messageTypes().initializationResponse);
+					Message::Writer writer(messageConfiguration().initializationResponse.type);
 					writer.setRequestID(received.message.requestID());
 					writer << uuid.bytes() << static_cast<std::uint8_t>(outcome);
 					if (outcome == InitializationOutcome::Success)
@@ -218,7 +218,7 @@ namespace spk
 						response = makeResponse(InitializationOutcome::InternalError, 0, {});
 					}
 				}
-				(void)_server->sendTo(connection, response, priorities().initializationResponse);
+				(void)_server->sendTo(connection, response, messageConfiguration().initializationResponse.priority);
 			} catch (...)
 			{
 				_initializationFailures.push_back({uuid, std::current_exception()});
