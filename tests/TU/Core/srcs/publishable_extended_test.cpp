@@ -155,3 +155,26 @@ TEST(PublishableStressTest, NewBindingsStartModifiedAfterRepeatedReplacement)
 		EXPECT_EQ(countParts(publisher.encodeUpdate()), 1u);
 	}
 }
+
+TEST(PublishableContractTest, UpdateCapturesCannotBeCommittedToAnotherPublishable)
+{
+	Publisher first;
+	Publisher second;
+	NumberPart a;
+	NumberPart b;
+	first.setPartRegistry({{0, a, Publisher::Publication::Update}});
+	second.setPartRegistry({{0, b, Publisher::Publication::Update}});
+
+	const auto capture = first.captureUpdate();
+	EXPECT_THROW(second.commitUpdate(capture), spk::Exception);
+	EXPECT_EQ(countParts(first.encodeUpdate()), 1u);
+	EXPECT_EQ(countParts(second.encodeUpdate()), 1u);
+}
+
+TEST(PublishableContractTest, EmptyCaptureIsRejectedByPublicAccessors)
+{
+	Publisher publisher;
+	Publisher::UpdateCapture empty;
+	EXPECT_THROW((void)empty.bytes(), spk::Exception);
+	EXPECT_THROW(publisher.commitUpdate(empty), spk::Exception);
+}

@@ -29,11 +29,16 @@ namespace spk
 	struct Publishable::UpdateCapture::Data
 	{
 		ByteStream bytes;
+		const Publishable *owner = nullptr;
 		std::vector<std::pair<std::shared_ptr<Registration>, std::uint64_t>> captured;
 	};
 
 	const ByteStream &Publishable::UpdateCapture::bytes() const
 	{
+		if (!_data)
+		{
+			throw spk::Exception("Invalid Publishable update capture.");
+		}
 		return _data->bytes;
 	}
 
@@ -234,6 +239,7 @@ namespace spk
 		}
 		UpdateCapture capture;
 		capture._data = std::make_shared<UpdateCapture::Data>();
+		capture._data->owner = this;
 		const auto registrations = _registrations;
 		std::vector<Section> sections;
 		for (const auto &[id, registration] : registrations)
@@ -256,9 +262,9 @@ namespace spk
 
 	void Publishable::commitUpdate(const UpdateCapture &capture) const
 	{
-		if (!capture._data)
+		if (!capture._data || capture._data->owner != this)
 		{
-			throw spk::Exception("Invalid Publishable update capture.");
+			throw spk::Exception("Publishable update capture does not belong to this instance.");
 		}
 		for (const auto &[registration, generation] : capture._data->captured)
 		{
