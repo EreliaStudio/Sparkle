@@ -32,6 +32,22 @@ namespace spk
 		_server = &server;
 	}
 
+	void ServerEntityHierarchy::_registerSourceType(std::type_index type, EntityTypeID id)
+	{
+		if (_sourceTypes.contains(type))
+		{
+			throw spk::Exception("EntityHierarchy concrete Source type already registered.");
+		}
+		for (const auto &[existingType, existingID] : _sourceTypes)
+		{
+			if (existingID == id)
+			{
+				throw spk::Exception("EntityHierarchy EntityTypeID is already registered.");
+			}
+		}
+		_sourceTypes.emplace(type, id);
+	}
+
 	std::map<UUID, ServerEntityHierarchy::Source> ServerEntityHierarchy::_select(const Connection &connection) const
 	{
 		std::map<UUID, Source> selected;
@@ -151,10 +167,10 @@ namespace spk
 		{
 			try
 			{
-				result.accepted.emplace(connection.id(), _server->sendTo(connection, outgoing.at(connection.id()), messageConfiguration().publication.priority));
+				result.emplace(connection.id(), _server->sendTo(connection, outgoing.at(connection.id()), messageConfiguration().publication.priority));
 			} catch (...)
 			{
-				result.failures.emplace(connection.id(), std::current_exception());
+				result.emplace(connection.id(), std::unexpected(std::current_exception()));
 			}
 		}
 		return result;
@@ -243,7 +259,7 @@ namespace spk
 		if (mode == ClearMode::Full)
 		{
 			_onRequest.resign();
-			_clearTypes();
+			_sourceTypes.clear();
 			_server = nullptr;
 		}
 	}
