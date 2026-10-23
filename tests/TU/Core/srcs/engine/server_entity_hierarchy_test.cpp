@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -90,8 +91,8 @@ TEST(ServerEntityHierarchyTest, FailedPreparationPreservesModifiedAndTransportFa
 	spk::ConnectionSet recipients = server.connections();
 	recipients.insert(spk::Connection{});
 	auto results = hierarchy.publish(recipients);
-	EXPECT_EQ(results.accepted.size(), 1u);
-	EXPECT_EQ(results.failures.size(), 1u);
+	EXPECT_EQ(results.size(), 2u);
+	EXPECT_EQ(std::ranges::count_if(results, [](const auto &entry) { return !entry.second.has_value(); }), 1);
 	EXPECT_TRUE(source.captureUpdate().bytes().empty());
 	client.disconnect();
 	server.stop();
@@ -292,16 +293,16 @@ TEST(ServerEntityHierarchyTest, MultipleRecipientsCaptureOnceAndUnselectedChange
 	firstPart.edit(25);
 	unselectedPart.edit(30);
 	const auto firstResult = hierarchy.publish(recipients);
-	EXPECT_EQ(firstResult.accepted.size(), 2u);
-	EXPECT_TRUE(firstResult.failures.empty());
+	EXPECT_EQ(firstResult.size(), 2u);
+	EXPECT_TRUE(std::ranges::all_of(firstResult, [](const auto &entry) { return entry.second.has_value(); }));
 	EXPECT_EQ(firstPart.encodes, 1);
 	EXPECT_EQ(unselectedPart.encodes, 0);
 	EXPECT_FALSE(unselected.captureUpdate().bytes().empty());
 
 	selected = {&unselected};
 	const auto secondResult = hierarchy.publish(recipients);
-	EXPECT_EQ(secondResult.accepted.size(), 2u);
-	EXPECT_TRUE(secondResult.failures.empty());
+	EXPECT_EQ(secondResult.size(), 2u);
+	EXPECT_TRUE(std::ranges::all_of(secondResult, [](const auto &entry) { return entry.second.has_value(); }));
 	EXPECT_EQ(unselectedPart.encodes, 1);
 	EXPECT_TRUE(unselected.captureUpdate().bytes().empty());
 
