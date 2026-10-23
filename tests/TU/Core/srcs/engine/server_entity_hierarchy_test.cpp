@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -134,6 +135,122 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizationDoesNotRevealUnknownE
 		std::this_thread::sleep_for(5ms);
 	}
 	FAIL() << "Did not receive initialization rejection.";
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerEntityHierarchyTest, InitializationAuthorizesCurrentDirectAndAncestorSelectionOncePerBatch)
+{
+	spk::Server server;
+	spk::Client client;
+	spk::Entity root("root");
+	Source parent(&root);
+	Source child(&parent);
+	Source sibling(&root);
+	std::vector<spk::PublishableEntity *> selected{&child};
+	int selectionCalls = 0;
+	TestServerEntityHierarchy hierarchy(
+		server,
+		root,
+		[&](const spk::Connection &) {
+			++selectionCalls;
+			return selected;
+		},
+		Types);
+	hierarchy.registerType<Source>(42);
+
+	server.start(0);
+	(void)client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	const spk::UUID unknown = spk::UUID::generate();
+	auto request = [&](std::uint32_t requestID, const std::vector<spk::UUID> &ids) {
+		spk::Message::Writer writer(Types.initializationRequest);
+		writer.setRequestID(requestID);
+		writer << static_cast<std::uint32_t>(ids.size());
+		for (const auto &uuid : ids)
+		{
+			writer << uuid.bytes();
+		}
+		(void)client.send(std::move(writer).build());
+
+		std::map<spk::UUID, spk::EntityHierarchy::InitializationOutcome> outcomes;
+		const auto deadline = std::chrono::steady_clock::now() + 5s;
+		while (std::chrono::steady_clock::now() < deadline && outcomes.size() < ids.size())
+		{
+			server.treatMessages();
+			std::vector<spk::Message> responses;
+			client.messages().drain(responses);
+			for (const auto &response : responses)
+			{
+				EXPECT_EQ(response.requestID(), requestID);
+				const auto reader = response.reader();
+				spk::UUID::Storage bytes;
+				std::uint8_t rawOutcome;
+				reader >> bytes >> rawOutcome;
+				const auto outcome = static_cast<spk::EntityHierarchy::InitializationOutcome>(rawOutcome);
+				if (outcome == spk::EntityHierarchy::InitializationOutcome::Success)
+				{
+					std::uint32_t type;
+					std::uint64_t length;
+					reader >> type >> length;
+					EXPECT_EQ(type, 42u);
+					EXPECT_GT(length, 0u);
+					EXPECT_EQ(reader.remaining(), length);
+					reader.skip(static_cast<std::size_t>(length));
+				}
+				EXPECT_EQ(reader.remaining(), 0u);
+				outcomes.emplace(spk::UUID(bytes), outcome);
+			}
+			std::this_thread::sleep_for(5ms);
+		}
+		return outcomes;
+	};
+
+	using Outcome = spk::EntityHierarchy::InitializationOutcome;
+	auto first = request(90, {parent.uuid(), child.uuid(), sibling.uuid(), unknown});
+	ASSERT_EQ(first.size(), 4u);
+	EXPECT_EQ(first.at(parent.uuid()), Outcome::Success);
+	EXPECT_EQ(first.at(child.uuid()), Outcome::Success);
+	EXPECT_EQ(first.at(sibling.uuid()), Outcome::Rejected);
+	EXPECT_EQ(first.at(unknown), Outcome::Rejected);
+	EXPECT_EQ(selectionCalls, 1);
+
+	selected.clear();
+	auto second = request(91, {parent.uuid(), child.uuid()});
+	ASSERT_EQ(second.size(), 2u);
+	EXPECT_EQ(second.at(parent.uuid()), Outcome::Rejected);
+	EXPECT_EQ(second.at(child.uuid()), Outcome::Rejected);
+	EXPECT_EQ(selectionCalls, 2);
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerEntityHierarchyTest, InvalidAncestorsAndUnregisteredTypesRejectPublication)
+{
+	spk::Server server;
+	spk::Client client;
+	spk::Entity root("root");
+	spk::Entity nonPublishable("boundary", &root);
+	Source child(&nonPublishable);
+	TestServerEntityHierarchy hierarchy(
+		server,
+		root,
+		[&](const spk::Connection &) {
+			return std::vector<spk::PublishableEntity *>{&child};
+		},
+		Types);
+	server.start(0);
+	(void)client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	EXPECT_THROW((void)hierarchy.publish(server.connections()), spk::Exception);
+	hierarchy.registerType<Source>(42);
+	EXPECT_THROW((void)hierarchy.publish(server.connections()), spk::Exception);
+	child.setParent(root);
+	EXPECT_NO_THROW((void)hierarchy.publish(server.connections()));
+
 	client.disconnect();
 	server.stop();
 }
