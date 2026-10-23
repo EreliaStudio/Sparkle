@@ -170,7 +170,7 @@ namespace spk
 				result.emplace(connection.id(), _server->sendTo(connection, outgoing.at(connection.id()), messageConfiguration().publication.priority));
 			} catch (...)
 			{
-				result.emplace(connection.id(), std::unexpected(std::current_exception()));
+				result.emplace(connection.id(), std::current_exception());
 			}
 		}
 		return result;
