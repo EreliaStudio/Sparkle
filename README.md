@@ -4,6 +4,18 @@ Sparkle is a C++23 static library for building graphical applications with a foc
 
 The current public release line is validated for x64 desktop Windows and uses OpenGL. Sparkle is developed in `EreliaStudio/Sparkle`. Sparkle's own source is licensed under the MIT License; bundled third-party material retains its own license.
 
+## Documentation
+
+Start with the [documentation hub](docs/README.md) for getting started, subsystem architecture, class references, how-to guides and contributing conventions. Key entry points:
+
+- [Getting started](docs/getting-started/README.md)
+- [Architecture diagrams](docs/architecture/README.md)
+- [Class reference](docs/reference/README.md)
+- [Guides](docs/guides/README.md)
+- [Contributing](docs/contributing/README.md)
+
+The documentation includes Mermaid diagrams with links where the renderer permits interaction; every diagram has equivalent Markdown links.
+
 ## Requirements
 
 - C++23 compiler
@@ -51,7 +63,7 @@ find_package(sparkle CONFIG REQUIRED)
 target_link_libraries(my_target PRIVATE sparkle::sparkle)
 ```
 
-See [docs/vcpkg-publication.md](docs/vcpkg-publication.md) for the publication and validation process.
+See [docs/vcpkg-publication.md](docs/internal/plans/vcpkg-publication.md) for the publication and validation process.
 
 ## Optional TestLibrary
 
@@ -70,7 +82,7 @@ The TestLibrary remains independent from GoogleTest. Its OpenGL capture utilitie
 
 Sparkle also publishes revision-pinned Windows prebuilt packages for controlled downstream CI. These packages are separate from the public vcpkg distribution model and are useful for projects that want to avoid rebuilding Sparkle for every CI run.
 
-See [docs/prebuilt-windows-package.md](docs/prebuilt-windows-package.md).
+See [docs/prebuilt-windows-package.md](docs/getting-started/prebuilt-windows-package.md).
 
 ## Building Sparkle
 
@@ -94,4 +106,4 @@ The bundled Liberation Sans default font is distributed under the SIL Open Font 
 
 ## Network message subscriptions
 
-Clients, servers, and routed node endpoints expose typed `messageDispatcher()` subscriptions. Call `treatMessages()` from the owning update loop to process received messages. See [network message dispatch](docs/network-message-dispatch.md) for callbacks, reply routing, and lifetime rules.
+Clients, servers, and routed node endpoints expose typed `messageDispatcher()` subscriptions. Call `treatMessages()` from the owning update loop to process received messages. See [network message dispatch](docs/guides/network-message-dispatch.md) for callbacks, reply routing, and lifetime rules.
