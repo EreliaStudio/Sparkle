@@ -8,12 +8,9 @@
 
 namespace spk
 {
-	ServerEntityHierarchy::ServerEntityHierarchy(Server &server, Entity &root, MessageTypes types, Priorities priorities) :
-		EntityHierarchy(types, priorities),
-		_server(&server),
-		_root(&root)
+	ServerEntityHierarchy::ServerEntityHierarchy(MessageTypes types, Priorities priorities) :
+		EntityHierarchy(types, priorities)
 	{
-		_bind();
 	}
 
 	ServerEntityHierarchy::~ServerEntityHierarchy()
@@ -21,13 +18,18 @@ namespace spk
 		_onRequest.resign();
 	}
 
-	void ServerEntityHierarchy::_bind()
+	void ServerEntityHierarchy::bind(Server &server)
 	{
-		_onRequest = _server->messageDispatcher().subscribeTo(
+		if (_server != nullptr)
+		{
+			throw spk::Exception("ServerEntityHierarchy is already bound.");
+		}
+		_onRequest = server.messageDispatcher().subscribeTo(
 			messageTypes().initializationRequest,
 			[this](const ReceivedMessage &message) {
 				_onInitializationRequest(message);
 			});
+		_server = &server;
 	}
 
 	std::map<UUID, ServerEntityHierarchy::Source> ServerEntityHierarchy::_select(const Connection &connection) const
@@ -40,11 +42,11 @@ namespace spk
 				throw spk::Exception("Entity selection returned an invalid Source Entity.");
 			}
 			Entity *entity = dynamic_cast<Entity *>(direct);
-			if (entity == nullptr || entity == _root)
+			if (entity == nullptr || entity == &root())
 			{
 				throw spk::Exception("Entity selection returned a Source outside its hierarchy.");
 			}
-			for (Entity *current = entity; current != _root; current = current->parent())
+			for (Entity *current = entity; current != &root(); current = current->parent())
 			{
 				if (current == nullptr || current->parent() == nullptr)
 				{
@@ -62,7 +64,7 @@ namespace spk
 				}
 				Entity *parent = current->parent();
 				UUID parentUUID = UUID::null();
-				if (parent != _root)
+				if (parent != &root())
 				{
 					auto *parentSource = dynamic_cast<PublishableEntity *>(parent);
 					if (parentSource == nullptr || parentSource->mode() != Publishable::Mode::Source)
@@ -243,7 +245,6 @@ namespace spk
 			_onRequest.resign();
 			_clearTypes();
 			_server = nullptr;
-			_root = nullptr;
 		}
 	}
 }
