@@ -305,3 +305,39 @@ TEST(ClientEntityHierarchyTest, RuntimeClearPreservesPublicationOrderWhileFullCl
 	EXPECT_NO_THROW(deliver(client, selection(11, {{source.uuid(), spk::UUID::null()}})));
 	EXPECT_EQ(hierarchy.size(), 0u);
 }
+
+TEST(ClientEntityHierarchyTest, ReparentingReversesExistingParentChildRelationship)
+{
+	spk::Server server;
+	spk::Client client;
+	spk::Entity root("root");
+	spk::ClientEntityHierarchy hierarchy(client, root, Types);
+	hierarchy.registerType(42, [](const spk::UUID &uuid) -> std::unique_ptr<spk::Entity> {
+		return std::make_unique<Remote>(uuid);
+	});
+
+	Remote a;
+	Remote b;
+	Remote *first = a.uuid() < b.uuid() ? &a : &b;
+	Remote *second = a.uuid() < b.uuid() ? &b : &a;
+	server.start(0);
+	(void)client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+
+	deliver(client, selection(1, {{first->uuid(), spk::UUID::null()}, {second->uuid(), first->uuid()}}));
+	const auto sent = requests(server);
+	ASSERT_EQ(sent.size(), 1u);
+	const auto requestID = sent.front().message.requestID();
+	deliver(client, response(requestID, first->uuid(), spk::EntityHierarchy::InitializationOutcome::Success, first->encodeInitialization()));
+	deliver(client, response(requestID, second->uuid(), spk::EntityHierarchy::InitializationOutcome::Success, second->encodeInitialization()));
+	ASSERT_NE(hierarchy.find(first->uuid()), nullptr);
+	ASSERT_NE(hierarchy.find(second->uuid()), nullptr);
+	EXPECT_EQ(hierarchy.find(second->uuid())->parent(), hierarchy.find(first->uuid()));
+
+	EXPECT_NO_THROW(deliver(client, selection(2, {{first->uuid(), second->uuid()}, {second->uuid(), spk::UUID::null()}})));
+	EXPECT_EQ(hierarchy.find(second->uuid())->parent(), &root);
+	EXPECT_EQ(hierarchy.find(first->uuid())->parent(), hierarchy.find(second->uuid()));
+
+	client.disconnect();
+	server.stop();
+}

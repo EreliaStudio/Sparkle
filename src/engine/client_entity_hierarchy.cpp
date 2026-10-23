@@ -116,6 +116,7 @@ namespace spk
 			auto found = _replicas.find(selected->second);
 			if (found != _replicas.end())
 			{
+				_attach(selected->second);
 				parent = found->second.get();
 			}
 		}
