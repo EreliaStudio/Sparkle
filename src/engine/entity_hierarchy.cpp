@@ -6,21 +6,15 @@
 
 namespace spk
 {
-	EntityHierarchy::EntityHierarchy(MessageTypes types, Priorities priorities) :
-		_messageTypes(types),
-		_priorities(priorities)
+	EntityHierarchy::EntityHierarchy(MessageConfiguration configuration) :
+		_messageConfiguration(configuration)
 	{
-		if (types.publication == types.initializationRequest ||
-			types.publication == types.initializationResponse ||
-			types.initializationRequest == types.initializationResponse)
+		if (configuration.publication.type == configuration.initializationRequest.type ||
+			configuration.publication.type == configuration.initializationResponse.type ||
+			configuration.initializationRequest.type == configuration.initializationResponse.type)
 		{
 			throw spk::Exception("EntityHierarchy requires three distinct message IDs.");
 		}
-	}
-
-	EntityHierarchy::EntityHierarchy(MessageTypes types) :
-		EntityHierarchy(types, Priorities{})
-	{
 	}
 
 	Entity &EntityHierarchy::root() noexcept
@@ -64,13 +58,8 @@ namespace spk
 		_replicantFactories.clear();
 	}
 
-	const EntityHierarchy::MessageTypes &EntityHierarchy::messageTypes() const noexcept
+	const EntityHierarchy::MessageConfiguration &EntityHierarchy::messageConfiguration() const noexcept
 	{
-		return _messageTypes;
-	}
-
-	const EntityHierarchy::Priorities &EntityHierarchy::priorities() const noexcept
-	{
-		return _priorities;
+		return _messageConfiguration;
 	}
 }
