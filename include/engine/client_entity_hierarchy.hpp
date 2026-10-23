@@ -4,6 +4,7 @@
 #include "network/client.hpp"
 
 #include <chrono>
+#include <functional>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -15,6 +16,8 @@ namespace spk
 	class ClientEntityHierarchy : public EntityHierarchy
 	{
 	public:
+		using ReplicantFactory = std::function<std::unique_ptr<Entity>(const UUID &)>;
+
 		struct InitializationConfig
 		{
 			std::uint32_t maximumRequests = 4;
@@ -37,6 +40,7 @@ namespace spk
 			std::size_t end;
 		};
 
+		std::map<EntityTypeID, ReplicantFactory> _replicantFactories;
 		Client *_client = nullptr;
 		InitializationConfig _configuration;
 		Client::MessageDispatcher::Contract _onPublication;
@@ -49,6 +53,7 @@ namespace spk
 		std::uint64_t _sequence = 0;
 		bool _hasSelection = false;
 
+		void _registerReplicantType(EntityTypeID id, ReplicantFactory factory);
 		void _onPublished(const Message &message);
 		void _onInitialized(const Message &message);
 		void _attach(const UUID &uuid);
