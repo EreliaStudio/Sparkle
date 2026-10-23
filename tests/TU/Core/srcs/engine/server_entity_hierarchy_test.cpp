@@ -18,7 +18,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr spk::EntityHierarchy::MessageConfiguration Types{{ 720001, spk::Message::Priority::Low }, { 720002, spk::Message::Priority::High }, { 720003, spk::Message::Priority::High }};
+	constexpr spk::EntityHierarchy::MessageConfiguration Types{{720001, spk::Message::Priority::Low}, {720002, spk::Message::Priority::High}, {720003, spk::Message::Priority::High}};
 
 	class FailablePart : public spk::Publishable::Part
 	{
