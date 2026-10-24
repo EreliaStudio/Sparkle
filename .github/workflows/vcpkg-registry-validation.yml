@@ -1,0 +1,36 @@
+name: Validate official vcpkg candidate
+on:
+  push:
+    branches:
+      - publication/vcpkg-013-preparation
+    paths:
+      - vcpkg-publication/ports/erelia-sparkle/**
+      - .github/workflows/vcpkg-registry-validation.yml
+permissions:
+  contents: read
+jobs:
+  consumers:
+    name: Windows static release consumers from immutable source tag
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Replace checked-in overlay port with official candidate
+        shell: pwsh
+        run: |
+          Remove-Item ports/erelia-sparkle -Recurse -Force
+          Copy-Item vcpkg-publication/ports/erelia-sparkle ports/erelia-sparkle -Recurse -Force
+      - name: Validate Core, Graphics and TestLibrary consumers
+        shell: pwsh
+        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-registry-consumers
+          path: |
+            build/vcpkg-port-check/**/CMakeConfigureLog.yaml
+            build/vcpkg-port-check/**/Testing
