@@ -35,13 +35,13 @@ $installed = Join-Path $staging $packageName
 $relocatedPackage = Join-Path $relocated $packageName
 
 Remove-Item $source, $build, $dependencies, $staging, $relocated, $triplets,
-    "$root/core-consumer", "$root/core-consumer-build", "$root/test-consumer", "$root/test-consumer-build",
+    "$root/default-consumer", "$root/default-consumer-build", "$root/test-consumer", "$root/test-consumer-build",
     "$root/source.zip" -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $root, $output | Out-Null
 
 Invoke-Checked git @('-C', $repo, 'archive', '--format=zip', '-o', "$root/source.zip", 'HEAD')
 Expand-Archive "$root/source.zip" $source -Force
-Copy-Item "$source/tests/package-core-consumer" "$root/core-consumer" -Recurse -Force
+Copy-Item "$source/tests/package-default" "$root/default-consumer" -Recurse -Force
 Copy-Item "$source/tests/package-consumer" "$root/test-consumer" -Recurse -Force
 Copy-Item "$source/tools/ci/triplets" $triplets -Recurse -Force
 
@@ -129,7 +129,7 @@ $consumerCommon = @(
     "-DCMAKE_PREFIX_PATH=$relocatedPackage"
 )
 
-foreach ($consumer in @('core-consumer', 'test-consumer')) {
+foreach ($consumer in @('default-consumer', 'test-consumer')) {
     $consumerSource = Join-Path $root $consumer
     $consumerBuild = Join-Path $root "$consumer-build"
     Invoke-Checked cmake (@('-S', $consumerSource, '-B', $consumerBuild) + $consumerCommon)
