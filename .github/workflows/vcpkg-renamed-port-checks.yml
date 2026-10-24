@@ -1,0 +1,78 @@
+name: Verify ereliastudio-sparkle official vcpkg submission
+on:
+  push:
+    branches:
+      - publication/vcpkg-013-preparation
+    paths:
+      - .github/workflows/vcpkg-renamed-port-checks.yml
+permissions:
+  contents: read
+jobs:
+  version-db:
+    name: vcpkg formatter and version database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: EreliaStudio/vcpkg
+          ref: add-erelia-sparkle-0.1.3
+          fetch-depth: 1
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: ./bootstrap-vcpkg.sh -disableMetrics
+      - name: Validate port manifest formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./vcpkg format-manifest ports/ereliastudio-sparkle/vcpkg.json
+          git diff --exit-code -- ports/ereliastudio-sparkle/vcpkg.json
+      - name: Verify version database with the official vcpkg tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./vcpkg x-add-version --all
+          git diff --exit-code -- versions/e-/ereliastudio-sparkle.json versions/baseline.json
+
+  consumers:
+    name: Three Windows consumers with renamed official port
+    runs-on: windows-2022
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: sparkle
+      - uses: actions/checkout@v4
+        with:
+          repository: EreliaStudio/vcpkg
+          ref: add-erelia-sparkle-0.1.3
+          sparse-checkout: |
+            ports/ereliastudio-sparkle
+          path: fork
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Use pinned upstream package with the new port name
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Remove-Item sparkle/ports/erelia-sparkle -Recurse -Force
+          Copy-Item fork/ports/ereliastudio-sparkle sparkle/ports/ereliastudio-sparkle -Recurse -Force
+          foreach ($consumer in @('package-core-consumer', 'package-default', 'package-consumer')) {
+            $file = "sparkle/tests/$consumer/vcpkg.json"
+            (Get-Content $file -Raw).Replace('erelia-sparkle', 'ereliastudio-sparkle') | Set-Content $file
+          }
+          $script = 'sparkle/tools/ci/test-vcpkg-port.ps1'
+          (Get-Content $script -Raw).Replace('erelia-sparkle', 'ereliastudio-sparkle') | Set-Content $script
+      - name: Run Core, Graphics and TestLibrary consumers
+        shell: pwsh
+        working-directory: sparkle
+        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release
+      - name: Upload diagnostics if validation fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ereliastudio-sparkle-vcpkg-validation
+          path: |
+            sparkle/build/vcpkg-port-check/**/CMakeConfigureLog.yaml
+            sparkle/build/vcpkg-port-check/**/Testing
