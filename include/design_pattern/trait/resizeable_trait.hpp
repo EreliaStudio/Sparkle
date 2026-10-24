@@ -3,6 +3,8 @@
 #include "design_pattern/contract_provider.hpp"
 #include "math/vector2.hpp"
 
+#include <limits>
+
 namespace spk
 {
 	class ResizeableTrait
@@ -13,9 +15,9 @@ namespace spk
 
 		struct SizeHint
 		{
-			Vector2 minimal;
-			Vector2 maximal;
-			Vector2 preferred;
+			Vector2 minimal = {0, 0};
+			Vector2 maximal = {std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
+			Vector2 preferred = {0, 0};
 
 			[[nodiscard]] bool operator==(const SizeHint &other) const = default;
 		};

@@ -1,0 +1,355 @@
+#include "diagnostics/logger.hpp"
+
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <utility>
+
+#include "exception.hpp"
+
+namespace
+{
+	void writeRecord(
+		std::ostream &stream,
+		const std::string &levelIdentifier,
+		std::source_location location,
+		const std::string &message) noexcept
+	{
+		try
+		{
+			stream << '[' << levelIdentifier << "] ";
+			if (location.line() != 0)
+			{
+				stream << location.file_name() << ':' << location.line() << ' ';
+			}
+			stream << message << '\n';
+			stream.flush();
+		} catch (...)
+		{
+		}
+	}
+}
+namespace spk
+{
+	thread_local Logger::ThreadState Logger::_threadState{};
+
+	struct Logger::FileOutput
+	{
+		std::size_t identifier = 0;
+		std::filesystem::path path;
+		Level lowerAcceptedLevel = Level::Trace;
+		std::ofstream stream;
+	};
+
+	Logger::Output::Output(Logger *logger, std::size_t identifier) noexcept :
+		_logger(logger),
+		_identifier(identifier)
+	{
+	}
+
+	Logger::Output::Output(Output &&other) noexcept :
+		_logger(std::exchange(other._logger, nullptr)),
+		_identifier(std::exchange(other._identifier, 0))
+	{
+	}
+
+	Logger::Output &Logger::Output::operator=(Output &&other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+		_release();
+		_logger = std::exchange(other._logger, nullptr);
+		_identifier = std::exchange(other._identifier, 0);
+		return *this;
+	}
+
+	Logger::Output::~Output()
+	{
+		_release();
+	}
+
+	void Logger::Output::_release() noexcept
+	{
+		if (_logger == nullptr)
+		{
+			return;
+		}
+		_logger->_removeOutput(_identifier);
+		_logger = nullptr;
+		_identifier = 0;
+	}
+
+	void Logger::Output::setLevel(Level level) noexcept
+	{
+		if (_logger != nullptr)
+		{
+			_logger->_setOutputLevel(_identifier, level);
+		}
+	}
+
+	Logger::Logger() = default;
+
+	Logger::~Logger() = default;
+
+	Logger &Logger::instance() noexcept
+	{
+		static Logger instance;
+		return instance;
+	}
+
+	Logger::LevelSetter Logger::setLevel(Level level) noexcept
+	{
+		return LevelSetter{level};
+	}
+
+	Logger &Logger::beginRecord(
+		Level level,
+		std::source_location location) noexcept
+	{
+		try
+		{
+			_threadState.stack.emplace_back();
+			Composition &composition = _threadState.stack.back();
+			composition.level = level;
+			composition.location = location;
+		} catch (...)
+		{
+		}
+		return *this;
+	}
+
+	void Logger::_ensureOutputPathAvailable(const std::filesystem::path &path) const
+	{
+		const auto duplicate = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto &output) {
+			return output->path == path;
+		});
+		if (duplicate != _outputs.end())
+		{
+			throw spk::Exception("Logger output already registered [" + path.string() + "]");
+		}
+	}
+
+	std::unique_ptr<Logger::FileOutput> Logger::_makeOutput(const std::filesystem::path &path, Level level)
+	{
+		auto output = std::make_unique<FileOutput>();
+		output->identifier = _nextOutputIdentifier++;
+		output->path = path;
+		output->lowerAcceptedLevel = level;
+		output->stream.open(path, std::ios::out | std::ios::app);
+		if (!output->stream.is_open())
+		{
+			throw spk::Exception("Failed to open logger output [" + path.string() + "]");
+		}
+		return output;
+	}
+
+	Logger::Output Logger::addOutput(const std::filesystem::path &path, Level lowerAcceptedLevel)
+	{
+		try
+		{
+			const std::filesystem::path normalizedPath = path.lexically_normal();
+			const std::scoped_lock lock(_mutex);
+			_ensureOutputPathAvailable(normalizedPath);
+			auto output = _makeOutput(normalizedPath, lowerAcceptedLevel);
+			const std::size_t identifier = output->identifier;
+			_outputs.push_back(std::move(output));
+			return Output(this, identifier);
+		} catch (const spk::Exception &)
+		{
+			throw;
+		} catch (...)
+		{
+			throw spk::Exception("Failed to add logger output", std::current_exception());
+		}
+	}
+
+	void Logger::muteConsole() noexcept
+	{
+		try
+		{
+			const std::scoped_lock lock(_mutex);
+			_consoleMuted = true;
+		} catch (...)
+		{
+		}
+	}
+
+	void Logger::setLevelIdentifier(Level level, std::string identifier)
+	{
+		const std::scoped_lock lock(_mutex);
+		_levelIdentifiers.at(static_cast<std::size_t>(level)) = std::move(identifier);
+	}
+
+	std::string Logger::_levelIdentifier(Level level) const
+	{
+		return _levelIdentifiers.at(static_cast<std::size_t>(level));
+	}
+
+	void Logger::unmuteConsole() noexcept
+	{
+		try
+		{
+			const std::scoped_lock lock(_mutex);
+			_consoleMuted = false;
+		} catch (...)
+		{
+		}
+	}
+
+	Logger::OnEntryContract Logger::subscribeToEntry(OnEntryCallback callback)
+	{
+		return _onEntryContractProvider.subscribe(std::move(callback));
+	}
+
+	Logger &Logger::operator<<(LevelSetter setter) noexcept
+	{
+		_threadState.current().level = setter.level;
+		return *this;
+	}
+
+	Logger &Logger::operator<<(std::source_location location) noexcept
+	{
+		return setSourceLocation(location);
+	}
+
+	Logger &Logger::setSourceLocation(std::source_location location) noexcept
+	{
+		_threadState.current().location = location;
+		return *this;
+	}
+
+	Logger &Logger::operator<<(OStreamManipulator manipulator) noexcept
+	{
+		const OStreamManipulator endLine =
+			static_cast<OStreamManipulator>(std::endl<char, std::char_traits<char>>);
+		if (manipulator == endLine)
+		{
+			_dispatch();
+			return *this;
+		}
+		try
+		{
+			manipulator(_threadState.current().stream);
+		} catch (...)
+		{
+		}
+		return *this;
+	}
+
+	Logger &Logger::operator<<(IOSManipulator manipulator) noexcept
+	{
+		try
+		{
+			manipulator(_threadState.current().stream);
+		} catch (...)
+		{
+		}
+		return *this;
+	}
+
+	Logger &Logger::operator<<(IOSBaseManipulator manipulator) noexcept
+	{
+		try
+		{
+			manipulator(_threadState.current().stream);
+		} catch (...)
+		{
+		}
+		return *this;
+	}
+
+	bool Logger::_extractRecord(Level &level, std::source_location &location, std::string &message) noexcept
+	{
+		try
+		{
+			Composition &composition = _threadState.current();
+			level = composition.level;
+			location = composition.location;
+			message = composition.stream.str();
+
+			if (_threadState.stack.empty() == false)
+			{
+				_threadState.stack.pop_back();
+			}
+			else
+			{
+				composition.stream.str({});
+				composition.stream.clear();
+				composition.level = Level::Info;
+				composition.location = {};
+			}
+			return true;
+		} catch (...)
+		{
+			return false;
+		}
+	}
+
+	void Logger::_publishRecord(Level level, std::source_location location, const std::string &message) noexcept
+	{
+		try
+		{
+			{
+				const std::scoped_lock lock(_mutex);
+				if (_consoleMuted == false)
+				{
+					writeRecord(std::clog, _levelIdentifier(level), location, message);
+				}
+				for (auto &output : _outputs)
+				{
+					if (static_cast<std::uint8_t>(level) >= static_cast<std::uint8_t>(output->lowerAcceptedLevel))
+					{
+						writeRecord(output->stream, _levelIdentifier(level), location, message);
+					}
+				}
+			}
+			_onEntryContractProvider.trigger(level, message);
+		} catch (...)
+		{
+		}
+	}
+
+	void Logger::_dispatch() noexcept
+	{
+		Level level;
+		std::source_location location;
+		std::string message;
+		if (_extractRecord(level, location, message) == true)
+		{
+			_publishRecord(level, location, message);
+		}
+	}
+
+	void Logger::_removeOutput(std::size_t identifier) noexcept
+	{
+		try
+		{
+			const std::scoped_lock lock(_mutex);
+			std::erase_if(_outputs, [&](const auto &output) {
+				return output->identifier == identifier;
+			});
+		} catch (...)
+		{
+		}
+	}
+
+	void Logger::_setOutputLevel(std::size_t identifier, Level level) noexcept
+	{
+		try
+		{
+			const std::scoped_lock lock(_mutex);
+			const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto &output) {
+				return output->identifier == identifier;
+			});
+			if (it != _outputs.end())
+			{
+				(*it)->lowerAcceptedLevel = level;
+			}
+		} catch (...)
+		{
+		}
+	}
+}

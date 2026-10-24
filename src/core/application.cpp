@@ -25,9 +25,9 @@ namespace spk
 		return _impl->createWindow(identifier, configuration);
 	}
 
-	void Application::closeWindow(const Window::Identifier &identifier)
+	Task<void>::Answer Application::closeWindow(const Window::Identifier &identifier)
 	{
-		_impl->closeWindow(identifier);
+		return _impl->closeWindow(identifier);
 	}
 
 	void Application::quit(int exitCode)

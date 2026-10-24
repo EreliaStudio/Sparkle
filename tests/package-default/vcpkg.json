@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "sparkle-default-consumer",
+  "version-string": "0",
+  "dependencies": [
+    {
+      "name": "erelia-sparkle",
+      "default-features": false,
+      "features": [
+        "graphics"
+      ]
+    }
+  ]
+}

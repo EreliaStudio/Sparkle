@@ -6,6 +6,7 @@
 #include <variant>
 
 #include "exception.hpp"
+#include "input/device_context.hpp"
 #include "input/input_state.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
@@ -291,18 +292,23 @@ namespace spk
 		request.state->setBackgroundColor(request.backgroundColor);
 		_registerSnapshotProducer(request.windowIdentifier, request.renderSnapshotProducer, request.isRequested);
 		request.state->markReady();
+
+		request.task->validate();
 	}
 
 	void Application::UpdateRuntime::_consume(const StateDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 		auto &state = object(request.windowIdentifier);
 		release(state);
 		_renderSnapshotEntries.erase(request.windowIdentifier);
 		remove(request.windowIdentifier);
+
+		request.task->validate();
 	}
 
 	void Application::UpdateRuntime::_consumeEvents()
@@ -318,7 +324,17 @@ namespace spk
 		for (auto &request : _updateRequestConsumer.drain())
 		{
 			std::visit([this](const auto &value) {
-				_consume(value);
+				try
+				{
+					_consume(value);
+				} catch (...)
+				{
+					if (value.task->answer().status() == Task<void>::Status::Pending)
+					{
+						value.task->fail(std::current_exception());
+					}
+					throw;
+				}
 			},
 					   request);
 		}
@@ -326,7 +342,12 @@ namespace spk
 
 	void Application::UpdateRuntime::_updateState(Window::State &state, UpdateContext &context)
 	{
+		DeviceContext deviceContext{
+			.keyboard = state.keyboard(),
+			.mouse = state.mouse()};
+
 		state.root().updateState(context);
+		state.root().updateState(context, deviceContext);
 	}
 
 	spk::RenderSnapshot Application::UpdateRuntime::_buildRenderSnapshot(const Window::Identifier &identifier, Window::State &state)
@@ -376,8 +397,6 @@ namespace spk
 		UpdateContext context{
 			.time = _currentTime - _startTime,
 			.deltaTime = _deltaTime,
-			.keyboard = state.keyboard(),
-			.mouse = state.mouse(),
 			.profiler = state.profiler()};
 		try
 		{
