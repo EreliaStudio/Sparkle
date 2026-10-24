@@ -68,6 +68,14 @@ jobs:
         shell: pwsh
         working-directory: sparkle
         run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release
+      - name: Reject duplicated debug/share metadata
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($consumer in @('core-consumer', 'graphics-consumer', 'test-library-consumer')) {
+            $debugShare = "sparkle/build/vcpkg-port-check/$consumer-installed/x64-windows-static/debug/share"
+            if (Test-Path $debugShare) { throw "Forbidden debug/share exists in $consumer : $debugShare" }
+          }
       - name: Upload diagnostics if validation fails
         if: failure()
         uses: actions/upload-artifact@v4
