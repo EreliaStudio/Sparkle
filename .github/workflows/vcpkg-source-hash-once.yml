@@ -1,0 +1,22 @@
+name: Verify vcpkg publication source archive
+on:
+  push:
+    branches:
+      - publication/vcpkg-013-preparation
+    paths:
+      - .github/workflows/vcpkg-source-hash-once.yml
+permissions:
+  contents: read
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hash immutable Sparkle source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='sparkle-v0.1.3-g5117c64a7052457ca2de1864bf23e0e29487bdcf'
+          curl --fail --location --retry 3 --silent --show-error "https://github.com/EreliaStudio/Sparkle/archive/${tag}.tar.gz" --output sparkle.tar.gz
+          echo "SOURCE_TAG=${tag}"
+          echo "SOURCE_SHA512=$(sha512sum sparkle.tar.gz | cut -d' ' -f1)"
+          echo "SOURCE_BYTES=$(stat -c '%s' sparkle.tar.gz)"
