@@ -37,7 +37,7 @@ namespace spk
 		};
 
 		Style style;
-		style.font = font("fonts/arial.ttf");
+		style.font = font("fonts/liberation_sans_regular.ttf");
 		style.iconsetImage = std::make_unique<Image>(bytes("textures/default_iconset.png"));
 		style.iconset = std::make_unique<SpriteSheet>(bytes("textures/default_iconset.png"), Vector2UInt{10, 10});
 		for (const auto path : {"textures/default_iconset_16.png", "textures/default_iconset_8.png"})
@@ -139,6 +139,11 @@ namespace spk
 	}
 
 	bool Widget::_canUpdate() const
+	{
+		return isActive();
+	}
+
+	bool Widget::_canUpdateByDevice() const
 	{
 		return isActive();
 	}
@@ -324,6 +329,17 @@ namespace spk
 			if (child != nullptr)
 			{
 				child->updateState(context);
+			}
+		}
+	}
+
+	void Widget::_afterUpdate(UpdateContext &context, DeviceContext &deviceContext)
+	{
+		for (Widget *child : children())
+		{
+			if (child != nullptr)
+			{
+				child->updateState(context, deviceContext);
 			}
 		}
 	}

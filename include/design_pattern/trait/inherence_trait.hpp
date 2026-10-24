@@ -2,12 +2,14 @@
 
 #include <algorithm>
 #include <concepts>
+#include <exception>
 #include <functional>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
 #include "design_pattern/contract_provider.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -19,6 +21,16 @@ namespace spk
 		using OnParentEditionContractProvider = ContractProvider<const TType *>;
 		using OnParentEditionCallback = OnParentEditionContractProvider::callback_type;
 		using OnParentEditionContract = OnParentEditionContractProvider::Contract;
+
+		enum class ChildEdition
+		{
+			Added,
+			Removed
+		};
+
+		using OnChildEditionContractProvider = ContractProvider<TType *, ChildEdition>;
+		using OnChildEditionCallback = OnChildEditionContractProvider::callback_type;
+		using OnChildEditionContract = OnChildEditionContractProvider::Contract;
 
 		struct ContinueWhileTruthy
 		{
@@ -36,6 +48,9 @@ namespace spk
 		ChildrenContainer _children;
 		TChildComparator _childComparator;
 		OnParentEditionContractProvider _onParentEditionContractProvider;
+		OnChildEditionContractProvider _onChildEditionContractProvider;
+		std::exception_ptr _parentFailure;
+		std::exception_ptr _childFailure;
 
 		void _sortChildren()
 		{
@@ -46,7 +61,6 @@ namespace spk
 		{
 			_children.push_back(child);
 			_sortChildren();
-			_onChildAdded(child);
 		}
 
 		void _removeChild(TType *child)
@@ -58,7 +72,62 @@ namespace spk
 			}
 
 			_children.erase(it);
-			_onChildRemoved(child);
+		}
+
+		[[nodiscard]] std::exception_ptr _notifyChild(TType *child, ChildEdition edition)
+		{
+			std::exception_ptr firstFailure;
+			try
+			{
+				if (edition == ChildEdition::Added)
+				{
+					_onChildAdded(child);
+				}
+				else
+				{
+					_onChildRemoved(child);
+				}
+			} catch (...)
+			{
+				firstFailure = std::current_exception();
+			}
+
+			_childFailure = nullptr;
+			try
+			{
+				_onChildEditionContractProvider.trigger(child, edition);
+			} catch (...)
+			{
+				if (!firstFailure)
+				{
+					firstFailure = std::current_exception();
+				}
+			}
+			if (!firstFailure)
+			{
+				firstFailure = _childFailure;
+			}
+			_childFailure = nullptr;
+			return firstFailure;
+		}
+
+		[[nodiscard]] std::exception_ptr _notifyParent()
+		{
+			_parentFailure = nullptr;
+			std::exception_ptr firstFailure;
+			try
+			{
+				_onParentEditionContractProvider.trigger(_parent);
+			} catch (...)
+			{
+				firstFailure = std::current_exception();
+			}
+			if (!firstFailure)
+			{
+				firstFailure = _parentFailure;
+			}
+			_parentFailure = nullptr;
+			return firstFailure;
 		}
 
 		void _setParent(TType *parent)
@@ -81,19 +150,39 @@ namespace spk
 				}
 			}
 
-			if (_parent != nullptr)
+			TType *previous = _parent;
+			if (previous != nullptr)
 			{
-				_parent->_removeChild(self);
+				previous->_removeChild(self);
 			}
-
 			_parent = parent;
-
-			if (_parent != nullptr)
+			if (parent != nullptr)
 			{
-				_parent->_appendChild(self);
+				parent->_appendChild(self);
 			}
 
-			_onParentEditionContractProvider.trigger(_parent);
+			std::exception_ptr firstFailure;
+			if (previous != nullptr)
+			{
+				firstFailure = previous->_notifyChild(self, ChildEdition::Removed);
+			}
+			if (parent != nullptr)
+			{
+				auto failure = parent->_notifyChild(self, ChildEdition::Added);
+				if (!firstFailure)
+				{
+					firstFailure = failure;
+				}
+			}
+			auto parentFailure = _notifyParent();
+			if (!firstFailure)
+			{
+				firstFailure = parentFailure;
+			}
+			if (firstFailure)
+			{
+				std::rethrow_exception(firstFailure);
+			}
 		}
 
 	protected:
@@ -122,24 +211,50 @@ namespace spk
 		virtual ~InherenceTrait()
 		{
 			_destroying = true;
-			// Only notify surviving objects. Derived members of this object may
-			// already be gone; its own parent-edition subscribers must not run.
 			if (TType *parent = std::exchange(_parent, nullptr))
 			{
 				parent->_removeChild(static_cast<TType *>(this));
+				logException(parent->_notifyChild(static_cast<TType *>(this), ChildEdition::Removed), "InherenceTrait notification failed during destruction");
 			}
 			while (!_children.empty())
 			{
 				TType *child = _children.back();
 				_children.pop_back();
 				child->_parent = nullptr;
-				child->_onParentEditionContractProvider.trigger(nullptr);
+				logException(child->_notifyParent(), "InherenceTrait notification failed during destruction");
 			}
 		}
 
 		OnParentEditionContract subscribeToParentEdition(OnParentEditionCallback callback)
 		{
-			return _onParentEditionContractProvider.subscribe(std::move(callback));
+			return _onParentEditionContractProvider.subscribe([this, callback = std::move(callback)](const TType *parent) {
+				try
+				{
+					callback(parent);
+				} catch (...)
+				{
+					if (!_parentFailure)
+					{
+						_parentFailure = std::current_exception();
+					}
+				}
+			});
+		}
+
+		OnChildEditionContract subscribeToChildEdition(OnChildEditionCallback callback)
+		{
+			return _onChildEditionContractProvider.subscribe([this, callback = std::move(callback)](TType *child, ChildEdition edition) {
+				try
+				{
+					callback(child, edition);
+				} catch (...)
+				{
+					if (!_childFailure)
+					{
+						_childFailure = std::current_exception();
+					}
+				}
+			});
 		}
 
 		void addChild(TType &child)

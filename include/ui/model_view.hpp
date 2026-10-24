@@ -342,6 +342,30 @@ namespace spk
 			_updateItemGeometry();
 		}
 
+		[[nodiscard]] bool isRowVisible(std::size_t row) const
+		{
+			if (_model == nullptr || _delegate == nullptr || row >= _model->rowCount())
+			{
+				throw std::out_of_range("ModelView visible row is out of range");
+			}
+
+			unsigned int top = 0;
+			for (std::size_t index = 0; index < row; ++index)
+			{
+				top += _delegate->rowExtent(*_model, index);
+			}
+
+			const unsigned int extent = _delegate->rowExtent(*_model, row);
+			return top + extent > _scrollOffset && top < _scrollOffset + geometry().height;
+		}
+
+		[[nodiscard]] bool isLastRowVisible() const
+		{
+			return _model != nullptr &&
+				   _model->empty() == false &&
+				   isRowVisible(_model->rowCount() - 1);
+		}
+
 		[[nodiscard]] Model *model() const noexcept
 		{
 			return _model;

@@ -16,11 +16,6 @@ namespace spk
 	{
 	}
 
-	bool System::_isAcceptingEvent() const
-	{
-		return isActive();
-	}
-
 	bool System::_canUpdate() const
 	{
 		return isActive();

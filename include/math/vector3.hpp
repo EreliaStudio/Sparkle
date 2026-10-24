@@ -35,7 +35,7 @@ namespace spk
 		{
 		}
 
-		explicit TVector3(const JSON::Value &value) noexcept
+		explicit TVector3(const JSON::Value &value)
 		{
 			*this = fromJSON(value);
 		}
@@ -67,9 +67,13 @@ namespace spk
 		[[nodiscard]] constexpr auto operator<=>(const TVector3 &other) const
 		{
 			if (const auto comparison = x <=> other.x; comparison != 0)
+			{
 				return comparison;
+			}
 			if (const auto comparison = y <=> other.y; comparison != 0)
+			{
 				return comparison;
+			}
 			return z <=> other.z;
 		}
 		[[nodiscard]] constexpr TVector3 operator-() const
