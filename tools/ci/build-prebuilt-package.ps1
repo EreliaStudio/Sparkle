@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = '0.1.2',
+    [string]$Version = '',
     [string]$OutputDirectory = 'build/prebuilt-package/output'
 )
 
@@ -13,6 +13,12 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 }
 
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $manifest = Get-Content (Join-Path $repo 'vcpkg.json') -Raw | ConvertFrom-Json
+    $Version = $manifest.version
+}
+if ([string]::IsNullOrWhiteSpace($Version)) { throw 'Unable to resolve the Sparkle version' }
+
 $revision = (& git -C $repo rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Unable to resolve the Sparkle revision' }
 
@@ -29,13 +35,12 @@ $installed = Join-Path $staging $packageName
 $relocatedPackage = Join-Path $relocated $packageName
 
 Remove-Item $source, $build, $dependencies, $staging, $relocated, $triplets,
-    "$root/core-consumer", "$root/core-consumer-build", "$root/test-consumer", "$root/test-consumer-build",
+    "$root/test-consumer", "$root/test-consumer-build",
     "$root/source.zip" -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $root, $output | Out-Null
 
 Invoke-Checked git @('-C', $repo, 'archive', '--format=zip', '-o', "$root/source.zip", 'HEAD')
 Expand-Archive "$root/source.zip" $source -Force
-Copy-Item "$source/tests/package-core-consumer" "$root/core-consumer" -Recurse -Force
 Copy-Item "$source/tests/package-consumer" "$root/test-consumer" -Recurse -Force
 Copy-Item "$source/tools/ci/triplets" $triplets -Recurse -Force
 
@@ -69,7 +74,10 @@ $required = @(
     "$installed/lib/cmake/sparkle/sparkleConfigVersion.cmake",
     "$installed/lib/cmake/sparkle/sparkleTargets.cmake",
     "$installed/lib/cmake/sparkle/sparkleTargets-release.cmake",
-    "$installed/lib/cmake/sparkle/sparkleTestTargets.cmake"
+    "$installed/lib/cmake/sparkle/sparkleTestTargets.cmake",
+    "$installed/share/sparkle/LICENSE",
+    "$installed/share/sparkle/THIRD_PARTY_NOTICES.md",
+    "$installed/share/sparkle/LICENSE-Liberation.txt"
 )
 foreach ($path in $required) {
     if (-not (Test-Path $path)) { throw "Installed package is missing $path" }
@@ -120,13 +128,11 @@ $consumerCommon = @(
     "-DCMAKE_PREFIX_PATH=$relocatedPackage"
 )
 
-foreach ($consumer in @('core-consumer', 'test-consumer')) {
-    $consumerSource = Join-Path $root $consumer
-    $consumerBuild = Join-Path $root "$consumer-build"
-    Invoke-Checked cmake (@('-S', $consumerSource, '-B', $consumerBuild) + $consumerCommon)
-    Invoke-Checked cmake @('--build', $consumerBuild, '--parallel', '4')
-    Invoke-Checked ctest @('--test-dir', $consumerBuild, '--output-on-failure', '--no-tests=error')
-}
+$consumerSource = Join-Path $root 'test-consumer'
+$consumerBuild = Join-Path $root 'test-consumer-build'
+Invoke-Checked cmake (@('-S', $consumerSource, '-B', $consumerBuild) + $consumerCommon)
+Invoke-Checked cmake @('--build', $consumerBuild, '--parallel', '4')
+Invoke-Checked ctest @('--test-dir', $consumerBuild, '--output-on-failure', '--no-tests=error')
 
 $archive = Join-Path $output "$packageName.zip"
 $checksum = "$archive.sha256"

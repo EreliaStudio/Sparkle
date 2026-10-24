@@ -19,6 +19,7 @@ namespace spk
 		_outline(this->name() + ".outline", this),
 		_thumb(this->name() + ".thumb", this)
 	{
+		_thumb.setCornerSize(_thumbCornerSize);
 		applyStyle(defaultStyle);
 		_outline.setZOrder(1.0f);
 		_thumb.setZOrder(2.0f);
@@ -58,7 +59,8 @@ namespace spk
 		const unsigned int top = std::min(_padding.y, geometry().height / 2);
 		const unsigned int availableWidth = geometry().width - 2 * left;
 		const unsigned int availableHeight = geometry().height - 2 * top;
-		const Vector2UInt size{std::min(_thumbSize.x, availableWidth), std::min(_thumbSize.y, availableHeight)};
+		const unsigned int thumbExtent = std::min(availableWidth, availableHeight);
+		const Vector2UInt size{thumbExtent, thumbExtent};
 		Rect2D thumb{Vector2Int{static_cast<int>(left), static_cast<int>(top)}, size};
 		if (_orientation == Orientation::Horizontal)
 		{
@@ -77,14 +79,17 @@ namespace spk
 
 	void ToggleSwitch::_updateSizeHint()
 	{
+		const Vector2UInt thumbSize{
+			static_cast<unsigned int>(_thumbCornerSize.x * 2),
+			static_cast<unsigned int>(_thumbCornerSize.y * 2)};
 		Vector2 preferred;
 		if (_orientation == Orientation::Horizontal)
 		{
-			preferred = {static_cast<float>(2 * _thumbSize.x + 2 * _padding.x), static_cast<float>(_thumbSize.y + 2 * _padding.y)};
+			preferred = {static_cast<float>(2 * thumbSize.x + 2 * _padding.x), static_cast<float>(thumbSize.y + 2 * _padding.y)};
 		}
 		else
 		{
-			preferred = {static_cast<float>(_thumbSize.x + 2 * _padding.x), static_cast<float>(2 * _thumbSize.y + 2 * _padding.y)};
+			preferred = {static_cast<float>(thumbSize.x + 2 * _padding.x), static_cast<float>(2 * thumbSize.y + 2 * _padding.y)};
 		}
 		setSizeHint({preferred, {std::numeric_limits<float>::max(), std::numeric_limits<float>::max()}, preferred});
 	}
@@ -249,12 +254,6 @@ namespace spk
 		_updateSizeHint();
 		_updateVisualGeometry();
 	}
-	void ToggleSwitch::setThumbSize(const Vector2UInt &size)
-	{
-		_thumbSize = size;
-		_updateSizeHint();
-		_updateVisualGeometry();
-	}
 	void ToggleSwitch::setAnimationDuration(Duration duration)
 	{
 		if (duration < Duration::zero())
@@ -332,6 +331,8 @@ namespace spk
 	void ToggleSwitch::setThumbCornerSize(const Vector2Int &size)
 	{
 		_thumb.setCornerSize(size);
+		_thumbCornerSize = size;
+		_updateSizeHint();
 	}
 	bool ToggleSwitch::isChecked() const noexcept
 	{
@@ -352,10 +353,6 @@ namespace spk
 	const Vector2UInt &ToggleSwitch::padding() const noexcept
 	{
 		return _padding;
-	}
-	const Vector2UInt &ToggleSwitch::thumbSize() const noexcept
-	{
-		return _thumbSize;
 	}
 	ToggleSwitch::Duration ToggleSwitch::animationDuration() const noexcept
 	{
@@ -391,7 +388,7 @@ namespace spk
 	}
 	const Vector2Int &ToggleSwitch::thumbCornerSize() const noexcept
 	{
-		return _thumb.cornerSize();
+		return _thumbCornerSize;
 	}
 	ToggleSwitch::StateContract ToggleSwitch::subscribeToState(StateCallback callback)
 	{

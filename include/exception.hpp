@@ -3,6 +3,7 @@
 #include <exception>
 #include <source_location>
 #include <string>
+#include <string_view>
 
 namespace spk
 {
@@ -32,4 +33,9 @@ namespace spk
 		[[nodiscard]] const std::source_location &location() const noexcept;
 		[[nodiscard]] const std::exception_ptr &cause() const noexcept;
 	};
+
+	void logException(
+		std::exception_ptr failure,
+		std::string_view context,
+		std::source_location location = std::source_location::current()) noexcept;
 }

@@ -26,7 +26,7 @@ namespace spk
 			setIconset(style.iconset.get());
 		}
 		setIconSize(style.iconButtonIconSize);
-		setIconPadding(style.iconButtonIconPadding);
+		setIconPaddingRatio(style.iconButtonIconPaddingRatio);
 	}
 
 	void IconButton::_refreshIcon()

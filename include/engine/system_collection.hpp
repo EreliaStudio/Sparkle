@@ -44,6 +44,19 @@ namespace spk
 		}
 
 	public:
+		template <typename TCallback>
+		void forEachSystem(TCallback &&callback)
+		{
+			const auto systemSnapshot = Base::snapshotElements();
+			for (const auto &snapshot : systemSnapshot)
+			{
+				if (Base::containsSnapshotElement(snapshot))
+				{
+					callback(*snapshot.element);
+				}
+			}
+		}
+
 		[[nodiscard]] OnSystemEditionContract subscribeToSystemAddition(
 			OnSystemEditionCallback callback)
 		{

@@ -56,7 +56,11 @@ namespace spk
 
 	std::vector<ResizeableTrait::SizeHint> GridLayout::_columnHints() const
 	{
-		std::vector<SizeHint> result(_columnCount);
+		const SizeHint emptyHint{
+			.minimal = {0, 0},
+			.maximal = {0, 0},
+			.preferred = {0, 0}};
+		std::vector<SizeHint> result(_columnCount, emptyHint);
 		for (std::size_t row = 0; row < _rowCount; ++row)
 		{
 			for (std::size_t column = 0; column < _columnCount; ++column)
@@ -75,7 +79,11 @@ namespace spk
 
 	std::vector<ResizeableTrait::SizeHint> GridLayout::_rowHints() const
 	{
-		std::vector<SizeHint> result(_rowCount);
+		const SizeHint emptyHint{
+			.minimal = {0, 0},
+			.maximal = {0, 0},
+			.preferred = {0, 0}};
+		std::vector<SizeHint> result(_rowCount, emptyHint);
 		for (std::size_t row = 0; row < _rowCount; ++row)
 		{
 			for (std::size_t column = 0; column < _columnCount; ++column)

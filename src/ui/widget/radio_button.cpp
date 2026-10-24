@@ -14,7 +14,8 @@ namespace spk
 	{
 		applyStyle(defaultStyle);
 		_label.setMaximalSize({std::numeric_limits<float>::max(), std::numeric_limits<float>::max()});
-		_layout.addWidget(&_indicator, Layout::SizeSettings{Layout::SizePolicy::Fixed});
+		auto *indicatorElement = _layout.addWidget(&_indicator, Layout::SizeSettings{Layout::SizePolicy::Fixed});
+		indicatorElement->setVerticalAlignment(Alignment::Vertical::Center);
 		auto *labelElement = _layout.addWidget(&_label, {Layout::SizePolicy::Extend, Layout::SizePolicy::Minimum});
 		labelElement->setVerticalAlignment(Alignment::Vertical::Center);
 		_indicatorContract = _indicator.subscribeToState([this](bool checked) {

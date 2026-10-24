@@ -45,7 +45,7 @@ namespace sparkle_test
 		[[nodiscard]] static OpenGLTestContext &instance();
 
 		void makeCurrent();
-		void reset();
+		void reset(spk::Vector2UInt size = {640, 480});
 		void setGeometry(const spk::Rect2D &geometry);
 
 		[[nodiscard]] spk::RenderContext &renderContext();
