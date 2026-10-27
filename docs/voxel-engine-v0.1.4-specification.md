@@ -1236,9 +1236,26 @@ Pour le rôle `albedo`, appliquer strictement `uvFinal = uvOffset + uvLocal * uv
 
 **Contrat de responsabilité :** l'AssetManager recherche/possède et réutilise la ressource selon son identité de cache ; **la factory interprète la configuration et construit T**. Les erreurs de construction ne publient pas d'entrée de cache partiellement initialisée ; la politique exacte de propagations d'exceptions sera à préciser avec le contrat général de Sparkle. Aucune obligation de sérialiser une ressource vers JSON pour la charger, et aucun catalogue global imposé.
 
-**Points volontairement ouverts :** le moyen de fournir la factory (personnalisation statique par type ou enregistrement d'une fonction de création sur chaque AssetManager), ses arguments exacts, les dépendances entre assets, la durée de vie des références retournées et l'accès concurrent. Ce choix n'impose pas encore de type `AssetFactory<T>` ni de registre dynamique.
+**VXL-102 :** le mécanisme de factory est une **personnalisation statique par type**, consultée à la compilation par `AssetManager::load<T>` ; **aucun registre de factories ni appel `registerFactory<T>()`** n'est nécessaire. Le schéma `template<> struct spk::AssetFactory<MyType> { static MyType create(const spk::JSON::Value&); };` est illustratif, et non une signature C++ définitivement approuvée : le nom exact, les arguments (notamment un éventuel accès à l'AssetManager pour charger des dépendances), les concepts/diagnostics de compilation, la durée de vie des références retournées et l'accès concurrent restent à définir. Cette décision permet aussi aux applications de fournir les factories de leurs types personnalisés.
 
 **Tests proposés :** factory native de SpriteSheet et de Font ; factory applicative de type personnalisé sans `fromJSON` ; création unique sur cache hit avec même triplet ; variante JSON différente produisant un nouvel asset ; exception pendant la factory laissant le cache sans entrée invalide ; aucun `toJSON` exigé.
+
+### VXL-102 — Factory statique spécialisée par type : VALIDÉ (option A)
+
+La construction d'un asset sur cache miss utilise une **factory définie statiquement pour le type `T`**, résolue par le compilateur, par exemple via une personnalisation de `spk::AssetFactory<T>` (nom de travail). `AssetManager::load<T>(identifiant, configuration)` appelle cette factory et conserve l'objet produit dans le cache VXL-100. Les types intégrés (textures, SpriteSheet, Font) disposent de factories appropriées ; l'application peut en définir une pour `MyShape` ou tout autre type personnalisé **sans l'enregistrer dynamiquement sur chaque AssetManager**.
+
+**Exemple conceptuel non contractuel :**
+```cpp
+template <>
+struct spk::AssetFactory<MyShape>
+{
+    static MyShape create(const spk::JSON::Value& config);
+};
+```
+
+Le recours éventuel à `fromJSON` reste **un détail interne optionnel de la factory**, conformément à VXL-101, et non un concept exigé pour tout `T`. L'absence de factory pour un type demandé doit produire un diagnostic explicite de compilation ou de contrat de l'API, **sans fallback automatique indéterminé**. Les signatures définitives et les accès nécessaires pour charger des dépendances restent ouverts.
+
+**Tests/validation proposés :** factory SpriteSheet sélectionnée statiquement ; factory personnalisée MyShape sans enregistrement au runtime ; même triplet d'identité n'appelant qu'une fois sa factory ; variation de configuration créant un autre asset ; absence de factory rejetée explicitement ; pas de dépendance obligatoire au JSON pour toutes les classes d'asset elles-mêmes.
 
 ### Fonctionnalités explicitement conservées
 
@@ -1247,6 +1264,8 @@ L'occlusion polygonale en flottants et la prise en charge précise des recouvrem
 Autres sujets de conception ouverts : contrats exacts des Shapes/Volumes, binding palettes/textures, définition de compatibilité d'un bucket, durée de vie des ressources GPU et validation des APIs publiques. Ne pas inventer de décisions supplémentaires.
 
 ## 9 — Traçabilité des décisions antérieures
+
+**VXL-102** valide l'option A : factories spécialisées statiquement selon `T`, consultées par `AssetManager::load<T>()`, sans registre dynamique ni méthode `registerFactory<T>()`. L'API de spécialisation reste à finaliser ; l'absence de factory ne déclenche pas de comportement implicite.
 
 **VXL-101** valide l'option B : chaque type d'asset possède un mécanisme de factory capable de construire T à partir des données nécessaires. L'AssetManager n'impose pas de `fromJSON`/`toJSON` universel ; une factory peut l'utiliser ou charger un fichier. Le mode d'extension aux types personnalisés (personnalisation statique vs enregistrement par instance) reste ouvert.
 
@@ -1381,4 +1400,4 @@ Les discussions VXL-001 à VXL-031 ont déterminé Volume immutable / Builder, g
 Le **présent document versionné** est la source de vérité de la conception de la PR #37 jusqu'à validation finale ; la description de la PR ne contient qu'un résumé et un lien vers cette spécification. Aucun commit de code n'est autorisé par le seul fait que ce texte existe.
 
 ---
-**État de la conception : VXL-040 à VXL-101 discutées, VXL-101 validée (option B).** La description détaillée des décisions et des tests se trouve dans les sections 3 à 8 ; la section 9 en conserve la traçabilité historique. Les décisions VXL-093 à VXL-101 révisent les règles antérieures sur l'alpha des slots, l'occlusion, les régions d'atlas, les associations Model/Palette, la politique UV, les syntaxes JSON de Material et l'identité des assets. Seuls les contrats explicitement validés sont applicables ; les signatures et aspects techniques encore ouverts exigent une validation avant toute implémentation. La PR reste en conception, sans autorisation de commit de code.
+**État de la conception : VXL-040 à VXL-102 discutées, VXL-102 validée (option A).** La description détaillée des décisions et des tests se trouve dans les sections 3 à 8 ; la section 9 en conserve la traçabilité historique. Les décisions VXL-093 à VXL-102 révisent les règles antérieures sur l'alpha des slots, l'occlusion, les régions d'atlas, les associations Model/Palette, la politique UV, les syntaxes JSON de Material et l'identité des assets. Seuls les contrats explicitement validés sont applicables ; les signatures et aspects techniques encore ouverts exigent une validation avant toute implémentation. La PR reste en conception, sans autorisation de commit de code.
