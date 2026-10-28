@@ -10,16 +10,6 @@
 
 Ces sujets peuvent modifier le contrat public ou le comportement observable de Sparkle. Ne soumettre **qu'une question importante à la fois** au mainteneur, avec des solutions compatibles avec la spécification existante.
 
-### A2 — Propagation des modes d'ombres et conflits de chemins
-
-**Références :** spécification §7.2–7.3.
-
-- Définir précisément quelles relations de **collecte graphique explicitement déclarées** complètent la parenté `InherenceTrait` des Entities et comment elles sont représentées.
-- Lorsque plusieurs chemins atteignent le même `ShadowMap::Contributor`, définir la priorité des overrides `Descendants` concurrents, notamment s'ils portent des modes différents. Préciser le comportement en cas de reparenting et de retrait d'un chemin.
-- Garantir le calcul déterministe d'un mode effectif unique sans modifier les valeurs enregistrées et sans dessiner deux fois la même source.
-
-Ne pas confondre inscription dans le Registry et parenté, ni réintroduire de logique d'ombres dans `EngineView`.
-
 ### A3 — Mise à disposition des cartes d'ombres finales à l'éclairage
 
 **Références :** spécification §7.3–7.4 et §7.8.
@@ -97,7 +87,7 @@ Ces points ne nécessitent **pas automatiquement** une question au mainteneur. L
 **Références :** spécification §7.1–7.4.
 
 - Définir le suivi des générations de cartes statiques/finales et le suivi d'une image effectivement produite, **par version logique de cible et par surface**.
-- Détailler la collecte et l'invalidation lors des changements de `MeshFilter`, activation, layers, transformation, parenté, lumière, projection et membership de la vue. Aucune invalidation ne doit être perdue pendant une capture ou le détachement d'une caméra.
+- Détailler la collecte et l'invalidation lors des changements de `MeshFilter`, activation, layers, transformation (y compris un reparenting pouvant modifier la matrice monde), lumière, projection et membership de la vue. **Aucun `ShadowMode` n'est propagé par la parenté** ; seules les transformations monde peuvent changer à la suite d'un reparenting. Aucune invalidation ne doit être perdue pendant une capture ou le détachement d'une caméra.
 - Vérifier que tout remplacement de cible après resize crée les **nouveaux States** nécessaires, sans modifier un attachment capturé dans un ancien snapshot.
 - Décrire comment les demandes de reconstruction de PointLight de **toutes les vues dessinées dans une même image sur une surface** sont réunies et arbitrées **avant** l'exécution des reconstructions ; préserver le score brut décroissant, le budget commun et l'ordre des vues. Définir le compteur d'image et le traitement d'une éventuelle réexécution du même sous-snapshot.
 - Conserver l'immutabilité et la réentrance des commandes : aucun accès à une Entity ou à un Contributor mutable durant l'exécution GPU.
@@ -171,6 +161,6 @@ Un point peut être retiré lorsqu'il a été :
 
 Avant d'autoriser l'implémentation, une revue finale doit vérifier que les interfaces importantes sont réalisables, que les passages entre composants ne reposent pas sur des décisions implicites et qu'il existe des tests pour les contrats observables. Les scénarios de test des décisions **déjà validées** figurent dans la spécification et les futurs tests d'implémentation : ils n'ont pas à être répétés ici.
 
-**Priorité de travail suggérée :** traiter d'abord les questions d'intégration transversale encore ouvertes (A2–A5), puis les contrats d'Assembly et de Material JSON (A6–A7) ; consolider T1–T7 en parallèle de la préparation de l'interface sans poser systématiquement de nouvelles questions.
+**Priorité de travail suggérée :** traiter d'abord les questions d'intégration transversale encore ouvertes (A3–A5), puis les contrats d'Assembly et de Material JSON (A6–A7) ; consolider T1–T7 en parallèle de la préparation de l'interface sans poser systématiquement de nouvelles questions.
 
 Ce document ne crée aucune nouvelle décision et ne modifie pas les choix approuvés dans la spécification.
