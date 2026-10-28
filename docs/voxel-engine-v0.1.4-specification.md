@@ -562,11 +562,11 @@ Les **caméras et les lumières sont représentées par des composants spéciali
 
 **Types de lumières requis en V0.1.4 :** l'infrastructure de rendu 3D générique prendra en charge les trois catégories suivantes, représentées par des composants spécialisés de l'Engine :
 
-- **Directionnelle** : une direction d'éclairage globale, sans atténuation liée à la distance, adaptée notamment au soleil ; sa direction est issue de l'orientation de l'Entity3D porteuse.
-- **Ponctuelle** : une source située à la position de son Entity3D, émettant dans toutes les directions, avec une portée et une atténuation à définir dans son contrat d'éclairage.
-- **Spot** : une source positionnée et orientée par son Entity3D, dont l'émission est limitée à un cône, avec des paramètres de portée et d'ouverture à définir.
+- **Directionnelle** : une direction d'éclairage globale, sans atténuation liée à la distance, adaptée notamment au soleil ; sa direction est issue de l'orientation de l'Entity3D porteuse. **Peut projeter des ombres.**
+- **Ponctuelle** : une source située à la position de son Entity3D, émettant dans toutes les directions, avec une portée et une atténuation à définir dans son contrat d'éclairage. **Éclaire sans projeter d'ombres en V0.1.4.**
+- **Spot** : une source positionnée et orientée par son Entity3D, dont l'émission est limitée à un cône, avec des paramètres de portée et d'ouverture à définir. **Peut projeter des ombres.**
 
-Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightComponent` et `SpotLightComponent` restent **illustratifs**, mais la prise en charge des **trois catégories de lumières** est requise. Les paramètres de caméra (projection, plans proche/lointain, etc.) et de lumière (couleur, intensité, portée, cône selon le type) appartiendront à leurs composants respectifs ; les matrices et données graphiques nécessaires seront préparées par le système de rendu générique, puis capturées dans les commandes et snapshots concernés. **La capacité de projeter des ombres par catégorie de lumière n'est pas encore décidée** ; ne pas présumer que les trois types en produisent.
+Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightComponent` et `SpotLightComponent` restent **illustratifs**, mais la prise en charge des **trois catégories de lumières** est requise. Les paramètres de caméra (projection, plans proche/lointain, etc.) et de lumière (couleur, intensité, portée, cône selon le type) appartiendront à leurs composants respectifs ; les matrices et données graphiques nécessaires seront préparées par le système de rendu générique, puis capturées dans les commandes et snapshots concernés. **Contrat de projection d'ombres :** seules les lumières **directionnelles** et **spots** pourront projeter des ombres dans V0.1.4. Les lumières **ponctuelles** participent à l'éclairage mais **ne produisent aucune ombre**. Une source compatible avec les ombres n'est pas nécessairement obligée de les activer : le contrat d'activation explicite, les techniques de génération (shadow maps), les réglages de qualité et leurs coûts restent à préciser au niveau de l'infrastructure de rendu 3D générique. Ne pas introduire de shadow maps omnidirectionnelles pour les lumières ponctuelles dans cette version.
 
 ```mermaid
 flowchart LR
@@ -585,7 +585,7 @@ flowchart LR
 
 Le pipeline graphique prépare pour **chaque vue** les matrices de vue issues du `Transform3D` de sa caméra sélectionnée et la projection adaptée aux paramètres de celle-ci et aux dimensions **de ce viewport** ; il capture les valeurs nécessaires dans les commandes/`RenderSnapshot`, sans relire la caméra mutable lors de leur exécution. Cette exigence concerne également les vues non voxels et n'impose pas la création d'une nouvelle classe publique nommée `Viewport3D` : l'interface concrète doit s'intégrer aux mécanismes de viewport, `RenderPass` et `RenderSnapshot` déjà fournis par Sparkle, complétés au besoin par l'infrastructure de rendu 3D de cette version.
 
-**Restent à concevoir :** les projections à proposer, l'API exacte de sélection et le comportement en cas de caméra absente/détruite, les paramètres et les capacités de projection d'ombres **des trois catégories de lumières retenues**, ainsi que l'orchestration des passes. Le modèle n'introduit pas de registre parallèle, de `CameraHolder3D` ni de conteneur `Scene3D` distinct pour dupliquer les composants de l'Engine.
+**Restent à concevoir :** les projections à proposer, l'API exacte de sélection et le comportement en cas de caméra absente/détruite, les paramètres détaillés des lumières, l'activation et la technique concrète des ombres pour les deux catégories autorisées (**directionnelle et spot**), ainsi que l'orchestration des passes. Le modèle n'introduit pas de registre parallèle, de `CameraHolder3D` ni de conteneur `Scene3D` distinct pour dupliquer les composants de l'Engine.
 
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
@@ -659,7 +659,7 @@ flowchart LR
   L --> D
 ```
 
-**L'éclairage, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque participera au rendu opaque/profondeur avec éclairage et ombres ; le mesh translucide passera par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'organisation exacte des passes, des sources lumineuses, des buffers et de la composition reste à définir dans cette architecture commune.
+**L'éclairage, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque participera au rendu opaque/profondeur avec éclairage et ombres ; le mesh translucide passera par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'organisation exacte des passes, des sources lumineuses, des buffers et de la composition reste à définir dans cette architecture commune. Les ombres sont disponibles uniquement pour les lumières directionnelles et spots ; les lumières ponctuelles éclairent sans créer de passe d'ombres.
 
 L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compris ses usages spécifiques du cutout ; ce document ne change pas son contrat général.
 
