@@ -632,7 +632,10 @@ classDiagram
   }
   class RenderingBehaviour
   class RenderingEntity
-  class RenderingSystem
+  class RenderingSystem {
+    +castShadow : bool
+    +tags directs (sans heritage aux composants)
+  }
   class EngineWidget {
     +bind(RenderingEngine*)
     +roles()
@@ -888,7 +891,7 @@ Cette réconciliation traite notamment une édition de `EngineView::setLayers(..
 
 **Filtrage interne des RenderingSystem — choix A validé.** L'admission automatique par Sparkle reste **au niveau du Contributor dans son ensemble** : chaque `EngineView` sélectionne les Contributors selon les layers qu'ils déclarent, sans posséder leurs objets ou gérer une scène. **Un `RenderingSystem` admis reste entièrement responsable du choix des objets qu'il dessine à l'intérieur de sa contribution**, y compris lorsque ceux-ci portent des layers différents. Pour garantir une règle unique sans imposer de connaissance de la structure des entités à la vue, `EngineView::CaptureContext` expose un helper de comparaison des layers (signature illustrative `bool isLayerCompatible(const LayerCollection&) const`). Le helper compare les layers fournis au **filtre de la vue figé lors de la capture CPU** ; il ne reçoit pas de `Entity*` ou de `Component*`, ne lit pas une EngineView mutable et ne filtre **jamais automatiquement** les éléments d'un `RenderingSystem`.
 
-**Cas voxel validé.** Les layers individuels sont portés par les **composants graphiques** qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), **pas par leur Entity propriétaire** : deux composants graphiques sur une même Entity peuvent donc déclarer des layers distincts. Le `VoxelRenderingSystem`, lui-même `EngineView::Contributor`, déclare également **ses propres layers** ; Sparkle ne l'appelle que si son filtre externe est compatible. **Une fois appelé**, le système parcourt ses composants graphiques et ne soumet à la vue que ceux pour lesquels `captureContext.isLayerCompatible(component.layers())` est vrai. Le filtrage est appliqué aux commandes de scène **et aux shadow casters**, puis, **si son `castShadow` global est vrai**, le système vérifie le `castShadow` de chaque composant graphique retenu : `false` exclut sa projection ; `true` autorise ses **seules surfaces opaques**, classées statiques avec le tag `shadowmap.static` et dynamiques en l’absence de ce tag. Les tags ne déterminent jamais l’admission par layers. Les tags ne sont jamais utilisés pour l'admission par layers.
+**Cas voxel validé.** Le tag `shadowmap.static` porté par `VoxelRenderingSystem` ne classe **aucun** de ses composants : chaque `AssemblyRenderingComponent` est autonome pour sa classification statique/dynamique, même si le système lui-même est tagué. Le `castShadow` du système reste le verrou global. Les layers individuels sont portés par les **composants graphiques** qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), **pas par leur Entity propriétaire** : deux composants graphiques sur une même Entity peuvent donc déclarer des layers distincts. Le `VoxelRenderingSystem`, lui-même `EngineView::Contributor`, déclare également **ses propres layers** ; Sparkle ne l'appelle que si son filtre externe est compatible. **Une fois appelé**, le système parcourt ses composants graphiques et ne soumet à la vue que ceux pour lesquels `captureContext.isLayerCompatible(component.layers())` est vrai. Le filtrage est appliqué aux commandes de scène **et aux shadow casters**, puis, **si son `castShadow` global est vrai**, le système vérifie le `castShadow` de chaque composant graphique retenu : `false` exclut sa projection ; `true` autorise ses **seules surfaces opaques**, classées statiques avec le tag `shadowmap.static` et dynamiques en l’absence de ce tag. Les tags ne déterminent jamais l’admission par layers. Les tags ne sont jamais utilisés pour l'admission par layers.
 
 ```cpp
 // API conceptuelle, signatures finales à vérifier durant l'implémentation.
@@ -990,7 +993,7 @@ La sélection des contributeurs aux shadow maps respecte la séparation **opaque
 - Parmi les casters opaques ainsi autorisés, le **tag `shadowmap.static` présent** classe la contribution dans le **cache statique** ; **tag absent** classe la contribution dans la partie **dynamique** de la carte finale. Les translucides ne projettent jamais d'ombres, mais peuvent en recevoir.
 - Un Contributor graphique autonome peut utiliser **son propre tag `shadowmap.static`** pour classer ses contributions. Pour un `RenderingSystem` comportant plusieurs composants graphiques, **les tags individuels de ceux-ci** sont utilisés par le système pour classifier ses objets.
 
-**La responsabilité de filtrage demeure explicite.** Sparkle ne classe pas automatiquement les objets internes d'un `RenderingSystem` ; ce dernier applique le filtre des layers via `CaptureContext`, vérifie son autorisation globale, puis vérifie les propriétés `castShadow` et les tags des composants retenus. Un `VoxelRenderingSystem` peut ainsi produire dans un même snapshot des casters opaques statiques, dynamiques et des objets sans ombre. **La portée éventuelle du tag `shadowmap.static` porté par le RenderingSystem lui-même** (éventuel effet sur les composants internes) **reste à arbitrer** : aucune priorité ni aucun héritage implicite n'est prescrit par ce choix.
+**La responsabilité de filtrage demeure explicite.** Sparkle ne classe pas automatiquement les objets internes d'un `RenderingSystem` ; ce dernier applique le filtre des layers via `CaptureContext`, vérifie son autorisation globale, puis vérifie les propriétés `castShadow` et **les tags propres à chacun** des composants retenus. Le tag du système ne sert pas de valeur par défaut à ses composants. Un `VoxelRenderingSystem` peut ainsi produire dans un même snapshot des casters opaques statiques, dynamiques et des objets sans ombre. **Choix A validé : le tag `shadowmap.static` d’un `RenderingSystem` n’est jamais transmis à ses composants internes.** Il s’applique uniquement aux contributions graphiques **directement produites par le système lui-même**, et non aux composants graphiques qu’il collecte. Chaque composant interne est classé exclusivement selon **ses propres tags** : `shadowmap.static` présent → statique ; absent → dynamique, sous réserve de `castShadow` et de l’opacité. Le booléen `castShadow` du système reste, lui, une **autorisation globale obligatoire** : s’il vaut `false`, aucun composant ne projette d’ombre. Le système doit appliquer explicitement ces règles dans son propre code ; aucune propagation de tags ou reclassement implicite par Sparkle.
 
 **Invalidation et snapshots.** La capture CPU fige les couches de rendu, les permissions et la classification retenues dans les commandes immuables ; aucune lecture GPU d'un booléen ou tag mutable n'est autorisée. Le développeur ou le `RenderingSystem` doit déclencher explicitement l'invalidation des ombres concernées lors d'une transformation, modification de géométrie, ajout/retrait, changement de `castShadow`, édition du tag `shadowmap.static` ou changement d'opacité. Une transition statique ↔ dynamique peut invalider **les deux cartes**, y compris l'ancienne catégorie ; une transition d'autorisation ne doit pas laisser de casters périmés. La projection d'ombres reste indépendante du frustum de la caméra : un caster hors champ peut être pertinent pour une lumière. Les abonnements restent par Contributor et par vue, **sans `GroupID` persistant imposé** ; le payload précis de l'invalidation et les règles de générations GPU restent à finaliser.
 
@@ -1017,19 +1020,22 @@ flowchart TD
 flowchart TD
   C["Contributor"] --> A{"castShadow global ?"}
   A -->|"Non"| None["Rendu de scene sans ombres"]
-  A -->|"Oui"| Obj["Caster direct ou composants du RenderingSystem"]
-  Obj --> B{"castShadow du composant, si applicable ?"}
+  A -->|"Oui"| Obj{"Nature de la contribution ?"}
+  Obj -->|"Directe"| Direct["Utiliser le tag du Contributor"]
+  Obj -->|"Composant interne"| B{"castShadow du composant ?"}
   B -->|"Non"| None
-  B -->|"Oui"| O{"Surface opaque ?"}
+  B -->|"Oui"| Child["Utiliser uniquement le tag du composant"]
+  Direct --> O{"Surface opaque ?"}
+  Child --> O
   O -->|"Non"| None
-  O -->|"Oui"| T{"Tag graphique shadowmap.static ?"}
+  O -->|"Oui"| T{"Tag shadowmap.static de la contribution choisie ?"}
   T -->|"Oui"| Static["Cache statique"]
   T -->|"Non"| Dynamic["Ombres dynamiques de la carte finale"]
   Static --> Final["Copie dans la carte finale"]
   Dynamic --> Final
 ```
 
-**Cache d'ombres statiques et carte finale — choix B validé.** Pour chaque combinaison **`EngineView` × lumière projetant des ombres**, l'infrastructure graphique distingue deux ressources de profondeur logiques : une **shadow map statique mise en cache** (contribution des *shadow casters* opaques classés statiques), et une **shadow map finale** utilisée par l'éclairage Forward. Les géométries opaques classées dynamiques ne sont pas dessinées dans le cache statique. Ces deux catégories sont des **politiques de mise à jour des ombres**, et non une nouvelle classification de transparence ; les translucides ne projettent toujours pas d'ombres. **La classification est déterminée à partir du `castShadow` global du Contributor, puis, pour les composants graphiques internes d’un RenderingSystem, de leur `castShadow` et du tag `shadowmap.static`**, selon le contrat ci-dessus ; **la demande d'invalidation transite d'abord par le `ContractProvider` du Contributor vers ses `EngineView` abonnées, puis par le `ContractProvider` de chaque vue vers ses cartes d'ombres**. Aucun identifiant persistant par groupe n'est requis. La portée exacte des événements, les règles d'appartenance vue/Contributor et le suivi des générations restent à préciser ; aucune détection implicite du mouvement.
+**Cache d'ombres statiques et carte finale — choix B validé.** Pour chaque combinaison **`EngineView` × lumière projetant des ombres**, l'infrastructure graphique distingue deux ressources de profondeur logiques : une **shadow map statique mise en cache** (contribution des *shadow casters* opaques classés statiques), et une **shadow map finale** utilisée par l'éclairage Forward. Les géométries opaques classées dynamiques ne sont pas dessinées dans le cache statique. Ces deux catégories sont des **politiques de mise à jour des ombres**, et non une nouvelle classification de transparence ; les translucides ne projettent toujours pas d'ombres. **La classification est déterminée à partir du `castShadow` global du Contributor, puis, pour les composants graphiques internes d’un RenderingSystem, de leur `castShadow` et de leur propre tag `shadowmap.static` ; le tag du RenderingSystem ne les reclasse jamais**, selon le contrat ci-dessus ; **la demande d'invalidation transite d'abord par le `ContractProvider` du Contributor vers ses `EngineView` abonnées, puis par le `ContractProvider` de chaque vue vers ses cartes d'ombres**. Aucun identifiant persistant par groupe n'est requis. La portée exacte des événements, les règles d'appartenance vue/Contributor et le suivi des générations restent à préciser ; aucune détection implicite du mouvement.
 
 **Actualisation à la demande, par invalidation :**
 - Lorsqu'une contribution **statique** change ou lorsque la carte statique n'a encore jamais été construite, la partie statique est invalidée. Au prochain rendu demandant ses ombres, Sparkle redessine **uniquement les casters statiques** dans la carte statique, puis invalide et reconstruit la carte finale.
