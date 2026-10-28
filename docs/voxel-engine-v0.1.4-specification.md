@@ -1842,7 +1842,7 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 - **A4 — capacité encore ouverte.** Tester une tile avec plus de lumières locales candidates que la capacité GPU initialement prévue. Le test d'acceptation exigera la **contribution de toutes les lumières pertinentes ou une erreur explicite** selon le contrat de dépassement restant à choisir ; **jamais** un résultat visuel tronqué sans indication. Ne pas fixer pour l'instant taille de tile, capacité maximale, structure des listes ni fallback avant la décision correspondante.
 
 
-- **A3 — indépendance des sélections :** le classement GPU des PointLight/SpotLight pour l'éclairage utilise ses propres listes ; la sélection des ombres et leurs `ShadowMap::Output` n'imposent pas qu'une lumière locale soit incluse dans une tile/cluster particulière. Une lumière admise par Forward+ et sans ombre demeure éclairante, aussi bien pour l'opaque que le WBOIT.
+- **A3 — indépendance des sélections :** le classement GPU des PointLight/SpotLight pour l'éclairage utilise ses propres listes ; la sélection des ombres et leurs `ShadowMap::Output` n'imposent pas qu'une lumière locale soit incluse dans une tile 2D particulière. Une lumière admise par Forward+ et sans ombre demeure éclairante, aussi bien pour l'opaque que le WBOIT.
 
 
 - Vérifier que les listes de lumières GPU sont pertinentes pour les fragments opaques **et** translucides, y compris hors de la plage de profondeur opaque, sans perdre silencieusement des lumières en cas de dépassement de capacité. La sélection d'un caster pour une shadow map reste indépendante de celle d'une lumière pour le shading.
