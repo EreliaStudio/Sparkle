@@ -10,19 +10,20 @@
 
 Ces sujets peuvent modifier le contrat public ou le comportement observable de Sparkle. Ne soumettre **qu'une question importante à la fois** au mainteneur, avec des solutions compatibles avec la spécification existante.
 
-### A4 — Découpage GPU de l'éclairage Forward+
+### A4 — Tiled Forward+ : capacité des listes et paramètres restants
 
-**Référence :** spécification §7.8.
+**Décision déjà validée :** le pipeline V0.1.4 utilise **Tiled Forward+ sur une grille écran 2D**, sans découpage en clusters de profondeur. La sélection GPU des `PointLight` et `SpotLight` pour une tile doit être **conservatrice sur toute la profondeur utile de la caméra**, y compris là où il n’existe pas de depth opaque : opaque et WBOIT lisent les **mêmes listes**. Les directionnelles restent globales. Ce choix ne doit pas être rediscuté.
 
-Il reste à choisir **tiled Forward+ ou clustered Forward**, puis à préciser les règles fonctionnelles qui en dépendent :
+**Arbitrage suivant (une seule question importante au mainteneur) :** comment gérer une tile dont le nombre de lumières pertinentes dépasse la capacité disponible pour sa liste GPU, sans perte silencieuse ? Deux familles possibles à expliciter : une liste à capacité bornée avec **signal d’overflow et chemin de repli correct** pour la tile concernée ; ou un stockage compact dimensionné au plus près des résultats du culling, avec une gestion explicite et correcte de la saturation de mémoire GPU. Ne pas fixer de politique de dépassement sans validation.
 
-- Dimensions des tiles ou clusters et domaine de profondeur considéré.
-- Sélection pertinente des PointLight et SpotLight, y compris pour les fragments translucides que la profondeur opaque ne couvre pas.
-- Représentation des listes GPU et traitement explicite de leur dépassement de capacité, sans disparition silencieuse d'une lumière.
-- Position des calculs et barrières GPU dans le sous-snapshot de chaque vue.
+**Précisions restant nécessaires ensuite :**
 
-Le choix Forward+ lui-même, l'absence de G-buffer et le shading Forward de WBOIT sont clos.
+- Taille des tiles 2D et caractère fixe/configurable ; bordures partielles, résolutions et redimensionnements explicites par vue.
+- Format des buffers d’indices et listes, représentation des éventuels marqueurs d’overflow, compteur global d’allocations et règles de dépassement selon la décision précédente.
+- Dispatch GPU, ordering/barrières et isolation des ressources par `EngineView` et `Window::Surface` ; aucune lecture de données mutables en `execute()`.
+- Frustum par tile pour la couverture conservatrice perspective/orthographique et prise en compte des lumières dont le volume touche la région sans être visibles par leur centre.
 
+**Invariant non négociable :** un dépassement ne doit ni éliminer silencieusement une lumière, ni dégrader uniquement WBOIT, ni provoquer une sélection de shadow caster en lieu et place du culling lumineux.
 ### A5 — Textures de vue dans les `Material` et compatibilité des atlas voxel
 
 **Références :** spécification §4.1, §4.4, §7.1 et §7.7.
