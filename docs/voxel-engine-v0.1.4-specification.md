@@ -658,6 +658,42 @@ flowchart TB
 
 **Le cache n'est pas une seconde abstraction de scène :** ses entrées gardent des cibles GPU persistantes, tandis que `RenderSnapshot` reste le seul conteneur de commandes temporaires. Les widgets ne font pas de lecture directe d'OpenGL : ils récupèrent les handles des textures finales à présenter au moment de préparer leurs commandes de dessin.
 
+**Séquence fonctionnelle d'une fenêtre avec un seul `EngineWidget` producteur :**
+
+```mermaid
+sequenceDiagram
+  participant Game as Code du jeu
+  participant Engine as Engine / EngineView
+  participant Owner as EngineWidget
+  participant Render as RenderingEngine
+  participant Cache as Cache par fenêtre
+  participant Builder as RenderSnapshot.Builder
+  participant Viewer as EngineViewWidget
+  participant GPU as Thread de rendu
+  Game->>Engine: enregistrer "main" et "minimap" + caméras + résolutions
+  opt Le jeu décide d'un redimensionnement
+    Game->>Engine: modifier explicitement la taille d'une EngineView
+    Note over Game,Engine: Le jeu modifie aussi la projection caméra s'il le souhaite
+  end
+  Owner->>Engine: updateState (simulation)
+  Owner->>Render: construire les captures de toutes les EngineView
+  loop chaque EngineView
+    Render->>Cache: obtenir ou renouveler les cibles de cette vue
+    Cache-->>Render: handles GPU
+    Render->>Builder: ajouter ombres, opaque, WBOIT, composition finale
+  end
+  Owner->>Cache: consulter la texture finale de "main"
+  Cache-->>Owner: Texture::Handle
+  Owner->>Builder: ajouter une commande d'affichage de "main"
+  Viewer->>Cache: consulter la texture finale de "minimap"
+  Cache-->>Viewer: Texture::Handle
+  Viewer->>Builder: ajouter une commande d'affichage, sans update ni capture
+  Builder->>GPU: exécuter le RenderSnapshot
+  Note over GPU: L'ordre des passes assure que les textures sont produites avant leur affichage
+```
+
+Cette séquence décrit le scénario usuel, avec **un producteur**. L'existence de plusieurs `EngineWidget` sur le même Engine n'est pas un cas dont Sparkle doit protéger le développeur : chacun peut demander des updates et des captures supplémentaires. Une vue peut aussi être produite sans être affichée ; à l'inverse, un `EngineViewWidget` isolé ne crée pas automatiquement une image manquante. La configuration des identifiants de passes pour plusieurs vues dans le même snapshot reste à spécifier.
+
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
 `spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU. **`spk::RenderingEngine`, `spk::RenderSnapshot`, `spk::RenderPass` et `spk::RenderCommand` restent les mécanismes centraux d'orchestration et d'exécution du rendu** ; l'éclairage, les ombres et le WBOIT sont implémentés en V0.1.4 **en les réutilisant**, au moyen des commandes et ressources GPU manquantes et, seulement si nécessaire, de contributions spécialisées au snapshot. **Aucun second ordonnanceur de passes, `SceneRenderingSystem` imposé ni pipeline parallèle n'est introduit.** Le pipeline emploie le **Forward Rendering** pour calculer directement l'éclairage dans les shaders des surfaces. Le code voxel apporte ses commandes de dessin aux passes communes, mais ne possède pas l'orchestration générale.
@@ -679,6 +715,7 @@ Les shadow maps, le rendu opaque, le WBOIT et sa composition peuvent être repr�
 ```mermaid
 sequenceDiagram
   participant Game as Jeu / animation
+  participant Engine as Engine
   participant Widget as EngineWidget
   participant Render as RenderingEngine
   participant System as VoxelRenderingSystem
@@ -686,7 +723,7 @@ sequenceDiagram
   participant Cache as Cache graphique fenêtre
   participant GPU as Thread de rendu
   Game->>Game: modifier Assembly, caméra ou EngineView explicitement
-  Widget->>Game: update Engine
+  Widget->>Engine: updateState()
   Widget->>Render: préparer toutes les EngineView de cet Engine
   loop Pour chaque EngineView enregistrée
     Render->>Cache: obtenir la cible (Engine, ViewID, résolution)
