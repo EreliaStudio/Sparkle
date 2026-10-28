@@ -22,6 +22,7 @@ Ces sujets peuvent modifier le contrat public ou le comportement observable de S
 - **Valeurs initiales :** fixer `ShadowMode`, `ShadowPropagation` et les layers du Contributor (ainsi que le caractère facultatif de sa présence). Respecter les règles générales de layers déjà validées ; ne pas introduire un mode de projection implicite.
 
 **À préserver :** séparation visuel/ombres, snapshots immuables, notifications de changements de liaison, et aucun travail GPU dans `bind()`.
+
 ### A2 — Propagation des modes d'ombres et conflits de chemins
 
 **Références :** spécification §7.2–7.3.
