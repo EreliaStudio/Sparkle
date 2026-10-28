@@ -39,7 +39,9 @@ flowchart LR
     Window["Snapshot de fenêtre + EngineWidget à rôles"]
     GPU["GPUResourceCollection : cibles par surface"]
     Engine --> Render --> Views --> ViewSnap --> EngineSnap --> Slot
-    Assembly --> Components --> Sys --> ViewSnap
+    Assembly --> Components --> Sys
+    Views -->|"Layers filtres"| Sys
+    Sys -->|"Filtre ses composants"| ViewSnap
     Slot --> Window --> GPU
   end
   Model --> Assembly
@@ -53,7 +55,7 @@ Les frontières sont intentionnelles :
 - **Géométrie et meshing :** aucune lecture de pixels, aucun atlas et aucune émission directe de commande OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie. **Shape, Definition, Cell et Volume** restent indépendants d'OpenGL ; en revanche, **Model/Mesh** réutilisent le vrai `spk::Mesh<TVertex>`, dont le `LayoutBuffer` dépend déjà des types graphiques de Sparkle. Le bake ne doit pas être décrit comme un module intégralement headless.
 - **Apparence :** `spk::Material` est générique et possède des rôles de textures nommés ; `spk::VoxelPalette` relie ces matériaux aux slots d'un modèle voxel. Une palette différente ne nécessite pas de remailler.
 - **Scène :** `Voxel::Assembly` compose des modèles et des transformations locales, sans créer une Entity par partie.
-- **Graphisme :** `VoxelRenderingSystem` collecte les voxels et contribue séparément au sous-snapshot de chaque `EngineView`, sans ordonnancer lui-même les vues. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
+- **Graphisme :** `VoxelRenderingSystem` collecte les composants graphiques voxel et contribue séparément au sous-snapshot de chaque `EngineView` qui admet **les layers du système**. Pour chaque composant traité, **le système est responsable de vérifier ses layers** avec le helper de `CaptureContext` avant de contribuer au rendu ou aux ombres ; Sparkle ne filtre pas automatiquement les éléments internes d'un `RenderingSystem`. Le système n'ordonnance pas lui-même les vues. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
 - **Chargement :** `spk::AssetManager` est un utilitaire générique de Sparkle, pas un sous-système réservé aux voxels. Il partage les assets chargés selon une clé comprenant type, identifiant et configuration JSON.
 
 Le rendu voxel produit **au maximum deux meshes par Model** : un opaque et un translucide. Aucun troisième mesh « cutout » n'est introduit. Chaque mesh non vide peut être dessiné avec un seul atlas `albedo` pour une association `Model`/`VoxelPalette` compatible, même si plusieurs slots choisissent des régions différentes de cet atlas.
@@ -562,7 +564,7 @@ L'animation demeure **externe** à la bibliothèque voxel : un système de jeu p
 Les deux composants sont des **composants de données** liés à une Entity3D et exposés au système de rendu par les mécanismes de Registry du moteur. Ils ne génèrent jamais eux-mêmes de `RenderCommand`.
 
 - `ModelRenderingComponent` emprunte un `Model` et une `VoxelPalette` compatibles, sans transférer leur propriété ;
-- `AssemblyRenderingComponent` emprunte une `Assembly`, sans la posséder.
+- `AssemblyRenderingComponent` emprunte une `Assembly`, sans la posséder. **Les layers individuels utilisés par le filtrage de `VoxelRenderingSystem` sont portés par ce composant graphique**, et non par l'Entity3D propriétaire ; l'API concrète des layers reprend le contrat générique des Contributors graphiques et du helper `CaptureContext::isLayerCompatible(...)`.
 
 Leurs méthodes de liaison (`bind` / `unbind`, signatures à finaliser) utilisent des **pointeurs non propriétaires**, conformément aux usages Sparkle. Le programme doit conserver les objets liés en vie jusqu'à leur détachement et pendant tout accès nécessaire à la préparation d'un snapshot. Une liaison à cible unique n'est pas implicitement remplacée.
 
@@ -838,7 +840,8 @@ sequenceDiagram
       E->>V: creer Builder et initialiser passes GPU
       E->>E: filtrer les Contributors par layers de la vue
       E->>C: buildViewRenderSnapshot(V, CaptureContext) pour les Contributors admis
-      C->>V: commandes propres a cette vue
+      C->>C: pour chaque composant graphique interne : isLayerCompatible(component.layers)
+      C->>V: commandes des seuls composants retenus, y compris ombres
       E->>V: finaliser les phases de la vue
       V-->>E: sous-RenderSnapshot immuable
       E->>M: ajouter passe de vue + ExecuteViewSnapshotCommand
@@ -853,7 +856,7 @@ sequenceDiagram
   R->>R: retablir framebuffer de presentation et etat UI
 ```
 
-**Contribution graphique.** `EngineView::Contributor` remplace `RenderingObjectTrait`. Il conserve les responsabilités de `EventDispatcher` et `UpdatableByDeviceTrait`, mais ne dérive plus de `RenderSnapshotContributorTrait`. Les variantes existantes `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity` (y compris 2D/3D) et `RenderingSystem` en héritent. Les widgets gardent le trait générique `RenderSnapshotContributorTrait`. Le Contributor peut participer à **toutes les vues dont le filtre de layers l'admet**, sans appartenir à l'une d'elles ; sa contribution reçoit `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` (API illustrative), avec vérification d'activation et propagation d'exceptions. La capture CPU fige les matrices et handles utilisés par les commandes ; aucune « caméra active » mutable n'est consultée pendant l'exécution GPU. **Pour les ombres, `ShadowMode` est porté par chaque objet ou groupe de dessin fourni par ce Contributor, et non obligatoirement par le Contributor lui-même** : voir le contrat de classification en section 7.5. Le Contributor expose un `ContractProvider` d'invalidation des ombres et une méthode indicative **`invalidateShadowMap(...)`** qui le notifie ; les `EngineView` auxquelles il contribue s'y abonnent, puis retransmettent l'invalidation sur **leur propre `ContractProvider`** aux cartes d'ombres de la vue. Un Contributor n'a **aucune vue unique implicite** et ne conserve pas obligatoirement une liste de vues : chaque vue détient son contrat d'abonnement. Les abonnements d'une vue à un Contributor sont conditionnés par son **admission logique au filtre de layers**, jamais par sa visibilité dans le frustum caméra. Le mécanisme concret de mise à jour des contrats en cas d'édition des layers reste à arrêter.
+**Contribution graphique.** `EngineView::Contributor` remplace `RenderingObjectTrait`. Il conserve les responsabilités de `EventDispatcher` et `UpdatableByDeviceTrait`, mais ne dérive plus de `RenderSnapshotContributorTrait`. Les variantes existantes `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity` (y compris 2D/3D) et `RenderingSystem` en héritent. Les widgets gardent le trait générique `RenderSnapshotContributorTrait`. Le Contributor peut participer à **toutes les vues dont le filtre de layers l'admet**, sans appartenir à l'une d'elles ; sa contribution reçoit `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` (API illustrative), avec vérification d'activation et propagation d'exceptions. La capture CPU fige les matrices et handles utilisés par les commandes ; aucune « caméra active » mutable n'est consultée pendant l'exécution GPU. **Pour les ombres, `ShadowMode` est porté par chaque objet ou groupe de dessin fourni par ce Contributor, et non obligatoirement par le Contributor lui-même** : voir le contrat de classification en section 7.5. Le Contributor expose un `ContractProvider` d'invalidation des ombres et une méthode indicative **`invalidateShadowMap(...)`** qui le notifie ; les `EngineView` auxquelles il contribue s'y abonnent, puis retransmettent l'invalidation sur **leur propre `ContractProvider`** aux cartes d'ombres de la vue. Un Contributor n'a **aucune vue unique implicite** et ne conserve pas obligatoirement une liste de vues : chaque vue détient son contrat d'abonnement. Les abonnements d'une vue à un Contributor sont conditionnés par son **admission logique au filtre de layers**, jamais par sa visibilité dans le frustum caméra. Ces abonnements sont réconciliés à chaque `refreshRenderSnapshot()` à partir du Registry et du filtre de la vue ; aucun contrat par composant interne d'un `RenderingSystem` n'est imposé.
 
 **Filtrage des Contributors par layers — choix de principe confirmé.** Les layers sont des **identifiants textuels** portés par les `EngineView::Contributor` (un ou plusieurs noms de layer ; représentation C++ finale `std::string` ou collection de chaînes à définir). Chaque `EngineView` expose une sélection explicite de layers (API illustrative : `setLayers({"layerA", "layerB"})`). Le rendu reste celui du **RenderingEngine entier**, restreint par ce **filtre d'admission**, et non par une liste de scènes, d'entités ou de Contributors assignés manuellement à la vue. Un Contributor correspondant au filtre est sollicité normalement pour construire le sous-snapshot de cette vue. Un Contributor exclu n'ajoute **aucune commande graphique** à cette vue, **y compris dans ses passes shadow maps** ; un caster situé hors champ caméra mais admis par layers doit néanmoins pouvoir projeter une ombre.
 
@@ -863,7 +866,29 @@ sequenceDiagram
 
 Cette réconciliation traite notamment une édition de `EngineView::setLayers(...)`, les changements de layers d'un Contributor et ses ajouts/retraits du Registry **à la prochaine capture**, sans événement dédié aux changements de layers, sans abonnement préalable aux Contributors exclus et sans registre de scène maintenu par la vue. Entre deux captures, le nouveau membership n'est pas réputé reflété par le snapshot déjà publié ; le jeu coordonne les mutations de layers/Registry et la capture CPU comme les autres états de l'Engine. La réconciliation elle-même ne produit **aucune commande GPU** ; une vue détachée ne reprend pas de rendu de scène du seul fait de cette opération. Les futures commandes de rendu ne capturent que les Contributions admises par la sélection réconciliée. Les anciens snapshots et leurs handles ne sont pas modifiés rétroactivement. La réalisation GPU et les générations restent locales à chaque `Window::Surface`, avec les garanties de non-perte des invalidations à finaliser.
 
-**Frontière de granularité à conserver à l'esprit.** Le layer est ici déclaré sur **l'ensemble d'un Contributor**, tandis que `ShadowMode` est déjà déclaré **sur chaque objet/groupe de dessin**. Un `RenderingSystem` qui dessine des objets de plusieurs layers ne pourra donc pas masquer une partie de ses objets avec un unique filtre au niveau Contributor, à moins d'organiser explicitement des Contributors homogènes ou de faire évoluer ultérieurement ce contrat. Cette extension n'est **pas validée** par le présent choix. Les layers ne remplacent pas le culling spatial ni la sélection des objets opaques qui projettent des ombres.
+**Filtrage interne des RenderingSystem — choix A validé.** L'admission automatique par Sparkle reste **au niveau du Contributor dans son ensemble** : chaque `EngineView` sélectionne les Contributors selon les layers qu'ils déclarent, sans posséder leurs objets ou gérer une scène. **Un `RenderingSystem` admis reste entièrement responsable du choix des objets qu'il dessine à l'intérieur de sa contribution**, y compris lorsque ceux-ci portent des layers différents. Pour garantir une règle unique sans imposer de connaissance de la structure des entités à la vue, `EngineView::CaptureContext` expose un helper de comparaison des layers (signature illustrative `bool isLayerCompatible(const LayerCollection&) const`). Le helper compare les layers fournis au **filtre de la vue figé lors de la capture CPU** ; il ne reçoit pas de `Entity*` ou de `Component*`, ne lit pas une EngineView mutable et ne filtre **jamais automatiquement** les éléments d'un `RenderingSystem`.
+
+**Cas voxel validé.** Les layers individuels sont portés par les **composants graphiques** qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), **pas par leur Entity propriétaire** : deux composants graphiques sur une même Entity peuvent donc déclarer des layers distincts. Le `VoxelRenderingSystem`, lui-même `EngineView::Contributor`, déclare également **ses propres layers** ; Sparkle ne l'appelle que si son filtre externe est compatible. **Une fois appelé**, le système parcourt ses composants graphiques et ne soumet à la vue que ceux pour lesquels `captureContext.isLayerCompatible(component.layers())` est vrai. Le filtrage est appliqué aux commandes de scène **et aux shadow casters**, puis les seuls casters opaques sont dispatchés selon leur `ShadowMode` déjà décidé, indépendant des layers.
+
+```cpp
+// API conceptuelle, signatures finales à vérifier durant l'implémentation.
+void VoxelRenderingSystem::contribute(
+    RenderSnapshot::Builder& builder,
+    const EngineView::CaptureContext& captureContext)
+{
+    for (const auto& component : _components)
+    {
+        if (!captureContext.isLayerCompatible(component.layers()))
+            continue;
+
+        // Ajouter les commandes scène et ombres du composant admis.
+    }
+}
+```
+
+**Responsabilité explicite du développeur.** Le filtre interne **n'élargit pas** le filtre externe : si un `VoxelRenderingSystem` n'appartient à aucun layer admis par la vue, il n'est pas appelé, même si un de ses composants aurait été compatible. Il appartient au développeur de configurer les layers du système pour toutes les vues dans lesquelles il souhaite pouvoir dessiner ses composants, et de filtrer correctement les composants quand le système contribue. Une implémentation qui omet le helper ou émet des commandes inappropriées est une **erreur du RenderingSystem**, pas un cas où Sparkle doit déduire ou corriger implicitement le contenu. De même, une modification de layers d'un composant interne peut changer les ombres **sans modifier la liste des Contributors admis** : le système ou le jeu doit alors déclencher explicitement l'invalidation d'ombres via le `ContractProvider` du Contributor. La réconciliation des abonnements entre EngineView et Contributors ne remplace pas cette notification métier.
+
+**Limites à préciser ultérieurement.** Le comportement du helper pour les layers non définis et les filtres explicitement vides suit la même convention que le filtre externe, convention encore à fixer. Aucun héritage implicite de layer Entity → composant ni surcharge automatique des layers du Contributor par ceux du composant n'est introduit. Les layers ne remplacent pas le culling spatial : un caster admis mais hors frustum caméra peut encore projeter des ombres.
 
 ```mermaid
 flowchart TD
@@ -873,7 +898,10 @@ flowchart TD
   A --> B["Capture CPU : sous-RenderSnapshot"]
   A --> C["Contrats RAII d'invalidation"]
   C --> S["Shadow maps de cette EngineView"]
-  B --> P["Passes scène et ombres par vue"]
+  A --> VS["VoxelRenderingSystem admis"]
+  VS -->|"isLayerCompatible(component.layers)"| VC["Composants graphiques voxel admis"]
+  VC --> P["Passes scène et ombres par vue"]
+  B --> P
 ```
 
 **Initialisation des passes et transitions GPU.** Sparkle emploie déjà ce principe pour `RootWidget` : les passes `sparkle.Background`, `sparkle.Overlay`, `sparkle.Popup` et `sparkle.Tooltip` reçoivent des commandes de viewport, scissor ou clear avant les dessins. De même, `RenderingEngine` ajoute les commandes d'état en **début de chaque passe standard de chaque vue**, puis les Contributors enrichissent ces passes. Les phases shadow, opaque, WBOIT et composition établissent chacune leurs états d'entrée (framebuffer, viewport, scissor, blending, profondeur, culling et masques d'écriture), sans supposer ceux de la phase précédente. Les clear tiennent compte des masques d'écriture actifs.
