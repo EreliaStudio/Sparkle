@@ -627,7 +627,7 @@ classDiagram
   }
   class RenderingComponent {
     +setShadowMode(mode)
-    +onShadowModeChanged : ContractProvider
+    +contrat de notification herite du Contributor
   }
   class RenderingBehaviour
   class RenderingEntity
@@ -1006,7 +1006,7 @@ La sélection des contributeurs aux shadow maps respecte la séparation **opaque
 
 **Autres mutations.** `invalidateShadowMap(...)` demeure utile pour les changements de géométrie, transformations, composants ajoutés/retirés et modifications de layers susceptibles d'affecter les ombres ; la portée exacte des événements pour ces cas reste ouverte. Le changement de `ShadowMode` impose en revanche systématiquement une invalidation complète des deux caches. Les cartes sont reconstruites à la demande, séparément dans chaque `Window::Surface` et seulement sur la base de snapshots immuables.
 
-**Propagation à deux niveaux maintenue.** Les invalidations atteignent les cartes via `Contributor → EngineView → shadow maps`. Chaque Contributor possède son `ContractProvider`, auquel ses EngineView logiquement admissibles sont abonnées par contrats RAII ; la vue relaie sur son propre `ContractProvider` aux cartes des lumières. Les notifications ne déclenchent pas de rendu GPU ; la réconciliation des vues par Registry + layers reste effectuée à chaque `RenderingEngine::refreshRenderSnapshot()`, indépendamment du frustum de la caméra. Le relais facultatif d'un `RenderingSystem` depuis les composants qu'il utilise ajoute **un étage de notification en amont**, sans modifier ce chemin à deux niveaux jusqu'aux cartes.
+**Propagation à deux niveaux maintenue.** Les invalidations atteignent les cartes via `Contributor → EngineView → shadow maps`. Chaque Contributor possède son `ContractProvider`, auquel ses EngineView logiquement admissibles sont abonnées par contrats RAII ; la vue relaie sur son propre `ContractProvider` aux cartes des lumières. Les notifications ne déclenchent pas de rendu GPU ; la réconciliation des vues par Registry + layers reste effectuée à chaque `RenderingEngine::refreshRenderSnapshot()`, indépendamment du frustum de la caméra. Le relais d'un `RenderingSystem` depuis les composants graphiques qu'il utilise ajoute **un étage de notification en amont**, sans modifier ce chemin à deux niveaux jusqu'aux cartes.
 
 **Sécurité de capture et rendu.** Les callbacks ne reconstruisent aucune carte et ne modifient aucun `RenderSnapshot` publié. Les notifications doivent être prises en compte par l'état logique des cartes, puis par les captures et versions réalisées **séparément pour chaque `Window::Surface`**. Les souscriptions RAII et les callbacks doivent respecter la durée de vie des vues, Contributors et cartes ; la synchronisation avec la capture CPU et l'exécution GPU reste à préciser. La vue doit invalider ses cartes lorsque sa liste de Contributors pertinents change, y compris lors d'une désinscription, sans dépendre d'un callback venant d'un Contributor déjà détruit.
 
@@ -1017,7 +1017,8 @@ flowchart TD
   Change -->|"Oui"| CC["ContractProvider du composant"]
   CC -->|"Contrat RAII du RenderingSystem collecteur"| Sys["RenderingSystem : relais d'invalidation"]
   Sys --> SC["ContractProvider du Contributor systeme"]
-  Direct["Contributor autonome : setShadowMode(mode)"] --> SC
+  Direct["Contributor autonome : setShadowMode(mode)"] --> DC["ContractProvider du Contributor autonome"]
+  DC -->|"Contrats RAII des EngineView admises"| View
   SC -->|"Contrats RAII des EngineView admises"| View["ContractProvider de chaque EngineView"]
   View --> Static["Invalider cache statique"]
   View --> Final["Invalider carte finale"]
