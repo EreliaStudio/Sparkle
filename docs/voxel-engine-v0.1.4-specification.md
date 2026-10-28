@@ -10,7 +10,7 @@ Un programme décrit des géométries élémentaires indépendantes de toute tex
 
 ```mermaid
 flowchart LR
-  subgraph G["Données et géométrie — sans OpenGL"]
+  subgraph G["Données voxel et bake"]
     S["Shape"]
     D["Definition"]
     V["Volume"]
@@ -41,7 +41,7 @@ flowchart LR
 
 Les frontières sont intentionnelles :
 
-- **Géométrie et meshing :** aucune lecture de pixels, aucun atlas, aucun OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie.
+- **Géométrie et meshing :** aucune lecture de pixels, aucun atlas et aucune émission directe de commande OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie. **Shape, Definition, Cell et Volume** restent indépendants d'OpenGL ; en revanche, **Model/Mesh** réutilisent le vrai `spk::Mesh<TVertex>`, dont le `LayoutBuffer` dépend déjà des types graphiques de Sparkle. Le bake ne doit pas être décrit comme un module intégralement headless.
 - **Apparence :** `spk::Material` est générique et possède des rôles de textures nommés ; `spk::VoxelPalette` relie ces matériaux aux slots d'un modèle voxel. Une palette différente ne nécessite pas de remailler.
 - **Scène :** `Voxel::Assembly` compose des modèles et des transformations locales, sans créer une Entity par partie.
 - **Graphisme :** `VoxelRenderingSystem` est responsable de la collecte, du regroupement, de la construction des buffers de snapshot et des commandes de rendu. Les composants ne dessinent pas.
@@ -243,8 +243,7 @@ Les surfaces intérieures ont une règle volontairement globale par cellule :
 ```mermaid
 flowchart TD
   C["Cellule à mailler"] --> N["Examiner les 6 voisins"]
-  N --> D{"Chacun présente-t-il une couverture
-  opaque frontale complète du carré de frontière ?"}
+  N --> D{"Chaque voisin ferme-t-il entièrement sa frontière par une couverture opaque frontale ?"}
   D -- "Oui, tous" --> X["Ne pas émettre innerShell"]
   D -- "Non, partiel ou inconnu" --> Y["Émettre tous les polygones innerShell"]
   X --> Z["Traiter séparément les outerShell"]
@@ -406,7 +405,7 @@ Son Builder mutable peut être initialisé à partir d'un Model, de plusieurs Mo
 
 **Chaque slot déclaré** doit recevoir un Material compatible, **même s'il n'a aucun triangle visible**. Le Builder valide que chaque Material affecté possède au moins la texture nommée exactement **`albedo`**, avec exception descriptive sur absence. Le système voxel ne requiert, n'examine ni n'utilise d'autres noms de textures dans cette version. La présence d'autres rôles sur un Material reste autorisée.
 
-Un Model peut être associé à une palette contenant **plus de slots** que lui. L'association est compatible seulement si tous ses noms et opacités requis sont présents. La palette n'est pas obligée d'être identique au Model, et une même palette peut servir à plusieurs Models.
+Un Model peut être associé à une palette contenant **plus de slots** que lui. L'association est compatible seulement si tous ses noms et opacités requis sont présents. `Model::isCompatible(palette)` est la forme d'API envisagée pour vérifier ce contrat, y compris la limite d'atlas par passe décrite ci-dessous. La palette n'est pas obligée d'être identique au Model, et une même palette peut servir à plusieurs Models.
 
 **Contrainte des atlas :** pour chaque association **Model + VoxelPalette**, les Materials des slots **opaques** requis par ce Model doivent tous référencer **un unique `albedo` `Texture::Handle` au maximum** ; la même règle s'applique, indépendamment, aux slots **translucides**. Cette vérification concerne **tous les slots déclarés par le Model, même sans triangles émis**, pas l'intégralité des slots supplémentaires de la palette. Les passes opaque et translucide peuvent utiliser le même atlas ou deux atlas différents.
 
