@@ -608,7 +608,10 @@ sequenceDiagram
     S->>L: Enumerer les lumieres demandant des ombres
     S->>S: Filtrer spatialement les PointLight candidates
     S->>S: Calculer intensite x poids / distance camera bornee
-    S->>S: Classer par score decroissant, retenir au plus budget
+    S->>S: Conserver les retenues eligibles de la vue
+    S->>S: Remplir places libres par score decroissant
+    S->>S: Evincer seulement si nouveau score depasse ancien x (1 + hysteresis)
+    S->>S: Fixer selection et references de cubemaps au snapshot
     loop Chaque directionnelle, spot et PointLight retenue
         S->>C: Selectionner les casters admissibles a cette lumiere
         S->>V: Commandes de cible et cache statique si invalide
@@ -645,7 +648,8 @@ flowchart LR
   Registry --> SR["ShadowMap::RenderingSystem"]
   Filter --> SR
   SR --> Score["PointLight : intensite x poids / distance bornee"]
-  Score --> Budget["Budget maximal PointLight par EngineView"]
+  Score --> Hysteresis["Hysteresis proportionnelle : conserver retenues si ecart insuffisant"]
+  Hysteresis --> Budget["Budget maximal PointLight par EngineView"]
   Budget --> RP["Une RenderPass ombres par EngineView"]
   RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
   Checks --> SM["Cache statique individuel de la lumiere"]
@@ -686,7 +690,20 @@ shadowPriority = intensity * shadowPriorityWeight / max(distanceCamera, minShado
 - `distanceCamera` : distance euclidienne **de la lumière à la caméra associée à l'EngineView courante**, dans un même repère, lors de la capture.
 - `minShadowDistance` : valeur **strictement positive** dans les mêmes unités que la distance, évitant les divisions par zéro et les scores arbitrairement élevés lorsque la caméra est très proche. Elle appartient à la configuration du classement des ombres ; **sa valeur numérique reste à définir**, de même que celle du budget par défaut. Les paramètres négatifs ou non finis ne sont pas valides ; un poids égal à zéro ramène le score à zéro sans désactiver l'éclairage ni la demande d'ombres.
 
-Le résultat est ordonné par **score décroissant** après le filtrage spatial ; les scores égaux sont départagés **de manière déterministe** par une identité stable de lumière ou critère équivalent, sans dépendre de l'ordre accidentel du Registry. La **stabilité temporelle et l'hystérésis** en cas de scores voisins **restent à arbitrer** : aucun bonus pour les lumières précédemment retenues n'est encore validé. Modifier `intensity`, `shadowPriorityWeight`, la position de la lumière ou celle de la caméra doit se refléter dans le classement de la prochaine capture ; celui-ci ne lit aucun objet mutable lors de l'exécution GPU. Le culling des `ShadowMap::Contributor` dans la sphère de portée demeure indépendant du classement Forward+ des lumières pour l'éclairage.
+**Classement et hystérésis proportionnelle — choix B validé.** Les candidates spatialement éligibles restent classées selon le **score brut décroissant** ci-dessus ; les égalités sont départagées de manière déterministe par une identité stable, jamais par l'ordre accidentel du Registry. Le sous-système `ShadowMap` conserve **pour chaque EngineView** l'ensemble de `PointLight` retenues lors de sa précédente sélection ; cette mémoire de sélection **n'appartient pas à `EngineView`**. Une lumière **nouvelle** ne peut **évincer** une lumière encore retenue et éligible que si son score dépasse **strictement** celui de la retenue selon le seuil proportionnel configurable :
+
+```text
+score(candidate) > score(incumbent) * (1 + shadowSelectionHysteresis)
+```
+
+- `shadowSelectionHysteresis` est un **taux fractionnaire** configurable pour la sélection d'ombres ponctuelles de la vue (par exemple `0.10` représente **10 %** d'avance requis) ; il est **fini et supérieur ou égal à zéro**. **Sa valeur par défaut et sa forme d'API restent à décider.** Un taux nul supprime la marge proportionnelle mais laisse l'obligation de dépasser strictement le score pour évincer une lumière encore éligible.
+- **Premier classement ou places libres :** sélectionner les meilleures candidates éligibles par score **sans appliquer d'hystérésis** ; le plafond de budget reste strict. Une source auparavant retenue mais **inactive, avec ombres désactivées, spatialement non pertinente ou supprimée** perd immédiatement sa place : elle n'est pas protégée par l'hystérésis.
+- **Budget plein :** conserver les retenues encore éligibles, comparer les nouvelles candidates par ordre de score décroissant à la **moins bien classée des retenues** (égalité départagée par identité stable). Remplacer uniquement si le seuil strict est franchi ; répéter au besoin, en restant dans le budget. Une nouvelle candidate qui n'atteint pas le seuil reste hors budget même si son score brut est légèrement supérieur.
+- **Cas limites :** pour un score retenu nul, seule une candidate de score strictement positif peut le remplacer ; deux scores nuls ne provoquent pas d'échange. La formule garde les contraintes de valeurs finies et non négatives des intensités et coefficients. Un changement du budget (y compris à zéro) applique immédiatement le nouveau plafond ; si le budget diminue, retirer en premier les retenues aux scores les plus faibles, avec départage déterministe.
+
+**Portée et diagnostic.** L'hystérésis limite **les changements de membership**, et non le classement ou les intensités des sources d'éclairage Forward+ ; une `PointLight` moins bien classée mais conservée grâce à l'hystérésis continue à projeter une ombre valide. Une candidate bloquée par le seuil reste **observable** comme `ombres demandées mais non sélectionnées`, avec une raison permettant de distinguer `budget/hystérésis` d'une désactivation explicite. Toute capture encode la sélection et les références de cartes d'ombres de façon **immuable** ; aucun changement de sélection n'est fait par le thread de rendu GPU. Les mêmes données d'entrée **et le même état antérieur de sélection** entraînent le même résultat ; l'hystérésis signifie qu'une sélection peut dépendre intentionnellement de l'historique. Le culling des `ShadowMap::Contributor` reste distinct du classement Forward+.
+
+**Performance et cache.** Conserver les retenues limite les alternances de cubemaps et les reconstructions provoquées par les remplacements. Lorsqu'une lumière perd sa place, l'éclairage ne doit plus échantillonner son ancienne carte ; lorsqu'elle est réadmise, les deux caches logiques doivent être revalidés ou reconstruits selon leurs générations, indépendamment de la fenêtre qui réalise le snapshot. Les implications de la suppression/recréation d'une vue et de la réinitialisation de l'état de sélection doivent être couvertes par la durée de vie du sous-système d'ombres ; aucune réutilisation implicite d'un état d'une ancienne vue de même nom.
 
 **Éclairage et observabilité.** Les lumières ponctuelles **écartées par le budget continuent d'éclairer via Forward+ sans ombre**. Seules les lumières sélectionnées ajoutent des opérations de cubemap à l'**unique `RenderPass` d'ombres de la vue**. L'éclairage ne doit jamais échantillonner une carte périmée d'une lumière non sélectionnée, même si la ressource GPU existe encore. L'exclusion `ombres demandées mais refusées par budget` doit être **observable** (statut par vue/lumière et raison ou diagnostic équivalent) et distincte de `ombres désactivées explicitement`. Pas de journalisation répétée par lumière et par frame non sollicitée.
 
@@ -698,7 +715,13 @@ flowchart TD
   Eligible --> Relevant["Selection selon influence spatiale pour la vue"]
   Relevant --> Score["Score : intensite x shadowPriorityWeight / max(distanceCamera, minShadowDistance)"]
   Score --> Order["Score decroissant, egalites deterministes"]
-  Order --> Limit["Retenir au plus budget PointLight"]
+  Order --> History["Recuperer selection precedente de cette vue"]
+  History --> Active["Conserver retenues encore eligibles"]
+  Active --> Free["Remplir places libres sans hysteresis"]
+  Free --> Swap{"Candidate > plus faible retenue x (1 + hysteresis) ?"}
+  Swap -->|"Oui"| Replace["Remplacer la moins prioritaire"]
+  Replace --> Swap
+  Swap -->|"Non"| Limit["Fixer au plus budget PointLight"]
   Limit -->|"Selectionnees"| Cubes["Cubemaps si invalides"]
   Cubes --> Pass["RenderPass d ombres commune par vue"]
   Cubes --> Lit["Forward+ eclairage avec ombre valide"]
@@ -710,7 +733,8 @@ flowchart TD
 ```mermaid
 flowchart TD
   Point["PointLight demandant des ombres"] --> Score["Score intensite x poids / distance bornee"]
-  Score --> Limit["Budget spatial de l EngineView"]
+  Score --> H["Comparer aux retenues avec seuil proportionnel configurable"]
+  H --> Limit["Budget spatial de l EngineView"]
   Limit -->|"Retenue"| Range["Culling sphere de portee et casters pertinents"]
   Limit -->|"Hors budget"| LightOnly["Forward+ sans ombres"]
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
