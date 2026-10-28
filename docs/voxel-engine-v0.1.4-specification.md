@@ -538,6 +538,41 @@ La comparaison utilise le triplet **complet** `(type, id, JSON structurel)` ; de
 
 Une factory échouée **ne publie aucune entrée partiellement initialisée**. L'état provisoire de détection des cycles est nettoyé en cas de succès comme d'exception, permettant une nouvelle tentative ultérieure. Les dépendances qui ont été **chargées avec succès** avant cet échec restent dans le cache : il n'existe pas de transaction globale ou rollback de toutes les dépendances.
 
+**Séquence de chargement, de dépendances et de publication.** La factory est exécutée seulement pour une identité absente ; la pile de construction active détecte les cycles, et seule une construction terminée entre dans le cache.
+
+```mermaid
+sequenceDiagram
+    participant Caller as Appelant
+    participant Assets as AssetManager
+    participant Cache as Cache par type id JSON
+    participant Factory as AssetFactory T
+    Caller->>Assets: load<T>(id, config)
+    Assets->>Cache: Chercher identite complete
+    alt Entree terminee presente
+        Cache-->>Caller: Meme T reference stable
+    else Identite absente
+        Assets->>Assets: Verifier pile active et marquer construction
+        alt Cycle dans la pile active
+            Assets-->>Caller: spk::Exception et chaine du cycle
+        else Identite sans cycle
+            Assets->>Factory: create(assets, id, config) retourne T
+            opt Dependencies
+                Factory->>Assets: load<U>(idU, configU) dans meme thread
+                Assets-->>Factory: U reference deja presente ou construite
+            end
+            alt Construction reussie
+                Factory-->>Assets: T par valeur
+                Assets->>Cache: Inserer T avec adresse stable
+                Assets->>Assets: Retirer marque active
+                Assets-->>Caller: T reference empruntee
+            else Construction echouee
+                Assets->>Assets: Retirer marque active sans publier T
+                Assets-->>Caller: Propager exception, garder dependencies deja publiees
+            end
+        end
+    end
+```
+
 ### 5.5 Synchronisation et durée de vie
 
 **L'AssetManager n'est pas intrinsèquement thread-safe.** Tous les accès concurrents à **une même instance**, même pour des clés différentes, relèvent de la synchronisation de l'application. Les appels imbriqués depuis une factory **dans le même thread** restent autorisés ; une synchronisation externe doit tenir compte de cette réentrance séquentielle. L'AssetManager n'introduit ni verrou de coordination automatique ni attente implicite entre factories de threads différents.
@@ -1349,6 +1384,40 @@ flowchart TD
 
 **Projection des ombres directionnelles :** chaque lumière directionnelle ayant les ombres activées utilise **une seule shadow map de profondeur pour le rendu concerné**, représentant une région pertinente pour celui-ci. Il n'y a **ni Cascaded Shadow Maps (CSM), ni subdivision obligatoire du frustum en plusieurs cascades**, ni atlas de cascades pour une même lumière directionnelle dans V0.1.4. Cela n'interdit pas plusieurs lumières directionnelles, chacune avec sa propre carte pour un rendu donné. En présence de plusieurs EngineView, aucune mutualisation des shadow maps n'est exigée en V0.1.4 : chaque vue peut préparer les siennes indépendamment. Le choix d'une seule carte par lumière directionnelle dans une vue n'impose aucune cache inter-vues. La définition de la région couverte, des matrices de projection d'ombre, de la résolution, du biais et de la fréquence de rafraîchissement reste à finaliser ; ne pas inventer de couverture mondiale infinie ni de mécanisme de sélection automatique des cascades. Le contrat des ombres des spots sera précisé séparément.
 
+**Flux complet d'un modèle voxel jusqu'aux commandes par vue.** Les données métier sont créées indépendamment du thread GPU. Le bake sépare les meshes opaques et translucides ; le rendu réunit les composants actifs par vue, tandis que les casters utilisent un chemin de capture distinct.
+
+```mermaid
+flowchart TD
+    Shape["Voxel::Shape : polygones et slots"] --> Definition["Voxel::Definition : association des slots"]
+    Definition --> Volume["Voxel::Volume : Cells orientees et donnees immuables"]
+    Volume --> Mesher["VoxelMesher : bake du Volume"]
+    Occlusion["OcclusionCache optionnel"] -.-> Mesher
+    Mesher --> Model["Voxel::Model : meshes et slots semantiques"]
+    Model --> Opaque["Mesh opaque"]
+    Model --> Translucent["Mesh translucide"]
+    Material["Material : textures nommees et UV"] --> Palette["VoxelPalette : materials par slot"]
+    Model --> Assembly["Assembly : parties et transforms locales"]
+    Palette --> Assembly
+    Model --> ModelComp["ModelRenderingComponent : references empruntees"]
+    Palette --> ModelComp
+    Assembly --> AssemblyComp["AssemblyRenderingComponent : reference empruntee"]
+    ModelComp --> VR["VoxelRenderingSystem : filtrage par vue et layers"]
+    AssemblyComp --> VR
+    Opaque --> VR
+    Translucent --> VR
+    VR --> Buckets["Buckets : mesh, atlas et material compatibles"]
+    Buckets --> SSBO["SSBO instances et materials du snapshot"]
+    SSBO --> Draw["DrawVoxelBucketCommand avec handles captures"]
+    Draw --> Forward["Passe opaque Forward+"]
+    Draw --> WBOIT["Passe translucide WBOIT"]
+    Caster["ShadowMap::Contributor : MeshFilter"] --> Shadow["ShadowMap::RenderingSystem : caches ombres"]
+    Shadow --> Light["Profondeurs finales vers eclairage"]
+    Light --> Forward
+    Light --> WBOIT
+```
+
+Les liaisons depuis `Model` et ses meshes vers le rendu représentent la **géométrie du modèle emprunté**, et non la possession des objets par `VoxelRenderingSystem`. Un `ShadowMap::Contributor` est distinct des composants de rendu visuel ; il n'est jamais créé automatiquement par ce flux.
+
 ### 7.5 SSBO d'instances
 
 Pour **chaque bucket non vide produit dans une vue et un RenderSnapshot**, le système crée un **nouveau `spk::ShaderStorageBuffer` d'instances**, écrit la totalité de ses données compactes et appelle sa validation (`validate()`) conformément au fonctionnement existant des ressources Sparkle.
@@ -1501,6 +1570,9 @@ Cet inventaire résume les types et adaptations décrits dans les sections préc
 | `EngineView::Contributor` / `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity`, `RenderingSystem` | Contributions visuelles filtrées, sans logique d'ombres | §7.2 |
 | `spk::EngineWidget` | Liaison non propriétaire ; rôles `Update`, `Render`, `Drawing` et retour explicite à la présentation UI | §7.1–7.2 |
 | `spk::RenderSnapshot` / `RenderPass` / `RenderCommand` | Sous-snapshots immuables, délégation ordonnée, commandes de GPU typées réentrantes | §7.1–7.2 |
+| `ExecuteViewSnapshotCommand` (**nom indicatif**) | Capturer par valeur le sous-snapshot d'une vue et l'exécuter intégralement dans l'ordre du snapshot moteur | §7.2 |
+| `BlendRenderCommand`, `DepthRenderCommand`, `CullFaceRenderCommand`, `ColorMaskRenderCommand`, `FramebufferRenderCommand` | Configurer explicitement les états et cibles GL, y compris blending MRT distinct et depth sans écriture pour WBOIT | §7.2, §7.8 |
+| Commandes `Viewport` / `Scissor` (**noms indicatifs**) | Appliquer les états de cible et la résolution d'une vue et restaurer l'UI par le snapshot de fenêtre | §7.2 |
 | `CameraComponent`, `DirectionalLightComponent`, `SpotLightComponent`, `PointLightComponent` (**noms indicatifs**) | Composants 3D, capture des paramètres lumineux ; activation des ombres selon type | §7.4 |
 | `ShadowMap::Contributor` / `ShadowMap::RenderingSystem` | Découvrir les casters, appliquer modes/layers/propagation, notifier et reconstruire les caches | §7.3 |
 | `spk::Texture` / `spk::Framebuffer` | Cubemaps de profondeur à six faces ; sélection explicite d'une face depth ; formats et attachments WBOIT | §7.4, §7.8 |
