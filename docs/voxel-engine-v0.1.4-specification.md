@@ -34,7 +34,7 @@ flowchart LR
     Views["EngineView nommées"]
     Sys["VoxelRenderingSystem : rendu visuel uniquement"]
     ShadowMapClass["ShadowMap : passe logique autonome"]
-    ShadowSys["ShadowMap::RenderingSystem : passes d ombre"]
+    ShadowSys["ShadowMap::RenderingSystem : une RenderPass par vue"]
     ShadowSource["ShadowMap::Contributor : composant caster"]
     ShadowRegistry["Registry des sources d ombre"]
     ViewSnap["Sous-RenderSnapshot indépendant par EngineView"]
@@ -52,7 +52,7 @@ flowchart LR
     Views -->|"Layers filtres"| Sys
     Views -->|"CaptureContext generique"| ShadowSys
     Sys -->|"Commandes visuelles uniquement"| ViewSnap
-    ShadowSys -->|"Commandes d ombre uniquement"| ViewSnap
+    ShadowSys -->|"Une passe ombres : toutes les lumieres compatibles"| ViewSnap
     Slot --> Window --> GPU
   end
   Model --> Assembly
@@ -585,14 +585,38 @@ Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T
 
 **Séparation des responsabilités — décision validée et approfondie.** `VoxelRenderingSystem` produit **exclusivement** les passes visibles des voxels (opaque, WBOIT translucide, matériaux et SSBO). Il ne génère **aucune commande** de shadow map, n'observe aucun mode d'ombre de ses composants et ne gère aucune souscription RAII de cache d'ombres.
 
-La classe publique **`ShadowMap`** représente une **passe logique de rendu d'ombres**, sans dépendance de `EngineView` vers la gestion des ombres. Elle contient les **types imbriqués `ShadowMap::Contributor`** (composant graphique attachable à une `Entity3D`, qui fournit la géométrie d'ombre) et **`ShadowMap::RenderingSystem`** (système autonome qui découvre ces composants par Registry, construit les `RenderPass` et maintient leurs caches). Le `VoxelRenderingSystem` ne produit que les passes visuelles ; les composants de la même Entity peuvent fournir indépendamment un mesh visible et un mesh d'ombre.
+La classe publique **`ShadowMap`** représente une **passe logique de rendu d'ombres**, sans dépendance de `EngineView` vers la gestion des ombres. Elle contient les **types imbriqués `ShadowMap::Contributor`** (composant graphique attachable à une `Entity3D`, qui fournit la géométrie d'ombre) et **`ShadowMap::RenderingSystem`** (système autonome qui découvre ces composants par Registry et construit les `RenderPass` et les caches). **Choix A validé : pour chaque `EngineView`, le système construit une seule `RenderPass` d'ombres commune, qui regroupe les commandes nécessaires à toutes les lumières projetant des ombres** ; il n'existe pas une `RenderPass` distincte par lumière, ni une passe statique et une passe finale séparées par lumière. Le `VoxelRenderingSystem` ne produit que les passes visuelles ; les composants de la même Entity peuvent fournir indépendamment un mesh visible et un mesh d'ombre.
 
-**Clés de passes — proposition de clé statique non retenue comme contrainte.** Une unique `static const RenderPass::Key ShadowMap::RenderPassKey` n'est **pas requise** : une même vue peut contenir plusieurs lumières et le cache statique et la carte finale nécessitent des opérations distinctes. `ShadowMap::RenderingSystem` est responsable d'émettre des `RenderPass` correctement ordonnées et identifiables avec le Builder et les `RenderPass::Key` numériques existants. **Il reste à choisir** entre une passe d'ombres partagée par vue contenant plusieurs opérations/lumières et des passes indépendantes par instance/phase ; ce choix déterminera la politique de clés. Ne pas introduire une constante publique ni un allocateur de clés avant cet arbitrage, et ne pas ajouter d'ordonnanceur implicite.
+**Ordonnancement et clé de la passe d'ombres — choix A validé.** Chaque sous-`RenderSnapshot` de vue utilise son **Builder indépendant**. `ShadowMap::RenderingSystem` y inscrit **une seule `RenderPass` d'ombres**, sous une `RenderPass::Key` unique dans ce Builder, qui doit précéder les passes d'éclairage consommant les résultats. **Une clé statique commune** (par exemple `ShadowMap::RenderPassKey`) **redevient une option cohérente**, puisqu'elle est réutilisée dans des Builders de vues différents, mais sa déclaration `static const`/`static constexpr`, sa réservation par le moteur et sa valeur numérique **ne sont pas encore décidées**. Elle ne doit pas entrer en collision avec une autre passe au sein de la même vue, et le nom ne détermine jamais l'ordre : le Builder continue à ordonner numériquement ses `RenderPass::Key`.
+
+**Contenu de la passe commune.** Pour chacune des lumières **directionnelles et spots** dont la projection d'ombres est activée, le système écrit, à l'intérieur de **la même `RenderPass`**, la suite **ordonnée** des commandes nécessaires : choisir les cibles de profondeur **propres à cette lumière**, reconstruire le cache statique seulement s'il est invalide, reconstruire la carte finale par copie de la statique puis dessins des casters dynamiques seulement si la finale est invalide, et poursuivre avec la lumière suivante. Si aucune reconstruction n'est requise, ne pas redessiner ni recopier inutilement. Les caches **ne sont jamais partagés entre lumières** : la combinaison `EngineView × lumière` conserve ses deux ressources logiques et ses générations, matérialisées séparément pour chaque `Window::Surface`. Les lumières ponctuelles n'ajoutent aucune opération d'ombre en V0.1.4. Le comportement exact lorsqu'aucune lumière compatible n'est présente (passe vide ou absente) reste un détail à finaliser, sans remettre en cause l'unicité maximale de la passe par vue.
+
+**Sécurité des commandes conditionnelles.** Le snapshot CPU doit encoder suffisamment d'informations immuables pour que l'exécution GPU sur chaque surface reconstruise uniquement les caches invalides **de cette surface**, sans lire des `Contributor` mutables ; aucun changement de cible entre deux lumières n'est implicite. Le passage des textures de profondeur finales à l'éclairage reste une intégration générique à définir, sans ajouter une dépendance d'`EngineView` vers `ShadowMap`.
+
+**Séquence de construction de la passe unique — choix A.**
+
+```mermaid
+sequenceDiagram
+    participant V as Builder de l EngineView
+    participant S as ShadowMap::RenderingSystem
+    participant L as Registry des lumieres
+    participant C as Registry des ShadowMap::Contributor
+    S->>V: Creer une RenderPass ombres avec une cle unique a cette vue
+    S->>L: Enumerer les lumieres projetant des ombres
+    loop Pour chaque directionnelle / spot compatible
+        S->>C: Selectionner les casters admissibles a cette lumiere
+        S->>V: Commandes de cible et cache statique si invalide
+        S->>V: Commandes de copie depth et casters dynamiques si finale invalide
+        Note over S,V: Ressources et generations propres a la lumiere et a la surface
+    end
+    Note over V,S: Une RenderPass ombres, N lumieres, N paires de caches independantes
+    Note over V,S: Passes Forward ulterieures utilisent les profondeurs finales
+```
 
 La responsabilité des composants et des systèmes est séparée :
 
 - **`ShadowMap::Contributor`** : représente une source d'ombre sur une Entity, avec ses layers, `ShadowMode { None, Static, Dynamic }`, `ShadowPropagation { SelfOnly, Descendants }` et un **`MeshFilter` intégré** donnant accès au mesh de projection. Un mesh d'ombre peut être différent de celui utilisé pour le rendu visuel ; un cas voxel peut utiliser un mesh greedy-meshé. `ShadowMap::Contributor` n'est **pas une sous-classe de `EngineView::Contributor`** et n'expose pas les callbacks génériques de capture d'une vue. La forme C++ exacte (`Component3D`, handle/possesseur du mesh, setters) sera précisée séparément.
-- **`ShadowMap::RenderingSystem`** : recherche les composants déclarés, filtre par état d'activation, layers compatibles avec la `CaptureContext` figée de la vue, `ShadowMode` effectif, géométrie admissible et projection de la lumière, puis produit les commandes de profondeur statique ou dynamique ; pas de double émission par la partie voxel. Les casters utiles hors du frustum de la caméra restent considérés.
+- **`ShadowMap::RenderingSystem`** : recherche les composants déclarés, filtre par état d'activation, layers compatibles avec la `CaptureContext` figée de la vue, `ShadowMode` effectif, géométrie admissible et projection de la lumière, puis ajoute les commandes de **toutes les lumières compatibles dans la seule `RenderPass` d'ombres de cette vue** ; les cibles statique/finale restent individuelles par lumière, sans double émission par la partie voxel. Les casters utiles hors du frustum de la caméra restent considérés.
 - **`EngineView::Contributor`** : abstraction **purement générique** pour soumettre des commandes de rendu par vue ; ses propriétés sont les layers et la contribution au Builder. Il **ne porte aucune enum d'ombre, aucune fonction `invalidateShadowMap`, aucun `ContractProvider` lié aux ombres**.
 - **`EngineView`** : porte la caméra, les layers, la résolution, la configuration de capture et les sous-snapshots. **Aucune connaissance du concept d'ombre** (ni shadow map, ni source de caster, ni politique de cache) n'est requise dans son API ou sa logique interne. L'intégration se fait par le Builder/les passes génériques : c'est la contribution du `ShadowMap::RenderingSystem` qui construit les passes et les ressources nécessaires. Le mécanisme de mise à disposition de la carte finale à l'éclairage reste à spécifier sans introduire de dépendance `EngineView → ShadowMap::RenderingSystem`.
 
@@ -606,18 +630,19 @@ flowchart LR
   Entity --> ShadowComp["ShadowMap::Contributor"]
   M["ShadowMap : passe logique"] --> ShadowComp
   M --> SR
-  M --> PassKey["Cles RenderPass : politique a valider, aucune constante obligatoire"]
+  M --> PassKey["Une cle par Builder de vue : cle statique commune possible"]
   ShadowComp --> ShadowMode["ShadowMode et ShadowPropagation"]
   ShadowComp --> Filter["MeshFilter integre : mesh d ombre"]
   Visual --> VR["VoxelRenderingSystem : rendu visuel"]
   VR --> Scene["Passes opaques et WBOIT"]
   ShadowComp --> Registry["Registry des casters"]
-  Registry --> SR["ShadowMap::RenderingSystem : passes d ombre"]
-  SR --> Checks["Layers + activation + mode effectif + lumiere"]
+  Registry --> SR["ShadowMap::RenderingSystem"]
   Filter --> SR
-  Checks --> SM["Cache statique par vue et lumiere"]
-  Checks --> FM["Carte finale dynamique par vue et lumiere"]
-  SM --> FM
+  SR --> RP["Une RenderPass ombres par EngineView"]
+  RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
+  Checks --> SM["Cache statique individuel de la lumiere"]
+  SM -->|"Copie si finale invalide"| FM["Carte finale individuelle de la lumiere"]
+  Checks --> FM
   FM --> Scene
   View["EngineView : donnees generiques de capture"] --> Builder["RenderingEngine : Builder de sous-snapshot"]
   Builder --> VR
@@ -693,7 +718,7 @@ classDiagram
   }
   class ShadowRenderingSystem {
     +discoverShadowCasters(Registry)
-    +buildViewRenderSnapshot(Builder, CaptureContext)
+    +buildOneShadowRenderPassPerView(Builder, CaptureContext)
     +cacheInvalidationContracts
   }
   class ShadowMode {
@@ -1127,9 +1152,11 @@ Les `DepthRenderCommand` et `FramebufferRenderCommand` typées établissent cet 
 
 ```mermaid
 flowchart LR
-  S["EngineView : contexte generique"] --> SR["ShadowMap::RenderingSystem : vues et lumieres"]
-  SR --> StaticShadow["Cache depth statique : possede par ShadowMap::RenderingSystem"]
-  SR --> FinalShadow["Depth finale : possedee par ShadowMap::RenderingSystem"]
+  S["EngineView : contexte generique"] --> SR["ShadowMap::RenderingSystem"]
+  SR --> RP["Une RenderPass ombres dans le Builder de cette vue"]
+  RP -->|"Boucle sur lumiere compatible"| Light["Lumiere courante : ressources propres"]
+  Light --> StaticShadow["Cache depth statique : par vue / lumiere / surface"]
+  Light --> FinalShadow["Depth finale : par vue / lumiere / surface"]
   StaticCasters["Opaque statique"] --> StaticShadow
   StaticShadow -->|"Copie si invalidation"| FinalShadow
   DynamicCasters["Opaque dynamique"] -->|"Dessin après copie"| FinalShadow
@@ -1167,7 +1194,7 @@ L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compri
 | `RenderingEngine : Engine` | Moteur logique + graphiques dans `sparkle::sparkle` | Possède les EngineView et le slot du snapshot moteur |
 | `EngineView` | Vue logique/graphique possédée par RenderingEngine | Références non propriétaires ; framebuffer logique avec instances par surface |
 | `EngineView::Contributor` | Type imbriqué hérité par RenderingComponent/Behaviour/Entity/System | Contributions aux vues admises par layers via `CaptureContext`, sans possession de vue ni logique d’ombre |
-| `ShadowMap` | Abstraction graphique de passe logique d’ombre | Expose Contributor et RenderingSystem imbriqués ; ses clés de passes ne sont pas présumées statiques et restent à arbitrer |
+| `ShadowMap` | Abstraction graphique de passe logique d’ombre | Expose Contributor et RenderingSystem imbriqués ; une seule RenderPass par Builder de vue ; clé statique commune envisageable mais non imposée |
 | `ShadowMap::Contributor` | Composant graphique attachable aux Entity3D | Porte ShadowMode, ShadowPropagation, layers et MeshFilter ; découvert par Registry |
 | `ShadowMap::RenderingSystem` | RenderingSystem spécialisé | Construit les passes d’ombres, souscrit aux Contributors et conserve les caches par vue/lumière |
 | `CameraComponent` | Component3D graphique lié à une Entity | Accès à ses vues par `camera.view(name)` contrôlé |
