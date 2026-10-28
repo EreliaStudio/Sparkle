@@ -51,7 +51,8 @@ flowchart LR
     ShadowMapClass --> ShadowSys
     ShadowSource --> ShadowRegistry --> ShadowSys
     ShadowSys -->|"Sorties capturees sans resoudre GPU"| ShadowOutput
-    ShadowOutput -->|"Commandes Forward+ avec disponibilite par surface"| Sys
+    ShadowOutput -->|"Commandes Forward+ opaques et WBOIT, disponibilite par surface"| ForwardConsumer["Eclairage Forward+ : consommateur generique"]
+    ForwardConsumer --> ViewSnap
     Views -->|"Layers filtres"| Sys
     Views -->|"CaptureContext generique"| ShadowSys
     Sys -->|"Commandes visuelles uniquement"| ViewSnap
