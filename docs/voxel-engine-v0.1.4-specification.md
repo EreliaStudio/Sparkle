@@ -16,7 +16,7 @@ flowchart LR
     V["Volume"]
     M["VoxelMesher"]
     O["OcclusionCache (facultatif)"]
-    Model["Model : 2 meshes"]
+    Model["Model : 2 meshes visuels + mesh ombre"]
     S --> D --> V --> M --> Model
     O -. "accélère" .-> M
   end
@@ -60,6 +60,7 @@ flowchart LR
   end
   Model --> Assembly
   Model --> Components
+  Model -->|"bind explicite"| ShadowSource
   Palette --> Assembly
   Palette --> Components
 ```
@@ -69,10 +70,10 @@ Les frontières sont intentionnelles :
 - **Géométrie et meshing :** aucune lecture de pixels, aucun atlas et aucune émission directe de commande OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie. **Shape, Definition, Cell et Volume** restent indépendants d'OpenGL ; en revanche, **Model/Mesh** réutilisent le vrai `spk::Mesh<TVertex>`, dont le `LayoutBuffer` dépend déjà des types graphiques de Sparkle. Le bake ne doit pas être décrit comme un module intégralement headless.
 - **Apparence :** `spk::Material` est générique et possède des rôles de textures nommés ; `spk::VoxelPalette` relie ces matériaux aux slots d'un modèle voxel. Une palette différente ne nécessite pas de remailler.
 - **Scène :** `Voxel::Assembly` compose des modèles et des transformations locales, sans créer une Entity par partie.
-- **Graphisme :** `VoxelRenderingSystem` collecte les composants graphiques voxel et produit **uniquement les passes visuelles** (opaque et translucide), pour chaque vue dont les layers admettent le système et ses composants. Il **ne génère aucune commande de shadow map**. Un **`ShadowMap::RenderingSystem` distinct et générique** est exclusivement responsable de la capture des casters et de la construction des passes des shadow maps, à partir d’un Registry de **`ShadowMap::Contributor` spécialisés**. Chaque `ShadowMap::Contributor` porte `ShadowMode`, `ShadowPropagation`, les layers utiles au filtrage et un **`MeshFilter` intégré** désignant la géométrie d'ombre, qui peut différer du mesh visible (par exemple un mesh voxel greedy-meshé). Ce composant est graphique et distinct de `EngineView::Contributor` : ce dernier ne connaît plus ni ombres, ni `ShadowMode`, ni invalidation de shadow maps. L'interface précise et la propriété du mesh restent à définir. L’admission par layers et les modes d’ombres effectifs restent vérifiés pour chaque objet par le système chargé des ombres. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
+- **Graphisme :** `VoxelRenderingSystem` collecte les composants graphiques voxel et produit **uniquement les passes visuelles** (opaque et translucide), pour chaque vue dont les layers admettent le système et ses composants. Il **ne génère aucune commande de shadow map**. Un **`ShadowMap::RenderingSystem` distinct et générique** est exclusivement responsable de la capture des casters et de la construction des passes des shadow maps, à partir d’un Registry de **`ShadowMap::Contributor` spécialisés**. Chaque `ShadowMap::Contributor` porte `ShadowMode`, `ShadowPropagation`, les layers utiles au filtrage et un **`MeshFilter` intégré** désignant la géométrie d'ombre, qui peut différer du mesh visible (par exemple un mesh voxel greedy-meshé). Ce composant est graphique et distinct de `EngineView::Contributor` : ce dernier ne connaît plus ni ombres, ni `ShadowMode`, ni invalidation de shadow maps. Le mesh d'ombre est un `ShadowMap::Mesh` explicitement lié ; le `MeshFilter` conserve une copie légère partageant ses données immuables. Aucun fallback automatique vers le mesh visuel n'est autorisé. L’admission par layers et les modes d’ombres effectifs restent vérifiés pour chaque objet par le système chargé des ombres. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
 - **Chargement :** `spk::AssetManager` est un utilitaire générique de Sparkle, pas un sous-système réservé aux voxels. Il partage les assets chargés selon une clé comprenant type, identifiant et configuration JSON.
 
-Le rendu voxel produit **au maximum deux meshes par Model** : un opaque et un translucide. Aucun troisième mesh « cutout » n'est introduit. Chaque mesh non vide peut être dessiné avec un seul atlas `albedo` pour une association `Model`/`VoxelPalette` compatible, même si plusieurs slots choisissent des régions différentes de cet atlas.
+Le `Voxel::Model` produit **au maximum deux meshes visuels** (opaque et translucide) et un **`ShadowMap::Mesh` de profondeur supplémentaire**, extrait des surfaces opaques lors du bake. Ce troisième mesh n'est ni une troisième catégorie visuelle ni un mesh « cutout » ; il n'est utilisé pour les ombres que si l'application le lie explicitement à un Contributor. Chaque mesh non vide peut être dessiné avec un seul atlas `albedo` pour une association `Model`/`VoxelPalette` compatible, même si plusieurs slots choisissent des régions différentes de cet atlas.
 
 ### Exemple de parcours utilisateur
 
@@ -303,7 +304,7 @@ Un cache partagé peut être interrogé simultanément ; en revanche, sa **destr
 
 ### 3.6 `spk::Voxel::Model` : résultat immuable
 
-Le Model contient ou conserve de manière sûre les données issues du Volume, **deux meshes immuables** (opaque et translucide, éventuellement vides) et la table complète des slots sémantiques déclarés par les Definitions effectivement utilisées.
+Le Model contient ou conserve de manière sûre les données issues du Volume, **deux meshes visuels immuables** (opaque et translucide, éventuellement vides), **un `ShadowMap::Mesh` de profondeur immuable** (éventuellement vide) et la table complète des slots sémantiques déclarés par les Definitions effectivement utilisées. Le mesh d'ombre reprend les triangles opaques résultant du bake, leurs positions, indices et winding, sans UV, normales ni références de palette ; il ne représente pas nécessairement une enveloppe fermée.
 
 Chaque polygone d'opacité **égale à 1** alimente le mesh opaque, et tout polygone d'opacité **inférieure à 1** alimente le mesh translucide. Il n'existe pas de catégorie `cutout` distincte. La texture ne modifie pas cette classification.
 
@@ -323,7 +324,7 @@ struct MeshVertex
 };
 ```
 
-Les deux meshes réutilisent **l'infrastructure `spk::Mesh<TVertex>` existante** et ses buffers/layouts GPU ; pas de nouveau framework de maillage. `materialIndex` n'est jamais réattribué selon les seuls triangles visibles. Remplacer une palette ou déplacer un Assembly ne change pas les meshes du Model.
+Les meshes visuels et d'ombre réutilisent **l'infrastructure `spk::Mesh<TVertex>` existante** et ses buffers/layouts GPU ; pas de nouveau framework de maillage. `materialIndex` n'est jamais réattribué selon les seuls triangles visibles. Remplacer une palette ou déplacer un Assembly ne change pas les meshes du Model.
 
 ## 4. Matériaux, textures et palettes
 
@@ -672,10 +673,20 @@ classDiagram
     +shadowMode : ShadowMode
     +shadowPropagation : ShadowPropagation
     +meshFilter : MeshFilter
+    +bind(mesh : ShadowMapMesh)
+    +unbind()
     +setShadowMode(mode, propagation)
   }
   class MeshFilter {
-    +mesh : source de geometrie ombre
+    +mesh : ShadowMapMesh (copie legere)
+  }
+  class ShadowMapMesh {
+    +Builder
+    +from(source Mesh, extractPosition) Mesh
+    +positions et indices uniquement
+  }
+  class PositionMesh {
+    <<spk::Mesh de Vector3>>
   }
   class ShadowRenderingSystem {
     +discoverShadowCasters(Registry)
@@ -696,6 +707,8 @@ classDiagram
   ShadowMap .. ShadowMapContributor : type imbrique Contributor
   ShadowMap .. ShadowRenderingSystem : type imbrique RenderingSystem
   ShadowMapContributor *-- MeshFilter
+  MeshFilter --> ShadowMapMesh : copie legere
+  PositionMesh <|-- ShadowMapMesh
   ShadowMapContributor --> ShadowMode
   ShadowMapContributor --> ShadowPropagation
   RenderingSystem <|-- ShadowRenderingSystem
@@ -1068,7 +1081,7 @@ sequenceDiagram
 
 La responsabilité des composants et des systèmes est séparée :
 
-- **`ShadowMap::Contributor`** : représente une source d'ombre sur une Entity, avec ses layers, `ShadowMode { None, Static, Dynamic }`, `ShadowPropagation { SelfOnly, Descendants }` et un **`MeshFilter` intégré** donnant accès au mesh de projection. Un mesh d'ombre peut être différent de celui utilisé pour le rendu visuel ; un cas voxel peut utiliser un mesh greedy-meshé. `ShadowMap::Contributor` n'est **pas une sous-classe de `EngineView::Contributor`** et n'expose pas les callbacks génériques de capture d'une vue. La forme C++ exacte (`Component3D`, handle/possesseur du mesh, setters) sera précisée séparément.
+- **`ShadowMap::Contributor`** : représente une source d'ombre sur une Entity, avec ses layers, `ShadowMode { None, Static, Dynamic }`, `ShadowPropagation { SelfOnly, Descendants }` et un **`MeshFilter` intégré** donnant accès au mesh de projection. Un mesh d'ombre peut être différent de celui utilisé pour le rendu visuel ; un cas voxel peut utiliser un mesh greedy-meshé. `ShadowMap::Contributor` n'est **pas une sous-classe de `EngineView::Contributor`** et n'expose pas les callbacks génériques de capture d'une vue. Le Contributor conserve une copie légère du `ShadowMap::Mesh` ; les signatures secondaires restent à finaliser.
 - **`ShadowMap::RenderingSystem`** : recherche les composants déclarés, filtre par état d'activation, layers compatibles avec la `CaptureContext` figée de la vue, `ShadowMode` effectif, géométrie admissible et projection de la lumière, puis ajoute les commandes de **toutes les lumières compatibles dans la seule `RenderPass` d'ombres de cette vue** ; les cibles statique/finale restent individuelles par lumière, sans double émission par la partie voxel. Les casters utiles hors du frustum de la caméra restent considérés.
 - **`EngineView::Contributor`** : abstraction **purement générique** pour soumettre des commandes de rendu par vue ; ses propriétés sont les layers et la contribution au Builder. Il **ne porte aucune enum d'ombre, aucune fonction `invalidateShadowMap`, aucun `ContractProvider` lié aux ombres**.
 - **`EngineView`** : porte la caméra, les layers, la résolution, la configuration de capture et les sous-snapshots. **Aucune connaissance du concept d'ombre** (ni shadow map, ni source de caster, ni politique de cache) n'est requise dans son API ou sa logique interne. L'intégration se fait par le Builder/les passes génériques : c'est la contribution du `ShadowMap::RenderingSystem` qui construit les passes et les ressources nécessaires. Le mécanisme de mise à disposition de la carte finale à l'éclairage reste à spécifier sans introduire de dépendance `EngineView → ShadowMap::RenderingSystem`.
@@ -1114,7 +1127,7 @@ flowchart LR
   Builder --> SR
 ```
 
-**Sources d'ombres et modes effectifs.** Le `ShadowMap::Contributor` est un **composant graphique spécialisé de caster**, distinct de `EngineView::Contributor`. Il porte `ShadowMode { None, Static, Dynamic }`, `ShadowPropagation { SelfOnly, Descendants }`, ses layers et un **`MeshFilter` intégré** qui référence ou fournit la géométrie de profondeur des ombres. L'identité exacte du type C++, la possession du mesh, et la façon de relier un mesh de rendu existant restent à décider. Le `ShadowMap::RenderingSystem` seul lit ces données et émet les passes d'ombres.
+**Sources d'ombres et modes effectifs.** Le `ShadowMap::Contributor` est un **composant graphique spécialisé de caster**, distinct de `EngineView::Contributor`. Il porte `ShadowMode { None, Static, Dynamic }`, `ShadowPropagation { SelfOnly, Descendants }`, ses layers et un **`MeshFilter` intégré** qui référence ou fournit la géométrie de profondeur des ombres. La source doit être liée explicitement par l'application, sans recherche automatique d'un mesh visuel. Le `ShadowMap::RenderingSystem` seul lit ces données et émet les passes d'ombres.
 
 - `None` interdit la projection pour le caster concerné, `Static` le classe dans le cache statique, `Dynamic` dans la partie dynamique de la carte finale. Seules les contributions opaques sont susceptibles de projeter des ombres ; les translucides n'en projettent pas, mais peuvent en recevoir lors de l'éclairage Forward. `ShadowMode` n'est ni un booléen `castShadow` ni un tag de Contributor générique.
 - `SelfOnly` ne concerne que le `ShadowMap::Contributor` lui-même ; `Descendants` **override temporairement et non destructivement** le `ShadowMode` effectif de toute la descendance, pour les **trois modes**, sans modifier les valeurs stockées des descendants. Retirer l'override restaure leurs propres valeurs, sous réserve des autres overrides applicables.
