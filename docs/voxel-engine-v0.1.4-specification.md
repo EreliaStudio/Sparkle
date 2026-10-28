@@ -35,6 +35,7 @@ flowchart LR
     Sys["VoxelRenderingSystem : rendu visuel uniquement"]
     ShadowMapClass["ShadowMap : passe logique autonome"]
     ShadowSys["ShadowMap::RenderingSystem : une RenderPass par vue"]
+    ShadowOutput["ShadowMap::Output : sortie logique par vue et lumiere"]
     ShadowSource["ShadowMap::Contributor : collection de MeshInstance"]
     ShadowRegistry["Registry des sources d ombre"]
     ViewSnap["Sous-RenderSnapshot indépendant par EngineView"]
@@ -49,6 +50,8 @@ flowchart LR
     ShadowMapClass --> ShadowSource
     ShadowMapClass --> ShadowSys
     ShadowSource --> ShadowRegistry --> ShadowSys
+    ShadowSys -->|"Sorties capturees sans resoudre GPU"| ShadowOutput
+    ShadowOutput -->|"Commandes Forward+ avec disponibilite par surface"| Sys
     Views -->|"Layers filtres"| Sys
     Views -->|"CaptureContext generique"| ShadowSys
     Sys -->|"Commandes visuelles uniquement"| ViewSnap
@@ -669,6 +672,7 @@ classDiagram
   class ShadowMap {
     +Contributor : nested type
     +RenderingSystem : nested type
+    +Output : nested type
   }
   class ShadowMapContributor {
     +layers : string names
@@ -700,7 +704,16 @@ classDiagram
   class ShadowRenderingSystem {
     +discoverShadowCasters(Registry)
     +buildOneShadowRenderPassPerView(Builder, CaptureContext)
+    +captureOutputPerLight(view, light)
     +cacheInvalidationContracts
+  }
+  class ShadowMapOutput {
+    +viewAndLightIdentity
+    +lightProjectionType : Depth2D / DepthCube
+    +finalDepthHandle : logical immutable reference
+    +expectedGeneration
+    +capturedLightProjection
+    +resolveForCurrentSurface(RenderContext)
   }
   class ShadowMode {
     <<enumeration>>
@@ -710,6 +723,8 @@ classDiagram
   }
   ShadowMap .. ShadowMapContributor : type imbrique Contributor
   ShadowMap .. ShadowRenderingSystem : type imbrique RenderingSystem
+  ShadowMap .. ShadowMapOutput : type imbrique Output
+  ShadowRenderingSystem --> ShadowMapOutput : produit par vue et lumiere
   ShadowMapContributor *-- MeshFilter
   MeshFilter "1" *-- "0..*" ShadowMapMeshInstance : collection
   ShadowMapMeshInstance --> ShadowMapMesh : partage de donnees immuables
@@ -1039,7 +1054,7 @@ La classe publique **`ShadowMap`** représente une **passe logique de rendu d'om
 
 **Contenu de la passe commune.** Pour chacune des lumières **directionnelles et spots dont les ombres sont activées, ainsi que des ponctuelles activées et retenues par le budget souple X/Y/tolérance de la vue**, le système écrit, à l'intérieur de **la même `RenderPass`**, la suite **ordonnée** des commandes nécessaires : choisir les cibles de profondeur **propres à cette lumière**, reconstruire le cache statique seulement s'il est invalide, reconstruire la carte finale par copie de la statique puis dessins des casters dynamiques seulement si la finale est invalide, et poursuivre avec la lumière suivante. Si aucune reconstruction n'est requise, ne pas redessiner ni recopier inutilement. Les caches **ne sont jamais partagés entre lumières** : la combinaison `EngineView × lumière` conserve ses deux ressources logiques et ses générations, matérialisées séparément pour chaque `Window::Surface`. Les lumières ponctuelles dont les ombres sont activées ajoutent **des commandes de projection omnidirectionnelle sur les six faces d'une cubemap de profondeur** dans cette même `RenderPass`, et non six `RenderPass` indépendantes. Les spots et directionnelles conservent chacun une projection 2D ; les six faces d'une lumière ponctuelle forment une seule source d'ombre logique à caches séparés par lumière. Le comportement exact lorsqu'aucune lumière compatible n'est présente (passe vide ou absente) reste un détail à finaliser, sans remettre en cause l'unicité maximale de la passe par vue.
 
-**Sécurité des commandes conditionnelles.** Le snapshot CPU doit encoder suffisamment d'informations immuables pour que l'exécution GPU sur chaque surface reconstruise uniquement les caches invalides **de cette surface et dans la limite du budget de reconstructions de l'image**. Une PointLight retenue mais non actualisée éclaire sans ombre. Les commandes ne lisent aucun `Contributor` mutable ; aucun changement de cible entre deux lumières n'est implicite. Le passage des textures de profondeur finales à l'éclairage reste une intégration générique à définir, sans ajouter une dépendance d'`EngineView` vers `ShadowMap`.
+**Sécurité des commandes conditionnelles.** Le snapshot CPU doit encoder suffisamment d'informations immuables pour que l'exécution GPU sur chaque surface reconstruise uniquement les caches invalides **de cette surface et dans la limite du budget de reconstructions de l'image**. Une PointLight retenue mais non actualisée éclaire sans ombre. Les commandes ne lisent aucun `Contributor` mutable ; aucun changement de cible entre deux lumières n'est implicite. **A3 fixe désormais le transfert aux commandes d'éclairage au moyen de `ShadowMap::Output` par lumière et par vue, résolu à l'exécution pour la surface courante.**
 
 **Séquence de construction de la passe d'ombres.**
 
@@ -1080,7 +1095,9 @@ sequenceDiagram
         end
     end
     Note over V,S: Une RenderPass ombres, N lumieres, N paires de caches independantes
-    Note over V,S: Passes Forward ulterieures utilisent les profondeurs finales
+    S-->>V: ShadowMap::Output logique par lumiere de la vue
+    Note over V,S: Les Forward+ capturent les sorties logiques, pas les textures GL
+    Note over V,S: La validite finale est resolue par surface apres la passe ombres
 ```
 
 La responsabilité des composants et des systèmes est séparée :
@@ -1205,7 +1222,48 @@ sequenceDiagram
   Note over GPU: Aucune lecture de Contributor, Entity ou Assembly mutable
 ```
 
-**Propriété des shadow maps et intégration.** Le `ShadowMap::RenderingSystem` gère ses cibles et générations d'ombres **indexées par vue et lumière**, avec des instances GPU locales à chaque `Window::Surface`. `EngineView` n'a **aucun callback d'ombre**, ne possède pas ses caches et ne transmet pas leurs invalidations : il fournit seulement un contexte de capture générique (caméra, layers, résolution) et un Builder. Le système d'ombres utilise ces informations pour fournir ses propres passes et des sorties de texture consultables par le pipeline d'éclairage via les mécanismes génériques de ressources et commandes ; la liaison concrète à l'éclairage reste à définir. Une vue détachée et des captures en vol ne doivent pas perdre les changements d'invalidation. Aucun callback ne reconstruit de texture GPU ; aucun snapshot publié n'est modifié.
+**Propriété des shadow maps et intégration.** Le `ShadowMap::RenderingSystem` gère ses cibles et générations d'ombres **indexées par vue et lumière**, avec des instances GPU locales à chaque `Window::Surface`. `EngineView` n'a **aucun callback d'ombre**, ne possède pas ses caches et ne transmet pas leurs invalidations : il fournit seulement un contexte de capture générique (caméra, layers, résolution) et un Builder. **A3 fixe une sortie typée `ShadowMap::Output` par lumière et par vue**, capturée logiquement par les commandes Forward+ puis résolue pour la surface courante au moment de leur exécution. Une vue détachée et des captures en vol ne doivent pas perdre les changements d'invalidation. Aucun callback ne reconstruit de texture GPU ; aucun snapshot publié n'est modifié.
+
+**A3 — contrat de `ShadowMap::Output` (décision validée).** `ShadowMap::RenderingSystem` produit, pour chaque **lumière capturée dans une EngineView**, une sortie typée `ShadowMap::Output` représentant la possibilité de recevoir ses ombres dans **cette vue seulement**. Il ne s'agit ni d'un atlas global ni d'un registre générique de sorties du `RenderSnapshot`. La sortie capture **par valeur logique immuable** : l'association à la lumière et à la vue de la capture (identité typée/indice stable à l'intérieur du snapshot, sans pointeur C++ vivant à consulter ensuite), le type de projection (texture de profondeur 2D ou cubemap à six faces), les matrices et paramètres de projection/échantillonnage de cette lumière figés par la capture, l'identité de la **carte finale** et sa génération attendue. Les noms concrets des champs et l'encapsulation C++ sont à adapter aux types existants ; les éléments de ce contrat ne constituent pas une nouvelle API de découverte de scène. Les caches **statiques** restent privés au système d'ombres et ne sont jamais échantillonnés directement par Forward+. Une lumière avec projection désactivée, exclue du budget souple ou dépourvue de cible éligible produit une sortie **sans ombre disponible** (ou une absence typée équivalente), mais **continue de contribuer à l'éclairage**.
+
+**Publication/consommation sans couplage d'`EngineView`.** Lors de `RenderingEngine::refreshRenderSnapshot()`, le système d'ombres capture les lumières et demandeurs de projection, construit **une seule `RenderPass` d'ombres par vue** et remet les `ShadowMap::Output` correspondants au **code de préparation des commandes d'éclairage générique**. Les commandes de culling Forward+ et de dessin opaque/WBOIT capturent les sorties par valeur ou handle immuable avec l'enregistrement **de la même lumière dans le snapshot**. Le culling Forward+ choisit indépendamment quelles lumières éclairent un fragment ; cette sélection **n'ajoute pas** une shadow map ni ne conditionne son admissibilité par le culling des casters. `EngineView` ne stocke, n'expose et ne résout aucune sortie d'ombres ; le passage se fait directement entre le producteur et les consommateurs, pendant la préparation du Builder de la vue. Les commandes d'ombres précèdent obligatoirement toute commande qui pourrait lire leurs sorties, selon les `RenderPass::Key` réservées. Aucune lecture d'`EngineView`, `LightComponent`, `Contributor` ou de leurs registres mutables n'a lieu dans `execute(RenderContext&) const`.
+
+**Résolution par `Window::Surface` et validité effective.** `ShadowMap::Output` ne signifie **jamais** « texture valide sur toutes les surfaces ». Pendant l'exécution de ce snapshot sur une `Window::Surface`, le `RenderContext` de cette surface résout la référence logique via ses ressources `GPUResourceCollection`/`GPUResource::Handle`. Cette résolution intervient **après** l'exécution des commandes de la passe d'ombres de la même vue. Elle vérifie que (1) la lumière est autorisée à projeter et encore sélectionnée **dans ce snapshot**, (2) l'instance finale de profondeur **de cette surface**, pour **la bonne vue, lumière, identité de ressource et génération attendue**, existe et est complète/valide, et (3) si cette instance devait être reconstruite, la reconstruction a **réussi sous le budget de cette surface pour cette image**. La génération demandée doit correspondre aux matrices/projections capturées : une texture issue d'une autre lumière, vue, génération ou surface n'est jamais réutilisée comme solution de secours. Pour une PointLight, les six faces doivent représenter le **même jeu cohérent de génération**, jamais un assemblage de faces de versions différentes. Aucune donnée de profondeur périmée ou incomplète n'est échantillonnée, y compris lorsque les requêtes ont été différées ou qu'une lumière vient d'être réadmise. La réentrance sur deux surfaces donne **deux résolutions indépendantes** d'un même `ShadowMap::Output` capturé.
+
+**Éclairage sans ombre et snapshots en vol.** Si la résolution échoue ou si la carte finale a été différée, la commande prépare explicitement pour cette lumière un état **« ombres indisponibles »** dans les données de lumière consommées par les shaders opaques et WBOIT, et **ne lie ni n'échantillonne** de texture de profondeur pour elle. La lumière éclaire normalement. Si la carte est valide, la commande lie **uniquement la carte finale** correspondant au type (2D pour spots/directionnelles, cubemap pour PointLight) et les paramètres de projection du même snapshot. L'état d'échantillonnage/présence ne doit pas survivre implicitement d'une lumière ou d'un draw à l'autre. Les `RenderSnapshot` antérieurs préservent leurs handles et références logiques grâce à la gestion de vie existante des GPUResource ; une invalidation ultérieure **ne les modifie pas rétroactivement**, mais leur capacité effective à échantillonner reste soumise à la présence d'une **version compatible sur la surface** lors de leur exécution. Il ne faut pas tester la validité d'une sortie uniquement à la capture CPU, ni supposer qu'une reconstruction sur A valide B.
+
+**Erreurs et frontière technique.** La sélection de lumière sans carte valide, l'absence de ressource GPU pour une surface et le report d'une reconstruction sont des **résultats attendus**, pas des `spk::Exception`. Une incohérence structurelle (type de projection 2D/cube incompatible avec la ressource attendue, impossible d'attacher une profondeur dans un contexte déclaré compatible, identité ou génération impossible à résoudre suivant les invariants de publication) reste une erreur explicite dans la gestion GPU. Le format exact de l'état de disponibilité remis au shader, les binding points et la représentation C++ interne d'une sortie sont des détails d'implémentation/T2–T3 ; les garanties de visibilité et d'absence de fallback sont normatives.
+
+**Séquence A3 : production des sorties et consommation par surface.**
+
+```mermaid
+sequenceDiagram
+  participant CPU as Capture CPU de la vue
+  participant SH as ShadowMap RenderingSystem
+  participant F as Commandes Forward+
+  participant S as Window Surface et RenderContext
+  participant GPU as GPU depth et shading
+  CPU->>SH: construire les demandes d ombres des lumieres capturees
+  SH-->>CPU: ShadowMap::Output immuable par vue/lumiere
+  CPU->>F: capturer lumiere et Output correspondant
+  CPU-->>S: publier sous-snapshot avec passe ombres avant Forward+
+  S->>GPU: executer passe ombres de la vue sur cette surface
+  alt PointLight en attente du budget ou aucune carte finale valide
+    S->>S: marquer Output indisponible sur cette surface
+  else Carte reconstruite ou deja valide pour cette generation
+    S->>S: verifier handle, generation, matrices et projection
+  end
+  S->>F: executer commande de culling/dessin Forward+
+  F->>S: resoudre Output sur surface courante apres passe ombres
+  alt Output disponible et coherent
+    S-->>F: carte finale 2D/cubemap et etat ombre active
+    F->>GPU: shader opaque/WBOIT avec ombres
+  else Output indisponible
+    S-->>F: etat ombre absente pour la lumiere
+    F->>GPU: shader opaque/WBOIT : lumiere sans ombre
+  end
+  Note over S,GPU: Aucune texture perimee, aucune reference mutable hors snapshot
+```
 
 **Admission et prévention du double rendu.** `ShadowMap::RenderingSystem` découvre uniquement les sources du Registry de `ShadowMap::Contributor`; chaque source est traitée **une seule fois par parcours de casters pour chaque lumière/cible admissible**, indépendamment de l'arborescence des Entities et des éventuels regroupements graphiques. `VoxelRenderingSystem` et les autres systèmes de rendu visuel ne produisent **aucun caster en parallèle**. Une contribution hors frustum caméra peut continuer à projeter sur les objets visibles si elle est pertinente pour la projection lumineuse.
 
