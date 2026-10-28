@@ -23,18 +23,18 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 **Référence dans la spécification :** sections 1, 7.1 et 7.5.
 
-**Situation.** La cible décrit des meshes voxel opaques et translucides, l'éclairage, les ombres, les calculs de profondeur et la composition WBOIT. Ces capacités doivent être **créées dans V0.1.4**, et non supposées déjà présentes. Les commandes et passes actuelles de Sparkle fournissent de la structure, pas un système de scène 3D illuminée. **La représentation des caméras et lumières est déjà fixée dans la spécification principale : ce sont des `Component3D` attachés aux `Entity3D`, utilisant leurs `Transform3D` et les Registries par Engine.** Ce point ne doit pas être rediscuté ici ; la sélection et les fonctionnalités concrètes restent ouvertes.
+**Situation.** La cible décrit des meshes voxel opaques et translucides, l'éclairage, les ombres, les calculs de profondeur et la composition WBOIT. Ces capacités doivent être **créées dans V0.1.4**, et non supposées déjà présentes. Les commandes et passes actuelles de Sparkle fournissent de la structure, pas un système de scène 3D illuminée. **Les caméras et lumières sont des `Component3D` attachés aux `Entity3D`, utilisant leurs `Transform3D` et les Registries par Engine. La caméra est sélectionnée explicitement par chaque vue/viewport 3D, sans caméra principale implicite par Engine et avec plusieurs vues indépendantes possibles.** Ces deux règles sont fixées dans la spécification principale et ne doivent plus être rediscutées ici. Les projections détaillées, l'API de binding et les fonctionnalités des lumières restent ouvertes.
 
 **Questions architecturales :**
 
-1. **Comment choisir la caméra active** pour une fenêtre, un viewport ou un `RenderSnapshot` lorsqu'un même Engine possède plusieurs `CameraComponent` ? Comment sont définies les matrices de projection et les dimensions du viewport, sans réintroduire implicitement une unique caméra globale ?
-2. Quels éclairages sont effectivement inclus dans cette version : directionnels, ponctuels et spots ? Pour lesquels doit-on produire des **ombres** ? Quel est le périmètre initial de l'éclairage des matériaux ?
+1. Quels **types de lumières** sont effectivement inclus dans cette version : directionnelles, ponctuelles et spots ? Pour lesquelles prévoit-on des **ombres** ? Quel est le périmètre initial de l'éclairage des matériaux ?
+2. Quelles **projections de caméra** sont disponibles et quelle API lie une vue/viewport 3D à sa `CameraComponent` ? Quel est le comportement explicite si la caméra sélectionnée n'est plus disponible, sans caméra de secours implicite ?
 3. Quelle responsabilité revient à un moteur/pipeline 3D **générique**, et laquelle revient précisément au `VoxelRenderingSystem` qui lui remet ses géométries, matériaux, transformations et commandes ? Qui détient et prépare les ressources GPU d'une scène ?
 4. Un consommateur de rendu 3D **non voxel** doit-il pouvoir utiliser exactement le même éclairage, les mêmes ombres et les mêmes passes dès V0.1.4 ?
 
 **Direction recommandée, non validée.** Définir une infrastructure de scène et de rendu 3D réutilisable par plusieurs producteurs de géométries. Le voxel participe à cette infrastructure sans l'intégrer dans ses classes de données.
 
-**Critère de clôture.** La représentation `Component3D` est acquise. Il reste à définir la sélection de caméra par cible de rendu, le périmètre concret des lumières et ombres, le propriétaire de la préparation graphique, ainsi que le parcours des données jusqu'aux shaders. Un schéma doit séparer explicitement infrastructure graphique commune et adaptation voxel.
+**Critère de clôture.** La représentation `Component3D` et la sélection explicite d'une caméra par viewport 3D sont acquises. Il reste à définir les projections et comportements d'indisponibilité, le périmètre concret des lumières et ombres, le propriétaire de la préparation graphique, ainsi que le parcours des données jusqu'aux shaders. Un schéma doit séparer explicitement infrastructure graphique commune et adaptation voxel.
 
 ### P0 — Orchestration des passes, depth, shadow maps et WBOIT
 
