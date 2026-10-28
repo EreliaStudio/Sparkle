@@ -556,6 +556,27 @@ Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T
 
 ## 7. VoxelRenderingSystem et commandes GPU
 
+### Caméras et lumières : composants 3D de l'Engine
+
+Les **caméras et les lumières sont représentées par des composants spécialisés dérivant de `spk::Component3D`**, attachés aux `Entity3D` existantes. Leur position et leur orientation dans le monde proviennent des **`Transform3D` des entités qui les portent** : il n'existe pas de seconde hiérarchie de transformations dédiée aux caméras ou aux lumières. Ces composants appartiennent à l'Engine concerné et sont découvrables par ses mécanismes de Registry, comme les autres composants du moteur.
+
+Les noms `CameraComponent`, `DirectionalLightComponent`, `PointLightComponent` et `SpotLightComponent` sont **illustratifs** : cette décision ne présuppose pas quels types de lumières seront effectivement disponibles en V0.1.4, ni leur API exacte. Les paramètres de caméra (projection, plans proche/lointain, etc.) et de lumière (couleur, intensité, ombres éventuelles) appartiendront à leurs composants respectifs ; les matrices et données graphiques nécessaires seront préparées par le système de rendu générique, puis capturées dans les commandes et snapshots concernés.
+
+```mermaid
+flowchart LR
+  E["Entity3D"] --> T["Transform3D"]
+  E --> C["Component3D : Camera"]
+  E --> L["Component3D : Light"]
+  C --> R["Registry de l'Engine"]
+  L --> R
+  T -. "pose" .-> C
+  T -. "pose" .-> L
+  R --> P["Pipeline 3D générique"]
+  P --> V["Commandes voxel et non voxel"]
+```
+
+**Cette décision fixe la représentation et le rattachement des caméras et lumières, pas leur politique de sélection.** Le choix d'une caméra pour un viewport ou un RenderSnapshot, les variantes de projection à exposer, les types de lumières, leurs capacités d'ombre et l'orchestration des passes restent à préciser. Aucune caméra « principale » globale, aucun registre de caméras parallèle, aucune classe `CameraHolder3D` et aucun conteneur `Scene3D` distinct ne sont introduits implicitement par ce choix.
+
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
 `spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU. Les primitives de RenderPass, Framebuffer et RenderCommand existent, mais **le pipeline de scène 3D complet, ses lumières, ses ombres et son WBOIT doivent être conçus et développés en V0.1.4**. Leur orchestration appartient à l'infrastructure de rendu 3D générique, et non aux classes voxel seules.
