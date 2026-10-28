@@ -32,7 +32,10 @@ flowchart LR
     Engine["Engine : core headless"]
     Render["RenderingEngine : hérite d'Engine"]
     Views["EngineView nommées"]
-    Sys["VoxelRenderingSystem : Contributor, ShadowMode"]
+    Sys["VoxelRenderingSystem : rendu visuel uniquement"]
+    ShadowSys["ShadowRenderingSystem : ombres uniquement"]
+    ShadowSource["Composant source de mesh d ombre : type a definir"]
+    ShadowRegistry["Registry des sources d ombre"]
     ViewSnap["Sous-RenderSnapshot indépendant par EngineView"]
     EngineSnap["RenderSnapshot moteur : délégation ordonnée"]
     Slot["ThreadSafeSlot du snapshot moteur"]
@@ -40,9 +43,13 @@ flowchart LR
     GPU["GPUResourceCollection : cibles par surface"]
     Engine --> Render --> Views --> ViewSnap --> EngineSnap --> Slot
     Assembly --> Components
-    Components -->|"Layers + ShadowMode"| Sys
+    Components -->|"Layers, meshes de scene"| Sys
+    Components -.->|"Geometrie d ombre differente possible"| ShadowSource
+    ShadowSource --> ShadowRegistry --> ShadowSys
     Views -->|"Layers filtres"| Sys
-    Sys -->|"Filtre ses composants"| ViewSnap
+    Views -->|"Layers + projections lumineuses"| ShadowSys
+    Sys -->|"Commandes visuelles uniquement"| ViewSnap
+    ShadowSys -->|"Commandes d ombre uniquement"| ViewSnap
     Slot --> Window --> GPU
   end
   Model --> Assembly
@@ -56,7 +63,7 @@ Les frontières sont intentionnelles :
 - **Géométrie et meshing :** aucune lecture de pixels, aucun atlas et aucune émission directe de commande OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie. **Shape, Definition, Cell et Volume** restent indépendants d'OpenGL ; en revanche, **Model/Mesh** réutilisent le vrai `spk::Mesh<TVertex>`, dont le `LayoutBuffer` dépend déjà des types graphiques de Sparkle. Le bake ne doit pas être décrit comme un module intégralement headless.
 - **Apparence :** `spk::Material` est générique et possède des rôles de textures nommés ; `spk::VoxelPalette` relie ces matériaux aux slots d'un modèle voxel. Une palette différente ne nécessite pas de remailler.
 - **Scène :** `Voxel::Assembly` compose des modèles et des transformations locales, sans créer une Entity par partie.
-- **Graphisme :** `VoxelRenderingSystem` collecte les composants graphiques voxel et contribue séparément au sous-snapshot de chaque `EngineView` qui admet **les layers du système**. Pour chaque composant traité, **le système est responsable de vérifier ses layers** avec le helper de `CaptureContext` avant de contribuer au rendu ou aux ombres ; Sparkle ne filtre pas automatiquement les éléments internes d'un `RenderingSystem`. Le système n'ordonnance pas lui-même les vues. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
+- **Graphisme :** `VoxelRenderingSystem` collecte les composants graphiques voxel et produit **uniquement les passes visuelles** (opaque et translucide), pour chaque vue dont les layers admettent le système et ses composants. Il **ne génère aucune commande de shadow map**. Un **`ShadowRenderingSystem` distinct et générique** est exclusivement responsable de la capture des casters et de la construction des passes des shadow maps, à partir d’un Registry de **sources de géométrie d’ombre** disponibles et admissibles. Un objet pourra fournir un mesh d’ombre **distinct** du mesh visible, par exemple un mesh voxel greedy-meshé. Les noms et API des sources restent à déterminer. L’admission par layers et les modes d’ombres effectifs restent vérifiés pour chaque objet par le système chargé des ombres. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
 - **Chargement :** `spk::AssetManager` est un utilitaire générique de Sparkle, pas un sous-système réservé aux voxels. Il partage les assets chargés selon une clé comprenant type, identifiant et configuration JSON.
 
 Le rendu voxel produit **au maximum deux meshes par Model** : un opaque et un translucide. Aucun troisième mesh « cutout » n'est introduit. Chaque mesh non vide peut être dessiné avec un seul atlas `albedo` pour une association `Model`/`VoxelPalette` compatible, même si plusieurs slots choisissent des régions différentes de cet atlas.
@@ -571,7 +578,26 @@ Leurs méthodes de liaison (`bind` / `unbind`, signatures à finaliser) utilisen
 
 Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T, Engine*>` ou de l'inscription typée réellement disponible. L'héritage Registry des composants spécialisés est à adapter à l'API existante et ne doit pas être inventé indépendamment de sa construction/contexte.
 
-## 7. VoxelRenderingSystem et commandes GPU
+## 7. Systèmes de rendu visuel, d’ombres et commandes GPU
+
+**Séparation des responsabilités — décision validée.** Le `VoxelRenderingSystem` ne dessine **jamais** d'ombres et ne fabrique pas de commandes de shadow maps. Il conserve la préparation des SSBO voxel et les commandes de rendu visible (opaque, translucide WBOIT et matériaux). Un **`ShadowRenderingSystem` générique séparé**, indépendant de l'implémentation voxel, produit **toutes les contributions aux shadow maps**, par vue et par lumière autorisée. Il découvre via un Registry les objets **ayant une source de géométrie d'ombre** ; il ne parcourt pas automatiquement les contributions visuelles pour en déduire leur mesh. Un composant graphique dédié fournissant le shadow mesh (nom provisoire `ShadowMeshComponent` ou `ShadowMeshFilter`) est l'interface envisagée : **son nom, sa propriété du mesh, ses bindings et l'éventuel fallback vers le mesh visuel restent ouverts**. Le mesh d'ombre peut être distinct : un voxel visible avec des surfaces détaillées peut proposer un mesh d'ombre greedy-meshé.
+
+L'énumération par Registry n'est **pas** un lien de parenté : le `ShadowRenderingSystem` ne devient pas parent de tous les objets qu'il découvre, et ses modes ne se propagent pas à tout le Registry par ce seul fait. La politique `ShadowPropagation` continue à suivre la parenté des Entities (parent unique par `InherenceTrait`) et les **relations graphiques de collecte explicitement établies** ; leur combinaison et les priorités d'overrides restent à préciser. Un objet portant une source d'ombre mais exclu par layers, désactivé, en `ShadowMode::None` effectif, ou non pertinent pour la projection lumineuse, n'émet pas de commande d'ombre. Le caster opaque hors frustum caméra reste admissible s'il peut influer sur l'ombre. Les versions GPU et handles des géométries d'ombre restent figés dans les snapshots.
+
+```mermaid
+flowchart LR
+  E["Entity3D et composants graphiques"] --> Visual["Meshes visibles"]
+  E --> ShadowComp["Source de mesh d ombre : API a finaliser"]
+  Visual --> Voxel["VoxelRenderingSystem : rendu de scene"]
+  ShadowComp --> Registry["Registry des casters"]
+  Registry --> Shadow["ShadowRenderingSystem : ombres uniquement"]
+  Shadow --> Rules["Layers + activation + ShadowMode effectif + projection lumiere"]
+  Rules --> SM["Cache statique"]
+  Rules --> DM["Carte finale dynamique"]
+  Voxel --> Scene["Passes opaques et WBOIT"]
+  SM --> DM
+  DM --> Scene
+```
 
 ### Caméras et lumières : composants 3D de l'Engine
 
