@@ -656,6 +656,12 @@ secondaryWidget.setViewID("surveillance");
 
 // Une autre vue est retrouvable depuis sa propre CameraComponent :
 spk::EngineView& monitor = surveillanceCamera.view("surveillance");
+
+// Un matériau de surveillance emprunte la source logique de la vue.
+// Surcharge indicative à finaliser ; le Material ne possède pas la vue.
+spk::Material::Builder builder;
+builder.setTexture("albedo", monitor);
+spk::Material screenMaterial = builder.build();
 ```
 
 **Deux niveaux de snapshots, sans seconde boucle GPU.** Le `RenderingEngine` possède son slot de snapshot moteur, commun à toutes les fenêtres. L'`Application` conserve son slot de `RenderSnapshot` **par fenêtre**, contenant UI et commandes de ses widgets. Le widget `Render` insère, dans le snapshot de cette fenêtre, une `RenderCommand` qui **capture le `shared_ptr<const RenderSnapshot>` moteur sélectionné**, puis exécute `engineSnapshot->execute(renderContext)` sur le thread de rendu de la fenêtre. Ainsi une publication ultérieure du slot moteur ne change pas le snapshot déjà capturé par A, même si B en choisit un plus récent.
@@ -805,7 +811,7 @@ flowchart LR
   Shadow --> Trans
   Opaque --> Compose["Composition opaque + WBOIT"]
   Trans --> Compose
-  Compose --> Tex["Texture finale de la vue en cache"]
+  Compose --> Tex["Texture finale : instance propre à chaque surface"]
   Tex --> Main["EngineWidget : Role Drawing"]
   Tex --> Other["Material : EngineView empruntée"]
   L["Éclairage générique : composants Light"] --> Opaque
