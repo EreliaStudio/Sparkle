@@ -57,7 +57,7 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 ### P0 — Contrat du pipeline Forward, des ombres et du WBOIT
 
-**Références :** sections 7.1 à 7.5.
+**Références :** sections 7.1 à 7.8 de la spécification principale (vues, captures, ombres, lumières, buffers, Forward+ et WBOIT).
 
 **Constat.** `Framebuffer`, `RenderPass`, `RenderSnapshot` et les handles GPU existent ; Forward+ avec classement GPU des lumières, WBOIT et shadow maps génériques (y compris ponctuelles omnidirectionnelles) restent à implémenter. Le principe d'état d'entrée explicite par `RenderPass` et les familles génériques de nouvelles `RenderCommand` (Blend, Depth, CullFace, ColorMask, Framebuffer et adaptation Viewport/Scissor) sont validés. **Choix A WBOIT validé :** une seule passe de dessin de la géométrie translucide produit simultanément les résultats d'accumulation et de révélation dans **deux attachments couleur MRT** avec **blending indépendant**, suivie d'une **passe de composition**. Aucun double dessin ni stratégie WBOIT interchangeable n'est demandé. Les capacités OpenGL requises doivent être vérifiées explicitement, sans fallback silencieux. **Formats WBOIT fixés :** accumulation `RGBA16F`, révélation `R8`, sans configuration supplémentaire ni fallback de format. **Profondeur validée (choix A) :** la passe WBOIT partage l'attachment depth de la passe opaque ; depth test actif, écritures de profondeur désactivées, sans copie ni nouveau rendu depth-only. Les réglages numériques de blending, la fonction de comparaison de profondeur et la composition restent à déterminer. Un suffixe `.init` n'a aucune signification automatique.
 
