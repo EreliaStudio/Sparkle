@@ -592,7 +592,7 @@ La classe publique **`ShadowMap`** représente une **passe logique de rendu d'om
 
 **Ordonnancement et clé de la passe d'ombres — choix A validé.** Chaque sous-`RenderSnapshot` de vue utilise son **Builder indépendant**. `ShadowMap::RenderingSystem` y inscrit **une seule `RenderPass` d'ombres**, sous une `RenderPass::Key` unique dans ce Builder, qui doit précéder les passes d'éclairage consommant les résultats. **Une clé statique commune** (par exemple `ShadowMap::RenderPassKey`) **redevient une option cohérente**, puisqu'elle est réutilisée dans des Builders de vues différents, mais sa déclaration `static const`/`static constexpr`, sa réservation par le moteur et sa valeur numérique **ne sont pas encore décidées**. Elle ne doit pas entrer en collision avec une autre passe au sein de la même vue, et le nom ne détermine jamais l'ordre : le Builder continue à ordonner numériquement ses `RenderPass::Key`.
 
-**Contenu de la passe commune.** Pour chacune des lumières **directionnelles et spots dont les ombres sont activées, ainsi que des ponctuelles activées et retenues sous le budget de la vue**, le système écrit, à l'intérieur de **la même `RenderPass`**, la suite **ordonnée** des commandes nécessaires : choisir les cibles de profondeur **propres à cette lumière**, reconstruire le cache statique seulement s'il est invalide, reconstruire la carte finale par copie de la statique puis dessins des casters dynamiques seulement si la finale est invalide, et poursuivre avec la lumière suivante. Si aucune reconstruction n'est requise, ne pas redessiner ni recopier inutilement. Les caches **ne sont jamais partagés entre lumières** : la combinaison `EngineView × lumière` conserve ses deux ressources logiques et ses générations, matérialisées séparément pour chaque `Window::Surface`. Les lumières ponctuelles dont les ombres sont activées ajoutent **des commandes de projection omnidirectionnelle sur les six faces d'une cubemap de profondeur** dans cette même `RenderPass`, et non six `RenderPass` indépendantes. Les spots et directionnelles conservent chacun une projection 2D ; les six faces d'une lumière ponctuelle forment une seule source d'ombre logique à caches séparés par lumière. Le comportement exact lorsqu'aucune lumière compatible n'est présente (passe vide ou absente) reste un détail à finaliser, sans remettre en cause l'unicité maximale de la passe par vue.
+**Contenu de la passe commune.** Pour chacune des lumières **directionnelles et spots dont les ombres sont activées, ainsi que des ponctuelles activées et retenues par le budget souple X/Y/tolérance de la vue**, le système écrit, à l'intérieur de **la même `RenderPass`**, la suite **ordonnée** des commandes nécessaires : choisir les cibles de profondeur **propres à cette lumière**, reconstruire le cache statique seulement s'il est invalide, reconstruire la carte finale par copie de la statique puis dessins des casters dynamiques seulement si la finale est invalide, et poursuivre avec la lumière suivante. Si aucune reconstruction n'est requise, ne pas redessiner ni recopier inutilement. Les caches **ne sont jamais partagés entre lumières** : la combinaison `EngineView × lumière` conserve ses deux ressources logiques et ses générations, matérialisées séparément pour chaque `Window::Surface`. Les lumières ponctuelles dont les ombres sont activées ajoutent **des commandes de projection omnidirectionnelle sur les six faces d'une cubemap de profondeur** dans cette même `RenderPass`, et non six `RenderPass` indépendantes. Les spots et directionnelles conservent chacun une projection 2D ; les six faces d'une lumière ponctuelle forment une seule source d'ombre logique à caches séparés par lumière. Le comportement exact lorsqu'aucune lumière compatible n'est présente (passe vide ou absente) reste un détail à finaliser, sans remettre en cause l'unicité maximale de la passe par vue.
 
 **Sécurité des commandes conditionnelles.** Le snapshot CPU doit encoder suffisamment d'informations immuables pour que l'exécution GPU sur chaque surface reconstruise uniquement les caches invalides **de cette surface**, sans lire des `Contributor` mutables ; aucun changement de cible entre deux lumières n'est implicite. Le passage des textures de profondeur finales à l'éclairage reste une intégration générique à définir, sans ajouter une dépendance d'`EngineView` vers `ShadowMap`.
 
@@ -608,10 +608,12 @@ sequenceDiagram
     S->>L: Enumerer les lumieres demandant des ombres
     S->>S: Filtrer spatialement les PointLight candidates
     S->>S: Calculer intensite x poids / distance camera bornee
-    S->>S: Conserver les retenues eligibles de la vue
-    S->>S: Remplir places libres par score decroissant
-    S->>S: Evincer seulement si nouveau score depasse ancien x (1 + hysteresis)
-    S->>S: Fixer selection et references de cubemaps au snapshot
+    S->>S: Construire cible X premieres candidates par score
+    S->>S: Fixer reference au score de la Xe candidate
+    S->>S: Ajouter scores >= reference x (1 - tolerance), jusqu a Y
+    S->>S: Recuperer retenues eligibles et appliquer hysteresis conservee
+    Note over S: Conflit seuil souple vs historique : priorite a arbitrer
+    S->>S: Ne jamais depasser Y, figer selection dans snapshot
     loop Chaque directionnelle, spot et PointLight retenue
         S->>C: Selectionner les casters admissibles a cette lumiere
         S->>V: Commandes de cible et cache statique si invalide
@@ -648,9 +650,11 @@ flowchart LR
   Registry --> SR["ShadowMap::RenderingSystem"]
   Filter --> SR
   SR --> Score["PointLight : intensite x poids / distance bornee"]
-  Score --> Hysteresis["Hysteresis proportionnelle : conserver retenues si ecart insuffisant"]
-  Hysteresis --> Budget["Budget maximal PointLight par EngineView"]
-  Budget --> RP["Une RenderPass ombres par EngineView"]
+  Score --> Target["Cible X : score de la Xe lumiere"]
+  Target --> Tolerance["Suivantes si score >= reference x (1 - tolerance)"]
+  Tolerance --> Max["Maximum absolu Y"]
+  Max --> Hysteresis["Hysteresis proportionnelle conservee, conflit a arbitrer"]
+  Hysteresis --> RP["Une RenderPass ombres par EngineView"]
   RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
   Checks --> SM["Cache statique individuel de la lumiere"]
   SM -->|"Copie si finale invalide"| FM["Carte finale individuelle de la lumiere"]
@@ -729,29 +733,32 @@ score(candidate) > score(incumbent) * (1 + shadowSelectionHysteresis)
 ```mermaid
 flowchart TD
   Registry["Registry PointLight"] --> Eligible["Actives et ombres demandees"]
-  Eligible --> Relevant["Selection selon influence spatiale pour la vue"]
-  Relevant --> Score["Score : intensite x shadowPriorityWeight / max(distanceCamera, minShadowDistance)"]
-  Score --> Order["Score decroissant, egalites deterministes"]
-  Order --> History["Recuperer selection precedente de cette vue"]
-  History --> Active["Conserver retenues encore eligibles"]
-  Active --> Free["Remplir places libres sans hysteresis"]
-  Free --> Swap{"Candidate > plus faible retenue x (1 + hysteresis) ?"}
-  Swap -->|"Oui"| Replace["Remplacer la moins prioritaire"]
-  Replace --> Swap
-  Swap -->|"Non"| Limit["Fixer au plus budget PointLight"]
-  Limit -->|"Selectionnees"| Cubes["Cubemaps si invalides"]
-  Cubes --> Pass["RenderPass d ombres commune par vue"]
-  Cubes --> Lit["Forward+ eclairage avec ombre valide"]
-  Limit -->|"Ecartees"| Status["Statut hors budget observable"]
-  Status --> Unshadowed["Forward+ eclairage sans ombre"]
-  Off["Ombres desactivees par developpeur"] --> Unshadowed
+  Eligible --> Spatial["Filtrage spatial par EngineView"]
+  Spatial --> Sort["Score intensite x poids / distance bornee, tri decroissant"]
+  Sort --> Target{"X = 0 ?"}
+  Target -->|"Oui"| Empty["Aucune ombre ponctuelle"]
+  Target -->|"Non"| Base["Retenir jusqu a X meilleures"]
+  Base --> Reference{"Au moins X candidates ?"}
+  Reference -->|"Oui"| Threshold["Reference fixe = score de la Xe"]
+  Reference -->|"Non"| Final["Selection actuelle, jamais plus que Y"]
+  Threshold --> Extra["Accepter les suivantes >= reference x (1 - tolerance)"]
+  Extra --> HardMax["Stop a Y, sans effet de chaine"]
+  HardMax --> Hysteresis["Hysteresis proportionnelle maintenue"]
+  Hysteresis -.-> Open["Conflit seuil souple / historique a arbitrer"]
+  Hysteresis --> Final
+  Final --> Cubes["Cubemaps valides des retenues"]
+  Cubes --> Pass["RenderPass ombres commune par vue"]
+  Cubes --> Lit["Forward+ eclairage avec ombre"]
+  Final --> Excluded["Ecartees : statut observable"]
+  Excluded --> NoShadow["Forward+ eclairage sans ombre"]
+  Empty --> NoShadow
 ```
 
 ```mermaid
 flowchart TD
   Point["PointLight demandant des ombres"] --> Score["Score intensite x poids / distance bornee"]
-  Score --> H["Comparer aux retenues avec seuil proportionnel configurable"]
-  H --> Limit["Budget spatial de l EngineView"]
+  Score --> Soft["X cibles puis surplus proches du score de la Xe"]
+  Soft --> Limit["Jamais plus de Y, avec hysteresis conservee"]
   Limit -->|"Retenue"| Range["Culling sphere de portee et casters pertinents"]
   Limit -->|"Hors budget"| LightOnly["Forward+ sans ombres"]
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
