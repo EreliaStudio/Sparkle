@@ -760,7 +760,8 @@ sequenceDiagram
     participant VIEW as EngineView
     participant SNAP as Ancien RenderSnapshot
     participant GPU as Window Surface
-    SEL->>VIEW: Reconciler les PointLight retenues
+    VIEW-->>SEL: Fournir CaptureContext generique de la vue
+    SEL->>SEL: Reconciler les PointLight retenues
     SEL->>SEL: Detecter lumiere sortie de la selection
     SEL->>SEL: Retirer paire statique finale du cache actif
     Note over SNAP,GPU: Ancien snapshot garde handles et generation immuables
@@ -770,7 +771,7 @@ sequenceDiagram
     else Aucun snapshot utilisateur et GPU termine
         GPU->>GPU: Detruire ressources sur contexte approprie
     end
-    VIEW->>SEL: Lumiere re-admise plus tard
+    SEL->>SEL: Capture ulterieure : PointLight re-admise
     SEL->>SEL: Creer nouvelle paire de caches invalides
     SEL->>GPU: Demander reconstruction selon budget de cette image
     alt Budget de reconstruction disponible
