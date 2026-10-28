@@ -23,18 +23,18 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 **Référence dans la spécification :** sections 1, 7.1 et 7.5.
 
-**Situation.** La cible décrit des meshes voxel opaques et translucides, l'éclairage, les ombres, les calculs de profondeur et la composition WBOIT. Ces capacités doivent être **créées dans V0.1.4**, et non supposées déjà présentes. Les commandes et passes actuelles de Sparkle fournissent de la structure, pas un système de scène 3D illuminée.
+**Situation.** La cible décrit des meshes voxel opaques et translucides, l'éclairage, les ombres, les calculs de profondeur et la composition WBOIT. Ces capacités doivent être **créées dans V0.1.4**, et non supposées déjà présentes. Les commandes et passes actuelles de Sparkle fournissent de la structure, pas un système de scène 3D illuminée. **La représentation des caméras et lumières est déjà fixée dans la spécification principale : ce sont des `Component3D` attachés aux `Entity3D`, utilisant leurs `Transform3D` et les Registries par Engine.** Ce point ne doit pas être rediscuté ici ; la sélection et les fonctionnalités concrètes restent ouvertes.
 
 **Questions architecturales :**
 
-1. Quel objet ou sous-système générique détient la **caméra active et ses matrices**, les **lumières** et les ressources de rendu d'une scène ? Comment est-il associé à `Engine`, à un `RenderSnapshot` et à une surface/viewport ?
+1. **Comment choisir la caméra active** pour une fenêtre, un viewport ou un `RenderSnapshot` lorsqu'un même Engine possède plusieurs `CameraComponent` ? Comment sont définies les matrices de projection et les dimensions du viewport, sans réintroduire implicitement une unique caméra globale ?
 2. Quels éclairages sont effectivement inclus dans cette version : directionnels, ponctuels et spots ? Pour lesquels doit-on produire des **ombres** ? Quel est le périmètre initial de l'éclairage des matériaux ?
-3. Quelle responsabilité revient à un moteur/pipeline 3D **générique**, et laquelle revient précisément au `VoxelRenderingSystem` qui lui remet ses géométries, matériaux, transformations et commandes ?
+3. Quelle responsabilité revient à un moteur/pipeline 3D **générique**, et laquelle revient précisément au `VoxelRenderingSystem` qui lui remet ses géométries, matériaux, transformations et commandes ? Qui détient et prépare les ressources GPU d'une scène ?
 4. Un consommateur de rendu 3D **non voxel** doit-il pouvoir utiliser exactement le même éclairage, les mêmes ombres et les mêmes passes dès V0.1.4 ?
 
 **Direction recommandée, non validée.** Définir une infrastructure de scène et de rendu 3D réutilisable par plusieurs producteurs de géométries. Le voxel participe à cette infrastructure sans l'intégrer dans ses classes de données.
 
-**Critère de clôture.** La spécification décrit les responsabilités, les données de caméra/lumières, les interactions avec l'Engine et le parcours des données jusqu'aux shaders. Un schéma sépare explicitement infrastructure graphique commune et adaptation voxel.
+**Critère de clôture.** La représentation `Component3D` est acquise. Il reste à définir la sélection de caméra par cible de rendu, le périmètre concret des lumières et ombres, le propriétaire de la préparation graphique, ainsi que le parcours des données jusqu'aux shaders. Un schéma doit séparer explicitement infrastructure graphique commune et adaptation voxel.
 
 ### P0 — Orchestration des passes, depth, shadow maps et WBOIT
 
