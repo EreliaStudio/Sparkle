@@ -610,6 +610,7 @@ classDiagram
     +detachedOutputPolicy
     +setFallbackTexture(Texture::Handle)
     +setLayers(names)
+    +layerFilter : non configure ou selection explicite
     +size
     +optionalOrder
     +CaptureContext
@@ -838,7 +839,7 @@ sequenceDiagram
     alt Camera liee
       E->>E: capturer EngineView::CaptureContext
       E->>V: creer Builder et initialiser passes GPU
-      E->>E: filtrer les Contributors par layers de la vue
+      E->>E: filtre non configure : tous ; filtre vide : aucun ; sinon intersection non vide
       E->>C: buildViewRenderSnapshot(V, CaptureContext) pour les Contributors admis
       C->>C: pour chaque composant graphique interne : isLayerCompatible(component.layers)
       C->>V: commandes des seuls composants retenus, y compris ombres
@@ -860,7 +861,18 @@ sequenceDiagram
 
 **Filtrage des Contributors par layers — choix de principe confirmé.** Les layers sont des **identifiants textuels** portés par les `EngineView::Contributor` (un ou plusieurs noms de layer ; représentation C++ finale `std::string` ou collection de chaînes à définir). Chaque `EngineView` expose une sélection explicite de layers (API illustrative : `setLayers({"layerA", "layerB"})`). Le rendu reste celui du **RenderingEngine entier**, restreint par ce **filtre d'admission**, et non par une liste de scènes, d'entités ou de Contributors assignés manuellement à la vue. Un Contributor correspondant au filtre est sollicité normalement pour construire le sous-snapshot de cette vue. Un Contributor exclu n'ajoute **aucune commande graphique** à cette vue, **y compris dans ses passes shadow maps** ; un caster situé hors champ caméra mais admis par layers doit néanmoins pouvoir projeter une ombre.
 
-**Sélection et abonnements.** Quand une `EngineView` choisit `{"layerA", "layerB"}`, les Contributors portant un layer correspondant sont **admis automatiquement** ; ceux limités à `"layerC"` sont ignorés. Le filtre correspond à l'**intersection non vide** entre les layers du Contributor et les layers sélectionnés par la vue, sans exiger la présence de tous les noms. **Sans filtre configuré**, la vue conserve le comportement général historique : tous les Contributors du moteur sont admissibles. La signification d'un `setLayers({})` explicite et la convention des Contributors sans layer restent à préciser ; elles ne doivent pas être décidées implicitement par l'implémentation.
+**Sémantique explicite des layers — choix A validé (la dernière décision remplace l'option B proposée précédemment).** Une `EngineView` distingue impérativement **un filtre non configuré** d'**un filtre configuré contenant une liste vide**. `setLayers({})` configure un filtre explicitement **vide**, qui n'admet **aucun Contributor**, même ceux sans layer ; ce n'est jamais un raccourci pour désactiver le filtre. Une `EngineView` nouvellement créée a un filtre **non configuré**, qui admet **tous** les Contributors du RenderingEngine, y compris ceux sans layer. Le moyen public exact de **revenir** à cet état depuis un filtre configuré reste un détail d'API à définir explicitement ; il doit exister sans réinterpréter `setLayers({})` comme « tout accepter ».
+
+Un Contributor (ou composant graphique filtré explicitement dans un RenderingSystem) avec une collection **de layers vide/non définie** n'est compatible **que si la vue n'a aucun filtre configuré**. Il ne représente **pas** un objet global visible dans toutes les vues filtrées. Avec `setLayers({"layerA", "layerB"})`, seuls les Contributors possédant **au moins un layer commun** (intersection non vide) sont admis ; ceux seulement sur `"layerC"` et ceux sans layer sont exclus. La même règle, **sans autre exception**, est appliquée par `CaptureContext::isLayerCompatible(component.layers())` aux composants sélectionnés volontairement par un RenderingSystem. Aucune sélection wildcard implicite, layer par défaut ajouté, héritage des layers de l'Entity ou traitement spécial des composants voxel n'est créé.
+
+| Filtre de l'EngineView | Layers du Contributor/composant | Admis ? |
+| --- | --- | --- |
+| Non configuré | Tous, y compris aucun layer | Oui |
+| `setLayers({})` | Tous, y compris aucun layer | Non |
+| `setLayers({"layerA", "layerB"})` | `{"layerA"}` ou `{"layerB", "layerC"}` | Oui |
+| `setLayers({"layerA", "layerB"})` | `{"layerC"}` ou aucun layer | Non |
+
+L'état **« non configuré »** doit être représenté distinctement de la liste vide dans l'état logique de l'EngineView et **figé distinctement dans chaque `CaptureContext`**. La réconciliation des abonnements compare la sélection résultante au Registry à chaque `refreshRenderSnapshot()` : passer de « tout accepter » à `setLayers({})` désabonne les Contributors et **invalide les cartes statiques et finales** de la vue pour faire disparaître les anciens shadow casters ; le retour à « non configuré » réabonne et invalide à nouveau les cartes. Le filtre vide ne supprime ni l'EngineView, ni ses ressources logiques, ni les passes intrinsèques de vue : **il supprime seulement les contributions des Contributors**. Les RenderSnapshot déjà publiés restent immuables.
 
 **Réconciliation des abonnements lors de chaque capture CPU — choix B validé.** Les `ContractProvider` d'invalidation d'ombres s'articulent avec le filtre : une vue détient **un contrat RAII par Contributor logiquement admissible** au regard du Registry du même RenderingEngine et des layers, indépendamment du fait qu'il émette effectivement un triangle ou qu'il soit visible dans la caméra. **Au début de chaque `RenderingEngine::refreshRenderSnapshot()`**, pour **chaque EngineView, y compris celles dont la caméra est détachée**, Sparkle calcule l'ensemble des Contributors admissibles et le compare aux abonnements déjà détenus par la vue. Les nouveaux entrants sont abonnés ; les sortants sont désabonnés avant de pouvoir être détruits. **Toute modification de cet ensemble invalide conservativement les caches statiques et finaux des lumières de la vue**, afin d'intégrer les nouvelles ombres et d'effacer celles des Contributors retirés, sans exiger d'identifiant stable de groupe ni d'inspection de l'ancien contenu des ombres. Une simple absence temporaire de triangles ou de visibilité depuis la caméra n'entraîne ni désabonnement ni invalidation.
 
@@ -888,20 +900,24 @@ void VoxelRenderingSystem::contribute(
 
 **Responsabilité explicite du développeur.** Le filtre interne **n'élargit pas** le filtre externe : si un `VoxelRenderingSystem` n'appartient à aucun layer admis par la vue, il n'est pas appelé, même si un de ses composants aurait été compatible. Il appartient au développeur de configurer les layers du système pour toutes les vues dans lesquelles il souhaite pouvoir dessiner ses composants, et de filtrer correctement les composants quand le système contribue. Une implémentation qui omet le helper ou émet des commandes inappropriées est une **erreur du RenderingSystem**, pas un cas où Sparkle doit déduire ou corriger implicitement le contenu. De même, une modification de layers d'un composant interne peut changer les ombres **sans modifier la liste des Contributors admis** : le système ou le jeu doit alors déclencher explicitement l'invalidation d'ombres via le `ContractProvider` du Contributor. La réconciliation des abonnements entre EngineView et Contributors ne remplace pas cette notification métier.
 
-**Limites à préciser ultérieurement.** Le comportement du helper pour les layers non définis et les filtres explicitement vides suit la même convention que le filtre externe, convention encore à fixer. Aucun héritage implicite de layer Entity → composant ni surcharge automatique des layers du Contributor par ceux du composant n'est introduit. Les layers ne remplacent pas le culling spatial : un caster admis mais hors frustum caméra peut encore projeter des ombres.
+**Limites déjà fixées.** Le helper applique strictement le choix A : filtre non configuré = tout accepter ; filtre `setLayers({})` = tout exclure ; layers non définis/vides d'un composant = accepté uniquement si le filtre de vue est non configuré. Aucun héritage implicite de layer Entity → composant ni surcharge automatique des layers du Contributor par ceux du composant n'est introduit. Les layers ne remplacent pas le culling spatial : un caster admis mais hors frustum caméra peut encore projeter des ombres.
 
 ```mermaid
 flowchart TD
-  R["RenderingEngine : Registry de Contributors"] --> L["EngineView : filtre setLayers"]
-  L -->|"Intersection des layers"| A["Contributors admis"]
-  L -->|"Aucun layer commun"| X["Contributors exclus"]
+  R["RenderingEngine : Registry de Contributors"] --> F{"Filtre configure ?"}
+  F -->|"Non"| A["Tous les Contributors admis, meme sans layer"]
+  F -->|"Oui"| V{"Liste de layers vide ?"}
+  V -->|"Oui : setLayers({})"| X["Aucun Contributor admis"]
+  V -->|"Non"| I{"Intersection de layers non vide ?"}
+  I -->|"Oui"| A2["Contributors compatibles admis"]
+  I -->|"Non, y compris sans layer"| X
   A --> B["Capture CPU : sous-RenderSnapshot"]
-  A --> C["Contrats RAII d'invalidation"]
+  A2 --> B
+  B --> C["Contrats RAII d'invalidation des admis"]
   C --> S["Shadow maps de cette EngineView"]
-  A --> VS["VoxelRenderingSystem admis"]
-  VS -->|"isLayerCompatible(component.layers)"| VC["Composants graphiques voxel admis"]
-  VC --> P["Passes scène et ombres par vue"]
-  B --> P
+  B --> VS["VoxelRenderingSystem admis"]
+  VS -->|"CaptureContext.isLayerCompatible : meme regle"| VC["Composants graphiques voxel admis"]
+  VC --> P["Passes scene et ombres par vue"]
 ```
 
 **Initialisation des passes et transitions GPU.** Sparkle emploie déjà ce principe pour `RootWidget` : les passes `sparkle.Background`, `sparkle.Overlay`, `sparkle.Popup` et `sparkle.Tooltip` reçoivent des commandes de viewport, scissor ou clear avant les dessins. De même, `RenderingEngine` ajoute les commandes d'état en **début de chaque passe standard de chaque vue**, puis les Contributors enrichissent ces passes. Les phases shadow, opaque, WBOIT et composition établissent chacune leurs états d'entrée (framebuffer, viewport, scissor, blending, profondeur, culling et masques d'écriture), sans supposer ceux de la phase précédente. Les clear tiennent compte des masques d'écriture actifs.
