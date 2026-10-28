@@ -616,9 +616,12 @@ sequenceDiagram
     Note over S: Tolerance prime, X premieres obligatoires, total <= Y
     S->>S: Figer demandes des vues et scores dans snapshot
     Note over S,V: Plan de reconstruction par image et surface
-    loop Pour chaque Window Surface
-        S->>S: Rassembler toutes les demandes invalides des vues de cette image
-        S->>S: Classer par priorite decroissante et attribuer au plus N unites
+    loop Chaque image sur chaque Window Surface
+        S->>S: Rassembler demandes invalides de toutes les vues de cette image
+        S->>S: Trier par score brut decroissant, egalites stables
+        Note over S: Aucun bonus d attente, aucune garantie de delai
+        S->>S: Autoriser au plus N reconstructions
+        S->>S: Demandes differees invalides, a reevaluer a la prochaine image
     end
     loop Chaque directionnelle, spot et PointLight retenue
         S->>C: Selectionner les casters admissibles
@@ -669,7 +672,7 @@ flowchart LR
   Max --> RP["Une RenderPass ombres par EngineView"]
   Max --> Pending["Demandes de reconstruction PointLight des vues"]
   Pending --> SurfaceBudget["Budget global par image et Window Surface"]
-  SurfaceBudget --> Priority["Plan des reconstructions par score prioritaire"]
+  SurfaceBudget --> Priority["Score brut decroissant seulement, sans bonus d attente"]
   Priority --> RP
   RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
   Checks --> SM["Cache statique individuel de la lumiere"]
@@ -753,9 +756,13 @@ score(candidate) > score(incumbent) * (1 + shadowSelectionHysteresis)
 
 **Unité atomique de reconstruction.** Une unité du budget correspond à **une paire logique statique/finale pour une combinaison (EngineView, PointLight) sur la surface**, lorsqu'au moins une carte doit être mise à jour. Si seule la finale est invalide, la reconstruction de la finale et ses six faces coûte **une unité** ; si la statique et la finale sont invalides, reconstruire la statique, copier chaque face puis reconstruire la finale constitue **une unique unité**. Les **six faces** ne sont pas comptées individuellement et aucune carte finale **partiellement remise à jour** ne peut être publiée comme valide. Une paire entièrement valide ne coûte **aucune unité** et sa shadow map demeure disponible, même si le budget de reconstructions est épuisé. Les images où le budget vaut zéro peuvent donc continuer à afficher **les ombres déjà valides** sans aucune reconstruction.
 
-**Priorisation et planification multi-vues.** Le système considère uniquement les `PointLight` **déjà retenues** par le budget souple propre à chaque vue. Il examine leur validité **spécifique à la surface** et classe **les reconstructions nécessaires par le score de priorité brut validé** (`intensity * shadowPriorityWeight / max(distanceCamera, minShadowDistance)`), **décroissant**. Pour un même score, départager de façon déterministe avec l'identité stable de la vue et de la lumière, jamais selon l'ordre accidentel du Registry. Afin de respecter cette priorité **à l'échelle de la surface**, les demandes de toutes les vues qui seront dessinées dans l'image doivent être considérées avant de distribuer les unités, même si les vues sont ensuite exécutées dans leur ordre déjà validé. L'orchestration d'ombres utilise les **captures immuables de l'image** et l'état de ressources GPU de la surface, sans parcourir des Entities mutables pendant le rendu et **sans changer l'ordre des vues ni introduire un ordonnanceur de passes général**. Une même paire (vue, lumière, surface) ne consomme pas deux unités lors d'exécutions répétées dans l'image si elle a déjà été actualisée. Les détails du plan d'exécution et des barrières de ressources entre vues et snapshots restent à préciser. **Les priorités inter-vues sont donc comparées numériquement à partir du score propre à la caméra de chaque vue** ; une future politique de partage équitable entre vues constituerait une nouvelle décision, non présumée ici.
+**Priorisation stricte, sans vieillissement — choix A validé.** Le système considère uniquement les `PointLight` **déjà retenues** par le budget souple propre à chaque vue. Il examine leur validité **spécifique à la surface** et classe **toutes les reconstructions nécessaires par le score brut de priorité déjà validé** (`intensity * shadowPriorityWeight / max(distanceCamera, minShadowDistance)`), **strictement décroissant**, pour chaque image et chaque surface. Pour un même score, le départage est **déterministe** par identité stable de la vue puis de la lumière (ou clef équivalente), jamais selon l'ordre accidentel du Registry. **Aucun bonus lié à l'attente**, aucune ancienneté de demande, priorité croissante avec les frames différées, rotation round-robin, quota de rattrapage ni garantie de délai maximal de reconstruction : une demande moins prioritaire peut légitimement **rester différée indéfiniment** si des demandes plus prioritaires occupent le budget à chaque image. Ce comportement est voulu et observable, sans changement du score utilisé pour choisir les lumières ombrées par `EngineView`.
 
-**Règle anti-obsolescence.** Si une `PointLight` est sélectionnée et sa paire de cubemaps est **valide pour les générations du snapshot et de la surface**, elle projette ses ombres sans consommer de reconstruction. Si l'une des cartes requises est **invalide** et que sa demande n'est **pas retenue dans le budget de l'image**, elle continue d'éclairer par Forward+ **sans aucune ombre** pour cette vue et cette surface pendant cette image. **Ne jamais échantillonner une ancienne cubemap simplement parce qu'elle est encore allouée.** Si la reconstruction est autorisée, les sorties ne deviennent utilisables qu'une fois la chaîne statique/finale cohérente achevée. Les demandes non satisfaites restent invalides et sont réévaluées à l'image suivante selon leur score actualisé : pas de publication de texture périmée ni de travail GPU masqué. Les diagnostics distinguent `hors sélection X/Y/epsilon`, `hystérésis`, et `retenue mais reconstruction différée faute de budget GPU` ; éviter tout journal répétitif non demandé.
+**Réévaluation à chaque image.** Les demandes dont les caches restent invalides et qui ont été différées sont **réévaluées à la prochaine image réellement rendue sur cette surface**, avec le score de cette image et la nouvelle validité de leurs caches ; aucune file FIFO ni compteur d'attente persistants ne sont nécessaires. Les lumières désormais valides n'entrent plus dans la liste de reconstructions ; celles dont l'intensité, le poids ou la distance caméra ont changé peuvent changer de rang immédiatement. La liste des demandes de **toutes les vues dessinées sur cette surface** est classée **avant** d'accorder les unités du budget commun, y compris si une vue à plus haute priorité est rendue plus tard dans l'ordre des vues établi. Le plan utilise les captures immuables et l'état de ressources propre à la surface, **sans modifier l'ordre des vues ni introduire un ordonnanceur de passes général**, sans accéder aux Entities mutables sur le thread GPU. Une paire (vue, lumière, surface) reconstruite une fois dans l'image ne consomme pas deux unités lors de son éventuelle réexécution. Les détails de synchronisation inter-vues et inter-snapshots restent à préciser, mais **aucune équité implicite entre vues** ne doit renverser le score brut. La même lumière peut être prioritaire pour une vue et moins prioritaire pour une autre en raison de leurs caméras distinctes.
+
+**Non-sélection et diagnostic.** Après répartition des unités, une demande dont la cubemap est toujours invalide **éclaire sans ombres** pendant cette image, ne consomme aucune unité et reste candidate au rendu suivant si elle est toujours sélectionnée. L'outil de diagnostic du `ShadowMap::RenderingSystem` peut distinguer `reconstruction différée pour priorité inférieure` d'une exclusion du budget X/Y/tolérance, sans produire de journaux répétitifs par image. Aucune lecture d'une cubemap invalidée n'est tolérée, même après une très longue attente. Les spots et directionnelles ne sont pas concernés par ce budget de reconstructions ponctuelles.
+
+**Règle anti-obsolescence.** Si une `PointLight` est sélectionnée et sa paire de cubemaps est **valide pour les générations du snapshot et de la surface**, elle projette ses ombres sans consommer de reconstruction. Si l'une des cartes requises est **invalide** et que sa demande n'est **pas retenue dans le budget de l'image**, elle continue d'éclairer par Forward+ **sans aucune ombre** pour cette vue et cette surface pendant cette image. **Ne jamais échantillonner une ancienne cubemap simplement parce qu'elle est encore allouée.** Si la reconstruction est autorisée, les sorties ne deviennent utilisables qu'une fois la chaîne statique/finale cohérente achevée. Les demandes non satisfaites restent invalides et sont réévaluées à l'image suivante selon leur **score brut actualisé, sans bonus d'attente ni date limite de traitement** : pas de publication de texture périmée ni de travail GPU masqué. Les diagnostics distinguent `hors sélection X/Y/epsilon`, `hystérésis`, et `retenue mais reconstruction différée faute de budget GPU` ; éviter tout journal répétitif non demandé.
 
 **Autres lumières et sécurité d'exécution.** Les ombres des **spots et directionnelles** suivent leur politique de cache déjà établie et ne consomment pas les unités du budget réservé aux cubemaps ponctuelles. Le budget est consommé **au rendu effectif d'une image par surface**, pas lors de `refreshRenderSnapshot()`, avec génération/validité vérifiées à l'exécution GPU sur la surface, tout en conservant les captures et les handles des `RenderSnapshot` immuables. Les snapshots anciens encore en vol doivent rester exécutables sans état mutable de gameplay ni altération des ressources qu'ils référencent : réutilisation de caches obsolètes, recomptage abusif d'une même paire et état de budget partagé par erreur entre surfaces sont interdits. Le nombre de faces actualisées par unité n'est pas un paramètre supplémentaire de cette décision.
 
@@ -782,9 +789,10 @@ flowchart TD
   Hard --> Validity{"Cubemaps valides sur cette surface ?"}
   Validity -->|"Oui"| Cubes["Reutiliser cubemap sans budget GPU"]
   Validity -->|"Non"| Requests["Demandes invalides de toutes les vues"]
-  Requests --> Rebuild["Au plus N reconstructions par image et surface, tri par score"]
+  Requests --> Rebuild["Score brut decroissant, sans vieillissement : max N par image et surface"]
   Rebuild -->|"Autorisee"| CubesReady["Reconstruire statique et finale atomiquement si necessaire"]
-  Rebuild -->|"Differee"| NoShadow["Forward+ sans ombre, jamais de carte perimee"]
+  Rebuild -->|"Differee"| Pending["Reste invalide : reevaluer image suivante sans bonus"]
+  Pending --> NoShadow["Forward+ sans ombre, jamais de carte perimee"]
   Cubes --> Lit["Forward+ avec ombre"]
   CubesReady --> Lit
   Hard --> Excluded["Hors budget de selection : raison observable"]
@@ -801,7 +809,7 @@ flowchart TD
   Limit -->|"Retenue et valide"| Available["Reutiliser cubemap : cout nul"]
   Limit -->|"Retenue et invalide"| Surface["Budget de reconstruction par image et surface"]
   Surface -->|"Autorisee par priorite"| Range["Culling sphere de portee et casters pertinents"]
-  Surface -->|"Differee"| LightOnly["Forward+ sans ombres"]
+  Surface -->|"Differee, sans bonus futur"| LightOnly["Forward+ sans ombres"]
   Limit -->|"Non retenue"| LightOnly
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
   Available --> Forward["Forward+ : echantillonnage ombre ponctuelle"]
