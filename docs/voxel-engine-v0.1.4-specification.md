@@ -575,7 +575,11 @@ flowchart LR
   P --> V["Commandes voxel et non voxel"]
 ```
 
-**Cette décision fixe la représentation et le rattachement des caméras et lumières, pas leur politique de sélection.** Le choix d'une caméra pour un viewport ou un RenderSnapshot, les variantes de projection à exposer, les types de lumières, leurs capacités d'ombre et l'orchestration des passes restent à préciser. Aucune caméra « principale » globale, aucun registre de caméras parallèle, aucune classe `CameraHolder3D` et aucun conteneur `Scene3D` distinct ne sont introduits implicitement par ce choix.
+**Sélection explicite par viewport :** chaque **vue ou viewport de rendu 3D** choisit explicitement **une `CameraComponent` précise**, appartenant à l'Engine qu'elle affiche. Il n'existe **aucune caméra principale implicite par Engine**, aucun recours automatique à la première caméra disponible et aucune sélection par une valeur globale. Plusieurs viewports peuvent afficher le même Engine avec **des caméras distinctes et simultanées** ; une même caméra peut aussi être sélectionnée par plusieurs vues si l'application le souhaite. Le point d'association est la configuration de la vue 3D et **non** le `VoxelRenderingSystem`, les Models ou une autre caméra.
+
+Le pipeline graphique prépare pour **chaque vue** les matrices de vue issues du `Transform3D` de sa caméra sélectionnée et la projection adaptée aux paramètres de celle-ci et aux dimensions **de ce viewport** ; il capture les valeurs nécessaires dans les commandes/`RenderSnapshot`, sans relire la caméra mutable lors de leur exécution. Cette exigence concerne également les vues non voxels et n'impose pas la création d'une nouvelle classe publique nommée `Viewport3D` : l'interface concrète doit s'intégrer aux mécanismes de viewport, `RenderPass` et `RenderSnapshot` déjà fournis par Sparkle, complétés au besoin par l'infrastructure de rendu 3D de cette version.
+
+**Restent à concevoir :** les projections à proposer, l'API exacte de sélection et le comportement en cas de caméra absente/détruite, les catégories de lumières, leurs capacités d'ombre et l'orchestration des passes. Le modèle n'introduit pas de registre parallèle, de `CameraHolder3D` ni de conteneur `Scene3D` distinct pour dupliquer les composants de l'Engine.
 
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
