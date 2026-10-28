@@ -53,6 +53,9 @@ flowchart LR
     Views -->|"CaptureContext generique"| ShadowSys
     Sys -->|"Commandes visuelles uniquement"| ViewSnap
     ShadowSys -->|"Une passe ombres : toutes les lumieres compatibles"| ViewSnap
+    LightCull["Forward+ : culling GPU par tiles ou clusters"]
+    Views -->|"Capture des lumieres"| LightCull
+    LightCull -->|"Listes pertinentes pour dessin visuel"| Sys
     Slot --> Window --> GPU
   end
   Model --> Assembly
@@ -1078,9 +1081,29 @@ Une association compatible emploie au plus **un atlas `albedo` par mesh/passe**,
 
 ### 7.5 Pipeline opaque, translucence et éclairage
 
-**Architecture retenue : Forward Rendering.** Le rendu 3D générique calcule l'éclairage **directement pendant le dessin des surfaces dans leurs shaders**, à partir des données des lumières de l'Engine et, pour les catégories autorisées, des ressources d'ombres correspondantes. Il ne requiert pas de passe de remplissage d'un **G-buffer** ni d'une passe différée de calcul de l'éclairage. L'infrastructure graphique n'impose pas non plus d'étape de classification des lumières par tuiles ou clusters de type Forward+ dans cette version. Les paramètres de lumière nécessaires sont préparés pour les commandes de dessin ou leur environnement de rendu ; les structures GPU et les limites quantitatives restent à concevoir.
+**Architecture retenue : Forward+ — choix B validé.** Le rendu 3D générique conserve le *Forward shading* : l'éclairage est calculé dans les shaders de chaque surface opaque ou translucide, **sans G-buffer** ni éclairage différé. En revanche, une **étape GPU de sélection des lumières par tiles ou clusters** prépare, pour chaque vue, des listes de sources lumineuses pertinentes. Les shaders ne parcourent plus systématiquement toutes les lumières de l'Engine pour chaque fragment. La forme définitive (*tiled Forward+* ou *clustered Forward*), la dimension des zones et les structures de listes restent à préciser : **la décision B valide la sélection GPU**, sans choisir prématurément le découpage.
 
-La passe **opaque** calcule la couleur éclairée directement, avec les tests de profondeur appropriés. La transparence reste un traitement **WBOIT distinct** : les shaders des surfaces translucides calculent eux aussi leur couleur éclairée au moment de leur dessin, puis l'écrivent dans les buffers d'accumulation/révélation prévus par le WBOIT avant la composition finale.
+**Culling de l'éclairage.** Les lumières du Registry sont capturées sous forme de données **CPU immuables** (positions/directions, portée, cône, intensité et activation). Le classement GPU restreint les lumières locales : **ponctuelles** (volume d'influence/portée), **spots** (volume de cône/portée). Les **directionnelles** sont des contributions potentiellement globales, sans intersection locale inutile. Les buffers GPU de listes et d'indices des sources sélectionnées sont ensuite consommés par les shaders opaques et translucides. **Ce culling de lumières pour l'éclairage est distinct du culling des `ShadowMap::Contributor` effectué par `ShadowMap::RenderingSystem` pour fabriquer les ombres.** Sélectionner une lumière pour un fragment n'impose ni shadow map ni dessin de caster.
+
+**Orchestration et ressources.** Dans chaque sous-snapshot d'`EngineView`, la préparation des données de lumière et la classification GPU des tiles/clusters sont programmées **avant les dessins qui utilisent ces listes**, avec `RenderCommand`/passes génériques ordonnés et barrières mémoire GPU appropriées. Les ressources de sélection sont logiques dans les snapshots et réalisées **par `Window::Surface`** dans sa `GPUResourceCollection` ; les commandes demeurent réentrantes entre surfaces et ne lisent aucun objet mutable du moteur au moment GPU. Le partage de profondeur et les décisions existantes sur les caches d'ombres restent indépendants.
+
+**Compatibilité WBOIT.** La sélection des lumières doit couvrir **les fragments translucides**, même lorsqu'ils sont devant ou derrière la première surface opaque : un culling fondé uniquement sur la plage des profondeurs opaques ne doit jamais perdre des lumières nécessaires à la transparence. Les shaders translucides utilisent eux aussi les listes Forward+, dans **l'unique passe géométrique WBOIT** prévue et sans nouveau dessin de translucides. Les ressources GPU doivent avoir une politique explicite pour les tiles/clusters contenant trop de lumières ; aucune source ne doit disparaître silencieusement lors d'un dépassement.
+
+```mermaid
+flowchart TD
+  Registry["Registry des lumieres"] --> Capture["Capture CPU : donnees lumineuses immuables"]
+  Capture --> GPU["GPU : culling Forward+ par tiles ou clusters"]
+  GPU --> Lists["Listes de lumieres pertinentes / ressources par surface"]
+  Lists --> Opaque["Shaders opaques Forward+"]
+  Lists --> WBOIT["Shaders translucides WBOIT Forward+"]
+  Shadow["ShadowMap::RenderingSystem"] -->|"Culling independant des casters"| Maps["Cartes d ombres propres a chaque lumiere"]
+  Maps --> Opaque
+  Maps --> WBOIT
+  Opaque --> Compose["Composition scene / WBOIT"]
+  WBOIT --> Compose
+```
+
+La passe **opaque** calcule la couleur éclairée directement à partir des listes **Forward+** pertinentes, avec les tests de profondeur appropriés. La transparence reste un traitement **WBOIT distinct** : les shaders translucides consultent également leurs listes **Forward+ valides**, puis écrivent la couleur éclairée dans les buffers d'accumulation/révélation prévus avant la composition finale.
 
 **WBOIT — architecture MRT validée (choix A).** Pour chaque `EngineView` rendue, la géométrie translucide est parcourue **une seule fois dans une passe de dessin translucide**. Les fragments de cette passe alimentent **simultanément deux attachments couleur (Multiple Render Targets)** du framebuffer logique de la vue : l'un pour **l'accumulation pondérée** (couleur et poids), l'autre pour la **révélation** (transmittance résiduelle). La passe utilise un **blending indépendant par attachment**, configuré explicitement avec les `BlendRenderCommand` typées prévues dans la section 7.1. Les attachments sont initialisés avec leurs valeurs de clear appropriées avant tout dessin translucide. Une **passe distincte de composition** combine ensuite opaque, accumulation et révélation pour produire la texture finale. Il n'existe pas en V0.1.4 de seconde passe redessinant la même géométrie pour la révélation, ni de stratégie alternative configurable entre MRT et double dessin.
 
@@ -1160,20 +1183,22 @@ flowchart LR
   StaticCasters["Opaque statique"] --> StaticShadow
   StaticShadow -->|"Copie si invalidation"| FinalShadow
   DynamicCasters["Opaque dynamique"] -->|"Dessin après copie"| FinalShadow
-  S --> Opaque["Passes Forward opaque + depth partagé"]
+  S --> Cull["Forward+ : culling GPU des lumieres"]
+  Cull --> Lists["Listes pertinentes par tile / cluster"]
+  Lists --> Opaque["Passes Forward+ opaques + depth partage"]
   FinalShadow --> Opaque
-  Opaque -->|"Même depth : test ON / write OFF"| Trans["Une passe translucide MRT : accumulation + révélation"]
+  Opaque -->|"Meme depth : test ON / write OFF"| Trans["Une passe translucide WBOIT Forward+ : accumulation + revelation"]
+  Lists --> Trans
   FinalShadow -->|"Reçoit les ombres, ne les projette pas"| Trans
   Opaque --> Compose["Passe composition : opaque + WBOIT"]
   Trans --> Compose
   Compose --> Tex["Texture finale : instance propre à chaque surface"]
   Tex --> Main["EngineWidget : Role Drawing"]
   Tex --> Other["Material : EngineView empruntée"]
-  L["Éclairage générique : composants Light"] --> Opaque
-  L --> Trans
+  L["Registry lumieres : capture CPU"] --> Cull
 ```
 
-**L'éclairage, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque visible participera au rendu opaque/profondeur avec éclairage **sans générer de commandes de shadow maps** ; le `ShadowMap::Contributor::MeshFilter` fournira séparément la géométrie de projection au `ShadowMap::RenderingSystem` ; le mesh translucide visible passera par **une seule passe géométrique MRT Weighted Blended OIT à deux attachments et blending indépendant**, puis par une **passe de composition**. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'orchestration utilise les RenderPass ordonnées déjà disponibles, avec une éventuelle passe `.init` avant une passe de dessin ; le nom ne détermine jamais leur ordre. Les clés exactes de passes et les valeurs des nouvelles commandes d'état GPU typées, les sources lumineuses, **les paramètres numériques des deux attachments MRT WBOIT aux formats fixes `RGBA16F` + `R8`** et l'équation de composition restent à préciser dans cette architecture commune (section 7.1). Les cibles sont décrites par les framebuffers logiques des EngineView et réalisées, via GPUResourceCollection, en instances propres à chaque Window::Surface ; leur résolution n'est modifiée que par le jeu. Les ombres sont disponibles uniquement pour les lumières directionnelles et spots ; les lumières ponctuelles éclairent sans créer de passe d'ombres. Les ombres directionnelles utilisent **une projection de lumière par vue/lumière**, réalisée par **un cache de profondeur statique et une carte de profondeur finale** (alimentée par copie de la statique puis rendu dynamique si invalidée) ; il n'y a pas de Cascaded Shadow Maps dans cette version et aucune mutualisation des cartes entre vues n'est requise en V0.1.4. **Seules les surfaces opaques alimentent ces shadow maps ; les translucides en reçoivent les effets lors de leur éclairage Forward mais ne projettent aucune ombre.**
+**L'éclairage Forward+ avec culling GPU par tiles/clusters, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque visible participera au rendu opaque/profondeur avec éclairage **sans générer de commandes de shadow maps** ; le `ShadowMap::Contributor::MeshFilter` fournira séparément la géométrie de projection au `ShadowMap::RenderingSystem` ; le mesh translucide visible passera par **une seule passe géométrique MRT Weighted Blended OIT à deux attachments et blending indépendant**, puis par une **passe de composition**. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'orchestration utilise les RenderPass ordonnées déjà disponibles, avec une éventuelle passe `.init` avant une passe de dessin ; le nom ne détermine jamais leur ordre. Les clés exactes de passes et les valeurs des nouvelles commandes d'état GPU typées, les sources lumineuses, **les paramètres numériques des deux attachments MRT WBOIT aux formats fixes `RGBA16F` + `R8`** et l'équation de composition restent à préciser dans cette architecture commune (section 7.1). Les cibles sont décrites par les framebuffers logiques des EngineView et réalisées, via GPUResourceCollection, en instances propres à chaque Window::Surface ; leur résolution n'est modifiée que par le jeu. Les ombres sont disponibles uniquement pour les lumières directionnelles et spots ; les lumières ponctuelles éclairent sans créer de passe d'ombres. Les ombres directionnelles utilisent **une projection de lumière par vue/lumière**, réalisée par **un cache de profondeur statique et une carte de profondeur finale** (alimentée par copie de la statique puis rendu dynamique si invalidée) ; il n'y a pas de Cascaded Shadow Maps dans cette version et aucune mutualisation des cartes entre vues n'est requise en V0.1.4. **Seules les surfaces opaques alimentent ces shadow maps ; les translucides en reçoivent les effets lors de leur éclairage Forward mais ne projettent aucune ombre.**
 
 L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compris ses usages spécifiques du cutout ; ce document ne change pas son contrat général.
 
