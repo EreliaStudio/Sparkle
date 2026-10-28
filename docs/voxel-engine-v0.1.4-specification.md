@@ -608,12 +608,13 @@ sequenceDiagram
     S->>L: Enumerer les lumieres demandant des ombres
     S->>S: Filtrer spatialement les PointLight candidates
     S->>S: Calculer intensite x poids / distance camera bornee
-    S->>S: Construire cible X premieres candidates par score
-    S->>S: Fixer reference au score de la Xe candidate
-    S->>S: Ajouter scores >= reference x (1 - tolerance), jusqu a Y
-    S->>S: Recuperer retenues eligibles et appliquer hysteresis conservee
-    Note over S: Conflit seuil souple vs historique : priorite a arbitrer
-    S->>S: Ne jamais depasser Y, figer selection dans snapshot
+    S->>S: Trier scores et reserver le socle des X meilleures
+    S->>S: Fixer PX au score de la Xe et qualifier les surplus par tolerance
+    S->>S: Retirer anciennes retenues sorties du socle ET de la tolerance
+    S->>S: Conserver surplus historiques admissibles, remplir places libres
+    S->>S: Evincer surplus seulement si nouveau > retenu x (1 + hysteresis)
+    Note over S: Tolerance prime, X premieres obligatoires, total <= Y
+    S->>S: Figer ensemble et references cubemaps dans snapshot
     loop Chaque directionnelle, spot et PointLight retenue
         S->>C: Selectionner les casters admissibles a cette lumiere
         S->>V: Commandes de cible et cache statique si invalide
@@ -651,10 +652,11 @@ flowchart LR
   Filter --> SR
   SR --> Score["PointLight : intensite x poids / distance bornee"]
   Score --> Target["Cible X : score de la Xe lumiere"]
-  Target --> Tolerance["Suivantes si score >= reference x (1 - tolerance)"]
-  Tolerance --> Max["Maximum absolu Y"]
-  Max --> Hysteresis["Hysteresis proportionnelle conservee, conflit a arbitrer"]
-  Hysteresis --> RP["Une RenderPass ombres par EngineView"]
+  Target --> Tolerance["Admissibles en surplus si score >= PX x (1 - tolerance)"]
+  Tolerance --> Remove["Ecarter anciennes retenues hors tolerance"]
+  Remove --> Keep["Hysteresis seulement entre surplus admissibles"]
+  Keep --> Max["Maximum absolu Y, socle X obligatoire"]
+  Max --> RP["Une RenderPass ombres par EngineView"]
   RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
   Checks --> SM["Cache statique individuel de la lumiere"]
   SM -->|"Copie si finale invalide"| FM["Carte finale individuelle de la lumiere"]
@@ -735,33 +737,38 @@ score(candidate) > score(incumbent) * (1 + shadowSelectionHysteresis)
 
 ```mermaid
 flowchart TD
-  Registry["Registry PointLight"] --> Eligible["Actives et ombres demandees"]
-  Eligible --> Spatial["Filtrage spatial par EngineView"]
-  Spatial --> Sort["Score intensite x poids / distance bornee, tri decroissant"]
-  Sort --> Target{"X = 0 ?"}
-  Target -->|"Oui"| Empty["Aucune ombre ponctuelle"]
-  Target -->|"Non"| Base["Retenir jusqu a X meilleures"]
-  Base --> Reference{"Au moins X candidates ?"}
-  Reference -->|"Oui"| Threshold["Reference fixe = score de la Xe"]
-  Reference -->|"Non"| Final["Selection actuelle, jamais plus que Y"]
-  Threshold --> Extra["Accepter les suivantes >= reference x (1 - tolerance)"]
-  Extra --> HardMax["Stop a Y, sans effet de chaine"]
-  HardMax --> Hysteresis["Hysteresis proportionnelle maintenue"]
-  Hysteresis -.-> Open["Conflit seuil souple / historique a arbitrer"]
-  Hysteresis --> Final
-  Final --> Cubes["Cubemaps valides des retenues"]
-  Cubes --> Pass["RenderPass ombres commune par vue"]
-  Cubes --> Lit["Forward+ eclairage avec ombre"]
-  Final --> Excluded["Ecartees : statut observable"]
-  Excluded --> NoShadow["Forward+ eclairage sans ombre"]
+  Registry["Registry PointLight"] --> Eligible["Actives, ombres demandees, spatialement pertinentes"]
+  Eligible --> Sort["Trier par score brut decroissant"]
+  Sort --> Zero{"X = 0 ?"}
+  Zero -->|"Oui"| Empty["Aucune ombre ponctuelle"]
+  Zero -->|"Non"| Baseline["Socle : min(X,n) premieres obligatoires"]
+  Baseline --> HaveX{"n >= X ?"}
+  HaveX -->|"Non"| Selection["Ensemble retenu, total <= Y"]
+  HaveX -->|"Oui"| Threshold["PX = score de la Xe dans le classement brut"]
+  Threshold --> Candidates["Surplus admissibles si score >= PX x (1 - tolerance)"]
+  Candidates --> History["Retirer historiques passes sous seuil"]
+  History --> Slots["Garder surplus historiques admissibles puis remplir places libres"]
+  Slots --> Full{"Places supplementaires pleines ?"}
+  Full -->|"Non"| Selection
+  Full -->|"Oui"| Swap{"Nouvelle surplus > plus faible retenue x (1 + hysteresis) ?"}
+  Swap -->|"Oui"| Replace["Remplacer une retenue supplementaire, pas le socle"]
+  Replace --> Full
+  Swap -->|"Non"| Selection
+  Selection --> Hard["Max Y jamais depasse"]
+  Hard --> Cubes["Cubemaps valides"]
+  Cubes --> Pass["RenderPass ombres unique par vue"]
+  Cubes --> Lit["Forward+ avec ombre"]
+  Hard --> Excluded["Ecartees : raison observable"]
+  Excluded --> NoShadow["Forward+ sans ombre"]
   Empty --> NoShadow
 ```
 
 ```mermaid
 flowchart TD
   Point["PointLight demandant des ombres"] --> Score["Score intensite x poids / distance bornee"]
-  Score --> Soft["X cibles puis surplus proches du score de la Xe"]
-  Soft --> Limit["Jamais plus de Y, avec hysteresis conservee"]
+  Score --> Soft["X premieres garanties, surplus seulement dans tolerance de PX"]
+  Soft --> Hist["Retirer retenues historiques hors tolerance"]
+  Hist --> Limit["Hysteresis entre surplus admissibles, maximum Y"]
   Limit -->|"Retenue"| Range["Culling sphere de portee et casters pertinents"]
   Limit -->|"Hors budget"| LightOnly["Forward+ sans ombres"]
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
