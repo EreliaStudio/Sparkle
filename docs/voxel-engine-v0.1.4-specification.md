@@ -1041,7 +1041,7 @@ flowchart TD
   Sys -.-> Scope["Propagation de None aux enfants : a arbitrer"]
   Static --> Final["Copie vers carte finale"]
   Dynamic --> Final
-``
+```
 
 **Cache d'ombres statiques et carte finale — choix B validé.** Pour chaque combinaison **`EngineView` × lumière projetant des ombres**, l'infrastructure graphique distingue deux ressources de profondeur logiques : une **shadow map statique mise en cache** (contribution des *shadow casters* opaques classés statiques), et une **shadow map finale** utilisée par l'éclairage Forward. Les géométries opaques classées dynamiques ne sont pas dessinées dans le cache statique. Ces deux catégories sont des **politiques de mise à jour des ombres**, et non une nouvelle classification de transparence ; les translucides ne projettent toujours pas d'ombres. **La classification dépend du `ShadowMode` propre au Contributor ou composant graphique ; `Static` sur un RenderingSystem ne reclassifie pas ses enfants et la portée de `None` sur eux reste à arbitrer**, selon le contrat ci-dessus ; **la demande d'invalidation transite d'abord par le `ContractProvider` du Contributor vers ses `EngineView` abonnées, puis par le `ContractProvider` de chaque vue vers ses cartes d'ombres**. Aucun identifiant persistant par groupe n'est requis. La portée exacte des événements, les règles d'appartenance vue/Contributor et le suivi des générations restent à préciser ; aucune détection implicite du mouvement.
 
