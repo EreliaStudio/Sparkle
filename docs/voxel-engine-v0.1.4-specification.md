@@ -1,1544 +1,663 @@
-# Sparkle V0.1.4 — Voxel Engine : architecture et contrats C++
+# Sparkle V0.1.4 — Architecture cible du moteur voxel
 
-> **CONCEPTION EN COURS — NE PAS IMPLÉMENTER NI MERGER.** Ce document Markdown est le cahier des charges vivant de la PR #37 et la future référence pour une seconde IA. Le but est de valider les noms de classes, leur interface, leurs dépendances, leurs algorithmes et leurs TU **avant de coder**. Les signatures ci-dessous sont des **propositions d'interface, non encore validées ni garanties compilables**. Les mécanismes approuvés sont explicitement distingués des détails encore ouverts.
+> **Spécification d'architecture, préalable à l'implémentation.** Ce document décrit le comportement et les responsabilités attendus de la bibliothèque, indépendamment de l'ordre dans lequel les décisions ont été prises. Les exemples C++ représentent l'intention de l'API ; une signature illustrative ne constitue pas, à elle seule, une interface définitive. Aucune implémentation de ces nouveaux modules n'est présumée existante.
 >
-> Branche `V0.1.4` initialement créée depuis `main` avec un commit vide. Ce fichier Markdown de spécification a été ajouté à la demande du mainteneur pour éviter la limite de taille de la description de PR. **Aucun code implémenté.**
+> **Objectif :** offrir au sein de Sparkle une infrastructure voxel publique, générique, utilisable pour des objets, personnages articulés et volumes de cellules, sans introduire de dépendance à un jeu, à un terrain, à Erelia ou à un catalogue global.
 
-## 1 — Scénario d'utilisation visé
+## 1. Vue d'ensemble
 
-> **Règles normatives révisées VXL-093 à VXL-096.** Les anciens passages évoquant une classification des slots en trois catégories (opaque/cutout/translucide), un contrat d'occlusion séparé ou une compatibilité des matériaux fondée sur ces catégories sont **supplantés** par ces décisions. En cas de contradiction dans l'historique VXL-046/048/078 à VXL-093, les nouvelles règles VXL-093 à VXL-096 prévalent ; les invariants géométriques antérieurs (winding, union polygonale, cache, copies immuables, etc.) demeurent. Aucune implémentation n'est autorisée par le présent texte.
+Un programme décrit des géométries élémentaires indépendantes de toute texture, les assemble en cellules d'un volume, puis construit un modèle maillé. Il choisit séparément les matériaux à utiliser et les associations de palettes. Les modèles peuvent être affichés directement ou composés en hiérarchies articulées. Le système de rendu rassemble les occurrences actives pour créer des commandes graphiques instanciées.
 
-Un jeu construit un Volume, le mesher le transforme synchroniquement en Model immutable, puis le jeu compose des Models dans un Assembly copiable, anime l'Assembly, et attache un composant à une Entity3D. Le VoxelRenderingSystem collecte ces composants via le Registry de Sparkle, reconstruit chaque frame des batches compacts et un SSBO neuf par bucket non vide, puis émet les commandes de dessin instancié. Aucune commande de mise à jour par occurrence.
+```mermaid
+flowchart LR
+  subgraph G["Données et géométrie — sans OpenGL"]
+    S["Shape"]
+    D["Definition"]
+    V["Volume"]
+    M["VoxelMesher"]
+    O["OcclusionCache (facultatif)"]
+    Model["Model : 2 meshes"]
+    S --> D --> V --> M --> Model
+    O -. "accélère" .-> M
+  end
+  subgraph A["Apparence"]
+    AM["AssetManager"]
+    Mat["Material"]
+    Palette["VoxelPalette"]
+    AM --> Mat --> Palette
+  end
+  subgraph R["Scène et rendu"]
+    Assembly["Assembly"]
+    Components["Composants 3D"]
+    Sys["VoxelRenderingSystem"]
+    Snapshot["RenderSnapshot / commandes"]
+    Assembly --> Components --> Sys --> Snapshot
+  end
+  Model --> Assembly
+  Model --> Components
+  Palette --> Assembly
+  Palette --> Components
+```
 
-~~~cpp
-// PSEUDO-INTERFACE cible — méthodes et types à finaliser.
-// Les Shape et les Definition sont construites au préalable, via C++ ou JSON.
-spk::Voxel::Definition stone = /* definition immuable et partageable */;
-spk::Voxel::Cell cell{/* copie légère de stone */, /* orientation */};
-spk::Voxel::Volume::Builder builder({16, 16, 16});
-builder.set({2, 4, 1}, cell);
-spk::Voxel::Volume volume = std::move(builder).build();
+Les frontières sont intentionnelles :
 
-spk::Voxel::Model body = mesher.bake(volume); // interface proposée : les Cell donnent accès aux Definition
+- **Géométrie et meshing :** aucune lecture de pixels, aucun atlas, aucun OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie.
+- **Apparence :** `spk::Material` est générique et possède des rôles de textures nommés ; `spk::VoxelPalette` relie ces matériaux aux slots d'un modèle voxel. Une palette différente ne nécessite pas de remailler.
+- **Scène :** `Voxel::Assembly` compose des modèles et des transformations locales, sans créer une Entity par partie.
+- **Graphisme :** `VoxelRenderingSystem` est responsable de la collecte, du regroupement, de la construction des buffers de snapshot et des commandes de rendu. Les composants ne dessinent pas.
+- **Chargement :** `spk::AssetManager` est un utilitaire générique de Sparkle, pas un sous-système réservé aux voxels. Il partage les assets chargés selon une clé comprenant type, identifiant et configuration JSON.
+
+Le rendu voxel produit **au maximum deux meshes par Model** : un opaque et un translucide. Aucun troisième mesh « cutout » n'est introduit. Chaque mesh non vide peut être dessiné avec un seul atlas `albedo` pour une association `Model`/`VoxelPalette` compatible, même si plusieurs slots choisissent des régions différentes de cet atlas.
+
+### Exemple de parcours utilisateur
+
+```cpp
+// Exemple conceptuel : noms secondaires et signatures à finaliser.
+spk::Voxel::Shape shape = makeShape();
+spk::Voxel::Definition stone = makeDefinition(shape);
+
+spk::Voxel::Volume::Builder volumeBuilder({16, 16, 16});
+volumeBuilder.set({2, 4, 1}, spk::Voxel::Cell{stone, orientation});
+spk::Voxel::Volume volume = std::move(volumeBuilder).build();
+
+spk::Voxel::VoxelMesher mesher;
+spk::Voxel::Model model = mesher.bake(volume);
+
+spk::Material material = makeMaterial(texture);
+spk::VoxelPalette palette = makePalette(model, material);
+
 spk::Voxel::Assembly character;
-auto torso = character.addPart("torso", body, torsoPalette);
-auto arm   = character.addPart("arm", armModel, armPalette, torso);
-
-spk::Voxel::Assembly npc = character; // copie autonome, version 1
-character.setLocalTransform(arm, animationMatrix);
+auto torso = character.addPart("torso", model, palette);
+auto arm = character.addPart("arm", armModel, armPalette, torso);
+character.setLocalTransform(arm, armLocalTransform);
 character.invalidate();
 
-spk::Voxel::AssemblyRenderingComponent component(&entity3D);
-component.bind(&character); // pointeur non propriétaire : ne fait pas de rendu lui-même
-// Le VoxelRenderingSystem émet les commandes par RenderSnapshot.
-~~~
+// Un composant lié à l'Entity3D expose l'Assembly au système de rendu.
+// Le VoxelRenderingSystem produira les commandes du prochain snapshot.
+```
 
-**Objectif du rendu voxel :** pour chaque `Model` / chunk, le Mesher conserve **deux meshes immuables**, opaque et translucide, indépendants des textures et des palettes. Des matériaux distincts peuvent référencer **la même texture atlas `albedo`**, avec des régions UV distinctes, et être dessinés ensemble grâce à `MeshVertex::materialIndex`. L'association `Model`/`VoxelPalette` n'est acceptée que si chacun des deux meshes nécessite **au maximum un handle `albedo`** parmi ses slots ; il en résulte au plus **un appel de dessin géométrique par mesh non vide**, hors passes WBOIT additionnelles. Aucune restriction globale de nombre de textures n'est imposée à la palette. Voir VXL-093 à VXL-096.
+## 2. Modèle de données voxel
 
-**Contrat fondamental :** le moteur voxel est générique (objet, personnage, volumes/chunks). Aucun couplage à Erelia, à un terrain, à un catalogue ou à une Entity par partie.
-
-## 2 — Diagramme des classes attendues
-
-~~~mermaid
+```mermaid
 classDiagram
-direction LR
-class Cell
-class Shape {
-  -shared_ptr~const Data~ data
-  +outerShell(face) : polygons
-  +innerShell() : polygons
-  +outerShell(face, geometricSlot) : polygons
-}
-class ShapeBuilder {
-  +addPolygon(polygon)
-  +build() Shape
-}
-ShapeBuilder ..> Shape : construit
-class Polygon {
-  +vertices : at least 3
-  +planar : true
-  +convex : true
-}
-Shape *-- Polygon : surfaces
-class Definition {
-  -shared_ptr~const Data~ data
-  +shape() const Shape&
-  +slotBindings() : Shape slot -> Model slot
-}
-class Volume {
-  +Builder
-}
-class VolumeBuilder {
-  +Builder(Volume snapshot)
-  +set(position, Cell)
-  +erase(position)
-  +build() Volume
-}
-VolumeBuilder ..> Volume : derive et produit snapshot
-class OcclusionResult {
-  -shared_ptr~const Data~ data
-  +polygons() : immutable view
-}
-class OcclusionCache {
-  -ProtectedData~Data~ data
-  +find(key) : optional~OcclusionResult~
-  +store(key, OcclusionResult)
-  +clear()
-}
-class VoxelMesher {
-  +bind(OcclusionCache*)
-  +unbind()
-  +setClippingTolerance(float)
-  +clippingTolerance() const float
-  +bake(Volume) Model
-  #outsideCell(position)
-  -effectiveOpaqueCoverage(face, definition)
-  -neighborClosesBoundary(side)
-  -shouldEmitInnerShell(cell)
-}
-class Mesh {
-  +MeshVertex
-}
-class Model {
-  +Volume volume
-  +Mesh opaque
-  +Mesh transparent
-  +materialSlots
-}
-class Material
-class VoxelPalette
-class Assembly {
-  +parts
-  +transforms
-  +version
-  +invalidate()
-  +copy()
-}
-class ModelRenderingComponent {
-  +bind(Model*, VoxelPalette*)
-}
-class AssemblyRenderingComponent {
-  +bind(Assembly*)
-}
-class VoxelRenderingSystem {
-  +collect()
-  +buildCommands()
-  +frame scoped SSBO
-}
-class DrawVoxelBucketCommand {
-  +execute(context)
-}
-Volume o-- Cell : valeurs logiques
-Volume o-- Definition : table locale de definitions
-Cell --> Definition : valeur partageable
-Definition --> Shape : geometrie partagee
-VoxelMesher --> Volume
-VoxelMesher --> Definition
-VoxelMesher --> Shape
-VoxelMesher --> OcclusionCache : optional non-owning bind
-OcclusionCache o-- OcclusionResult : immutable values
-VoxelMesher --> Model
-Model o-- Mesh
-Assembly o-- Model
-Assembly --> VoxelPalette
-VoxelPalette --> Material : associations immuables
-ModelRenderingComponent --> Model
-ModelRenderingComponent --> VoxelPalette
-AssemblyRenderingComponent --> Assembly
-VoxelRenderingSystem --> ModelRenderingComponent : Registry
-VoxelRenderingSystem --> AssemblyRenderingComponent : Registry
-VoxelRenderingSystem --> DrawVoxelBucketCommand
-~~~
-
-Noms proposés en namespace `spk::Voxel`, sauf `spk::Material` et `spk::VoxelPalette` dans `spk`. `VoxelPalette` est le nom validé en VXL-091 pour l'ancienne `MaterialPalette` ; les signatures non tranchées restent à valider.
-
-## 3 — Geometry : Cell, Shape, Volume, Mesh, Model, Mesher
-
-### 3.1 Cell, Definition et Shape — VXL-042 à VXL-045, VXL-048
-
-**VXL-093/094 (révision de responsabilité) :** les slots géométriques locaux sont **déclarés dans `Shape`**, avec un nom, un **`float opacity` dans `[0,1]`** et une valeur par défaut de `1.0`. Chaque polygone référence son slot de Shape. `Definition` associe ces slots locaux à des noms sémantiques de `Model`, sans champ d'opacité supplémentaire, sans catégorie cutout et sans contrat d'occlusion séparé. L'opacité du slot est propagée lors du bake. Une face `outerShell` ne participe à l'occlusion que si `opacity == 1.0` ET si sa face avant géométrique est orientée vers la cible (VXL-074). La texture n'est jamais examinée pour décider du culling.
-
-Les polygones de `Shape` ont des sommets **flottants dans le cube unité [0,1]³**. **VXL-049 remplace l'ancienne discrétisation VXL-044 :** aucune rasterisation 1000×1000, grille de pixels, ni liste d'AABB ne sert de représentation obligatoire de l'occlusion. Le Mesher calcule directement les intersections et soustractions de polygones en flottants, puis les résultats récurrents sont mis en cache. Les **positions des cellules du Volume** restent entières ; ce sont les sommets locaux et les fragments du mesh qui sont flottants. **VXL-043 reste validée :** chaque polygone est plan et convexe avec au moins trois sommets ; les formes globalement concaves sont composées de plusieurs polygones convexes. Les surfaces ouvertes restent possibles. **VXL-076 : plusieurs polygones coplanaires de même winding peuvent volontairement se recouvrir, même totalement. Le Builder les conserve distincts, sans fusion, déduplication ni rejet ; le Mesher calcule l'union géométrique des couvertures occultantes sans compter deux fois les recouvrements.** **VXL-075 : une `Shape` complètement dépourvue de polygones est également valide ; l'exigence d'au moins trois sommets s'applique individuellement à chaque polygone ajouté, pas au nombre total de polygones de la Shape.** **VXL-073 : chaque polygone est strictement simple face : le winding de ses sommets détermine sa face visible. Pour rendre une feuille/pancarte visible des deux côtés, la Shape doit contenir deux polygones explicites de winding opposé ; Sparkle n'ajoute jamais automatiquement la face arrière. VXL-077 fixe ce winding en CCW vu du côté avant, avec normale géométrique orientée comme (v1-v0) × (v2-v0).** Une cellule dispose toujours de quatre rotations Y de 90 degrés et d'un flip vertical, soit huit orientations. **VXL-060 :** lors du clipping, les nouveaux sommets conservent le mapping de la Shape source grâce à des **UV interpolés depuis les UV existants**, sans reprojection automatique sur un plan. **VXL-061 :** ces n-gones aux UV arbitraires sont autorisés ; une **triangulation déterministe** définit leur interpolation UV (affine sur chaque triangle) et sert de support au clipping, y compris lorsque les fragments traversent plusieurs triangles. **VXL-062 :** la normale géométrique est fournie par défaut, mais chaque sommet peut aussi définir sa propre normale destinée à l'éclairage lissé ; les nouvelles normales lors du clipping sont interpolées et renormalisées. **Seules les surfaces géométriques**, non les normales d'éclairage personnalisées, déterminent l'occlusion. La convention du winding est désormais **CCW vu de face (VXL-077)** ; restent ouverts : validation des normales d'éclairage et technique précise de triangulation (qui doit être stable). **Le caractère simple face et le caractère explicite du double polygone sont fixés par VXL-073**. Les tolérances du Mesher sont définies par VXL-063/064.
-
-**Contrat VXL-042 validé : `Cell → Definition → Shape`.** Une `Definition` associe une `Shape` réutilisable aux **slots de matériaux sémantiques du Model**, sans inclure les matériaux concrets d'une `VoxelPalette`. Une `Definition` est **immuable** une fois construite et sa copie est légère grâce à un `std::shared_ptr<const Data>` interne. Une `Cell` contient **une `Definition` par valeur dans l'API publique**, plus son orientation. **VXL-069 :** l'air est **une véritable `Definition` et une véritable `Cell`**, non une absence, un `std::nullopt` ni un état booléen `isEmpty`. Dans la table locale des `Definition` de chaque `Volume`, **l'index interne `0` est réservé à la définition Air** ; toutes les positions contiennent une `Cell` valide, y compris celles remplies d'air. Copier plusieurs cellules partage les données immuables des définitions ; aucun registre ou Catalog global n'est requis pour résoudre les Shape et les bindings.
-
-~~~cpp
-// PSEUDO-INTERFACES — relations et propriété VALIDÉES ; signatures et détails ouverts.
-namespace spk::Voxel {
-  using Vertex = spk::Vector3; // positions polygonales locales en flottants
-
+  direction LR
   class Shape {
-  private:
-    struct Data; // VXL-051 : données immuables, partagées entre copies
-    std::shared_ptr<const Data> _data;
-  public:
-    class Builder; // VXL-052 : assemblage mutable, produit une Shape immuable
-    struct Polygon {
-      /* Au moins 3 sommets formant un polygone plan et convexe : VALIDÉ */
-      /* VXL-073/077 : une seule face visible, winding CCW vu de l'avant */
-      /* Normale géométrique orientée par (v1-v0) x (v2-v0) */
-      /* Deux faces visibles = deux Polygon explicites de winding opposé */
-      /* Type des sommets, UV, normale, slot, indexation : à définir */
-    };
-    /* Slots locaux nommés de Shape : opacity float [0,1], défaut 1.0. */
-    /* PROPOSITIONS de lectures publiques à préciser :
-       polygons(face) / outerShell(face) -> polygones coplanaires au bord
-       innerShell() -> autres polygones 3D
-       outerShell(face, geometricSlot) -> polygones de frontière par slot */
-  };
-
+    +Builder
+    +slots locaux et polygones
+    -Data immutable partagé
+  }
   class Definition {
-  private:
-    struct Data;
-    std::shared_ptr<const Data> _data;
-  public:
-    [[nodiscard]] const Shape& shape() const;
-    /* lecture seule des bindings : slot local de Shape (avec opacity) -> slot de Model */
-    /* méthodes de construction/factory à définir */
-  };
-
-  struct Cell {
-    Definition definition;    // copie légère, propriétaire partagé du Data
-    /* orientation discrète : type exact à définir */
-    /* VXL-069 : toute Cell est réelle, y compris la Cell de définition Air */
-  };
-}
-~~~
-
-**Propriété :** l'état `Definition::Data` reste valide tant qu'une copie de la `Definition` le référence, y compris quand le Volume d'origine est détruit. **VXL-051 :** `Shape` est également une valeur à copie légère partageant un `std::shared_ptr<const Shape::Data>` immuable. La `Definition` doit prolonger la durée de vie de la `Shape` qu'elle référence. Les copies d'une même `Shape` partagent l'identité de son `Data` ; deux formes construites séparément, même de géométrie identique, peuvent avoir deux identités distinctes dans le cache. Les `Cell` restent des valeurs C++ autonomes, sans dépendance à l'Engine ni à OpenGL.
-
-**VXL-052 — construction via `Shape::Builder` : VALIDÉE.** Un `Shape::Builder` mutable collecte les polygones, sommets et attributs nécessaires, puis `build()` produit une `Shape` immuable portant son propre `std::shared_ptr<const Shape::Data>`. Aucune API de mutation de la géométrie n'est exposée par `Shape` une fois créée. Les copies de la `Shape` produite partagent ce bloc `Data` ; l'utilisation ultérieure du Builder ne doit jamais modifier une `Shape` déjà produite. L'import JSON peut alimenter le même Builder que l'API C++, sans chemin de construction distinct imposé. **VXL-075 : `Shape::Builder::build()` est valide même sans aucun appel à `addPolygon` ; il produit une Shape immuable de géométrie vide, sans surfaces visibles ni occultantes.** **VXL-053 : les opérations qui ajoutent la géométrie sont chargées de sa validation immédiate** : lorsqu'un polygone invalide est proposé, l'opération d'ajout échoue en lançant `spk::Exception` avec une description du problème. Les invariants connus à cette étape (au moins trois sommets, coordonnées locales dans le cube unité, planéité, convexité et autres contraintes géométriques applicables) sont contrôlés avant qu'un état invalide soit accepté. Le Builder atteint normalement `build()` avec une géométrie déjà valide ; `build()` publie la `Shape` immuable, sans devoir être le point habituel de détection des erreurs de géométrie. La classification `outerShell`/`innerShell` peut être réalisée pendant la construction ou finalisée au build, sans différer les erreurs géométriques détectables. **VXL-054 : toute opération d'ajout qui lance une exception laisse le Builder strictement inchangé** (garantie forte d'exception) : polygones déjà acceptés, attributs, slots, tables et index internes restent identiques à l'état antérieur. Le Builder reste utilisable et peut accepter une géométrie corrigée. L'implémentation valide avant toute modification et garantit une insertion atomique y compris si l'échec survient lors de l'allocation ou de l'insertion, sans imposer de copies coûteuses lorsque ce n'est pas nécessaire. **Décision VXL-052 complémentaire :** un appel réussi à `build()` **consomme le Builder** ; son contenu résiduel n'a aucune signification contractuelle. Aucune opération d'ajout, d'inspection ou de second `build()` n'est autorisée sur cet objet après consommation. Il reste destructible, et peut éventuellement recevoir une nouvelle affectation/construction selon les capacités C++ retenues. Cela **ne signifie pas un comportement indéfini C++** : l'implémentation doit gérer correctement la fin de vie de l'objet déplacé/consommé, mais elle n'a pas à promettre un état de données réutilisable. La signature précise reste ouverte. **VXL-054 fixe désormais qu'un ajout échoué laisse intégralement l'état du Builder inchangé et autorise un nouvel ajout.** Un `build()` peut néanmoins échouer pour des raisons techniques (par exemple une allocation), indépendantes d'une géométrie invalide ; l'état après ce type d'échec n'est pas encore spécifié.
-
-**Contrat géométrique VXL-043 :** le contenu d'une `Shape` est une collection de surfaces polygonales planes et convexes d'au moins trois sommets. Une forme concave reste autorisée à l'échelle de la `Shape` par assemblage de plusieurs polygones convexes. Le Mesher doit préserver les occultations partielles précises entre ces surfaces, quelle que soit leur triangulation pour le rendu ; la triangulation ne doit pas redéfinir le contrat de la forme. L'exigence de convexité concerne chaque polygone, pas le volume global. Les ouvertures et surfaces sans volume fermé restent possibles. Définir ultérieurement la validation exacte (dégénérescence, winding, tolérances) sans affaiblir ces invariants.
-
-**VXL-045 — classification conservée :** chaque polygone dont tous les sommets sont sur un même plan de frontière (X, Y ou Z égal à 0 ou 1) rejoint l'ensemble `outerShell` correspondant ; les autres rejoignent `innerShell`. Aucune projection artificielle d'une pente ou d'une surface intérieure n'occulte la frontière. Une `Shape` peut être composée uniquement d'`innerShell`.
-
-**VXL-048 — séparation par slot conservée, représentation modifiée :** les polygones `outerShell` sont accessibles séparément par couple (face, slot géométrique local). Aucun masque rasterisé ni AABB de couverture précalculé n'est requis. `Definition` lie ces slots aux slots sémantiques de `Model`; le Mesher sélectionne les seuls polygones autorisés à occulter et applique les unions et différences **géométriques** nécessaires. Plusieurs slots opaques peuvent conjointement fermer une frontière ; **VXL-076 impose l'union géométrique des contributions réellement occultantes même lorsqu'elles se chevauchent, sans multiplication artificielle de la couverture ni changement des slots sources** ; une zone cutout/translucide ne doit pas faire disparaître une face. `VoxelPalette` reste indépendante du bake et tenue de respecter le contrat d'occlusion du Model. Les effets de ces bindings sur les clés de cache restent à préciser.
-
-**À préciser sans présumer de nouveaux choix :** construction/validation d'une `Shape` et d'une `Definition`, gestion interne des références d'identité de `Definition::Data` pour l'interning (l'égalité par identité est fixée par VXL-071), forme concrète de l'API facultative de lecture de la définition Air automatiquement fournie par Sparkle (VXL-070), toujours réservée à l'index local `0` (VXL-069), encodage d'orientation, format de sérialisation et attribution finale des indices de slots. Une position interne ne représente jamais l'absence d'une cellule : l'air est une Cell valide.
-
-### 3.2 Volume immutable, Builder mutable
-
-~~~cpp
-namespace spk::Voxel {
+    +shape
+    +correspondance des slots
+    -Data immutable partagé
+  }
+  class Cell {
+    +Definition par valeur
+    +orientation
+  }
   class Volume {
-  public:
-    class Builder;
-    /* extents(), cell(), etc. */
-  private:
-    /* shared immutable cell storage */
-  };
-  class Volume::Builder {
-  public:
-    explicit Builder(/* extents */); // VXL-068/070 : dimensions fixes, Air fourni automatiquement
-    explicit Builder(const Volume& source); // VXL-066/070 : Air et dimensions conserves
-    /* set() remplace une Cell ; erase() restaure la Cell Air (index local 0) */
-    Volume build() &&; // VXL-072 : succès consomme, exception préserve le Builder
-    /* pas de resize() */
-  };
-}
-~~~
-
-Copier un Volume est léger, le partage se fait sous le capot. Builder produit un **nouveau snapshot** ; ne jamais modifier un ancien Volume. **VXL-066 :** un Builder peut aussi être créé **depuis un Volume existant** afin de conserver ses dimensions et le contenu de ses cellules comme point de départ, modifier seulement les cellules voulues, puis publier un **nouveau Volume**. L'ancien snapshot, et toutes ses copies, restent logiquement indépendants et immuables. Le partage interne des données entre deux snapshots est autorisé seulement s'il ne permet jamais de mutation observable des anciennes versions. Le `VoxelMesher` refait un **bake complet** du Volume obtenu ; aucune actualisation partielle ni réutilisation de `Model` incrémentale n'est requise. **VXL-068 : les dimensions du `Volume::Builder` sont définitivement fixées lors de sa construction**, qu'il parte de dimensions neuves ou d'un `Volume` source (VXL-066). Ni `set()` ni `erase()` ne les modifient ; aucune opération `resize()` n'est prévue. Pour changer les dimensions, l'application crée un autre Builder avec les nouvelles dimensions et recopie explicitement les cellules qu'elle souhaite conserver. **VXL-072 :** le `Volume::Builder` est **consommé uniquement quand `build()` réussit** et publie son snapshot ; une exception laisse toute sa grille, ses définitions locales, leurs identités, les orientations et les dimensions intégralement inchangées, avec possibilité de réessayer ou d'éditer les cellules. Le `build() &&` illustratif ne suffit pas seul à garantir cela : l'implémentation doit préserver l'état tant que la publication n'est pas réussie. Volume doit fonctionner **headless**, sans graphics/Entity.
-
-**Stockage interne validé par VXL-042/067/069/070/071 :** l'API de `Volume::Builder::set` reçoit une `Cell` portant sa `Definition` par valeur. Le `Volume` utilise **une grille dense et contiguë, de taille égale au produit de ses trois dimensions**, comportant une entrée compacte à **chaque position, y compris celles contenant de l'air**. Il ne stocke **pas** un `shared_ptr` complet pour chaque cellule : il possède une **table locale de définitions** (valeurs `Definition` partageant leurs `Data`) et des enregistrements compacts indexant cette table, avec les orientations nécessaires. **L'entrée `0` de cette table désigne la véritable définition Air prédéfinie et automatiquement fournie par Sparkle (VXL-070) ; une case d'air stocke l'index `0`, pas un sentinel d'absence.** Toutes les positions sont des `Cell` valides. Les lectures publiques reconstituent une `Cell` **par valeur**, air compris, à partir de sa `Definition` ; elles ne révèlent ni indices internes ni pointeurs susceptibles de devenir invalides. Le `Volume` garde la table et les données de cellule dans son snapshot immutable partagé. **VXL-071 :** lors de l'insertion d'une `Definition` dans la table locale, le Builder réutilise son index si et seulement si sa valeur partage exactement le même `Definition::Data` immuable qu'une entrée déjà enregistrée ; le contenu géométrique ou les bindings n'est pas comparé. Les copies de `Definition` peuvent donc partager un index ; deux définitions construites indépendamment, même de contenu identique, conservent des entrées distinctes. **Air reste réservé à l'index local 0.**
-
-Conséquence : **ne pas promettre `std::span<const Cell>`** sur le stockage compact ; privilégier `cell(position)`, une itération par valeurs/vues ou un accès adapté encore à définir. **VXL-067 fixe la densité et la contiguïté du stockage publié. VXL-069 réserve l'index local de définition `0` à l'air et supprime la notion d'état de cellule absent au sein du Volume ; le type exact de l'enregistrement et l'ordre d'indexation X/Y/Z restent ouverts.** L'identité servant à dédupliquer les définitions, la taille et les limites des indices locaux, les limites des dimensions/allocations et les signatures finales du Builder restent des détails ouverts. **La possibilité de redimensionner un Builder est définitivement exclue par VXL-068** ; les coordonnées en dehors de ses dimensions ne provoquent pas d'agrandissement implicite. **Le droit de construire le Builder depuis un snapshot existant est fixé par VXL-066**, sans imposer une stratégie de copie profonde ou copy-on-write particulière.
-
-### 3.3 Mesh et Model
-
-Le Mesh reprend le template existant **spk::Mesh<TVertex>**, y compris sa logique de Builder et ses GPU LayoutBuffers. Aucun second framework de buffers.
-
-~~~cpp
-namespace spk::Voxel {
-  struct MeshVertex {
-    spk::Vector3 position;       // VXL-049 : résultat flottant du clipping
-    spk::Vector3 normal;         // VXL-062 : normale par sommet d'éclairage, géométrique par défaut
-    spk::Vector2 uv;             // UV locaux ; remappage atlas au shader selon le Material
-    std::uint32_t materialIndex; // index local au Model
-  };
-
-  class Mesh : public spk::Mesh<MeshVertex> {
-  public:
-    class Builder;
-  };
-
+    +Builder
+    +dimensions fixes
+    +cell(position) Cell
+    -grille dense + table locale
+  }
   class Model {
-  public:
-    const Volume& volume() const;
-    const Mesh& opaqueMesh() const;
-    const Mesh& transparentMesh() const;
-    /* named material slot accessors */
-  private:
-    /* immutable data, lightweight copies with shared internal resources */
-  };
-}
-~~~
+    +opaqueMesh()
+    +transparentMesh()
+    +materialSlots()
+    -données immuables partagées
+  }
+  class VoxelMesher {
+    +bake(Volume) Model
+    +bind(OcclusionCache*)
+    +unbind()
+  }
+  Shape <-- Definition
+  Definition <-- Cell
+  Cell <-- Volume
+  Volume --> VoxelMesher
+  VoxelMesher --> Model
+```
 
-**VXL-049 :** les sommets d'entrée et les fragments générés sont flottants, sans quantification obligatoire. Les attributs de position GPU sont flottants. Une passe de bake donne deux meshes indépendants des textures, éventuellement vides : opacity du slot == 1.0 dans l'opaque, opacity < 1.0 dans le translucide. Le rendu cutout résulte du discard des pixels alpha nuls, sans troisième mesh/passe voxel dédiée (VXL-093). **VXL-078 : la table des slots sémantiques du Model recense tous les slots déclarés par les `Definition` des cellules réellement présentes dans le Volume, même si leur géométrie est entièrement occultée, ou si aucun triangle ne référence ces slots après bake. Les indices GPU utilisés par les triangles restent liés à cette table complète et ne sont pas renumérotés à partir du seul maillage visible.** **VXL-079 révisée par VXL-093/094 : deux déclarations de même nom et de même opacité de slot se regroupent dans un slot du Model ; deux déclarations de même nom avec opacités différentes provoquent une `spk::Exception` descriptive au bake. L'occultation se déduit de `outerShell`, de l'opacité et du winding, sans contrat distinct.** VXL-080 : une fois regroupés et validés, les slots du Model sont triés par nom dans un ordre lexicographique déterministe avant attribution des indices internes, sans dépendance au parcours des cellules, à l'ordre des Definition ou au culling.** Les `Model` restent immuables et les changements de matrices d'`Assembly` ne provoquent pas de rebake.
+### 2.1 `spk::Voxel::Shape` : géométrie locale réutilisable
 
-### 3.4 Mesher : bake synchrone, clipping flottant et cache d'occlusion
+Une `Shape` représente les surfaces d'une cellule dans le **cube local `[0,1]³`**. Elle ne connaît ni matériaux concrets, ni volume, ni Engine.
 
-~~~cpp
-namespace spk::Voxel {
-  struct OutsideCell {
+Chaque polygone :
+
+- possède au moins trois sommets, de positions flottantes dans le cube unité ; il est **plan et convexe**. Une forme globalement concave est représentée par plusieurs polygones ;
+- est **simple face**. Son ordre de sommets est CCW vu du côté avant, et sa normale géométrique est orientée par `(v1 - v0) × (v2 - v0)` pour des sommets initiaux non colinéaires ;
+- peut porter des UV arbitraires et des normales d'éclairage par sommet. La normale géométrique est utilisée par défaut pour l'éclairage, mais les normales personnalisées ne modifient jamais l'orientation géométrique ou l'occlusion ;
+- référence un **slot géométrique local** déclaré par son nom dans la Shape. Ce slot porte `opacity`, un flottant de `[0,1]`, de valeur `1.0` par défaut.
+
+Pour afficher une feuille ou une pancarte des deux côtés, l'application fournit **deux polygones explicites** de windings opposés. Il n'existe pas de propriété `doubleSided` ni de duplication implicite. Des polygones coplanaires de même winding peuvent se recouvrir, même totalement ; leur existence séparée est conservée. Une Shape de **zéro polygone** est valide.
+
+Les surfaces sont réparties selon leur position :
+
+- `outerShell` : polygones dont tous les sommets sont situés sur l'un des six plans de frontière (`x`, `y` ou `z` égal à `0` ou `1`), identifiables par face et par slot local ;
+- `innerShell` : autres polygones, notamment les surfaces inclinées ou internes, qui ne sont jamais projetés artificiellement sur une frontière.
+
+Les positions et les UV ne sont pas confondus : les **positions** doivent être dans `[0,1]³`, mais les **UV** peuvent être hors `[0,1]`. Dans ce dernier cas, la construction/validation CPU de la Shape émet un `Warning` non bloquant via `spk::Logger`. Aucun clamp ou modulo de sprite n'est ajouté automatiquement et cet avertissement n'est jamais répété à chaque frame.
+
+#### Construction et immutabilité
+
+`Shape::Builder` recueille des slots et des polygones, les valide **au moment de leur ajout** et publie une Shape immuable par `build()`. Toute géométrie invalide provoque une `spk::Exception` descriptive à l'ajout. Un ajout qui échoue, quelle qu'en soit la cause, laisse le Builder **strictement inchangé**. Un `build()` échoué laisse également son état entièrement intact, autorisant une nouvelle tentative. **Seul un build réussi consomme le Builder** ; il ne peut plus être exploité pour une nouvelle construction.
+
+Une Shape publiée conserve un bloc `shared_ptr<const Data>` interne : les copies sont légères et partagent les mêmes données et la même identité. Deux Shapes construites indépendamment peuvent avoir des données géométriquement identiques mais des **identités de Data distinctes**. Cette identité est notamment utilisée par le cache d'occlusion. La représentation propriétaire n'est pas exposée dans les API publiques.
+
+### 2.2 `spk::Voxel::Definition` : sens des slots
+
+Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → nom de slot sémantique** destiné au Model. Elle ne contient pas de `Material` et n'ajoute ni catégorie de rendu, ni règle d'occlusion indépendante à l'opacité déclarée dans la Shape.
+
+`Definition` utilise également des données immuables partagées (`shared_ptr<const Data>`) et conserve la durée de vie de sa Shape. Copier une Definition est léger. Une même Shape peut être réutilisée dans différentes Definitions pour produire des noms de slots sémantiques différents.
+
+Sparkle fournit une **Definition Air prédéfinie**. Elle représente une vraie cellule d'air, sans surface occultante ni slot de matériau supplémentaire présumé. Elle est créée automatiquement dans les Volumes ; l'application n'a pas à la fabriquer pour initialiser une grille vide.
+
+### 2.3 `spk::Voxel::Cell` et orientations
+
+L'API publique représente une Cell **par valeur**, contenant sa Definition (copie légère) et une orientation discrète. Les orientations disponibles comprennent les quatre rotations de 90° autour de Y et une possibilité d'inversion verticale, soit **huit orientations**.
+
+L'orientation transforme correctement la géométrie, les UV et les normales. Un flip qui modifie la parité doit également préserver la **face avant physique voulue** par adaptation appropriée du winding/des indices, afin d'éviter qu'une surface visible ou occultante ne se retourne accidentellement.
+
+Une cellule d'air est une Cell valide, et non `null`, un `optional` vide ou un indicateur « absence ».
+
+### 2.4 `spk::Voxel::Volume` : snapshot dense immuable
+
+Un Volume représente une grille **dense et contiguë** de cellules, d'extensions fixes. Chaque position a une entrée, y compris l'air. Pour éviter un `shared_ptr` complet par cellule, le stockage interne repose sur :
+
+1. une **table locale de Definitions** partageant leurs blocs Data ;
+2. une grille compacte d'indices vers cette table, avec l'orientation de chaque cellule.
+
+L'index interne `0` est **toujours réservé à Air**. Une Cell d'air référence l'entrée `0`, jamais un sentinel d'absence.
+
+La table locale déduplique une Definition **par identité de `Definition::Data`**, pas par comparaison profonde de contenu. Deux copies d'une même Definition partagent donc un index ; deux Definitions indépendantes au contenu identique peuvent occuper deux entrées. La lecture publique `cell(position)` reconstitue une **Cell par valeur** et n'expose pas les indices ni une référence vers le stockage compact. Ne pas promettre un `span<const Cell>` vers la grille.
+
+`Volume::Builder` peut être initialisé depuis les dimensions d'une nouvelle grille entièrement remplie d'air ou depuis un `const Volume&` existant. Il propose des opérations de remplacement `set(position, Cell)` et de remise à l'air `erase(position)` ; les noms exacts peuvent être ajustés. **Ses dimensions ne changent jamais** : pas de `resize()` ni d'expansion implicite. Les accès hors limites sont invalides. Le produit des dimensions, les tailles d'indices et les allocations doivent être vérifiés avant tout débordement.
+
+Un build réussi publie un **nouveau snapshot immuable**, à copies légères, sans modifier d'anciens Volumes, puis consomme le Builder. Toute exception pendant `build()` laisse l'intégralité de son état inchangé et réutilisable. L'implémentation peut partager des données entre snapshots seulement si cela ne permet aucune mutation rétroactive.
+
+Les classes Shape, Definition, Cell et Volume fonctionnent **sans Engine ni OpenGL**.
+
+## 3. Meshing, visibilité et occlusion
+
+### 3.1 `spk::Voxel::VoxelMesher`
+
+Le Mesher transforme un `Volume` immuable en un **nouveau `Model` immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
+
+Son travail est indépendant des matériaux concrets et des pixels de texture. Il peut, de manière facultative, emprunter un `OcclusionCache` externe :
+
+```cpp
+spk::Voxel::VoxelMesher mesher;
+spk::Voxel::OcclusionCache cache;
+
+mesher.bind(&cache);
+auto model = mesher.bake(volume);
+mesher.unbind();
+```
+
+`bind(OcclusionCache*)` est un emprunt non propriétaire ; le cache doit rester vivant tant qu'il est lié et utilisé. La liaison est facultative : sans cache, le même algorithme de visibilité s'exécute sans mémorisation de ses résultats. Une nouvelle liaison à cible unique exige normalement un `unbind()` préalable ; le type exact du Mesher et ses méthodes secondaires restent à finaliser.
+
+La tolérance de clipping est un seul paramètre configurable du Mesher, **`1e-5` par défaut** dans les unités locales du cube. Toute valeur non finie ou non strictement positive est rejetée par `spk::Exception`. Cette tolérance contribue à la clé du cache. La détermination des longueurs, aires et seuils de dégénérescence doit rester dimensionnellement cohérente : ne pas comparer une aire directement à une longueur.
+
+### 3.2 Voisinage et cellules extérieures
+
+Pour les positions internes au Volume, chaque voisin existe toujours, éventuellement comme Cell Air. Pour une position **extérieure**, une spécialisation du Mesher peut fournir un état de voisin :
+
+```cpp
+struct OutsideCell
+{
     enum class State { Empty, Occupied, Unknown };
     State state;
-    /* optional Cell */
-  };
+    // Cell associée lorsque Occupied.
+};
+```
 
-  class OcclusionCache; // VXL-055/057 : ressource indépendante et synchronisée en interne
+- `Empty` signifie que l'application déclare l'extérieur vide : les surfaces de la cellule courante restent exposées.
+- `Occupied` fournit une vraie Cell extérieure, y compris éventuellement Air. Le Mesher étudie **sa géométrie effective**, pas simplement son caractère « occupé ».
+- `Unknown` représente une donnée indisponible : elle ne constitue **jamais une preuve d'occultation**. Le programme effectuera un nouveau bake lorsque cette donnée deviendra connue.
 
-  class VoxelMesher {
-  protected:
-    virtual OutsideCell _outsideCell(const spk::Vector3Int& pos) const {
-      return {/* Empty */};
-    }
-  public:
-    void bind(OcclusionCache* cache); // pointeur non propriétaire
-    void unbind();                    // revient au clipping sans cache
-    void setClippingTolerance(float tolerance); // défaut proposé : 1e-5f (VXL-063)
-    [[nodiscard]] float clippingTolerance() const;
-    Model bake(const Volume& volume /* paramètres complémentaires éventuels à définir */) const;
-  };
-}
-~~~
+Le Mesher ne conserve pas ces cellules extérieures dans le Volume. Aucun composant de gestion de chunks ni dépendance à un terrain n'est imposé.
 
-**VXL-063 — configuration numérique :** le `VoxelMesher` utilise une tolérance de clipping flottant **par défaut à `1e-5` dans les coordonnées locales du cube unité**, modifiable explicitement par le programme via le Mesher (`setClippingTolerance`/`clippingTolerance` comme signatures proposées). Le paramètre contrôlant le résultat géométrique participe à la **clé d'`OcclusionCache`** afin qu'un cache partagé entre plusieurs Meshers aux tolérances différentes n'offre jamais un résultat calculé sous une autre tolérance. Ne pas multiplier les réglages indépendants en l'absence d'un besoin démontré. La valeur doit être finie et strictement positive ; une configuration invalide doit être refusée avec `spk::Exception`.
+### 3.3 Clipping polygonal exact selon le contrat flottant
 
-Les `Shape` et leurs correspondances de slots sont accessibles par les `Definition` contenues logiquement dans les `Cell` ; le Mesher ne requiert donc pas un Catalog ou une bibliothèque de Shape globale pour résoudre les cellules. Les règles de rendu et d'occlusion doivent rester disponibles au bake selon un contrat encore à préciser.
+La visibilité entre deux cellules adjacentes est calculée en géométrie flottante, à partir des polygones réellement présents sur leurs frontières opposées. Le Mesher peut effectuer des rejets rapides par AABB, mais une AABB ou une rasterisation discrète **ne remplace jamais** le calcul des intersections, unions et différences polygonales pour les recouvrements partiels.
 
-Ce n'est pas un moteur de terrain. Une spécialisation de l'application peut répondre pour des cellules **extérieures au Volume** (exemple : chunks voisins). **VXL-069 distingue l'air interne (Cell réelle à définition d'index `0`) de l'absence de donnée extérieure.** Le `OutsideCell::State::Empty` préexistant concerne uniquement une absence déclarée pour l'extérieur : il expose les faces, tout comme une véritable Cell Air qui ne possède pas de surface occultante. **Occupied** signifie qu'une Cell extérieure est fournie : le Mesher doit évaluer ses contrats réels d'occlusion, **y compris s'il s'agit d'une Cell Air** ; **Unknown** est temporairement exposé. Un nouveau bake intervient quand la donnée voisine devient accessible. Aucun voisin stocké dans Volume.
+Pour une face de la cellule A, la couverture de la cellule B n'est occultante que pour ses polygones qui remplissent **simultanément** ces conditions :
 
-**VXL-049 — retour au clipping flottant d'Erelia v1 :** le JSON décrit les polygones sources et leurs attributs ; le Mesher calcule directement les intersections, unions nécessaires et différences polygonales sur ces surfaces. Les fragments visibles conservent des positions flottantes et des UV/normales cohérentes ; **VXL-060 exige l'interpolation des UV existants aux nouveaux sommets de clipping, pas une reprojection qui écraserait le mapping source**. **VXL-062 :** les normales par sommet d'éclairage personnalisées sont interpolées puis renormalisées aux nouveaux sommets, tandis que l'occlusion et la classification des faces utilisent la géométrie réelle du polygone, jamais ces normales d'éclairage. Les surfaces entièrement visibles sont idéalement préservées sans découpe. Le résultat est triangulé pour produire les triangles GPU. Aucun masque 1000×1000, Bresenham, extraction d'intervalles de lignes, ou décomposition en AABB n'est requis. Une AABB classique peut servir à rejeter rapidement un couple sans intersection, jamais comme approximation de couverture.
+1. le polygone appartient à `outerShell` sur la frontière correspondante ;
+2. son **slot local de Shape** possède `opacity == 1.0` ;
+3. sa **face avant géométrique** est tournée vers la cellule A.
 
-Les `outerShell` opposés de deux cellules adjacentes sont comparés après application de leurs orientations. Les polygones restent distingués par (face, slot géométrique) selon VXL-048. L'opacité déclarée par chaque slot de `Shape` détermine les surfaces éligibles à l'occlusion : uniquement les `outerShell` d'opacité `1.0` orientés de face vers la cellule à occulter (VXL-074/094). Les surfaces inclinées/intérieures restent indépendantes.
+Le canal alpha de `albedo`, les normales personnalisées d'éclairage, et les faces `innerShell` n'entrent jamais dans cette décision. Une texture trouée peut donc afficher visuellement un trou alors que son slot d'opacité 1 a été traité comme occultant : il appartient à l'auteur de la géométrie et des matériaux de ne pas introduire cette incohérence.
 
-**VXL-050 — cache directionnel validé :** pour une requête `A → B`, le Mesher conserve **seulement les fragments polygonaux de la face de A encore visibles après occultation par B** (y compris une liste vide si A est entièrement masqué). Une requête `B → A` possède une **clé distincte** et son propre résultat, calculé séparément au besoin. Le cache ne calcule ni ne conserve obligatoirement les deux sens simultanément, car la visibilité partielle n'est pas symétrique. **VXL-059 précise les données conservées :** chaque fragment visible de A reste exprimé dans le **référentiel local de sa Shape**, avec positions flottantes, UV, attributs géométriques nécessaires (dont normale selon le contrat définitif) et **identifiant de slot géométrique local**. Il ne porte pas de numéro de slot sémantique du Model ni de matériau concret ; le Mesher applique après la lecture du cache le mapping `Shape → Definition → Model` et la transformation/orientation nécessaire pour émettre les sommets GPU. La clé doit distinguer les identités des deux `Shape`, leurs orientations, la direction du voisinage et la configuration des contrats d'occlusion des slots : des matériaux concrets équivalents en opacité peuvent partager un résultat, mais des contrats différents ne doivent jamais être confondus. **VXL-051 précise l'identité :** elle est celle du bloc immuable `Shape::Data` partagé. Aucun identifiant numérique créé spécialement ni hash complet de la géométrie n'est nécessaire. Pour protéger contre la réutilisation d'adresse après destruction d'une forme, l'entrée de cache conserve une référence propriétaire partagée à chacun des deux `Data` (directement ou via un handle d'identité partagé). La comparaison/hash repose sur l'identité du pointeur, pas sur le contenu géométrique. **VXL-063 :** la tolérance configurable du Mesher entre dans la clé et prend `1e-5` par défaut ; **restent ouverts** : type exact de clé/API interne et détails des opérations numériques. Ce cache concerne le bake, non les instances GPU (VXL-041).
+Plusieurs polygones opaques frontaux peuvent conjointement fermer une frontière. Leur **union géométrique** est prise en compte, y compris s'ils se chevauchent : ni addition d'aires, ni XOR, ni double comptage, ni modification des polygones sources.
 
-**VXL-055 — cache lié explicitement :** **La convention Sparkle impose des pointeurs non propriétaires aux méthodes `bind()` et non des références.** `OcclusionCache` est un objet distinct du `VoxelMesher`, indépendant du GPU, dont la durée de vie est contrôlée par l'appelant. Le `VoxelMesher` propose une méthode `bind(OcclusionCache*)` et un `unbind()` (signatures illustratives), suivant la convention Sparkle de liaison explicite. La liaison est **non propriétaire** : le Mesher conserve uniquement un pointeur brut vers le cache ; l'appelant garantit que le cache reste vivant tant qu'il est lié et qu'un bake peut l'utiliser. Aucun cache statique/singleton automatique n'est imposé par Sparkle ; détruire le Mesher ne détruit pas le cache. Le Mesher peut être utilisé **sans cache lié** : il produit exactement la même géométrie par clipping direct, mais **n'enregistre ni ne consulte de résultats mémorisés**. Le cache ne modifie que les coûts de calcul, pas la sémantique de visibilité.
+Le clipping préserve **positions, slots locaux, UV et normales**. Un nouveau sommet hérite de ses UV par interpolation des UV de la surface source, **pas** par reprojection automatique sur un plan. Pour un polygone convexe à plus de trois sommets dont les UV sont arbitraires, une triangulation **déterministe** fixe le domaine d'interpolation affine, triangle par triangle. Les fragments qui traversent plusieurs triangles doivent conserver ce mapping ; les normales d'éclairage interpolées sont renormalisées. Les triangles GPU émis respectent le winding CCW et les flips d'orientation.
 
-Une application peut placer un `static OcclusionCache` dans son propre wrapper de Mesher et le lier à chaque opération, ou fournir un cache distinct pour chacun de ses sous-systèmes voxels. Les identités `Shape::Data` sont des identités mémoire : la séparation en plusieurs caches permet d'isoler leurs résultats et budgets mémoire, **sans supposer que des données partagées possèdent des identifiants numériques locaux**. Plusieurs Meshers peuvent être liés au même cache ; le comportement des accès simultanés et sa synchronisation reste à préciser. Les clés directionnelles et la possession des `Shape::Data` de VXL-050/051 restent inchangées. `OcclusionCache` n'est ni un catalogue de Shape, ni un cache de rendu GPU.
+Les fragments/triangles dégénérés selon la tolérance du Mesher sont écartés, sans supprimer artificiellement une couverture opaque légitime ou déclarer une frontière entièrement fermée par erreur. Aucun triangle GPU dégénéré ne doit être émis.
 
-**VXL-057 — cache synchronisé et valeurs immuables :** le cache possède un `spk::ProtectedData<Data>` privé qui protège sa table d'entrées. Ses opérations `find()`, `store()` et `clear()` sont thread-safe ; les appels `read()`/`write()` de `ProtectedData` ne sont effectués **qu'à l'intérieur des méthodes du cache**, pas dans le Mesher. `find(const Key&)` renvoie par valeur `std::optional<OcclusionResult>` et relâche le verrou avant de rendre la main. `OcclusionResult` est un objet **immuable à copie légère**, dont `std::shared_ptr<const Data>` est privé ; aucun pointeur partagé, garde ou référence vers la table protégée n'est exposé par l'API. `std::nullopt` signifie « absence d'entrée » ; un `OcclusionResult` valide mais sans polygones signifie « occlusion totale ». Le Mesher fait le clipping **hors verrou** sur un miss, puis appelle `store()`, qui prend brièvement l'accès d'écriture ; deux threads peuvent éventuellement effectuer le même clipping avant insertion. L'insertion doit conserver une valeur correcte si une autre opération l'a déjà enregistrée. Un résultat obtenu par valeur reste valide après `clear()` grâce à la propriété partagée de ses données.
+### 3.4 Règle d'émission des `innerShell`
 
-**VXL-060/061 — attributs UV :** tout sommet créé par un clipping hérite de ses coordonnées UV par interpolation du mapping défini sur le polygone source, et non par projection sur son plan. Les UV des sommets d'origine ne sont pas altérés. Pour les n-gones aux UV arbitraires, une triangulation déterministe définit le domaine de l'interpolation **par triangle** et est prise en compte pendant le clipping. Les fragments traversant plusieurs triangles sont découpés/représentés de manière à préserver ce mapping, sans interpoler artificiellement entre des triangles non coplanaires en UV. **VXL-064 — élimination des fragments dégénérés :** après clipping et durant la préparation des fragments/triangles du Model, les résultats géométriquement dégénérés selon la tolérance configurée sur le Mesher (VXL-063) sont écartés, sans produire de triangles GPU invalides. Cette règle ne valide ni ne transforme rétrospectivement les polygones source acceptés par Shape::Builder ; les critères numériques exacts et la préservation de la couverture opaque doivent être cohérents. **Robustesse restant ouverte :** tests de coplanarité/coïncidence, définition algorithmique des seuils de dégénérescence, règles de validation et cas limites de normalisation des normales personnalisées et calcul fiable de fermeture complète d'une face par union polygonale. Un cache n'élimine pas ces exigences géométriques.
+Les surfaces intérieures ont une règle volontairement globale par cellule :
 
-**VXL-045 :** l'occlusion d'une frontière découle uniquement de ses polygones `outerShell` coplanaires ; les `innerShell` restent des surfaces 3D et ne sont jamais projetés sur une frontière. **VXL-073** ne change pas cette classification par plan : les deux côtés explicitement fournis d'une surface ouverte restent deux polygones distincts. **VXL-074 fixe l'occlusion directionnelle selon le winding** : un `outerShell` opaque peut occulter la frontière adjacente **seulement depuis sa face avant**, orientée vers la cellule à occulter. Sa face arrière ne fournit aucune couverture occultante, même si ses positions couvrent géométriquement tout le carré. Normales d'éclairage et opacité restent distinctes de la direction géométrique.
-
-**VXL-046 validée — émission conditionnelle des `innerShell` :** pour la cellule courante, inspecter **les six cellules voisines**, et pour chaque direction consulter le `outerShell` du voisin situé sur le **plan opposé en vis-à-vis**. Une direction est considérée comme *fermée* seulement si la **couverture opaque réellement occultante du voisin, portée par ses faces avant orientées vers la cellule courante** (VXL-074), couvre **tout le carré [0,1]²** de la frontière, selon le clipping et la couverture polygonale en flottants, avec le winding et l'orientation/flip du voisin pris en compte. Ce test utilise **uniquement la couverture du voisin**, sans faire l'union avec le `outerShell` de la cellule courante.
-
-**Règle :** si **les six directions sont fermées**, le Mesher **n'émet aucun polygone `innerShell`** pour cette cellule. Si **au moins une direction reste ouverte, partiellement couverte ou incertaine**, il **émet tous les polygones `innerShell`** de la cellule (pas de culling individuel des polygones internes par cette règle). Cela s'applique aussi à une `Shape` qui n'a aucun `outerShell`, sans exception particulière : ce sont les **voisins**, non ses propres surfaces, qui contrôlent la condition.
-
-~~~cpp
-// PSEUDO-ALGORITHME de VXL-046 — les helpers et types réels restent à définir.
-bool emitInnerShell(const Volume& volume, Position position) {
-    for (Side side : AllSixSides) {
-        const OutsideCell neighbor = neighborAt(volume, position + offset(side));
-        if (!neighbor.isKnownOccupied() ||
-            !neighbor.opaqueOuterShellFullyCovers(opposite(side))) {
-            return true; // voisin absent, vide, inconnu ou couverture incomplète
-        }
-    }
-    return false; // six voisins opaques à couverture intégrale
-}
-// À la construction du mesh :
-// traiter séparément les fragments visibles des outerShell ;
-// émettre tous les innerShell si emitInnerShell(...) est vrai.
-~~~
-
-Un voisin extérieur `Empty` ou `Unknown`, une donnée manquante, une **Cell Air valide sans surface occultante** (VXL-069), une couverture partielle, et un matériau non entièrement occultant **ne prouvent pas** qu'une frontière est fermée ; ils ne doivent donc pas conduire à supprimer les `innerShell`. En particulier, le calcul géométrique d'une couverture ne suffit pas : vérifier également la catégorie d'occlusion associée aux slots **et la face avant dirigée vers la cellule concernée (VXL-074)** ; un polygone opaque dont seule la face arrière est tournée vers elle ne ferme pas cette frontière. Le résultat est déterminé **au bake** ; l'arrivée ou le changement d'un voisin peut imposer un nouveau bake.
-
-**VXL-047 — limitation assumée :** le produit utilisant ce Mesher **ne doit pas placer de caméra dans une région totalement enfermée** dont les `innerShell` auraient été éliminés selon VXL-046. Le mainteneur considère ce cas **impossible dans le scénario d'utilisation visé**, non impossible géométriquement. Aucun support, préservation préventive, paramètre de politique ou rebake déclenché par la caméra n'est demandé pour ce cas. La règle de culling des `innerShell` est maintenue telle quelle ; ce cas de rendu est explicitement **hors périmètre**.
-
-**Encore à décider :** tolérances numériques et algorithme de clipping, calcul exact au sens du contrat flottant de la fermeture opaque par union de polygones, propagation UV/normales, représentation et clé du cache (direction et slots/contrats), politique de concurrence entre `clear()` et un calcul en cours, durée de vie et budget mémoire. VXL-046 continue à gouverner l'émission globale des `innerShell`. Cutout et translucide ne sont pas présumés pleinement occultants ; un changement de contrat d'occlusion peut imposer un rebake.
-
-**V0.1.4 : bake complet**, sans remesh incrémental ; cache de résultats d'occlusion **optionnel, indépendant et explicitement lié au Mesher par VXL-055** (contrat de contenu/direction détaillé en VXL-050/051 ; gestion de mémoire et concurrence à finaliser). L'appel est **synchrone**, thread/priorité/adoption du résultat gérés par le code appelant. Le bake produit un nouveau Model immutable.
-
-## 4 — VoxelPalette, slots nommés, transparence et ressources
-
-**VXL-091 (architecture et nomenclature validées), précisée par VXL-092** : `spk::Material` et son Builder restent entièrement génériques ; `spk::VoxelPalette` est le nom public de l'ancienne `MaterialPalette` (pas de palette générique distincte ni de `VoxelMaterial`). Pour le rendu voxel V0.1.4, `VoxelPalette::Builder::build()` vérifie la présence de la seule texture nommée exactement `albedo` dans chaque `Material` associé, outre les contrats existants de slots, catégories et occlusion. Aucun autre rôle de texture n'est exigé, contrôlé ou exploité par le rendu voxel dans cette version.
-
-Chaque Model déclare les slots sémantiques provenant des `Definition` réellement utilisées par les cellules de son Volume, même lorsque leurs triangles sont occultés (VXL-078). Les slots locaux et leurs `opacity` sont déclarés sur `Shape` ; `Definition` réalise le mapping vers les noms du Model, sans propriétés d'occlusion distinctes (VXL-093/094). **Même nom sémantique : même opacité exigée**, sinon le bake lance une `spk::Exception` descriptive ; la fusion et l'ordre alphabétique VXL-079/080 demeurent. Le Model garde un indice par slot via `MeshVertex::materialIndex`.
-
-Les `VoxelPalette` sont des valeurs immuables associant ces noms de slots à des `spk::Material` immuables (VXL-081 à 087). Un matériau est requis pour **chaque slot**, visible ou invisible, et doit contenir le rôle de texture nommé `albedo` (VXL-092). Un matériau générique n'a **aucune obligation d'opacité ou de catégorie de rendu** : l'opacité appartient à la Shape, pas au Material. La compatibilité des slots repose sur les noms et les coefficients d'opacité exacts, et l'association `Model`/`VoxelPalette` exige au maximum un atlas `albedo` par mesh opaque/translucide parmi les slots du Model, **pas parmi tous les slots de la palette** (VXL-096). Plusieurs Model peuvent partager une palette contenant plus de textures ; les associations sont contrôlées individuellement.
-
-Chaque Material peut contenir d'autres rôles libres, mais seul `albedo` est lu dans cette première version voxel. Pour ce rôle, le Material décrit aussi sa région UV d'atlas : un décalage et une échelle rectangulaire, utilisés avec les UV locaux des polygones (VXL-095). Modifier l'apparence d'un slot en remplaçant son Material dans une nouvelle palette n'entraîne aucun rebake du Model, sous réserve de compatibilité et de respect des limites d'atlas. Les propriétés des Material/Palette restent immuables ; les pixels de l'état de texture référencé peuvent évoluer conformément à VXL-088/089.
-
-~~~cpp
-namespace spk {
-  class VoxelPalette {
-  private:
-    struct Data; // VXL-083 : ressources immuables partagees
-    std::shared_ptr<const Data> _data;
-  public:
-    class Builder; // VXL-083 : construction et variantes mutables
-    /* copies legeres, lecture seule des associations et contrats */
-  };
-}
-
-namespace spk::Voxel {
-  struct MaterialSlot {
-    std::string name;
-    float opacity; // recopiée du slot géométrique de Shape, [0,1] (VXL-093)
-  };
-}
-
-// Usage proposé :
-// auto palette = spk::VoxelPalette::Builder(model)
- //    .bind("skin", skinMaterial)
- //    .bind("eye", eyeMaterial)
- //    .build();
- // auto variant = spk::VoxelPalette::Builder(palette)
- //    .bind("skin", alternativeSkinMaterial)
- //    .build();
- // // autres sources : Builder(vector<Model>), Builder(Assembly), signatures a finaliser
-~~~
-
-**VXL-087 :** les `Material` eux-mêmes sont également **immuables après construction** : leurs propriétés ne sont pas modifiées à travers les palettes qui les partagent. Une nouvelle apparence nécessite un nouveau Material et/ou une nouvelle variante de VoxelPalette, sans mutation rétroactive des valeurs existantes. VXL-088 précise que la liste/l'identité des textures référencées fait partie des propriétés immuables du Material, mais que les données d'une texture déjà référencée ne sont pas figées. Modifier les pixels d'une même texture ne modifie donc pas la valeur Material ; créer un Material avec une autre texture (ou d'autres propriétés) exige une nouvelle valeur, puis une nouvelle palette pour la sélectionner.
-
-**VXL-088 — Textures vivantes, matériaux immuables : VALIDÉ (option B).** Un `Material` contient des associations immuables à une ou plusieurs textures : leur nombre, leur rôle et leur identité ne changent pas après construction ; VXL-089 précise que chaque liaison conserve un `spk::Texture::Handle` propriétaire et en lecture seule, obtenu depuis la `Texture` fournie au Builder ; l'organisation des emplacements de plusieurs textures reste à spécifier. Les ressources `spk::Texture` restent des objets graphiques indépendants et potentiellement mutables : réécrire leurs pixels, sans remplacer leur identité, n'exige ni `Material::Builder`, ni nouvelle `VoxelPalette`, ni rebake du `Model`. Les rendus de toutes les palettes/materials partageant ces ressources voient l'état de texture disponible au moment de leur exécution/synchronisation GPU ; aucune garantie de pixels figés pour un `RenderSnapshot` déjà préparé. Changer l'identité d'une texture liée à un Material ou une autre propriété du Material requiert la construction d'un nouveau Material, puis l'utilisation d'une nouvelle palette pour affecter ce matériau au Model. Une mise à jour de pixels n'autorise pas à changer implicitement le contrat de catégorie/occlusion requis par le Model ; les textures cutout/dynamiques doivent respecter le contrat défini lors du bake. La durée de vie des textures capturées par des commandes GPU doit être assurée par des handles possédés, et les écritures CPU / lectures GPU restent soumises à la synchronisation existante de Sparkle. **VXL-084–086 restent inchangées** : SSBO de matériaux par couple Model/Palette et par RenderSnapshot ; pas de cache inter-frame.
-
-**VXL-089 — Binding de textures par Handle : VALIDÉ (option B).** `Material::Builder::setTexture(const spk::Texture&)` accepte une référence non propriétaire seulement pendant l'appel de construction (nom/signature de l'emplacement de texture pour le cas de multiples textures encore à préciser), extrait immédiatement `texture.handle()` et conserve ce `spk::Texture::Handle` dans le `Material` immuable ; aucun `Texture*` brut ni copie propriétaire de l'objet `Texture` ne sont gardés par le `Material`. Le handle de Sparkle détient un `std::shared_ptr<const Texture::State>` : le Material peut consulter/activer l'état mais ne peut pas modifier ses pixels. Ce handle n'est **pas** un identifiant OpenGL et garde son état vivant indépendamment de l'objet `Texture` source. Les modifications effectuées via un autre objet `Texture` partageant exactement ce même `State` deviennent visibles après `validate()`/synchronisation appropriée par Sparkle, en accord avec VXL-088. **Cas à ne pas masquer :** certaines opérations de `spk::Texture` (en particulier avec plusieurs résolutions) peuvent détacher/remplacer le `State` de l'objet source ; un handle déjà stocké continue alors à cibler **l'ancien état** et ne suit pas automatiquement la nouvelle identité. `Texture::Handle` ne transporte pas, à lui seul, le `ResolutionSet` accessible via `Texture::resolution()/resolve()` ; VXL-090 impose donc une sélection explicite de la résolution par l'application **avant** l'appel au Builder, sans sélection automatique côté rendu voxel. Garder une ressource valide via le handle et assurer la synchronisation CPU/GPU ne dispense pas de respecter les règles de concurrence lors des mises à jour de la texture.
-
-**VXL-090 — Résolution de texture fixée au binding : VALIDÉ (option A).** Le `Material::Builder` conserve exclusivement le `spk::Texture::Handle` de la `const spk::Texture&` effectivement fournie à `setTexture(...)` (VXL-089). Il ne parcourt pas les différentes résolutions et n'effectue aucune sélection de niveau ou de résolution pendant le rendu voxel. Si l'application veut une variante de résolution, elle sélectionne d'abord explicitement une `Texture` de résolution voulue via les capacités existantes de `spk::Texture`, puis donne cette valeur au Builder ; `setTexture` capture alors son handle exact. `Material` reste immuable et ne conserve pas le `ResolutionSet` global ; changer de résolution nécessite un autre `Material` puis la palette correspondante. Cela ne désactive pas les mipmaps OpenGL ordinaires du `Texture::State` sélectionné. Le caractère vivant des pixels du `State` retenu (VXL-088) et le cas de détachement d'état (VXL-089) restent applicables. Test attendu : une source proposant plusieurs résolutions ne provoque jamais de commutation implicite ; deux Materials construits à partir de deux résolutions choisies explicitement conservent leur handle/résolution respectifs.
-
-**VXL-091 — Rôles de textures nommés, Material générique et VoxelPalette spécialisée : VALIDÉ.** `spk::Material` est l'unique type de matériau public : une valeur immuable (VXL-087) construite par `spk::Material::Builder` générique, qui associe zéro ou plusieurs textures à des **noms de rôle libres** définis par l'appelant. Aucun `enum` fermé de rôles voxels, aucune spécialisation `VoxelMaterial` et aucun `VoxelMaterial::Builder` ne sont imposés à l'utilisateur. Le Builder générique vérifie ses propres invariants structurels, sans dépendance au système voxel. Les noms sont l'identité sémantique publique des liaisons ; Sparkle peut les ranger/convertir en indices internes pour le rendu, sans rendre ces indices contractuels pour l'appelant.
-
-**Validation spécialisée par la palette (VXL-092) :** `spk::VoxelPalette` et son `Builder` restent spécifiques au système voxel. Ils associent les `spk::Material` immuables aux slots sémantiques et conservent les validations de catégories de rendu et de contrats d'occlusion (VXL-078 à 083). Concernant **les noms de textures uniquement**, `VoxelPalette::Builder::build()` exige exactement une liaison portant le nom **`albedo`** pour chaque `Material` associé. Si elle manque, `build()` lève une `spk::Exception` descriptive identifiant le slot et le rôle `albedo` manquant, sans publier de palette incomplète. **Aucun autre nom de texture n'est recherché, exigé ou validé par le système voxel V0.1.4.** Un `Material` peut librement posséder d'autres textures nommées, sans que cette présence invalide la palette ; ces autres textures sont ignorées par le rendu voxel initial. `spk::Material::Builder` ne connaît aucune convention voxel et reste libre de construire des Materials sans `albedo` pour d'autres usages. La vérification a lieu dans la construction de la palette, jamais dans le Material ni le Mesher.
-
-**Articulation avec VXL-088 à 090 :** chaque liaison de texture nommée conserve un `spk::Texture::Handle` capturé depuis la `const spk::Texture&` passée au Builder ; les noms/références sont figés après construction, tandis que les pixels de l'état référencé peuvent évoluer conformément à VXL-088/089. La résolution est celle explicitement choisie lors du binding selon VXL-090. La signature de l'API pour sélectionner le **nom** lors de `setTexture` (par exemple une variante `setTexture(nom, texture)`) reste à finaliser ; la forme illustrative antérieure `setTexture(const spk::Texture&)` ne définit pas, à elle seule, comment lier plusieurs textures nommées.
-
-**VXL-092 — Seul rôle de texture voxel : `albedo` obligatoire (VALIDÉ).** Pour V0.1.4, `albedo` est l'unique nom que le rendu voxel recherche dans un matériau. Aucun rôle `normal`, `roughness`, `metallic`, `emissive` ou autre n'est implémenté ni contrôlé dans cette version ; leur éventuelle présence dans un `spk::Material` générique n'est pas une erreur. Il n'y a pas de fallback implicite vers une couleur uniforme lorsqu'`albedo` manque pour une association voxel. La règle ne réduit en rien le caractère générique de `spk::Material` ni les vérifications déjà décidées des contrats de slots/catégorie/occlusion par `VoxelPalette`. **Restent ouverts :** signature définitive de `Material::Builder::setTexture` pour les noms de rôle, traitement du canal alpha d'`albedo` dans chaque catégorie explicitement déclarée au slot (VXL-093), détails des shaders et des ressources GPU. **Tests attendus :** Material générique sans `albedo` construit valablement ; Material générique avec rôles supplémentaires construit valablement ; Palette voxel acceptée lorsque `albedo` est présent, y compris en présence d'autres rôles libres ; Palette voxel rejetée avec `spk::Exception` descriptive lorsque `albedo` manque ; absence de toute validation des autres noms par la palette ; slots sans triangles visibles toujours validés ; aucun changement des invariants VXL-087 à 091 sur immutabilité, Handles et résolution.
-
-**VXL-084 :** `VoxelPalette` reste une **valeur métier immuable et indépendante des ressources GPU**. Le `VoxelRenderingSystem` (ou un adaptateur de ressources qu'il utilise) prépare les données nécessaires au shader dans un **`spk::ShaderStorageBuffer` distinct**, dont le contenu exploitable et les handles de rendu peuvent être **réutilisés entre plusieurs commandes compatibles**. Cela n'autorise aucune mutation cachée de la palette publique, n'impose pas d'héritage depuis `ShaderStorageBuffer`, et n'annule pas VXL-041 (reconstruction complète des SSBO d'instances). Le choix de la durée de vie et des critères précis de réutilisation du SSBO de palette entre frames demeure à préciser.
-
-**Correction majeure déjà validée :** l'ancienne palette unique pour tout Assembly est **révoquée**. **Chaque occurrence de Model dans Assembly possède sa propre association à une VoxelPalette**, tout en pouvant partager volontairement une même palette avec d'autres occurrences. **VXL-083 : un Builder initialisé depuis un Assembly recueille l'union des besoins de ses Model, sans obliger chaque partie à partager une seule palette ni effacer les associations individuelles existantes.** Model ne porte pas de palette mutable ; une VoxelPalette construite est immuable.
-
-**VXL-093 — Opacité numérique par slot de Shape : RÉVISÉE ET VALIDÉE.** Chaque slot géométrique de `Voxel::Shape` porte un `float opacity` dans `[0,1]`, avec `1.0` par défaut. La `Definition` ne fait que mapper ce slot vers le slot sémantique du `Model`. `opacity == 1.0` sélectionne le mesh opaque ; toute valeur inférieure à `1.0` sélectionne le mesh translucide. Aucun booléen transparent, aucune catégorie cutout/opaque/translucide supplémentaire et aucune lecture préalable des pixels d'`albedo` pour classer les faces. **Le calcul alpha est toujours identique dans les fragment shaders des deux passes** : `alpha_final = texture(albedo, uvFinal).a * slot.opacity`, suivi de `discard` si `alpha_final == 0.0`. Avec le blending GPU désactivé dans la passe opaque, l'alpha intermédiaire d'une texture opaque-classée ne déclenche pas automatiquement un mélange translucide ; le développeur choisit l'opacité du slot et la texture en conséquence. La passe translucide utilise WBOIT. Les pixels alpha nuls de feuillage sont bien éliminés même quand l'opacité du slot vaut `1.0`.
-
-**VXL-094 — Occlusion géométrique dérivée de l'opacité du slot : VALIDÉE.** Une face n'est éligible à l'occlusion du voisin que si **elle appartient à `outerShell`**, possède **`opacity == 1.0`**, et présente **sa face avant vers la cellule occultée** (VXL-074). Les règles existantes de couverture exacte, clipping partiel et union de polygones occultants continuent à s'appliquer. Une face `innerShell` n'occulte jamais une frontière, même opaque ; une face `outerShell` avec opacité inférieure à 1 n'occulte jamais, même si ses pixels sont opaques ; une face `outerShell` d'opacité 1 peut occulter même si sa texture comporte des trous alpha. **Les pixels de texture ne changent donc jamais le culling géométrique.** Aucun contrat d'occlusion indépendant ni détection d'alpha par Sparkle. Les erreurs visuelles d'une texture trouée sur un slot géométriquement occultant restent sous la responsabilité du développeur.
-
-**VXL-095 — Région d'atlas UV portée par Material : VALIDÉE SUR LE PRINCIPE, PRÉCISÉE PAR VXL-098.** Pour le rôle `albedo`, le `spk::Material` générique conserve la texture (`spk::Texture::Handle` selon VXL-089) et **une région UV rectangulaire**, exprimée par `uvOffset` et `uvScale` (noms et API exacts ouverts). Les UV de la face restent locaux à la `Shape` et le shader calcule `uvFinal = material.uvOffset + shapeUV * material.uvScale`, puis échantillonne `albedo` ; les coordonnées restent flottantes et le clipping continue d'interpoler les UV locaux (VXL-060/061). Plusieurs Materials peuvent utiliser des régions différentes **de la même texture atlas**, sans modifier la géométrie ; remplacer le matériau dans la VoxelPalette change le sprite sans rebake. Le Material reste générique (sans type VoxelMaterial), et seule la couche voxel requiert `albedo`. **VXL-097 : les UV locaux sont appliqués directement, même hors `[0,1]` : aucune répétition du sprite dans son rectangle d'atlas, aucun modulo ou clamp automatique.** L'appelant assume le résultat visuel. Des UV hors `[0,1]` sont autorisés (VXL-061), mais doivent provoquer un **Warning non bloquant via `spk::Logger`**, pendant la construction/validation CPU de la Shape et non par fragment ou frame. Les paramètres du sampler et les bords d'atlas restent ouverts. **VXL-098/099 : les régions UV des Materials voxel peuvent être fournies directement sous forme normalisée ou sélectionnées par coordonnées de sprite dans un `spk::SpriteSheet` (conversion via `sprite(coord)` en `Texture::Section`).** Un `Texture::Handle` ne contient ni le quadrillage de sprites ni la provenance SpriteSheet : l'API permettant au Material générique de porter cette sélection pour validation dans VoxelPalette reste à préciser.
-
-**VXL-096 — Une texture albedo maximum par Model et par passe : VALIDÉE.** La VoxelPalette peut avoir **autant d'atlas que voulu** ; aucune limite au niveau de `VoxelPalette::Builder::build()`, qui conserve sa validation de présence `albedo`. Lorsqu'on associe `Model` et `VoxelPalette`, Sparkle examine **uniquement les slots sémantiques requis par ce Model** (y compris ceux sans triangles, comme VXL-078), et exige que tous les matériaux de slots de mesh opaque partagent **un seul et même `albedo` `Texture::Handle`** ; même règle, indépendamment, pour les slots translucides. Les deux passes peuvent partager la texture ou chacune utiliser une texture différente. Un couple incompatible est refusé explicitement (la surface API d'erreur reste à finaliser) ; Sparkle n'effectue pas un repartitionnement silencieux des triangles entre plusieurs textures. Le Mesher **ne connaît pas les textures** et produit toujours les deux meshes de Model. La préparation du rendu conserve le SSBO de matériaux adapté au couple (VXL-085/086) et utilise `materialIndex` pour sélectionner région UV et opacité ; **jusqu'à un draw géométrique par mesh non vide et par Model/chunk** est visé, sans prétendre regrouper dans le même draw deux géométries de chunks distinctes ni compter les passes de composition WBOIT. Un modèle ne nécessitant aucun slot dans une passe n'impose aucune texture pour cette passe.
-
-La 3D Sparkle conserve son infrastructure opaque, alpha-cutout et translucide avec **Weighted Blended OIT (WBOIT)** ; **le rendu voxel V0.1.4 n'introduit pas de troisième catégorie de mesh cutout** : alpha nul = discard dans les deux shaders voxels, et opacité du slot < 1 = passe WBOIT. Profondeur opaque, accumulation puis composition de la translucence. L'éclairage, les spots/points/directional lights et les ombres doivent être partagés avec le rendu 3D non voxel. Détails des passes d'ombres/cascades à confirmer avec le pipeline courant.
-
-Description des ressources en **JSON**, formats de volumes compacts binaires possibles ; construction via API C++ toujours possible. **Pas de Catalogue obligatoire ni de Catalog implémenté** pour cette version. Les `Definition` conservent leurs `Shape` et associations de slots indépendamment d'un catalogue ; les formats JSON devront pouvoir reconstruire ces relations et les tables locales de `Volume` sans dépendance à un registre global.
-
-## 5 — Assembly articulé, copiable, directement mutable
-
-**Pas de Assembly::Instance.** Assembly contient une hiérarchie légère de Part ; chaque Part porte une **copie légère de Model** (shared resources internes), un transform local 3D, une association de palette et éventuellement un parent. Un point d'attache nommé peut exister sans mesh ; on peut lui attacher/détacher Model ou Assembly sans créer d'Entity, en interdisant les cycles. **VXL-083 : créer un `VoxelPalette::Builder` depuis cet Assembly collecte les contrats des Model de toutes ses parties concernées (avec fusion par nom identique/contrat identique et rejet des conflits) ; c'est une commodité de construction, non un remplacement de la sélection explicite d'une palette par occurrence.**
-
-~~~cpp
-namespace spk::Voxel {
-  using PartID = /* stable part ID: to define */;
-
-  class Assembly : public spk::VersionedTrait {
-  public:
-    struct Part {
-      PartID id;
-      std::string name;
-      std::optional<PartID> parent;
-      spk::Matrix4x4 localMatrix;
-      std::optional<Model> model; // lightweight shared copy
-      /* per-part material palette association */
-    };
-
-    Assembly();
-    Assembly(const Assembly&); // new VersionedTrait state, version 1
-    /* copy assignment policy is still to be defined */
-
-    PartID addPart(/* name, model, palette, parent */);
-    void setLocalTransform(PartID, /* local transform */);
-    /* part(), attach(), detach(), reparent(), removePart() */
-    /* enumerate parts and named attachment points */
-  };
-}
-~~~
-
-L'Assembly ne dépend pas de Transform3D, car **spk::Transform3D est déjà un Component3D** ; choisir un type local autonome (Matrix4x4 ou struct transform). La logique d'AnimationClip reste **externe aux voxels** ; un système de gameplay/animation ajuste les transforms et appelle **invalidate()**.
-
-Seul **Assembly** est versionné ; **Model ne l'est pas**. Si un Assembly source est en version 42, **sa copie indépendante démarre en version 1**, sans copier les abonnés. En attendant la correction générale de VersionedTrait, utiliser un constructeur de copie personnalisé reconstruisant la base ; voir **issue #36** : https://github.com/EreliaStudio/Sparkle/issues/36.
-
-Un Assembly reste versionné pour le gameplay et les observateurs, et les animations appellent invalidate() après les modifications. Pour le rendu simplifié de V0.1.4, le VoxelRenderingSystem recalcule **chaque frame toutes les matrices des parties affichées**, même sans changement de version (une quinzaine typiquement), ainsi que les transforms globaux des Entity. Aucun cache d'instances fondé sur les versions.
-
-## 6 — Engine : composants de données et un VoxelRenderingSystem
-
-### 6.1 Composants
-
-Les composants **n'ajoutent jamais** eux-mêmes de RenderCommand au RenderSnapshot. Ils exposent seulement les bindings. **Les méthodes `bind()` reçoivent des pointeurs non propriétaires**, éventuellement `const` pour les objets lus uniquement (`Model`, `VoxelPalette`, `Assembly`). Le propriétaire externe assure leur durée de vie ; l'appel à `bind()` ne transfère aucune propriété. **VXL-082/083 : `Model::isCompatible(palette)` vérifie que la palette possède tous ses slots requis avec les mêmes catégories et contrats ; des slots supplémentaires sont permis. Les associations entre Model et Palette, qu'elles proviennent des composants ou des parties d'Assembly, doivent être validées, et le mapping de leurs indices distincts doit être pris en compte à la construction des commandes de rendu.**
-
-~~~cpp
-namespace spk::Voxel {
-  // PROPOSITION : typed Registry registration à vérifier dans Sparkle.
-  class ModelRenderingComponent : public spk::Component3D,
-      public spk::Registry<ModelRenderingComponent, spk::Engine*>::Object {
-  public:
-    using Component3D::Component3D;
-    void bind(const Model* model, const spk::VoxelPalette* palette);
-    void unbind();
-    const Model* model() const;
-    const spk::VoxelPalette* palette() const;
-  private:
-    const Model* _model = nullptr;
-    const spk::VoxelPalette* _palette = nullptr;
-  };
-
-  class AssemblyRenderingComponent : public spk::Component3D,
-      public spk::Registry<AssemblyRenderingComponent, spk::Engine*>::Object {
-  public:
-    using Component3D::Component3D;
-    void bind(Assembly* assembly);
-    void unbind();
-    Assembly* assembly() const;
-  private:
-    Assembly* _assembly = nullptr; // non-owning
-  };
-}
-~~~
-
-L'héritage de Registry typé est une **proposition nécessitant vérification**, et non une garantie de compilation : Component3D a déjà son propre Registry et l'enregistrement concret du sous-type doit suivre l'API effectivement disponible.
-
-### 6.2 System et lecture des composants depuis Registry
-
-**VXL-096 :** lors d'une association `Model`/`VoxelPalette`, valider les slots par nom et opacité puis l'égalité des handles `albedo` **dans chaque passe uniquement**. Le bucket d'un `Model` peut alors être dessiné par passe avec un seul atlas lié, malgré plusieurs matériaux/régions UV, en conservant `MeshVertex::materialIndex` et le SSBO par couple Model/Palette. Deux Models de géométries différentes ne deviennent pas un seul draw simplement parce qu'ils partagent l'atlas. Ne pas regrouper des occurrences de palettes incompatibles dans un draw unique.
-
-~~~cpp
-namespace spk::Voxel {
-  class VoxelRenderingSystem : public spk::RenderingSystem {
-  protected:
-    void _beforeBuildRenderSnapshot(spk::RenderSnapshot::Builder&) override;
-    void _buildRenderSnapshot(spk::RenderSnapshot::Builder&) override;
-    void _afterBuildRenderSnapshot(spk::RenderSnapshot::Builder&) override;
-  private:
-    /* transient BucketKey -> vector<GPUInstance> */
-    /* new SSBO for each nonempty bucket and each RenderSnapshot */
-  };
-}
-
-// PSEUDO-C++ proche de l'API Registry actuelle :
-// à condition que les composants soient typiquement inscrits.
-const auto& models =
-  spk::Registry<spk::Voxel::ModelRenderingComponent, spk::Engine*>
-    ::instance().elements(this->engine());
-const auto& assemblies =
-  spk::Registry<spk::Voxel::AssemblyRenderingComponent, spk::Engine*>
-    ::instance().elements(this->engine());
-for (auto* component : assemblies) {
-  if (!component->isEffectivelyActive() || !component->assembly()) continue;
-  // pour chaque part visible : worldEntityMatrix * parentPartMatrices * local
-  // stocker occurrence opaque et/ou translucide, palette propre à cette part
-}
-// ModelRenderingComponent : une occurrence logique par mesh non vide.
-~~~
-
-**Ce sont les véritables APIs Sparkle** : RenderingSystem hérite de System et RenderingObjectTrait ; Registry<T, Engine*>::instance().elements(engine) est disponible ; RenderSnapshotContributorTrait dispose des hooks before/build/after ; RenderSnapshot::Builder::renderPass(key), RenderPass::emplace<Command>() et RenderCommand::execute(RenderContext&) const existent. Les noms de nos nouvelles classes et signatures restent à valider.
-
-**VXL-084 — GPU des palettes :** le système de rendu consomme les `VoxelPalette` immuables par leur contrat de slots et leurs matériaux, puis prépare séparément une représentation SSBO pour le shader. La représentation GPU peut être partagée par plusieurs `DrawVoxelBucketCommand` compatibles sans réencodage par commande. **Le SSBO de palette est distinct du SSBO d'instances de VXL-041** : chaque frame reconstruit toujours les SSBO des instances comme précédemment. Aucune règle de cache permanent ou de durée de vie inter-frame pour le SSBO de palette n'est imposée par VXL-084. **VXL-085 fixe ce mapping :** pour chaque couple compatible `Model`/`VoxelPalette`, préparer un SSBO de matériaux **déjà réordonnés dans l'ordre des slots du Model**, partageable entre commandes de ce couple ; `MeshVertex::materialIndex` adresse directement ce SSBO, sans table d'indirection GPU supplémentaire. Une palette présentant des slots en plus ne transfère que ceux requis par ce Model dans cette représentation. **VXL-086 : ces SSBO de matériaux sont construits et mutualisés uniquement à l'intérieur d'un même `RenderSnapshot`, sans cache persistant inter-frame.**
-
-### 6.3 SSBO neuf par bucket et par frame (VXL-041 validée)
-
-**Changement d'architecture : abandon de la gestion incrémentale des instances et des SSBO persistants.** Le système récupère tous les composants actifs à chaque RenderSnapshot, calcule les transformations de leurs Models et Assemblies, groupe les occurrences compatibles en buckets et constitue pour chaque bucket un vecteur dense de GPUInstance.
-
-Pour chaque bucket non vide, VoxelRenderingSystem **crée un nouvel objet spk::ShaderStorageBuffer**, le dimensionne, écrit la totalité du tableau dynamique, puis appelle GPUResource::validate() pour signaler la modification. Il capture un ShaderStorageBuffer::Handle propre au snapshot et construit directement une DrawVoxelBucketCommand. Les meshes et ressources immuables sont partagés normalement ; seules les données d'instances et leurs SSBO sont reconstruits.
-
-**Interfaces proposées (pseudo-C++, non encore figées) :**
-
-~~~cpp
-namespace spk::Voxel {
-  struct GPUInstance {
-    /* world transform, palette or material mapping, shader instance fields */
-  };
-
-  struct BucketKey {
-    /* mesh identity + render pass + compatible GPU bindings */
-  };
-
-  class DrawVoxelBucketCommand final : public spk::RenderCommand {
-    /* immutable mesh; ShaderStorageBuffer::Handle for THIS snapshot;
-       number of instances; immutable rendering resources */
-  public:
-    void execute(spk::RenderContext&) const override;
-  };
-}
-~~~
-
-~~~cpp
-// Concept dans VoxelRenderingSystem::_buildRenderSnapshot(builder)
-auto buckets = collectAndGroupActiveComponents(); // reconstruits par frame
-for (auto& [key, instances] : buckets) {
-    if (instances.empty()) continue;
-
-    spk::ShaderStorageBuffer ssbo(
-        /* binding point */, 0, sizeof(spk::Voxel::GPUInstance));
-    ssbo.resize(instances.size());
-    ssbo.setDynamicData(
-        std::span<const spk::Voxel::GPUInstance>(instances));
-    ssbo.validate();
-
-    auto immutableHandle = ssbo.handle();
-    builder.renderPass(key.pass).emplace<DrawVoxelBucketCommand>(
-        /* mesh / material bindings */, immutableHandle, instances.size());
-    // Ne plus modifier l'état de ssbo après publication du handle.
-}
-~~~
-
-**Au moment de l'exécution**, DrawVoxelBucketCommand active le handle SSBO sur le RenderContext ; le mécanisme GPUResource / GPUResourceCollection existant synchronise la génération GPU du buffer au premier activate, en transférant **tout** son contenu ; ensuite la commande dessine les instances. La création des objets OpenGL peut être différée jusqu'à cet activate.
-
-**Ne plus implémenter en v0.1.4 :** UpdateVoxelInstanceCommand, CacheEntry, InstanceKey->offset, BucketInstanceStorage, swap-and-pop interframes, uploads GPU partiels, dirty ranges, double buffering explicite de SSBO ou cache de version Assembly pour optimiser le rendu. La suppression d'une instance consiste simplement à ne plus l'insérer dans le bucket de la frame suivante. Chaque bucket est automatiquement compact, sans trous.
-
-**Durée de vie des snapshots :** chaque RenderSnapshot doit conserver son propre handle SSBO et les ressources immuables nécessaires pendant son exécution. Un nouveau snapshot ne peut pas altérer le SSBO d'un ancien, puisque les états sont distincts. Vérifier le nettoyage réel dans GPUResourceCollection et l'absence de fuite. Le DoubleBuffer générique de Sparkle existe, mais n'est pas nécessaire au principe choisi. Deux SSBO alternés sont remplacés par des SSBO neufs par snapshot.
-
-**Coût de simplicité accepté :** création d'objets GPU et **upload complet de toutes les instances à chaque frame**, même en l'absence de modification. C'est un compromis volontaire, à mesurer par profiling avant toute optimisation future. Les Mesh/Volume/Model sont toujours partagés et immuables : **aucun rebake par frame**.
-
-~~~mermaid
-sequenceDiagram
-  participant Game as Simulation / animation
-  participant Sys as VoxelRenderingSystem
-  participant Registry as Registry
-  participant Snapshot as RenderSnapshot Builder
-  participant GPU as RenderContext
-  Game->>Game: modifie Assemblies
-  Sys->>Registry: collecter composants actifs
-  Registry-->>Sys: Models et Assemblies
-  Sys->>Sys: recalculer toutes les matrices et occurrences
-  Sys->>Sys: grouper en vecteurs compacts par bucket
-  loop chaque bucket non vide
-    Sys->>Sys: créer nouveau SSBO, remplir, validate
-    Sys->>Snapshot: ajouter DrawVoxelBucketCommand avec handle
-  end
-  Snapshot-->>GPU: activate handle, upload complet, instanced draw
-  Note over GPU: aucune lecture des Assemblies mutables
-~~~
-
-
-### 6.4 Pipeline graphique
-
-~~~mermaid
+```mermaid
 flowchart TD
-  A[Collecter Model et Assembly] --> B[Meshes de slots avec opacity egal a 1]
-  A --> C[Meshes de slots avec opacity inferieure a 1]
-  B --> D[Opaque + depth + lighting / shadow]
-  C --> E[Weighted Blended OIT accumulation]
-  D --> F[Composition OIT / frame finale]
-  E --> F
-~~~
+  C["Cellule à mailler"] --> N["Examiner les 6 voisins"]
+  N --> D{"Chacun présente-t-il une couverture
+  opaque frontale complète du carré de frontière ?"}
+  D -- "Oui, tous" --> X["Ne pas émettre innerShell"]
+  D -- "Non, partiel ou inconnu" --> Y["Émettre tous les polygones innerShell"]
+  X --> Z["Traiter séparément les outerShell"]
+  Y --> Z
+```
 
-WBOIT est retenu pour les slots d'opacité inférieure à 1, avec éclairage/ombres **partagés** avec les rendus 3D non voxels, pas une seconde infrastructure complète. Les deux fragment shaders calculent toujours `alphaFinal = albedo.a * slot.opacity` et écartent `alphaFinal == 0` ; leur configuration de blending GPU diffère selon la passe. Un atlas `albedo` unique est utilisé par passe et par couple Model/Palette accepté (VXL-096).
+Chaque direction est **fermée** seulement si les polygones occultants du voisin couvrent **l'intégralité du carré `[0,1]²`** de sa frontière en vis-à-vis. La fermeture ne dépend pas des `outerShell` de la cellule courante. Si les six directions sont fermées, aucun `innerShell` de cette cellule n'est émis. Si au moins une direction est ouverte, partiellement couverte ou inconnue, **tous ses `innerShell`** sont émis, sans culling individuel supplémentaire par cette règle.
 
-## 7 — Contrats de tests à faire valider AVANT le développement
+Les `outerShell` continuent à être traités par clipping directionnel indépendamment des `innerShell`.
 
-Cette liste est un **point de départ pour une discussion dédiée sur les TU**, pas une suite de tests déjà approuvée.
+**Limite fonctionnelle assumée :** cette optimisation ne prend pas en charge une caméra placée **à l'intérieur d'un espace entièrement enfermé** dont les surfaces intérieures ont été éliminées. Le moteur ne conserve pas ces faces de manière préventive et n'effectue aucun rebake automatique lié à la position de la caméra. L'application doit éviter ce scénario si elle veut garantir le rendu de ses surfaces intérieures.
 
-| Classes / système | Comportements concrets proposés |
-|---|---|
-| Cell/Shape/Definition | 8 orientations ; géométrie flottante locale dans [0,1]³ ; VXL-077 winding CCW vu de la face avant, normale géométrique dérivée de (v1-v0) × (v2-v0), triangles à orientation cohérente, backface culling et flips préservant le côté physique ; VXL-076 recouvrements coplanaires même winding autorisés, partiels ou totaux, sans validation de paire bloquante, fusion ou déduplication automatique, polygones et slots sources préservés, responsabilité des artefacts visuels à l'application ; polygones plans/convexes à 3 sommets ou plus lorsque présents, **VXL-075 Shape::Builder avec 0 polygone acceptée publiquement, Shape distincte valide sans géométrie ni occlusion, même hors Air, caches et bake produisant 0 fragments**, VXL-073 polygones exclusivement simple face, winding dirigeant le recto, duplication manuelle par second polygone à winding opposé pour toute surface recto-verso, aucune propriété doubleSided ni duplication automatique ; VXL-074 front d'un polygone opaque seul autorisé à occulter, arrière non occultant, orientation et flip cohérents ; VXL-062 normales de sommets facultatives, normale géométrique par défaut et normales personnalisées pour éclairage lissé ; classification X/Y/Z=0/1 ou innerShell ; demi-dalle à Y=0.5, pente et végétation ; groupes de polygones par face et slot ; Shape::Builder valide chaque ajout et lance une `spk::Exception` descriptive pour géométrie invalide ; ajout rejeté sans aucune modification du Builder (garantie forte VXL-054), conservation des anciens polygones/slots/index, nouvelle tentative corrigée ou build des entrées précédemment acceptées ; build d'un Builder déjà géométriquement valide, VXL-065 conservation intégrale de l'état en cas d'exception de build() (y compris allocation), possibilité de corriger/retenter après échec, consommation uniquement après succès, impossibilité d'utiliser de nouveau le Builder consommé ; Shape immuable avec Data partagé et copies conservant l'identité ; construction via C++ et JSON ; Definition immuable, partage Data et copie autonome de Cell |
+### 3.5 `spk::Voxel::OcclusionCache`
 
-| Volume/Builder | VXL-066 Builder créé depuis un Volume existant, dimensions/cellules initiales préservées, set/erase après initialisation, nouveau snapshot indépendant sans modifier l'ancien, rebake intégral du nouveau Volume ; VXL-072 `build()` réussi consomme le Builder, toute exception conserve intégralement son état et autorise édition et nouvelle tentative, snapshot jamais partiellement publié ; VXL-067 grille dense contiguë de positions, **VXL-069/070 chaque case est une vraie Cell avec une Definition Air prédéfinie, automatiquement fournie par Sparkle à l'index local 0 sans paramètre**, sans optional ni sentinel de cellule absente, erase remet Air et accès cell(position) retourne Cell par valeur, index compact vers la table locale de Definition, accès O(1) indexé en grille ; VXL-071 interning des Definition par identité de `Definition::Data` partagé, copies sous un même index, créations indépendantes à contenu égal sous indices distincts et Air conservé à 0 ; volume majoritairement Air et dimensions volumineuses, garde contre dépassement du produit des dimensions ; VXL-068 dimensions fixées à la construction, pas de resize ni agrandissement implicite ; set/erase hors limites refusés sans mutation ; copies légères et snapshots indépendants ; vérification du rendu, de l'occlusion et du culling avec voisins Air réels et voisins extérieurs Empty/Unknown |
-| Mesher/occlusion | cache VXL-055 optionnel via bind(OcclusionCache*)/unbind non propriétaire, VXL-057 find() -> optional<OcclusionResult> immutable par valeur, store()/clear() thread-safe via ProtectedData<Data> privé, calcul clipping hors verrou, zéro fragment distinct de cache miss, VXL-056 clear() libérant entrées et références Shape sans éviction automatique, VXL-058 clear() concurrent effaçant les entrées présentes sans empêcher une insertion après purge par un calcul déjà démarré, hit/miss avant et après clear, VXL-059 résultat polygonal local à Shape avec UV et slots géométriques, VXL-060 interpolation UV des nouveaux sommets de clipping à partir du polygone source sans reprojection, VXL-061 triangulation déterministe de n-gones à UV arbitraires, clipping des fragments couvrant plusieurs triangles et interpolation locale par triangle, VXL-062 normales personnalisées interpolées et renormalisées durant le clipping, sans effet sur l'occlusion géométrique, VXL-073 préservation du winding source lors du clipping/triangulation, émission des deux polygones explicites d'une feuille recto-verso, éclairage normal indépendant de la face réellement visible, orientation et flip cohérents avec le recto, VXL-077 triangulation CCW et normale géométrique calculée par produit vectoriel, flips à déterminant négatif compensés au besoin dans les indices, rendu et occlusion frontales cohérents avec/sans cache, VXL-074 occlusion limitée à la face avant des polygones opaques, arrière non occultant même en présence d'une couverture géométrique complète, culling des innerShell utilisant des frontales réellement tournées vers la cellule, tests de clé de cache directionnelle et rotations/flips, VXL-076 union polygonale correcte de deux polygones opaques coplanaires même winding qui se recouvrent, totale et partielle, sans double comptage, pas d'effet de matière opaque d'un polygone translucide superposé, résultat identique avec/sans cache, VXL-075 Shape vide : absence de surface géométrique/occlusion, aucun triangle dans Mesh, présence logique de la Cell et distinction des résultats de cache vides des cache misses, VXL-063 tolérance de clipping par défaut 1e-5, personnalisable par Mesher, clé de cache distinguant les tolérances, validation des valeurs non positives/non finies, VXL-064 suppression des fragments de clipping géométriquement dégénérés selon cette tolérance, sans triangles GPU invalides ni fausse fermeture d'une face opaque, mapping vers les slots du Model après find() et selon Definition, réutilisation de résultats entre Definitions aux contrats d'occlusion équivalents, distinction des clés si contrats différents, bake sans cache = même résultat sans mémorisation, destruction/recréation du Mesher avec réutilisation du cache indépendant, caches distincts pour deux sous-systèmes et wrapper applicatif static ; deux cubes collés, carré contre triangle, pente, demi-face ; clipping flottant, fragments/UV/normales, union polygonale opaque multi-slots, trou cutout/translucide ; innerShell omis si six voisins ont chacun leur frontière pleinement fermée ; absence/Unknown/Empty/partiel préserve innerShell ; changements de voisin et rebake, orientations/flips ; cache `A → B` ne stockant que le résultat de A, cache `B → A` distinct ; occultation totale asymétrique/partielle, hit répété, sens/direction/slots distincts ; tests de tolérances et dégénérescences ; caméra enfermée hors périmètre VXL-047 |
-| Model/Mesh | opaque/cutout/translucide, meshes vides, copies à ressources partagées, sommets GPU flottants ; VXL-080 indices des slots sémantiques attribués par tri alphabétique déterministe des noms après fusion VXL-079, indépendants de l'ordre des cellules/Definition et de leur visibilité, cohérence MeshVertex et Palette ; VXL-078 conserver les slots sémantiques de toutes les Definition référencées par au moins une Cell, même entièrement occultées ; ne pas inférer les slots depuis les seuls triangles visibles, ne pas inclure les Definition devenues inutilisées dans la table locale, Palette valide avec slots sans triangles ; rebake modifiant le culling seul ne fait pas disparaître ces slots ; VXL-079 fusion de déclarations de nom identique seulement si catégorie et contrat d'occlusion tous deux identiques ; collision de nom avec catégorie/contrat incompatible provoquant une spk::Exception au bake, aucun Model retourné ; tests y compris slots totalement occultés et indices GPU référençant la table unifiée |
+Le cache est une ressource autonome **facultative** et indépendante des Meshers, des palettes et du GPU. Plusieurs Meshers peuvent l'utiliser.
 
-| Palette | nom de slot, mapping Shape→Definition→Model, compatibilité stable des noms/opacités de slots, atlas vérifiés par couple Model/Palette, palette par occurrence ; VXL-092 seul `albedo` obligatoire lors du `VoxelPalette::Builder::build()` ; aucun autre rôle contrôlé ou exigé, noms supplémentaires libres dans `Material` générique ; VXL-093/094 opacity flottant [0,1] déclaré dans les slots de Shape et transmis via Definition/Model, sans catégorie ni contrat d'occlusion séparés, outerShell frontal d'opacité 1 seul occultant, texture alpha ignorée par le Mesher ; VXL-087 Material immuable après construction, valeurs/données de matériaux partagées entre palettes sans copie profonde obligatoire, variante de Material et de Palette créée explicitement pour modifier une propriété, absence de mutation rétroactive ; test de matériaux communs à plusieurs palettes, copies légères, nouveau matériau n'affectant ni l'ancien ni les snapshots existants, VXL-089 `Builder::setTexture(const Texture&)` stocke un Handle lecture seule sans raw pointer, garde l'état capturé en vie après destruction de l'objet source, partage les changements du même State après validation/synchronisation et conserve l'ancien State après détachement du wrapper source ; VXL-090 choix de la résolution explicite avant setTexture, jamais de commutation automatique au rendu voxel, test multi-résolution distincte pour deux Materials ; VXL-088 références de Texture immuables par Material mais pixels vivants, partage des changements entre Materials/Palettes, absence de rebake pour modification des pixels, nouveau Material/Palette en cas de changement d'identité de texture, durée de vie/synchronisation GPU testées ; VXL-086 aucun SSBO persistant ni état de cache stocké dans VoxelPalette, plusieurs commandes d'un RenderSnapshot partageant le SSBO de leur couple, variantes immuables indépendantes de snapshots précédents ; VXL-085 SSBO de matériaux résolu par noms et aligné avec indices `MeshVertex::materialIndex` pour un couple Model/Palette compatible ; palette à slots supplémentaires sans obligation de matérialiser les slots hors Model dans son SSBO adapté, même palette sur deux Model différents => deux dispositions possibles ; VXL-084 Palette publique immuable indépendante d'OpenGL sans héritage ShaderStorageBuffer, représentation SSBO gérée par rendu et partagée entre commandes compatibles, modification d'une variante sans mutation rétroactive d'un SSBO publié ; VXL-082 Model::isCompatible(palette) exige tous les slots requis avec même opacité et vérifie au maximum un albedo par passe, accepte les slots supplémentaires de palette, vérifie à chaque association Model/Palette et ne dépend d'aucune identité de Model ; VXL-083 Builder mutable depuis un Model, plusieurs Model, Assembly ou Palette, produit une VoxelPalette immuable à copies légères partageant `const Data`, nouvelle palette variante indépendante après remplacement de bindings, pas de modification des snapshots existants ; VXL-081 `Builder::build()` (anciennement Factory) oblige un binding compatible de tous les slots déclarés, même non visibles ou sans triangle, erreur descriptive avec noms des slots absents et aucune palette publiée en cas d'échec, zéro slot = palette vide possible, aucun matériau de secours implicite ; VXL-080 bindings toujours par nom et mapping des indices du Model triés, pas selon l'ordre de bind() ; VXL-078 construction/binding par déclaration du Model même si un slot n'a aucune géométrie actuellement émise ; VXL-079 révisée : fusion du même nom avec même opacity, erreur de bake sur différence d'opacité |
-| Assembly | copie version 1 indépendante ; hiérarchie/parentage ; cycles refusés ; attaches, modification de bras, invalidate() ; VXL-083 Builder(Assembly) collecte l'union des slots des Model des parties, détecte les collisions de contrats, sans imposer une palette unique aux parties qui conservent leurs associations par occurrence |
-| Components/Registry | bind/unbind ; composant inactif ; composants isolés par Engine ; durée de vie du non-owning binding ; VXL-082/083 contrôle de compatibilité Model/Palette avant emploi, snapshots palette immuables, association d'une palette partagée à deux Model compatibles et deux palettes variantes à un seul Model |
-| VoxelRenderingSystem | rebuild de toutes les matrices à chaque frame ; VXL-086 table temporaire de SSBO de matériaux par couple Model/Palette limité au RenderSnapshot courant, nouveaux SSBO aux snapshots suivants, pas de cache ni d'invalidation inter-frame ; Entity transform ; grouping par Mesh/état GPU ; palettes indépendantes ; aucun cache de version GPU pour les instances (VXL-041) ; VXL-085 préparation des SSBO palette selon l'ordre du Model pour chaque couple compatible, partage du même SSBO par plusieurs commandes d'un même couple au sein du rendu, pas d'indirection GPU supplémentaire ; VXL-084 préparation séparée d'une représentation GPU de VoxelPalette, réutilisation pour plusieurs commandes compatibles, gestion des ressources hors de la valeur Palette, ne pas déduire cache inter-frame |
-| SSBO/Commands | SSBO d'instances neuf par bucket non vide et par frame (VXL-041) ; VXL-086 SSBO de matériaux préparés pour chaque couple Model/Palette réellement employé dans le snapshot, partage intra-snapshot, conservation par les handles jusqu'à l'usage GPU terminé, pas de ressource de palette réutilisée du snapshot précédent, zéro couple actif => zéro allocation ; VXL-085 SSBO de matériaux adapté au couple Model/VoxelPalette avec ordre identique à Model.materialSlots(), accès direct dans le shader par materialIndex, partage par commandes du même couple, deux palettes pour un Model et une palette pour deux Models, absence de cache inter-frame présumé ; upload complet ; une commande de dessin groupé ; disparition d'une occurrence sans trou ; handles indépendants par snapshot ; durée de vie et libération GPU ; profiling du coût d'allocation ; VXL-084 SSBO de palette séparé et potentiellement partagé entre commandes, ressource GPU gérée par rendu sans héritage dans VoxelPalette ; test du même handle palette utilisé par plusieurs commandes, du snapshot de rendu après variantes de Palette, des données des matériaux et de la dissociation des durées de vie |
-| Graphics | transparence WBOIT ; lighting/ombres ; screenshots de référence et validations visuelles ; VXL-087 matérialisation GPU des paramètres de Material immuables, identité/partage conservés, tests de changement de matériau nécessitant nouvelle palette, pas de politique implicite de mutabilité des pixels des textures |
+Une entrée représente **une requête directionnelle A → B** : quels fragments de l'`outerShell` de A restent visibles après occultation par B ? Le sens **B → A** constitue une autre requête, une autre clé et éventuellement un autre résultat. Une valeur valide contenant zéro fragment signifie **occlusion totale**, tandis que l'absence d'entrée est représentée par `std::nullopt`.
 
-| VXL-093/094 — Opacité et occlusion | Shape slot `opacity` dans [0,1] défaut 1 ; VXL-093 meshes classés sur valeur déclarée (1 opaque, <1 WBOIT), aucun cutout distinct ; alpha toujours `albedo.a * opacity`, discard si alpha == 0 dans les deux shaders, pixels alpha de feuillage éliminés, alpha partiel sur passe opaque ne déclenchant pas automatiquement blending ; VXL-094 occlusion du seul outerShell d'opacité 1 orienté vers le voisin, même si l'albedo a des pixels transparents ; outerShell opacité inférieure à 1 non occultant même avec texture opaque ; innerShell non occultant ; cache et clipping inchangés ; collision de nom sémantique à opacités différentes refusée. |
-| VXL-095/097/098 — SpriteSheet et atlas UV | Matériaux voxels partageant un `spk::SpriteSheet` avec coordonnées de sprites différentes (`Vector2UInt`) ; conversion via `sprite(coord)` en `Texture::Section` (`anchor`, `size`) ; shader `uvFinal = anchor + uvLocal * size`. UV hors `[0,1]` conservés sans répétition automatique, Warning non bloquant via `spk::Logger` sans logs par frame ; coordonnées de sprite hors grille rejetées ; remplacement du Material sans rebake. |
-| VXL-096 — Limite de textures par association | Palette avec N textures valablement construite ; Model utilisant un sous-ensemble compatible avec une albedo opaque et une translucide au maximum ; mêmes textures autorisées dans les deux passes ; slots de Model invisibles toujours vérifiés ; autre Model utilisant d'autres sous-ensembles de même Palette compatible ; couple requérant 2 atlas opaques ou 2 translucides refusé sans remaillage caché ; un draw maximum par mesh non vide d'un même Model ; meshes de Models géométriquement distincts non fusionnés automatiquement. |
+La clé identifie les blocs immuables `Shape::Data` des deux cellules, leurs orientations, la direction du voisinage, les contrats géométriques d'opacité pertinents et la tolérance de clipping. L'identité de Shape vient du Data partagé, **pas d'un hash de contenu ni d'un identifiant artificiel**. Les clés conservent une propriété partagée suffisante sur ces Data pour empêcher le recyclage d'adresse de créer de fausses correspondances. Les slots sémantiques de Model et les matériaux concrets n'entrent pas dans l'identité d'un résultat si les contrats géométriques sont équivalents.
 
-## 8 — Points ouverts et prochaines décisions
+`OcclusionResult` est une valeur immuable, à copie légère, contenant les **fragments visibles de A dans le repère local de la Shape A**, leurs UV, leurs attributs et leurs **slots géométriques locaux**. Il ne contient ni indices des slots du Model ni pointeurs vers une palette. Après lecture du cache, le Mesher applique le mapping de la Definition, l'orientation et le placement dans le Volume.
 
-**Révision normative :** les détails historiques de VXL-046/048/079/081/082/083/084/085, ci-dessous, qui mentionnent des catégories de rendu ou contrats d'occlusion indépendants sont **remplacés** par les conditions VXL-093 à VXL-096, décrites à la fin de cette section. Conserver les obligations de géométrie, slots, ordre, immutabilité, caches et SSBO sans réintroduire l'ancien mode cutout ni imposer une catégorie au Material.
+`OcclusionCache` protège sa table par un `spk::ProtectedData<Data>` **privé** :
 
-### VXL-040 — Buckets compacts : invariant conservé ; technique incrémentale supersédée
+- `find(key)` copie légèrement un `std::optional<OcclusionResult>` sous verrou de lecture, puis libère le verrou avant de rendre la main ; aucun emprunt sur la table ne s'échappe ;
+- `store(key, result)` publie une entrée complète sous verrou d'écriture ; deux Meshers peuvent calculer la même clé simultanément et n'en conserver qu'un résultat valide ;
+- `clear()` supprime, sous verrou d'écriture, **les entrées présentes à cet instant**. Il n'annule pas un clipping déjà commencé hors verrou : un `store()` ultérieur peut réinsérer un résultat calculé avant la purge.
 
-Toutes les instances actives d'un bucket occupent une plage dense. L'ancien mécanisme swap-and-pop et les tables d'offsets persistantes **ne sont plus à implémenter**, puisque les buckets sont intégralement reconstruits à chaque frame. Une occurrence supprimée n'apparaît simplement plus dans la prochaine frame. Le shader ne reçoit ni matrice identité sentinelle ni slots inactifs.
+Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`OcclusionResult` récupérées avant une purge restent valides. Les entrées du cache et les références aux Shapes restent détenues **jusqu'à `clear()` ou destruction** : aucune éviction automatique, aucun LRU et aucun budget de mémoire obligatoire.
 
-### VXL-041 — Recréer les SSBO à chaque frame : VALIDÉ
+Un cache partagé peut être interrogé simultanément ; en revanche, sa **destruction** et la modification de son binding pendant un bake actif ne sont pas rendues sûres par la seule synchronisation de `find/store/clear`.
 
-Le VoxelRenderingSystem crée un SSBO neuf par bucket de rendu non vide et par RenderSnapshot, copie tout son tableau d'instances, puis produit directement la commande de dessin instancié. Pas de commandes d'update par élément, cache d'occurrence, upload partiel ou double buffering explicite. Les Model/Mesh immuables restent partagés. Cette simplification accepte des allocations GPU et transferts complets réguliers, à mesurer ultérieurement.
+### 3.6 `spk::Voxel::Model` : résultat immuable
 
-### VXL-042 — Definition immuable, Cell par valeur et stockage interne compact : VALIDÉ
+Le Model contient ou conserve de manière sûre les données issues du Volume, **deux meshes immuables** (opaque et translucide, éventuellement vides) et la table complète des slots sémantiques déclarés par les Definitions effectivement utilisées.
 
-L'architecture des ressources est `Cell → Definition → Shape`. Une `Definition` immuable encapsule un `std::shared_ptr<const Data>` et associe une Shape aux slots sémantiques du Model ; elle ne contient pas les matériaux concrets de la palette. Une `Cell` publique contient une `Definition` **par valeur** (copie légère), accompagnée de son orientation. `Volume` conserve une table **locale** de définitions et des cellules à indices compacts, reconstruisant des valeurs `Cell` sur les lectures publiques. **Aucun Catalog global obligatoire**. Les détails d'égalité des définitions, de cellule vide, d'identifiants locaux et de construction sont encore ouverts.
+Chaque polygone d'opacité **égale à 1** alimente le mesh opaque, et tout polygone d'opacité **inférieure à 1** alimente le mesh translucide. Il n'existe pas de catégorie `cutout` distincte. La texture ne modifie pas cette classification.
 
-### VXL-043 — Polygones de Shape plans et convexes : VALIDÉ
+Tous les slots sémantiques **référencés par les Definitions des cellules du Volume** sont conservés, même si leurs triangles sont totalement occultés ou si leur Shape est vide. Une Definition qui reste dans une table interne mais n'est référencée par aucune Cell n'ajoute pas ses slots au Model.
 
-Une `Shape` est constituée de polygones **plans et convexes d'au moins trois sommets**. Il n'y a **pas** de polygone concave individuel dans le contrat d'entrée. Les objets et volumes globalement concaves sont représentés par plusieurs polygones convexes, y compris dans un seul `Shape`. Les surfaces ouvertes et non fermées (par exemple végétation) restent prises en charge ; **VXL-073 impose deux polygones explicites aux windings opposés pour un panneau ou une feuille visible recto-verso**, sans propriété `doubleSided` ni duplication automatique. **VXL-076 autorise aussi explicitement des polygones coplanaires de même winding qui se chevauchent, sans fusion automatique ni rejet.** Cela **ne réduit pas** l'exigence de clipping et d'occlusion polygonale précis du Mesher : les intersections et fragments visibles restent à calculer robustement. La triangulation doit respecter le winding CCW fixé par VXL-077 ; ses détails techniques, UV, erreurs de validation et représentation des coordonnées intermédiaires restent à spécifier.
+Deux déclarations de slot portant le **même nom et la même opacité** sont fusionnées. Si elles portent le **même nom et des opacités différentes**, `bake()` échoue avec une `spk::Exception` descriptive ; aucune promotion implicite de catégories n'est tentée. Une fois fusionnés, les slots sont triés par **ordre lexicographique déterministe de leurs noms**, indépendamment de l'ordre de visite des cellules ou du culling.
 
-### VXL-044 — Rasterisation entière et AABB de couverture : REMPLACÉE PAR VXL-049
+Le sommet voxel comporte au minimum :
 
-Les dispositions de VXL-044 concernant la grille de couverture 1000×1000, Bresenham, l'extraction de rectangles AABB et les sommets locaux entiers sont **abandonnées**. Les positions entières des cellules du Volume ne sont pas affectées. VXL-049 les remplace par des polygones locaux flottants et un clipping flottant avec cache.
+```cpp
+struct MeshVertex
+{
+    spk::Vector3 position;
+    spk::Vector3 normal;
+    spk::Vector2 uv;
+    std::uint32_t materialIndex; // Index dans la table triée du Model
+};
+```
 
-### VXL-045 — Six outerShell coplanaires et un innerShell géométrique : VALIDÉ
+Les deux meshes réutilisent **l'infrastructure `spk::Mesh<TVertex>` existante** et ses buffers/layouts GPU ; pas de nouveau framework de maillage. `materialIndex` n'est jamais réattribué selon les seuls triangles visibles. Remplacer une palette ou déplacer un Assembly ne change pas les meshes du Model.
 
-Classer les polygones de `Shape` dans les six ensembles `outerShell` situés sur X/Y/Z=0/1, sinon dans `innerShell`. Les six groupes extérieurs sont seuls habilités à occulter les frontières correspondantes, sans projection des formes intérieures ou inclinées. Tous les polygones conservent leur géométrie flottante, UV et slots. Une `Shape` sans `outerShell` reste possible.
+## 4. Matériaux, textures et palettes
 
-La règle d'émission des `innerShell` dépend exclusivement de la fermeture opaque des frontières par les voisins, conformément à VXL-046 ; elle ne dépend pas des surfaces extérieures propres à la cellule.
+```mermaid
+classDiagram
+  direction LR
+  class Material {
+    +Builder
+    +textures nommées
+    +régions UV normalisées
+  }
+  class Texture {
+    +Handle
+  }
+  class SpriteSheet {
+    +sprite(coord) TextureSection
+    +grille de sprites
+  }
+  class VoxelPalette {
+    +Builder
+    +association slot -> Material
+    -Data immutable partagé
+  }
+  class Model {
+    +slots sémantiques triés
+    +mesh opaque
+    +mesh translucide
+  }
+  Texture <|-- SpriteSheet
+  Material --> Texture : capture un Handle
+  VoxelPalette --> Material : valeurs immuables
+  Model ..> VoxelPalette : association validée
+```
 
-### VXL-046 — Emission conditionnelle des innerShell selon les six voisins : VALIDÉ
+### 4.1 `spk::Material` : ressource générique
 
-L'optimisation des surfaces internes est **activée** : **ne pas émettre** les polygones `innerShell` d'une cellule lorsque ses **six voisins** possèdent chacun une **couverture `outerShell` opaque intégrale** sur le plan frontière opposé. Ce sont les seules couvertures des voisins qui comptent, **sans union avec les surfaces extérieures de la cellule courante**. L'occupation géométrique doit être occultante au sens du matériau ; les couvertures non totalement opaques ne ferment pas la frontière.
+`spk::Material` est un **type générique Sparkle**, sans spécialisation `VoxelMaterial`. Il est construit via `Material::Builder`, puis devient **immuable**. Il peut associer zéro, une ou plusieurs textures à des **noms de rôles libres** (`albedo`, ou tout autre nom choisi par le programme). Seul le système voxel donne une signification au rôle `albedo`. Le Builder générique ne valide pas les conventions propres aux voxels.
 
-Si **une seule** des six frontières n'est pas complètement fermée (voisin absent/Empty/Unknown, couverture partielle, matériau insuffisamment occultant), émettre **l'ensemble** des polygones `innerShell` de la cellule. Une `Shape` sans `outerShell` obéit à la même règle ; elle ne disparaît pas simplement parce que ses six propres couvertures sont vides. Les `outerShell` continuent, indépendamment, à subir leur occultation partielle par les voisins. Cette décision concerne le **bake du Model**, non un culling GPU par frame.
+Chaque liaison à une texture conserve un **`spk::Texture::Handle`** obtenu depuis la `const spk::Texture&` fournie lors du binding, ainsi qu'une région UV normalisée (`Texture::Section`, exprimable en `anchor` et `size`). Le Material conserve le **handle de l'état exact choisi** et non un pointeur brut vers l'objet Texture, une copie complète de Texture ou un pointeur vers l'AssetManager.
 
-**Limitation acceptée par VXL-047 :** une caméra située à l'intérieur d'un espace entièrement fermé pourrait voir des polygones internes absents du mesh, mais ce cas est réputé **inaccessible dans l'utilisation visée**. Il n'est pas pris en charge et ne justifie ni une option de préservation des `innerShell` ni une variante du Mesher. Les détails du contrat d'opacité, du remplissage et des tests restent à finaliser.
+Un handle conserve l'état GPU partagé de la Texture après destruction du wrapper Texture initial. Il ne conserve toutefois **ni la grille du SpriteSheet, ni à lui seul son ensemble de résolutions**. Le Material final n'a pas besoin de la grille : la conversion d'un sprite en `Texture::Section` est réalisée **avant** sa construction.
 
-### VXL-047 — Caméra à l'intérieur d'une région complètement enfermée : CAS HORS PÉRIMÈTRE, VALIDÉ
+La résolution effectivement capturée est celle de la Texture explicitement passée au Builder. Il n'existe **aucune sélection automatique de résolution** dans Material ou dans le rendu voxel. Changer de résolution implique de fournir la nouvelle Texture choisie à un **nouveau Material**, puis de choisir la nouvelle palette correspondante. Les mipmaps standards du State GPU restent possibles.
 
-Le mainteneur considère comme **impossible dans les scénarios pris en charge** la présence d'une caméra observant de l'intérieur une région intégralement fermée dont les `innerShell` ont été supprimés au bake. Cette hypothèse **ne constitue pas une preuve d'invisibilité géométrique** : elle délimite seulement les situations supportées par cette version. Si un tel point de vue est néanmoins introduit par une application, l'absence de certaines surfaces est un **comportement non pris en charge**, pas un bug de visibilité que le Mesher doit résoudre automatiquement.
+Les **propriétés et l'identité des handles** d'un Material sont immuables. Les **pixels de l'état Texture partagé** peuvent évoluer selon les API graphiques existantes, avec validation et synchronisation CPU/GPU adaptées : les Materials qui partagent ce même State verront son contenu actualisé. Si une opération détache/remplace le State d'une Texture source, un handle déjà capturé continue de référencer **l'ancien State** : il ne suit pas automatiquement cette substitution. Les paramètres du Material et les anciennes palettes restent inchangés.
 
-**Conséquence :** maintenir VXL-046 sans politique configurable de culling des `innerShell`, sans conservation systématique « au cas où », et sans logique de caméra dépendante de l'exécution. Aucun changement de contrat de `Model` ou `Assembly` n'est nécessaire. La preuve de couverture opaque complète par les six voisins reste obligatoire pour supprimer les `innerShell`.
+### 4.2 Texture simple, SpriteSheet et région d'atlas
 
-### VXL-048 — Séparation par slot de Shape : VALIDÉE, ADAPTÉE PAR VXL-049
+La configuration JSON d'une texture peut représenter une simple image :
 
-Les polygones `outerShell` restent organisés par face frontière et par slot géométrique. `Definition` mappe ces slots vers les slots sémantiques du Model ; le Mesher ne sélectionne que les polygones réellement occultants selon les contrats immuables. VXL-059 maintient ces slots locaux dans les résultats de clipping mis en cache ; l'association aux slots du Model intervient uniquement après réutilisation du résultat. Plusieurs slots opaques peuvent former conjointement une couverture complète ; une fenêtre non opaque reste ouverte. La représentation en masques et rectangles précalculés est abandonnée. `VoxelPalette` reste une association concrète par occurrence et doit respecter les contrats du Model.
-
-### VXL-049 — Clipping polygonal flottant avec cache : VALIDÉ
-
-Le JSON/API fournit la géométrie polygonale source en flottants sur le cube unité [0,1]³. Le Mesher calcule directement intersections et soustractions polygonales, en conservant les attributs pour produire les triangles du mesh. **VXL-059 fixe que les fragments mis en cache restent en coordonnées locales de la Shape avec ses propres slots géométriques ; les slots sémantiques et indices de matériau du Model sont résolus après lecture, selon la Definition.** Les configurations répétées de deux formes orientées adjacentes réutilisent un résultat mis en cache. Les AABB ne constituent pas un masque d'occlusion ; elles restent éventuellement un outil de rejet rapide. Ce choix **remplace** le pipeline de discrétisation VXL-044.
-
-**VXL-050 fixe le sens et la valeur du cache :** `A → B` donne uniquement les fragments visibles de A ; `B → A` est une autre entrée, évaluée séparément lorsqu'elle est demandée. Les cas d'occlusion totale, partielle ou nulle sont tous représentables par les fragments conservés, y compris un résultat vide. La clé doit différencier la direction et les contrats d'opacité VXL-048, pas uniquement deux IDs et deux orientations. **VXL-051 fixe l'identité :** `Shape::Data` immuable et partagé par les copies ; hachage et égalité par identité du pointeur, avec propriété partagée maintenue par la clé pour éviter les collisions dues au recyclage d'adresses. **Restent ouverts** : API interne exacte, capacité/éviction/durée de vie du cache et tolérances de clipping.
-
-### VXL-050 — Cache d'occlusion directionnel : VALIDÉ
-
-Une entrée de cache répond à **une seule requête orientée** : « quels fragments de l'outerShell de la cellule A restent visibles lorsque sa voisine B les occulte ? ». Les polygones ou fragments visibles de **A uniquement** constituent la valeur, jusqu'à une liste vide pour une occultation totale. **VXL-059 :** la valeur conserve les fragments dans le référentiel géométrique local de la Shape A, avec positions, UV et slots de Shape ; ni les IDs de slots du Model, ni les `VoxelPalette` concrètes n'y figurent. Le sens inverse est **une autre clé** : `A → B` et `B → A` ne doivent pas être fusionnés ni présumés équivalents. Un appel inverse peut recalculer son propre résultat si cette entrée n'a pas encore été demandée. Cette décision évite de rendre obligatoire un calcul simultané des deux côtés.
-
-Base conceptuelle de la clé (types et représentation à préciser) : `(identityA, orientationA, occlusionContractA, identityB, orientationB, occlusionContractB, neighborDirection)`, en distinguant clairement **la cellule cible A** de **la cellule occultante B**. Les contrats doivent refléter les slots réellement occultants ; le nom/identifiant du matériau concret n'est pas une dépendance obligatoire si son comportement d'occlusion est identique. **VXL-051 :** remplacer `identityA`/`identityB` par l'identité des deux `Shape::Data` partagés, plutôt que des IDs alloués ou des hashes de contenu ; ne pas exposer le type `Data` privé dans l'API publique pour cela. Conserver la propriété partagée tant que l'entrée existe. Ne pas coder les autres paramètres de clé définitivement sans les prochains arbitrages.
-
-Tests proposés : A totalement occulté par B (résultat vide) ; B partiellement occulté par A (résultat polygonal non vide) ; mise en cache indépendante des deux sens ; hit sur requête répétée ; distinction de direction, d'orientation et de contrats d'occlusion. Le cache des résultats directionnels ne remplace pas le test séparé VXL-046 de fermeture globale des six frontières, lequel doit rester correct.
-
-### VXL-051 — Identité de Shape par Data partagé : VALIDÉ
-
-Une `Shape` possède un `std::shared_ptr<const Data>` interne ; sa copie est légère et préserve l'adresse de `Data`. **Cette identité mémoire est la clé de référence** des calculs d'occlusion mis en cache pendant l'exécution. Pas d'ID de forme généré ni de hash de l'ensemble des polygones. Un `std::hash<std::shared_ptr<const Data>>` et l'égalité des `shared_ptr` utilisent le pointeur stocké et conviennent pour cette comparaison ; une clé peut également exploiter un pointeur brut sous réserve d'une garantie stricte de durée de vie. **Ne pas convertir en `int` :** les pointeurs sont directement hachables, et un `int` pourrait tronquer l'adresse sur une plateforme 64 bits.
-
-**Sûreté de durée de vie :** le cache ne survivra pas au processus, mais une `Shape` peut être détruite avant lui. Un pointeur brut conservé comme seule identité pourrait alors être réutilisé pour un nouveau `Data`, causant une fausse correspondance. **Le cache doit donc conserver une possession partagée** des `Data` référencés par les clés tant que les entrées correspondantes existent (ou établir une alternative de durée de vie aussi sûre). Cette référence peut prolonger leur durée de vie ; le budget mémoire et l'éviction restent ouverts.
-
-Deux constructions indépendantes de `Shape` avec une géométrie identique produisent des clés distinctes : cache miss accepté. Copier une `Shape` partage son `Data` : cache hit possible si le reste de la clé est identique. Le cache reste **directionnel VXL-050** et la clé doit toujours distinguer orientation, direction du voisin et règles d'opacité.
-
-**Tests proposés :** identité identique entre copies ; identités distinctes entre constructions séparées ; réutilisation de cache entre copies ; entrée non confondue après destruction du propriétaire initial et création d'une nouvelle `Shape` ; pas de confusion entre contrats d'occlusion et sens `A → B`/`B → A`.
-
-### VXL-052 — Shape::Builder produit une Shape immuable : VALIDÉ
-
-La géométrie est assemblée dans `Shape::Builder`, un objet mutable dédié à la construction. `build()` produit une `Shape` dont les données internes sont **immuables** et conservées par `std::shared_ptr<const Shape::Data>`. Les copies de cette `Shape` partagent le même `Data` et donc la même identité de cache VXL-051. Le Builder ne fournit aucun accès mutable à un `Data` déjà publié dans une `Shape`. Le chargement JSON peut réutiliser le Builder au lieu de dupliquer la logique d'assemblage et de validation.
-
-**Signature illustrative, non définitive :**
-
-~~~cpp
-namespace spk::Voxel {
-  class Shape::Builder {
-  public:
-    Builder& addPolygon(const Shape::Polygon& polygon); // validation immédiate, spk::Exception si invalide
-    Shape build() &&; // VXL-065/075 : succès consomme, exception préserve ; 0 polygone autorisé
-  private:
-    // données temporaires mutables et privées
-  };
+```json
+{
+  "Texture": { "path": "terrain.png" },
+  "UV": {
+    "anchor": { "x": 0.25, "y": 0.5 },
+    "size": { "x": 0.125, "y": 0.125 }
+  }
 }
-~~~
+```
 
-**VXL-053 :** `addPolygon` et les autres méthodes d'ajout valident immédiatement les données introduites. Une entrée géométrique invalide déclenche une `spk::Exception` descriptive lors de l'ajout, plutôt que de rester stockée jusqu'à `build()`. Les règles de classification `outerShell`/`innerShell` doivent être satisfaites avant de rendre la `Shape` disponible. Une `Shape` produite n'est pas modifiable, et deux constructions indépendantes ne partagent pas automatiquement la même identité, même si leur contenu est géométriquement identique. **Décision complémentaire VXL-052 :** après un `build()` réussi, le Builder est **consommé**, son contenu interne restant est sans contrat, et il ne peut plus être utilisé pour construire ou modifier quoi que ce soit. Seule sa destruction (ou sa réinitialisation par un nouvel objet si l'API C++ le permet) demeure légitime. La notation illustrative `build() &&` suggère un appel de type `std::move(builder).build()`, mais ne suffit pas, seule, à prévenir un deuxième appel sur un objet déplacé : l'invariant de consommation reste une obligation d'implémentation. **VXL-065 tranche également l'échec de `build()` : une exception, y compris technique, laisse le Builder intégralement inchangé, non consommé et réutilisable. Seul le retour réussi consomme le Builder.** L'état après un `addPolygon` ayant lancé une exception est couvert séparément par la garantie forte VXL-054. La signature indicative `build() &&` ne doit pas permettre à des déplacements partiels de l'état interne de violer cette garantie.
+Elle peut également demander un `spk::SpriteSheet`, en donnant une **grille de nombres de sprites**, et sélectionner une cellule de la grille :
 
-### VXL-053 — Validation à l'ajout de géométrie, pas au build : VALIDÉ
-
-Le `Shape::Builder` est responsable de valider **chaque opération d'introduction de géométrie**. Ainsi, `addPolygon` (ou le nom définitif de la méthode) vérifie la validité des données entrantes au moment où elles sont fournies. Un polygone invalide déclenche immédiatement une **`spk::Exception` descriptive** (invariant non respecté, et données pertinentes permettant d'identifier le défaut), sans laisser la construction se poursuivre silencieusement avec un polygone connu invalide. Cette convention s'applique également à tout ajout ultérieur de formes/surfaces : l'appel d'ajout est le point de validation de ce qu'il introduit.
-
-Exemples de validations attendues selon VXL-043/VXL-049 : nombre de sommets, appartenance au cube unité [0,1]³, planéité, convexité, données flottantes admissibles et dégénérescences. Les définitions exactes des tolérances et des erreurs individuelles restent à spécifier. **VXL-076 interdit de qualifier d'invalide un polygone individuellement correct au seul motif qu'il chevauche un autre polygone coplanaire de même winding : l'acceptation de l'ajout est obligatoire, sans fusion ni déduplication implicite.** Les étapes de classification `outerShell`/`innerShell` et de préparation de `Data` peuvent se faire au fil des ajouts ou lors de la finalisation, sans faire de `build()` une passe générale de validation des données déjà acceptées.
-
-**Invariant :** au moment d'un `build()` normal, la géométrie présente dans le Builder est déjà valide ; **l'absence totale de polygones est elle-même une entrée valide** (VXL-075). `build()` publie alors une `Shape` immuable et consomme le Builder après succès, conformément à VXL-052. Cela ne garantit pas qu'un `build()` soit `noexcept` : des erreurs techniques, notamment d'allocation, demeurent possibles. **VXL-065 impose la garantie forte d'exception même dans ce cas : après un échec technique de `build()`, le Builder conserve ses données et peut être réutilisé ou reconstruit lors d'une nouvelle tentative.**
-
-**VXL-054 précise la politique d'échec :** une exception pendant l'ajout, quelle qu'en soit la cause, ne doit provoquer aucune mutation observable du Builder. Celui-ci reste exploitable après l'exception, pour un nouvel ajout corrigé ou pour `build()` avec les éléments déjà acceptés.
-
-### VXL-054 — Garantie forte d'exception lors des ajouts : VALIDÉ
-
-Chaque méthode d'ajout de `Shape::Builder` doit offrir la **garantie forte d'exception** : si l'opération échoue et lance une exception, **le Builder reste intégralement dans l'état qui précédait cet appel**. Cette règle vaut pour une géométrie invalide signalée par `spk::Exception` conformément à VXL-053, et pour les autres exceptions qui peuvent survenir pendant l'ajout, notamment les erreurs d'allocation. Un ajout rejeté n'entraîne ni insertion partielle, ni ajout fantôme à un index/slot, ni modification de la classification `outerShell`/`innerShell`. Le Builder reste valide et réutilisable : l'appelant peut corriger son polygone, l'ajouter de nouveau, ou construire la `Shape` à partir des éléments acceptés précédemment.
-
-Le choix de mise en œuvre (validation avant mutation, préparation temporaire et commit atomique, rollback interne réellement sûr, etc.) est libre tant que la garantie observable est satisfaite. **Ne pas confondre avec `build()` réussi**, qui consomme toujours le Builder selon VXL-052. **VXL-065 étend désormais la même garantie forte d'exception à `build()` : en cas d'échec, son état reste intégralement inchangé et il demeure réutilisable.**
-
-### VXL-055 — OcclusionCache indépendant, liaison optionnelle par pointeur : VALIDÉ
-
-**Décision :** `OcclusionCache` est une classe indépendante que le programme utilisateur peut créer et posséder durablement, sans conserver les objets `VoxelMesher` en vie. Le Mesher dispose d'une liaison explicite optionnelle vers ce cache, selon l'usage Sparkle : `bind(OcclusionCache*)` et `unbind()` comme propositions d'interface. La relation utilise un **pointeur non propriétaire** (`OcclusionCache*`) : le cache doit survivre au Mesher lié et à tout bake qui l'utilise. Un Mesher créé, lié, utilisé puis détruit ne détruit ni ne vide le cache.
-
-**Sans liaison :** le Mesher calcule les occlusions par clipping polygonal direct et retourne le même `Model` correct, **sans stockage ni consultation des résultats** dans quelque cache caché que ce soit. Aucun singleton obligatoire et aucun cache `static` interne à Sparkle. Cette dépendance demeure facultative, et un `unbind()` rend le Mesher autonome.
-
-**Dans une application :** un wrapper peut posséder un `static OcclusionCache` partagé entre ses Meshers temporaires, puis lier explicitement cet objet avec `mesher.bind(&cache)` ; deux moteurs/sous-systèmes voxels distincts peuvent aussi fournir deux caches séparés. Les identités `Shape::Data` de VXL-051 continuent à distinguer les géométries, mais l'isolation des caches repose sur la **possession indépendante**, pas sur une hypothèse de collisions d'identifiants. Le contenu, les clés et la sûreté des références partagées de VXL-050/051 restent invariants.
-
-**VXL-056 choisit une gestion mémoire explicite :** une entrée reste conservée jusqu'à `clear()` ou jusqu'à la destruction de `OcclusionCache` ; pas de budget, pas d'éviction automatique ni de LRU dans cette version. La mémoire peut croître sans borne imposée par la bibliothèque, et les références propriétaires aux `Shape::Data` restent actives jusqu'au retrait des entrées. **VXL-057 fixe le cache thread-safe avec `spk::ProtectedData<Data>` interne, et une valeur `OcclusionResult` immuable sans `shared_ptr` exposé. VXL-058 confirme que `clear()` purge seulement les entrées existantes à son instant de verrouillage, sans invalider les calculs concurrents : un résultat calculé hors verrou peut être enregistré ensuite.** Restent à préciser : API concrète du cache et contrat de `bind()`/destruction pendant un bake.
-
-### VXL-056 — Gestion explicite de la mémoire du cache : VALIDÉ
-
-**Décision A :** `OcclusionCache` conserve les entrées calculées **jusqu'à sa destruction ou un appel explicite à `clear()`**. Aucune limite de taille configurable, aucun LRU ni éviction automatique ne sont ajoutés à Sparkle V0.1.4. La gestion de la durée de vie et du moment de purge appartient au programme utilisateur.
-
-`clear()` supprime tous les résultats directionnels mis en cache et libère les références détenues par leurs clés aux `Shape::Data`, sous réserve des autres propriétaires encore vivants. Un nouveau `bake()` utilisant le cache reconstruit les entrées au besoin. Cette purge ne modifie pas les `Shape`, `Volume` ou `Model` déjà produits et ne change pas les résultats géométriques ; elle supprime seulement la réutilisation des anciens calculs.
-
-**Compromis assumé :** sans `clear()`, un cache durable peut croître pendant toute la durée du processus et retenir d'anciennes formes ; une application avec création de nombreuses formes temporaires doit déclencher la purge lorsqu'elle le juge pertinent. VXL-057 autorise plusieurs Meshers concurrents sur le même cache grâce à `ProtectedData` ; VXL-058 choisit une purge simple : un calcul démarré avant `clear()` peut insérer son résultat après la purge.
-
-### VXL-057 — Cache thread-safe et OcclusionResult immuable : VALIDÉ
-
-`OcclusionCache` encapsule une seule ressource de synchronisation propriétaire : **`spk::ProtectedData<Data>`**, avec `Data` interne à `OcclusionCache` (table de clés directionnelles vers des résultats immuables, dont la forme concrète reste à finaliser). La synchronisation est **interne aux méthodes du cache**, ce qui constitue une exception justifiée à la préférence générale de Sparkle pour séparer les verrous des objets métier : seul le cache connaît les moments exacts où ses lectures et insertions doivent être protégées. Le Mesher ne manipule aucun mutex ni garde de `ProtectedData`.
-
-`OcclusionResult` est un **objet-valeur immuable** à copie légère, avec un **`std::shared_ptr<const OcclusionResult::Data>` privé**, comme pour `Shape` et `Definition`. Les polygones/fragments visibles et leurs attributs sont accessibles par des accesseurs **en lecture seule**, sans exposer les pointeurs propriétaires ; le contrat concret de ces accesseurs reste à préciser. **VXL-059 :** ces fragments conservent positions et UV dans le référentiel de la `Shape` source, ainsi que ses slots géométriques locaux ; aucun slot sémantique de `Model` n'est enregistré dans la valeur. Même lorsqu'il ne contient aucun fragment, `OcclusionResult` est un résultat présent et valide, correspondant à une face totalement occultée.
-
-~~~cpp
-// PSEUDO-INTERFACES — noms/Key/attributs encore à finaliser
-namespace spk::Voxel {
-  class OcclusionResult {
-  private:
-    struct Data;
-    std::shared_ptr<const Data> _data;
-  public:
-    /* accès const aux fragments polygonaux visibles */
-  };
-
-  class OcclusionCache {
-  private:
-    struct Data {
-      /* std::unordered_map<Key, OcclusionResult> entries; */
-    };
-    spk::ProtectedData<Data> _data;
-  public:
-    std::optional<OcclusionResult> find(const Key& key) const;
-    void store(const Key& key, OcclusionResult result);
-    void clear();
-  };
+```json
+{
+  "Texture": {
+    "path": "terrain.png",
+    "size": { "x": 16, "y": 16 }
+  },
+  "UV": {
+    "sprite": { "x": 3, "y": 5 }
+  }
 }
-~~~
-
-`find()` utilise un garde de **lecture** pour rechercher une entrée, copie légèrement sa valeur immuable, puis libère le garde avant de rendre `std::optional<OcclusionResult>`. `std::nullopt` désigne un *cache miss*, jamais un résultat totalement occulté ; aucune référence ou `span` vers la table protégée ne doit dépasser la durée du garde. `store()` prend le garde d'**écriture**, insère une entrée complète puis relâche le verrou. `clear()` prend le garde d'écriture et retire toutes les entrées selon VXL-056, sans invalider les copies d'`OcclusionResult` déjà sorties du cache.
-
-Le Mesher consulte le cache, calcule le clipping polygonal **sans aucun verrou** si la clé est absente, puis publie le résultat. Deux calculs simultanés de même clé sont acceptables : le cache peut garder la première valeur insérée et ignorer la seconde. Le résultat visible doit rester identique avec ou sans cache. Le fait que `OcclusionCache` soit thread-safe **n'autorise pas à détruire le cache, ni à modifier le binding du Mesher, pendant un bake qui l'utilise** ; les règles de durée de vie du pointeur non propriétaire demeurent applicables.
-
-**VXL-058 tranche la concurrence entre purge et calcul :** `clear()` ne supprime que les entrées présentes lors de son exécution protégée. Il ne bloque pas les calculs de clipping hors verrou et ne les invalide pas ; une opération `store()` ultérieure peut réinsérer le résultat d'un calcul qui avait débuté avant la purge. Le cache demeure facultatif (VXL-055) et sans éviction automatique (VXL-056). Les noms et types définitifs des clés/méthodes ainsi que la politique en cas d'échec de calcul restent ouverts.
-
-### VXL-058 — clear() purge les entrées présentes, sans invalider les calculs en cours : VALIDÉ
-
-**Option A validée.** `OcclusionCache::clear()` prend l'accès d'écriture de `spk::ProtectedData<Data>` et efface **les entrées qui sont présentes à cet instant**. Le verrou est ensuite relâché ; aucun mécanisme de génération, annulation des calculs concurrents ou éviction supplémentaire n'est demandé.
-
-Si un `VoxelMesher` a commencé un clipping **hors verrou** avant cet appel, il peut continuer à calculer et appeler `store()` après la purge. Son résultat peut alors être réinséré dans la table, exactement comme une nouvelle insertion. `clear()` ne garantit donc pas que le cache restera vide à son retour en présence de calculs concurrents, mais il garantit que tous les éléments qui s'y trouvaient pendant sa section critique ont été effacés. Le comportement observable du bake et la géométrie produite restent inchangés.
-
-**Ordre garanti par le verrou :** une insertion totalement terminée avant le verrou de `clear()` est supprimée ; une insertion dont le verrou d'écriture est acquis après la purge peut être conservée. Le cache utilise la même synchronisation interne VXL-057 et ne garde jamais un verrou pendant le clipping. Les copies immuables d'`OcclusionResult` déjà sorties de la table restent valides grâce à leur propriété partagée. Les références aux `Shape::Data` portées uniquement par les entrées effacées sont libérées.
-
-**Tests proposés :** entrée existante effacée par `clear()` ; résultat déjà retourné par `find()` conservant sa validité ; calcul démarré avant `clear()`, terminé après, donnant un résultat inséré à nouveau ; exécution concurrente sans data race entre `find()`, `store()` et `clear()`.
-
-### VXL-059 — OcclusionResult conserve les fragments dans le référentiel de Shape : VALIDÉ
-
-**Option B validée.** Pour une requête directionnelle `A → B` (VXL-050), un `OcclusionResult` immuable conserve **uniquement les fragments visibles des polygones de la `Shape` A** en coordonnées **locales de cette Shape**. Chaque fragment retient ses positions flottantes, UV, le **slot géométrique local de la Shape** et les autres attributs indispensables à la restitution géométrique (normales/orientation et détails de structure à finaliser). Un résultat sans fragment est une entrée présente et valide indiquant une occultation totale (VXL-057).
-
-**Aucun slot de matériau sémantique du `Model` ni matériau concret de `VoxelPalette` n'est stocké dans le cache.** Après récupération de l'`OcclusionResult`, le `VoxelMesher` associe le slot géométrique de chaque fragment au slot sémantique correspondant par la `Definition` de la cellule A, applique l'orientation/transformation requise et génère les `MeshVertex` avec l'index de slot du `Model`. La géométrie conservée dans le cache est indépendante de l'ordre/du nom des slots dans le Model et de la palette utilisée pour une occurrence donnée.
-
-**Réutilisation :** deux `Definition` distinctes utilisant les mêmes `Shape` et orientations peuvent partager un résultat de clipping **si les contrats effectifs d'occlusion de leurs slots sont équivalents**. Conformément à VXL-048/050, la clé de cache inclut les contrats d'occlusion réellement pertinents pour A et B ; deux mappings vers des slots du Model différents n'imposent pas deux entrées si l'occlusion géométrique est identique, mais **une différence de caractère occultant doit produire des clés distinctes**. L'identité des `Shape::Data` (VXL-051), la séparation A→B/B→A et la sûreté du cache thread-safe VXL-057 restent inchangées.
-
-**Tests à prévoir :** une même Shape associée à deux Definitions avec des slots sémantiques différents restitue les mêmes fragments géométriques et des indices de Model correctement remappés ; deux Definitions au contrat d'occlusion équivalent réutilisent l'entrée ; un contrat d'occlusion différent ne provoque pas de faux hit ; les orientations des Shapes n'affectent pas la correspondance des slots ; les UV et les positions en coordonnées locales sont préservés après un hit ; résultat vide et lecture concurrente restent correctement distingués.
-
-**VXL-060/061 :** les nouveaux sommets reçoivent des UV interpolés, avec un mapping affine par triangle issu d'une triangulation déterministe pour les n-gones aux UV arbitraires. Restent ouverts : règles applicables aux autres attributs, algorithme concret de triangulation, structure définitive des fragments/clé et tolérances numériques.
-
-### VXL-060 — Interpolation des UV source lors du clipping : VALIDÉ
-
-**Option A validée :** lorsqu'une opération de clipping polygonal introduit de nouveaux sommets dans les fragments visibles de A, elle calcule leurs **coordonnées UV en interpolant le mapping UV défini par les attributs du polygone source de la Shape A**. Les sommets déjà présents conservent exactement leurs UV ; aucun recalcul par projection automatique de la position sur un plan n'est permis. Le découpage géométrique ne doit pas changer arbitrairement le motif, l'échelle ou l'orientation de texture choisis par le développeur.
-
-**Portée :** les nouveaux sommets situés sur un segment du polygone source suivent l'interpolation des attributs sur ce segment. Les fragments sont ensuite enregistrés dans `OcclusionResult` sous forme locale à la Shape avec leurs UV calculés (VXL-059) ; le remapping des slots de la `Definition` vers le `Model` reste une opération ultérieure et ne modifie pas ces UV. Un cache hit restitue les mêmes UV qu'un clipping sans cache.
-
-**Point technique tranché par VXL-061 :** VXL-043 permet les **polygones convexes de trois sommets ou plus**. Trois sommets définissent un interpolant UV affine sur leur triangle. Des n-gones à UV arbitraires sont également permis : leur interpolation est définie à partir d'une triangulation déterministe et s'effectue triangle par triangle, également pendant le clipping. Les spécificités de cette triangulation restent un détail algorithmique à préciser, non une interdiction des UV non affines.
-
-**Tests proposés :** clipping partiel sur triangle avec UV personnalisés et intersection au milieu d'une arête ; UV des sommets originaux préservés ; clipping répété sans modification du mapping ; comparaison strictement cohérente entre calcul direct et hit du cache ; tests de quadrilatères et n-gones à UV arbitraires avec triangulation déterministe et fragments traversant les arêtes internes conformément à VXL-061.
-
-### VXL-061 — UV arbitraires sur n-gones, triangulation déterministe pour interpolation et clipping : VALIDÉ
-
-**Option A validée :** les polygones plans et convexes de `Shape` conservent le droit d'avoir **trois sommets ou plus avec des coordonnées UV arbitraires par sommet** (VXL-043). Le `Shape::Builder` ne doit pas rejeter un polygone simplement parce que le mapping UV n'est pas représentable par une transformation affine unique sur toute sa surface. Les validations géométriques et la garantie forte d'exception de VXL-053/054 demeurent applicables.
-
-**Interpolation :** une **triangulation déterministe** du polygone source sert à définir le mapping de texture ; sur chaque triangle, les UV sont interpolés de façon affine depuis les trois sommets correspondants. Un triangle source conserve donc son interpolation naturelle ; un n-gone à UV non affines peut produire plusieurs régions d'interpolation au sein d'un même polygone. Les positions et UV des sommets originels restent intacts et aucune projection UV n'est imposée (VXL-060).
-
-**Clipping :** l'opération respecte la partition triangulée lorsque les fragments visibles traversent un ou plusieurs triangles internes. Elle peut clipper/émettre les fragments par triangle ou découper un fragment aux frontières internes de triangulation, tant qu'elle n'effectue jamais une interpolation UV unique invalide à cheval sur plusieurs triangles. Les nouvelles intersections obtiennent leur UV depuis **le triangle source qui les contient** ; les fragments adjacents partagent des bords géométriquement cohérents, avec des UV compatibles de chaque côté des diagonales internes. Éviter trous, recouvrements indus et coutures artificielles ; les contours occultants et les contrats des slots demeurent ceux du polygone source, sans introduire de surfaces occultantes sur les diagonales internes.
-
-**Stabilité :** une même `Shape` immuable et la même configuration de clipping doivent produire une triangulation cohérente, que le calcul soit direct ou que le résultat provienne d'`OcclusionCache`. L'`OcclusionResult` conserve les fragments issus de cette interpolation en coordonnées locales de Shape, avec leurs UV et leurs slots géométriques (VXL-059) ; le mapping `Shape → Definition → Model` intervient seulement après lecture. La triangulation ne change pas la séparation directionnelle des clés de cache ni les contrats d'opacité validés.
-
-**Tests proposés :** triangle à UV personnalisés ; quadrilatère UV non affine/tordu et n-gone convexe à plus de quatre sommets ; clipping qui coupe uniquement un triangle puis qui traverse plusieurs triangles ; frontières/diagonales internes sans fissures géométriques ni discontinuité UV non voulue ; plusieurs bakes identiques ; cache miss et cache hit produisant les mêmes géométries et UV ; polygones à UV arbitraires acceptés par `Shape::Builder`.
-
-**Restent à choisir lors de la précision algorithmique :** règle déterministe exacte de triangulation (ordre/diagonales, orientation) ; tolérances numériques et traitement des fragments dégénérés. Ces détails ne doivent pas être confondus avec une nouvelle restriction sur les UV des n-gones.
-
-### VXL-062 — Normales par sommet facultatives, éclairage lissé sans altérer l'occlusion : VALIDÉ
-
-**Option A validée.** Chaque polygone de `Shape` peut fournir des **normales personnalisées par sommet**, facultatives. Lorsqu'elles ne sont pas fournies, ses sommets utilisent pour l'éclairage la **normale géométrique du polygone plan** ; les Shapes classiques à faces planes n'ont donc aucune donnée de normale personnalisée à définir. Les normales explicites permettent notamment un éclairage lissé sur des ensembles de polygones dont les normales d'éclairage sont différentes des normales des plans porteurs.
-
-**Clipping :** lorsqu'un sommet est créé à l'intersection d'un fragment, sa normale d'éclairage est **interpolée depuis les normales des sommets source**, selon le domaine d'interpolation triangulé de VXL-061 lorsque nécessaire, puis **normalisée** pour produire une direction exploitable par le rendu. Les sommets originels conservent les directions fournies, sous réserve du contrat final de normalisation des données d'entrée. Le résultat immuable `OcclusionResult` conserve ces attributs géométriques/d'éclairage dans le référentiel de la `Shape` source (VXL-059), tout comme les UV ; un cache hit et le clipping direct doivent restituer les mêmes normales.
-
-**Séparation des responsabilités :** une normale personnalisée **ne modifie jamais le plan réel, l'orientation géométrique, le winding, l'occlusion ou l'intersection**. Selon VXL-073, elle ne rend pas non plus un polygone recto-verso : seul le polygone explicite de winding inverse fournit la face arrière. Les tests de couverture et de face visible opèrent uniquement sur les polygones géométriques, conformément à VXL-045/046/049. L'interpolation de la normale d'éclairage ne doit pas faire varier le contour occultant.
-
-**Tests proposés :** Shape à normale géométrique par défaut ; deux polygones adjacents avec normales de sommets choisies pour lisser visuellement l'éclairage ; clipping partiel d'un triangle avec interpolation et renormalisation ; n-gone à UV et normales arbitraires selon la triangulation VXL-061 ; cache miss/hit équivalents ; modification des normales d'éclairage seule sans modification du contour occultant.
-
-**Détails encore ouverts :** API concrète pour renseigner ou omettre les normales, politique de validation des vecteurs nuls/non finis, ordre et conventions de la normalisation des entrées, précision numérique et politique de winding. Aucune décision supplémentaire n'est implicite.
-
-### VXL-063 — Tolérance de clipping configurable sur VoxelMesher avec valeur par défaut : VALIDÉ
-
-**Décision :** les algorithmes de clipping et de comparaison géométrique qui en dépendent utilisent **une tolérance numérique avec valeur par défaut**, tout en laissant le programme la modifier explicitement **sur chaque `VoxelMesher`**. Valeur de départ retenue pour la spécification : **`1e-5` (`10⁻⁵`) en coordonnées locales de Shape/Volume**, dont les polygones sont exprimés dans le cube unité `[0,1]³`. L'appelant qui ne configure rien conserve ce comportement. Cette tolérance est numérique, pas une grille de discrétisation ; aucune rasterisation ni quantification des sommets n'est réintroduite.
-
-**Interface proposée, noms à finaliser :** `setClippingTolerance(float)` et `clippingTolerance() const`. La tolérance est un état **local au Mesher**, non global et non stocké dans les `Shape`, `Definition`, `Volume` ou `VoxelPalette`. Elle peut être différente entre Meshers partageant un même `OcclusionCache`. Le Mesher applique la valeur en vigueur à une opération `bake()` ; changer la configuration concerne les bakes suivants, sans muter les `Model` déjà produits.
-
-**Compatibilité cache :** les clés directionnelles VXL-050/051/059 incluent la valeur effective de tolérance (ou une identité équivalente sans collision de configuration), en plus des identités de Shape, orientations, voisinage et contrats d'occlusion. Deux Meshers de configurations différentes **ne doivent pas partager un résultat de clipping calculé avec des tolérances distinctes** ; plusieurs Meshers à configuration identique continuent à réutiliser les mêmes entrées, sans purger manuellement le cache lorsque la tolérance change. L'`OcclusionResult` immuable reste une valeur de géométrie et d'attributs, pas un conteneur de configuration.
-
-**Validation :** une tolérance doit être **finie et strictement positive** ; la définition d'une valeur invalide lève une `spk::Exception` sans modifier le réglage précédent. Éviter d'ajouter une multiplication de constantes de tolérance indépendantes non demandées ; le détail de l'utilisation de cette valeur dans les algorithmes, des tests de coplanarité et du retrait des petits fragments devra être précisé et testé.
-
-**Tests proposés :** comportement par défaut à `1e-5` ; ajustement par le Mesher ; rejet de `0`, valeurs négatives, `NaN` et infini ; géométrie valide avec et sans cache pour plusieurs tolérances ; cache partagé entre Meshers configurés différemment sans faux hit ; cache hit entre Meshers de même configuration ; changement de tolérance entre deux bakes sans mutation du Model précédent. **VXL-064** complète ces tests avec la suppression des fragments de clipping dégénérés selon la tolérance du bake.
-
-### VXL-064 — Élimination des fragments géométriquement dégénérés après clipping : VALIDÉ
-
-**Option A validée.** Le `VoxelMesher` écarte les fragments géométriquement **dégénérés selon sa tolérance de clipping configurable** (VXL-063), plutôt que de les conserver uniquement parce que leur aire mathématique est strictement positive. L'objectif est d'éviter les triangles de surface négligeable et les contours instables dans le `Model` généré. Une surface fine mais numériquement stable et située au-dessus du critère effectif reste éligible à l'émission.
-
-**Un seul réglage :** cette politique utilise la tolérance courante du Mesher (défaut `1e-5` en coordonnées locales) ; aucune seconde tolérance publique dédiée à l'aire, à la longueur d'arête ou à la triangulation n'est introduite. L'algorithme doit préciser une comparaison dimensionnellement cohérente (une aire s'exprime en unités au carré) plutôt que comparer arbitrairement une aire à une longueur. Les règles exactes de classification des fragments de quasi-aire nulle, arêtes effondrées et sommets quasi confondus restent à établir pendant la définition de l'algorithme.
-
-**Conséquences :** la suppression s'applique aux fragments et triangles issus du clipping et au maillage qui en résulte ; aucun triangle dégénéré n'est émis dans les meshes GPU ni conservé comme fragment « visible » exploitable dans `OcclusionResult`. Un résultat cache valide sans aucun fragment reste différent d'un cache miss (VXL-057). La géométrie source de la `Shape` demeure immuable ; les règles de validation de `Shape::Builder` (VXL-053/054) sont inchangées. Le culling d'innerShell et la détermination d'une couverture complètement opaque doivent se baser sur les mêmes règles de précision, sans provoquer artificiellement une fermeture totale par simple perte de fragments.
-
-**Cache :** la tolérance contribue déjà à l'identité de la clé (VXL-063) ; deux Meshers avec tolérances distinctes ne doivent pas partager le résultat filtré. Sans cache, le Mesher doit produire la même géométrie filtrée qu'avec un résultat mémorisé, dans les mêmes conditions.
-
-**Tests proposés :** triangles d'aire géométrique nulle ; sommets voisins et segments quasi nuls ; fragments plus petits/plus grands que le critère lié à `1e-5` ; tolérance du Mesher modifiée entre deux bakes ; `OcclusionResult` vide distinct d'un miss ; suppression de fragments n'introduisant pas de fausse fermeture d'une face ; équivalence des meshes avec/sans cache.
-
-### VXL-065 — Garantie forte d'exception de Shape::Builder::build() : VALIDÉ
-
-**Option A validée.** Un appel à `Shape::Builder::build()` qui **lance une exception** laisse **intégralement intact** l'état du Builder tel qu'il était avant l'appel : polygones acceptés, attributs/slots, index, classifications `outerShell`/`innerShell`, métadonnées et tout autre état observable. Le Builder **n'est pas consommé** en cas d'échec et reste valide pour une nouvelle tentative de `build()` ou pour de nouvelles opérations d'ajout. Cette garantie forte concerne notamment les exceptions techniques possibles après la validation des géométries, comme un échec d'allocation ou de préparation des données immuables.
-
-**Consommation seulement après succès.** Un `build()` terminé normalement publie une `Shape` immuable et consomme définitivement le Builder, conformément à VXL-052. En revanche, **aucune publication partielle** ne doit être observable lorsque `build()` échoue : les données temporaires nécessaires à la construction sont préparées avant l'étape de validation du succès/consommation. Les ressources/objets temporaires éventuellement produits pendant une tentative échouée sont détruits sans compromettre les données déjà acceptées. Le détail d'implémentation est libre tant que la garantie observable est respectée ; ne pas imposer une copie profonde permanente ni une stratégie unique de rollback.
-
-**Précision C++23 :** l'éventuelle signature `Shape build() &&` reste illustrative ; un appel sur `std::move(builder)` ne constitue pas à lui seul une mutation ou une consommation. L'implémentation doit conserver le Builder réutilisable après toute exception, même si `build() &&` tente de déplacer ses ressources. Ne pas convertir arbitrairement toutes les exceptions techniques en `spk::Exception` : les erreurs d'invariant des ajouts relèvent de VXL-053 ; la politique générale d'exception du projet reste applicable.
-
-**Tests proposés :** construire un Builder avec plusieurs polygones et slots valides ; provoquer un échec technique contrôlé pendant la préparation/publication (par exemple une allocation défaillante injectée par le test) ; vérifier l'intégrité exacte des données, index et classifications, puis ajouter une nouvelle géométrie et réussir un `build()` ultérieur. Tester également une deuxième tentative sans ajout après l'échec, puis vérifier qu'une construction réussie consomme le Builder et interdit sa réutilisation. Ne pas exiger de comportement non défini ou provoquer un véritable épuisement de mémoire machine.
-
-### VXL-066 — Initialisation de Volume::Builder depuis un Volume existant : VALIDÉ
-
-**Option A validée.** `spk::Voxel::Volume::Builder` peut être construit **à partir d'un `const Volume&`** déjà publié, en plus de son mode de création initiale. Le Builder démarre avec les dimensions et toutes les cellules (vides ou renseignées), orientations et `Definition` du Volume source. L'application peut ensuite appeler les opérations ordinaires du Builder (p. ex. `set`/`erase`) puis `build()` pour produire un **nouveau `Volume` immuable**. La signature du constructeur est illustrative et n'oblige pas une méthode `clone()` supplémentaire.
-
-**Isolation des snapshots :** le `Volume` source et ses copies restent **strictement inchangés** pendant toute modification et construction du Builder. Le nouveau `Volume` est indépendant pour son contenu observable. Le fait d'utiliser sous le capot une copie des données compactes, des `Definition` immuables partagées ou du copy-on-write est libre, à condition de ne jamais créer de mutations visibles sur les anciens snapshots ; un deep-copy systématique des ressources immuables n'est pas imposé. Les indices locaux de `Definition` restent internes à chaque snapshot et ne sont jamais exposés comme identité publique (VXL-042).
-
-**Meshing :** après publication du nouveau snapshot, un `VoxelMesher::bake(newVolume)` produit un **`Model` neuf par rebake intégral**, même si le Builder n'a modifié qu'une seule cellule. Le `Model` issu de l'ancien `Volume` n'est jamais altéré. Aucun système de dirty regions, rebake partiel, mise à jour du GPU par cellule ou synchronisation automatique du Mesher avec le Builder n'est introduit dans cette version. Le cache d'occlusion optionnel peut néanmoins réutiliser ses calculs directionnels lorsqu'ils sont valides, selon VXL-050/055/063.
-
-**Tests proposés :** cloner un `Volume` avec plusieurs `Cell` et `Definition` différentes ; modifier puis effacer des cellules via le nouveau Builder ; vérifier avant et après `build()` que le snapshot source, ses dimensions, sa table logique de cellules et d'orientations restent identiques ; construire plusieurs branches indépendantes à partir d'un même snapshot ; comparer le modèle produit par un rebake complet avec les modifications attendues ; s'assurer qu'une `Definition` immuable partagée ne subit aucune mutation.
-
-**VXL-068 fixe désormais les dimensions du Builder pour toute sa durée de vie :** aucune méthode de redimensionnement ni extension implicite n'est autorisée. **VXL-069/070 :** les entrées ne sont jamais « absentes » : l'air est la Definition prédéfinie fournie automatiquement par Sparkle à l'index local `0`. **VXL-072 fixe la publication et les échecs de `Volume::Builder::build()`** : consommation uniquement après succès, garantie forte d'exception et Builder réutilisable après erreur. Restent ouverts : encodage des autres informations compactes (notamment orientation) et signatures finales.
-
-### VXL-067 — Stockage dense contigu des cellules compactes dans Volume : VALIDÉ
-
-**Option A validée.** Chaque `Volume` publié possède une **grille dense contiguë** de `width × height × depth` **entrées compactes**, comprenant une entrée pour **chaque position, même si sa Cell réelle est de l'air** (VXL-069). La structure occupe donc une mémoire proportionnelle au **volume géométrique total des dimensions**, et non au seul nombre de cellules occupées. Les accès par coordonnées sont directs par calcul d'index dans cette grille ; aucune table associative sparse ni allocation individuelle systématique par cellule n'est requise.
-
-**Cellules et définitions — précisé par VXL-069/070 :** chaque entrée compacte référence **une véritable `Definition`** de la table locale et porte l'orientation nécessaire ; **l'index `0` est réservé à la `Definition` Air prédéfinie fournie automatiquement par Sparkle**, utilisée pour les positions sans matière visible. Il n'existe **aucun état « cellule absente » à l'intérieur du Volume**, ni sentinelle de case vide distincte de la définition Air. Il n'y a pas de `shared_ptr` complet par cellule. La table locale contient des `Definition` immuables à copie légère partageant leurs données internes selon VXL-042 ; une Cell d'air est aussi une Cell valide. L'API publique continue à exposer des `Cell` **par valeur**, jamais une référence au tableau d'enregistrements ni ses indices.
-
-**Snapshots et Builders :** les `Volume` restent immuables et légers à copier, tandis que le `Volume::Builder` peut démarrer à vide ou à partir d'un `Volume` existant (VXL-066). La modification d'une cellule via `set`/`erase` n'altère aucun snapshot publié ; un `build()` publie la grille dense cohérente du nouveau `Volume`. Une optimisation interne de partage entre snapshots reste admise seulement si elle respecte l'immuabilité et si chaque `Volume` fournit logiquement sa grille dense contiguë. La structure transitoire exacte du Builder est libre.
-
-**Conséquences assumées :** cette simplicité optimise les volumes de taille modérée, les personnages, objets et chunks, ainsi que le parcours du Mesher. En revanche, les volumes immenses essentiellement vides peuvent utiliser beaucoup de mémoire ; l'application peut découper un monde en plusieurs volumes. La création/conversion doit gérer correctement le débordement arithmétique dans le produit des dimensions et l'impossibilité d'allouer la grille, sans produire un `Volume` incohérent. Le format de stockage compact exact, l'ordre de parcours et la limite maximale des dimensions restent à préciser, sans remettre en cause le choix dense.
-
-**Tests proposés :** accès cohérent à toutes les positions d'un petit Volume rempli initialement de véritables Cell Air (VXL-069) ; premier/dernier index de chaque axe, orientations et `Definition` locales ; set sur Air puis erase rétablissant Air ; deux `Volume` snapshots issus du même Builder ou d'une construction dérivée, sans mutation croisée ; égalité du contenu logique avant/après copie ; grandes dimensions et détection de débordement du nombre d'entrées avant allocation ; Mesher parcourant une grille dense sans dépendance à un stockage sparse.
-
-### VXL-068 — Dimensions de Volume::Builder fixes dès la création : VALIDÉ
-
-**Option A validée.** Les **dimensions d'un `Volume::Builder` ne peuvent jamais changer après sa construction**. Elles sont fournies lors de la création d'une grille initialement vide, ou héritées du `Volume` existant si le Builder est initialisé depuis un snapshot (VXL-066). Les opérations ordinaires `set()`/`erase()` agissent uniquement à l'intérieur de ces dimensions ; **aucun `resize()` ni agrandissement/réduction implicite** ne fait partie de l'API de cette version.
-
-**Changer de dimensions :** le programme crée un **nouveau Builder** avec les nouvelles dimensions, puis y recopie explicitement les cellules qu'il souhaite conserver de l'ancien `Volume`, avant de produire un nouveau snapshot. Le Builder dérivé directement d'un `Volume` ne sert donc pas à en changer la taille ; il sert à éditer ses cellules sans mutation de l'original. Cette règle est compatible avec le stockage dense contigu VXL-067 et simplifie l'allocation et le calcul d'index dans la grille.
-
-**Limites et invariants :** toute tentative d'édition à une position hors des limites doit être **refusée explicitement**, selon la politique existante de signalement des opérations invalides (erreur/exception à préciser dans l'API finale), sans redimensionnement ni mutation partielle. Les dimensions initiales doivent être vérifiées contre les débordements du produit de leurs composantes avant allocation de la grille dense. Les anciens `Volume` et `Model` restent inchangés ; le rebake d'un `Volume` nouveau demeure intégral (VXL-066).
-
-**Tests proposés :** édition de la première et de la dernière cellule de chaque axe, dont les positions initialement Air ; refus d'un `set()`/`erase()` en dehors des bornes sans modification du contenu ni des dimensions ; édition de plusieurs cellules après construction d'un Builder depuis un `Volume`, en vérifiant que ses dimensions sont identiques au snapshot source ; création manuelle d'une grille plus grande avec recopie des cellules choisies, anciens snapshots inchangés ; absence de chemin API `resize()` et aucun changement implicite de taille.
-
-### VXL-069 — Une Cell Air réelle, référencée par l'index de Definition local 0 : VALIDÉ
-
-**Troisième option du mainteneur, remplaçant A et B.** Il n'existe **pas de cellule « absente » ou « vide »** à l'intérieur d'un `Volume`. **Chaque position de la grille dense représente une `Cell` réelle, valide, portant une véritable `Definition`**, conformément au contrat `Cell → Definition → Shape` de VXL-042. La notion de case sans matière visible correspond à **une Cell dont la Definition est « Air »**, et non à l'absence d'une Cell. Le terme « air » désigne ici le type de contenu de la cellule et ne nie pas son existence logique.
-
-**Index 0 réservé :** la **table locale de `Definition` de chaque `Volume`** réserve **son index interne `0` à la définition Air**, qui est une vraie valeur `Definition`, et non un sentinel sans définition. Une entrée compacte de la grille qui contient `definitionIndex == 0` correspond donc à une `Cell` d'air pleinement valable. Le nombre `0` est un **index interne de la table du Volume** ; la `Cell` publique continue à contenir une `Definition` **par valeur**, sans exposer d'ID global ou de numéro de table (VXL-042). **VXL-070 tranche sa création : Sparkle fournit automatiquement une `Definition` Air prédéfinie, sans que l'application ait à la créer ou la transmettre au Builder.**
-
-**Lecture et édition :** l'accès `Volume::cell(position)` rend **une `Cell` par valeur**, y compris lorsque sa définition est Air ; il ne retourne pas `std::optional<Cell>` pour les positions internes et n'introduit aucun `Cell::isEmpty()`. Un Builder nouvellement créé initialise automatiquement la table locale avec la `Definition` Air fournie par Sparkle en position `0`, et toutes les positions de sa grille avec la Cell Air. `Volume::Builder::set(position, cell)` remplace une Cell valide par une autre ; l'opération nommée `erase(position)`, si conservée dans l'API finale, **replace la Cell par la définition Air (index 0)**, sans supprimer d'entrée de la grille. Une coordonnée hors limites reste une erreur distincte, selon VXL-068.
-
-**Mesher et voisinage :** la définition Air ne comporte **aucune surface géométrique visible ni occultante** ; le Mesher n'émet donc pas de triangles pour elle et ses voisins ne sont pas occultés par elle. Cependant, **elle participe comme toute Cell aux lectures des voisins** : elle ne devient pas un statut « cellule inexistante ». Le mécanisme `OutsideCell::Empty` existant concerne uniquement une **absence de voisin extérieur fourni** ; une Cell extérieure Air fournie au Mesher peut rester une Cell valide, avec une couverture opaque nulle. Cette distinction préserve les règles de VXL-045/046 et les tests de couverture d'occlusion.
-
-**Compatibilité :** VXL-067 (grille dense) et VXL-066 (snapshots), VXL-068 (dimensions fixes), VXL-042 (Cell porte Definition par valeur) restent valides. VXL-070 précise que Sparkle garantit directement la Definition Air intégrée, sans configuration de la part du programme. La phrase antérieure « une case vide n'exige pas de Definition » est **révoquée** ; les indices `0` sont désormais de vraies références à la Definition Air. Le choix ne crée ni catalogue global obligatoire, ni état nullable de Cell, ni traitement GPU particulier pour une Cell sans géométrie.
-
-**Tests proposés :** toutes les cases automatiquement initialisées à la `Definition` Air prédéfinie de Sparkle sans argument supplémentaire, lectures par `Cell` réelle avec une Definition ; index local de Definition 0 lié à Air sans exposer ce nombre dans la Cell publique ; changement Air → autre Definition → Air via `set`/`erase` ; copies de snapshots indépendantes ; refus d'accès hors limites ; aucune émission de triangles Air ; surface visible d'une Cell de pierre voisine d'une Cell Air réelle ; absence d'innerShell culling indu non fondé par le voisin Air ; voisinage extérieur `Empty`/`Unknown` distinct de l'Air réel.
-
-### VXL-070 — Définition Air prédéfinie et fournie automatiquement par Sparkle : VALIDÉ
-
-**Option A validée.** Sparkle fournit une **vraie `Definition` Air prédéfinie** pour tous les `Volume`. Lorsqu'un `Volume::Builder` est construit avec des dimensions neuves, il crée automatiquement sa **table locale de `Definition` avec Air à l'index interne `0`** et remplit les positions de la grille dense avec des **`Cell` Air valides**. L'utilisateur ne passe **aucune définition Air en argument**, ne doit créer ni `Shape` Air manuellement, ni enregistrer Air dans un catalogue. Une construction dérivée d'un `Volume` existant (VXL-066) conserve le même invariant : Air est et reste la définition à l'index local `0`.
-
-**Contenu garanti :** la définition prédéfinie représente une cellule **sans surface visible ni occultante**. Cette géométrie est compatible avec une `Shape` vide construite par l'API publique (VXL-075), sans exiger que Sparkle l'obtienne par cette voie ; sa géométrie est vide, et son contrat d'occlusion ne couvre aucune frontière ; elle ne génère donc aucun fragment GPU et n'occulte jamais une cellule voisine (VXL-045/046/069). La `Definition` conserve néanmoins la nature d'une **valeur immuable réelle** dans l'API publique, comme les autres `Definition`. Il n'y a ni indice d'absence, ni `std::optional<Cell>`, ni `Cell::isEmpty()`. Le `Volume::Builder::erase(position)`, si cette dénomination finale est retenue, remplace systématiquement la cellule de la position par cette définition Air.
-
-**Compatibilité avec l'architecture :** la garantie ne crée **aucun `Catalog` mondial obligatoire** ; la bibliothèque peut fournir une valeur immuable préconstruite/partagée ou construite en interne, selon l'implémentation. Les copies légères, les `Data` immuables et les tables de `Definition` propres à chaque `Volume` restent applicables (VXL-042/051/067). L'index `0` appartient toujours **à la table locale du Volume**, et n'est pas un identifiant numérique ajouté à la surface publique de `Definition`. Aucun paramètre Air additionnel n'est introduit sur `Volume::Builder` ou `VoxelMesher`.
-
-**Tests proposés :** Builder neuf sans paramètre de définition Air ; table locale dont l'index initial `0` désigne la définition prédéfinie ; `Volume::cell(position)` retournant une véritable `Cell` Air partout avant des éditions ; `set` puis `erase` rétablissant la définition prédéfinie ; Builder créé depuis un Volume existant conservant Air à l'index `0` ; absence de triangles émis pour un Volume uniquement Air ; faces visibles d'une cellule solide au contact d'Air ; absence de culling incorrect d'`innerShell` en présence de voisin Air ; copies de Volume immuables et sans singleton de catalogue imposé.
-
-**Détails restant à finaliser :** nom/signature d'un éventuel accès public direct à la valeur Air, identité partagée ou non de ses `Data` entre plusieurs volumes, représentation des autres entrées de `Definition` et technique interne de recherche des identités. **VXL-071 fixe le critère d'interning : identité de `Definition::Data`, et non comparaison des contenus.** L'obligation d'initialisation automatique et l'index `0` ne sont pas remis en question.
-
-### VXL-071 — Interning local des Definition par identité de Data partagé : VALIDÉ
-
-**Option A validée.** `Volume::Builder` déduplique les `Definition` **uniquement par l'identité de leur `Definition::Data` immuable partagé**. Deux objets `Definition` copiés l'un de l'autre, ou portant autrement le même `Data` par `std::shared_ptr<const Data>`, sont une même définition pour la **table locale** : ils réutilisent un unique index interne. Deux `Definition` construites séparément possèdent des identités distinctes et obtiennent **des entrées différentes, même lorsque Shape, slots, bindings et contrats ont le même contenu**.
-
-**Pas de comparaison profonde.** Ni hash complet de `Shape`, ni comparaison des polygones, des UV, des noms et contrats des slots n'est nécessaire pour décider l'interning. Le Builder peut utiliser une table interne de correspondance sur l'identité du `Data`, en conservant les `Definition` immuables par valeur ; les entrées de la table prolongent la durée de vie des données partagées. Aucune identité numérique publique, aucun catalogue global et aucune canonisation automatique entre constructions différentes ne sont ajoutés.
-
-**Air reste à l'index local 0 :** la `Definition` Air fournie automatiquement par Sparkle (VXL-070) reste **l'entrée réservée `0` de chaque Volume**, y compris lorsque le Builder est initialisé depuis un Volume existant (VXL-066). L'interning ne doit ni déplacer ni remplacer cette entrée. La Cell Air continue à être une vraie Cell ayant la Definition Air, et la remise à Air via `erase()` doit renvoyer à cet index. Le choix d'une identité partagée ou distincte pour les données Air d'un Volume à l'autre reste un détail d'implémentation, sans modifier l'invariant local.
-
-**Effets sur snapshots :** l'interning est propre à chaque Builder/Volume. Dans un Volume dérivé, la table source peut être réutilisée logiquement ou reconstruite sans modifier les cellules ni altérer le snapshot initial ; les cellules qui partagent le même `Definition::Data` continuent d'être associées à une même entrée dans chaque table. Les indices sont internes et ne sont pas supposés égaux entre volumes distincts (sauf la convention Air = 0). Les cellules publiques continuent à porter une `Definition` par valeur, non un index.
-
-**Tests proposés :** copies répétées de la même Definition sur plusieurs cellules -> une entrée locale ; deux constructions indépendantes au contenu identique -> deux entrées ; suppression de cellules par `erase()` qui remet Air à l'index 0 ; table Air inchangée malgré une multiplication d'autres définitions ; Builder dérivé et snapshot original préservés ; destruction d'une Definition extérieure ne rendant pas le Volume invalide ; vérification du contenu logique et du bake quel que soit le nombre d'entrées de la table.
-
-### VXL-072 — Volume::Builder consommé après succès, garantie forte d'exception lors du build : VALIDÉ
-
-**Option A validée.** `Volume::Builder::build()` publie un nouveau `Volume` immuable puis **consomme définitivement le Builder uniquement lorsqu'il réussit**. Après le retour réussi, le Builder ne peut plus servir à éditer des cellules, construire un second `Volume` ni être réutilisé autrement que par les opérations permises sur un objet consommé (notamment destruction). Pour travailler sur le snapshot, l'application crée un nouveau `Volume::Builder` depuis ce `Volume` selon VXL-066. Ce contrat est analogue à celui de `Shape::Builder` (VXL-052/065).
-
-**Toute exception préserve le Builder.** Si `build()` échoue, **son état observable est strictement identique à celui d'avant l'appel** : dimensions fixes, grille dense avec toutes ses vraies `Cell`, orientations, index locaux, table de `Definition`, index `0` réservé à Air, identités partagées, et autres métadonnées. Le Builder **reste utilisable pour une nouvelle tentative de `build()` et pour de nouvelles opérations `set()`/`erase()`**. Cela comprend les erreurs techniques de préparation/publication, notamment d'allocation, même si toute géométrie et définition préexistantes sont valides. Aucun `Volume` partiel ni mutation d'un snapshot existant n'est observable lors de l'échec.
-
-**Implications d'implémentation C++23 :** la signature illustrative `Volume build() &&` indique l'intention de construction consommatrice et reste à finaliser. `std::move(builder)` ne vaut **pas consommation en soi** ; toute préparation susceptible de lever une exception doit préserver l'état original ou disposer d'une restauration réellement sûre. Le transfert définitif des ressources/du contenu de la grille et des définitions n'intervient qu'après préparation réussie. Le mécanisme exact de commit demeure libre, sans forcer une copie profonde complète systématique.
-
-**Tests proposés :** Builder neuf rempli d'Air, avec plusieurs définitions locales et rotations ; simuler un échec pendant la préparation de `build()` et vérifier que dimensions, chaque `Cell`, correspondances de `Definition::Data`, index Air `0` et contenu des cellules restent identiques ; réessayer directement `build()` avec succès ; scénario alternatif où `set()`/`erase()` modifient le Builder après échec puis où un nouveau `build()` réussit ; vérifier qu'un build réussi consomme le Builder et que l'ancien `Volume` source reste immuable ; ne pas provoquer d'épuisement réel de mémoire machine.
-
-### VXL-073 — Polygones simple face exclusivement, recto-verso par deux polygones explicites : VALIDÉ
-
-**Option B validée.** Tous les polygones d'une `Shape` sont **simple face**. Leur **ordre des sommets (winding) détermine la face géométrique avant**, donc la face destinée à être visible depuis le bon côté. Sparkle **n'ajoute ni booléen `doubleSided`, ni option de rendu recto-verso par polygone, ni duplication automatique de faces arrière**. Pour afficher une feuille, un panneau ou une surface plane depuis ses deux côtés, l'auteur fournit **deux polygones réels et distincts**, de mêmes positions géométriques mais de **windings opposés**.
-
-**Attributs et découpage :** chaque polygone explicite conserve ses **propres UV, slot géométrique et normales d'éclairage facultatives** (VXL-059/060/061/062). Le Mesher triangule et clippe les deux polygones en conservant leur orientation de face : un fragment ou un triangle retourné accidentellement ne doit pas rendre la face inverse visible, ni faire disparaître la face prévue. Les copies de géométrie à winding opposé doivent rester des surfaces distinctes dans le traitement de la `Shape`; elles ne sont pas une justification pour supprimer l'une d'elles par déduplication géométrique aveugle.
-
-**Visibilité :** le rendu respecte le caractère simple face, avec occultation des faces arrière selon leur orientation effective. **VXL-077 impose CCW vu du côté avant, et la normale géométrique de (v1-v0) × (v2-v0) pointe vers ce côté.** Les huit orientations existantes des `Cell` (rotations Y et flip vertical) ne doivent pas inverser visuellement les côtés de façon accidentelle : le winding/la transformation des triangles doit rester cohérent avec la face voulue. La **normale d'éclairage** éventuellement personnalisée ne remplace pas la normale géométrique qui détermine cette face (VXL-062).
-
-**Occlusion distincte :** ce choix détermine le **côté visible d'un polygone au rendu**, et non l'opacité d'un matériau. Les règles déjà approuvées de classification `outerShell`/`innerShell`, de clipping et de couverture occultante selon `Definition` (VXL-045/046/048/049) restent applicables ; **VXL-074 précise désormais que seul le côté avant orienté vers l'élément à occulter participe à cette couverture opaque**. Le winding ne doit pas être confondu avec l'attribut de transparence ni avec la seule présence de polygones coplanaires. **VXL-077 fixe le sens positif du winding à CCW vu de face** ; les cas particuliers de polygones coplanaires d'orientations opposées au calcul d'occlusion restent à préciser sans changer la règle du recto-verso explicite.
-
-**Tests proposés :** une feuille formée d'un seul polygone visible d'un seul côté ; deux polygones explicites aux windings opposés visibles chacun de leur côté ; UV et normales différentes sur les deux côtés ; absence de propriété `doubleSided` ou de face automatiquement créée au `Shape::Builder::build()` et au `VoxelMesher::bake()` ; clipping d'un polygone simple face sans inversion du winding ; conservation des deux surfaces dans les résultats ; rotations et flip vertical préservant les faces voulues ; face inversée et normale d'éclairage personnalisée sans changement du côté visible ; occlusion/contrat d'opacité restés indépendants.
-
-### VXL-074 — Occlusion opaque unilatérale, exclusivement du côté avant défini par le winding : VALIDÉ
-
-**Option A validée.** Un polygone de `Shape` dont le contrat de matériau est réellement **opaque/occultant** ne peut **occulter une surface voisine que depuis son côté avant**, déterminé par le **winding géométrique** des sommets conformément à VXL-073. **Sa face arrière n'occulte rien**, même si le polygone est géométriquement coplanaire à une frontière et couvrirait à lui seul tout le carré `[0,1]²`. La classification `outerShell` / `innerShell` (VXL-045), l'opacité d'un slot (VXL-048) et la direction de couverture sont **trois conditions distinctes** : elles doivent toutes être respectées pour culler une face de cellule adjacente.
-
-**Frontières entre deux Cell :** pour déterminer si le `outerShell` du voisin occulte la face de la cellule courante, le Mesher ne compte que ses polygones opaques **situés sur le plan de frontière concerné et dont la face avant est orientée vers la cellule courante**. Un `outerShell` opaque inversé, dont l'arrière est tourné vers elle, ne contribue pas à l'union des surfaces occultantes. Un polygone opaque orienté dans la bonne direction participe à l'union et au clipping flottant suivant VXL-049 ; plusieurs fragments orientés et opaques peuvent ensemble occulter la face. **VXL-076 : si leurs surfaces se chevauchent, l'union géométrique est calculée sans compter deux fois le recouvrement, même si la Shape source conserve les polygones superposés distincts.** Les polygones `innerShell` ne sont toujours pas projetés artificiellement sur les frontières.
-
-**Conséquence sur VXL-046 :** une direction est considérée comme fermée seulement lorsque **les faces avant réellement occultantes** des `outerShell` du voisin recouvrent toute la frontière. Six voisins opaques géométriquement complets ne suffisent pas si au moins l'un d'eux présente uniquement l'arrière de ses polygones à la cellule courante : dans ce cas, **tous les `innerShell` de la cellule courante restent émis**, comme pour toute direction non fermée. Une Cell Air (VXL-069/070) reste sans couverture occultante.
-
-**Rendu, orientations et cache :** le Mesher préserve le sens CCW des polygones lors de la triangulation et du clipping (VXL-061/073/077) et applique correctement les huit orientations de Cell, y compris le flip ; seule la **normale géométrique dérivée du winding après orientation** détermine le sens de l'occlusion, jamais les normales personnalisées d'éclairage (VXL-062). Lorsqu'une transformation de Cell inverse la parité géométrique, la génération doit adapter l'ordre des indices/sommets pour garder cohérente la face physique transformée et sa normale ; ne pas confondre cette correction avec l'ajout d'une face arrière. L'`OcclusionCache` reste directionnel (VXL-050) et distingue les contrats de couverture effective, orientations et géométries selon les clés déjà spécifiées. Inverser un polygone en construisant une nouvelle Shape n'autorise pas un cache hit d'un résultat calculé avec l'autre winding. L'opacité visuelle/les catégories de matériaux restent nécessaires ; la face avant d'un matériau non occultant n'occulte pas.
-
-**Tests proposés :** deux cubes opaques correctement orientés avec culling mutuel des faces communes ; voisin opaque orienté vers la face à occulter, puis même géométrie avec winding inversé, démontrant absence de culling dans le second cas ; recouvrement partiel par plusieurs polygones dont certains présentent leur arrière (à exclure de la couverture) ; culling global des `innerShell` avec six voisins frontaux réellement fermants versus une seule frontière entièrement arrière ; tests indépendants avec et sans `OcclusionCache`, dans les deux directions A→B et B→A ; invariance des UV/normales d'éclairage sous clipping ; transformations de rotation/flip ; polygone translucent/cutout ne pouvant pas occulter sans contrat adéquat.
-
-### VXL-075 — Shape::Builder accepte zéro polygone : VALIDÉ
-
-**Option A validée.** `Shape::Builder::build()` peut produire une **`Shape` immuable parfaitement valide sans aucun polygone ajouté**. Cette capacité est **publique et générale**, non un privilège interne réservé à Sparkle ni à sa `Definition` Air. L'exigence de géométrie plane, convexe, d'au moins **trois sommets** concerne **chaque polygone fourni** (VXL-043/053), mais aucune exigence n'impose qu'une `Shape` contienne au moins un polygone. La validation immédiate des polygones effectivement ajoutés (VXL-053/054) et la garantie forte d'exception de `build()` (VXL-065) restent inchangées.
-
-**Sémantique géométrique :** la `Shape` vide possède des collections `outerShell` et `innerShell` **vides**. Le `VoxelMesher` n'a aucun fragment de surface à émettre pour une cellule utilisant cette Shape et **ne trouve aucune surface occultante dans cette Shape** : aucune face de voisin ne doit disparaître à cause d'elle, indépendamment d'une éventuelle classification de matériau ou de contrat attaché à la `Definition`. Un `Model` dont toutes les cellules utilisent une `Shape` vide peut donc contenir des meshes géométriquement vides, tout en gardant un `Volume` logique valide. Les règles de VXL-046/049/057/059/074 restent en vigueur ; un résultat d'occlusion calculé, valide et sans fragment ne doit pas être confondu avec l'absence d'entrée en cache.
-
-**Identité et Air :** une `Shape` vide est une **véritable Shape**, avec ses données immuables et son identité propre selon VXL-051 ; deux `Shape` vides construites indépendamment n'ont pas automatiquement la même identité. Elles peuvent alimenter des `Definition` distinctes et de vraies `Cell`, sans être forcées à devenir la `Definition` Air d'index local 0. La `Definition` Air prédéfinie reste fournie automatiquement par Sparkle (VXL-069/070) ; le fait qu'une `Shape` soit vide ne suffit pas à la traiter comme cette Definition Air, ni à lui attribuer automatiquement l'index 0. L'interning des autres `Definition` suit toujours l'identité de `Definition::Data` (VXL-071).
-
-**Tests proposés :** `std::move(Shape::Builder{}).build()` réussit et consomme le Builder ; lecture des `outerShell` et `innerShell` vides ; construction de deux Shapes vides distinctes ; géométrie invalide rejetée immédiatement à `addPolygon` malgré l'autorisation des Shapes vides ; définition non-Air utilisant une Shape vide conservant son identité ; voisin utilisant une Shape vide ne contribuant pas à une couverture opaque ; bake sans triangles ni fragments émis ; même comportement avec/sans cache, y compris distinction entre résultat vide valide et cache miss.
-
-### VXL-076 — Chevauchements coplanaires de polygones de même winding autorisés : VALIDÉ
-
-**Option A validée.** `Shape::Builder` **accepte sans erreur** plusieurs polygones **individuellement valides**, **coplanaires et de même winding**, même lorsqu'ils se recouvrent **partiellement ou intégralement**. Cette situation ne viole pas les contraintes de planéité, convexité, coordonnées locales et nombre de sommets de VXL-043/053 : ces contraintes portent sur chaque polygone, pas sur la disjonction de leurs intérieurs. Le Builder **ne fusionne, ne déduplique et ne rejette aucun de ces polygones au motif de leur recouvrement** ; les attributs de chaque polygone (UV, normale d'éclairage, slot géométrique, winding et identité de source) sont conservés distinctement dans la `Shape` immuable. Les polygones de winding opposé déjà autorisés par VXL-073 le restent.
-
-**Rendu et responsabilité :** le Mesher ne prétend **pas corriger les superpositions visuelles** en supprimant automatiquement une face, en fusionnant les matériaux ou en déplaçant des sommets. Des polygones ainsi superposés peuvent provoquer du *z-fighting*, du surdessin ou des effets de transparence dépendant des matériaux ; **il appartient au développeur de concevoir sa géométrie pour éviter ces artefacts lorsqu'ils sont indésirables**. Le fait de préserver deux sources géométriques n'oblige pas à leur donner le même matériau ni les mêmes UV.
-
-**Couverture occultante :** pour le calcul **géométrique de la couverture effective** d'une frontière, le `VoxelMesher` doit calculer **l'union des surfaces réellement occultantes**, et non une somme d'aires ou un XOR des polygones. La partie commune entre deux polygones opaques dirigés dans le bon sens (VXL-074) ne compte **qu'une seule fois** et ne crée **ni couverture fictive, ni trou artificiel**. Les zones dont les slots sont translucides, cutout ou autrement non occultants ne contribuent pas comme des surfaces opaques. Plusieurs polygones opaques et orientés peuvent conjointement fermer le carré frontière `[0,1]²` (VXL-045/046/048/049). Les polygones source ne sont **pas altérés par cette union de calcul**, qui n'est pas une fusion de la `Shape`.
-
-**Cache et robustesse :** l'`OcclusionCache` conserve le contrat directionnel (VXL-050) et les fragments visibles avec leurs attributs d'origine (VXL-059/060/062). Un cache hit ne doit ni modifier ni fusionner les polygones source. Les résultats d'occlusion doivent être identiques avec et sans cache, y compris pour les polygones partiellement superposés. Les tolérances numériques et le retrait de triangles dégénérés suivent VXL-063/064. Les conditions de fermeture totale et d'élimination des `innerShell` n'utilisent que la **couverture effectivement occultante de l'union**, jamais le nombre de polygones.
-
-**Tests proposés :** accepter deux triangles/quadrilatères coplanaires même winding à recouvrement partiel puis intégral, avec slots et UV distincts, sans changer le nombre de polygones source ; conserver deux polygones de winding opposé ; vérifier l'union de deux demi-faces opaques se chevauchant et couvrant exactement la frontière sans double comptage ni faux trou ; vérifier que deux petites surfaces identiques ne ferment pas artificiellement une face entière ; transparence/cutout superposés à de l'opaque sans occlusion supplémentaire ; `innerShell` émis si la couverture réelle est incomplète ; clipping directionnel avec/sans cache produisant le même résultat ; aucune correction implicite des artefacts de rendu.
-
-### VXL-077 — Convention CCW de winding et normale géométrique par produit vectoriel : VALIDÉ
-
-**Option A validée.** Les polygones de `spk::Voxel::Shape` suivent **un winding CCW (counterclockwise / sens antihoraire) lorsqu'ils sont observés depuis leur face avant**. Le sens de la **normale géométrique orientée vers la face avant** est celui de **`(v1 - v0) × (v2 - v0)`**, pour les trois premiers sommets non colinéaires d'un polygone valide (l'ordre des sommets est celui de la Shape). Un winding opposé inverse la face avant et la direction d'occlusion conformément à VXL-073/074. Les normales par sommet fournies pour l'éclairage (VXL-062) n'altèrent jamais cette convention ni la direction d'occlusion.
-
-**Clipping et triangulation :** le `VoxelMesher` préserve le sens du polygone au cours de son clipping flottant, de sa triangulation déterministe et de l'émission des triangles (VXL-049/061/064). Chaque triangle de sortie est orienté **CCW depuis son côté avant**, et sa normale géométrique est cohérente avec celle de la surface dont il provient. Aucun fragment ne doit être retourné accidentellement ; supprimer les triangles dégénérés selon la tolérance de VXL-063/064 ne transforme pas une face arrière en face avant.
-
-**Orientations des Cell :** les quatre rotations autour de Y et l'inversion verticale/flip (huit orientations) doivent transformer **la face avant physique avec la géométrie**. En particulier, une transformation de parité négative (miroir ou flip) peut inverser le winding des sommets transformés : le Mesher adapte au besoin l'ordre des indices/sommets et la normale géométrique afin que la **face avant reste la face transformée voulue**, et non son dos par erreur. Cela ne crée ni géométrie recto-verso, ni option `doubleSided` ; un double côté nécessite toujours les deux polygones explicites de VXL-073.
-
-**Rendu :** la convention de géométrie produite par Sparkle est **CCW**, en cohérence avec la convention de face avant par défaut d'OpenGL. Les commandes de rendu et le culling des faces arrière doivent respecter cette convention, y compris si un état OpenGL préexistant la modifie ; le détail de gestion/restauration de l'état graphique appartient à l'intégration du moteur. L'occlusion reste unilatérale par la face avant géométrique (VXL-074) et l'`OcclusionCache` reste directionnel (VXL-050). Les UV et les normales d'éclairage personnalisées suivent leurs règles propres et ne doivent pas déterminer le winding.
-
-**Tests proposés :** triangle CCW XY observé depuis +Z donnant une normale +Z, puis triangle d'ordre inverse normal -Z ; rendu visible uniquement du bon côté avec face arrière cullée ; polygones recto-verso explicites de winding opposé ; découpage d'un n-gone en triangles CCW sans changement de normale géométrique ; clipping partiel préservant l'orientation et les UV ; quatre rotations Y et flip vertical, particulièrement le cas de transformation à déterminant négatif ; couverture occultante correcte seulement depuis le côté avant ; résultats équivalents avec/sans cache ; absence d'influence de normales d'éclairage personnalisées sur la face avant.
-
-### VXL-078 — Model conserve tous les slots déclarés par les Definition des Cell, indépendamment de l'occlusion : VALIDÉ
-
-**Option A validée.** Après `VoxelMesher::bake(volume)`, le `Model` immuable publie la **table de tous les slots de matériaux sémantiques déclarés par les `Definition` effectivement référencées par les `Cell` du `Volume`**, y compris lorsqu'**aucun triangle visible n'utilise certains slots** parce que la géométrie correspondante est complètement occultée, coupée ou simplement absente. Le choix ne concerne pas les entrées inemployées de la table locale des `Definition` du Volume : une Definition qui n'est plus référencée par aucune Cell n'ajoute pas ses slots au Model. Les slots ne sont jamais déterminés uniquement en parcourant les fragments émis.
-
-**Invariance vis-à-vis du culling :** pour un même ensemble de Definition déclarées dans les Cell du Volume, le fait qu'une face soit visible, partiellement coupée, totalement occultée ou qu'un bake ne produise aucun triangle ne supprime pas ses slots sémantiques du Model. Les indices de matériaux utilisés dans les sommets des meshes se réfèrent à **la table complète du Model**, sans compression des indices aux seuls slots visibles. Une Shape sans polygone (VXL-075) peut également appartenir à une Definition déclarant des slots ; les slots effectivement déclarés sont conservés. La Definition Air fournie par Sparkle (VXL-070) reste valide ; aucun slot supplémentaire n'est présumé pour Air.
-
-**VoxelPalette indépendante du culling :** `VoxelPalette::Builder(model)` et les associations de matériaux par occurrence (`ModelRenderingComponent`, `Assembly`) s'appuient sur la **déclaration complète** du Model. VXL-083 prévoit aussi des Builders depuis plusieurs Model, un Assembly ou une palette immuable existante ; VXL-082/083 autorisent que la palette contienne davantage de slots que le Model cible. **VXL-081 précise que tous les slots déclarés, y compris invisibles, exigent un matériau associé compatible avant la réussite de `Factory::build()` ; une absence de binding est une exception descriptive.** La palette peut lier un slot pour lequel le mesh ne contient actuellement aucun triangle. Le contrat de catégorie de rendu et d'occlusion du slot reste applicable même quand ce slot est sans géométrie visible. La suppression d'une face au clipping ne doit provoquer ni erreur de binding, ni disparition automatique d'un nom de slot, ni reconversion d'un slot en un autre. Le `Model` et ses palettes restent des objets distincts.
-
-**Limites de la stabilité :** cette décision garantit l'indépendance vis-à-vis de la **visibilité** et de la **sélection des triangles**, pas la persistance de slots de Definition qui n'existent plus dans les Cell du Volume après une édition/reconstruction. Le `Model` issu d'un nouveau Volume peut donc exposer des slots différents si les `Definition` qui y sont réellement présentes changent. **VXL-079 tranche la gestion de déclarations de même nom** : fusion si catégorie de rendu et contrat d'occlusion identiques, sinon erreur descriptive au bake. Seul **l'ordre/attribution des indices dans la table sémantique** reste à finaliser ; ne pas inventer d'autres politiques implicites.
-
-**Tests proposés :** Volume dont une Definition occupe plusieurs cellules mais dont les surfaces sont totalement occultées par les voisins : son slot reste présent ; Model aux meshes vides avec plusieurs Definition effectivement référencées et leurs slots accessibles ; Shape valide sans polygone portant une déclaration de slot ; `VoxelPalette::Factory` liant un slot non présent parmi les sommets GPU ; deux bakes à visibilité différente mais à ensemble de Definition identique conservent les mêmes slots ; `Definition` laissée seulement dans la table d'interning mais plus utilisée par aucune Cell n'ajoute pas de slot ; rebake après remplacement de la dernière Cell utilisant une Definition autorisant la disparition de ses slots ; cohérence des indices GPU de triangles visibles avec la table complète.
-
-### VXL-079 — Fusion des slots sémantiques par nom et contrat, rejet des collisions incompatibles : VALIDÉ
-
-**Option A validée.** Pour les `Definition` **effectivement référencées par au moins une `Cell` du `Volume`** (VXL-078), le `VoxelMesher::bake()` construit la table des slots sémantiques du `Model` en appliquant une **unicité de nom**. Deux déclarations ayant **exactement le même nom**, la **même catégorie de rendu** et le **même contrat d'occlusion** sont **fusionnées en une entrée unique**. Les polygones issus de l'une ou de l'autre `Definition` référencent cet unique slot du `Model`, sans modifier leurs `Shape`, `Definition` ou slots géométriques locaux d'origine. Le regroupement est logique ; l'égalité d'identité de `Definition::Data` (VXL-071) n'est **pas** exigée pour fusionner deux déclarations de slots sémantiquement équivalentes.
-
-**Collision incompatible :** si deux déclarations de **même nom** présentent des **catégories de rendu différentes et/ou des contrats d'occlusion différents**, `VoxelMesher::bake()` **lance une `spk::Exception` descriptive**. L'erreur doit permettre d'identifier au minimum **le nom du slot** en cause et **les deux contrats incompatibles**. Aucune variante suffixée, aucune sélection arbitraire du premier ou du dernier contrat et aucune promotion silencieuse vers la catégorie la plus restrictive ne sont permises. Deux slots de noms différents restent distincts, même avec des contrats égaux ; ni normalisation implicite des noms ni comparaison approchée des catégories/contrats n'est décidée.
-
-**Indépendance de la visibilité :** la validation inclut les déclarations des `Definition` présentes dans les cellules, **même si aucun de leurs polygones ne survit au culling**. Une collision de contrats ne doit pas devenir acceptable simplement parce qu'un des slots est entièrement occulté. À l'inverse, une `Definition` inemployée dans toutes les `Cell` (éventuellement toujours présente dans la table interne d'interning du `Volume`) **ne participe pas** à la table des slots ni à ce contrôle. La `Definition` Air conserve son comportement prédéfini, sans slot supplémentaire présumé (VXL-070).
-
-**Publication et palette :** en cas de conflit, **aucun `Model` partiel n'est retourné/publié** ; le `Volume` immuable source est inchangé. **VXL-080 prévoit le tri alphabétique par nom des slots validés avant tout assignement d'indice de matériau dans le Model**. La `VoxelPalette::Factory(model.materialSlots())` rencontre une table de noms uniques et lie chaque nom à un seul matériau concret par occurrence, avec la même validation de catégorie et de contrat qu'auparavant. Des déclarations fusionnées partagent le même index de slot lors de la génération des triangles GPU, y compris avec deux `Definition` de `Data` différents. La politique **d'ordre de classement et d'attribution des indices** est désormais fixée par **VXL-080** : les noms de slots uniques sont triés alphabétiquement avant attribution des indices, sans dépendance à leur première rencontre.
-
-**Tests proposés :** deux `Definition` distinctes de `Data` différents déclarant `surface` avec catégorie et contrat identiques -> un seul slot de `Model` et indices GPU cohérents ; deux `Definition` de même nom à catégories différentes -> `spk::Exception` descriptive ; même catégorie mais contrats d'occlusion différents -> même erreur ; deux noms différents à contrats égaux -> deux slots ; conflit dont une `Definition` est entièrement occultée -> erreur maintenue ; `Definition` uniquement dans la table locale mais utilisée par aucune `Cell` -> aucune collision ; `VoxelPalette` construite normalement à partir de la table fusionnée et refusant toujours les matériaux incompatibles.
-
-### VXL-080 — Ordre alphabétique déterministe des slots sémantiques du Model : VALIDÉ
-
-**Option A validée.** Lors de `VoxelMesher::bake(volume)`, les slots sémantiques sont d'abord recueillis auprès de **toutes les `Definition` effectivement référencées par les cellules** du `Volume` (VXL-078), puis **regroupés par nom avec contrôle de compatibilité des catégories et contrats** (VXL-079). **Avant toute attribution des indices internes de slots**, l'ensemble unique résultant est **trié alphabétiquement par nom**. Les indices de slot de `Model` et les `MeshVertex::materialIndex` émis font référence à ce même ordre.
-
-**Stabilité et déterminisme :** deux volumes disposant du **même ensemble de noms de slots, associés à des contrats compatibles**, produisent **le même ordre et les mêmes indices**, même si leurs cellules sont placées différemment, même si les `Definition` sont construites ou rencontrées dans un ordre différent, et même si une partie ou l'intégralité de la géométrie est occultée. La présence d'autres noms de slot peut modifier les indices, comme dans toute table compacte ordonnée ; il ne s'agit pas d'IDs globaux stables entre ensembles de noms différents. Un `Model` immuable ne réindexe pas ses propres slots après publication.
-
-**Contrat de comparaison :** le tri des noms doit être **déterministe et indépendant de l'environnement** (pas de collation dépendante de la locale système ni d'ordre de parcours d'un `unordered_map`). La comparaison exacte à retenir pour les caractères non ASCII et la sensibilité à la casse peuvent être décidées lors de la finalisation de l'API de nommage ; elles ne doivent jamais introduire de variation selon le système, la région ou l'exécution. VXL-079 continue de regrouper uniquement les déclarations au **même nom exact**, avant tri. Pas de normalisation implicite ou d'alias créé par ce choix.
-
-**VoxelPalette :** les associations s'effectuent toujours **par noms**, et non en supposant que le premier `bind()` correspond à l'index de slot `0`. La palette résout les indices selon les noms de la table triée du Model, de manière cohérente avec les indices émis par le Mesher. Les règles de contrat, la présence des slots y compris occultés et le périmètre des `Definition` utilisées restent inchangés (VXL-078/079).
-
-**Tests proposés :** deux `Definition` déclarant dans l'ordre `zeta`, `alpha` versus `alpha`, `zeta` -> indices alphabétiques identiques ; permutation des cellules d'un Volume gardant les mêmes `Definition` -> même table ; mêmes noms mais deux Definition::Data distincts -> regroupement identique si contrats égaux ; maillage entièrement occulté -> table alphabétique inchangée ; ordre de `VoxelPalette::Factory::bind()` inversé -> même résultat par nom ; ajout de nouveaux noms -> réindexation autorisée des slots du nouveau Model ; absence de changement selon la locale active ou l'itération d'une table associative.
-
-### VXL-081 — VoxelPalette complète obligatoire, y compris pour les slots sans triangles : VALIDÉ
-
-**Option A validée.** Lors de `spk::VoxelPalette::Builder::build()` (**ancienne dénomination illustrative `Factory`, remplacée par `Builder` en VXL-083**), **chaque slot sémantique recueilli depuis la source choisie (Model, plusieurs Model, Assembly ou palette existante) doit être associé à un matériau concret compatible** avec la catégorie de rendu et le contrat d'occlusion de ce slot. Cette obligation est indépendante de la présence ou de l'absence de triangles dans les meshes du `Model` (VXL-078) : **un slot entièrement occulté, ou déclaré par une `Definition` dont la `Shape` ne produit aucun triangle, reste obligatoire**. La Factory valide à la fois la présence du binding et sa compatibilité avec le contrat. L'ordre alphabétique des indices (VXL-080) n'affecte pas l'association qui se fait par nom.
-
-**Erreur explicite, jamais de secours implicite :** si **au moins un slot** déclaré n'a pas de matériau associé, `Builder::build()` **lance une `spk::Exception` descriptive**, indiquant au minimum le ou les noms de slots manquants pour diagnostiquer le défaut. Une association présente mais incompatible reste également rejetée, conformément à la validation de contrat antérieure. La méthode ne retourne pas de `VoxelPalette` partielle ; il n'y a **ni couleur/matériau par défaut automatique, ni fallback, ni dérogation pour les slots actuellement invisibles**. La politique d'état/reprise de la Factory après exception, distincte des Builders de Shape/Volume, n'est pas implicitement fixée ici.
-
-**Cas sans slots :** si la table des slots déclarés du Model est réellement vide, la contrainte « tous les slots associés » est satisfaite sans aucun `bind()` : une `VoxelPalette` à zéro association est valide pour un Model sans slots, notamment un Volume uniquement Air. Cette précision ne permet pas d'ignorer un slot déclaré par une `Definition` simplement parce que sa géométrie est vide (VXL-075).
-
-**Conséquences sur l'utilisation :** toute palette construite avec succès fournit un mapping complet pour tous les slots du ou des Model/Assembly ou de la palette source ayant servi à initialiser le Builder (VXL-083). Deux occurrences d'un `Model` peuvent utiliser des palettes différentes mais chacune doit être complète et compatible. `Assembly` conserve le binding de palette par occurrence et `ModelRenderingComponent` n'a pas à résoudre des matériaux manquants au rendu. **VXL-082/083 permettent la réutilisation avec un autre Model** dès lors que tous ses slots existent dans la palette avec même catégorie et contrat, même si la palette possède d'autres slots ; l'identité du Model n'entre pas dans le test.
-
-**Tests proposés :** Model ayant plusieurs slots dont un sans aucun triangle : `build()` sans le binding invisible -> exception avec nom ; tous les bindings compatibles -> succès ; binding incompatible d'un slot visible ou invisible -> exception ; Model avec tous triangles cullés mais slots présents -> tous bindings requis ; Model dont la table des slots est vide (Volume uniquement Air ou Shape vide sans déclaration) -> palette sans binding valide ; ordre de `bind()` quelconque -> table cohérente avec VXL-080 ; aucune palette incomplète retournée lors d'un échec.
-
-### VXL-082 — Compatibilité de palette par contrat des slots : VALIDÉ, PRÉCISÉ PAR VXL-083
-
-**Option A validée.** Chaque `Model` expose la liste de ses slots sémantiques requis, avec **nom, catégorie de rendu et contrat d'occlusion**, indépendamment du culling (VXL-078/079/080). Chaque `spk::VoxelPalette` conserve les contrats des slots qui ont servi à la construire, ainsi que leurs matériaux concrets. Aucun `MaterialSchema` supplémentaire ni registre commun obligatoire. Les `Model` n'ont pas à connaître les autres Model, et le partage d'une instance de palette est une **association explicite** effectuée par l'application.
-
-**Précision VXL-083 sur les slots supplémentaires :** `Model::isCompatible(const VoxelPalette&)` retourne `true` **si et seulement si pour chaque slot exigé par ce Model, la palette contient un slot de même nom, avec la même catégorie de rendu et le même contrat d'occlusion**. La palette est autorisée à posséder **des slots supplémentaires** non requis par le Model. L'ancienne hypothèse « ensemble strictement identique de slots » est **remplacée** par cette relation de couverture ; il ne suffit pas que la palette ait autant de slots ou que les index numériques coïncident. Pour une palette immuable déjà complète, un slot requis absent ou incompatible rend `isCompatible` faux.
-
-**Validation et rendu :** l'association Model/Palette, que ce soit pour `ModelRenderingComponent`, une partie d'`Assembly` ou la préparation d'une commande de rendu, ne doit jamais utiliser silencieusement une paire incompatible ; signaler une `spk::Exception` descriptive lors de l'opération de binding validante ou à la préparation du rendu selon la responsabilité retenue pour l'API. La méthode booléenne `isCompatible` n'effectue aucune association et ne modifie aucun objet. **Les indices locaux triés d'un Model peuvent différer de ceux d'une palette ayant des slots supplémentaires** : une association valide exige donc une **résolution par nom des slots du Model vers les entrées matérielles de la palette**, sans supposer l'identité numérique des indices. **VXL-085 fixe la résolution lors de la préparation de la représentation SSBO spécifique au couple Model/Palette**, dans l'ordre des slots du Model : une fois le SSBO préparé, le shader utilise directement `MeshVertex::materialIndex`, sans remapper dans le vertex/fragment shader ni modifier les MeshVertex immuables. La politique de conservation du SSBO entre frames demeure ouverte.
-
-**Tests proposés :** deux Model indépendants de géométries différentes mais déclarations de slots identiques partageant la même palette ; Model nécessitant `skin` et `eyes` compatible avec une palette déclarant en plus `cloth` ; Model exigeant un nom absent => faux ; même nom mais catégorie ou contrat différent => faux ; deux VoxelPalette alternatives utilisées par le même Model ; ordre de slots numérique différent sans faux négatif de compatibilité et indices résolus par noms ; aucune identité de Model requise.
-
-### VXL-083 — VoxelPalette immuable, Builder mutable avec construction multi-Model/Assembly ou variante : VALIDÉ
-
-**Option A validée.** `spk::VoxelPalette` est une **valeur immuable** une fois construite. Elle encapsule un **`std::shared_ptr<const Data>` immuable** (structure illustrative) : copies légères et assignations de valeurs complètes peuvent partager ce `Data` ; modifier une copie ne signifie jamais muter l'original. Il n'existe **aucune méthode publique de mutation** des associations ou contrats sur une palette construite. Une même palette peut alimenter plusieurs rendus compatibles sans course entre copies ; les durées de vie des matériaux et des ressources GPU restent soumises au contrat général de propriété du moteur, sans déclarer ici qu'elles sont entièrement possédées par les palettes.
-
-**`VoxelPalette::Builder` mutable** : peut être initialisé depuis (1) un `Model`, (2) **plusieurs Model** via une collection, (3) un `Assembly` en collectant les `Model` de ses parties, ou (4) une **`VoxelPalette` existante** pour créer une variante. Les signatures exactes restent à finaliser. Le Builder réunit les déclarations de slots par nom et leurs catégories/contrats ; les noms identiques et compatibles sont fusionnés comme en VXL-079, et toute collision de contrat entre sources fait échouer explicitement la construction/ajout avec `spk::Exception` descriptive plutôt que retenir un contrat arbitraire. Les noms de slots sont ordonnés alphabétiquement conformément à VXL-080.
-
-**Associations et variantes** : `Builder::bind(nom, matériau)` associe ou remplace explicitement le matériau d'un slot déclaré, avec contrôle de compatibilité du contrat. **VXL-087 : `matériau` désigne un `Material` déjà construit et immuable, dont la représentation/donnée partagée peut être reprise sans copie profonde ; une variante de palette peut ainsi réutiliser tous les autres Material inchangés.** Un Builder issu d'une palette existante récupère ses contrats **et les bindings concrets de matériaux déjà présents** ; remplacer le matériau d'un slot ne touche pas aux autres. `build()` **exige tous les slots de son contrat collecté liés à un matériau compatible** (VXL-081), y compris les slots en plus de ceux utilisés par un Model particulier. Le résultat est une nouvelle palette immuable indépendante en valeur de toute source ou Builder mutable ; produire une variante ne modifie jamais l'ancienne. Le choix de consommation du Builder après réussite et la garantie d'exception de `VoxelPalette::Builder::build()` restent à spécifier, sans être déduits automatiquement de Shape/Volume.
-
-**Assembly sans palette globale forcée** : construire le Builder depuis un `Assembly` collecte l'union des besoins en slots des `Model` de ses parties. Cela permet à l'application de **créer et réutiliser volontairement une palette commune**, mais **ne remplace pas** l'architecture approuvée où chaque occurrence de Model dans Assembly possède son association explicite à une palette. Si deux parties déclarent un même nom avec contrats incompatibles, le Builder commun ne peut pas les fusionner : il lance une `spk::Exception` descriptive ; l'Assembly peut néanmoins continuer à fonctionner avec **deux palettes séparées par partie**, comme auparavant. Le Builder ne change ni les liens de palettes déjà présents ni les modèles/transformations de l'Assembly.
-
-**Contrat de compatibilité consolidé (VXL-082)** : un `Model` est compatible avec une `VoxelPalette` **dès lors que tous les slots requis par le Model sont présents avec nom, catégorie et contrat d'occlusion identiques**. Les **slots supplémentaires de la palette sont autorisés** pour permettre les palettes communes à plusieurs Model/Assembly. `Model::isCompatible(palette)` est l'interface publique booléenne demandée. L'application peut partager la même palette entre plusieurs Model ou utiliser plusieurs palettes avec le même Model. La validation d'une association incompatible doit être explicite, sans fallback ni coercition.
-
-**Indirection d'indices à respecter** : les `MeshVertex::materialIndex` référencent la table triée des slots du `Model` (VXL-080), tandis qu'une palette regroupant plusieurs Model peut avoir **une autre table triée, contenant plus de slots**. Pour rendre une paire compatible Model/Palette, Sparkle **doit résoudre les noms** et utiliser le matériau correspondant ; elle ne peut pas considérer automatiquement `modelIndex == paletteIndex`. **VXL-085 tranche le remapping : les matériaux sont ordonnés côté préparation de rendu pour chaque couple Model/Palette** afin que les indices locaux du Model adressent directement son SSBO adapté ; les meshes restent immuables, et le SSBO de matrices reconstruit chaque frame n'entraîne pas implicitement de rebake.
-
-**Tests proposés** : Builder à partir d'un Model, de deux Model compatibles et d'un Assembly ; union exacte et tri des slots ; conflit de nom/contrat entre deux Model rejeté ; palettes vides depuis Model sans slots ; construction échouée pour slot non associé et matériau incompatible ; `Builder(palette)` puis remplacement d'un seul matériau produisant deux palettes indépendantes ; copie et affectation légères d'une palette immuable ; réutilisation du même objet palette sur deux Model indépendants, et de deux palettes pour le même Model ; compatibilité d'un Model avec une palette contenant des slots supplémentaires, validation des noms/contrats, index numériques pouvant différer ; association par partie d'Assembly intacte.
-
-### VXL-084 — Palette immuable indépendante du GPU, représentation SSBO séparée et réutilisable au rendu : VALIDÉ
-
-**Option A validée.** `spk::VoxelPalette` reste un **objet de données immuable et indépendant du GPU**, portant les contrats des slots, leurs noms et les associations aux matériaux concrets (VXL-081/082/083). Elle **n'hérite ni de `ShaderStorageBuffer`, ni de `BufferGPUResource`, ni d'une autre ressource graphique**. Sa construction et sa copie légère restent possibles sans contexte OpenGL. Elle ne possède pas directement un SSBO et ne modifie pas sa représentation GPU depuis son API publique.
-
-**VXL-087 : les `Material` fournis à cette représentation graphique sont des valeurs immuables**. Leur partage entre plusieurs `VoxelPalette` ne nécessite ni clonage profond ni surveillance de changements de propriétés : le système extrait les paramètres de chaque valeur Material au moment de préparer le SSBO de snapshot (VXL-085/086). L'éventuelle évolution du contenu des textures GPU est un contrat de ressource distinct, encore à trancher, et non une autorisation de rendre les valeurs Material mutables.
-
-**Représentation graphique distincte :** lors de la préparation du rendu, `VoxelRenderingSystem` ou un responsable de ressources interne qu'il pilote **résout les matériaux d'une `VoxelPalette` et prépare leurs données utilisables par les shaders dans un `spk::ShaderStorageBuffer` distinct**. Cette représentation peut être **réutilisée par plusieurs RenderCommand compatibles** ; il n'est pas nécessaire de reconstruire un SSBO identique pour chaque commande lorsque la même palette (ou une représentation GPU valable) est utilisée. Les données exactes empaquetées (paramètres numériques, indices/descripteurs de ressources, gestion des textures) seront définies selon les contrats des shaders existants ; un objet C++ Material ne se transfère pas intégralement par `reinterpret_cast` vers un SSBO.
-
-**Compatibilité et indices :** VXL-082/083 restent pleinement applicables : `Model::isCompatible(palette)` vérifie les noms, catégories et contrats requis, avec **slots supplémentaires de palette autorisés**. Les indices `MeshVertex::materialIndex` sont locaux au Model (VXL-080) et peuvent différer des indices du tableau GPU de palette. **Un mécanisme de correspondance Model → Palette est obligatoire** à l'émission/exécution des commandes de dessin ; **VXL-085 fixe le mécanisme de mapping : résolution par noms sur CPU puis SSBO de matériaux rangé selon les indices du Model, sans indirection GPU supplémentaire.** Il est interdit de présumer que les index numériques sont égaux ou de rebaker la géométrie immuable simplement pour une palette différente.
-
-**Coexistence avec VXL-041 :** le **SSBO d'instances** du `VoxelRenderingSystem` est toujours recréé et rempli intégralement à **chaque frame et par bucket non vide** (VXL-041). Le **SSBO de données de palette** est une ressource de nature différente : sa réutilisation entre commandes est autorisée et prévue. **VXL-086 fixe la durée :** le système prépare les SSBO de matériaux pour les couples réellement utilisés par **chaque nouveau RenderSnapshot**, les réutilise entre commandes de **ce même snapshot**, puis abandonne cette table de partage à la fin de sa construction ; aucun cache de SSBO de palette n'est conservé d'un snapshot au suivant. Les handles capturés par les commandes garantissent la rétention des ressources nécessaires jusqu'à la fin de leur utilisation par le GPU, suivant les mécanismes existants de `GPUResource`/`RenderContext` ; le détail des barrières de synchronisation dépend du moteur. Ce choix n'ajoute ni cache d'instances, ni mises à jour partielles d'instances, ni responsabilité GPU aux `VoxelPalette`.
-
-**Snapshots et variantes :** `VoxelPalette::Builder(palette)` peut construire une autre palette avec des matériaux différents sans modifier la première (VXL-083). Une commande déjà préparée et ses ressources GPU doivent restituer la palette qu'elles ont capturée, **sans être altérées par la création d'une variante ultérieure**. Les handles/ressources de rendu conservent une durée de vie correcte jusqu'à l'exécution des commandes, en respectant les règles de `GPUResource` de Sparkle ; les détails techniques de rétention restent à finaliser.
-
-**Tests proposés :** créer et copier des VoxelPalette sans initialiser OpenGL ; construction de variantes immuables sans mutation de la palette d'origine ; préparation d'une représentation ShaderStorageBuffer puis utilisation dans deux RenderCommand compatibles sans upload dupliqué par commande ; cohabitation avec les SSBO d'instances reconstruits par frame ; représentation des données matérialisées et des paramètres de shader (sans copier des objets C++ non trivials) ; rendu du même Model avec deux palettes et de deux Models compatibles avec une palette ; situation d'indices Model/Palette différents nécessitant résolution ; conservation de l'apparence d'un RenderSnapshot déjà constitué après création d'une variante.
-
-### VXL-085 — SSBO de matériaux adapté au couple Model/VoxelPalette, sans remapping GPU : VALIDÉ
-
-**Option A validée.** Le `VoxelRenderingSystem` prépare **une représentation SSBO des matériaux pour chaque couple compatible `Model` / `VoxelPalette` utilisé au rendu**, en **rangeant les matériaux exactement dans l'ordre des slots sémantiques du `Model`**, et **non** dans l'ordre original des slots de la `VoxelPalette`. Les noms des slots et leurs contrats sont résolus lors de la préparation des données côté CPU. La condition de compatibilité reste `Model::isCompatible(palette)` (VXL-082/083) : chaque slot requis doit avoir un nom, une catégorie et un contrat d'occlusion correspondants. Une association incompatible est rejetée explicitement, sans construire de représentation silencieusement partielle.
-
-**Indices utilisables directement :** l'indice `MeshVertex::materialIndex` (VXL-080), local au Model, désigne **directement** l'entrée de matériau correspondante dans **le SSBO GPU adapté à ce couple**. Le shader n'effectue **aucune seconde indirection Model→Palette**, aucune table de translation supplémentaire n'est nécessaire, et **aucun sommet/indice du Mesh immuable n'est réécrit** quand la palette change. Il faut seulement activer le SSBO adapté avant la commande/bucket concerné. Les slots supplémentaires de la palette, autorisés par VXL-082/083, **ne sont pas requis dans ce SSBO adapté**, qui suit strictement les slots du Model, y compris les slots actuellement sans triangle (VXL-078/081).
-
-**Partage entre commandes :** les commandes de dessin utilisant **le même couple logique `Model`/`VoxelPalette`** peuvent partager **la même représentation SSBO préparée**, sans réencoder ni réuploader les matériaux pour chacune. Un même Model avec **deux palettes différentes** nécessite deux représentations adaptées distinctes ; une même palette avec **deux Models différents** peut nécessiter deux ordres de SSBO distincts, même si la palette est immuable. Les copies légères de Model et de Palette qui partagent leurs mêmes données immuables peuvent partager une représentation de rendu adéquate ; ne pas imposer de déduplication mondiale par contenu ni de registre de ressources global.
-
-**Interaction avec le batching :** une commande/bucket qui utilise l'accès direct de `materialIndex` doit disposer d'un **mapping de matériaux adapté unique pour ses triangles au moment du draw**. Les instances de palettes différentes ne doivent pas être réunies dans un même draw si cela obligerait `materialIndex` à signifier plusieurs matériaux différents sans mécanisme explicitement retenu. Le grouping existant par Mesh/état GPU (VXL-041) doit inclure les bindings matériels compatibles avec ce SSBO adapté ; la granularité exacte du `BucketKey` reste une question d'implémentation à confronter aux shaders.
-
-**Durée de vie et cohérence :** le SSBO adapté est **une ressource de rendu séparée** de la `VoxelPalette` publique immuable (VXL-084) et du **SSBO d'instances recréé à chaque frame** (VXL-041). **VXL-086 fixe sa durée : une représentation est construite par couple compatible utilisé au cours de chaque `RenderSnapshot` et partagée entre ses commandes uniquement, sans réutilisation inter-frame.** Les handles/snapshots doivent conserver leurs données jusqu'à la fin de leur utilisation GPU et ne pas être altérés par `VoxelPalette::Builder(oldPalette)` créant une nouvelle variante (VXL-083). Aucun rebuild de `VoxelMesher` n'est impliqué.
-
-**Tests proposés :** `Model` ayant les slots triés `armor, skin` et palette contenant `armor, cloth, skin` -> SSBO adapté à deux entrées dans l'ordre `armor, skin`, `materialIndex == 1` adresse `skin` et non `cloth` ; deux commandes du même couple réutilisant une seule représentation et un handle valide ; même Model avec palettes alternatives rendu différemment sans rebake ; même palette et deux Model aux listes de slots différentes produisant chacun un mapping correct ; copie légère partageant les Data immuables ; culling complet n'effaçant pas les slots attendus ; deux instances du même Mesh à palettes différentes jamais regroupées dans un draw incompatible ; SSBO d'instances de VXL-041 toujours reconstruit par bucket chaque frame ; snapshot ancien conservant sa palette malgré création d'une variante.
-
-### VXL-086 — SSBO de matériaux propres à chaque RenderSnapshot, mutualisés entre ses commandes et libérés après usage GPU : VALIDÉ
-
-**Option A validée.** À **chaque préparation de `RenderSnapshot`**, `VoxelRenderingSystem` (ou une infrastructure graphique interne pilotée par lui) crée les **`spk::ShaderStorageBuffer` de matériaux nécessaires aux couples compatibles `Model`/`VoxelPalette` effectivement utilisés par ce snapshot** (VXL-084/085). Chaque SSBO contient les matériaux dans l'ordre des slots de son Model afin que `MeshVertex::materialIndex` l'adresse directement. Un couple absent du snapshot **ne donne lieu à aucune allocation de SSBO de matériaux** ; les slots sans triangle restent dans la table des slots du Model, mais un couple non dessiné ne requiert pas de ressource GPU.
-
-**Partage intra-snapshot seulement :** si plusieurs commandes de dessin dans le **même snapshot** utilisent le **même couple Model/Palette**, elles peuvent réutiliser **un unique SSBO préparé et ses données/handles valides**, sans recalculer ni réuploader ce SSBO pour chacune. Une table temporaire de couples présents dans le snapshot peut gérer cette mutualisation ; elle est **recréée lors de chaque préparation du snapshot** et abandonnée après la construction. Aucune déduplication globale, aucun cache GPU de SSBO de palettes persistant entre frames, aucun protocole d'invalidation/éviction inter-frame n'est à implémenter.
-
-**VXL-087 :** la stabilité des `Material` immuables liés par la palette évite tout protocole d'invalidation des paramètres matériels. Une variation de paramètres suppose un autre Material puis une nouvelle Palette, utilisée explicitement dans les snapshots concernés. La mutabilité des pixels/textures référencés reste distincte et ne sera pas présumée fixée par VXL-087.
-
-**Nouveaux snapshots :** même si un Model et sa palette immuable sont exactement identiques à ceux employés lors de la frame précédente, le **nouveau snapshot prépare ses propres SSBO de matériaux**. Cela entraîne des allocations CPU/GPU et des transferts complets régulièrement, choix assumé pour préserver la simplicité. Les `VoxelPalette`, `Model`, `Mesh` et éventuelles textures/ressources immuables existantes restent partageables en tant qu'objets distincts : la décision concerne **les SSBO de matériaux adaptés aux couples**, pas le stockage intrinsèque et la durée de vie des textures ou d'autres ressources graphiques non concernés. Aucun préchargement/retour anticipé de SSBO issu du snapshot précédent n'est autorisé.
-
-**Durée de vie des commandes :** la **table temporaire de partage** peut disparaître à la fin de la construction du `RenderSnapshot`, mais **chaque ressource/handle capturé par les RenderCommand doit rester valide jusqu'à la fin de l'utilisation effective des données par le GPU**. Les commandes différées, snapshots en attente, chevauchements possibles de frames et mécanismes internes de `GPUResource` / `RenderContext` doivent garantir qu'un buffer GPU n'est ni détruit prématurément, ni réutilisé/modifié pendant qu'il sert à un snapshot antérieur. VXL-086 impose cet invariant, mais **n'invente pas une barrière GPU ou une API de synchronisation spécifique** au-delà des primitives existantes du moteur.
-
-**Séparation claire de VXL-041 :** les **SSBO d'instances** restent eux aussi reconstruits intégralement à chaque frame et par bucket non vide. La table de SSBO de matériaux par couple n'est pas le même objet que les buffers d'instances, et une commande peut capturer un SSBO de matériaux commun à d'autres commandes tout en ayant son propre SSBO d'instances, sans rendre son `Mesh` ni sa palette mutables. La sélection des buckets doit conserver un mapping de matériaux unique par draw (VXL-085).
-
-**Tests proposés :** deux commandes compatibles du même snapshot partageant un seul SSBO de matériaux ; snapshot suivant à couples identiques recevant un nouveau SSBO et une nouvelle table temporaire ; snapshot sans couple dessiné n'allouant aucun SSBO de matériaux ; deux couples/palettes distincts d'un même snapshot disposant de SSBO propres ; destruction de la table temporaire n'invalidant pas les handles enregistrés dans les commandes ; snapshot A encore en cours d'exécution GPU pendant que B est créé, sans destruction ni mutation du buffer de A ; variantes de `VoxelPalette` n'affectant pas les SSBO capturés par les snapshots précédents ; buffers d'instances VXL-041 toujours intégralement reconstruits chaque frame ; absence de cache et d'invalidation inter-frame.
-
-### VXL-087 — Material immuable, partagé entre palettes ; édition par nouvelle valeur : VALIDÉ
-
-**Option A validée.** Les `Material` concrets associés aux slots sémantiques sont **immuables après leur construction** : leurs propriétés et leur contrat de rendu ne peuvent pas être modifiés en place par un utilisateur de `VoxelPalette`. Cette politique est alignée sur l'immutabilité de `Model` et `VoxelPalette` (VXL-083). Le contrat exact du type `Material`, ses éventuelles classes de construction et ses propriétés publiques seront définis lors de la finalisation de l'API ; VXL-087 ne suppose pas qu'un type préexistant de Sparkle fournit déjà cette immutabilité, et ne crée pas de règle implicite pour les autres matériaux graphiques du moteur.
-
-**Partage et copies :** plusieurs `VoxelPalette` immuables peuvent **référencer/posséder de manière partagée une même valeur `Material` immuable**, sans copie profonde obligatoire des paramètres ou ressources lourdes. Les copies légères de Material et/ou palettes peuvent s'appuyer sur un `shared_ptr<const Data>` ou une équivalence d'implémentation ; le détail de stockage n'est pas une exigence d'identité globale ni de registre. Partager un Material entre palettes ne transfère aucune capacité de mutation de ses propriétés. La propriété des références doit garantir que les matériaux restent accessibles tant que des palettes et leurs usages validés en dépendent ; le modèle précis d'ownership des textures GPU reste à concevoir.
-
-**Modification explicite :** pour obtenir un matériau dont la couleur ou tout autre paramètre est différent, l'application **construit un nouveau `Material`** ; pour afficher une occurrence avec ce matériau, elle **construit une nouvelle `VoxelPalette`** ou variante depuis `VoxelPalette::Builder(oldPalette)`, y associe le nouveau Material et choisit cette palette dans la partie d'Assembly, le composant ou l'occurrence cible. Les anciennes valeurs de Material et de Palette restent inchangées et réutilisables, y compris pour les autres occurrences ou `RenderSnapshot` déjà publiés. Modifier le contrat d'occlusion/catégorie d'un slot de Model reste interdit sans nouveau bake conformément aux décisions antérieures : aucune mutation de Material ne contourne VXL-081/082.
-
-**SSBO et threads :** VXL-084/085/086 conservent le principe d'extraire les propriétés des Material immuables au moment de la préparation du `RenderSnapshot` afin de produire les SSBO de matériaux par couple Model/Palette dans l'ordre des slots du Model, partagés à l'intérieur du snapshot, sans cache entre frames. L'absence de mutation des valeurs Material évite d'ajouter un protocole de notification/invalidation entre construction et rendu pour leurs **propriétés**, mais n'exempte pas d'assurer la durée de vie des ressources GPU référencées.
-
-**Limite explicite :** l'immutabilité de `Material` **n'implique pas automatiquement l'immutabilité du contenu d'une `Texture` référencée**. Une texture peut être une ressource GPU distincte avec ses propres règles de modification ou de rechargement. **La mutabilité des pixels/contenus des textures, la stabilité des versions capturées dans les RenderSnapshot et les conséquences sur l'apparence de plusieurs palettes** sont **réservées à une décision ultérieure** : aucune copie profonde de texture ni propagation automatique de changement n'est décidée ici.
-
-**Tests proposés :** création de deux palettes partageant un même Material immuable ; copies légères sans clonage systématique ; création d'un deuxième Material avec une propriété changée et création d'une palette variante depuis la première ; conservation des anciennes couleurs/paramètres dans la première palette et dans un snapshot déjà préparé, tandis qu'un nouveau snapshot avec la variante reflète les nouvelles valeurs ; rejet d'un matériau dont catégorie/occlusion ne correspond pas au slot ; préparation de SSBO VXL-085/086 sans protocole d'édition des propriétés Material ; test de durée de vie des ressources partagées. Aucun comportement de mise à jour du contenu des textures n'est présumé validé.
-
-### VXL-093 (révision) — Slots de Shape avec opacity [0,1], règle alpha unique : VALIDÉ
-
-Le nom et le `float opacity` sont déclarés par slot géométrique de `Shape` (1 par défaut), tandis que `Definition` mappe ce slot vers le slot sémantique du `Model`. `opacity == 1` : mesh opaque ; `opacity < 1` : mesh translucide. Shader identique sur l'alpha dans les deux cas : `alpha = texture(albedo, uvFinal).a * slot.opacity`, puis `discard` si `alpha == 0`. Feuillage à opacity 1 avec trous alpha 0 supporté sans passe cutout dédiée ; une valeur intermédiaire alpha dans la passe opaque ne provoque pas d'activation automatique du blending. Aucune inspection CPU des pixels, aucun enum opaque/cutout/translucide ni booléen de transparence sur le slot. Opacité numérique finie dans [0,1] requise ; l'API exacte du Shape::Builder reste à fixer.
-
-### VXL-094 — Occlusion issue de outerShell, opacity 1 et face avant : VALIDÉ
-
-L'occlusion n'est pas déterminée par le canal alpha de la texture et ne possède pas de contrat indépendant. Elle requiert **simultanément** : polygone `outerShell`, `opacity == 1.0` de son slot géométrique et face avant vers la cellule occultée (VXL-074). Géométrie, union des couvertures et clipping précis restent exigés. L'alpha visuel d'un pixel, même 0, n'est jamais utilisé par le Mesher : le développeur est responsable de l'apparence des trous et des occultations qu'il déclare par ses slots. Même nom sémantique avec opacité contradictoire provoque erreur au bake (révision de VXL-079).
-
-### VXL-095 — Atlas albedo et région UV dans Material : VALIDÉ SUR LE PRINCIPE
-
-Plusieurs `spk::Material` génériques et immuables peuvent référencer le même `Texture::Handle` `albedo` tout en possédant chacun leur propre région UV rectangulaire (`offset`, `scale`). Les UV interpolés du Mesh restent ceux de `Shape` ; au shader, `uvFinal = offset + uvLocal * scale`. Remplacer le Material lié au slot change le sprite sans toucher au Model ni au Mesher. Le Material n'a aucune connaissance obligatoire de `Voxel::Shape`. Les signatures et bords d'atlas restent à préciser ; VXL-098/099 autorisent les coordonnées de sprite de `spk::SpriteSheet` ou des UV explicites comme deux syntaxes alternatives pour produire la même `Texture::Section` UV normalisée ; VXL-097 fixe l'absence de répétition automatique du sprite et le Warning non bloquant sur les UV hors `[0,1]`.
-
-### VXL-096 — Validation des albedo au niveau du couple Model / VoxelPalette : VALIDÉ (option B)
-
-La VoxelPalette accepte un ensemble arbitraire de Materials/textures. Lors de l'association à un Model, examiner **uniquement les slots requis par celui-ci** ; tous les slots destinés au mesh opaque doivent référencer la même texture albedo, et tous ceux du mesh translucide doivent référencer une même texture albedo (potentiellement identique à la précédente). L'égalité porte sur le `Texture::Handle`/`Texture::State` capturé par le Material, non sur un nom ou un objet `Texture` temporaire. L'association est refusée explicitement si une catégorie nécessite plusieurs atlas ; pas de découpe des meshes au Mesher par texture ni de contournement implicite du contrat. Les deux meshes immuables et les SSBO de matériaux ordonnés par slot (VXL-085/086) permettent un draw géométrique par mesh non vide d'un Model/chunk, avec plusieurs Materials partageant l'atlas. Ne pas promettre un seul draw pour des géométries de Models/chunks différentes : le batching entre occurrences reste séparé.
-
-### VXL-097 — UV d'atlas directs, avertissement non bloquant : VALIDÉ (option A)
-
-Pour le rôle `albedo`, appliquer strictement `uvFinal = uvOffset + uvLocal * uvScale`, y compris avec `uvLocal < 0` ou `uvLocal > 1`. Sparkle ne ramène pas ces UV dans `[0,1]`, n'utilise ni `fract`/`mod` ni `clamp` pour confiner la lecture dans le rectangle atlas, et n'ajoute aucune répétition automatique du sprite. Le développeur assume les éventuels débordements ; cela ne préjuge pas des modes de sampler GPU. Les UV arbitraires de VXL-061 restent légaux.
-
-**Diagnostic :** lorsqu'un polygone introduit dans `Shape::Builder` comporte des UV locaux hors de `[0,1]`, Sparkle émet un **Warning via `spk::Logger`**, sans refuser le polygone ni interrompre le build ou le bake. Le contrôle s'effectue **sur la géométrie source, côté CPU** ; il ne doit pas être répété par fragment, par RenderCommand ou à chaque frame. Le point exact du diagnostic et l'éventuelle déduplication restent des détails d'implémentation. Aucun scan des textures.
-
-**Tests proposés :** UV 0 et 1 sans warning ; UV négatif ou supérieur à 1 conservé à l'identique avec Warning du Logger et aucune exception ; calcul de shader direct sans répétition/clamp ajouté ; absence de warning par frame ; clipping/interpolation VXL-060/061 inchangés ; changement d'atlas/Material sans rebake.
-
-### VXL-098 — Coordonnées de sprite dans spk::SpriteSheet pour les matériaux voxels : VALIDÉ SUR LE PRINCIPE
-
-**Précision VXL-099 :** un Material voxel n'est pas obligé d'utiliser `spk::SpriteSheet` : les textures ordinaires et les UV explicitement normalisés sont également autorisés. Lorsque la syntaxe JSON `UV.sprite` est utilisée, elle désigne une case d'un `spk::SpriteSheet` par coordonnées entières (`spk::Vector2UInt`) et est convertie automatiquement en une section UV normalisée. `spk::SpriteSheet` hérite de `spk::Image` / `spk::Texture`, connaît le nombre de sprites de chaque axe et propose déjà `sprite(Vector2UInt)` qui renvoie un `SpriteSheet::Sprite`, alias de `Texture::Section`, contenant `anchor` et `size` normalisés. Le rectangle UV du matériau est donc **calculé automatiquement** : `uvFinal = section.anchor + uvLocal * section.size`. Les UV locaux restent ceux des polygones de la Shape ; changer de sprite via un autre Material/une autre Palette n'exige aucun rebake. Les Materials peuvent utiliser différents sprites d'un même Spritesheet et partager son `Texture::Handle`, autorisant le draw groupé VXL-096.
-
-**Matériau générique :** cette exigence ne vaut **que pour le rôle albedo des Materials destinés aux voxels**. Le type `spk::Material` demeure générique, sans `VoxelMaterial` ; ses autres rôles nommés restent libres. **Détail d'interface encore ouvert :** comment exprimer puis vérifier la provenance SpriteSheet et les coordonnées dans le Builder générique ou l'association à VoxelPalette. Un `Texture::Handle` seul conserve un état de Texture, **pas** les coordonnées, la grille de sprites ni l'information qu'il s'agissait d'un `SpriteSheet`. Il faudra capturer la `Texture::Section` (et les métadonnées requises pour valider la sélection) pendant que le `SpriteSheet` est accessible, sans introduire de dépendance voxel dans Material. La validation des coordonnées hors grille est déjà assurée par `SpriteSheet::sprite`, qui signale l'erreur.
-
-**Compatibilité :** VXL-095 reste valide en tant que région UV par matériau, mais l'utilisateur fournit désormais des **sprite coordinates**, pas `uvOffset/uvScale` manuels pour un matériau voxel. VXL-097 reste valide : aucune répétition/clamp des UV *locaux* dans la région du sprite, avertissement non bloquant pour des UV Shape hors `[0,1]`. La sélection explicite de résolution VXL-090 et les limites GPU/filtrage d'atlas demeurent des sujets séparés.
-
-**Tests proposés :** sélection de sprites par coordonnées sur une grille, conversions `Section.anchor/size` correctes et coordonnées hors grille refusées ; plusieurs matériaux issus d'un même SpriteSheet et de cases différentes groupables ; atlas distincts incompatibles avec une même passe d'un Model selon VXL-096 ; variante de palette changeant de sprite sans rebake ; UV locaux hors plage préservés avec Warning VXL-097 ; Material générique autorisant des textures ordinaires dans ses autres usages.
-
-### VXL-099 — JSON de Material universel et AssetManager facultatif : VALIDÉ SUR LE PRINCIPE
-
-**Représentation commune :** `spk::Material` conserve une texture et une région UV normalisée (`Texture::Section`, `anchor` / `size`) par rôle de texture, quelle que soit la syntaxe JSON utilisée pour le construire. Un JSON décrivant une texture ordinaire contient `"Texture":{"path":"mypath"}` ; avec `"Texture":{"path":"mypath","size":{"x":X,"y":Y}}`, la propriété `size` exprime **le nombre de sprites sur chaque axe**, ce qui permet de charger un `spk::SpriteSheet` ; elle ne décrit pas la résolution en pixels de l'image. On peut fournir directement une région normalisée `"UV":{"anchor":{"x":u,"y":v},"size":{"x":w,"y":h}}`, **sur toute texture, y compris les atlas**. L'alternative `"UV":{"sprite":{"x":sX,"y":sY}}` convertit des coordonnées de sprite en section UV grâce à la grille du SpriteSheet ; cette syntaxe requiert une grille valide. L'API exacte du JSON, dont les autres rôles nommés de Material (VXL-091), reste à préciser. **VXL-099 supplante toute obligation générale d'utiliser un SpriteSheet pour les matériaux de VoxelPalette** : seul le rôle `albedo` reste obligatoire selon VXL-092.
-
-`Material::Builder` possède `void bind(spk::AssetManager*)`. **`bind(nullptr)` lance immédiatement `spk::Exception`** ; toute liaison non nulle est non propriétaire. **Option A validée :** un Builder peut construire un Material manuellement à partir de textures/handles déjà disponibles, sans AssetManager lié. En revanche, charger depuis un JSON qui nécessite de résoudre un chemin ou un asset exige la liaison préalable, sinon une `spk::Exception` est lancée. Le Material final ne conserve aucun pointeur AssetManager, seulement des ressources/handles valides et les régions UV normalisées.
-
-**Tests prévus :** texture simple avec UV explicites ; SpriteSheet avec UV explicites ; SpriteSheet avec sprite coord ; résolution des deux descriptions UV équivalentes en même Section ; rejet du sprite sans SpriteSheet ; `bind(nullptr)` lançant ; construction manuelle sans liaison ; lecture JSON nécessitant des assets sans liaison rejetée.
-
-### VXL-100 — Identité du cache par (type, id, configuration JSON) : OBJECTIF VALIDÉ
-
-`spk::AssetManager` (nom de travail ; `AssetStorage` reste envisageable) doit permettre `load<T>(identifiant, configurationJSON)`. Le cache doit reconnaître une ressource par **(type C++ `T`, identifiant fourni par l'appelant, valeur du `spk::JSON::Value`)**. Deux appels de même triplet récupèrent le **même asset**, tandis que le **même identifiant avec un JSON différent crée une autre variante**, sans rejet ni remplacement de la première. Exemple : `load<SpriteSheet>("terrain", grille16)` et `load<SpriteSheet>("terrain", grille8)` sont deux assets distincts. L'identifiant est une chaîne arbitraire (éventuellement tirée du champ `path`), pas obligatoirement un chemin. L'égalité des JSON est **structurelle** : `spk::JSON::Value::operator==` existe, et ses objets sont représentés par des `std::map` ; l'ordre textuel des propriétés et l'indentation ne changent donc pas la clé. L'objet JSON doit être mémorisé par valeur, non par pointeur vers l'argument temporaire.
-
-**Implémentation possible mais non imposée :** `std::unordered_map<std::string, std::vector<Entry>>` contenant pour chaque identifiant des variantes `Entry{type, JSON::Value, asset}`. La comparaison directe des JSON évite d'avoir à définir leur hash ; un `std::any` peut contenir une possession interne stable (par exemple un pointeur propriétaire vers `T`) plutôt que `T` en direct. **VXL-109 fixe cependant un retour `T` par valeur depuis la factory**, sans exposer cette possession. **VXL-101 : la construction passe par une factory adaptée au type T**, pouvant appeler `fromJSON` si pertinent mais sans exiger les concepts JSON pour tous les assets. **VXL-102 exclut l'enregistrement et la découverte dynamiques des factories** : la spécialisation est résolue statiquement par type à la compilation. VXL-104 autorise les factories statiques à recevoir explicitement l'AssetManager pour résoudre leurs dépendances ; VXL-108 confirme que la factory reçoit également l'identifiant transmis à `load<T>()` ; VXL-109 fixe le retour de la factory par valeur `T`, sans exposer le stockage interne. VXL-110 ajoute `load<T>(id)` comme raccourci exact de `load<T>(id, spk::JSON::Value::object())`, avec la même clé de cache ; les autres détails non validés de signature restent ouverts. VXL-105 fixe la détection des dépendances circulaires ; VXL-106 précise que l'AssetManager n'est pas thread-safe et que la synchronisation incombe à l'appelant. VXL-107 fixe la conservation sans éviction automatique et la purge explicite par `clear()` ; le rechargement d'une entrée isolée reste ouvert. La stabilité et la durée de vie des références sont fixées par VXL-103, avec invalidation lors de `clear()` selon VXL-107. **Rien n'impose pour l'instant une implémentation en `std::any`.**
-
-**Tests prévus :** même T/id/JSON => même instance ; même T/id avec JSON différents => deux instances ; JSON structurellement identiques malgré l'ordre des champs => même instance ; aucune duplication d'un atlas quand plusieurs Materials le décrivent avec la même configuration.
-
-### VXL-101 — Construction des assets par factories adaptées au type : VALIDÉ (option B)
-
-`spk::AssetManager::load<T>(id, configurationJSON)` utilise une **factory propre au type T** pour construire une ressource absente du cache, puis la conserve sous la clé logique VXL-100 `(T, id, configurationJSON)`. Une factory peut exploiter `T::fromJSON` ou la surcharge libre `fromJSON` lorsque ces API sont pertinentes, mais **les concepts `spk::JSON::json_readable` / `json_writable` ne sont pas des contraintes universelles d'admission au cache**. Des types comme `spk::Font` ou `spk::SpriteSheet` peuvent être construits depuis des fichiers et paramètres JSON au moyen d'une factory spécialisée, sans modifier artificiellement leur API publique. Les assets métiers personnalisés doivent également être chargeables via une factory fournie par l'application.
-
-**Contrat de responsabilité :** l'AssetManager recherche/possède et réutilise la ressource selon son identité de cache ; **la factory interprète la configuration et construit T**. Les erreurs de construction ne publient pas d'entrée de cache partiellement initialisée ; la politique exacte de propagations d'exceptions sera à préciser avec le contrat général de Sparkle. Aucune obligation de sérialiser une ressource vers JSON pour la charger, et aucun catalogue global imposé.
-
-**VXL-102 :** le mécanisme de factory est une **personnalisation statique par type**, consultée à la compilation par `AssetManager::load<T>` ; **aucun registre de factories ni appel `registerFactory<T>()`** n'est nécessaire. Le schéma `template<> struct spk::AssetFactory<MyType>` demeure illustratif : VXL-104 précise qu'une factory reçoit une référence explicite vers `AssetManager` afin de pouvoir charger d'autres assets, sans enregistrement dynamique. VXL-108 valide que l'identifiant est fourni à la factory en plus de l'AssetManager et du JSON, sans lui imposer une interprétation. Le nom exact et les autres détails de signature, les concepts/diagnostics de compilation restent à définir ; VXL-103 fixe la durée de vie et la stabilité des références retournées, et VXL-106 fixe la synchronisation externe. Cette décision permet aussi aux applications de fournir les factories de leurs types personnalisés.
-
-**Tests proposés :** factory native de SpriteSheet et de Font ; factory applicative de type personnalisé sans `fromJSON` ; création unique sur cache hit avec même triplet ; variante JSON différente produisant un nouvel asset ; exception pendant la factory laissant le cache sans entrée invalide ; aucun `toJSON` exigé.
-
-### VXL-102 — Factory statique spécialisée par type : VALIDÉ (option A)
-
-La construction d'un asset sur cache miss utilise une **factory définie statiquement pour le type `T`**, résolue par le compilateur, par exemple via une personnalisation de `spk::AssetFactory<T>` (nom de travail). `AssetManager::load<T>(identifiant, configuration)` appelle cette factory et conserve l'objet produit dans le cache VXL-100. Les types intégrés (textures, SpriteSheet, Font) disposent de factories appropriées ; l'application peut en définir une pour `MyShape` ou tout autre type personnalisé **sans l'enregistrer dynamiquement sur chaque AssetManager**.
-
-**Exemple conceptuel non contractuel :**
-```cpp
-template <>
-struct spk::AssetFactory<MyShape>
-{
-    static MyShape create(
-        spk::AssetManager& assets,
-        const std::string& id,
-        const spk::JSON::Value& config
-    );
-};
 ```
 
-Le recours éventuel à `fromJSON` reste **un détail interne optionnel de la factory**, conformément à VXL-101, et non un concept exigé pour tout `T`. L'absence de factory pour un type demandé doit produire un diagnostic explicite de compilation ou de contrat de l'API, **sans fallback automatique indéterminé**. L'accès à l'AssetManager pendant la création a été validé par VXL-104, la transmission de l'identifiant par VXL-108 et le retour par valeur `T` par VXL-109 ; les autres détails de signature restent ouverts ; VXL-105 fixe la détection et le rejet des cycles de dépendances.
+Ici, `Texture.size` signifie **16 sprites en largeur et 16 en hauteur**, **pas une résolution en pixels**. `SpriteSheet::sprite(Vector2UInt)` retourne une `Texture::Section` normalisée. Des UV explicites (`anchor`/`size`) restent utilisables **même avec un SpriteSheet**. La syntaxe `sprite` exige une grille valide et des coordonnées de sprite valides.
 
-**Tests/validation proposés :** factory SpriteSheet sélectionnée statiquement ; factory personnalisée MyShape sans enregistrement au runtime ; même triplet d'identité n'appelant qu'une fois sa factory ; variation de configuration créant un autre asset ; absence de factory rejetée explicitement ; pas de dépendance obligatoire au JSON pour toutes les classes d'asset elles-mêmes.
+Ces exemples illustrent le **bloc de description d'une texture**, pas nécessairement la structure complète d'un Material à rôles multiples ; les noms et l'organisation des rôles restent génériques. Le chargement JSON et la construction manuelle doivent aboutir à la **même représentation Material : handle + section UV**.
 
-### VXL-103 — Durée de vie des assets : propriété de l'AssetManager et références stables : VALIDÉ (option A)
+La Shape conserve des UV locaux ; le shader applique le rectangle du Material :
 
-**Possession et API :** `spk::AssetManager::load<T>(identifiant, configurationJSON)` retourne `T&`. L'AssetManager possède la ressource et conserve l'instance pour la clé logique `(T, identifiant, valeur structurelle JSON)` définie par VXL-100. Tant que cette entrée demeure dans le gestionnaire, des appels répétés avec la même clé rendent **la même instance à la même adresse**. L'insertion d'autres assets, y compris d'autres configurations pour un même identifiant, ne doit pas invalider les références existantes ; la structure interne garantit donc des adresses stables, indépendamment de l'éventuelle réallocation de conteneurs ou du rehash. Une référence `T&` est un emprunt non propriétaire : le développeur doit s'assurer que l'asset et son AssetManager vivent suffisamment longtemps pour ses utilisateurs.
-
-**Limite de vie :** la destruction de l'AssetManager détruit ses assets et invalide les références/pointeurs non propriétaires qui les désignent. Aucun `shared_ptr<T>` ni handle générique de possession partagée n'est exigé dans l'API `load<T>()`. Cela n'interdit pas les mécanismes de partage **internes et préexistants** des types d'assets ; leur sémantique demeure distincte de la durée de vie de l'objet `T`. VXL-107 précise désormais que les entrées restent présentes sans éviction automatique jusqu'à `clear()` ou à la destruction du gestionnaire ; `clear()` invalide toutes les références non propriétaires vers ses assets. Un éventuel rechargement ciblé reste à définir. La synchronisation de l'AssetManager est fixée par VXL-106 : responsabilité de l'appelant.
-
-**Conséquences pour les types actuels :** `Material::Builder::bind(AssetManager*)` reste une liaison non propriétaire et `bind(nullptr)` est toujours interdit (VXL-099). Lors du chargement JSON, le Builder peut emprunter un `SpriteSheet&`, convertir les coordonnées de sprite en `Texture::Section` normalisée et conserver dans le Material immuable cette valeur ainsi qu'un `Texture::Handle` ; le Material final ne contient ni pointeur AssetManager ni référence à l'objet SpriteSheet. Le `Texture::Handle` maintient l'état GPU partagé, **pas** la grille du SpriteSheet ni à lui seul le `ResolutionSet` de Texture : le contrat de conservation/sélection des résolutions multiples demeure à clarifier séparément. Les utilisateurs de `Font*` (notamment les widgets) doivent garder le `Font` d'origine vivant tant qu'ils l'empruntent ; ses atlas et ses comportements de génération ne sont pas remplacés par un simple handle GPU. Les valeurs de `Voxel::Shape` conservent leur partage de `Data` immuable déjà prévu, indépendamment du propriétaire initial.
-
-**Tests de contrat à prévoir :** même triplet => même adresse et une seule construction par la factory ; configurations différentes => instances distinctes ; insertion de nombreuses entrées et rehash éventuels sans changement d'adresse des assets déjà chargés ; conservation d'un `Material` construit (section UV et état de texture) après destruction de l'AssetManager, pour les opérations ne demandant pas les métadonnées ni résolutions possédées par le SpriteSheet ; durée de vie empruntée de `Font` et `SpriteSheet` explicitement documentée. VXL-107 fixe la purge explicite `clear()` et VXL-106 fixe la synchronisation externe ; le rechargement ciblé reste ouvert.
-
-### VXL-104 — Factory statique avec accès explicite aux dépendances : VALIDÉ (option B)
-
-**Contrat validé :** les factories spécialisées statiquement selon VXL-101/102 reçoivent une référence explicite à l'instance `spk::AssetManager` qui effectue le chargement. Elles peuvent ainsi appeler `assets.load<U>(identifiant, configuration)` pour obtenir d'autres ressources pendant la création de `T`. Il n'y a ni registre dynamique, ni `registerFactory<T>()`, ni gestionnaire global implicite. L'AssetManager garde la responsabilité de l'identité, du cache et de la possession des assets (VXL-100/103) ; la factory interprète la configuration et compose les dépendances nécessaires à la construction.
-
-**Signature conceptuelle, non définitive :**
-```cpp
-template <>
-struct spk::AssetFactory<MyShape>
-{
-    static MyShape create(
-        spk::AssetManager& assets,
-        const std::string& id,
-        const spk::JSON::Value& config
-    );
-};
+```text
+uvFinal = material.anchor + shapeUV * material.size
 ```
-La présence d'une référence `AssetManager&` est validée par VXL-104 et la transmission de l'identifiant par VXL-108. L'ordre précis des paramètres, les types textuels définitifs, le nom `AssetFactory` et les contraintes C++23 ne sont **pas encore figés**. VXL-109 précise toutefois que la factory retourne `T` par valeur, sans exposer un pointeur propriétaire. Le type `T` n'est pas forcé de proposer `fromJSON` ou `toJSON`, conformément à VXL-101. Les applications peuvent toujours fournir leurs propres spécialisations statiques.
 
-**Durées de vie et erreurs :** la référence fournie à la factory est non propriétaire et ne confère aucun droit de prolonger implicitement la vie du gestionnaire. Les dépendances chargées via `load<U>()` respectent le contrat `U&` et les garanties de stabilité de VXL-103 ; leurs éventuels mécanismes de partage propres demeurent utilisables. Un échec de construction ne publie pas d'instance `T` partiellement initialisée, conformément à VXL-101. **VXL-105 complète ce contrat :** les cycles de dépendances sont détectés et rejetés par l'AssetManager avec `spk::Exception`. VXL-106 fixe la stratégie : pas de thread-safety interne ni de coordination multi-thread dans l'AssetManager ; l'appelant synchronise les accès concurrents. Les appels imbriqués dans le même thread demeurent autorisés.
+Plusieurs Materials peuvent donc référencer le **même atlas** avec des rectangles UV distincts, sans rebake. Un UV local hors `[0,1]` est utilisé tel quel, sans répétition forcée dans la région ni clamp automatique. Le résultat visuel et la maîtrise des bords du sprite sont sous la responsabilité de l'appelant.
 
-**Tests à prévoir :** une factory personnalisée charge un asset `U` avec le gestionnaire reçu puis construit `T` ; plusieurs constructions réutilisent la même dépendance pour le même triplet ; les configurations différentes produisent des dépendances distinctes ; aucune inscription préalable ni singleton n'est requis ; un échec d'une dépendance n'enregistre pas un `T` incomplet. Les cycles directs et indirects sont couverts par VXL-105.
+### 4.3 `Material::Builder` et l'AssetManager
 
-### VXL-105 — Détection et rejet des dépendances circulaires : VALIDÉ (option A)
+Le Builder peut fonctionner **sans AssetManager** lorsque le programme lui passe directement des Textures existantes. En revanche, un chargement JSON qui doit résoudre un chemin ou un asset requiert un AssetManager préalablement lié :
 
-**Règle :** lorsqu'une factory invoquée depuis `AssetManager::load<T>()` demande à charger un asset dont la construction figure déjà dans la chaîne de dépendances active, l'AssetManager détecte cette récursion et lance une `spk::Exception` descriptive. Il n'autorise ni retour d'une référence vers un objet partiellement construit, ni récursion infinie. La détection couvre les cycles directs (`A → A`) et indirects (`A → B → ... → A`).
-
-**Identité du cycle :** la comparaison reprend exactement la clé logique de VXL-100 : `(type C++, identifiant, valeur structurelle du JSON)`. Deux configurations distinctes sous un même identifiant ne sont donc **pas** considérées comme une même ressource du seul fait de leur nom commun ; le cycle survient quand la même clé apparaît à nouveau dans une chaîne de constructions encore actives. Les assets déjà terminés et présents dans le cache sont récupérés normalement, sans être considérés comme des cycles.
-
-**Exception et état du cache :** la `spk::Exception` doit fournir un diagnostic exploitable indiquant les assets impliqués dans le cycle ; le détail de présentation n'est pas fixé. L'échec d'une factory ne publie aucune entrée incomplète pour l'asset en construction, conformément à VXL-101. La détection garde un état provisoire strictement lié à la construction en cours et le libère en cas de réussite comme en cas d'exception, afin qu'une tentative ultérieure ne soit pas refusée à tort. Les autres assets déjà construits avec succès ne sont pas implicitement annulés ; aucune transaction globale sur les dépendances n'est introduite.
-
-**Complément VXL-106 :** l'AssetManager n'assure pas d'accès concurrent intrinsèquement sûr. Les chargements simultanés, qu'ils visent la même clé ou des clés différentes, doivent être sérialisés/synchronisés par l'application. Cette règle ne confond pas la récursion au sein d'une chaîne de chargement (détectée selon VXL-105) avec les appels de plusieurs threads.
-
-**Tests à prévoir :** cycle direct ; cycle indirect à travers plusieurs types ; même identifiant avec des JSON distincts sans faux positif ; ordre de propriétés JSON différent mais même valeur structurelle donnant la même identité ; utilisation d'une dépendance déjà chargée sans rejet ; diagnostic `spk::Exception` explicite ; absence de publication d'assets incomplets et possibilité de retenter après une exception ; conservation des dépendances déjà chargées avec succès.
-
-### VXL-106 — Synchronisation externe de l'AssetManager : VALIDÉ (option A)
-
-**Contrat :** `spk::AssetManager` n'est **pas intrinsèquement thread-safe**. Plusieurs threads ne peuvent pas accéder simultanément à une même instance sans synchronisation organisée par l'application. Cela concerne également les appels `load<T>()` de clés différentes : l'AssetManager ne garantit aucune coordination interne pour protéger le cache, les entrées en construction ou les références. Aucune sérialisation interne automatique, aucun mutex obligatoire ni attente implicite d'une factory exécutée dans un autre thread ne sont imposés à cette classe. Des instances d'AssetManager distinctes n'ont pas de coordination mutuelle par ce contrat.
-
-**Factories imbriquées :** une factory invoquée par `load<T>()` peut appeler `load<U>()` sur le **même AssetManager depuis le même thread**. Ce chemin doit fonctionner sans faux positif de concurrence ni interblocage ajouté par le gestionnaire ; la détection des cycles de VXL-105 continue à s'appliquer à la chaîne des constructions en cours. Une application qui utilise un verrou externe doit tenir compte de cette réentrance séquentielle : la synchronisation ne doit pas verrouiller une seconde fois un mutex non récursif à chaque chargement imbriqué. Un accès concurrent éventuel depuis d'autres threads reste sous sa responsabilité.
-
-**Portée :** VXL-106 définit uniquement la synchronisation des opérations sur l'AssetManager. Elle n'étend pas la sûreté intrinsèque des types `T` qu'il conserve ; un `T&` retourné par `load<T>()` garde les règles de durée de vie de VXL-103, et tout accès concurrent ou modification de `T` doit respecter son propre contrat. VXL-107 prévoit `clear()` explicite sans éviction automatique ; un éventuel `reload` ciblé reste à décider.
-
-**Tests à prévoir :** chargements imbriqués `A → B` dans un même thread sans blocage ; réutilisation d'une même dépendance ; détection de `A → B → A` par VXL-105 ; vérification documentée que l'utilisation du même gestionnaire depuis plusieurs threads requiert une synchronisation externe. Ne pas introduire de test exigeant des accès simultanés non synchronisés ou un mécanisme interne de coalescence des chargements.
-
-### VXL-107 — Conservation par défaut et purge explicite par clear() : VALIDÉ (option C)
-
-**Politique de conservation :** `spk::AssetManager` conserve chaque asset chargé avec succès jusqu'à l'appel explicite de `clear()` ou la destruction du gestionnaire. Aucun retrait automatique, éviction LRU, limite de capacité ni nettoyage fondé sur un comptage de références n'est introduit. L'application décide quand libérer les ressources et peut employer plusieurs gestionnaires aux durées de vie distinctes si nécessaire.
-
-**API et effet de clear() :** `void spk::AssetManager::clear()` vide **toutes** les entrées du cache et détruit les objets possédés par le gestionnaire, quelles que soient leur catégorie, leur clé ou leurs dépendances. Le gestionnaire lui-même reste utilisable : des appels `load<T>(id, config)` ultérieurs reconstruisent les ressources demandées et créent de nouvelles entrées. `clear()` est une purge totale ; elle ne correspond pas à un `clean()` sélectif des seules ressources supposées inutilisées. Aucun `unload<T>()`, `remove()` par clé ou rechargement ciblé n'est validé à ce stade.
-
-**Validité des emprunts :** conformément à VXL-103, tous les `T&` et pointeurs non propriétaires vers les assets purgés deviennent invalides après `clear()` ; l'application doit cesser de les utiliser avant la purge. La garantie d'adresse stable reste valable **entre deux purges**, pour une entrée toujours conservée. Un nouveau chargement de la même clé après `clear()` produit un nouvel asset et ne rétablit pas la validité des anciennes références, même si une adresse mémoire est réutilisée. Les objets qui contiennent des emprunts aux assets (par exemple des widgets conservant un `Font*`) doivent respecter ce contrat. Les ressources partagées **propres aux types** — notamment un `Texture::Handle` capturé par un `Material` — conservent exactement leur sémantique de possession indépendante, sans maintenir pour autant les objets `Texture` ou `SpriteSheet` d'origine dans le gestionnaire.
-
-**Construction et synchronisation :** `clear()` est soumis à la même règle de synchronisation externe que `load<T>()` (VXL-106). La présente décision ne définit pas de support spécial pour une purge déclenchée *au milieu d'une factory* ou d'un chargement imbriqué encore actif : ce cas doit être exclu du scénario normal et son éventuel contrat précis reste à spécifier, sans supposer qu'il est sûr. L'AssetManager ne suit pas automatiquement les consommateurs externes, et n'empêche pas une application de provoquer une référence pendante.
-
-**Tests à prévoir :** conservation d'un asset tant qu'aucune purge n'a lieu ; deux chargements successifs d'une même clé retournant la même instance avant `clear()` ; `clear()` libérant toutes les entrées, y compris différentes configurations et types ; gestionnaire réutilisable après purge ; nouvelle construction après `clear()` ; aucun asset conservé artificiellement par une clé du gestionnaire ; effets sur les emprunts `Font*` et sur les `Texture::Handle` indépendants ; destruction du gestionnaire ayant l'effet attendu de libération. Ne pas effectuer de tests d'utilisation des références invalidées.
-
-### VXL-108 — Transmission de l'identifiant à la factory : VALIDÉ (option B)
-
-**Contrat :** lors d'un cache miss, la factory statiquement spécialisée pour `T` reçoit **l'identifiant fourni à `AssetManager::load<T>(id, configuration)`**, en plus de la référence explicite au gestionnaire (VXL-104) et du JSON de configuration (VXL-100/101). L'AssetManager transmet cet identifiant sans le transformer ni lui attribuer une signification particulière ; le type d'asset et sa factory peuvent librement l'interpréter comme un nom logique, un chemin de fichier, une clé métier ou une autre donnée. En particulier, un chemin dans `id` n'est **pas automatiquement** résolu comme fichier par le gestionnaire : c'est à la factory de choisir ce comportement. Un chemin présent dans le JSON reste également possible.
-
-**Exemple conceptuel non contractuel :**
 ```cpp
-template <>
-struct spk::AssetFactory<MyShape>
-{
-    static MyShape create(
-        spk::AssetManager& assets,
-        const std::string& id,
-        const spk::JSON::Value& config
-    );
-};
+spk::Material::Builder builder;
+builder.bind(&assets);  // Liaison non propriétaire
+// Construction depuis un JSON de matériau.
 ```
-La **présence** de ces trois informations à l'appel de construction est validée, et VXL-109 fixe un retour par valeur `T`. VXL-110 autorise l'appel sans argument JSON, mais la factory reçoit toujours une configuration JSON de type **objet vide** dans ce cas ; les autres détails de signature C++23, notamment le type de paramètre de chaîne (p. ex. `const std::string&` ou `std::string_view`) et les contraintes de compilation, restent à préciser avant implémentation.
 
-**Cache et dépendances :** VXL-108 ne modifie pas l'identité logique des ressources : `(T, id, valeur structurelle du JSON)` (VXL-100). Un cache hit réutilise l'instance sans appeler à nouveau la factory. Une factory composite peut charger une dépendance en choisissant librement son propre identifiant lors de `assets.load<U>(...)`. Les protections contre les cycles (VXL-105), la synchronisation externe (VXL-106) et la libération explicite (VXL-107) restent applicables sans changement.
+`void bind(spk::AssetManager*)` est la forme retenue. **`bind(nullptr)` provoque immédiatement une `spk::Exception`.** Une liaison à cible unique n'est pas implicitement remplacée sans détachement préalable, selon les conventions Sparkle. Le Material obtenu ne conserve aucune référence au gestionnaire.
 
-**Tests à prévoir :** identifiant transmis à la factory sans modification ; même triplet => pas de second appel à la factory ; deux identifiants distincts avec la même configuration => deux assets ; le même identifiant avec deux configurations => deux variantes ; factory traitant `id` comme chemin sans que le gestionnaire interprète les chemins ; factory utilisant `id` uniquement comme nom logique ; chargement imbriqué avec identifiant propre à la dépendance.
+### 4.4 `spk::VoxelPalette` : association des slots aux matériaux
 
-### VXL-109 — Factory retournant T par valeur et stockage interne opaque : VALIDÉ (option A)
+Une `VoxelPalette` associe des **noms de slots sémantiques et leurs contrats d'opacité** à des valeurs `spk::Material`. C'est une valeur immuable, à copies légères partageant un bloc de données internes ; elle ne contient **aucun SSBO** et n'hérite d'aucun objet GPU.
 
-**Contrat public :** `spk::AssetFactory<T>::create(...)` produit une valeur **`T`**, pas un `std::unique_ptr<T>`, un `std::shared_ptr<T>`, ni un handle propriétaire. La factory a la seule responsabilité de construire l'asset, à partir de l'AssetManager et de l'identifiant/configuration prévus par VXL-104/108. La politique de possession et le choix du conteneur restent exclusivement internes à `spk::AssetManager`. L'API de récupération demeure `T& AssetManager::load<T>(id, configuration)` (VXL-103) ; aucun pointeur propriétaire ne transparaît dans l'API de la factory ni dans celle du chargement.
+Son Builder mutable peut être initialisé à partir d'un Model, de plusieurs Models, d'un Assembly (union de leurs besoins) ou d'une palette existante pour en créer une variante. Les collisions de **même nom avec des opacités différentes** entre sources sont rejetées explicitement. Construire une nouvelle palette n'altère pas l'ancienne, ses Materials ou les snapshots existants.
 
-**Adresse stable et construction :** le gestionnaire doit conserver chaque `T` à une adresse stable (VXL-103), ce qui peut être obtenu avec un `std::unique_ptr<T>` interne stocké dans le cache. Il est permis d'utiliser une construction directe dans le stockage final sans copie/déplacement de `T`, grâce à l'élision obligatoire des copies depuis C++17 pour une prvalue de même type :
+**Chaque slot déclaré** doit recevoir un Material compatible, **même s'il n'a aucun triangle visible**. Le Builder valide que chaque Material affecté possède au moins la texture nommée exactement **`albedo`**, avec exception descriptive sur absence. Le système voxel ne requiert, n'examine ni n'utilise d'autres noms de textures dans cette version. La présence d'autres rôles sur un Material reste autorisée.
+
+Un Model peut être associé à une palette contenant **plus de slots** que lui. L'association est compatible seulement si tous ses noms et opacités requis sont présents. La palette n'est pas obligée d'être identique au Model, et une même palette peut servir à plusieurs Models.
+
+**Contrainte des atlas :** pour chaque association **Model + VoxelPalette**, les Materials des slots **opaques** requis par ce Model doivent tous référencer **un unique `albedo` `Texture::Handle` au maximum** ; la même règle s'applique, indépendamment, aux slots **translucides**. Cette vérification concerne **tous les slots déclarés par le Model, même sans triangles émis**, pas l'intégralité des slots supplémentaires de la palette. Les passes opaque et translucide peuvent utiliser le même atlas ou deux atlas différents.
+
+Une palette peut donc contenir arbitrairement plusieurs atlas pour répondre aux besoins de divers Models ; elle n'est pas rejetée globalement pour cette raison. C'est une **association** qui est refusée explicitement lorsqu'elle demanderait deux atlas différents dans une même passe. Aucun remaillage silencieux ni découpage des meshes en sous-meshes par texture n'est prévu.
+
+### 4.5 Alpha, opacité et visibilité
+
+La classification géométrique reste celle de la Shape :
+
+- `slot.opacity == 1.0` : triangles dans le mesh opaque ;
+- `slot.opacity < 1.0` : triangles dans le mesh translucide (WBOIT).
+
+Dans les **deux** fragment shaders :
+
+```glsl
+float alphaFinal = texture(albedo, uvFinal).a * slotOpacity;
+if (alphaFinal == 0.0)
+    discard;
+```
+
+Le mesh opaque est dessiné sans blending de translucence. Une texture contenant de l'alpha intermédiaire sur un slot d'opacité 1 **ne déclenche donc pas automatiquement** un passage translucide ; c'est un choix explicite de l'auteur. Le mesh translucide utilise Weighted Blended Order-Independent Transparency (WBOIT).
+
+L'alpha des pixels n'a **jamais** d'incidence sur la décision de culling effectuée au bake. Il n'existe ni troisième mesh voxel cutout, ni booléen transparent supplémentaire, ni contrat d'occlusion indépendant.
+
+## 5. AssetManager générique
+
+Le gestionnaire d'assets appartient à Sparkle, indépendamment de l'API voxel. Il gère la création et la possession d'objets de types variés, sans leur imposer de méthode `fromJSON()` ou `toJSON()` universelle.
+
+### 5.1 API de chargement et identité de cache
+
 ```cpp
-auto asset = std::unique_ptr<T>(
-    new T(spk::AssetFactory<T>::create(*this, id, config))
+spk::AssetManager assets;
+
+auto& first = assets.load<spk::SpriteSheet>("terrain", config16);
+auto& same  = assets.load<spk::SpriteSheet>("terrain", config16);
+auto& other = assets.load<spk::SpriteSheet>("terrain", config8);
+
+// &first == &same ; &first != &other
+```
+
+Le cache distingue les assets par le **triplet `(type C++ T, identifiant, valeur structurelle de spk::JSON::Value)`**. Le même identifiant peut désigner plusieurs configurations : ce sont alors des ressources distinctes. L'identifiant est une chaîne libre ; l'AssetManager ne l'interprète pas automatiquement comme un chemin.
+
+L'égalité des JSON est **structurelle** : l'ordre textuel des propriétés d'un objet JSON n'altère pas la clé. La configuration est conservée par valeur dans l'identité du cache, et non par pointeur vers l'argument. Deux appels pour un même triplet rendent **la même instance** sans réexécuter la factory.
+
+La configuration peut être omise :
+
+```cpp
+auto& a = assets.load<MyAsset>("simple");
+auto& b = assets.load<MyAsset>(
+    "simple", spk::JSON::Value::object()
 );
-cache.emplace(key, std::move(asset));
-```
-Ce fragment est **illustratif**, pas un contrat imposant `new` ou `unique_ptr` : l'implémentation doit préserver la propriété interne, la sûreté des exceptions et la stabilité des adresses. `std::move(asset)` déplace le **pointeur propriétaire**, jamais l'objet `T`. L'expression `std::make_unique<T>(AssetFactory<T>::create(...))` ne remplace pas automatiquement ce fragment pour les types non déplaçables : le passage par des paramètres de fonction peut exiger le déplacement de `T`.
-
-**Types non déplaçables :** une factory retournant directement une prvalue `T` (p. ex. `return T(args...);`) peut alimenter cette construction directe même lorsque `T` interdit copie et déplacement. Il ne faut pas promettre la même propriété à toutes les formes de code : `return local;` pour un objet local nommé repose sur une NRVO non garantie et peut échouer à compiler si `T` n'est pas déplaçable. Le destructeur doit naturellement rester accessible selon les règles normales du C++. Ces nuances relèvent du code de la factory, et non d'une obligation d'exposer le stockage interne.
-
-**Erreurs et tests :** une exception pendant la création ou l'allocation ne laisse aucune entrée de cache pour la clé en construction (VXL-101/105) et ne remet pas en cause les assets préalablement publiés. Vérifier la compilation avec un `T` copiable/déplaçable, puis un `T` explicitement non copiable et non déplaçable dont la factory retourne une prvalue ; les deux doivent pouvoir être chargés selon le contrat. Vérifier `T&` et l'adresse stable après insertion de nouvelles entrées, réutilisation sur cache hit, et destruction/reconstruction après `clear()` (VXL-107). Aucune exigence de `std::unique_ptr<T>` ne doit figurer dans une factory applicative.
-
-### VXL-110 — Surcharge load<T>(id) avec configuration JSON objet vide : VALIDÉ (option B)
-
-**API validée :** en plus de `load<T>(id, configuration)`, `spk::AssetManager` propose une forme `load<T>(id)` qui signifie exactement `load<T>(id, spk::JSON::Value::object())`. Elle n'invente aucune valeur de configuration implicite dépendante du type, n'effectue aucune recherche globale et ne demande pas à la factory une surcharge particulière. Une implémentation par surcharge ou délégation explicite est possible ; le contrat observable est celui de l'objet JSON vide.
-
-**Précision liée au vrai code de Sparkle :** `spk::JSON::Value::object()` construit un `Value` de type `Object` avec zéro propriété. La notation `JSON::Object{}` utilisée dans la proposition était conceptuelle et **ne correspond pas au nom d'un type public existant** dans `include/container/json/object.hpp` sur `V0.1.4`. Ne pas utiliser `spk::JSON::Value{}` comme valeur par défaut de cette API : le constructeur par défaut produit `Null`, et `Null` doit rester distinct d'un objet vide pour l'identité de cache de VXL-100.
-
-**Identité et factory :** ces deux appels utilisent exactement la **même entrée de cache** :
-```cpp
-auto& a = assets.load<MyAsset>("terrain");
-auto& b = assets.load<MyAsset>("terrain", spk::JSON::Value::object());
 // &a == &b
 ```
-La comparaison des JSON demeure structurelle (VXL-100). La factory statique reçoit toujours les trois informations prévues par VXL-104/108 : gestionnaire, identifiant, configuration. Avec `load<T>(id)`, sa configuration est l'objet JSON vide, pas une absence de JSON. Si une factory exige certaines propriétés et reçoit un objet vide, elle reste responsable d'une erreur de configuration explicite ; le gestionnaire ne crée pas d'asset de substitution.
 
-**Tests à prévoir :** appel `load<T>(id)` suivi de `load<T>(id, JSON::Value::object())` retournant la même adresse, et inversement ; factory appelée une seule fois pour ces deux syntaxes ; factory recevant bien un JSON `isObject()` vrai et `asObject().empty()` vrai ; `JSON::Value::null()` ou `JSON::Value{}` explicite constituant une clé différente de celle de l'objet vide ; conservation des règles de cycles VXL-105, de synchronisation VXL-106, de purge VXL-107 et de retour par valeur VXL-109.
+La forme à un seul argument signifie **exactement un objet JSON vide**, obtenu par `spk::JSON::Value::object()`. Un `spk::JSON::Value{}` est en revanche **Null** dans l'API actuelle et demeure une clé **différente**. Ne jamais confondre objet vide et Null.
 
-### Fonctionnalités explicitement conservées
+### 5.2 Factories statiques par type
 
-L'occlusion polygonale en flottants et la prise en charge précise des recouvrements partiels restent exigées. Les AABB peuvent éliminer des paires sans intersection, mais non remplacer les surfaces polygonales réellement couvrantes. La transparence (verre, fenêtres, etc.) et WBOIT sont aussi conservés. Pour les voxels, la transparence de pixels complètement nuls est traitée par `discard` dans les deux passes sans mesh cutout distinct ; la 3D non voxel peut conserver ses capacités cutout. Le WBOIT gère la **transparence visuelle** ; transmission physique de la lumière et ombres du verre constituent un contrat d'éclairage distinct à préciser.
+Lorsqu'une clé est absente, le gestionnaire appelle une **factory spécialisée statiquement pour T**. Aucune inscription de factory par instance, aucun `registerFactory<T>()` et aucun registre dynamique de constructeurs ne sont requis.
 
-Autres sujets de conception ouverts : contrats exacts des Shapes/Volumes, binding palettes/textures, définition de compatibilité d'un bucket, durée de vie des ressources GPU et validation des APIs publiques. Ne pas inventer de décisions supplémentaires.
+L'interface conceptuelle est :
 
-## 9 — Traçabilité des décisions antérieures
+```cpp
+template <>
+struct spk::AssetFactory<MyAsset>
+{
+    static MyAsset create(
+        spk::AssetManager& assets,
+        const std::string& id,
+        const spk::JSON::Value& config
+    );
+};
+```
 
-**VXL-110** valide l'option B : `AssetManager::load<T>(id)` est un raccourci strict de `load<T>(id, spk::JSON::Value::object())`. Les deux appels partagent la même clé de cache, le même asset et le même passage à la factory ; un JSON Null est distinct de cet objet vide. Le code Sparkle propose `JSON::Value::object()`, pas un type `JSON::Object`.
+La factory reçoit **explicitement** le gestionnaire, l'identifiant original et la configuration. Elle peut appeler `assets.load<U>()` pour résoudre des dépendances et décider elle-même comment interpréter son identifiant ou le JSON (nom logique, fichier, options métier, etc.). Une spécialisation applicative est possible pour tout type d'asset pris en charge. Le nom exact de la spécialisation, le type de paramètre de chaîne et certaines contraintes de compilation sont encore des détails d'interface.
 
-**VXL-109** valide l'option A : les factories statiques retournent une valeur `T`, sans connaître les stratégies de stockage de l'AssetManager. Une construction directe du `T` dans un emplacement à adresse stable peut exploiter l'élision garantie des copies C++17 et prendre en charge des types non copiables/non déplaçables si la factory retourne directement une prvalue ; le gestionnaire peut déplacer des pointeurs propriétaires internes sans déplacer `T`. Les signatures et formes exactes du stockage restent à finaliser.
+**La factory retourne `T` par valeur.** Elle ne retourne pas un `unique_ptr`, un `shared_ptr` ou un handle de possession et n'a pas à connaître la structure du cache. Une absence de factory pour un type demandé doit être signalée explicitement au niveau compilation/contrat, sans fallback arbitraire. Un chargement ne suppose aucune sérialisation JSON du type lui-même.
 
-**VXL-108** valide l'option B : la factory statique reçoit aussi l'identifiant exact passé à `AssetManager::load<T>(id, configuration)`, en plus du gestionnaire et du JSON. L'identifiant garde un sens libre, choisi par la factory ; l'AssetManager n'impose pas qu'il soit un chemin. La clé du cache reste `(T, id, JSON structurel)`, les détails exacts de signature restent ouverts.
+### 5.3 Possession, adresses stables et construction directe
 
-**VXL-107** valide l'option C : les assets restent en cache jusqu'à destruction du gestionnaire ou purge totale explicite par `clear()`. Aucune éviction automatique ni nettoyage sélectif. `clear()` détruit les objets possédés, invalide les emprunts `T&`, mais laisse le gestionnaire réutilisable ; les handles internes aux types gardent leur propre durée de vie. Le rechargement ciblé reste ouvert.
+`AssetManager::load<T>()` retourne **`T&`**, emprunt non propriétaire sur un asset que **l'AssetManager possède**. Tant que l'entrée est conservée, son adresse **ne change pas**, même lorsque de nouvelles entrées sont insérées, que des conteneurs sont réalloués ou qu'une table de hachage est réorganisée. Le gestionnaire peut utiliser des allocations dédiées et des pointeurs propriétaires **strictement internes** pour garantir cette stabilité.
 
-**VXL-106** valide l'option A : l'AssetManager n'est pas thread-safe ; l'application synchronise les accès concurrents à une même instance, même sur des clés distinctes. Les appels récursifs non circulaires d'une factory sur le même gestionnaire depuis un même thread restent permis ; VXL-105 détecte et rejette les cycles. Cette décision ne change pas les règles de concurrence propres aux assets retournés.
+Pour des types non copiables ou non déplaçables, C++23 permet de construire directement l'objet dans son emplacement final à partir d'une prvalue de `T` retournée par la factory :
 
-**VXL-105** valide l'option A : l'AssetManager détecte les cycles directs et indirects entre factories par clé complète (type, identifiant, JSON structurel), et lance `spk::Exception` sans publier d'asset partiellement construit. L'état provisoire de construction est nettoyé en cas d'échec ; VXL-106 fixe la synchronisation externe.
+```cpp
+// Pseudo-implémentation interne : unique_ptr reste invisible de la factory.
+auto owned = std::unique_ptr<T>(
+    new T(spk::AssetFactory<T>::create(*this, id, config))
+);
+cache.emplace(key, std::move(owned));
+```
 
-**VXL-104** valide l'option B : les factories statiquement spécialisées reçoivent une référence explicite à l'AssetManager et peuvent appeler `load<U>()` pour obtenir leurs dépendances. L'AssetManager conserve cache et possession ; aucune inscription dynamique ni gestionnaire global n'est introduit. La signature détaillée reste à définir ; VXL-105 fixe la détection des dépendances circulaires.
+L'élision obligatoire des copies fonctionne avec un retour direct de type `return T(args...);`. La forme `return local;` dépend, elle, d'une NRVO non garantie ; et `std::make_unique<T>(AssetFactory<T>::create(...))` peut demander une opération de déplacement. **Ni `unique_ptr` ni `new` ne constituent une obligation de l'API publique** : seuls comptent le retour par valeur de la factory, le retour `T&` du gestionnaire et l'adresse stable de l'objet stocké.
 
-**VXL-103** valide l'option A : `AssetManager::load<T>()` retourne une référence `T&` non propriétaire vers une ressource possédée par l'AssetManager, avec adresse stable pendant sa présence dans le cache, même après de nouvelles insertions ; pas de handle générique partagé. La destruction du gestionnaire invalide les emprunts, tandis que les mécanismes de partage propres aux types (notamment `Texture::Handle`) conservent leurs contrats. VXL-107 tranche `clear()` et l'absence d'éviction automatique ; le rechargement ciblé et la sélection des résolutions multiples restent ouverts. VXL-106 tranche la synchronisation externe.
+### 5.4 Dépendances et détection des cycles
 
-**VXL-102** valide l'option A : factories spécialisées statiquement selon `T`, consultées par `AssetManager::load<T>()`, sans registre dynamique ni méthode `registerFactory<T>()`. L'API de spécialisation reste à finaliser ; l'absence de factory ne déclenche pas de comportement implicite.
+Une factory peut effectuer des chargements imbriqués dans **le même AssetManager et le même thread**. Si elle redemande un asset **déjà en cours de construction dans la chaîne active**, le gestionnaire détecte ce cycle, direct ou indirect, et lance une **`spk::Exception` descriptive**.
 
-**VXL-101** valide l'option B : chaque type d'asset possède un mécanisme de factory capable de construire T à partir des données nécessaires. L'AssetManager n'impose pas de `fromJSON`/`toJSON` universel ; une factory peut l'utiliser ou charger un fichier. VXL-102 tranche leur mode d'extension : **spécialisation statique par type, sans enregistrement d'une factory sur chaque AssetManager**.
+La comparaison utilise le triplet **complet** `(type, id, JSON structurel)` ; deux configurations différentes du même nom ne sont pas un cycle à elles seules. Un asset déjà **terminé et publié** dans le cache est simplement réutilisé. Le message d'erreur doit permettre d'identifier la chaîne de dépendances en cause.
 
-**VXL-100** valide une clé logique de cache (type, id, configuration JSON) : le même identifiant avec des grilles SpriteSheet différentes donne deux assets ; même triplet donne la même instance. La structure interne du cache et la signature précise de la factory statique restent ouvertes ; **le principe de création par spécialisation de type est fixé par VXL-101/102**.
+Une factory échouée **ne publie aucune entrée partiellement initialisée**. L'état provisoire de détection des cycles est nettoyé en cas de succès comme d'exception, permettant une nouvelle tentative ultérieure. Les dépendances qui ont été **chargées avec succès** avant cet échec restent dans le cache : il n'existe pas de transaction globale ou rollback de toutes les dépendances.
 
-**VXL-099** valide la flexibilité du JSON de Material (texture simple ou SpriteSheet, UV normalisés explicites ou coordonnées de sprite) et `Material::Builder::bind(AssetManager*)` avec exception immédiate sur nullptr, mais AssetManager facultatif en construction manuelle et obligatoire pour résoudre les fichiers depuis JSON.
+### 5.5 Synchronisation et durée de vie
 
-**VXL-098** valide les coordonnées de sprite comme entrée possible pour le rôle albedo d'un Material : `spk::SpriteSheet::sprite(Vector2UInt)` retourne une `Texture::Section` normalisée, calculée automatiquement à partir de la grille. `spk::Material` reste générique ; l'API d'association et la conservation d'une preuve de provenance SpriteSheet restent à finaliser, puisque `Texture::Handle` seul ne suffit pas.
+**L'AssetManager n'est pas intrinsèquement thread-safe.** Tous les accès concurrents à **une même instance**, même pour des clés différentes, relèvent de la synchronisation de l'application. Les appels imbriqués depuis une factory **dans le même thread** restent autorisés ; une synchronisation externe doit tenir compte de cette réentrance séquentielle. L'AssetManager n'introduit ni verrou de coordination automatique ni attente implicite entre factories de threads différents.
 
-**VXL-097** valide l'option A : les UV des polygones sont appliqués directement, même hors `[0,1]`, sans répétition de sprite/clamp dans l'atlas. Un Warning non bloquant est émis via `spk::Logger` au niveau de la géométrie source, sans scan GPU ni répétition à chaque frame. VXL-061 conserve les UV arbitraires.
+Le gestionnaire garde tous ses assets jusqu'à :
 
-**VXL-096** valide l'option B : la VoxelPalette conserve des atlas multiples, mais pour chaque association Model/Palette les slots du Model doivent utiliser au plus un albedo opaque et un albedo translucide. Le Mesher reste indépendant des textures et produit exactement deux meshes ; aucune division des meshes par texture. Deux matériaux d'un même Model peuvent partager un atlas avec différents rectangles UV. Un draw de géométrie par mesh non vide et par Model est l'objectif, sans fusion automatique des géométries de chunks distincts ni confusion avec les passes WBOIT.
+- la destruction de l'AssetManager ;
+- ou l'appel explicite à **`void AssetManager::clear()`**.
 
-**VXL-095** valide l'atlas UV par Material : chaque liaison albedo peut porter une région UV rectangulaire (offset et scale), que le shader applique aux UV locaux/interpolés des faces. Changer de Material change de sprite sans rebake. Les UV hors plage et le wrapping restent ouverts.
+Il n'existe **aucune éviction automatique**, aucun LRU ni nettoyage des seules entrées prétendument inutilisées. `clear()` détruit **tous les objets appartenant au gestionnaire**, puis laisse celui-ci réutilisable pour de nouveaux chargements. Tous les `T&` et pointeurs empruntés deviennent invalides après la purge ; un chargement ultérieur de même clé crée un **nouvel asset** et ne restaure jamais la validité des anciennes références.
 
-**VXL-094** valide une unique règle d'occlusion : outerShell + opacity de slot == 1 + face avant orientée vers la cible ; seules ces faces participent à l'union des couvertures pour le culling géométrique. Le canal alpha de texture n'a jamais d'effet sur le Mesher ; aucune autre propriété d'occlusion.
+Les mécanismes propriétaires propres aux assets restent distincts de la vie du wrapper `T` : notamment, un `Texture::Handle` déjà capturé par un Material peut conserver son état graphique après `clear()`, sans conserver la grille SpriteSheet ni un Font d'origine. Des widgets détenant un `Font*` doivent cesser de l'utiliser avant la destruction de l'asset correspondant.
 
-**VXL-093 révisée** : chaque slot géométrique de Shape possède un float opacity [0,1] (défaut 1), propagé via Definition au Model ; il détermine les deux meshes, opaque à 1 et translucide sinon. Tous les shaders voxels calculent `alpha = albedo.a * opacity` et `discard` si alpha == 0. Aucune classification cutout et aucun booléen transparent distinct. Les mentions antérieures de catégorie opaque/cutout/translucide ou contrat d'occlusion séparé sont supplantées ; les tests historiques s'appliquent seulement dans la mesure où ils sont compatibles avec cette révision.
+`clear()` suit les mêmes contraintes de synchronisation externe que `load<T>()`. La purge au milieu d'une factory ou d'une chaîne de chargements active n'est **pas un scénario pris en charge**. Aucun `unload<T>()` par clé, rechargement ciblé ou surveillance automatique des emprunts n'est ajouté dans cette version.
 
-**VXL-092** valide la présence obligatoire de la seule texture nommée `albedo` pour toute association `Material` d'une `VoxelPalette` voxel V0.1.4. La vérification s'effectue à `VoxelPalette::Builder::build()`, avec exception descriptive si `albedo` manque. Aucun autre nom de texture n'est vérifié ni requis par le voxel dans cette version ; `spk::Material` et son Builder demeurent totalement génériques et acceptent tous les rôles libres, indépendamment du rendu voxel.
+## 6. Assembly, composants et scène
 
-**VXL-090** valide l'option A : aucune résolution de texture n'est sélectionnée automatiquement par `Material` ou le système de rendu voxel. Le Builder capture le `Texture::Handle` de la `Texture` effectivement passée dans `setTexture`; pour une texture multi-résolution l'appelant choisit explicitement la résolution à lui passer. Changer de résolution impose un autre Material, puis une autre Palette. Le handle choisi ne conserve pas le ResolutionSet global, les mipmaps standards restent possibles, et le comportement de mise à jour/détachement du `State` (VXL-088/089) est inchangé.
+### 6.1 `spk::Voxel::Assembly`
 
-**VXL-089** valide l'option B : l'interface de construction lie une `const spk::Texture&` par `Material::Builder::setTexture(...)` et enregistre un `Texture::Handle` possesseur d'un état en lecture seule, plutôt qu'un pointeur brut ou une copie d'objet Texture. Le handle n'est pas l'ID OpenGL ; il retient l'état exact capturé, même après destruction du wrapper original. La mutation des pixels sur ce même état reste visible après synchronisation (VXL-088) ; un changement d'identité de State, notamment une opération détachant une texture multi-résolution, n'est pas suivi automatiquement. Un handle seul ne conserve pas le jeu de résolutions ; VXL-090 impose que l'appelant sélectionne explicitement la résolution avant le binding.
+Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **avec sa propre association à une `VoxelPalette`**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou sous-assemblages.
 
-**VXL-088** valide l'option B : les `Material` immuables enregistrent une liste fixe de références aux `spk::Texture` (possession par `Texture::Handle` fixée par VXL-089). Une mise à jour des pixels d'une texture de même identité est visible pour tous les rendus qui partagent cette texture, après synchronisation avec le GPU, sans modifier ni reconstruire Material/Palette/Model. Remplacer une référence de texture dans un Material nécessite un nouveau Material et son affectation via une nouvelle Palette. Les RenderSnapshot ne figent pas automatiquement les pixels des textures vivantes. La synchronisation et les durées de vie GPU doivent rester sûres. Le contrat d'occlusion défini au bake ne change pas du fait d'une modification des pixels.
+Les opérations couvrent ajout, accès, transformation locale, changement de parent et retrait de parties, avec **refus des cycles**. La forme exacte des identifiants et des signatures est une question d'API, pas une raison d'introduire un deuxième système hiérarchique.
 
-**VXL-087** valide l'option A : les `Material` sont des **valeurs immuables après construction**, partageables entre plusieurs `VoxelPalette` immuables à copies légères, sans duplication profonde obligatoire. Changer les propriétés d'un matériau requiert un **nouveau Material** et, pour l'associer à un slot au rendu, une **nouvelle VoxelPalette** issue éventuellement de son Builder. Les anciens modèles, matériaux, palettes et snapshots restent inchangés. Les SSBO de matériaux continuent à être construits par RenderSnapshot (VXL-084/085/086) sans cache inter-frame ni suivi de mutation des propriétés Material. **VXL-088 fixe désormais une sémantique de textures vivantes** : l'identité des références d'un Material est immuable, leur contenu peut changer, sans modification des paramètres/associations de Material.
+```mermaid
+flowchart TD
+  Root["Assembly : personnage"] --> Torso["Part : torso / Model + Palette"]
+  Torso --> Arm["Part : arm / Model + Palette"]
+  Arm --> Hand["Point d'attache : hand"]
+  Torso --> Head["Part : head / Model + Palette"]
+```
 
-**VXL-086** valide l'option A : chaque `RenderSnapshot` construit ses **SSBO de matériaux adaptés aux couples Model/VoxelPalette réellement utilisés**, les partage entre commandes compatibles du **même snapshot** et **n'en conserve aucun cache persistant entre frames**. Chaque nouveau snapshot recrée ses propres ressources de palette, tandis que les buffers d'instances VXL-041 restent également recréés par bucket et par frame. Les handles capturés doivent assurer la validité des buffers jusqu'à la **fin de leur utilisation GPU**, y compris lorsque des snapshots se chevauchent ; la table temporaire de partage peut être détruite après préparation sans invalider les commandes. Aucune politique de cache, d'éviction ou d'invalidation inter-frame des SSBO n'est requise.
+Les transformations locales sont indépendantes de `spk::Transform3D`, qui est déjà un Component3D. Une copie d'Assembly est **autonome pour sa hiérarchie et ses transformations**, tout en réutilisant les données immuables des Models et Palettes. L'Assembly copié démarre avec son **propre VersionedTrait, à version 1**, et non une copie des abonnés ou du compteur de version source. Les évolutions générales de `VersionedTrait` doivent rester compatibles avec cette propriété.
 
-**VXL-085** valide l'option A : le système de rendu prépare les matériaux dans un **SSBO adapté à chaque couple compatible Model/VoxelPalette**, **dans l'ordre des slots du Model** après résolution par noms ; `MeshVertex::materialIndex` adresse directement le matériau, **sans table d'indices GPU supplémentaire**, sans modification du Mesh. Plusieurs commandes du même couple peuvent partager la même représentation SSBO ; une palette utilisée avec deux Models peut nécessiter des SSBO distincts, et deux palettes d'un Model donnent des représentations distinctes. Les buckets doivent séparer les bindings matériels incompatibles, et le SSBO d'instances reste neuf à chaque frame (VXL-041). **VXL-086 tranche : les représentations de palette sont reconstruites par RenderSnapshot et ne font l'objet d'aucun cache persistant entre frames ; les handles restent valables jusqu'à la fin de leur usage GPU.**
+L'animation demeure **externe** à la bibliothèque voxel : un système de jeu peut modifier les transforms des parties, puis appeler `invalidate()` sur l'Assembly. Le rendu ne s'appuie toutefois sur **aucun cache de version** pour ses occurrences : il recalcule les transformations visibles à chaque RenderSnapshot.
 
-**VXL-084** valide l'option A : `VoxelPalette` demeure une **valeur immuable indépendante d'OpenGL**, sans héritage direct de `ShaderStorageBuffer`. Le `VoxelRenderingSystem` ou une infrastructure de rendu dédiée produit une **représentation SSBO séparée** des matériaux, partageable entre plusieurs commandes compatibles. Cette ressource GPU est distincte des SSBO d'instances toujours reconstruits intégralement par frame selon VXL-041. La compatibilité des slots de VXL-082/083, le remapping Model→Palette en cas d'indices différents, la stabilité des RenderSnapshot et les copies légères de palettes sont conservés ; **VXL-085 fixe le remapping en préparant un SSBO de matériaux ordonné selon les slots du Model pour chaque couple**, tandis que **VXL-086 interdit le cache inter-frame des SSBO de palettes** et impose leur construction par RenderSnapshot.
+### 6.2 `ModelRenderingComponent` et `AssemblyRenderingComponent`
 
-**VXL-083** valide des `VoxelPalette` **immuables à copies légères avec `Data` partagé**, construites par un `VoxelPalette::Builder` mutable depuis un Model, plusieurs Model, un Assembly ou une Palette existante pour produire des variantes indépendantes. Un Builder commun fusionne par nom/contrat et signale les collisions (VXL-079), exige tous les matériaux au `build()` (VXL-081), respecte le tri déterministe (VXL-080), sans imposer une palette globale à toutes les parties d'Assembly. **Il précise VXL-082 : une palette peut posséder des slots supplémentaires**, tant qu'elle couvre intégralement les noms, catégories et contrats requis par le Model ; `Model::isCompatible(palette)` vérifie cette relation sans identité de Model. Les indices Model/Palette pouvant différer, le remapping par noms doit être assuré au rendu ; **VXL-085 le fixe par un SSBO de matériaux ordonné selon les slots du Model pour chaque couple compatible**.
+Les deux composants sont des **composants de données** liés à une Entity3D et exposés au système de rendu par les mécanismes de Registry du moteur. Ils ne génèrent jamais eux-mêmes de `RenderCommand`.
 
-**VXL-082** valide la compatibilité des palettes par leurs **contrats de slots existants**, sans `MaterialSchema` ni registre global. Un Model peut partager une palette avec plusieurs autres Model compatibles et les instances les utilisent explicitement. La proposition initiale d'égalité stricte des ensembles de slots est remplacée par la couverture des slots requis à l'aide de la palette, incluant les sur-ensembles autorisés par VXL-083 ; les noms et contrats partagés doivent correspondre exactement.
+- `ModelRenderingComponent` emprunte un `Model` et une `VoxelPalette` compatibles, sans transférer leur propriété ;
+- `AssemblyRenderingComponent` emprunte une `Assembly`, sans la posséder.
 
-**VXL-081** valide l'option A : `VoxelPalette::Factory::build()` exige un **matériau compatible associé à chaque slot sémantique déclaré par le Model**, même totalement occulté ou sans triangle (VXL-078). Un binding manquant déclenche une `spk::Exception` descriptive identifiant le slot ; aucune palette partielle ni matériau de secours implicite. Une table de slots vide peut produire une palette vide ; associations par nom et indices triés demeurent ceux de VXL-080. **VXL-082/083 fixent le partage entre Model par compatibilité des slots requis, avec sur-ensemble de palette autorisé**.
+Leurs méthodes de liaison (`bind` / `unbind`, signatures à finaliser) utilisent des **pointeurs non propriétaires**, conformément aux usages Sparkle. Le programme doit conserver les objets liés en vie jusqu'à leur détachement et pendant tout accès nécessaire à la préparation d'un snapshot. Une liaison à cible unique n'est pas implicitement remplacée.
 
-**VXL-080** valide l'option A : après collecte des slots de toutes les Definition utilisées (VXL-078) et regroupement/validation par nom et contrat (VXL-079), le Model attribue les indices de slots **dans l'ordre alphabétique déterministe des noms**, indépendamment du parcours des cellules, de l'ordre de construction des Definition et de la visibilité des triangles. MeshVertex et VoxelPalette utilisent cette même table ; les bindings restent par nom. Le tri ne dépend pas de la locale système. La comparaison précise des noms hors ASCII reste à finaliser sans changer cet invariant.
+Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T, Engine*>` ou de l'inscription typée réellement disponible. L'héritage Registry des composants spécialisés est à adapter à l'API existante et ne doit pas être inventé indépendamment de sa construction/contexte.
 
-**VXL-079** valide l'option A : `VoxelMesher::bake()` regroupe les déclarations de slots sémantiques **de même nom et de catégorie de rendu + contrat d'occlusion identiques**, y compris issues de `Definition::Data` distincts. Une collision de nom aux contrats incompatibles lance une **`spk::Exception` descriptive**, même si la géométrie du slot est totalement occultée. Les slots des `Definition` sans aucune `Cell` ne participent pas. Aucun `Model` partiel n'est publié ; la `VoxelPalette` reçoit des noms uniques. **VXL-080 fixe l'ordre des indices par tri alphabétique déterministe des noms des slots.**
+## 7. VoxelRenderingSystem et commandes GPU
 
-**VXL-078** valide l'option A : le Model conserve **tous les slots sémantiques déclarés par les Definition des cellules effectivement présentes dans le Volume**, y compris si aucun triangle émis ne les utilise. Les VoxelPalette et les indices GPU s'appuient sur cette table complète, indépendante du culling. Une Definition non référencée par les cellules n'ajoute pas de slot. L'ensemble des slots peut évoluer si les Definition des cellules changent, pas à cause de l'occlusion. **VXL-079 tranche les collisions de noms/contrats** (fusion si contrat identique, exception sinon) ; **VXL-080 fixe l'ordre des slots par tri alphabétique déterministe**.
+### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
-**VXL-077** valide l'option A : le winding de tout polygone de Shape est **CCW vu de sa face avant** ; la normale géométrique suit `(v1-v0) × (v2-v0)`. Le Mesher conserve cette orientation lors du clipping/triangulation, et les rotations/flips des Cell conservent la face avant physique (correction de parité si nécessaire). Le rendu respecte le CCW et le backface culling ; l'occlusion VXL-074 reste dirigée vers la face avant indépendamment des normales d'éclairage. La convention CCW ne supprime pas la nécessité de deux polygones pour un rendu recto-verso.
+`spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU.
 
-**VXL-076** valide l'option A : `Shape::Builder` accepte les polygones individuellement valides coplanaires de même winding qui se chevauchent, totalement ou partiellement, sans rejet, fusion ou déduplication de la géométrie source. Les éventuels artefacts visuels appartiennent au développeur. `VoxelMesher` emploie l'**union géométrique réelle** des contributions opaques orientées (VXL-074) pour l'occlusion, sans double comptage ni fermeture fictive, conformément à VXL-045/046/048/049 ; cache et calcul direct équivalents.
+À chaque préparation de snapshot, le système :
 
-**VXL-075** valide l'option A : `Shape::Builder::build()` accepte zéro polygone pour n'importe quelle Shape, sans chemin privilégié pour Air. Les contraintes >=3 sommets, planéité et convexité continuent de s'appliquer à tout polygone effectivement ajouté. Une Shape vide est une valeur valide immuable à identité propre, sans `outerShell`, `innerShell`, triangles visibles ni couverture occultante ; elle n'est pas automatiquement assimilée à la Definition Air. Les résultats de cache vides restent distincts des misses, et le Builder est consommé après succès (VXL-065).
+1. parcourt les `ModelRenderingComponent` et `AssemblyRenderingComponent` actifs du bon Engine ;
+2. reconstruit les matrices globales des Entities et les matrices accumulées des parties d'Assembly, sans utiliser un cache inter-frame basé sur la version ;
+3. produit les occurrences visibles des meshes opaque et translucide, avec les associations Model/Palette propres à chaque occurrence ;
+4. valide les associations requises et groupe les occurrences en **buckets compatibles** : mesh, passe, atlas, mapping de matériaux et autres bindings GPU pertinents ;
+5. prépare de **nouveaux SSBO** pour les instances et les matériaux utilisés par ce snapshot, puis ajoute les commandes de dessin instancié.
 
-**VXL-074** valide l'option A : un polygone réellement opaque ne peut occulter que **depuis sa face avant selon le winding**, jamais depuis sa face arrière. Pour fermer une frontière, les `outerShell` du voisin doivent être opaques, coplanaires et dirigés vers la cellule courante ; ces restrictions valent aussi pour le culling global des `innerShell` (VXL-046). Clipping et orientations/flip préservent le winding, avec `OcclusionCache` directionnel cohérent. Normales d'éclairage et classification d'opacité restent indépendantes de l'orientation.
+```mermaid
+sequenceDiagram
+  participant Game as Jeu / animation
+  participant Registry as Registry de l'Engine
+  participant System as VoxelRenderingSystem
+  participant Snapshot as RenderSnapshot.Builder
+  participant GPU as RenderContext
+  Game->>Game: modifier Assembly et invalidate
+  System->>Registry: lire composants actifs
+  Registry-->>System: Model / Assembly et bindings
+  System->>System: recalculer matrices et occurrences
+  System->>System: valider couples Model / Palette
+  System->>System: grouper les occurrences par bucket
+  loop chaque couple Model/Palette utilisé
+    System->>System: construire SSBO de matériaux du snapshot
+  end
+  loop chaque bucket non vide
+    System->>System: construire SSBO neuf d'instances
+    System->>Snapshot: ajouter DrawVoxelBucketCommand et handles
+  end
+  Snapshot->>GPU: exécuter les commandes par passe
+  Note over GPU: aucun accès à un Assembly mutable
+```
 
-**VXL-073** valide l'option B : chaque polygone de Shape n'a **qu'une face visible**, définie par son winding. Une surface recto-verso nécessite **deux polygones explicitement écrits**, de winding opposé, avec leurs attributs propres. Aucun champ `doubleSided`, duplication implicite ni désactivation de l'exigence simple face. Le clipping, les orientations/flips, les normales et les UV respectent les faces ; **VXL-074 confirme également une couverture occultante unilatérale des polygones opaques, dans la direction de leur face avant**, sans assimiler visibilité et type de matériau. La convention précise du winding et les coïncidences coplanaires détaillées restent ouvertes.
+### 7.2 SSBO d'instances
 
-**VXL-072** valide `Volume::Builder::build()` consommant le Builder **seulement après un succès** ; une exception technique laisse son état intégralement inchangé (grille, index locaux, Definition Air 0, orientations, dimensions et métadonnées) et permet une nouvelle tentative ou un ajout/erase. Un snapshot partiel n'est jamais publié. Signature `build() &&` illustrative ; VXL-066 reste le moyen de modifier un Volume déjà construit.
+Pour **chaque bucket non vide, à chaque RenderSnapshot**, le système crée un **nouveau `spk::ShaderStorageBuffer` d'instances**, écrit la totalité de ses données compactes et appelle sa validation (`validate()`) conformément au fonctionnement existant des ressources Sparkle.
 
-**VXL-071** valide l'interning local par **identité de `Definition::Data` immuable partagé**, plutôt que par égalité de contenu. Les copies d'une même Definition partagent une entrée ; des constructions distinctes, même identiques géométriquement et sémantiquement, restent des entrées séparées. L'index local `0` reste réservé à Air. La possession partagée garantit la durée de vie de Data, sans registre global.
+Les occurrences d'un bucket sont toujours **contiguës et sans trous**. La disparition d'une instance à la frame suivante revient simplement à ne pas la recollecter. Aucun stockage persistant `InstanceID → offset`, swap-and-pop entre frames, dirty range, update partiel de buffer, commande de mise à jour d'une occurrence ou double buffering explicite de SSBO n'est requis.
 
-**VXL-070** valide l'option A : Sparkle fournit automatiquement une véritable Definition Air prédéfinie, sans paramètre utilisateur, à l'index `0` de la table locale de chaque Volume. Un Builder neuf démarre avec des Cell Air dans toutes ses positions ; un Builder issu d'un Volume conserve cet invariant. Air n'a ni géométrie visible ni couverture occultante. Il ne s'agit pas d'une sentinelle vide, d'un état facultatif de Cell ou d'un Catalog global imposé ; l'identité/stockage exact des Data et l'API d'accès direct restent des détails d'implémentation.
+Chaque commande conserve le **handle du SSBO propre à son snapshot** : un snapshot plus récent ne peut pas altérer le contenu des buffers d'un snapshot encore exploité. Le coût d'allocation et d'upload intégral, même en l'absence de changement, est accepté comme compromis de simplicité. Cette politique **ne rebake jamais** un Model chaque frame.
 
-**VXL-069** remplace les propositions « optional<Cell> » et « Cell isEmpty() » par une véritable Cell Air. L'index `0` dans la table locale des Definition de chaque Volume représente Air (Definition valide, pas sentinelle d'absence). Chaque position contient une Cell et `Volume::cell()` renvoie une Cell par valeur ; `erase` rétablit Air. L'Air n'émet ni surface visible ni surface occultante. L'absence d'un voisin *extérieur* reste un état distinct du callback du Mesher. VXL-070 précise que Sparkle crée et fournit cette Definition Air automatiquement pour tout Volume, sans configuration utilisateur.
+### 7.3 SSBO de matériaux par couple Model/Palette
 
-**VXL-068** fixe les dimensions du `Volume::Builder` dès la création, qu'il parte d'une grille neuve ou d'un snapshot existant : pas de `resize()`, pas de changement implicite sur `set()`/`erase()`. Pour changer les dimensions, l'application recrée un Builder de nouvelle taille et recopie les cellules choisies. Les positions hors limites sont refusées sans mutation du Builder ; les snapshots restent immuables et le rebake intégral.
+La palette publique ne contient **aucun état GPU mutable**. Pour chaque couple `Model`/`VoxelPalette` réellement employé par le snapshot, le rendu construit un SSBO de matériaux **dans l'ordre des slots sémantiques du Model**.
 
-**VXL-067** valide la grille dense contiguë du `Volume` : une entrée compacte par position, y compris d'air, indexée par dimensions. VXL-069 précise que toutes ces positions possèdent une véritable Definition via la table locale (`0` pour Air) et non un sentinel de cellule absente. Snapshot immuable à partage interne possible, accès public à `Cell` par valeur, mémoire proportionnelle au nombre total de positions. Le format de l'enregistrement et l'ordre d'indexation demeurent internes.
+La correspondance entre les **noms de slots** du Model et ceux de la palette est résolue **sur CPU**. Le shader peut ensuite accéder directement à son matériau par `MeshVertex::materialIndex`, **sans table d'indirection GPU**. Les slots supplémentaires de la palette n'ont pas à être encodés dans le SSBO adapté au Model. Les slots du Model sans triangles visibles restent pris en compte dans l'ordre et la validation du couple.
 
-**VXL-066** valide un constructeur de `Volume::Builder` à partir d'un `Volume` source immuable : les dimensions, cellules, orientations et définitions servent de contenu initial ; les mutations ultérieures produisent un nouveau snapshot isolé, sans modifier l'ancien. Le Mesher reste sur un rebake intégral du nouveau Volume, et les anciens Model restent inchangés. Copy-on-write ou copie interne sont des choix de mise en œuvre. Le redimensionnement est exclu par VXL-068 ; VXL-072 fixe la consommation uniquement après un build réussi et la garantie forte d'exception lors du build.
+Les commandes utilisant le **même couple compatible** à l'intérieur d'un même snapshot peuvent partager ce SSBO. La table temporaire de mutualisation disparaît après la préparation du snapshot ; **aucun SSBO de matériaux n'est réutilisé entre deux snapshots**. Une même palette employée avec des Models différents peut nécessiter des dispositions de SSBO différentes. Deux palettes distinctes d'un même Model ne sont pas fusionnées dans un draw si leurs `materialIndex` auraient des interprétations différentes.
 
-**VXL-065** valide la garantie forte d'exception pour `Shape::Builder::build()` : toute exception laisse le Builder inchangé, non consommé et réutilisable, avec ses polygones, slots et index intacts. Une construction réussie est seule à consommer le Builder (VXL-052). L'invariant demeure valable avec une signature illustrative `build() &&` ; aucune Shape partielle publiée en cas d'échec.
+### 7.4 Buckets et commandes de dessin
 
-**VXL-064** valide l'option A : le Mesher supprime les fragments/triangles géométriquement dégénérés selon la tolérance configurée sur le Mesher (VXL-063), sans inventer de paramètre public supplémentaire. Filtrage cohérent entre résultat calculé et cache, absence de triangles GPU invalides, sans altérer la Shape source ni déclarer une face complètement opaque par perte de fragments. Le détail du prédicat numérique, dimensionnellement cohérent, reste à définir.
+Le `BucketKey` distingue toutes les ressources ou états qui doivent rester identiques au cours d'un dessin instancié : mesh, passe, atlas `albedo`, représentation de matériaux adaptée, et éventuels autres bindings nécessaires au pipeline réel. Des géométries de Models différents ne sont **pas fusionnées automatiquement** parce qu'elles utilisent le même atlas.
 
-**VXL-063** valide une tolérance de clipping du `VoxelMesher`, configurable explicitement avec une valeur par défaut de `1e-5` dans le cube unité. Les réglages différents produisent des clés distinctes dans `OcclusionCache` ; pas de tolérance statique globale, ni de purges automatiques. Les valeurs non finies ou non positives sont invalides ; VXL-064 impose l'élimination des fragments géométriquement dégénérés avec cette même tolérance, tandis que le prédicat mathématique exact reste à préciser.
+Un `DrawVoxelBucketCommand` est un `RenderCommand` qui conserve les handles/ressources de mesh, de SSBO d'instances, de SSBO de matériaux et de textures nécessaires à l'exécution. Il n'emprunte aucune donnée d'Assembly mutable pendant son `execute(RenderContext&) const`. La gestion existante des ressources GPU de Sparkle assure que les handles capturés sont utilisables jusqu'à la fin effective de leur usage GPU, sans réutilisation anticipée d'un State appartenant à un ancien snapshot.
 
-**VXL-062** valide des normales personnalisées facultatives par sommet de Shape ; par défaut, on utilise la normale géométrique du polygone. Les nouvelles normales aux intersections du clipping sont interpolées et renormalisées (sur les triangles définis en VXL-061 si nécessaire). Les normales d'éclairage ne participent ni à l'occlusion, ni au winding, ni à la classification des plans. OcclusionResult conserve les attributs locaux immuables ; validation des entrées et cas dégénérés restent à préciser.
+Une association compatible emploie au plus **un atlas `albedo` par mesh/passe**, permettant **un draw instancié par mesh non vide et par bucket compatible**, hors éventuelles passes graphiques complémentaires. Les occurrences présentant des mappings ou états de rendu incompatibles restent séparées.
 
-**VXL-061** valide les UV arbitraires sur les n-gones plans et convexes (au moins trois sommets) ; triangulation déterministe pour définir l'interpolation UV affine **par triangle** et conduire le clipping tout en gérant les fragments traversant plusieurs triangles. Aucun rejet au Builder au seul motif que les UV ne sont pas globalement affines. Géométrie locale de Shape et mêmes UV dans les résultats cachés ou non (VXL-059/060). L'algorithme précis des diagonales et ses tolérances restent ouverts.
+### 7.5 Pipeline opaque, translucence et éclairage
 
-**VXL-060** valide l'option A : tout nouveau sommet issu d'un clipping reçoit ses UV par interpolation du mapping du polygone source ; aucune reprojection automatique. Les fragments et UV restent locaux à Shape dans OcclusionResult selon VXL-059. Le cas des n-gones à mapping non affine est désormais tranché par VXL-061 : UV arbitraires permis et interpolation fondée sur une triangulation déterministe, y compris pendant le clipping.
+```mermaid
+flowchart LR
+  A["Mesh opaque (opacity == 1)"] --> B["Passe opaque : profondeur / éclairage"]
+  C["Mesh translucide (opacity < 1)"] --> D["WBOIT : accumulation"]
+  B --> E["Composition finale"]
+  D --> E
+  L["Éclairage et ombres 3D Sparkle"] --> B
+  L --> D
+```
 
-**VXL-059** fixe le contenu d'`OcclusionResult` : fragments visibles de la Shape source A exprimés en coordonnées locales flottantes, UV et slots géométriques locaux. Le Mesher ne résout les slots sémantiques du Model qu'après lecture du cache, à travers la Definition ; les matériaux concrets ne sont pas stockés. La clé continue de distinguer les contrats effectifs d'occlusion, mais permet de partager les résultats entre Definitions compatibles ayant des mappings de slots différents.
+Le moteur voxel **réutilise l'infrastructure de lumière, d'ombres et de rendu 3D de Sparkle**, au lieu de reproduire une seconde architecture graphique. Le mesh opaque suit le rendu opaque/depth habituel ; le mesh translucide passe par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials.
 
-**VXL-058** valide la purge simple : `clear()` retire toutes les entrées présentes sous son verrou d'écriture, sans annuler ni invalider les clippings déjà en cours hors verrou. Ceux-ci peuvent insérer leur résultat après la purge. Aucun mécanisme de génération ni attente des calculs concurrents ; les résultats immuables déjà récupérés restent valides.
+L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compris ses usages spécifiques du cutout ; ce document ne change pas son contrat général.
 
-**VXL-057** valide `OcclusionCache` thread-safe par un `spk::ProtectedData<Data>` privé. Les méthodes `find()`, `store()` et `clear()` synchronisent lecture/écriture sans imposer de mutex au Mesher ; le clipping est effectué hors verrou. `find()` renvoie une `std::optional<OcclusionResult>` par valeur ; `OcclusionResult` est immuable, à copie légère, avec son `shared_ptr<const Data>` privé, jamais exposé. `nullopt` correspond à un miss ; un résultat valide avec zéro fragment correspond à une occultation totale. VXL-058 définit une purge simple autorisant une réinsertion après `clear()` par un calcul précédemment démarré.
+## 8. Garanties transversales et frontières des interfaces
 
-**VXL-056** adopte la politique A : `OcclusionCache` garde les entrées et leurs références partagées aux `Shape::Data` tant que l'appelant ne demande pas `clear()` ou ne détruit pas le cache ; aucune éviction automatique ni budget de mémoire pour V0.1.4. VXL-057 rend les opérations du cache thread-safe, et VXL-058 fixe la sémantique de la purge pendant un calcul hors verrou.
+### 8.1 Propriété des données
 
-**VXL-055** rend le cache d'occlusion facultatif et indépendant du Mesher : liaison explicite non propriétaire par `bind(OcclusionCache*)`, détachement via `unbind()` ; sans cache, clipping sans mémorisation. L'application peut encapsuler un cache statique dans son wrapper, tandis que Sparkle n'impose aucun singleton. Cache vivant indépendamment des Meshers ; politiques de mémoire/concurrence ouvertes.
+| Ressource | Propriétaire / représentation | Relation vers les utilisateurs |
+|---|---|---|
+| `Shape`, `Definition`, `Volume`, `Model` | Données immuables, copies légères et partage interne | Réutilisables indépendamment du Builder d'origine |
+| `OcclusionCache` | Propriété de l'application ; table protégée | Mesher lié par pointeur **non propriétaire** |
+| `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
+| `Material` | Valeur immuable conservant des `Texture::Handle` | Pixels du State GPU partagé potentiellement vivants |
+| `VoxelPalette` | Valeur immuable, association de Materials | Aucune ressource GPU propre à la palette |
+| `AssetManager` | Possède les objets `T` du cache | `load<T>()` retourne `T&` emprunté ; `clear()` invalide |
+| `Assembly` | Possède sa hiérarchie mutable ; partage Models/Palettes immuables | Les composants empruntent l'Assembly |
+| `RenderSnapshot` et commandes | Conservent les handles de ressources graphiques nécessaires | Aucun accès aux transforms mutables après publication |
 
-**VXL-054** impose la garantie forte d'exception pour les méthodes d'ajout du Shape::Builder : après tout ajout échoué, son état reste inchangé et réutilisable. Aucune insertion partielle ni corruption des tables/slots/indices. Cette règle complète VXL-053 et ne change pas la consommation du Builder après un `build()` réussi (VXL-052).
+### 8.2 Règles d'erreur et de publication
 
-**VXL-053** place la validation géométrique dans les méthodes d'ajout du Shape::Builder, avec `spk::Exception` descriptive à l'instant où une donnée invalide est proposée. `build()` suppose les données acceptées géométriquement valides, publie la `Shape` et consomme le Builder après succès. Les ajouts rejetés sont sans effet (VXL-054) et un `build()` échoué laisse désormais le Builder intact et réutilisable (VXL-065).
+Les opérations publiques invalides, les incompatibilités de slots, les violations des invariants géométriques, les cycles d'assets et les appels de liaison interdits déclenchent des **`spk::Exception` descriptives**. Les opérations de Builder garantissant un état inchangé après échec doivent préserver cette propriété même lors d'une exception technique ; ne pas transformer systématiquement les exceptions d'allocation en `spk::Exception` si cela détruit leur cause.
 
-**VXL-052** valide `Shape::Builder` mutable produisant une `Shape` immuable à données partagées. Le JSON peut employer ce Builder. **Un `build()` réussi le consomme définitivement** : aucune réutilisation ni deuxième build n'est contractuellement permise ; le contenu résiduel n'a pas de garantie, sans rendre sa destruction invalide. Les signatures exactes restent ouvertes ; un échec technique de `build()` ne consomme pas le Builder (VXL-065), et la validation d'une géométrie invalide se fait à l'ajout (VXL-053).
+Aucune Shape, Volume, Model, VoxelPalette ou entrée AssetManager **partiellement construite** ne doit être publiée. Les avertissements d'UV hors `[0,1]` sont, au contraire, **non bloquants** et émis au niveau de la géométrie source, sans répétition par pixel ou par frame.
 
-**VXL-051** définit l'identité d'une `Shape` par son `shared_ptr<const Data>` interne (pointeur stocké, pas hash de géométrie), partagé entre copies. Les clés du cache conservent une possession partagée pour éviter une réutilisation dangereuse de l'adresse après destruction. Pas de conversion en entier 32 bits ; capacité et durée de vie du cache à définir.
+### 8.3 Niveau de précision des exemples
 
-**VXL-050** valide le cache d'occlusion **directionnel** : `A → B` renvoie uniquement les fragments visibles de A après occultation par B ; `B → A` possède sa clé et son calcul propres. Les variantes d'orientation, direction et contrats d'opacité ne doivent pas être confondues. L'identité des `Shape` est précisée par VXL-051 ; la gestion mémoire du cache reste à définir.
+Les **responsabilités, données, règles de propriété, classifications, algorithmes et comportements décrits ci-dessus** constituent l'architecture à produire. Les exemples illustrent des interfaces possibles, sans obliger à employer un nom secondaire, un emplacement précis de classe, un conteneur particulier, un algorithme de triangulation spécifique ou une nouvelle abstraction de façade lorsque Sparkle dispose déjà du mécanisme nécessaire.
 
-**VXL-049** remplace la discrétisation de VXL-044 par clipping polygonal flottant direct et cache des résultats entre configurations répétées. Les détails de clé, durée de vie et robustesse restent ouverts.
+En particulier, l'intégration finale doit s'appuyer sur les vrais `spk::Mesh<TVertex>`, `ShaderStorageBuffer`, `Texture::Handle`, `Registry`, `RenderingSystem`, `RenderSnapshot` et `RenderCommand` disponibles dans la bibliothèque. Les détails numériques du clipping, les signatures définitives des Builders et des bindings de textures nommées, les types d'identifiants de Part et les bindings GPU exacts doivent respecter les contrats décrits sans ajouter de comportements implicites.
 
-**VXL-048** conserve la séparation de la géométrie par face et slot et la sélection des seuls slots occultants, mais plus aucune couverture discrétisée/AABB précomputée.
-
-**VXL-047** garde hors périmètre la caméra interne à une enceinte intégralement fermée.
-
-**VXL-046** conserve l'omission des innerShell si et seulement si les six voisins couvrent entièrement leurs frontières opposées avec des surfaces réellement opaques.
-
-**VXL-045** maintient les six outerShell coplanaires aux frontières du cube unité et un innerShell géométrique, sans projection.
-
-**VXL-044** est supplantée sur grille 1000×1000, sommets locaux entiers et décomposition en rectangles.
-
-**VXL-043** maintient les polygones plans et convexes individuels ; les formes globalement concaves s'obtiennent par assemblage.
-
-**VXL-042** maintient Definition immuable, Cell publique par valeur, Volume compact à table locale et absence de Catalog global obligatoire.
-
-Les discussions VXL-001 à VXL-031 ont déterminé Volume immutable / Builder, géométrie polygonale locale (désormais flottante), occlusion polygonale, Materials et transparence, relecture des voisins, Mesh<T>, Model immutable, Assembly hiérarchique et articulé, palettes par Model, JSON, bake synchrone, absence de Catalog. Les choix VXL-032 à VXL-040 ont fixé instancing, abandon de Assembly::Instance, composants uniquement données, orchestration par System, binding non propriétaire, RenderSnapshot autonome, Assembly seul versionné et instances compactes. **VXL-041 remplace les stratégies GPU précédentes** par une reconstruction intégrale des tableaux d'instances et des SSBO à chaque frame ; suppression des commandes d'update, caches d'offset et synchronisations partielles.
-
-**Ne pas réintroduire les choix abandonnés :** palette unique imposée pour Assembly, Assembly::Instance, Catalog obligatoire, grille entière mondiale, animation voxel dédiée, Entity3D par partie.
-
-## 10 — Processus d'implémentation à faire respecter par la seconde IA
-
-**Phase 1 :** lire la PR et le Sparkle réel, proposer les headers/relations/signatures de toutes les classes, résoudre les points ouverts avec le mainteneur et obtenir validation des interfaces.
-
-**Phase 2 :** discuter et obtenir validation des cas de TU (géométrie, scénarios de recouvrement, transformations, buffers, instancing), construire les tests et fixtures, sans anticiper silencieusement les comportements.
-
-**Phase 3 :** implémenter progressivement jusqu'à satisfaire ces TU ; ajouter tests graphiques, golden images, CI, profiling si pertinent et revue architecturale.
-
-Le **présent document versionné** est la source de vérité de la conception de la PR #37 jusqu'à validation finale ; la description de la PR ne contient qu'un résumé et un lien vers cette spécification. Aucun commit de code n'est autorisé par le seul fait que ce texte existe.
-
----
-**État de la conception : VXL-040 à VXL-110 discutées, VXL-110 validée (option B).** La description détaillée des décisions et des tests se trouve dans les sections 3 à 8 ; la section 9 en conserve la traçabilité historique. Les décisions VXL-093 à VXL-110 révisent ou précisent les règles antérieures sur l'alpha des slots, l'occlusion, les régions d'atlas, les associations Model/Palette, la politique UV, les syntaxes JSON de Material, l'identité des assets, leur durée de vie et les factories accédant explicitement à leurs dépendances, le rejet des cycles de chargement, la synchronisation externe de l'AssetManager, la conservation des assets avec purge explicite, la transmission de l'identifiant aux factories, leur retour par valeur `T` et la surcharge sans configuration fondée sur un objet JSON vide. Seuls les contrats explicitement validés sont applicables ; les signatures et aspects techniques encore ouverts exigent une validation avant toute implémentation. La PR reste en conception, sans autorisation de commit de code.
+Le présent texte est **la description de l'architecture souhaitée pour Sparkle V0.1.4**. Il ne constitue pas une autorisation de développement, de fusion ou de modification du code existant.
