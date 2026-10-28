@@ -26,25 +26,24 @@ flowchart LR
     Palette["VoxelPalette"]
     AM --> Mat --> Palette
   end
-  subgraph R["Engine, vues et rendu générique"]
+  subgraph R["Moteur logique et orchestration graphique"]
     Assembly["Assembly"]
     Components["Composants 3D"]
-    Engine["Engine : EngineView nommées"]
-    Cam["CameraComponent / LightComponent"]
+    Engine["Engine : core headless"]
+    Render["RenderingEngine : hérite d'Engine"]
+    Views["EngineView nommées"]
     Sys["VoxelRenderingSystem"]
-    Snapshot["RenderSnapshot / RenderPass"]
-    Targets["Cache graphique : cibles par fenêtre et vue"]
-    Assembly --> Components --> Sys --> Snapshot
-    Engine --> Cam
-    Engine --> Snapshot
-    Cam --> Snapshot
-    Snapshot --> Targets
+    Slot["ThreadSafeSlot du snapshot moteur"]
+    Window["Snapshot de fenêtre + EngineWidget à rôles"]
+    GPU["GPUResourceCollection : cibles par surface"]
+    Engine --> Render --> Views --> Slot
+    Assembly --> Components --> Sys --> Slot
+    Slot --> Window --> GPU
   end
   Model --> Assembly
   Model --> Components
   Palette --> Assembly
   Palette --> Components
-  Targets --> Display["EngineWidget / EngineViewWidget : affichage de textures"]
 ```
 
 Les frontières sont intentionnelles :
@@ -52,7 +51,7 @@ Les frontières sont intentionnelles :
 - **Géométrie et meshing :** aucune lecture de pixels, aucun atlas et aucune émission directe de commande OpenGL. La visibilité entre cellules est déterminée uniquement à partir des surfaces, de leur orientation et de l'opacité déclarée par les slots de géométrie. **Shape, Definition, Cell et Volume** restent indépendants d'OpenGL ; en revanche, **Model/Mesh** réutilisent le vrai `spk::Mesh<TVertex>`, dont le `LayoutBuffer` dépend déjà des types graphiques de Sparkle. Le bake ne doit pas être décrit comme un module intégralement headless.
 - **Apparence :** `spk::Material` est générique et possède des rôles de textures nommés ; `spk::VoxelPalette` relie ces matériaux aux slots d'un modèle voxel. Une palette différente ne nécessite pas de remailler.
 - **Scène :** `Voxel::Assembly` compose des modèles et des transformations locales, sans créer une Entity par partie.
-- **Graphisme :** `VoxelRenderingSystem` est responsable de la collecte voxel, du regroupement, de la construction des buffers de snapshot et de ses commandes de dessin. Il contribue au pipeline graphique générique commun, sans organiser seul le rendu d'une vue. `Engine` possède des `EngineView` logiques nommées ; le cache de ressources graphiques par fenêtre associe une vue à ses cibles et à sa texture finale. `EngineWidget` met à jour, rend et affiche ; `EngineViewWidget` affiche uniquement une texture déjà produite. Les composants de données ne dessinent pas.
+- **Graphisme :** `VoxelRenderingSystem` collecte les voxels et ajoute des commandes au snapshot graphique commun, sans ordonnancer lui-même les vues. `Engine` reste headless ; `RenderingEngine : Engine` possède les vues et le slot de snapshot partagé. `GPUResourceCollection` réalise les framebuffers et textures séparément pour chaque fenêtre ; un `EngineWidget` associe librement les rôles `Update`, `Render` et `Drawing`.
 - **Chargement :** `spk::AssetManager` est un utilitaire générique de Sparkle, pas un sous-système réservé aux voxels. Il partage les assets chargés selon une clé comprenant type, identifiant et configuration JSON.
 
 Le rendu voxel produit **au maximum deux meshes par Model** : un opaque et un translucide. Aucun troisième mesh « cutout » n'est introduit. Chaque mesh non vide peut être dessiné avec un seul atlas `albedo` pour une association `Model`/`VoxelPalette` compatible, même si plusieurs slots choisissent des régions différentes de cet atlas.
@@ -336,7 +335,8 @@ classDiagram
     +mesh translucide
   }
   Texture <|-- SpriteSheet
-  Material --> Texture : capture un Handle
+  Material --> Texture : Handle statique
+  Material ..> EngineView : source empruntée (API à finaliser)
   VoxelPalette --> Material : valeurs immuables
   Model ..> VoxelPalette : association validée
 ```
@@ -350,6 +350,8 @@ Chaque liaison à une texture conserve un **`spk::Texture::Handle`** obtenu depu
 Un handle conserve l'état GPU partagé de la Texture après destruction du wrapper Texture initial. Il ne conserve toutefois **ni la grille du SpriteSheet, ni à lui seul son ensemble de résolutions**. Le Material final n'a pas besoin de la grille : la conversion d'un sprite en `Texture::Section` est réalisée **avant** sa construction.
 
 La résolution effectivement capturée est celle de la Texture explicitement passée au Builder. Il n'existe **aucune sélection automatique de résolution** dans Material ou dans le rendu voxel. Changer de résolution implique de fournir la nouvelle Texture choisie à un **nouveau Material**, puis de choisir la nouvelle palette correspondante. Les mipmaps standards du State GPU restent possibles.
+
+**Extension pour les textures de vues :** la source statique conserve le contrat `Texture::Handle` ci-dessus. Une liaison à une `EngineView` est une **source non propriétaire**, dont l'identité reste fixe dans le Material immuable mais dont le handle GPU est résolu **à la construction de chaque nouveau snapshot**. Le Material ne prolonge pas la vie de la vue et ne conserve pas durablement les handles de cette source ; les commandes déjà publiées peuvent les conserver. L'API exacte de liaison et la compatibilité avec les règles d'atlas voxel restent à finaliser. Les JSON d'assets ne recherchent pas implicitement des vues.
 
 Les **propriétés et l'identité des handles** d'un Material sont immuables. Les **pixels de l'état Texture partagé** peuvent évoluer selon les API graphiques existantes, avec validation et synchronisation CPU/GPU adaptées : les Materials qui partagent ce même State verront son contenu actualisé. Si une opération détache/remplace le State d'une Texture source, un handle déjà capturé continue de référencer **l'ancien State** : il ne suit pas automatiquement cette substitution. Les paramètres du Material et les anciennes palettes restent inchangés.
 
@@ -414,6 +416,8 @@ Son Builder mutable peut être initialisé à partir d'un Model, de plusieurs Mo
 **Chaque slot déclaré** doit recevoir un Material compatible, **même s'il n'a aucun triangle visible**. Le Builder valide que chaque Material affecté possède au moins la texture nommée exactement **`albedo`**, avec exception descriptive sur absence. Le système voxel ne requiert, n'examine ni n'utilise d'autres noms de textures dans cette version. La présence d'autres rôles sur un Material reste autorisée.
 
 Un Model peut être associé à une palette contenant **plus de slots** que lui. L'association est compatible seulement si tous ses noms et opacités requis sont présents. `Model::isCompatible(palette)` est la forme d'API envisagée pour vérifier ce contrat, y compris la limite d'atlas par passe décrite ci-dessous. La palette n'est pas obligée d'être identique au Model, et une même palette peut servir à plusieurs Models.
+
+**Source de vue dynamique :** les vérifications d'identité d'atlas ne pourront pas reposer uniquement sur un `Texture::Handle` figé après resize ; leur contrat exact est un point ouvert. Les règles suivantes restent acquises pour les sources statiques.
 
 **Contrainte des atlas :** pour chaque association **Model + VoxelPalette**, les Materials des slots **opaques** requis par ce Model doivent tous référencer **un unique `albedo` `Texture::Handle` au maximum** ; la même règle s'applique, indépendamment, aux slots **translucides**. Cette vérification concerne **tous les slots déclarés par le Model, même sans triangles émis**, pas l'intégralité des slots supplémentaires de la palette. Les passes opaque et translucide peuvent utiliser le même atlas ou deux atlas différents.
 
@@ -578,170 +582,189 @@ Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightCompon
 
 **Projection des ombres directionnelles :** chaque lumière directionnelle ayant les ombres activées utilise **une seule shadow map de profondeur pour le rendu concerné**, représentant une région pertinente pour celui-ci. Il n'y a **ni Cascaded Shadow Maps (CSM), ni subdivision obligatoire du frustum en plusieurs cascades**, ni atlas de cascades pour une même lumière directionnelle dans V0.1.4. Cela n'interdit pas plusieurs lumières directionnelles, chacune avec sa propre carte pour un rendu donné. En présence de plusieurs viewports, le **partage ou le recalcul** des shadow maps entre vues reste à définir : le choix d'une seule map par lumière n'impose pas une politique globale de mutualisation. La définition de la région couverte, des matrices de projection d'ombre, de la résolution, du biais et de la fréquence de rafraîchissement reste à finaliser ; ne pas inventer de couverture mondiale infinie ni de mécanisme de sélection automatique des cascades. Le contrat des ombres des spots sera précisé séparément.
 
+
 ```mermaid
-flowchart LR
-  E["Entity3D"] --> T["Transform3D"]
-  E --> C["Component3D : Camera"]
-  E --> L["Component3D : Light"]
-  C --> R["Registry de l'Engine"]
-  L --> R
-  T -. "pose" .-> C
-  T -. "pose" .-> L
-  Eng["Engine : sparkle::core"] --> Views["EngineView par ViewID"]
-  Views --> C
-  R --> Render["RenderingEngine / contributions génériques"]
-  Views --> Render
-  Render --> Snap["RenderSnapshot : passes ordonnées"]
-  Snap --> Cache["Cache graphique par fenêtre"]
-  Cache --> Texture["Texture finale de chaque vue"]
-  Texture --> UI["Widgets / matériaux"]
+classDiagram
+  class Engine {
+    +updateState(context)
+    +addEntity(entity)
+    +addSystem(system)
+  }
+  class RenderingEngine {
+    +refreshRenderSnapshot()
+    +renderSnapshot()
+    +addView(name, camera, size, order)
+    +view(name)
+    -ThreadSafeSlot~RenderSnapshot~ snapshot
+  }
+  class EngineView {
+    +name
+    +camera
+    +size
+    +order
+    -Framebuffer logique
+  }
+  class EngineWidget {
+    +bind(RenderingEngine*)
+    +roles()
+    +setViewID(name)
+  }
+  Engine <|-- RenderingEngine
+  RenderingEngine *-- EngineView
+  RenderingEngine *-- RenderSnapshot
+  EngineWidget --> RenderingEngine : reference non proprietaire
+  EngineWidget --> EngineView : Drawing
 ```
 
-**Vues de l'Engine nommées : `spk::EngineView`.** Un `Engine` possède une collection de `EngineView` identifiées par une **chaîne de caractères unique dans cet Engine** (identifiant `ViewID`, nom de type illustratif). Une `EngineView` décrit **la caméra `Component3D` explicitement choisie**, appartenant à cet Engine, et **la résolution de sortie explicitement choisie par l'application**. La même caméra peut être associée à plusieurs vues, avec des résolutions différentes. `EngineView` appartient à **`sparkle::core`** : elle ne contient aucun `Framebuffer`, aucune `Texture`, aucun handle OpenGL, et ne crée pas de nouvelle hiérarchie de scène. Le nom `spk::SceneView` n'est pas retenu ; `RenderPass` et `RenderSnapshot` conservent leur signification d'étapes et de commandes graphiques.
+**Frontière des bibliothèques.** `spk::Engine` reste un moteur logique et headless de `sparkle::core`, responsable des entités, systèmes, événements et `updateState(UpdateContext&)`. `spk::RenderingEngine : public spk::Engine` se trouve dans `sparkle::sparkle` et ajoute les capacités graphiques : `EngineView`, contribution des objets graphiques, construction du `RenderSnapshot` moteur et publication via `ThreadSafeSlot<RenderSnapshot>`. Un serveur peut instancier `Engine` seul ; une application graphique instancie directement `RenderingEngine`. La conversion d'un Engine existant en RenderingEngine n'est pas prévue. L'héritage impose de rendre virtuel le destructeur de `Engine`. L'ancien `RenderingEngine` adaptateur possédant un `Engine*` et les événements/input qu'il propage devront être refactorisés, sans perdre ces fonctionnalités.
 
-**Aucune caméra ni vue principale implicite.** `"main"` est uniquement **l'identifiant de vue que `EngineWidget` essaie d'afficher par défaut**. L'application enregistre explicitement cette vue avec la caméra de son choix ; ni `Engine`, ni `EngineWidget` ne créent de caméra, ne recherchent automatiquement la première caméra disponible ou ne fabriquent automatiquement une `EngineView`. Un `EngineWidget` peut choisir une autre vue via une méthode de sélection d'identifiant (p. ex. `setViewID("minimap")`, nom indicatif). Il **n'exige ni `setCamera()`, ni `setFramebuffer()`**. Le comportement en cas de vue ou de caméra absente reste à préciser explicitement.
+**Propriété des vues.** Chaque `RenderingEngine` possède une collection de `spk::EngineView`, identifiées par une chaîne unique. Une vue désigne une `CameraComponent` explicite, sa résolution choisie par le jeu et son ordre de capture. Une caméra peut être utilisée dans plusieurs vues. `EngineView` et `CameraComponent` relèvent désormais du module graphique et non de `sparkle::core` ; la caméra reste un `Component3D` positionné par son `Entity3D/Transform3D` habituel. Aucune caméra, vue, résolution, projection ou hiérarchie alternative n'est créée implicitement. Le nom `"main"` est uniquement la sélection par défaut du rôle `Drawing` d'un EngineWidget.
 
-**Résolution et projection sous contrôle du jeu.** L'**application décide** quand modifier la résolution déclarée par une `EngineView`, et modifie séparément les paramètres de projection de la caméra concernée. Un redimensionnement de fenêtre ou de widget **ne change automatiquement ni la taille de l'EngineView, ni la projection de sa caméra**. Le moteur **n'infère pas** une nouvelle résolution de la géométrie du widget et n'ajuste pas le champ de vision, l'aspect ratio ou les matrices de projection pour l'application. Si seule la taille d'affichage du widget change, sa texture peut être affichée à cette nouvelle taille **sans modifier la résolution du rendu source**. En revanche, si l'application change explicitement la résolution de l'EngineView, les ressources graphiques de cette vue doivent être adaptées à cette résolution.
+**Accès aux vues depuis l'Engine ou la caméra.** `renderingEngine.view("monitor")` retrouve une vue par son nom et lance `spk::Exception` si absente. `surveillanceCamera.view("monitor")` est également prévu : il utilise le contexte `Engine*` déjà transmis aux composants pour retrouver le `RenderingEngine`, puis vérifie que la vue demandée désigne bien cette caméra. Absence de moteur graphique, nom inconnu ou mauvaise caméra : `spk::Exception`. Cela ne demande **aucun registre inverse** dans la caméra. Signatures et noms secondaires restent illustratifs.
 
-**Ressources graphiques séparées et partagées par fenêtre.** L'infrastructure **`sparkle::sparkle`** associe chaque triplet **`(Window::Surface, Engine, ViewID)`** aux ressources de rendu **persistantes** de cette vue : `Framebuffer`, texture couleur finale, profondeur, buffers WBOIT et ressources d'ombres requises. Ces ressources sont **créées à la demande** pour les vues enregistrées, et **remplacées/adaptées** lors d'un changement explicite de taille d'une EngineView, sans muter les ressources encore capturées par les `RenderSnapshot` en attente d'exécution. Les **handles GPU** conservent les états nécessaires aux snapshots ; la création et l'activation effective des objets OpenGL restent sur le thread de rendu. Dans **une même fenêtre**, un `EngineWidget` producteur prépare une capture par vue enregistrée et par snapshot qu'il construit ; plusieurs widgets d'affichage peuvent ensuite utiliser les **mêmes résultats**, sans nouveau rendu. **Deux `EngineWidget` producteurs associés au même Engine ne sont pas dédupliqués automatiquement** : c'est à l'application de maîtriser les mises à jour et les rendus redondants qu'elle provoque. Des fenêtres distinctes conservent des ressources distinctes, sans présumer le partage de leurs contextes OpenGL. Le cache n'appartient ni à `Engine` dans `sparkle::core`, ni à un `EngineWidget` particulier.
+**Resize sous contrôle du jeu.** Redimensionner la fenêtre ou un widget ne change **ni la résolution d'une EngineView ni la projection de la caméra**. Le jeu ajuste chacune explicitement. L'affichage peut simplement étirer la texture existante. Une vue dont la résolution change crée une **nouvelle version des cibles logiques** ; les handles déjà publiés ne doivent pas être modifiés rétroactivement. Le `Framebuffer::resize()` actuel, qui modifie les States de ses attachments sur place, n'est donc pas le mécanisme à employer sur une cible encore référencée par des snapshots.
 
-**Production des captures et présentation.** Lorsqu'un `EngineWidget` contribue au snapshot de sa fenêtre, il déclenche, via son `RenderingEngine`, la préparation des commandes de capture de **chaque `EngineView` enregistrée dans son Engine**, depuis la caméra correspondante. Chaque vue est traitée une fois **pour cette contribution**, et les résultats sont écrits dans les ressources graphiques correspondantes. `EngineViewWidget` n'ajoute jamais de commandes de capture. Un deuxième `EngineWidget` sur le même Engine peut déclencher une deuxième série de captures : Sparkle **n'empêche ni ne déduplique** cet usage. Les passes d'ombres, de rendu opaque, de WBOIT et de composition emploient les `RenderPass` ordonnées existantes ; les commandes de présentation des widgets suivent les passes de production correspondantes. Une `EngineView` peut être rendue sans widget visible, et **plusieurs consommateurs peuvent réutiliser la même texture sans relancer le rendu**. Les valeurs de matrices nécessaires sont capturées lors de la préparation du snapshot, sans lecture de caméra mutable pendant l'exécution.
+**Un framebuffer logique, plusieurs réalisations OpenGL.** `spk::Framebuffer` dérive déjà de `GPUResource` ; ses attachments de couleur sont des `Texture`, elles-mêmes `GPUResource`. `GPUResource::activate(context)` passe par la `GPUResourceCollection` de `context.targetSurface` et matérialise une instance OpenGL **par Window::Surface**. Une `EngineView` peut donc décrire un framebuffer logique, réalisé indépendamment en fenêtre A et B, sans ajout d'une map `(Window, Engine, ViewID)` à l'API des vues. Il s'agit d'images **locales et distinctes** : rendre A ne copie ni ne met à jour les pixels de B. La dernière image rendue dans B reste disponible tant que sa cible locale n'est pas remplacée. Pour une cible locale jamais rendue (ou nouvellement remplacée), les pixels ne sont pas garantis ; pas de warning, texture de secours ou transfert automatique.
 
-**Deux types de widgets et deux responsabilités explicites.** `spk::EngineWidget` **met à jour l'Engine, prépare le rendu de toutes ses EngineView et affiche la texture d'une EngineView sélectionnée** (`"main"` par défaut, ou un autre `ViewID` configuré). Il continue à transmettre les interactions de l'interface à l'Engine. `spk::EngineViewWidget` **affiche seulement** la texture d'une vue sélectionnée, sans mettre à jour l'Engine, sans transmettre ses événements comme un propriétaire de simulation et **sans provoquer de capture ni construire les commandes de rendu 3D**. Aucun de ces widgets ne lie directement une caméra ou un framebuffer. Un `EngineViewWidget` seul ne garantit donc aucune nouvelle image : il présente uniquement une texture qui a déjà été produite pour cette surface. **Sparkle n'interdit pas plusieurs `EngineWidget` sur le même Engine et ne les protège pas de doubles updates ou de doubles captures** ; ce choix, et ses coûts ou effets, relèvent exclusivement de l'application.
+**Durées de vie.** Les vues sont possédées par `RenderingEngine`. Toutes les références vers une `EngineView`, y compris celles éventuellement détenues par des matériaux, sont **non propriétaires** et deviennent invalides lorsque la vue disparaît. Une vue qui référence une caméra détruite devient impropre à l'utilisation : c'est au développeur de ne plus la dessiner. Utiliser une référence C++ pendante peut être un comportement indéfini, pas une exception garantie. Une vue supprimée ne doit pas laisser une texture accessible aux **nouveaux rendus**. En revanche, les `RenderSnapshot` **déjà construits** peuvent conserver les `Framebuffer::Handle` et `Texture::Handle` concrets jusqu'à leur fin d'utilisation, sans prolonger la vie logique de la vue.
+
+**Deux opérations distinctes.** `Engine::updateState(context)` fait avancer le monde, les entités et systèmes ; **ne construit et ne publie aucun snapshot**. `RenderingEngine::refreshRenderSnapshot()` lit les contributeurs et les `EngineView`, prépare les commandes des vues, construit le `RenderSnapshot` moteur puis le publie dans un `ThreadSafeSlot<RenderSnapshot>` propre au moteur. Une construction échouée ne publie pas de snapshot partiel et laisse le précédent en place. Les `RenderCommand` publiées ne lisent plus les `Transform3D`, `Assembly`, caméras ou lumières mutables. Le slot fournit des `shared_ptr<const RenderSnapshot>`, chacun utilisable par plusieurs consommateurs. Aucune exécution OpenGL n'a lieu durant les deux opérations.
+
+**Rafraîchissement au rythme des fenêtres.** La boucle Update de l'Application continue d'appeler les mises à jour des widgets. La construction du `RenderSnapshot` **de fenêtre** reste **sur demande**, comme dans Sparkle actuel : un rendu précédent peut demander la prochaine capture. Ce n'est que lors de cette construction qu'un `EngineWidget` ayant le rôle `Render` appelle `refreshRenderSnapshot()`. Publier un nouveau snapshot moteur **ne déclenche pas** automatiquement le rafraîchissement des autres fenêtres. Chaque demande `Render` est indépendante, sans déduplication automatique : plusieurs widgets peuvent reconstruire le snapshot moteur successivement, à la charge du développeur.
+
+**Un seul `EngineWidget`, trois rôles combinables.** `bind(RenderingEngine*)` installe une liaison **non propriétaire**. Un `spk::Flags<EngineWidget::Role>` (syntaxe indicative) distingue :
+
+- `Update` : appelle `Engine::updateState()` et utilise la propagation existante des événements et du device, selon le contrat de focus ;
+- `Render` : sur demande de snapshot de **sa fenêtre**, appelle `refreshRenderSnapshot()` et ajoute la commande d'exécution du snapshot moteur dans cette fenêtre ;
+- `Drawing` : affiche dans sa géométrie la **texture locale** d'une vue sélectionnée, sans provoquer update ni capture.
+
+Les rôles peuvent être combinés : `Update|Render|Drawing` pour une fenêtre principale, `Render|Drawing` pour une fenêtre secondaire, `Drawing` pour un écran de contrôle affichant le résultat courant, ou `Update` sans vue affichée. Il n'existe plus de `EngineViewWidget` séparé. Deux widgets avec rôle `Update` peuvent faire deux mises à jour, sans garde-fou ni association automatique. Les rôles `Render` et `Drawing` sont également indépendants ; le second ne relance jamais le premier.
 
 ```cpp
-// API illustrative, pas une signature publique définitive.
-engine.addView("main", playerCamera, {1280, 720});
-engine.addView("minimap", minimapCamera, {512, 512});
+// Exemple conceptuel (constructeurs/Flags et noms secondaires à finaliser).
+spk::RenderingEngine engine;
+engine.addView("surveillance", surveillanceCamera, {640, 360}, 0);
+engine.addView("main", playerCamera, {1280, 720}, 1);
 
-engineWidget.setEngine(&engine);      // affichage de "main" par convention
-// minimapWidget est un EngineViewWidget, pas un EngineWidget.
-minimapWidget.setEngine(&engine);
-minimapWidget.setViewID("minimap");   // affichage seul : ni update ni capture
+mainWidget.bind(&engine);
+mainWidget.setRoles(Role::Update | Role::Render | Role::Drawing);
+mainWidget.setViewID("main");
 
-// En réponse à un redimensionnement, uniquement si le jeu le décide :
-engine.view("main").setSize({1600, 900});
-playerCamera.setProjection(/* choix du jeu */);
+secondaryWidget.bind(&engine);
+secondaryWidget.setRoles(Role::Render | Role::Drawing);
+secondaryWidget.setViewID("surveillance");
+
+// Une autre vue est retrouvable depuis sa propre CameraComponent :
+spk::EngineView& monitor = surveillanceCamera.view("surveillance");
 ```
 
-**Responsabilité du développeur en cas de producteurs multiples.** Si deux `EngineWidget` sont associés au même Engine, chacun effectue ses propres demandes d'update et de rendu. Sparkle ne bloque, ne fusionne et ne déduplique **ni les mises à jour, ni les captures**. Le cache de textures reste partagé par fenêtre, mais cela ne constitue **pas** une garantie de production unique lorsque plusieurs widgets producteurs écrivent dans les mêmes vues. L'application doit organiser leur usage et leur ordre de contribution si elle choisit cette configuration. Aucune protection automatique contre le « multi-update » ne fait partie de V0.1.4.
-
-**Points encore ouverts :** signatures finales des API de gestion des vues, règles d'identité/durée de vie des caméras et Engines référencés, comportement si `ViewID` est introuvable ou si aucune image n'est disponible, accès au cache par fenêtre lors de la **construction du snapshot**, synchronisation entre update et render, politiques précises des ressources d'ombres et des cibles WBOIT, et adaptation des contributions graphiques existantes pour recevoir la vue courante. **Aucune protection contre plusieurs `EngineWidget` d'un même Engine n'est demandée.** La présence d'une vue déclarée ne signifie pas qu'elle est rendue immédiatement hors du cycle de snapshot. Ce modèle ne duplique ni le Registry, ni les `RenderPass`, ni le `RenderSnapshot` existants.
+**Deux niveaux de snapshots, sans seconde boucle GPU.** Le `RenderingEngine` possède son slot de snapshot moteur, commun à toutes les fenêtres. L'`Application` conserve son slot de `RenderSnapshot` **par fenêtre**, contenant UI et commandes de ses widgets. Le widget `Render` insère, dans le snapshot de cette fenêtre, une `RenderCommand` qui **capture le `shared_ptr<const RenderSnapshot>` moteur sélectionné**, puis exécute `engineSnapshot->execute(renderContext)` sur le thread de rendu de la fenêtre. Ainsi une publication ultérieure du slot moteur ne change pas le snapshot déjà capturé par A, même si B en choisit un plus récent.
 
 ```mermaid
 flowchart TB
-  subgraph Core["sparkle::core, sans OpenGL"]
-    Engine["Engine"]
-    VMain["EngineView : main"]
-    VMap["EngineView : minimap"]
-    CMain["CameraComponent joueur"]
-    CMap["CameraComponent carte"]
-    Engine --> VMain --> CMain
-    Engine --> VMap --> CMap
+  subgraph U["Thread Update : cycle existant"]
+    Widgets["Widget::updateState()"]
+    Logic["Role Update : Engine::updateState()"]
+    Requested["Demande de RenderSnapshot d'une fenêtre"]
+    Refresh["Role Render : RenderingEngine::refreshRenderSnapshot()"]
+    Slot["ThreadSafeSlot moteur"]
+    WindowSnap["Builder : snapshot de fenêtre (délégation + Drawing + UI)"]
+    Widgets --> Logic
+    Requested --> Refresh --> Slot --> WindowSnap
   end
-  subgraph Graphics["sparkle::sparkle, une fenêtre"]
-    Producer["EngineWidget : update + rendu + affichage"]
-    Pipeline["RenderingEngine + RenderSnapshot"]
-    Cache["Cache (Surface, Engine, ViewID)"]
-    FBMain["Framebuffer main"]
-    FBMap["Framebuffer minimap"]
-    Viewer["EngineViewWidget : affichage uniquement"]
-    Producer --> Pipeline --> Cache
-    Cache --> FBMain
-    Cache --> FBMap
-    FBMain --> Producer
-    FBMap --> Viewer
+  subgraph G["Thread GPU : par Window::Surface"]
+    Consume["Consommer le snapshot de fenêtre"]
+    EngineExec["Commande : execute du snapshot moteur"]
+    ViewPass["Capturer les EngineView dans l'ordre explicite"]
+    Textures["Framebuffer et textures OpenGL de cette surface"]
+    UI["Drawing et rendu UI"]
+    Consume --> EngineExec --> ViewPass --> Textures --> UI
   end
-  Engine --> Producer
-  Engine --> Viewer
-  VMain -. "résolution et caméra" .-> Pipeline
-  VMap -. "résolution et caméra" .-> Pipeline
+  WindowSnap --> Consume
 ```
 
-**Le cache n'est pas une seconde abstraction de scène :** ses entrées gardent des cibles GPU persistantes, tandis que `RenderSnapshot` reste le seul conteneur de commandes temporaires. Les widgets ne font pas de lecture directe d'OpenGL : ils récupèrent les handles des textures finales à présenter au moment de préparer leurs commandes de dessin.
+**Rendu partagé, réentrance obligatoire.** Un snapshot moteur est une **description de commandes immuable**. Il doit être possible de l'exécuter sur deux `RenderContext` distincts, éventuellement simultanément, sans écrire dans l'état mutable partagé des commandes. Les allocations et synchronisations OpenGL sont locales à la `Window::Surface`. Le `ThreadSafeSlot` garantit la durée de vie de l'objet snapshot, mais **n'assure pas** à lui seul la réentrance des commandes personnalisées ni la synchronisation de mutations concurrentes durant la capture CPU. Les mutations de `Engine` / caméra / Assemblies et `refreshRenderSnapshot()` doivent être coordonnées sur le thread Update, ou synchronisées explicitement par l'appelant.
 
-**Séquence fonctionnelle d'une fenêtre avec un seul `EngineWidget` producteur :**
+**Cas de l'écran de surveillance.** La vue `surveillance` d'ordre 0 doit être **complètement** rendue (ombres, opaque, WBOIT, composition, texture finale) avant que la vue `main` d'ordre 1 utilise sa texture comme matériau de son écran 3D. Le jeu fixe l'ordre des vues ; Sparkle ne déduit pas de dépendances automatiquement d'un Material. Le `RenderSnapshot::Builder` existant fusionne des passes de même nom et les trie par ordre numérique : le regroupement des phases **par vue complète** doit donc être prévu explicitement (p. ex. une commande exécutant les passes d'une sous-capture par vue, ou des ordres globaux isolés). **Le choix précis d'encodage des phases reste ouvert**, mais un tri global « toutes les ombres, puis tous les opaques » de toutes les vues serait incorrect. Les réglages de cible, viewport, scissor, depth, blending et le retour au framebuffer de fenêtre pour la présentation sont explicites.
+
+**Une source de texture EngineView dans un Material.** Le `Material` statique existant capture un `Texture::Handle`. Pour représenter un écran de surveillance dont la source survit aux changements de résolution **mais pas à la destruction de la vue**, une variante de source doit référencer **non propriétaire** la `EngineView`. Lors de la construction d'un snapshot, Sparkle résout sa version courante du framebuffer et capture **les handles concrets** dans les commandes. Le `Material` lui-même ne conserve pas des handles GPU pérennes pour cette source ; il n'empêche pas la destruction de la vue. Ceci ne copie pas les pixels entre fenêtres : un handle de sortie de vue se réalise localement selon `RenderContext::targetSurface`. Le type exact de liaison et les règles d'unicité d'atlas voxel pour les sources dynamiques restent à définir.
+
+**Rendu ou dessin seul.** `Render` produit les vues du moteur dans la surface courante sans nécessairement en afficher aucune ; `Drawing` dessine la vue sélectionnée sans forcément déclencher une nouvelle capture. Il affiche donc la dernière sortie **locale** de cette vue, si elle existe. Un widget ne doit pas supposer que la dernière exécution du snapshot moteur dans une autre fenêtre a mis à jour ses propres textures.
+
+**Séquence multifenêtre et publication indépendante.**
 
 ```mermaid
 sequenceDiagram
-  participant Game as Code du jeu
-  participant Engine as Engine / EngineView
-  participant Owner as EngineWidget
-  participant Render as RenderingEngine
-  participant Cache as Cache par fenêtre
-  participant Builder as RenderSnapshot.Builder
-  participant Viewer as EngineViewWidget
-  participant GPU as Thread de rendu
-  Game->>Engine: enregistrer "main" et "minimap" + caméras + résolutions
-  opt Le jeu décide d'un redimensionnement
-    Game->>Engine: modifier explicitement la taille d'une EngineView
-    Note over Game,Engine: Le jeu modifie aussi la projection caméra s'il le souhaite
+  participant U as Application / Thread Update
+  participant A as EngineWidget A : Update|Render|Drawing
+  participant B as EngineWidget B : Render|Drawing
+  participant E as RenderingEngine : Engine
+  participant S as ThreadSafeSlot moteur
+  participant SA as Slot fenêtre A
+  participant SB as Slot fenêtre B
+  participant GA as Thread GPU / Surface A
+  participant GB as Thread GPU / Surface B
+  loop Chaque tick logique
+    U->>A: updateState(context)
+    A->>E: Engine::updateState(context)
   end
-  Owner->>Engine: updateState (simulation)
-  Owner->>Render: construire les captures de toutes les EngineView
-  loop chaque EngineView
-    Render->>Cache: obtenir ou renouveler les cibles de cette vue
-    Cache-->>Render: handles GPU
-    Render->>Builder: ajouter ombres, opaque, WBOIT, composition finale
+  opt Nouvelle image demandée en fenêtre A
+    U->>A: construire snapshot A
+    A->>E: refreshRenderSnapshot()
+    E->>S: publish(snapshot n)
+    A->>S: acquireLatest() => n
+    A->>SA: commande execute(n) + Drawing main + UI
+    SA-->>GA: snapshot fenêtre A
+    GA->>GA: execute(n) avec context A, puis présentation A
   end
-  Owner->>Cache: consulter la texture finale de "main"
-  Cache-->>Owner: Texture::Handle
-  Owner->>Builder: ajouter une commande d'affichage de "main"
-  Viewer->>Cache: consulter la texture finale de "minimap"
-  Cache-->>Viewer: Texture::Handle
-  Viewer->>Builder: ajouter une commande d'affichage, sans update ni capture
-  Builder->>GPU: exécuter le RenderSnapshot
-  Note over GPU: L'ordre des passes assure que les textures sont produites avant leur affichage
+  opt Nouvelle image demandée en fenêtre B
+    U->>B: construire snapshot B
+    B->>E: refreshRenderSnapshot()
+    E->>S: publish(snapshot n+1)
+    B->>S: acquireLatest() => n+1
+    B->>SB: commande execute(n+1) + Drawing surveillance + UI
+    SB-->>GB: snapshot fenêtre B
+    GB->>GB: execute(n+1) avec context B, puis présentation B
+  end
+  Note over GA,GB: GPUResourceCollection A et B : objets GL distincts, aucune copie des pixels.
 ```
-
-Cette séquence décrit le scénario usuel, avec **un producteur**. L'existence de plusieurs `EngineWidget` sur le même Engine n'est pas un cas dont Sparkle doit protéger le développeur : chacun peut demander des updates et des captures supplémentaires. Une vue peut aussi être produite sans être affichée ; à l'inverse, un `EngineViewWidget` isolé ne crée pas automatiquement une image manquante. La configuration des identifiants de passes pour plusieurs vues dans le même snapshot reste à spécifier.
 
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
-`spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU. **`spk::RenderingEngine`, `spk::RenderSnapshot`, `spk::RenderPass` et `spk::RenderCommand` restent les mécanismes centraux d'orchestration et d'exécution du rendu** ; l'éclairage, les ombres et le WBOIT sont implémentés en V0.1.4 **en les réutilisant**, au moyen des commandes et ressources GPU manquantes et, seulement si nécessaire, de contributions spécialisées au snapshot. **Aucun second ordonnanceur de passes, `SceneRenderingSystem` imposé ni pipeline parallèle n'est introduit.** Le pipeline emploie le **Forward Rendering** pour calculer directement l'éclairage dans les shaders des surfaces. Le code voxel apporte ses commandes de dessin aux passes communes, mais ne possède pas l'orchestration générale.
+Le `VoxelRenderingSystem` contribue aux `RenderPass` et `RenderCommand` du snapshot moteur ; il n'introduit pas de second ordonnanceur voxel. Le pipeline générique utilise le **Forward Rendering**. Des passes explicites `renderPassA.init` et `renderPassA` peuvent préparer puis utiliser le GPU, à condition que `init.order < draw.order` ; les suffixes ne créent aucune priorité implicite. La chaîne complète **par vue** inclut la préparation des shadow maps, l'opaque, le WBOIT puis la composition. La présentation du widget suit dans le snapshot **de fenêtre**.
 
-**Phases d'initialisation par passes ordonnées.** Lorsqu'une passe de rendu a besoin d'une préparation préalable (activation d'une cible `Framebuffer`, effacement, réglages de profondeur, blending ou état GPU nécessaire au groupe de commandes suivant), elle peut disposer d'une **passe distincte d'initialisation** dans le même `RenderSnapshot` : par exemple `renderPassA.init` puis `renderPassA`. Chaque contribution enregistre explicitement ses commandes dans la passe qui lui correspond ; il n'y a pas de hook d'initialisation caché ni de second mécanisme de phases.
-
-L'**ordre d'exécution** est garanti par les **valeurs numériques `RenderPass::Key::order`**, comme dans Sparkle aujourd'hui, **pas par le suffixe `.init` ni par un tri lexical des noms**. Les clés d'une paire doivent donc vérifier `init.order < draw.order`, avec des ordres choisis de façon cohérente avec les autres passes du même snapshot. Une même clé (nom et ordre) permet à plusieurs contributeurs de compléter une même passe ; les commandes d'une passe s'exécutent dans leur ordre d'ajout, **sans dépendre de l'ordre de visite des composants pour placer l'initialisation avant tout dessin**. Des vues distinctes doivent conserver leurs cibles et leurs paramètres de caméra séparés : la politique de noms et d'ordres des passes doit garantir la capture de chaque vue avant toute présentation de sa texture. Une passe `.init` n'est créée que lorsqu'une phase distincte est nécessaire.
-
-Les shadow maps, le rendu opaque, le WBOIT et sa composition peuvent être représentés par des passes ainsi ordonnées, en conservant les possibilités de `RenderingEngine`. Les **cibles persistantes sont gérées par le cache graphique par `(Window::Surface, Engine, ViewID)`**, conformément à la section précédente. Il reste à définir les **commandes concrètes de gestion des cibles et des états GPU**, la configuration détaillée des attachments et des ombres, la synchronisation entre snapshots, ainsi que les clés finales des passes. L'existence de `RenderPass` ne signifie pas que ces commandes spécialisées existent déjà.
-
-À chaque préparation de snapshot, le système :
-
-1. parcourt les `ModelRenderingComponent` et `AssemblyRenderingComponent` actifs du bon Engine ;
-2. reconstruit les matrices globales des Entities et les matrices accumulées des parties d'Assembly, sans utiliser un cache inter-frame basé sur la version ;
-3. produit les occurrences visibles des meshes opaque et translucide, avec les associations Model/Palette propres à chaque occurrence ;
-4. valide les associations requises et groupe les occurrences en **buckets compatibles** : mesh, passe, atlas, mapping de matériaux et autres bindings GPU pertinents ;
-5. prépare de **nouveaux SSBO** pour les instances et les matériaux utilisés par ce snapshot, puis ajoute les commandes de dessin instancié.
+Pendant chaque `refreshRenderSnapshot()`, et pour chaque vue demandée par le RenderingEngine, le système :
+1. collecte les `ModelRenderingComponent` et `AssemblyRenderingComponent` actifs de cet Engine ;
+2. reconstruit les transforms des Entities et des parties d'Assembly ;
+3. calcule les occurrences visibles pour la caméra de la vue, en distinguant opaque et translucide ;
+4. valide Model/Palette et groupe les occurrences par buckets compatibles ;
+5. prépare **de nouveaux SSBO** de snapshot pour les instances et matériaux, puis les commandes de dessin immuables.
 
 ```mermaid
 sequenceDiagram
-  participant Game as Jeu / animation
-  participant Engine as Engine
-  participant Widget as EngineWidget
-  participant Render as RenderingEngine
-  participant System as VoxelRenderingSystem
-  participant Builder as RenderSnapshot.Builder
-  participant Cache as Cache graphique fenêtre
-  participant GPU as Thread de rendu
-  Game->>Game: modifier Assembly, caméra ou EngineView explicitement
-  Widget->>Engine: updateState()
-  Widget->>Render: préparer toutes les EngineView de cet Engine
-  loop Pour chaque EngineView enregistrée
-    Render->>Cache: obtenir la cible (Engine, ViewID, résolution)
-    Cache-->>Render: handles de framebuffer et textures
-    Render->>System: fournir le contexte de vue / collecter les objets
-    System->>System: valider Model + Palette, recalculer matrices et buckets
-    System->>System: créer SSBO du snapshot (instances et matériaux)
-    System->>Builder: contribuer les commandes voxel pour la vue
-    Render->>Builder: ajouter les commandes communes (ombres, WBOIT, composition)
+  participant Game as Jeu
+  participant Engine as RenderingEngine
+  participant View as EngineView
+  participant Voxel as VoxelRenderingSystem
+  participant Builder as RenderSnapshot.Builder moteur
+  participant Slot as Slot du moteur
+  participant GPU as Exécution sur une Window::Surface
+  Game->>Engine: updateState(context) (simulation uniquement)
+  Game->>View: réglages éventuels (taille / ordre / projection caméra)
+  Game->>Engine: refreshRenderSnapshot() sur demande
+  loop Toutes les vues dans l'ordre
+    Engine->>View: capturer caméra, résolution, framebuffer logique
+    Engine->>Voxel: collecter visibilité et buckets pour cette vue
+    Voxel->>Builder: SSBO et commandes par passe
+    Engine->>Builder: état GPU, ombres, opaque, WBOIT, composition
   end
-  Widget->>Cache: retrouver la texture finale de la vue sélectionnée
-  Widget->>Builder: commande de présentation de la texture
-  Note over Builder: passes de capture avant passes de présentation
-  Builder->>GPU: exécuter le snapshot ordonné
-  Note over GPU: aucune lecture de Camera ni Assembly mutable
+  Builder-->>Engine: RenderSnapshot immuable
+  Engine->>Slot: publish(snapshot)
+  Slot-->>GPU: shared_ptr capturé par le snapshot de fenêtre
+  GPU->>GPU: execute(context.targetSurface) : réaliser les GPUResource locales
 ```
+
+L'instant de publication sépare les objets mutables du jeu des commandes différées. Un échec de build conserve l'ancien snapshot. Plusieurs threads GPU peuvent exécuter un même snapshot immuable, mais le build CPU n'est pas automatiquement protégé contre des mutations externes simultanées.
 
 ### 7.2 SSBO d'instances
 
@@ -783,13 +806,13 @@ flowchart LR
   Opaque --> Compose["Composition opaque + WBOIT"]
   Trans --> Compose
   Compose --> Tex["Texture finale de la vue en cache"]
-  Tex --> Main["EngineWidget : dessine la vue sélectionnée"]
-  Tex --> Other["EngineViewWidget : affiche sans capturer"]
+  Tex --> Main["EngineWidget : Role Drawing"]
+  Tex --> Other["Material : EngineView empruntée"]
   L["Éclairage générique : composants Light"] --> Opaque
   L --> Trans
 ```
 
-**L'éclairage, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque participera au rendu opaque/profondeur avec éclairage et ombres ; le mesh translucide passera par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'orchestration utilise les RenderPass ordonnées déjà disponibles, avec une éventuelle passe `.init` avant une passe de dessin ; le nom ne détermine jamais leur ordre. Les clés concrètes des passes, les commandes d'état GPU, les sources lumineuses, les attachments WBOIT et la composition restent à définir dans cette architecture commune. Les cibles de rendu sont associées aux EngineView dans le cache graphique propre à chaque fenêtre ; leur dimension ne dépend que de la résolution explicitement déclarée par le jeu. Les ombres sont disponibles uniquement pour les lumières directionnelles et spots ; les lumières ponctuelles éclairent sans créer de passe d'ombres. Les ombres directionnelles utilisent une seule carte de profondeur par lumière dans une EngineView rendue, sans Cascaded Shadow Maps dans cette version ; une éventuelle mutualisation des cartes entre vues reste un choix technique ouvert.
+**L'éclairage, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque participera au rendu opaque/profondeur avec éclairage et ombres ; le mesh translucide passera par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'orchestration utilise les RenderPass ordonnées déjà disponibles, avec une éventuelle passe `.init` avant une passe de dessin ; le nom ne détermine jamais leur ordre. Les clés concrètes des passes, les commandes d'état GPU, les sources lumineuses, les attachments WBOIT et la composition restent à définir dans cette architecture commune. Les cibles sont décrites par les framebuffers logiques des EngineView et réalisées, via GPUResourceCollection, en instances propres à chaque Window::Surface ; leur résolution n'est modifiée que par le jeu. Les ombres sont disponibles uniquement pour les lumières directionnelles et spots ; les lumières ponctuelles éclairent sans créer de passe d'ombres. Les ombres directionnelles utilisent une seule carte de profondeur par lumière dans une EngineView rendue, sans Cascaded Shadow Maps dans cette version ; une éventuelle mutualisation des cartes entre vues reste un choix technique ouvert.
 
 L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compris ses usages spécifiques du cutout ; ce document ne change pas son contrat général.
 
@@ -802,14 +825,19 @@ L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compri
 | `Shape`, `Definition`, `Volume`, `Model` | Données immuables, copies légères et partage interne | Réutilisables indépendamment du Builder d'origine |
 | `OcclusionCache` | Propriété de l'application ; table protégée | Mesher lié par pointeur **non propriétaire** |
 | `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
-| `Material` | Valeur immuable conservant des `Texture::Handle` | Pixels du State GPU partagé potentiellement vivants |
+| `Material` | Valeur immuable : handles statiques ou source EngineView empruntée | Aucune propriété d'une EngineView ; handles GPU capturés par les snapshots |
 | `VoxelPalette` | Valeur immuable, association de Materials | Aucune ressource GPU propre à la palette |
 | `AssetManager` | Possède les objets `T` du cache | `load<T>()` retourne `T&` emprunté ; `clear()` invalide |
 | `Assembly` | Possède sa hiérarchie mutable ; partage Models/Palettes immuables | Les composants empruntent l'Assembly |
-| `EngineView` | Vue logique nommée possédée par `Engine` dans `sparkle::core` | Référence sa caméra et sa résolution explicites, sans OpenGL |
-| Cache de vue graphique | Ressources persistantes par `(Window::Surface, Engine, ViewID)` dans `sparkle::sparkle` | Fournit les handles des images produites aux snapshots et widgets |
-| `EngineWidget` | Widget pilotant update + capture des EngineView + présentation d'une vue | N'empêche pas la présence d'autres producteurs pour le même Engine |
-| `EngineViewWidget` | Widget d'affichage seul, sans update ni capture | Réutilise une texture de vue déjà produite |
+| `Engine` | Moteur logique dans `sparkle::core` | Ne possède ni EngineView ni RenderSnapshot |
+| `RenderingEngine : Engine` | Moteur logique + graphiques dans `sparkle::sparkle` | Possède les EngineView et le slot du snapshot moteur |
+| `EngineView` | Vue logique/graphique possédée par RenderingEngine | Références non propriétaires ; framebuffer logique avec instances par surface |
+| `CameraComponent` | Component3D graphique lié à une Entity | Accès à ses vues par `camera.view(name)` contrôlé |
+| `Window::Surface` / `GPUResourceCollection` | Propriété de l'Application, propre à la fenêtre | Instance OpenGL par State de framebuffer ou texture |
+| `EngineWidget` | Widget avec rôles `Update`, `Render`, `Drawing` | `bind(RenderingEngine*)`, non propriétaire ; aucune classe d'affichage secondaire |
+| Slot moteur | ThreadSafeSlot de RenderingEngine | Snapshot partagé entre fenêtres via `shared_ptr<const RenderSnapshot>` |
+| Slot de fenêtre | ThreadSafeSlot de l'Application par fenêtre | Snapshot UI, capture du snapshot moteur et Drawing |
+| Material à source de vue | Material immuable, référence logique empruntée (API à préciser) | Ne maintient pas la vue en vie ; capture de handles uniquement dans les snapshots |
 | `RenderSnapshot` et commandes | Conservent les handles de ressources graphiques nécessaires | Aucun accès aux transforms mutables après publication |
 
 ### 8.2 Règles d'erreur et de publication
@@ -822,7 +850,7 @@ Aucune Shape, Volume, Model, VoxelPalette ou entrée AssetManager **partiellemen
 
 Les **responsabilités, données, règles de propriété, classifications, algorithmes et comportements décrits ci-dessus** constituent l'architecture à produire. Les exemples illustrent des interfaces possibles, sans obliger à employer un nom secondaire, un emplacement précis de classe, un conteneur particulier, un algorithme de triangulation spécifique ou une nouvelle abstraction de façade lorsque Sparkle dispose déjà du mécanisme nécessaire.
 
-En particulier, l'intégration finale doit s'appuyer sur les vrais `spk::Mesh<TVertex>`, `ShaderStorageBuffer`, `Texture::Handle`, `Registry`, `RenderingSystem`, `RenderSnapshot` et `RenderCommand` disponibles dans la bibliothèque. `EngineView`, le cache graphique par fenêtre et `EngineViewWidget` sont des **capacités à introduire**, et non des classes déjà présentes. `EngineWidget` reste un moteur de mise à jour et de rendu pour le jeu. Les détails numériques du clipping, les signatures définitives des Builders et des bindings de textures nommées, les types d'identifiants de Part et les bindings GPU exacts doivent respecter les contrats décrits sans ajouter de comportements implicites.
+En particulier, l'intégration finale doit s'appuyer sur les vrais `spk::Mesh<TVertex>`, `ShaderStorageBuffer`, `Texture::Handle`, `Registry`, `RenderingSystem`, `RenderSnapshot` et `RenderCommand` disponibles dans la bibliothèque. `EngineView`, la source Material fondée sur une vue et l'héritage `RenderingEngine : Engine` sont des **capacités à introduire ou refactoriser**. `ThreadSafeSlot`, `GPUResourceCollection` et `Framebuffer` existent déjà ; `EngineWidget` existe mais doit adopter les trois rôles configurables. Les détails numériques du clipping, les signatures définitives des Builders et des bindings de textures nommées, les types d'identifiants de Part et les bindings GPU exacts doivent respecter les contrats décrits sans ajouter de comportements implicites.
 
 Le présent texte est **la description de l'architecture souhaitée pour Sparkle V0.1.4**. Il ne constitue pas une autorisation de développement, de fusion ou de modification du code existant.
 
