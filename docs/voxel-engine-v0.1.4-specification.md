@@ -47,7 +47,7 @@ flowchart LR
     Components -.->|"ShadowMapContributor attache a Entity"| ShadowSource
     ShadowSource --> ShadowRegistry --> ShadowSys
     Views -->|"Layers filtres"| Sys
-    Views -->|"Layers + projections lumineuses"| ShadowSys
+    Views -->|"CaptureContext generique"| ShadowSys
     Sys -->|"Commandes visuelles uniquement"| ViewSnap
     ShadowSys -->|"Commandes d ombre uniquement"| ViewSnap
     Slot --> Window --> GPU
@@ -609,8 +609,9 @@ flowchart LR
   Checks --> FM["Carte finale dynamique par vue et lumiere"]
   SM --> FM
   FM --> Scene
-  View["EngineView : capture generique"] --> VR
-  View --> SR
+  View["EngineView : donnees generiques de capture"] --> Builder["RenderingEngine : Builder de sous-snapshot"]
+  Builder --> VR
+  Builder --> SR
 ```
 
 ### Caméras et lumières : composants 3D de l'Engine
