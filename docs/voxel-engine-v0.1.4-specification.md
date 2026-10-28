@@ -1161,9 +1161,10 @@ flowchart LR
 std::vector<spk::ShadowMap::MeshInstance> instances;
 instances.push_back({bodyShadowMesh, bodyLocalMatrix});
 instances.push_back({armShadowMesh, armAccumulatedLocalMatrix});
-shadowContributor.bind(instances); // Remplace TOUT et notifie une seule fois.
+shadowContributor.bind(instances, assemblyLocalMatrix); // M_assembly sur toutes les Parts ; remplace TOUT.
 shadowContributor.setShadowMode(ShadowMode::Dynamic, ShadowPropagation::SelfOnly);
-// Nouvelle pose : recalculer les matrices, puis rappeler bind(instances).
+// Nouvelle pose : recalculer les matrices des Parts, puis bind(instances, assemblyLocalMatrix).
+// Deplacement de toute l Assembly : bind(instances, nouvelleAssemblyLocalMatrix).
 // Cas simple : shadowContributor.bind(modelShadowMesh); // Matrice identite.
 ```
 
@@ -1177,7 +1178,7 @@ Les noms secondaires et la qualification exacte des enums sont illustratifs ; le
 
 **Setter et notifications automatiques.** `ShadowMap::Contributor::setShadowMode(mode, propagation)` compare les deux valeurs. Si le mode **ou** la politique change, il enregistre le nouveau couple et notifie son **`ContractProvider` propre aux ombres** ; sinon il ne notifie rien. `ShadowMap::RenderingSystem` souscrit par contrats RAII à ses `ShadowMap::Contributor` connus ; à la réception, il marque **ses caches statique et final** logiquement invalides pour les vues/lumières concernées. Aucun appel manuel à `invalidateShadowMap()` n'est exigé après le setter, et aucune copie de l'ancienne catégorie n'est requise. Les événements de transformation, de reparenting, de modification de la géométrie `MeshFilter`, des layers ou de la disponibilité d'une source demandent également une invalidation, selon des mécanismes précis encore à finaliser.
 
-**Séquence de liaison d'une Assembly animée (A1, clos).** Le jeu produit toutes les matrices locales et soumet un nouvel ensemble atomique. Le système graphique n'extrait pas de Parts depuis l'Assembly et la thread GPU ne consulte pas les objets mutables.
+**Séquence de liaison d'une Assembly animée (A1, matrice commune).** Le jeu calcule les matrices des Parts relatives au repère de l'Assembly et sa matrice commune relative à l'Entity, puis soumet l'ensemble atomiquement. Le système graphique n'extrait pas de Parts depuis l'Assembly et la thread GPU ne consulte pas les objets mutables.
 
 ```mermaid
 sequenceDiagram
@@ -1189,22 +1190,23 @@ sequenceDiagram
   participant GPU as RenderContext
   Jeu->>Assembly: modifier poses des Parts
   Jeu->>Assembly: invalidate() pour chemin visuel
-  Jeu->>Assembly: lire meshes ombre et matrices locales cumulees
+  Jeu->>Assembly: lire meshes et matrices Parts relatives a Assembly
   Assembly-->>Jeu: collection de MeshInstance (valeurs)
-  Jeu->>C: bind(collection) (remplacement entier)
-  C->>C: copier Mesh partages + matrices, valider
+  Jeu->>Jeu: preparer M_base = matrice Assembly dans repere Entity
+  Jeu->>C: bind(collection, M_base) (remplacement entier)
+  C->>C: copier Mesh partages + matrices Parts + M_base, valider
   alt Erreur de validation
-    C-->>Jeu: Exception ; ancienne collection intacte
+    C-->>Jeu: Exception ; collection et M_base precedentes intactes
   else Liaison acceptee
-    C->>C: substituer toute la collection
+    C->>C: substituer ensemble collection et M_base
     C-->>Sh: ContractProvider : un evenement
     Sh->>Sh: invalider caches des ombres concernes
   end
   Jeu->>Sh: capture vue suivante via RenderingEngine
   Sh->>C: lire collection et Entity world matrix sur thread capture
-  C-->>Sh: MeshInstance[] et M_entityWorld
+  C-->>Sh: MeshInstance[], M_base et M_entityWorld
   loop Chaque MeshInstance et lumiere admissible
-    Sh->>Sh: M_world = M_entityWorld * M_instanceLocal
+    Sh->>Sh: M_world = M_entityWorld * M_base * M_instanceLocal
     Sh->>B: commandes profondeur avec mesh et matrice captures
   end
   B-->>GPU: snapshot immuable publie et execute plus tard
@@ -1218,9 +1220,9 @@ sequenceDiagram
 ```mermaid
 flowchart TD
   Source["ShadowMap::Contributor : ShadowMode + Propagation + MeshFilter"] --> Change{"Setter : mode ou propagation modifies ?"}
-  Bind["bind(mesh, matrice) ou bind(collection)"] --> Validate["Preparer et valider toute la collection"]
+  Bind["bind(mesh, matrice) ou bind(collection, matrice commune)"] --> Validate["Preparer et valider la collection et la matrice commune"]
   Validate -->|"Echec : garder ancienne"| Failure["Aucun changement ni notification"]
-  Validate -->|"Succes"| Swap["Remplacer toute la collection"]
+  Validate -->|"Succes"| Swap["Remplacer collection ET matrice commune"]
   Swap --> Geom["Une notification par bind reussi"]
   Geom --> Provider
   Change -->|"Non"| Nothing["Aucun evenement"]
@@ -1505,15 +1507,16 @@ flowchart TD
     Draw --> Forward["Passe opaque Forward+"]
     Draw --> WBOIT["Passe translucide WBOIT"]
     ShadowDepth -->|"copie partagee"| MeshPart["MeshInstance : Mesh + matrice locale"]
-    Assembly -->|"Composer matrices des Parts, jeu"| MeshPart
-    MeshPart -->|"bind(collection) : remplacement complet"| Caster["ShadowMap::Contributor : MeshFilter"]
+    Assembly -->|"Composer matrices Parts relatives a Assembly"| MeshPart
+    AssemblyMatrix["Matrice Assembly relative a Entity"] -->|"appliquer avant toutes les Parts"| Caster["ShadowMap::Contributor : MeshFilter"]
+    MeshPart -->|"bind(collection, assemblyMatrix) : remplacement complet"| Caster
     Caster --> Shadow["ShadowMap::RenderingSystem : caches ombres"]
     Shadow --> Light["Profondeurs finales vers eclairage"]
     Light --> Forward
     Light --> WBOIT
 ```
 
-Les liaisons depuis `Model` et ses **meshes visuels** vers le rendu représentent la **géométrie du modèle emprunté**, et non la possession des objets par `VoxelRenderingSystem`. Un `ShadowMap::Contributor` est distinct des composants de rendu visuel ; il n'est jamais créé automatiquement par ce flux. Le mesh d'ombre du Model doit aussi être **lié explicitement** à un Contributor. Le `MeshFilter` détient une collection de `MeshInstance` dont les meshes partagent leurs données immuables et dont les matrices locales sont des valeurs. Pour une `Assembly`, le jeu compose les matrices locales cumulées par Part et **remplace toute la collection** par `bind(collection)` après chaque nouvelle pose ; aucune fusion de géométries ni notification automatique par l'Assembly n'est introduite.
+Les liaisons depuis `Model` et ses **meshes visuels** vers le rendu représentent la **géométrie du modèle emprunté**, et non la possession des objets par `VoxelRenderingSystem`. Un `ShadowMap::Contributor` est distinct des composants de rendu visuel ; il n'est jamais créé automatiquement par ce flux. Le mesh d'ombre du Model doit aussi être **lié explicitement** à un Contributor. Le `MeshFilter` détient une collection de `MeshInstance` dont les meshes partagent leurs données immuables et dont les matrices locales sont des valeurs. Pour une `Assembly`, le jeu compose les matrices des Parts **relatives à l'Assembly**, et fournit la **matrice commune de l'Assembly relative à l'Entity** à `bind(collection, assemblyMatrix)` après chaque nouvelle pose ou changement de la matrice commune. Le résultat suit `M_entityWorld * M_assembly * M_partLocal` sans double application des transformations. La matrice commune peut changer sans remailler ou recalculer les transformations locales des Parts ; aucune fusion géométrique ni notification automatique par l'Assembly n'est introduite.
 
 ### 7.5 SSBO d'instances
 
@@ -1630,8 +1633,8 @@ L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compri
 | `EngineView::Contributor` | Type imbriqué hérité par RenderingComponent/Behaviour/Entity/System | Contributions aux vues admises par layers via `CaptureContext`, sans possession de vue ni logique d’ombre |
 | `ShadowMap` | Abstraction graphique de passe logique d’ombre | Expose Contributor et RenderingSystem imbriqués ; une seule RenderPass par Builder de vue ; clé statique commune envisageable mais non imposée |
 | `ShadowMap::Mesh` | Classe de profondeur dérivée de `spk::Mesh<spk::Vector3>` et factory de conversion position-seule | Conversion en nouveau contenu immuable ; copies légères par partage de `Mesh::Content` |
-| `ShadowMap::MeshInstance` | Entrée de collection du MeshFilter | Mesh immuable en copie légère et `Matrix4x4` locale détenue par valeur ; aucune identité pérenne |
-| `ShadowMap::Contributor` | Composant graphique attachable aux Entity3D | Mode `None`, propagation `SelfOnly`, layers vides initialement ; collection vide ; `bind(mesh, matrix)` / `bind(collection)` remplacent tout ; découvert par Registry |
+| `ShadowMap::MeshInstance` | Entrée de collection du MeshFilter | Mesh immuable en copie légère et `Matrix4x4` locale détenue par valeur dans le repère de la collection ; `baseTransform` distinct dans MeshFilter |
+| `ShadowMap::Contributor` | Composant graphique attachable aux Entity3D | Mode `None`, propagation `SelfOnly`, layers vides, collection vide et base identité initialement ; `bind(mesh, matrix)` / `bind(collection, baseMatrix)` remplacent intégralement les données ; découvert par Registry |
 | `ShadowMap::RenderingSystem` | RenderingSystem spécialisé | Construit les passes d’ombres, souscrit aux Contributors et conserve les caches par vue/lumière |
 | `CameraComponent` | Component3D graphique lié à une Entity | Accès à ses vues par `camera.view(name)` contrôlé |
 | `Window::Surface` / `GPUResourceCollection` | Propriété de l'Application, propre à la fenêtre | Instance OpenGL par State de framebuffer ou texture |
@@ -1673,7 +1676,7 @@ Cet inventaire résume les types et adaptations décrits dans les sections préc
 | `BlendRenderCommand`, `DepthRenderCommand`, `CullFaceRenderCommand`, `ColorMaskRenderCommand`, `FramebufferRenderCommand` | Configurer explicitement les états et cibles GL, y compris blending MRT distinct et depth sans écriture pour WBOIT | §7.2, §7.8 |
 | Commandes `Viewport` / `Scissor` (**noms indicatifs**) | Appliquer les états de cible et la résolution d'une vue et restaurer l'UI par le snapshot de fenêtre | §7.2 |
 | `CameraComponent`, `DirectionalLightComponent`, `SpotLightComponent`, `PointLightComponent` (**noms indicatifs**) | Composants 3D, capture des paramètres lumineux ; activation des ombres selon type | §7.4 |
-| `ShadowMap::Mesh` / `MeshInstance` / `ShadowMap::Contributor` / `ShadowMap::RenderingSystem` | Convertir les meshes, lier une collection complète de MeshInstance, capturer chaque matrice locale et mesh immuable, notifier une seule fois et reconstruire les caches | §7.3 |
+| `ShadowMap::Mesh` / `MeshInstance` / `ShadowMap::Contributor` / `ShadowMap::RenderingSystem` | Convertir les meshes, lier collection et matrice commune, capturer `M_entityWorld * M_base * M_instanceLocal` par entrée, notifier une seule fois et reconstruire les caches | §7.3 |
 | `spk::Texture` / `spk::Framebuffer` | Cubemaps de profondeur à six faces ; sélection explicite d'une face depth ; formats et attachments WBOIT | §7.4, §7.8 |
 | `spk::GPUResource` / `GPUResourceCollection` / `Window::Surface` | Instances par surface, handles immuables, récupération et recyclage sur le bon contexte | §7.3–7.4, §8.1 |
 | `spk::Voxel::Shape`, `Definition`, `Cell`, `Volume` | Géométrie, slots et volume dense immuables | §2 |
@@ -1719,11 +1722,12 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 - Un `ShadowMap::Contributor` et un `VoxelRenderingSystem` attachés à la même Entity fournissent respectivement géométrie d'ombre et rendu visible, sans commande d'ombre générée par le système voxel. Plusieurs sources et plusieurs lumières dans une vue produisent **une seule RenderPass d'ombres par vue**, mais une paire statique/finale indépendante pour chaque lumière.
 - Tester la factory de `ShadowMap::Mesh` depuis plusieurs types de vertices : extraction des positions, conservation de l'ordre des indices, winding, triangles et sommets partagés ; rejeter indice invalide, index count non multiple de trois et position non finie ; accepter un mesh source vide. Aucun contexte GL n'est requis pendant la conversion et le mesh source reste inchangé.
-- Tester un `Voxel::Model` après bake : deux meshes visuels au maximum, plus le mesh de profondeur position-seule issu des seuls triangles opaques ; ni palette ni Contributor automatique. Après `bind(shadowMesh)` ou `bind(shadowMesh, matrix)`, destruction des wrappers et du Model original : les meshes des `MeshInstance` conservent leurs données. Après `bind(collection)`, `bind(collection vide)` ou `unbind()` : remplacement intégral, notification unique et invalidation des caches concernés ; pas de fallback visuel ; anciens snapshots et leurs handles/matrices inchangés. Sans instances ou avec seulement des meshes vides, aucun triangle d'ombre n'est soumis et aucune exception n'est produite.
+- Tester un `Voxel::Model` après bake : deux meshes visuels au maximum, plus le mesh de profondeur position-seule issu des seuls triangles opaques ; ni palette ni Contributor automatique. Après `bind(shadowMesh)` ou `bind(shadowMesh, matrix)`, destruction des wrappers et du Model original : les meshes des `MeshInstance` conservent leurs données. Après `bind(collection, baseMatrix)`, `bind(collection)`, `bind(collection vide)` ou `unbind()` : remplacement intégral de la collection **et** de la matrice commune, notification unique et invalidation des caches concernés ; pas de fallback visuel ; anciens snapshots et leurs handles/matrices inchangés. Sans instances ou avec seulement des meshes vides, aucun triangle d'ombre n'est soumis et aucune exception n'est produite.
 - Valeurs initiales : Contributor facultatif, `ShadowMode::None`, `ShadowPropagation::SelfOnly`, aucun layer, collection vide. Avec une vue sans filtre, admission par layers mais aucune projection ; avec une vue à filtre explicite, Contributor sans layer exclu. Ajouter une instance sans sélectionner un mode projetant ne crée aucune ombre ; `Descendants` continue de propager son mode suivant les règles de A2.
-- `bind(mesh, matrix)` remplace une collection antérieure de plusieurs entrées par une **seule** instance ; `bind(mesh)` utilise une matrice identité ; `bind(collection)` préserve exactement le nombre et l'ordre des instances, y compris un même mesh utilisé plusieurs fois avec différentes matrices. `bind(collection vide)`/`unbind()` efface tout. Ni add/remove/ID ni fusion CPU des meshes.
-- Une `Voxel::Assembly` avec Parent/Enfant articulés est rendue par un Contributor et plusieurs `MeshInstance` dont les matrices locales contiennent **toute** la chaîne de Parts ; vérifier `M_entityWorld * M_partAccumulated`, au changement de rotation d'un parent, au changement de pose d'un enfant et à la translation globale de l'Entity. Une nouvelle pose nécessite un rebind explicite ; un déplacement global de l'Entity ne rebind pas la collection locale mais invalide les cartes via Transform3D. Les meshes immuables et leurs indices ne changent jamais.
-- Un `bind(collection)` réussi ne diffuse qu'**un** événement même avec plusieurs changements de meshes/matrices ; un échec de validation laisse la collection et le compteur d'invalidation inchangés. Un `bind()` sur Contributor purement `Dynamic` invalide **seulement la finale** ; sur `Static`, statique et finale, sans changer le comportement distinct de `setShadowMode`. Répéter un bind identique émet un événement selon la politique choisie (pas de comparaison profonde). Les snapshots existants gardent anciennes matrices et handles ; la capture suivante utilise uniquement les nouvelles instances, sans jamais accéder à l'Assembly pendant `execute()`.
+- `bind(mesh, matrix)` remplace une collection antérieure de plusieurs entrées par une **seule** instance ; `bind(mesh)` utilise une matrice identité ; `bind(collection)` préserve exactement le nombre et l'ordre des instances, y compris un même mesh utilisé plusieurs fois avec différentes matrices, **et remet la matrice commune à l'identité**. `bind(collection, baseMatrix)` conserve les instances et applique la même `baseMatrix` à toutes. `bind(collection vide)`/`unbind()` efface tout et remet la matrice commune à l'identité. Ni add/remove/ID ni fusion CPU des meshes.
+- Une `Voxel::Assembly` avec Parent/Enfant articulés est rendue par un Contributor et plusieurs `MeshInstance` dont les matrices locales contiennent **toute la chaîne de Parts depuis le repère de l'Assembly**, sans inclure sa matrice commune ; vérifier `M_entityWorld * M_assembly * M_partAccumulated`, sur des transformations non triviales (rotation et translation de l'Assembly), au changement de rotation d'un parent, au changement de pose d'un enfant et au déplacement de l'Entity. Vérifier l'absence de double application de la matrice d'Entity ou d'Assembly. Une nouvelle pose **ou un déplacement de l'Assembly relativement à l'Entity** nécessite un rebind explicite ; un déplacement global de l'Entity ne rebind ni la collection ni la matrice d'Assembly mais invalide les cartes via Transform3D. Les meshes immuables et leurs indices ne changent jamais.
+- Un `bind(collection)` réussi ne diffuse qu'**un** événement même avec plusieurs changements de meshes/matrices ; un échec de validation (matrice commune ou matrice enfant invalide) laisse la collection, la matrice commune et le compteur d'invalidation inchangés. Un `bind()` sur Contributor purement `Dynamic` invalide **seulement la finale** ; sur `Static`, statique et finale, sans changer le comportement distinct de `setShadowMode`. Répéter un bind identique émet un événement selon la politique choisie (pas de comparaison profonde). Les snapshots existants gardent anciennes matrices et handles ; la capture suivante utilise uniquement les nouvelles instances, sans jamais accéder à l'Assembly pendant `execute()`.
+- Changer **seulement** la matrice commune par `bind(collection, nouvelleBaseMatrix)` doit repositionner toutes les instances sans modifier leurs matrices locales ou le contenu des meshes, avec une seule notification. Les captures précédentes gardent les anciennes matrices ; un `bind(collection)` ultérieur remet la matrice commune à identité. Vérifier avec plusieurs Parts différentes et une transformation d'Entity non identité.
 - Deux instances de même mesh avec matrices différentes produisent deux silhouettes dans une carte de lumière (si toutes deux pertinentes) sans admission en double de la **même instance**. Les paramètres `ShadowMode`, `ShadowPropagation` et layers restent communs au Contributor entier, non configurés par entrée ; `Dynamic` et `Static` utilisent leurs caches respectifs, `None` aucun dessin.
 - `None` ne projette pas ; `Static` contribue au cache statique ; `Dynamic` à la finale. Tester propagation `SelfOnly` / `Descendants`, préservation des modes propres et absence de double dessin. Setter avec valeur inchangée : aucune invalidation ; changement de mode ou propagation : notification RAII et invalidation des deux caches.
 - Premier rendu d'une lumière : construire statique puis finale. Sans modification : aucune reconstruction. Changement d'un caster dynamique : ne reconstruire que la finale, après copie de la profondeur statique. Changement statique, lumière ou projection : reconstruire les deux. Deux surfaces conservent des validités et générations distinctes.
