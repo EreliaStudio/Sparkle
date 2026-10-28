@@ -606,7 +606,9 @@ sequenceDiagram
     participant C as Registry des ShadowMap::Contributor
     S->>V: Creer une RenderPass ombres avec une cle unique a cette vue
     S->>L: Enumerer les lumieres demandant des ombres
-    S->>S: Selection spatiale des PointLight sous budget de la vue
+    S->>S: Filtrer spatialement les PointLight candidates
+    S->>S: Calculer intensite x poids / distance camera bornee
+    S->>S: Classer par score decroissant, retenir au plus budget
     loop Chaque directionnelle, spot et PointLight retenue
         S->>C: Selectionner les casters admissibles a cette lumiere
         S->>V: Commandes de cible et cache statique si invalide
@@ -642,7 +644,8 @@ flowchart LR
   ShadowComp --> Registry["Registry des casters"]
   Registry --> SR["ShadowMap::RenderingSystem"]
   Filter --> SR
-  SR --> Budget["Budget spatial PointLight par EngineView"]
+  SR --> Score["PointLight : intensite x poids / distance bornee"]
+  Score --> Budget["Budget maximal PointLight par EngineView"]
   Budget --> RP["Une RenderPass ombres par EngineView"]
   RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
   Checks --> SM["Cache statique individuel de la lumiere"]
@@ -672,7 +675,18 @@ Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightCompon
 
 **Budget ponctuel par EngineView — choix B validé.** Les `PointLightComponent` ont les ombres **désactivées par défaut**, puis activables individuellement. Chaque vue possède un **budget maximal configurable du nombre de lumières ponctuelles pouvant projeter effectivement des ombres simultanément**. Cette configuration de budget est **détenue par le sous-système `ShadowMap` et associée à une `EngineView`**, sans ajouter de méthode d'ombre à la vue générique. Le nombre par défaut et la forme finale de l'API restent à spécifier, sans plafond arbitraire ; un budget nul signifie aucune ombre ponctuelle, mais pas une absence d'éclairage.
 
-**Sélection spatiale.** Lors de la capture de chaque vue, `ShadowMap::RenderingSystem` examine les lumières ponctuelles actives ayant **demandé** les ombres, recherche celles dont le volume d'influence peut atteindre les récepteurs pertinents de la vue, puis en retient **au plus le budget**. Le centre d'une lumière peut être **hors du frustum** tout en éclairant un objet visible : la sélection ne se fonde donc pas seulement sur la position du centre. L'algorithme exact de classement, les priorités, les égalités et la stabilité temporelle sont **à arbitrer ensuite** ; un même état de capture produit une sélection déterministe. Le culling des `ShadowMap::Contributor` dans la sphère de portée reste indépendant du classement Forward+ des lumières pour l'éclairage.
+**Sélection spatiale et priorité — choix B validé.** Lors de la capture de chaque vue, `ShadowMap::RenderingSystem` examine les lumières ponctuelles actives ayant **demandé** les ombres, recherche celles dont le volume d'influence peut atteindre les récepteurs pertinents de la vue, puis les classe par score **décroissant** et en retient **au plus le budget**. Le centre d'une lumière peut être **hors du frustum** tout en éclairant un objet visible : la sélection de candidats ne se fonde pas seulement sur la position de leur centre. Le score est une **heuristique de sélection des ombres**, indépendante du calcul d'atténuation physique et de l'intensité appliquée dans Forward+ :
+
+```text
+shadowPriority = intensity * shadowPriorityWeight / max(distanceCamera, minShadowDistance)
+```
+
+- `intensity` : intensité non négative du composant lumière, dans les unités de son contrat d'éclairage ; ne pas modifier le calcul d'éclairage pour classer les ombres.
+- `shadowPriorityWeight` : **coefficient propre à chaque `PointLightComponent`, égal à `1.0f` par défaut** ; une valeur supérieure favorise la lumière et une valeur inférieure la défavorise, **sans modifier sa luminosité**. Il ne s'agit pas d'une propriété du `ShadowMap::Contributor` ni de l'`EngineView`.
+- `distanceCamera` : distance euclidienne **de la lumière à la caméra associée à l'EngineView courante**, dans un même repère, lors de la capture.
+- `minShadowDistance` : valeur **strictement positive** dans les mêmes unités que la distance, évitant les divisions par zéro et les scores arbitrairement élevés lorsque la caméra est très proche. Elle appartient à la configuration du classement des ombres ; **sa valeur numérique reste à définir**, de même que celle du budget par défaut. Les paramètres négatifs ou non finis ne sont pas valides ; un poids égal à zéro ramène le score à zéro sans désactiver l'éclairage ni la demande d'ombres.
+
+Le résultat est ordonné par **score décroissant** après le filtrage spatial ; les scores égaux sont départagés **de manière déterministe** par une identité stable de lumière ou critère équivalent, sans dépendre de l'ordre accidentel du Registry. La **stabilité temporelle et l'hystérésis** en cas de scores voisins **restent à arbitrer** : aucun bonus pour les lumières précédemment retenues n'est encore validé. Modifier `intensity`, `shadowPriorityWeight`, la position de la lumière ou celle de la caméra doit se refléter dans le classement de la prochaine capture ; celui-ci ne lit aucun objet mutable lors de l'exécution GPU. Le culling des `ShadowMap::Contributor` dans la sphère de portée demeure indépendant du classement Forward+ des lumières pour l'éclairage.
 
 **Éclairage et observabilité.** Les lumières ponctuelles **écartées par le budget continuent d'éclairer via Forward+ sans ombre**. Seules les lumières sélectionnées ajoutent des opérations de cubemap à l'**unique `RenderPass` d'ombres de la vue**. L'éclairage ne doit jamais échantillonner une carte périmée d'une lumière non sélectionnée, même si la ressource GPU existe encore. L'exclusion `ombres demandées mais refusées par budget` doit être **observable** (statut par vue/lumière et raison ou diagnostic équivalent) et distincte de `ombres désactivées explicitement`. Pas de journalisation répétée par lumière et par frame non sollicitée.
 
@@ -682,7 +696,9 @@ Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightCompon
 flowchart TD
   Registry["Registry PointLight"] --> Eligible["Actives et ombres demandees"]
   Eligible --> Relevant["Selection selon influence spatiale pour la vue"]
-  Relevant --> Limit["Retenir au plus budget PointLight"]
+  Relevant --> Score["Score : intensite x shadowPriorityWeight / max(distanceCamera, minShadowDistance)"]
+  Score --> Order["Score decroissant, egalites deterministes"]
+  Order --> Limit["Retenir au plus budget PointLight"]
   Limit -->|"Selectionnees"| Cubes["Cubemaps si invalides"]
   Cubes --> Pass["RenderPass d ombres commune par vue"]
   Cubes --> Lit["Forward+ eclairage avec ombre valide"]
@@ -693,7 +709,8 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  Point["PointLight demandant des ombres"] --> Limit["Budget spatial de l EngineView"]
+  Point["PointLight demandant des ombres"] --> Score["Score intensite x poids / distance bornee"]
+  Score --> Limit["Budget spatial de l EngineView"]
   Limit -->|"Retenue"| Range["Culling sphere de portee et casters pertinents"]
   Limit -->|"Hors budget"| LightOnly["Forward+ sans ombres"]
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
