@@ -10,19 +10,18 @@
 
 Ces sujets peuvent modifier le contrat public ou le comportement observable de Sparkle. Ne soumettre **qu'une question importante à la fois** au mainteneur, avec des solutions compatibles avec la spécification existante.
 
-### A1 — Source du mesh et valeurs initiales de `ShadowMap::Contributor`
+### A1 — Intégration des Assemblies articulées et valeurs initiales de `ShadowMap::Contributor`
 
-**Références :** spécification §7.2–7.3.
+**Références :** spécification §3.6 et §7.2–7.3.
 
-Préciser le contrat exact du `MeshFilter` intégré :
+**Déjà résolu et documenté dans la spécification (ne pas réarbitrer) :** `ShadowMap::Mesh` est une classe dérivée de `spk::Mesh<spk::Vector3>`, avec factory statique de conversion générique depuis `spk::Mesh<TVertex>` par extracteur de position et conservation des indices. `ShadowMap::Contributor::bind(mesh)` conserve une copie légère du mesh et partage son contenu immuable via le `MeshFilter` intégré. Aucun fallback vers un mesh visuel, aucune création automatique de Contributor ; sans mesh ou avec mesh vide, aucun triangle de profondeur n'est produit. Les remplacements/détachements notifient le système d'ombres ; le bake voxel expose un mesh d'ombre distinct des deux meshes visuels.
 
-- Un `ShadowMap::Contributor` doit-il obligatoirement recevoir une géométrie d'ombre explicite, ou peut-il utiliser par défaut un mesh visible existant ? Si un fallback existe, quelle source fait foi lorsqu'une Entity contient plusieurs éléments visuels ?
-- Que se passe-t-il si aucun mesh de projection exploitable n'est disponible : source ignorée, état invalide ou exception, et à quel moment ?
-- Quelle propriété ou quel emprunt le `MeshFilter` conserve-t-il sur la géométrie ? Comment une modification, substitution ou disparition de cette source est-elle signalée ?
-- Quelles sont les valeurs initiales de `ShadowMode`, `ShadowPropagation` et des layers propres à ce composant ? Le caractère facultatif de sa présence sur une Entity doit être explicite.
+**Restent uniquement à préciser pour clôturer A1 :**
 
-**À préserver :** les sources d'ombres restent distinctes des composants visuels et du `VoxelRenderingSystem`; aucune création implicite d'un caster ne doit être présumée sans décision.
+- **Assemblies articulées :** une `Voxel::Assembly` peut avoir plusieurs parties mobiles et aucun `Entity` propre par partie. Comment exposer leurs meshes de profondeur et transforms locales au système d'ombres sans dépendance du sous-système générique à `Voxel::Assembly` et sans rebake implicite à chaque pose ? Décider entre plusieurs Contributors explicites, un Contributor multi-sources, ou un mesh de projection recomposé explicitement.
+- **Valeurs initiales :** fixer `ShadowMode`, `ShadowPropagation` et les layers du Contributor (ainsi que le caractère facultatif de sa présence). Respecter les règles générales de layers déjà validées ; ne pas introduire un mode de projection implicite.
 
+**À préserver :** séparation visuel/ombres, snapshots immuables, notifications de changements de liaison, et aucun travail GPU dans `bind()`.
 ### A2 — Propagation des modes d'ombres et conflits de chemins
 
 **Références :** spécification §7.2–7.3.
