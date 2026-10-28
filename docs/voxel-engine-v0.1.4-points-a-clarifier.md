@@ -10,19 +10,6 @@
 
 Ces sujets peuvent modifier le contrat public ou le comportement observable de Sparkle. Ne soumettre **qu'une question importante à la fois** au mainteneur, avec des solutions compatibles avec la spécification existante.
 
-### A1 — Intégration des Assemblies articulées et valeurs initiales de `ShadowMap::Contributor`
-
-**Références :** spécification §3.6 et §7.2–7.3.
-
-**Déjà résolu et documenté dans la spécification (ne pas réarbitrer) :** `ShadowMap::Mesh` est une classe dérivée de `spk::Mesh<spk::Vector3>`, avec factory statique de conversion générique depuis `spk::Mesh<TVertex>` par extracteur de position et conservation des indices. `ShadowMap::Contributor::bind(mesh)` conserve une copie légère du mesh et partage son contenu immuable via le `MeshFilter` intégré. Aucun fallback vers un mesh visuel, aucune création automatique de Contributor ; sans mesh ou avec mesh vide, aucun triangle de profondeur n'est produit. Les remplacements/détachements notifient le système d'ombres ; le bake voxel expose un mesh d'ombre distinct des deux meshes visuels.
-
-**Restent uniquement à préciser pour clôturer A1 :**
-
-- **Assemblies articulées :** une `Voxel::Assembly` peut avoir plusieurs parties mobiles et aucun `Entity` propre par partie. Comment exposer leurs meshes de profondeur et transforms locales au système d'ombres sans dépendance du sous-système générique à `Voxel::Assembly` et sans rebake implicite à chaque pose ? Décider entre plusieurs Contributors explicites, un Contributor multi-sources, ou un mesh de projection recomposé explicitement.
-- **Valeurs initiales :** fixer `ShadowMode`, `ShadowPropagation` et les layers du Contributor (ainsi que le caractère facultatif de sa présence). Respecter les règles générales de layers déjà validées ; ne pas introduire un mode de projection implicite.
-
-**À préserver :** séparation visuel/ombres, snapshots immuables, notifications de changements de liaison, et aucun travail GPU dans `bind()`.
-
 ### A2 — Propagation des modes d'ombres et conflits de chemins
 
 **Références :** spécification §7.2–7.3.
@@ -184,6 +171,6 @@ Un point peut être retiré lorsqu'il a été :
 
 Avant d'autoriser l'implémentation, une revue finale doit vérifier que les interfaces importantes sont réalisables, que les passages entre composants ne reposent pas sur des décisions implicites et qu'il existe des tests pour les contrats observables. Les scénarios de test des décisions **déjà validées** figurent dans la spécification et les futurs tests d'implémentation : ils n'ont pas à être répétés ici.
 
-**Priorité de travail suggérée :** traiter d'abord les questions d'intégration transversale (A1–A5), puis les contrats d'Assembly et de Material JSON (A6–A7) ; consolider T1–T7 en parallèle de la préparation de l'interface sans poser systématiquement de nouvelles questions.
+**Priorité de travail suggérée :** traiter d'abord les questions d'intégration transversale encore ouvertes (A2–A5), puis les contrats d'Assembly et de Material JSON (A6–A7) ; consolider T1–T7 en parallèle de la préparation de l'interface sans poser systématiquement de nouvelles questions.
 
 Ce document ne crée aucune nouvelle décision et ne modifie pas les choix approuvés dans la spécification.
