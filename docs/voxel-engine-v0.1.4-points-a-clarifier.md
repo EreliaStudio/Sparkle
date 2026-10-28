@@ -36,12 +36,12 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 **Références :** sections 7 et 7.1 de la spécification.
 
-**Décisions closes.** Approche A : un Builder et un sous-`RenderSnapshot` par EngineView, indépendants et reconstruits à chaque rafraîchissement ; le snapshot moteur possède une commande d'exécution par vue, ordonnée par le jeu. Un même `EngineView::Contributor` remplit le Builder de chaque vue avec son `CaptureContext` explicite. Aucun rendu de vue n'est entrelacé avec le suivant ; pas de mutualisation, de graphe de dépendances ni d'ordonnanceur supplémentaire. Les passes standard sont initialisées avec des RenderCommand d'état GPU et le retour à la présentation précède les widgets UI. Les slots moteur et fenêtre et les GPUResource par surface restent inchangés.
+**Décisions closes.** Approche A : un Builder et un sous-`RenderSnapshot` par EngineView, indépendants et reconstruits à chaque rafraîchissement ; le snapshot moteur possède une commande d'exécution par vue, ordonnée par le jeu. Un même `EngineView::Contributor` remplit le Builder de chaque vue avec son `CaptureContext` explicite. Aucun rendu de vue n'est entrelacé avec le suivant ; pas de mutualisation, de graphe de dépendances ni d'ordonnanceur supplémentaire. Les passes standard sont initialisées avec des RenderCommand d'état GPU et le retour à la présentation précède les widgets UI. **Extension validée (choix B) :** les Contributors peuvent ajouter des passes à ordre numérique explicite via le Builder existant, en respectant les clés et bornes réservées par le moteur ; ces passes restent locales à leur vue. Les slots moteur et fenêtre et les GPUResource par surface restent inchangés.
 
 **Questions résiduelles avant implémentation :**
 
 1. Quelle politique publique appliquer à **deux vues portant le même ordre numérique** ? Le Builder existant utilise un tri stable ; faut-il accepter cette priorité d'insertion ou refuser l'ambiguïté ? Quel ordre attribuer lorsqu'il n'est pas fourni ?
-2. Quel contrat permet aux Contributors d'ajouter des **passes graphiques personnalisées** sans déborder les phases réservées ni intercaler la composition ou les transitions de framebuffer ? Les plages/clés concrètes et la méthode d'extension restent à fixer.
+2. **Décision close sur l'extension :** les Contributors ajoutent librement des `RenderPass` locales à leur vue avec des `RenderPass::Key` explicites, à l'intérieur des limites réservées au moteur. **Précision technique restante :** finaliser les noms/ordres exacts, les plages disponibles, ainsi que la validation des collisions et des insertions interdites ; ne pas rouvrir le choix d'un Builder existant sans ordonnanceur supplémentaire.
 3. Où précisément placer les commandes de remise en état du framebuffer de présentation dans le **snapshot de fenêtre** pour qu'elles précèdent tous les widgets Drawing/UI, y compris lorsqu'un widget effectue uniquement Drawing ? Les invariants sont validés, leur encodage exact reste à préciser.
 4. Confirmer les règles d'erreur des vues manquantes, des changements d'ordre et de l'absence/déconnexion de caméra ; les références pendantes restent sous responsabilité du développeur.
 
@@ -167,7 +167,7 @@ Les principales responsabilités sont établies ; plusieurs noms/types exacts re
 
 ## 4. Ordre de résolution recommandé
 
-1. **P0 partiellement clos :** les sous-snapshots par vue, `EngineView::Contributor` et les commandes d'état typées sont validés ; finaliser seulement l'extension par passes personnalisées, les ordres égaux et le placement exact des commandes de présentation UI.
+1. **P0 partiellement clos :** les sous-snapshots par vue, `EngineView::Contributor`, les commandes d'état typées et l'extension par passes personnalisées explicites sont validés ; finaliser les valeurs des clés/plages réservées, les ordres égaux et le placement exact des commandes de présentation UI.
 2. **P0 :** fixer les configurations concrètes Forward/ombres/WBOIT (formats, blending par attachment et composition) et le remplacement des cibles lors des resizes en protégeant tous les snapshots en vol.
 3. **P0 :** finaliser la source `Material` fondée sur une `EngineView` et l'identité d'atlas dans les `VoxelPalette`, pour que la vidéosurveillance soit réellement implémentable.
 4. **P1 :** clarifier les frontières de thread et de propriété pendant la capture, y compris input et lifetimes des composants, puis la composition des Assemblies et le JSON complet des Materials.
