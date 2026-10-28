@@ -558,7 +558,7 @@ Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T
 
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
-`spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU.
+`spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU. Les primitives de RenderPass, Framebuffer et RenderCommand existent, mais **le pipeline de scène 3D complet, ses lumières, ses ombres et son WBOIT doivent être conçus et développés en V0.1.4**. Leur orchestration appartient à l'infrastructure de rendu 3D générique, et non aux classes voxel seules.
 
 À chaque préparation de snapshot, le système :
 
@@ -624,11 +624,11 @@ flowchart LR
   C["Mesh translucide (opacity < 1)"] --> D["WBOIT : accumulation"]
   B --> E["Composition finale"]
   D --> E
-  L["Éclairage et ombres 3D Sparkle"] --> B
+  L["Infrastructure générique 3D à créer en V0.1.4 : éclairage et ombres"] --> B
   L --> D
 ```
 
-Le moteur voxel **réutilise l'infrastructure de lumière, d'ombres et de rendu 3D de Sparkle**, au lieu de reproduire une seconde architecture graphique. Le mesh opaque suit le rendu opaque/depth habituel ; le mesh translucide passe par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials.
+**L'éclairage, les ombres et le pipeline WBOIT ne sont pas encore implémentés dans Sparkle : ils font partie des fonctionnalités à créer en V0.1.4 comme infrastructure graphique 3D générique.** Le système voxel doit s'y intégrer, sans en posséder une implémentation privée. Le mesh opaque participera au rendu opaque/profondeur avec éclairage et ombres ; le mesh translucide passera par **Weighted Blended OIT** puis sa composition. L'alpha est calculé et les pixels d'alpha exactement nul écartés dans les deux shaders, conformément à la section sur les Materials. L'organisation exacte des passes, des sources lumineuses, des buffers et de la composition reste à définir dans cette architecture commune.
 
 L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compris ses usages spécifiques du cutout ; ce document ne change pas son contrat général.
 
@@ -660,3 +660,5 @@ Les **responsabilités, données, règles de propriété, classifications, algor
 En particulier, l'intégration finale doit s'appuyer sur les vrais `spk::Mesh<TVertex>`, `ShaderStorageBuffer`, `Texture::Handle`, `Registry`, `RenderingSystem`, `RenderSnapshot` et `RenderCommand` disponibles dans la bibliothèque. Les détails numériques du clipping, les signatures définitives des Builders et des bindings de textures nommées, les types d'identifiants de Part et les bindings GPU exacts doivent respecter les contrats décrits sans ajouter de comportements implicites.
 
 Le présent texte est **la description de l'architecture souhaitée pour Sparkle V0.1.4**. Il ne constitue pas une autorisation de développement, de fusion ou de modification du code existant.
+
+Les **arbitrages architecturaux et précisions techniques encore nécessaires** sont regroupés dans un [document complémentaire de points à clarifier](voxel-engine-v0.1.4-points-a-clarifier.md). Ce document distinct ne modifie pas les contrats présentés ici tant qu'aucune décision nouvelle n'a été validée.
