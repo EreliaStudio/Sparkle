@@ -10,19 +10,6 @@
 
 Ces sujets peuvent modifier le contrat public ou le comportement observable de Sparkle. Ne soumettre **qu'une question importante à la fois** au mainteneur, avec des solutions compatibles avec la spécification existante.
 
-### A3 — Mise à disposition des cartes d'ombres finales à l'éclairage
-
-**Références :** spécification §7.3–7.4 et §7.8.
-
-Déterminer le **contrat de publication/consommation** des résultats de `ShadowMap::RenderingSystem` :
-
-- Par quelle interface générique les commandes Forward+ retrouvent-elles la carte finale, ses matrices et son état de validité pour une lumière et une vue données ?
-- Où sont capturées les références logiques et les générations, et comment leur réalisation est-elle résolue pour la `Window::Surface` courante ?
-- Comment signaler au shader une lumière dont les ombres ne sont pas disponibles ou sont différées, sans échantillonner de carte périmée ?
-- Comment éviter toute dépendance de `EngineView` envers `ShadowMap`, tout en conservant l'ordre de production puis de consommation au sein du sous-snapshot ?
-
-Ne pas confondre cette publication de ressources d'ombres avec le **culling Forward+ des lumières**, qui est indépendant.
-
 ### A4 — Découpage GPU de l'éclairage Forward+
 
 **Référence :** spécification §7.8.
@@ -94,6 +81,9 @@ Ces points ne nécessitent **pas automatiquement** une question au mainteneur. L
 
 **Contrat existant à exploiter, pas à redéfinir :** `GPUResource::Handle`, `State::LifeTime`, `GPUResourceCollection::ReclamationQueue` et le recyclage natif des ressources. Vérifier uniquement que `RenderRuntime::tickOnce()` rend le **bon contexte OpenGL courant** avant `reclaimReleased()`, y compris sans nouveau rendu et avec plusieurs surfaces. Ne pas ajouter de file de destruction ShadowMap ni de `GLsync` spécifique sans nécessité démontrée.
 
+
+**A3 déjà validé — ne pas réouvrir :** `ShadowMap::Output` par couple vue/lumière, capturé logiquement dans les commandes Forward+, résolu à l'exécution après la passe d'ombres pour la `Window::Surface` courante ; une carte finale/génération indisponible désactive uniquement les ombres de la lumière, jamais son éclairage. Restent techniques : représentation des générations et compatibilité des snapshots en vol, résolution de handles existants et binding des données de disponibilité côté shader. Aucun registre générique de ressources du `RenderSnapshot` ni dépendance `EngineView` → `ShadowMap`.
+
 ### T3 — Paramètres lumineux et qualité des ombres
 
 **Références :** spécification §7.3–7.4.
@@ -161,6 +151,6 @@ Un point peut être retiré lorsqu'il a été :
 
 Avant d'autoriser l'implémentation, une revue finale doit vérifier que les interfaces importantes sont réalisables, que les passages entre composants ne reposent pas sur des décisions implicites et qu'il existe des tests pour les contrats observables. Les scénarios de test des décisions **déjà validées** figurent dans la spécification et les futurs tests d'implémentation : ils n'ont pas à être répétés ici.
 
-**Priorité de travail suggérée :** traiter d'abord les questions d'intégration transversale encore ouvertes (A3–A5), puis les contrats d'Assembly et de Material JSON (A6–A7) ; consolider T1–T7 en parallèle de la préparation de l'interface sans poser systématiquement de nouvelles questions.
+**Priorité de travail suggérée :** traiter d'abord les questions d'intégration transversale encore ouvertes (A4–A5), puis les contrats d'Assembly et de Material JSON (A6–A7) ; consolider T1–T7 en parallèle de la préparation de l'interface sans poser systématiquement de nouvelles questions.
 
 Ce document ne crée aucune nouvelle décision et ne modifie pas les choix approuvés dans la spécification.
