@@ -19,46 +19,60 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 - **Le pipeline générique 3D utilise le Forward Rendering en V0.1.4 :** l'éclairage est calculé pendant le dessin des surfaces, pour l'opaque comme pour le translucide avant accumulation WBOIT. Ni rendu Deferred avec G-buffer d'éclairage, ni organisation Forward+ des lumières par tiles/clusters ne sont requis. Les passes auxiliaires de profondeur, shadow maps et WBOIT restent possibles.
 - **L'ordonnancement existant est conservé :** `RenderingEngine` et les `RenderSnapshot`/`RenderPass`/`RenderCommand` orchestrent les nouvelles étapes 3D. Si une passe nécessite une initialisation distincte, une paire de passes nommées par convention `renderPassA.init` puis `renderPassA` est possible, avec `init.order < draw.order` **explicitement défini**. Le nom ne crée pas de comportement automatique. Aucun nouvel ordonnanceur ou `SceneRenderingSystem` central n'est exigé.
 
-- **Vues 3D nommées dans `sparkle::core` :** l'Engine possède des `spk::EngineView`, identifiées par chaîne, chacune associée à une caméra explicite de cet Engine et à une résolution choisie par le jeu. `EngineView` et `CameraComponent` ne possèdent aucun `Framebuffer` ni ressource OpenGL. `"main"` est seulement le `ViewID` sélectionné par défaut par `EngineWidget` ; le jeu doit enregistrer la vue et la caméra. `EngineWidget` **met à jour, rend toutes les vues de l'Engine et affiche la vue sélectionnée** ; `EngineViewWidget` **affiche seulement** une vue nommée, sans update, capture ou nouvel ordonnanceur.
-- **Cache graphique partagé par fenêtre :** dans `sparkle::sparkle`, les cibles persistantes sont indexées par `(Window::Surface, Engine, ViewID)`. **Un `EngineWidget` produit chaque vue une fois dans sa propre contribution** au snapshot ; les widgets d'affichage peuvent réutiliser cette texture sans nouveau dessin 3D. **Plusieurs `EngineWidget` sur le même Engine restent sous la responsabilité du développeur** : Sparkle ne bloque ni ne déduplique leurs mises à jour et captures.
-- **Aucun resize implicite :** seul le code du jeu décide de modifier la taille d'une `EngineView` et, indépendamment, les paramètres de projection de sa caméra. Le resize d'une fenêtre ou d'un widget ne modifie jamais ces valeurs ; le cache graphique ajuste ses ressources uniquement après changement explicite de la résolution de l'EngineView. Un widget peut afficher une texture à une autre taille sans redimensionner la capture.
+
+- **Architecture graphique validée :** `spk::RenderingEngine : public spk::Engine`, dans `sparkle::sparkle`, possède les `EngineView` et son `ThreadSafeSlot<RenderSnapshot>`. `Engine` demeure utilisable seul par les serveurs headless et ne dépend ni des vues ni d'OpenGL. `EngineView` n'est plus une classe de `sparkle::core`. Le destructeur d'Engine doit permettre la destruction polymorphique.
+- **Caméras et vues explicites :** chaque vue a un nom unique, une caméra, une résolution et un ordre de capture. `camera.view(name)` utilise le contexte moteur existant et lance `spk::Exception` sur un nom inconnu ou une mauvaise caméra. `"main"` est uniquement l'identifiant demandé par défaut pour `Drawing`. Aucune vue/caméra/projection/resize automatique.
+- **Une classe `EngineWidget` :** `bind(RenderingEngine*)`, non propriétaire ; rôles indépendants et combinables `Update`, `Render`, `Drawing`. Pas d'`EngineViewWidget` distinct et pas de protection des updates/rendus redondants demandés par le développeur.
+- **Deux snapshots, deux cadences distinctes :** `Engine::updateState` met à jour les entités sans capture. `RenderingEngine::refreshRenderSnapshot` construit et publie le snapshot moteur, uniquement sur demande au moment de préparer un snapshot de fenêtre avec rôle `Render`. L'Application conserve ses slots de snapshots par fenêtre ; une commande y capture et exécute un `shared_ptr<const RenderSnapshot>` moteur. Les fenêtres ne sont pas rafraîchies automatiquement lors de la publication moteur.
+- **Ressources OpenGL séparées par fenêtre, sans map dédiée :** `Framebuffer` et `Texture` sont déjà des `GPUResource`, matérialisées par la `GPUResourceCollection` de chaque `Window::Surface`. Une même EngineView peut être rendue dans plusieurs fenêtres ; produire A n'actualise pas B. `Drawing` seul affiche la dernière texture locale courante, sans warning si elle n'a jamais été initialisée.
+- **Emprunts et snapshots :** détruire une `EngineView` invalide ses références logiques et les matériaux qui l'empruntent. Les RenderSnapshot déjà publiés peuvent conserver leurs handles GPU concrets jusqu'à utilisation ; ce mécanisme ne prolonge pas l'existence de la vue. Les changements de résolution exigent une nouvelle version de framebuffer/attachments, et non un resize en place des States capturés.
 
 ## 2. Décisions structurantes à arbitrer
 
-### P0 — Intégration des EngineView dans les snapshots de fenêtre
+### P0 — Représentation et ordonnancement complet des vues
 
-**Référence :** sections 7, 7.1, 7.4 et 8.1 de la spécification.
+**Références :** sections 7, 7.1 et 7.5 de la spécification.
 
-**Constat de revue de zéro.** `EngineView` est une description logique dans `sparkle::core`, alors que `RenderingEngine`, `Window::Surface` et `Framebuffer` appartiennent à `sparkle::sparkle`. Aujourd'hui, `Application::UpdateRuntime::_buildRenderSnapshot` fabrique un `RenderSnapshot::Builder` **sans lui passer l'identité de la fenêtre** et appelle seulement `state.root().buildRenderSnapshot(builder)`. Le `RenderingEngine` actuel est membre d'`EngineWidget` et ne connaît qu'un Engine, sans contexte de vue transmis aux contributeurs. La cible par `(Window::Surface, Engine, ViewID)` est validée mais sa résolution au moment du build **n'est pas implémentée**.
+**Ce qui est désormais tranché.** L'Engine graphique possède ses vues et un snapshot partagé. Chaque fenêtre exécute ce dernier dans son contexte OpenGL grâce à une commande imbriquée dans son propre snapshot. Le `Framebuffer` et les `Texture` disposent déjà d'instances GPU par fenêtre. Le jeu fixe un ordre explicite des vues ; il ne demande aucun tri des dépendances en fonction des Materials.
 
-**Questions bloquantes :**
+**Points restants :**
 
-1. Comment fournir **l'identité de fenêtre/surface** au code qui construit les snapshots, pour obtenir le bon cache **sans appels OpenGL dans le thread update** ni nouveau scheduler ? Quelle durée de vie du cache quand une fenêtre, un Engine ou une EngineView disparaît ?
-2. Comment faire contribuer `RenderingEngine`, `VoxelRenderingSystem` et les autres contributeurs **pour chaque EngineView** en leur transmettant la caméra, les matrices, la cible et les données de lumières de la vue, puisque `buildRenderSnapshot(Builder&)` seul ne transporte pas ce contexte aujourd'hui ?
-3. Quels contrats de lecture et de propriété permettent d'enregistrer, supprimer, rebinder ou renommer une EngineView et de remplacer sa caméra sans références pendantes ? Qui valide l'appartenance de la caméra à l'Engine, la résolution (dimensions nulles, limites GPU), et que faire si la vue `"main"` ou la texture recherchée est absente ?
-4. À quel instant et sous quel ordre de passes les **handles d'une nouvelle cible** sont-ils fournis aux commandes de production et aux widgets consommateurs, notamment si la résolution de la vue change entre deux snapshots encore en vol ?
+1. Le `RenderSnapshot::Builder` fusionne les passes par nom et effectue un tri global par `RenderPass::Key::order`. Comment garantir une **suite complète de passes par vue** (ombres, opaque, WBOIT, composition finale) avant la vue suivante, en conservant les mécanismes existants ? Options techniques : séquences de sous-snapshots ou clés isolées/ordres non ambigus ; aucune option n'est encore approuvée.
+2. Comment faire parvenir le contexte de caméra, matrices de projection, lumières, view ID et ressources GPU logiques aux contributeurs (`RenderingSystem` et `VoxelRenderingSystem`), dont l'API actuelle `buildRenderSnapshot(Builder&)` ne reçoit pas de contexte de vue ?
+3. Comment établir la commande de délégation du snapshot moteur au snapshot de fenêtre sans collision de passes avec l'UI, avec une restauration **explicite** du framebuffer de présentation et des paramètres OpenGL avant les widgets ?
+4. Quelles sont les garanties et la sémantique de l'**ordre par défaut** d'une vue, des réordonnancements, d'un nom manquant pour `Drawing` et de la disparition d'une caméra pendant la vie d'une EngineView ? La responsabilité des références pendantes est tranchée, mais les erreurs observables avant destruction peuvent encore être précisées.
 
-**Contrat déjà acquis.** `Engine` possède les vues logiques, sans OpenGL ; un cache par fenêtre possède les ressources persistantes ; le jeu contrôle **seul** la résolution et les projections. `EngineWidget` effectue update + captures de toutes les vues + présentation d'une vue. `EngineViewWidget` ne fait que présenter une texture déjà produite. Les `RenderPass` et `RenderSnapshot` restent les seuls mécanismes d'ordonnancement des commandes.
-
-**Critère de clôture.** Un exemple réel de construction de snapshot dans une fenêtre montre comment accéder à la même ressource de vue depuis le producteur et les consommateurs, sans dépendance interdite de `sparkle::core` vers `sparkle::sparkle`.
+**Critère de clôture.** Un snapshot moteur à deux vues (`surveillance` d'ordre 0 et `main` d'ordre 1) rend complètement la première puis l'utilise comme texture pendant le dessin de la seconde, dans deux fenêtres différentes, sans algorithme caché ni interleaving de passes.
 
 ### P0 — Contrat du pipeline Forward, des ombres et du WBOIT
 
-**Référence :** sections 7.1 à 7.5.
+**Références :** sections 7.1 à 7.5.
 
-**Constat de revue de zéro.** Les primitives `RenderPass`, `RenderSnapshot`, `Framebuffer` et `GPUResource::Handle` existent. Les passes sont triées par ordre numérique ; les phases `.init` sont des passes **explicitement ordonnées**, pas un hook magique. En revanche, la configuration des render targets, la gestion de l'état OpenGL par passe, le WBOIT complet, le rendu des lumières et les shadow maps ne sont **pas** fournis comme pipeline générique complet aujourd'hui. Les formats couleur flottants nécessaires au WBOIT ne sont pas tous exposés par `Texture::Format`.
+**Constat.** `Framebuffer`, `RenderPass`, `RenderSnapshot` et les handles GPU existent ; un pipeline Forward complet, la configuration WBOIT et les shadow maps génériques restent à implémenter. Les passes d'initialisation sont des commandes explicites ; le suffixe `.init` n'a pas de valeur magique.
 
-**Questions bloquantes :**
+**Points restants :**
 
-1. Quels **ordres et identifiants de passes** permettent, pour plusieurs vues du même snapshot, le chaînage **ombres → opaque → accumulation/révélation WBOIT → composition de la texture finale → présentation des widgets**, sans collisions entre `ViewID` et passes de l'UI ? Comment remettre explicitement la cible et l'état graphique adéquats avant chaque phase ?
-2. Quels formats GPU, attachments, règles de profondeur partagée/lecture-écriture, blend states et opérations de composition exacts implémentent le WBOIT ? Comment restaurer un état valide pour les widgets 2D et les autres objets 3D après une capture ?
-3. Quels sont les contrats du **Forward Lighting** générique pour voxel **et non voxel** (paramètres, contribution des trois lumières, limites), et des **shadow maps** directionnelles/spots (projection, qualité, biais, résolution, coût, rafraîchissement et partage éventuel entre vues) ? Le rendu Deferred/Forward+ n'est pas requis, les lights ponctuelles ne projettent pas d'ombres, une seule shadow map par directionnelle et vue est retenue.
-4. Comment conserver **la validité des anciens snapshots** lorsqu'un framebuffer ou ses textures sont remplacés après un resize **explicitement demandé par le jeu**, sans mutation rétroactive, accès inter-thread non sécurisé ou lecture de données `CameraComponent` / `Assembly` mutables pendant les commandes GPU ?
-5. **Texture de vue utilisée hors widgets :** un `spk::Material` immuable capture actuellement un `Texture::Handle` précis. Si le framebuffer d'une EngineView est **remplacé** lors d'un changement de résolution, son nouveau handle n'est pas automatiquement suivi par un Material antérieur. Faut-il documenter la **reconstruction explicite du Material/de la palette par le jeu** (conforme à l'immuabilité déjà décidée), ou introduire une abstraction stable de sortie de vue ? Éviter de promettre simultanément renouvellement transparent des ressources et mise à jour implicite des Materials.
+1. Formats et nombre d'attachments WBOIT (accumulation/révélation), profondeur, blending, contraintes OpenGL et commandes de composition ; `Texture::Format` n'expose pas encore tous les formats possibles nécessaires.
+2. Paramètres d'éclairage générique (directionnelle, point, spot), limites, shadow maps des directionnelles/spots, qualité, biais, portée, rafraîchissement et éventuellement mutualisation entre vues. Les points lumineux n'ont pas d'ombres et les directionnelles utilisent une seule shadow map par vue/lumière ; ni Deferred ni Forward+ n'est prévu.
+3. Remplacement sûr des framebuffers/attachments après changement **explicite** de taille : toute capture déjà publiée doit référencer des States immuables, et les anciennes ressources GPU ne doivent pas être réutilisées pendant leur exécution. `Framebuffer::resize()` en place ne fournit pas ce contrat.
+4. Comment assurer la **réentrance** des `RenderCommand::execute(RenderContext&) const` d'un snapshot moteur exécuté simultanément dans deux contextes de fenêtre ? Les caches CPU mutables et l'état global OpenGL implicite sont à auditer.
 
-**Contrat déjà acquis.** Les `EngineView` sont enregistrées explicitement par le jeu ; une vue est produite depuis son `CameraComponent` dans le cache propre à la surface puis sa texture peut être présentée librement. L'ordre `RenderPass::Key::order` décide de l'exécution ; la présence du suffixe `.init` ne décide rien. Le jeu, **pas Sparkle**, choisit comment la taille/projection change lors d'un resize.
+**Critère de clôture.** Un ensemble de passes par vue, documenté puis testé, marche avec plusieurs vues et deux surfaces GPU, y compris pendant le resize et la coexistence de snapshots anciens et nouveaux.
 
-**Critère de clôture.** Un diagramme de passes exécutable et une séquence de captures puis présentation, avec deux vues de résolutions différentes et un snapshot antérieur toujours en vol, ne nécessitent ni comportement GPU implicite ni nouveau framework de passes.
+### P0 — Sources de texture EngineView dans les Materials
+
+**Références :** sections 4.1, 4.4, 7 et 8.1.
+
+**Constat.** Un `Material` statique contient aujourd'hui un `Texture::Handle` exact et immuable. Cela ne suffit pas à une sortie de vue qui change de framebuffer après un resize. Le choix fonctionnel est validé : emprunter l'`EngineView`, capturer le handle concret dans le snapshot, ne jamais prolonger la vie de la vue via le Material. Une source dynamique de vue doit pouvoir alimenter un écran de surveillance.
+
+**Points restants :**
+
+1. Quelle représentation publique (variante de source, overload de Builder, autre type minimal) porte une référence **non propriétaire** à une EngineView et permet de la résoudre pendant `refreshRenderSnapshot()` sans nouvelle lecture pendant le rendu GPU ?
+2. Comment cette source s'intègre-t-elle à la **règle d'un seul atlas par passe et par couple Model/Palette**, actuellement fondée sur des identités `Texture::Handle` stables ? Une vue peut-elle fournir le rôle `albedo` d'un Material voxel ? Si oui, quel est le contrat de compatibilité avant le premier rendu et après resize ?
+3. Comment garantir que la sortie d'une vue A sera déjà produite dans **la même surface OpenGL** avant la commande qui l'échantillonne dans la vue B, sans créer une dépendance implicite ou un transfert interfenêtre ?
+4. Quelles opérations sur une vue (renommage, suppression, rebinding de caméra, remplacement de cible) sont autorisées, et comment leurs références empruntées deviennent-elles invalides ou restent-elles stables ?
+
+**Critère de clôture.** Un écran 3D de vidéosurveillance reste affichable après resize explicite sans reconstruire son Material, tandis qu'un Material référençant une vue détruite n'est plus utilisable.
 
 ### P1 — Composition d'Assembly dans un autre Assembly
 
@@ -97,18 +111,17 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 **Référence :** sections 6.1, 6.2, 7.1 et 8.1.
 
-**Situation.** L'Assembly est mutable ; les composants empruntent des pointeurs ; le système de rendu construit un snapshot qui ne doit plus lire ces objets ensuite. Sparkle possède des threads update et render distincts, et désormais des descriptions d'EngineView modifiables par le jeu. Le document ne précise pas suffisamment **qui peut modifier/détruire quoi pendant la collecte du snapshot**.
+**Ce qui est acquis.** Le snapshot moteur est publié comme une valeur immuable ; ses commandes n'empruntent aucun objet mutable du jeu. Le slot supporte de multiples lecteurs et les ressources GPU sont matérialisées par surface. Les éléments de l'Engine sont mis à jour régulièrement tandis que le snapshot n'est construit **que sur demande d'une fenêtre avec rôle Render**.
 
-**Questions à arbitrer :**
+**Points restants :**
 
-1. Dans quel contexte/thread s'effectue la **lecture** des composants, des transforms d'Entity, des Assemblies, des CameraComponent et des EngineView ? Quelles sont les exigences de synchronisation face aux modifications de simulation ?
-2. À quel moment les références non propriétaires (`Assembly*`, `Model*`, `VoxelPalette*`) peuvent-elles être détachées ou détruites, sans être observées pendant une collecte ?
-3. Quelles données sont copiées ou capturées par le snapshot (matrices de vue/projection, lumière, handles de framebuffer et textures, meshes, SSBO), et quelles données mutables restent-elles interdites d'accès depuis les RenderCommand différées ?
-4. Une modification en plein build est-elle exclue par un contrat de threading existant, ou un mécanisme explicite est-il nécessaire ?
+1. Sur quel thread et pendant quelles frontières de cycle sont autorisées les mutations de `Engine`, `EngineView`, caméra, lumières, Assemblies et composants, face à `refreshRenderSnapshot()` ?
+2. Les `Model*`, `VoxelPalette*` et `Assembly*` empruntés doivent rester valides pendant la préparation des commandes : quel est le contrat explicite de destruction/détachement ?
+3. Les deux fenêtres peuvent demander une capture à des moments distincts dans le même cycle Update. Faut-il garantir un snapshot logique commun, ou accepter deux captures cohérentes mais datées différemment (l'absence de déduplication est déjà validée) ?
+4. Comment la distribution des événements et `DeviceContext` de l'ancien RenderingEngine adaptateur est-elle conservée avec l'héritage, notamment avec des widgets `Render|Drawing` sans `Update` et plusieurs fenêtres à focus différent ?
+5. Quelles ressources sont figées en handles et en copies (meshes, matrices, lumières, framebuffer, Material, SSBO), et quel usage partagé reste interdit pendant `execute()` ?
 
-**Direction recommandée, non validée.** Utiliser les frontières de snapshot déjà présentes dans Sparkle, éviter toute référence vers la hiérarchie mutable dans une commande, et faire porter à l'application un contrat de vie clair pour les pointeurs empruntés.
-
-**Critère de clôture.** Une séquence « update → construction snapshot → rendu » fixe le point à partir duquel les données GPU sont autonomes et les emprunts ne sont plus nécessaires.
+**Critère de clôture.** Une séquence complète « update logique → capture CPU → publication → exécution parallèle dans A et B » garantit l'absence de lectures mutables et de races dans les composants Sparkle (hors erreurs explicitement laissées au développeur).
 
 ## 3. Précisions techniques importantes à mener pendant la préparation de l'implémentation
 
@@ -151,10 +164,10 @@ Les principales responsabilités sont établies ; plusieurs noms/types exacts re
 
 ## 4. Ordre de résolution recommandé
 
-1. **Résolution du cache de vues par fenêtre dans les snapshots**, puis **pipeline Forward/ombres/WBOIT et ordre des passes GPU** : ce sont les seuls points de raccordement majeurs à l'architecture graphique existante.
-2. **Composition des Assemblies** et **frontière de synchronisation des snapshots** : ces décisions affectent la propriété et la validité des données.
-3. **JSON Material complet** : stabiliser la forme publique de construction/chargement.
-4. **Préparation technique** du meshing, de l'intégration GPU et des signatures finales : produire des propositions et exemples de tests sans multiplier les questions du mainteneur.
-5. Reporter les décisions validées dans la **spécification d'architecture cible**, puis retirer les questions correspondantes de ce fichier jusqu'à ce qu'il ne reste aucun **point bloquant**.
+1. **P0 :** choisir l'encodage de l'ordre complet des vues et des passes, la représentation du contexte de vue dans les contributions et le rétablissement de l'état de rendu des widgets.
+2. **P0 :** fixer le pipeline Forward/ombres/WBOIT et le remplacement des cibles lors des resizes en protégeant tous les snapshots en vol.
+3. **P0 :** finaliser la source `Material` fondée sur une `EngineView` et l'identité d'atlas dans les `VoxelPalette`, pour que la vidéosurveillance soit réellement implémentable.
+4. **P1 :** clarifier les frontières de thread et de propriété pendant la capture, y compris input et lifetimes des composants, puis la composition des Assemblies et le JSON complet des Materials.
+5. **Préparation technique :** finaliser tests, algorithmes géométriques, layouts GPU et APIs dans une seule passe cohérente ; seules les implications architecturales demandent un nouveau choix du mainteneur.
 
-Ce document peut rester présent tant que l'architecture est encore discutée, puis être supprimé lorsque la spécification principale devient suffisamment autonome pour guider le développement.
+Les décisions validées résident uniquement dans la spécification principale. Cette liste doit décroître au fur et à mesure que leurs contrats techniques sont vérifiés ; elle ne vaut pas autorisation d'implémentation.
