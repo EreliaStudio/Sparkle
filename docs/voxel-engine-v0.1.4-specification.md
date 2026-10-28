@@ -587,7 +587,7 @@ Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T
 
 La classe publique **`ShadowMap`** représente une **passe logique de rendu d'ombres**, sans dépendance de `EngineView` vers la gestion des ombres. Elle contient les **types imbriqués `ShadowMap::Contributor`** (composant graphique attachable à une `Entity3D`, qui fournit la géométrie d'ombre) et **`ShadowMap::RenderingSystem`** (système autonome qui découvre ces composants par Registry, construit les `RenderPass` et maintient leurs caches). Le `VoxelRenderingSystem` ne produit que les passes visuelles ; les composants de la même Entity peuvent fournir indépendamment un mesh visible et un mesh d'ombre.
 
-**Identifiant réservé de passe proposé.** `ShadowMap` peut exposer `static const RenderPass::Key RenderPassKey` (ou `static constexpr` si le type réel l'autorise). **Une constante partagée ne suffit pas à garantir l'unicité de toutes les passes** lorsque plusieurs lumières et deux reconstructions (statique et finale) utilisent un même Builder. Cette constante peut désigner une famille de passes, mais l'identité des instances et leur ordonnancement effectif (clés distinctes, plage réservée, ou sous-Builders isolés) restent à valider. On conserve l'ordre numérique explicite `RenderPass::Key`, sans introduire de nouveau scheduler.
+**Clés de passes — proposition de clé statique non retenue comme contrainte.** Une unique `static const RenderPass::Key ShadowMap::RenderPassKey` n'est **pas requise** : une même vue peut contenir plusieurs lumières et le cache statique et la carte finale nécessitent des opérations distinctes. `ShadowMap::RenderingSystem` est responsable d'émettre des `RenderPass` correctement ordonnées et identifiables avec le Builder et les `RenderPass::Key` numériques existants. **Il reste à choisir** entre une passe d'ombres partagée par vue contenant plusieurs opérations/lumières et des passes indépendantes par instance/phase ; ce choix déterminera la politique de clés. Ne pas introduire une constante publique ni un allocateur de clés avant cet arbitrage, et ne pas ajouter d'ordonnanceur implicite.
 
 La responsabilité des composants et des systèmes est séparée :
 
@@ -606,7 +606,7 @@ flowchart LR
   Entity --> ShadowComp["ShadowMap::Contributor"]
   M["ShadowMap : passe logique"] --> ShadowComp
   M --> SR
-  M --> PassKey["RenderPassKey propose : reservations / unicite ouvertes"]
+  M --> PassKey["Cles RenderPass : politique a valider, aucune constante obligatoire"]
   ShadowComp --> ShadowMode["ShadowMode et ShadowPropagation"]
   ShadowComp --> Filter["MeshFilter integre : mesh d ombre"]
   Visual --> VR["VoxelRenderingSystem : rendu visuel"]
@@ -678,7 +678,6 @@ classDiagram
   class RenderingEntity
   class RenderingSystem
   class ShadowMap {
-    +RenderPassKey : static const RenderPass::Key
     +Contributor : nested type
     +RenderingSystem : nested type
   }
@@ -1168,7 +1167,7 @@ L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compri
 | `RenderingEngine : Engine` | Moteur logique + graphiques dans `sparkle::sparkle` | Possède les EngineView et le slot du snapshot moteur |
 | `EngineView` | Vue logique/graphique possédée par RenderingEngine | Références non propriétaires ; framebuffer logique avec instances par surface |
 | `EngineView::Contributor` | Type imbriqué hérité par RenderingComponent/Behaviour/Entity/System | Contributions aux vues admises par layers via `CaptureContext`, sans possession de vue ni logique d’ombre |
-| `ShadowMap` | Abstraction graphique de passe logique d’ombre | Expose Contributor et RenderingSystem imbriqués ; identité exacte de passe à préciser |
+| `ShadowMap` | Abstraction graphique de passe logique d’ombre | Expose Contributor et RenderingSystem imbriqués ; ses clés de passes ne sont pas présumées statiques et restent à arbitrer |
 | `ShadowMap::Contributor` | Composant graphique attachable aux Entity3D | Porte ShadowMode, ShadowPropagation, layers et MeshFilter ; découvert par Registry |
 | `ShadowMap::RenderingSystem` | RenderingSystem spécialisé | Construit les passes d’ombres, souscrit aux Contributors et conserve les caches par vue/lumière |
 | `CameraComponent` | Component3D graphique lié à une Entity | Accès à ses vues par `camera.view(name)` contrôlé |
