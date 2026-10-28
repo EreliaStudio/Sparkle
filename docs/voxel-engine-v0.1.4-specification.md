@@ -691,7 +691,7 @@ flowchart TB
 
 **Rendu partagé, réentrance obligatoire.** Un snapshot moteur est une **description de commandes immuable**. Il doit être possible de l'exécuter sur deux `RenderContext` distincts, éventuellement simultanément, sans écrire dans l'état mutable partagé des commandes. Les allocations et synchronisations OpenGL sont locales à la `Window::Surface`. Le `ThreadSafeSlot` garantit la durée de vie de l'objet snapshot, mais **n'assure pas** à lui seul la réentrance des commandes personnalisées ni la synchronisation de mutations concurrentes durant la capture CPU. Les mutations de `Engine` / caméra / Assemblies et `refreshRenderSnapshot()` doivent être coordonnées sur le thread Update, ou synchronisées explicitement par l'appelant.
 
-**Cas de l'écran de surveillance.** La vue `surveillance` d'ordre 0 doit être **complètement** rendue (ombres, opaque, WBOIT, composition, texture finale) avant que la vue `main` d'ordre 1 utilise sa texture comme matériau de son écran 3D. Le jeu fixe l'ordre des vues ; Sparkle ne déduit pas de dépendances automatiquement d'un Material. Le `RenderSnapshot::Builder` existant fusionne des passes de même nom et les trie par ordre numérique : le regroupement des phases **par vue complète** doit donc être prévu explicitement (p. ex. une commande exécutant les passes d'une sous-capture par vue, ou des ordres globaux isolés). **Le choix précis d'encodage des phases reste ouvert**, mais un tri global « toutes les ombres, puis tous les opaques » de toutes les vues serait incorrect. Les réglages de cible, viewport, scissor, depth, blending et le retour au framebuffer de fenêtre pour la présentation sont explicites.
+**Cas de l'écran de surveillance.** La vue `surveillance` d'ordre 0 doit être **complètement** rendue (ombres, opaque, WBOIT, composition, texture finale) avant que la vue `main` d'ordre 1 utilise sa texture comme matériau de son écran 3D. Le jeu fixe l'ordre des vues ; Sparkle ne déduit pas de dépendances automatiquement d'un Material. **Le choix est désormais fixé :** les vues sont exécutées intégralement et successivement via leurs sous-snapshots indépendants (section 7.1), avec préparation GPU par `RenderCommand` typées et restauration explicite de la présentation.
 
 **Une source de texture EngineView dans un Material.** Le `Material` statique existant capture un `Texture::Handle`. Pour représenter un écran de surveillance dont la source survit aux changements de résolution **mais pas à la destruction de la vue**, une variante de source doit référencer **non propriétaire** la `EngineView`. Lors de la construction d'un snapshot, Sparkle résout sa version courante du framebuffer et capture **les handles concrets** dans les commandes. Le `Material` lui-même ne conserve pas des handles GPU pérennes pour cette source ; il n'empêche pas la destruction de la vue. Ceci ne copie pas les pixels entre fenêtres : un handle de sortie de vue se réalise localement selon `RenderContext::targetSurface`. Le type exact de liaison et les règles d'unicité d'atlas voxel pour les sources dynamiques restent à définir.
 
@@ -735,42 +735,52 @@ sequenceDiagram
   Note over GA,GB: GPUResourceCollection A et B : objets GL distincts, aucune copie des pixels.
 ```
 
-### 7.1 Responsabilité et cycle d'un RenderSnapshot
+### 7.1 Architecture validée : sous-snapshot par vue et états GPU explicites
 
-Le `VoxelRenderingSystem` contribue aux `RenderPass` et `RenderCommand` du snapshot moteur ; il n'introduit pas de second ordonnanceur voxel. Le pipeline générique utilise le **Forward Rendering**. Des passes explicites `renderPassA.init` et `renderPassA` peuvent préparer puis utiliser le GPU, à condition que `init.order < draw.order` ; les suffixes ne créent aucune priorité implicite. La chaîne complète **par vue** inclut la préparation des shadow maps, l'opaque, le WBOIT puis la composition. La présentation du widget suit dans le snapshot **de fenêtre**.
+**Orchestration A — un sous-`RenderSnapshot` indépendant par `EngineView`.** À chaque `RenderingEngine::refreshRenderSnapshot()`, le moteur crée un `RenderSnapshot::Builder` neuf pour chaque vue. Les `EngineView::Contributor` actifs contribuent tous au **même Builder de cette vue**, à l'aide d'un `EngineView::CaptureContext` explicite (caméra, matrices, résolution, identifiant de vue, lumières pertinentes et handles de cibles logiques). Le moteur prépare les passes standard avant de solliciter les contributeurs.
 
-Pendant chaque `refreshRenderSnapshot()`, et pour chaque vue demandée par le RenderingEngine, le système :
-1. collecte les `ModelRenderingComponent` et `AssemblyRenderingComponent` actifs de cet Engine ;
-2. reconstruit les transforms des Entities et des parties d'Assembly ;
-3. calcule les occurrences visibles pour la caméra de la vue, en distinguant opaque et translucide ;
-4. valide Model/Palette et groupe les occurrences par buckets compatibles ;
-5. prépare **de nouveaux SSBO** de snapshot pour les instances et matériaux, puis les commandes de dessin immuables.
+Le sous-snapshot de chaque vue est construit puis **détenu par valeur** par une commande de délégation (nom illustratif : `ExecuteViewSnapshotCommand`). Le Builder du snapshot moteur contient une passe par vue, de nom unique, ordonnée numériquement selon l'ordre explicite de l'EngineView. L'exécution d'une passe du moteur appelle `subSnapshot.execute(renderContext)` : **toutes** les phases de `surveillance` (ombres, opaque, WBOIT, composition) sont exécutées avant la première phase de `main`, lorsque leurs ordres sont 0 et 1. Les noms et ordres des passes **internes** sont isolés entre vues. Aucun second ordonnanceur, tri de dépendances des Materials ou encodage global des phases n'est introduit.
+
+**Pas de mutualisation inter-vues pour V0.1.4.** Chaque vue recalcule indépendamment ses transforms, sa visibilité, ses buckets, ses SSBO d'instances et ses commandes. Les ressources sources préexistantes (meshes, matériaux, textures, handles) demeurent réutilisables ; aucun cache ou objet de capture partagé entre vues n'est exigé. La mutualisation est une optimisation future éventuelle, seulement après mesures. La simulation `Engine::updateState()` n'est pas répétée pour chaque vue.
 
 ```mermaid
 sequenceDiagram
-  participant Game as Jeu
-  participant Engine as RenderingEngine
-  participant View as EngineView
-  participant Voxel as VoxelRenderingSystem
-  participant Builder as RenderSnapshot.Builder moteur
-  participant Slot as Slot du moteur
-  participant GPU as Exécution sur une Window::Surface
-  Game->>Engine: updateState(context) (simulation uniquement)
-  Game->>View: réglages éventuels (taille / ordre / projection caméra)
-  Game->>Engine: refreshRenderSnapshot() sur demande
-  loop Toutes les vues dans l'ordre
-    Engine->>View: capturer caméra, résolution, framebuffer logique
-    Engine->>Voxel: collecter visibilité et buckets pour cette vue
-    Voxel->>Builder: SSBO et commandes par passe
-    Engine->>Builder: état GPU, ombres, opaque, WBOIT, composition
+  participant G as Jeu
+  participant E as RenderingEngine
+  participant C as EngineView::Contributor
+  participant V as Builder par vue
+  participant M as Builder moteur
+  participant S as Slot moteur
+  participant R as RenderContext GPU
+  G->>E: updateState() (simulation)
+  G->>E: refreshRenderSnapshot()
+  loop Pour chaque EngineView dans l'ordre
+    E->>E: capturer EngineView::CaptureContext
+    E->>V: creer Builder et initialiser passes GPU
+    E->>C: buildViewRenderSnapshot(V, CaptureContext)
+    C->>V: commandes propres a cette vue
+    E->>V: finaliser les phases de la vue
+    V-->>E: sous-RenderSnapshot immuable
+    E->>M: ajouter passe de vue + ExecuteViewSnapshotCommand
   end
-  Builder-->>Engine: RenderSnapshot immuable
-  Engine->>Slot: publish(snapshot)
-  Slot-->>GPU: shared_ptr capturé par le snapshot de fenêtre
-  GPU->>GPU: execute(context.targetSurface) : réaliser les GPUResource locales
+  M-->>E: RenderSnapshot moteur
+  E->>S: publish(snapshot moteur)
+  S-->>R: snapshot immuable capture par la fenetre
+  R->>R: executer chaque sous-snapshot complet dans son ordre
+  R->>R: retablir framebuffer de presentation et etat UI
 ```
 
-L'instant de publication sépare les objets mutables du jeu des commandes différées. Un échec de build conserve l'ancien snapshot. Plusieurs threads GPU peuvent exécuter un même snapshot immuable, mais le build CPU n'est pas automatiquement protégé contre des mutations externes simultanées.
+**Contribution graphique.** `EngineView::Contributor` remplace `RenderingObjectTrait`. Il conserve les responsabilités de `EventDispatcher` et `UpdatableByDeviceTrait`, mais ne dérive plus de `RenderSnapshotContributorTrait`. Les variantes existantes `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity` (y compris 2D/3D) et `RenderingSystem` en héritent. Les widgets gardent le trait générique `RenderSnapshotContributorTrait`. Le Contributor participe à toutes les vues, sans appartenir à l'une d'elles ; sa contribution reçoit `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` (API illustrative), avec vérification d'activation et propagation d'exceptions. La capture CPU fige les matrices et handles utilisés par les commandes ; aucune « caméra active » mutable n'est consultée pendant l'exécution GPU.
+
+**Initialisation des passes et transitions GPU.** Sparkle emploie déjà ce principe pour `RootWidget` : les passes `sparkle.Background`, `sparkle.Overlay`, `sparkle.Popup` et `sparkle.Tooltip` reçoivent des commandes de viewport, scissor ou clear avant les dessins. De même, `RenderingEngine` ajoute les commandes d'état en **début de chaque passe standard de chaque vue**, puis les Contributors enrichissent ces passes. Les phases shadow, opaque, WBOIT et composition établissent chacune leurs états d'entrée (framebuffer, viewport, scissor, blending, profondeur, culling et masques d'écriture), sans supposer ceux de la phase précédente. Les clear tiennent compte des masques d'écriture actifs.
+
+Les nouvelles `RenderCommand` sont **génériques à Sparkle, par famille d'état OpenGL** et configurables avec des types/enums C++ : `BlendRenderCommand` (activation, facteurs, équations et configuration par attachment pour WBOIT), `DepthRenderCommand` (test, comparaison, depth mask), `CullFaceRenderCommand` (activation, face et winding), `ColorMaskRenderCommand` (écritures couleur) et `FramebufferRenderCommand` (cible logique ou framebuffer de présentation). Les commandes existantes `ViewportRenderCommand` et `ScissorRenderCommand` sont réutilisées ou étendues pour les cibles offscreen et pour activer/désactiver le scissor. Les noms et signatures restent indicatifs. Aucune commande monolithique de sauvegarde/restauration de tout l'état GL n'est nécessaire.
+
+**Frontière fenêtre/Engine.** Après toutes les vues et **avant** `EngineWidget::Drawing` et les autres widgets UI, des commandes typées rétablissent explicitement le framebuffer de fenêtre, le viewport et les autres états attendus par l'interface. Les configurations de rendu jusqu'ici fixées uniquement dans `Window::Surface::initializeRenderState()` doivent être exprimées dans les passes appropriées ; l'initialisation effective du contexte OpenGL reste dans `Window::Surface`. Les commandes sont construites sur CPU sans appel GL, puis exécutées dans le `RenderContext` de chaque surface, sans état CPU mutable partagé.
+
+**À préciser sans réouvrir ces décisions :** ordres égaux entre vues, insertion des passes personnalisées, contrats précis des attachments/blend WBOIT, réentrance effective des commandes existantes (dont les UBO partagés), et qualification des mesures Profiler lors de l'exécution imbriquée. Une construction incomplète ne publie pas de snapshot partiel et conserve la précédente publication.
+
+
 
 ### 7.2 SSBO d'instances
 
