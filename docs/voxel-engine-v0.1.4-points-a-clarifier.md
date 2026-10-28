@@ -16,6 +16,7 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 - Les factories statiques par type de l'AssetManager, la clé `(T, id, JSON structurel)`, les retours `T&` empruntés, les constructions `T` par valeur, la synchronisation externe, la détection des cycles et la purge explicite `clear()`.
 - **Confirmation du mainteneur : Sparkle ne dispose pas encore d'un système d'éclairage ou d'ombres. Il faut créer ces fonctionnalités dans V0.1.4.** La branche actuelle ne contient pas non plus de pipeline WBOIT complet identifié durant la revue. Les briques graphiques disponibles (`Program`, `Framebuffer`, `RenderPass`, `RenderSnapshot`, `Texture`, `ShaderStorageBuffer`, etc.) sont des fondations, **pas** un pipeline 3D complet à réutiliser tel quel.
 - L'éclairage, les ombres et la transparence ne doivent pas devenir des services exclusivement voxels : l'objectif reste une bibliothèque Sparkle publique et générique.
+- **Le pipeline générique 3D utilise le Forward Rendering en V0.1.4 :** l'éclairage est calculé pendant le dessin des surfaces, pour l'opaque comme pour le translucide avant accumulation WBOIT. Ni rendu Deferred avec G-buffer d'éclairage, ni organisation Forward+ des lumières par tiles/clusters ne sont requis. Les passes auxiliaires de profondeur, shadow maps et WBOIT restent possibles.
 
 ## 2. Décisions structurantes à arbitrer
 
@@ -23,7 +24,7 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 **Référence dans la spécification :** sections 1, 7.1 et 7.5.
 
-**Situation.** La cible décrit des meshes voxel opaques et translucides, l'éclairage, les ombres, les calculs de profondeur et la composition WBOIT. Ces capacités doivent être **créées dans V0.1.4**, et non supposées déjà présentes. Les commandes et passes actuelles de Sparkle fournissent de la structure, pas un système de scène 3D illuminée. **Les caméras et lumières sont des `Component3D` attachés aux `Entity3D`, utilisant leurs `Transform3D` et les Registries par Engine. La caméra est sélectionnée explicitement par chaque vue/viewport 3D, sans caméra principale implicite par Engine et avec plusieurs vues indépendantes possibles.** Ces deux règles sont fixées dans la spécification principale et ne doivent plus être rediscutées ici. Les projections détaillées et l'API de binding des caméras restent ouvertes. **Les trois catégories de lumières sont fixées pour V0.1.4 : directionnelle, ponctuelle et spot. Seules les directionnelles et les spots pourront projeter des ombres ; les ponctuelles éclaireront sans ombres.** Ces choix sont fixés dans la spécification principale. Les paramètres détaillés des lumières, l'activation et la technique de génération des ombres restent ouverts.
+**Situation.** La cible décrit des meshes voxel opaques et translucides, l'éclairage, les ombres, les calculs de profondeur et la composition WBOIT. Ces capacités doivent être **créées dans V0.1.4**, et non supposées déjà présentes. Les commandes et passes actuelles de Sparkle fournissent de la structure, pas un système de scène 3D illuminée. **Le choix du Forward Rendering est acté :** l'éclairage des surfaces est calculé dans les shaders au dessin, sans passe Deferred/G-buffer ni Forward+ imposé. **Les caméras et lumières sont des `Component3D` attachés aux `Entity3D`, utilisant leurs `Transform3D` et les Registries par Engine. La caméra est sélectionnée explicitement par chaque vue/viewport 3D, sans caméra principale implicite par Engine et avec plusieurs vues indépendantes possibles.** Ces deux règles sont fixées dans la spécification principale et ne doivent plus être rediscutées ici. Les projections détaillées et l'API de binding des caméras restent ouvertes. **Les trois catégories de lumières sont fixées pour V0.1.4 : directionnelle, ponctuelle et spot. Seules les directionnelles et les spots pourront projeter des ombres ; les ponctuelles éclaireront sans ombres.** Ces choix sont fixés dans la spécification principale. Les paramètres détaillés des lumières, l'activation et la technique de génération des ombres restent ouverts.
 
 **Questions architecturales :**
 
@@ -32,7 +33,7 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 3. Quelle responsabilité revient à un moteur/pipeline 3D **générique**, et laquelle revient précisément au `VoxelRenderingSystem` qui lui remet ses géométries, matériaux, transformations et commandes ? Qui détient et prépare les ressources GPU d'une scène ?
 4. Un consommateur de rendu 3D **non voxel** doit-il pouvoir utiliser exactement le même éclairage, les mêmes ombres et les mêmes passes dès V0.1.4 ?
 
-**Direction recommandée, non validée.** Définir une infrastructure de scène et de rendu 3D réutilisable par plusieurs producteurs de géométries. Le voxel participe à cette infrastructure sans l'intégrer dans ses classes de données.
+**Direction recommandée, non validée.** Définir le responsable des ressources et de l'orchestration d'une infrastructure de scène/rendu 3D réutilisable par plusieurs producteurs de géométries. Le **mode Forward est déjà retenu**, mais les interfaces du pipeline et les politiques de lumières/ombres restent ouvertes. Le voxel participe à cette infrastructure sans la posséder.
 
 **Critère de clôture.** La représentation `Component3D` et la sélection explicite d'une caméra par viewport 3D sont acquises. Il reste à définir les projections et comportements d'indisponibilité, les paramètres des trois catégories de lumières et les détails des ombres directionnelles/spots, le propriétaire de la préparation graphique, ainsi que le parcours des données jusqu'aux shaders. Un schéma doit séparer explicitement infrastructure graphique commune et adaptation voxel.
 
@@ -40,7 +41,7 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 **Référence :** sections 7.1 à 7.5.
 
-**Situation.** `spk::RenderPass` conserve actuellement une **séquence de commandes**. La création des cibles de rendu, la profondeur, les états de blending/culling et la composition transparente ne sont pas explicitement prises en charge par un orchestrateur de scène 3D. Le contexte OpenGL initial de Sparkle active notamment un blending alpha classique ; cela ne suffit ni à une passe opaque, ni aux paramètres spécifiques du WBOIT.
+**Situation.** `spk::RenderPass` conserve actuellement une **séquence de commandes**. La création des cibles de rendu, la profondeur, les états de blending/culling et la composition transparente ne sont pas explicitement prises en charge par un orchestrateur de scène 3D. Le contexte OpenGL initial de Sparkle active notamment un blending alpha classique ; cela ne suffit ni à une passe opaque, ni aux paramètres spécifiques du WBOIT. **Le Forward Rendering est acquis** : aucune nouvelle passe G-buffer d'éclairage différé n'est demandée, mais des passes auxiliaires pour ombres, profondeur et WBOIT restent nécessaires.
 
 **Questions architecturales :**
 
