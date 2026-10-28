@@ -1226,7 +1226,7 @@ Pour le rôle `albedo`, appliquer strictement `uvFinal = uvOffset + uvLocal * uv
 
 `spk::AssetManager` (nom de travail ; `AssetStorage` reste envisageable) doit permettre `load<T>(identifiant, configurationJSON)`. Le cache doit reconnaître une ressource par **(type C++ `T`, identifiant fourni par l'appelant, valeur du `spk::JSON::Value`)**. Deux appels de même triplet récupèrent le **même asset**, tandis que le **même identifiant avec un JSON différent crée une autre variante**, sans rejet ni remplacement de la première. Exemple : `load<SpriteSheet>("terrain", grille16)` et `load<SpriteSheet>("terrain", grille8)` sont deux assets distincts. L'identifiant est une chaîne arbitraire (éventuellement tirée du champ `path`), pas obligatoirement un chemin. L'égalité des JSON est **structurelle** : `spk::JSON::Value::operator==` existe, et ses objets sont représentés par des `std::map` ; l'ordre textuel des propriétés et l'indentation ne changent donc pas la clé. L'objet JSON doit être mémorisé par valeur, non par pointeur vers l'argument temporaire.
 
-**Implémentation possible mais non imposée :** `std::unordered_map<std::string, std::vector<Entry>>` contenant pour chaque identifiant des variantes `Entry{type, JSON::Value, asset}`. La comparaison directe des JSON évite d'avoir à définir leur hash ; un `std::any` peut contenir un `std::shared_ptr<T>` pour les ressources non copiables, plutôt que `T` en direct. **VXL-101 : la construction passe par une factory adaptée au type T**, pouvant appeler `fromJSON` si pertinent mais sans exiger les concepts JSON pour tous les assets. **VXL-102 exclut l'enregistrement et la découverte dynamiques des factories** : la spécialisation est résolue statiquement par type à la compilation. Restent ouverts : la signature concrète des factories, la concurrence et la politique de reload/clear ; la stabilité et la durée de vie des références sont désormais fixées par VXL-103. **Rien n'impose pour l'instant une implémentation en `std::any`.**
+**Implémentation possible mais non imposée :** `std::unordered_map<std::string, std::vector<Entry>>` contenant pour chaque identifiant des variantes `Entry{type, JSON::Value, asset}`. La comparaison directe des JSON évite d'avoir à définir leur hash ; un `std::any` peut contenir un `std::shared_ptr<T>` pour les ressources non copiables, plutôt que `T` en direct. **VXL-101 : la construction passe par une factory adaptée au type T**, pouvant appeler `fromJSON` si pertinent mais sans exiger les concepts JSON pour tous les assets. **VXL-102 exclut l'enregistrement et la découverte dynamiques des factories** : la spécialisation est résolue statiquement par type à la compilation. VXL-104 autorise les factories statiques à recevoir explicitement une référence vers l'AssetManager pour résoudre leurs dépendances ; les détails non validés de la signature restent ouverts. La concurrence, les dépendances circulaires et la politique de reload/clear restent à définir ; la stabilité et la durée de vie des références sont fixées par VXL-103. **Rien n'impose pour l'instant une implémentation en `std::any`.**
 
 **Tests prévus :** même T/id/JSON => même instance ; même T/id avec JSON différents => deux instances ; JSON structurellement identiques malgré l'ordre des champs => même instance ; aucune duplication d'un atlas quand plusieurs Materials le décrivent avec la même configuration.
 
@@ -1236,7 +1236,7 @@ Pour le rôle `albedo`, appliquer strictement `uvFinal = uvOffset + uvLocal * uv
 
 **Contrat de responsabilité :** l'AssetManager recherche/possède et réutilise la ressource selon son identité de cache ; **la factory interprète la configuration et construit T**. Les erreurs de construction ne publient pas d'entrée de cache partiellement initialisée ; la politique exacte de propagations d'exceptions sera à préciser avec le contrat général de Sparkle. Aucune obligation de sérialiser une ressource vers JSON pour la charger, et aucun catalogue global imposé.
 
-**VXL-102 :** le mécanisme de factory est une **personnalisation statique par type**, consultée à la compilation par `AssetManager::load<T>` ; **aucun registre de factories ni appel `registerFactory<T>()`** n'est nécessaire. Le schéma `template<> struct spk::AssetFactory<MyType> { static MyType create(const spk::JSON::Value&); };` est illustratif, et non une signature C++ définitivement approuvée : le nom exact, les arguments (notamment un éventuel accès à l'AssetManager pour charger des dépendances), les concepts/diagnostics de compilation, la durée de vie des références retournées et l'accès concurrent restent à définir. Cette décision permet aussi aux applications de fournir les factories de leurs types personnalisés.
+**VXL-102 :** le mécanisme de factory est une **personnalisation statique par type**, consultée à la compilation par `AssetManager::load<T>` ; **aucun registre de factories ni appel `registerFactory<T>()`** n'est nécessaire. Le schéma `template<> struct spk::AssetFactory<MyType>` demeure illustratif : VXL-104 précise qu'une factory reçoit une référence explicite vers `AssetManager` afin de pouvoir charger d'autres assets, sans enregistrement dynamique. Le nom exact, les autres arguments, les concepts/diagnostics de compilation et l'accès concurrent restent à définir ; VXL-103 fixe séparément la durée de vie et la stabilité des références retournées. Cette décision permet aussi aux applications de fournir les factories de leurs types personnalisés.
 
 **Tests proposés :** factory native de SpriteSheet et de Font ; factory applicative de type personnalisé sans `fromJSON` ; création unique sur cache hit avec même triplet ; variante JSON différente produisant un nouvel asset ; exception pendant la factory laissant le cache sans entrée invalide ; aucun `toJSON` exigé.
 
@@ -1249,11 +1249,14 @@ La construction d'un asset sur cache miss utilise une **factory définie statiqu
 template <>
 struct spk::AssetFactory<MyShape>
 {
-    static MyShape create(const spk::JSON::Value& config);
+    static MyShape create(
+        spk::AssetManager& assets,
+        const spk::JSON::Value& config
+    );
 };
 ```
 
-Le recours éventuel à `fromJSON` reste **un détail interne optionnel de la factory**, conformément à VXL-101, et non un concept exigé pour tout `T`. L'absence de factory pour un type demandé doit produire un diagnostic explicite de compilation ou de contrat de l'API, **sans fallback automatique indéterminé**. Les signatures définitives et les accès nécessaires pour charger des dépendances restent ouverts.
+Le recours éventuel à `fromJSON` reste **un détail interne optionnel de la factory**, conformément à VXL-101, et non un concept exigé pour tout `T`. L'absence de factory pour un type demandé doit produire un diagnostic explicite de compilation ou de contrat de l'API, **sans fallback automatique indéterminé**. L'accès à l'AssetManager pendant la création a été validé par VXL-104 ; les autres détails de signature et le traitement des cycles de dépendances restent ouverts.
 
 **Tests/validation proposés :** factory SpriteSheet sélectionnée statiquement ; factory personnalisée MyShape sans enregistrement au runtime ; même triplet d'identité n'appelant qu'une fois sa factory ; variation de configuration créant un autre asset ; absence de factory rejetée explicitement ; pas de dépendance obligatoire au JSON pour toutes les classes d'asset elles-mêmes.
 
@@ -1267,6 +1270,27 @@ Le recours éventuel à `fromJSON` reste **un détail interne optionnel de la fa
 
 **Tests de contrat à prévoir :** même triplet => même adresse et une seule construction par la factory ; configurations différentes => instances distinctes ; insertion de nombreuses entrées et rehash éventuels sans changement d'adresse des assets déjà chargés ; conservation d'un `Material` construit (section UV et état de texture) après destruction de l'AssetManager, pour les opérations ne demandant pas les métadonnées ni résolutions possédées par le SpriteSheet ; durée de vie empruntée de `Font` et `SpriteSheet` explicitement documentée. Ne pas présumer d'une politique `clear/reload` ou d'un accès concurrent non encore validés.
 
+### VXL-104 — Factory statique avec accès explicite aux dépendances : VALIDÉ (option B)
+
+**Contrat validé :** les factories spécialisées statiquement selon VXL-101/102 reçoivent une référence explicite à l'instance `spk::AssetManager` qui effectue le chargement. Elles peuvent ainsi appeler `assets.load<U>(identifiant, configuration)` pour obtenir d'autres ressources pendant la création de `T`. Il n'y a ni registre dynamique, ni `registerFactory<T>()`, ni gestionnaire global implicite. L'AssetManager garde la responsabilité de l'identité, du cache et de la possession des assets (VXL-100/103) ; la factory interprète la configuration et compose les dépendances nécessaires à la construction.
+
+**Signature conceptuelle, non définitive :**
+```cpp
+template <>
+struct spk::AssetFactory<MyShape>
+{
+    static MyShape create(
+        spk::AssetManager& assets,
+        const spk::JSON::Value& config
+    );
+};
+```
+La présence d'une référence `AssetManager&` est validée ; l'ordre et la liste exacte des arguments, y compris un éventuel identifiant, le nom `AssetFactory` et les contraintes C++23, ne sont **pas encore figés**. Le type `T` n'est pas forcé de proposer `fromJSON` ou `toJSON`, conformément à VXL-101. Les applications peuvent toujours fournir leurs propres spécialisations statiques.
+
+**Durées de vie et erreurs :** la référence fournie à la factory est non propriétaire et ne confère aucun droit de prolonger implicitement la vie du gestionnaire. Les dépendances chargées via `load<U>()` respectent le contrat `U&` et les garanties de stabilité de VXL-103 ; leurs éventuels mécanismes de partage propres demeurent utilisables. Un échec de construction ne publie pas d'instance `T` partiellement initialisée, conformément à VXL-101. **La détection et la politique de traitement des cycles de dépendances ne sont pas décidées par VXL-104** : elles constituent un point ouvert important à traiter avant implémentation, de même que la concurrence/réentrance.
+
+**Tests à prévoir :** une factory personnalisée charge un asset `U` avec le gestionnaire reçu puis construit `T` ; plusieurs constructions réutilisent la même dépendance pour le même triplet ; les configurations différentes produisent des dépendances distinctes ; aucune inscription préalable ni singleton n'est requis ; un échec d'une dépendance n'enregistre pas un `T` incomplet. Les cas de cycles attendront la décision dédiée.
+
 ### Fonctionnalités explicitement conservées
 
 L'occlusion polygonale en flottants et la prise en charge précise des recouvrements partiels restent exigées. Les AABB peuvent éliminer des paires sans intersection, mais non remplacer les surfaces polygonales réellement couvrantes. La transparence (verre, fenêtres, etc.) et WBOIT sont aussi conservés. Pour les voxels, la transparence de pixels complètement nuls est traitée par `discard` dans les deux passes sans mesh cutout distinct ; la 3D non voxel peut conserver ses capacités cutout. Le WBOIT gère la **transparence visuelle** ; transmission physique de la lumière et ombres du verre constituent un contrat d'éclairage distinct à préciser.
@@ -1274,6 +1298,8 @@ L'occlusion polygonale en flottants et la prise en charge précise des recouvrem
 Autres sujets de conception ouverts : contrats exacts des Shapes/Volumes, binding palettes/textures, définition de compatibilité d'un bucket, durée de vie des ressources GPU et validation des APIs publiques. Ne pas inventer de décisions supplémentaires.
 
 ## 9 — Traçabilité des décisions antérieures
+
+**VXL-104** valide l'option B : les factories statiquement spécialisées reçoivent une référence explicite à l'AssetManager et peuvent appeler `load<U>()` pour obtenir leurs dépendances. L'AssetManager conserve cache et possession ; aucune inscription dynamique ni gestionnaire global n'est introduit. La signature détaillée et la politique de détection des dépendances circulaires restent à définir.
 
 **VXL-103** valide l'option A : `AssetManager::load<T>()` retourne une référence `T&` non propriétaire vers une ressource possédée par l'AssetManager, avec adresse stable pendant sa présence dans le cache, même après de nouvelles insertions ; pas de handle générique partagé. La destruction du gestionnaire invalide les emprunts, tandis que les mécanismes de partage propres aux types (notamment `Texture::Handle`) conservent leurs contrats. `clear/reload`, sélection des résolutions multiples et concurrence restent ouverts.
 
@@ -1412,4 +1438,4 @@ Les discussions VXL-001 à VXL-031 ont déterminé Volume immutable / Builder, g
 Le **présent document versionné** est la source de vérité de la conception de la PR #37 jusqu'à validation finale ; la description de la PR ne contient qu'un résumé et un lien vers cette spécification. Aucun commit de code n'est autorisé par le seul fait que ce texte existe.
 
 ---
-**État de la conception : VXL-040 à VXL-103 discutées, VXL-103 validée (option A).** La description détaillée des décisions et des tests se trouve dans les sections 3 à 8 ; la section 9 en conserve la traçabilité historique. Les décisions VXL-093 à VXL-103 révisent ou précisent les règles antérieures sur l'alpha des slots, l'occlusion, les régions d'atlas, les associations Model/Palette, la politique UV, les syntaxes JSON de Material, l'identité des assets et leur durée de vie. Seuls les contrats explicitement validés sont applicables ; les signatures et aspects techniques encore ouverts exigent une validation avant toute implémentation. La PR reste en conception, sans autorisation de commit de code.
+**État de la conception : VXL-040 à VXL-104 discutées, VXL-104 validée (option B).** La description détaillée des décisions et des tests se trouve dans les sections 3 à 8 ; la section 9 en conserve la traçabilité historique. Les décisions VXL-093 à VXL-104 révisent ou précisent les règles antérieures sur l'alpha des slots, l'occlusion, les régions d'atlas, les associations Model/Palette, la politique UV, les syntaxes JSON de Material, l'identité des assets, leur durée de vie et les factories accédant explicitement à leurs dépendances. Seuls les contrats explicitement validés sont applicables ; les signatures et aspects techniques encore ouverts exigent une validation avant toute implémentation. La PR reste en conception, sans autorisation de commit de code.
