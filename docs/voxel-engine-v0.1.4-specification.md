@@ -589,7 +589,7 @@ Le pipeline graphique prépare pour **chaque vue** les matrices de vue issues du
 
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
-`spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU. Les primitives de RenderPass, Framebuffer et RenderCommand existent, mais **le pipeline de scène 3D complet, ses lumières, ses ombres et son WBOIT doivent être conçus et développés en V0.1.4**. Leur orchestration appartient à l'infrastructure de rendu 3D générique, et non aux classes voxel seules.
+`spk::Voxel::VoxelRenderingSystem` s'intègre à l'infrastructure de `spk::RenderingSystem`, aux hooks de préparation de `RenderSnapshot`, aux `RenderPass` et aux `RenderCommand` existants. Il n'introduit ni second moteur de rendu ni nouveau gestionnaire de ressources GPU. Les primitives de RenderPass, Framebuffer et RenderCommand existent, mais **le pipeline de scène 3D complet, ses lumières, ses ombres et son WBOIT doivent être conçus et développés en V0.1.4**. **Ce pipeline utilise le Forward Rendering pour calculer directement l'éclairage au rendu des surfaces** ; son orchestration appartient à l'infrastructure de rendu 3D générique, et non aux classes voxel seules.
 
 À chaque préparation de snapshot, le système :
 
@@ -649,10 +649,14 @@ Une association compatible emploie au plus **un atlas `albedo` par mesh/passe**,
 
 ### 7.5 Pipeline opaque, translucence et éclairage
 
+**Architecture retenue : Forward Rendering.** Le rendu 3D générique calcule l'éclairage **directement pendant le dessin des surfaces dans leurs shaders**, à partir des données des lumières de l'Engine et, pour les catégories autorisées, des ressources d'ombres correspondantes. Il ne requiert pas de passe de remplissage d'un **G-buffer** ni d'une passe différée de calcul de l'éclairage. L'infrastructure graphique n'impose pas non plus d'étape de classification des lumières par tuiles ou clusters de type Forward+ dans cette version. Les paramètres de lumière nécessaires sont préparés pour les commandes de dessin ou leur environnement de rendu ; les structures GPU et les limites quantitatives restent à concevoir.
+
+La passe **opaque** calcule la couleur éclairée directement, avec les tests de profondeur appropriés. La transparence reste un traitement **WBOIT distinct** : les shaders des surfaces translucides calculent eux aussi leur couleur éclairée au moment de leur dessin, puis l'écrivent dans les buffers d'accumulation/révélation prévus par le WBOIT avant la composition finale. Les shadow maps, passes de profondeur préalables éventuellement nécessaires et composition de transparence sont **compatibles** avec le Forward Rendering : exclure le Deferred n'interdit pas ces passes auxiliaires. Aucune architecture privée d'éclairage voxel n'est introduite.
+
 ```mermaid
 flowchart LR
-  A["Mesh opaque (opacity == 1)"] --> B["Passe opaque : profondeur / éclairage"]
-  C["Mesh translucide (opacity < 1)"] --> D["WBOIT : accumulation"]
+  A["Mesh opaque (opacity == 1)"] --> B["Forward opaque : profondeur et éclairage dans le shader"]
+  C["Mesh translucide (opacity < 1)"] --> D["Forward éclairé puis WBOIT : accumulation"]
   B --> E["Composition finale"]
   D --> E
   L["Infrastructure générique 3D à créer en V0.1.4 : éclairage et ombres"] --> B
