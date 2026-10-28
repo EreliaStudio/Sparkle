@@ -649,6 +649,10 @@ classDiagram
   }
   Contributor --> ShadowMode : classification propre
   Contributor --> ShadowPropagation : portee du mode
+  RenderingSystem --> RenderingComponent : collecte graphique / descendants
+  RenderingEntity --> RenderingEntity : parente Entity / descendants
+  RenderingEntity --> RenderingComponent : composant graphique de Entity
+  RenderingSystem ..> RenderingEntity : collecte possible
   class EngineWidget {
     +bind(RenderingEngine*)
     +roles()
@@ -865,7 +869,7 @@ sequenceDiagram
       E->>E: filtre non configure : tous ; filtre vide : aucun ; sinon intersection non vide
       E->>C: buildViewRenderSnapshot(V, CaptureContext) pour les Contributors admis
       C->>C: pour chaque composant graphique interne : isLayerCompatible(component.layers)
-      C->>C: determiner le ShadowMode effectif avec overrides Descendants
+      C->>C: determiner le ShadowMode effectif via parente Entity et collecte graphique (conflits ouverts)
       C->>V: commandes des composants admis et casters compatibles
       E->>V: finaliser les phases de la vue
       V-->>E: sous-RenderSnapshot immuable
@@ -904,7 +908,7 @@ Cette réconciliation traite notamment une édition de `EngineView::setLayers(..
 
 **Filtrage interne des RenderingSystem — choix A validé.** L'admission automatique par Sparkle reste **au niveau du Contributor dans son ensemble** : chaque `EngineView` sélectionne les Contributors selon les layers qu'ils déclarent, sans posséder leurs objets ou gérer une scène. **Un `RenderingSystem` admis reste entièrement responsable du choix des objets qu'il dessine à l'intérieur de sa contribution**, y compris lorsque ceux-ci portent des layers différents. Pour garantir une règle unique sans imposer de connaissance de la structure des entités à la vue, `EngineView::CaptureContext` expose un helper de comparaison des layers (signature illustrative `bool isLayerCompatible(const LayerCollection&) const`). Le helper compare les layers fournis au **filtre de la vue figé lors de la capture CPU** ; il ne reçoit pas de `Entity*` ou de `Component*`, ne lit pas une EngineView mutable et ne filtre **jamais automatiquement** les éléments d'un `RenderingSystem`.
 
-**Cas voxel validé — ShadowMode et ShadowPropagation par Contributor et composant graphique.** Les layers individuels sont portés par les composants graphiques qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), indépendamment de leurs `Entity`. Le `VoxelRenderingSystem` est lui-même Contributor et doit être admis par les layers de chaque `EngineView` ; il filtre les composants à l'aide de `CaptureContext::isLayerCompatible(component.layers())`, sans scène implicite. **Chaque composant graphique possède son propre `ShadowMode`** : `None` ne projette pas d'ombre, `Static` contribue au cache statique, `Dynamic` contribue à la carte finale, pour ses surfaces opaques uniquement. Sans propagation, `Static`, `Dynamic` et `None` du `VoxelRenderingSystem` ne modifient **pas** le rendu d'ombres de ses composants. **Avec `ShadowPropagation::Descendants`, chacun de ces trois modes devient temporairement effectif sur la descendance entière** (enfants, petits-enfants, etc.), sans changer les modes propres stockés des composants. La définition précise des liens parent/enfant reste ouverte.
+**Cas voxel validé — ShadowMode et ShadowPropagation par Contributor et composant graphique.** Les layers individuels sont portés par les composants graphiques qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), indépendamment de leurs `Entity`. Le `VoxelRenderingSystem` est lui-même Contributor et doit être admis par les layers de chaque `EngineView` ; il filtre les composants à l'aide de `CaptureContext::isLayerCompatible(component.layers())`, sans scène implicite. **Chaque composant graphique possède son propre `ShadowMode`** : `None` ne projette pas d'ombre, `Static` contribue au cache statique, `Dynamic` contribue à la carte finale, pour ses surfaces opaques uniquement. Sans propagation, `Static`, `Dynamic` et `None` du `VoxelRenderingSystem` ne modifient **pas** le rendu d'ombres de ses composants. **Avec `ShadowPropagation::Descendants`, chacun de ces trois modes devient temporairement effectif sur la descendance entière** (enfants, petits-enfants, etc.), sans changer les modes propres stockés des composants. Les liens de descendance sont **la hiérarchie des Entities et la collecte des RenderingSystem réunies**, sans écrire de propriétés d'ombre dans le coeur headless. La priorité en cas de plusieurs chemins reste ouverte.
 
 **Invalidation du mode d'un composant.** Lorsqu'un composant dont les ombres sont collectées par `VoxelRenderingSystem` change de mode avec `setShadowMode(...)`, son fournisseur de notification émet automatiquement l'événement d'invalidation. Le système **détient des contrats RAII vers les composants dont il utilise les contributions** et relaie cet événement par son `ContractProvider` vers les EngineView abonnées. Il résilie ces contrats lorsqu'il cesse de collecter les composants et n'en détient pas pour les objets qu'il ne gère pas. Aucun nouvel abonnement ne représente une possession de scène ; il ne détermine pas l'admission par layers.
 
@@ -1011,7 +1015,17 @@ La sélection des contributeurs aux shadow maps respecte la séparation **opaque
 - **`Descendants` :** le parent **impose temporairement son mode effectif** sur l'ensemble de ses enfants, petits-enfants et niveaux suivants. `None` empêche toutes leurs projections, `Static` dirige leurs casters opaques vers le cache statique et `Dynamic` les dirige vers la carte finale dynamique. Les règles d'opacité ne changent pas.
 - **Aucun état des descendants n'est modifié :** leurs `ShadowMode` et `ShadowPropagation` propres restent stockés et intacts. Le système ne déclenche aucun setter récursif ; il utilise le **mode effectif** durant la capture. En retirant l'override, les objets retrouvent les modes prévus par leur configuration propre et les autres overrides applicables.
 
-**Reste à définir :** ce qui constitue la descendance (composants collectés par un RenderingSystem, parenté des Entities ou graphe graphique explicite), la priorité entre overrides concurrents d'ancêtres et de descendants, et la valeur par défaut de chaque propriété. Ces points ne sont pas implicitement décidés. La propagation ne change pas les layers, la sélection des EngineView ou la possession de la scène.
+**Définition de la descendance — choix C validé.** `ShadowPropagation::Descendants` suit **l'union de deux familles de relations**, sans imposer de scène appartenant à une `EngineView` :
+
+- **Hiérarchie des Entities :** les relations de parenté des Entities, y compris les petits-enfants et niveaux plus profonds, permettent de retrouver les composants et Contributors graphiques associés aux entités descendantes. La parenté est une **relation structurelle fournie par le moteur headless**, mais **aucun `ShadowMode` ou `ShadowPropagation` n'est ajouté à `sparkle::core`**.
+- **Collecte graphique :** une relation de collecte explicitement maintenue par un `RenderingSystem` vers les composants graphiques ou Contributors qu'il dessine est également une relation de descendance pour l'application de la politique. Le simple fait de partager un Registry ou d'être dans le même RenderingEngine ne crée pas de lien de collecte.
+- **Chemins mixtes :** le parcours peut suivre alternativement la parenté Entity et les collectes graphiques, jusqu'à n'importe quelle profondeur. Il est possible qu'un même objet soit atteint par plusieurs chemins ; cela ne doit pas dupliquer ses contributions au rendu, créer plusieurs copies de son état ou réécrire son `ShadowMode` stocké. L'admission par layers reste une condition indépendante et ne peut pas être contournée par la propagation.
+
+**Conséquence pour les invalidations.** Les changements du couple `(ShadowMode, ShadowPropagation)` continuent à invalider automatiquement les deux caches par les `ContractProvider`. Un changement de parenté ou d'association de collecte qui modifie la portée effective d'une propagation doit lui aussi invalider les anciennes et nouvelles contributions concernées ; le contrat de notification et de synchronisation de ces modifications structurelles reste à finaliser. Le calcul des overrides s'effectue à la capture, sans toucher aux snapshots publiés.
+
+**Conflits encore ouverts.** Une Entity graphique peut subir une propagation d'un ancêtre Entity **et** de plusieurs RenderingSystem. Lorsque deux sources proposent des modes différents, **aucune priorité implicite fondée sur le type de relation, la profondeur ou l'ordre de parcours n'est retenue à ce stade**. La résolution déterministe des modes concurrents, l'éventuelle présence de cycles dans le graphe mixte, la valeur par défaut des propriétés et la sécurité des abonnements devront être décidées avant implémentation.
+
+**Contrat de traversée graphique.** Un même composant peut être rattaché à une Entity descendante et être collecté par un RenderingSystem qui le dessine. Sparkle doit calculer sa politique d'ombres effective en tenant compte des deux types de relations sans inventer de règle de priorité. Les membres d'une Entity ne sont pas automatiquement inclus dans toutes les vues : les layers continuent de filtrer les Contributions. Les notifications d'invalidation de mode et de propagation ne doivent pas entraîner de reconstruction GPU immédiate ni modifier d'ancien snapshot.
 
 **Setter et invalidation automatiques — contrat actualisé.** `setShadowMode(mode, propagation)` compare le **couple** `(ShadowMode, ShadowPropagation)` à la configuration stockée. Si le mode **ou** la politique change, il enregistre les nouvelles valeurs et notifie automatiquement son `ContractProvider`, ce qui invalide **les deux caches, statique et final**, des vues concernées ; aucune ancienne classification des descendants n'est recherchée. Si les deux valeurs restent identiques, aucune invalidation n'est émise. La signature à un seul argument et les valeurs par défaut restent à fixer ; elles ne doivent pas être inventées. La capture calcule les modes effectifs et les fige dans les snapshots, sans écriture sur les enfants, travail GPU immédiat ou mutation de snapshots publiés.
 
@@ -1041,19 +1055,23 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  Parent["Parent : ShadowMode + ShadowPropagation"] --> P{"Propagation ?"}
-  P -->|"SelfOnly"| Own["Mode propre seulement pour le parent"]
-  P -->|"Descendants"| Override["Override effectif du meme mode sur toute la descendance"]
-  Override --> Child["Enfant : mode propre conserve"]
-  Child --> GrandChild["Petit-enfant et niveaux suivants : modes propres conserves"]
-  Child --> E["Calcul du ShadowMode effectif a la capture"]
-  GrandChild --> E
-  Own --> Mode{"Mode effectif"}
-  E --> Mode
-  Mode -->|"None"| No["Aucune ombre"]
-  Mode -->|"Static + opaque"| Static["Cache statique"]
-  Mode -->|"Dynamic + opaque"| Dynamic["Carte finale"]
-  Static --> Final["Copie dans carte finale"]
+  Parent["Origine : ShadowMode + ShadowPropagation"] --> P{"Propagation ?"}
+  P -->|"SelfOnly"| Own["Mode propre uniquement"]
+  P -->|"Descendants"| Union["Union des liens de descendance"]
+  Union --> Entity["Parenté des Entities"]
+  Union --> System["Collecte des RenderingSystem"]
+  Entity --> Traverse["Parcours transitif des chemins mixtes"]
+  System --> Traverse
+  Traverse --> Keep["Modes propres des descendants inchangés"]
+  Keep --> Conflicts{"Overrides concurrents ?"}
+  Conflicts -->|"Oui"| Open["Règle de résolution à arbitrer"]
+  Conflicts -->|"Non"| Effective["Mode effectif à la capture"]
+  Own --> Effective
+  Effective --> M{"Mode effectif"}
+  M -->|"None"| No["Aucune projection"]
+  M -->|"Static et opaque"| Static["Cache statique"]
+  M -->|"Dynamic et opaque"| Dynamic["Carte finale"]
+  Static --> Final["Copie vers finale"]
   Dynamic --> Final
 ```
 
