@@ -595,7 +595,7 @@ classDiagram
   class RenderingEngine {
     +refreshRenderSnapshot()
     +renderSnapshot()
-    +addView(name, camera, size, order)
+    +addView(name, camera, size, optionalOrder)
     +view(name)
     -ThreadSafeSlot~RenderSnapshot~ snapshot
   }
@@ -603,7 +603,7 @@ classDiagram
     +name
     +camera
     +size
-    +order
+    +optionalOrder
     +CaptureContext
     +Contributor
     -Framebuffer logique
@@ -636,9 +636,11 @@ Dans ce diagramme, `Contributor` est **`EngineView::Contributor`** : le lien poi
 
 **Frontière des bibliothèques.** `spk::Engine` reste un moteur logique et headless de `sparkle::core`, responsable des entités, systèmes, événements et `updateState(UpdateContext&)`. `spk::RenderingEngine : public spk::Engine` se trouve dans `sparkle::sparkle` et ajoute les capacités graphiques : `EngineView`, contribution des objets graphiques, construction du `RenderSnapshot` moteur et publication via `ThreadSafeSlot<RenderSnapshot>`. Un serveur peut instancier `Engine` seul ; une application graphique instancie directement `RenderingEngine`. La conversion d'un Engine existant en RenderingEngine n'est pas prévue. L'héritage impose de rendre virtuel le destructeur de `Engine`. L'ancien `RenderingEngine` adaptateur possédant un `Engine*` et les événements/input qu'il propage devront être refactorisés, sans perdre ces fonctionnalités.
 
-**Propriété des vues.** Chaque `RenderingEngine` possède une collection de `spk::EngineView`, identifiées par une chaîne unique. Une vue désigne une `CameraComponent` explicite, sa résolution choisie par le jeu et son ordre de capture. Une caméra peut être utilisée dans plusieurs vues. `EngineView` et `CameraComponent` relèvent désormais du module graphique et non de `sparkle::core` ; la caméra reste un `Component3D` positionné par son `Entity3D/Transform3D` habituel. Aucune caméra, vue, résolution, projection ou hiérarchie alternative n'est créée implicitement. Le nom `"main"` est uniquement la sélection par défaut du rôle `Drawing` d'un EngineWidget.
+**Propriété des vues.** Chaque `RenderingEngine` possède une collection de `spk::EngineView`, identifiées par une chaîne unique. Une vue désigne une `CameraComponent` explicite, sa résolution choisie par le jeu et, facultativement, un ordre numérique de capture. Une caméra peut être utilisée dans plusieurs vues. `EngineView` et `CameraComponent` relèvent désormais du module graphique et non de `sparkle::core` ; la caméra reste un `Component3D` positionné par son `Entity3D/Transform3D` habituel. Aucune caméra, vue, résolution, projection ou hiérarchie alternative n'est créée implicitement. Le nom `"main"` est uniquement la sélection par défaut du rôle `Drawing` d'un EngineWidget.
 
-**Unicité des ordres de capture (choix B validé).** Au sein d'un même `RenderingEngine`, **deux `EngineView` distinctes ne peuvent jamais porter le même ordre numérique**. Lors de l'ajout d'une vue ou d'une modification de son ordre, une collision doit déclencher une `spk::Exception` descriptive, sans laisser une configuration d'ordonnancement invalide. Le tri stable des `RenderPass` ne doit pas servir de mécanisme implicite pour départager les vues. Les ordres peuvent avoir des écarts : l'exigence est leur unicité, non leur contiguïté. Le comportement d'une éventuelle surcharge sans ordre explicite reste à préciser séparément ; elle doit, si elle existe, préserver cette garantie.
+**Ordre facultatif, sans numérotation automatique (décision validée).** Une `EngineView` peut être créée **avec ou sans ordre numérique explicite**. Les vues dotées d'un ordre explicite sont toutes exécutées **en premier**, dans l'ordre croissant de cette valeur. Leurs ordres numériques doivent être uniques dans le même `RenderingEngine` ; tout conflit à la création ou lors d'un changement d'ordre déclenche une `spk::Exception` descriptive sans laisser la configuration dans un état invalide. Les vues **sans ordre explicite** sont toujours exécutées **après toutes les vues ordonnées**, dans **leur ordre de création**, sans recevoir de priorité numérique automatique. Deux vues sans ordre ne sont **pas** en conflit : l'unicité ne s'applique qu'aux valeurs explicitement fournies. Ainsi, l'ajout ultérieur d'une vue ordonnée la place avant toutes les vues sans ordre, même si celles-ci ont été créées précédemment.
+
+La construction du snapshot moteur produit d'abord cette séquence complète de vues (priorités explicites puis vues non ordonnées en ordre de création) et y place les commandes de délégation dans le même ordre. Comme le `RenderSnapshot::Builder` existant ne trie les `RenderPass::Key` que par valeur numérique, l'encodage interne doit **respecter cette séquence**, y compris si une priorité explicite vaut la borne maximale du type numérique. Il ne doit pas reposer sur une valeur sentinelle « après toutes les priorités » susceptible d'entrer en collision ; les priorités publiques n'ont pas à être réutilisées telles quelles comme ordres des passes internes. Cela préserve le mécanisme existant de Builder sans ordonnanceur supplémentaire.
 
 **Accès aux vues depuis l'Engine ou la caméra.** `renderingEngine.view("monitor")` retrouve une vue par son nom et lance `spk::Exception` si absente. `surveillanceCamera.view("monitor")` est également prévu : il utilise le contexte `Engine*` déjà transmis aux composants pour retrouver le `RenderingEngine`, puis vérifie que la vue demandée désigne bien cette caméra. Absence de moteur graphique, nom inconnu ou mauvaise caméra : `spk::Exception`. Cela ne demande **aucun registre inverse** dans la caméra. Signatures et noms secondaires restent illustratifs.
 
@@ -667,6 +669,7 @@ Les rôles peuvent être combinés : `Update|Render|Drawing` pour une fenêtre p
 spk::RenderingEngine engine;
 engine.addView("surveillance", surveillanceCamera, {640, 360}, 0);
 engine.addView("main", playerCamera, {1280, 720}, 1);
+engine.addView("debug", debugCamera, {320, 240}); // Sans ordre : exécutée après toutes les vues ordonnées.
 
 mainWidget.bind(&engine);
 mainWidget.setRoles(Role::Update | Role::Render | Role::Drawing);
@@ -766,7 +769,7 @@ sequenceDiagram
 
 **Orchestration A — un sous-`RenderSnapshot` indépendant par `EngineView`.** À chaque `RenderingEngine::refreshRenderSnapshot()`, le moteur crée un `RenderSnapshot::Builder` neuf pour chaque vue. Les `EngineView::Contributor` actifs contribuent tous au **même Builder de cette vue**, à l'aide d'un `EngineView::CaptureContext` explicite (caméra, matrices, résolution, identifiant de vue, lumières pertinentes et handles de cibles logiques). Le moteur prépare les passes standard avant de solliciter les contributeurs.
 
-Le sous-snapshot de chaque vue est construit puis **détenu par valeur** par une commande de délégation (nom illustratif : `ExecuteViewSnapshotCommand`). Le Builder du snapshot moteur contient une passe par vue, de nom unique, ordonnée numériquement selon l'ordre explicite de l'EngineView. L'exécution d'une passe du moteur appelle `subSnapshot.execute(renderContext)` : **toutes** les phases de `surveillance` (ombres, opaque, WBOIT, composition) sont exécutées avant la première phase de `main`, lorsque leurs ordres sont 0 et 1. Les noms et ordres des passes **internes** sont isolés entre vues. Aucun second ordonnanceur, tri de dépendances des Materials ou encodage global des phases n'est introduit.
+Le sous-snapshot de chaque vue est construit puis **détenu par valeur** par une commande de délégation (nom illustratif : `ExecuteViewSnapshotCommand`). Le Builder du snapshot moteur contient une passe par vue, de nom unique, dont l'ordre **interne** respecte la séquence calculée à partir des vues à priorité explicite, puis des vues non ordonnées dans leur ordre de création (voir règle ci-dessus). L'exécution d'une passe du moteur appelle `subSnapshot.execute(renderContext)` : **toutes** les phases de `surveillance` (ombres, opaque, WBOIT, composition) sont exécutées avant la première phase de `main`, lorsque leurs ordres explicites sont 0 et 1. Toute vue sans ordre est exécutée après ces deux vues. Les noms et ordres des passes **internes aux sous-snapshots** sont isolés entre vues. Aucun second ordonnanceur, tri de dépendances des Materials ou encodage global des phases n'est introduit.
 
 **Pas de mutualisation inter-vues pour V0.1.4.** Chaque vue recalcule indépendamment ses transforms, sa visibilité, ses buckets, ses SSBO d'instances et ses commandes. Les ressources sources préexistantes (meshes, matériaux, textures, handles) demeurent réutilisables ; aucun cache ou objet de capture partagé entre vues n'est exigé. La mutualisation est une optimisation future éventuelle, seulement après mesures. La simulation `Engine::updateState()` n'est pas répétée pour chaque vue.
 
@@ -809,7 +812,7 @@ Les configurations de rendu jusqu'ici fixées uniquement dans `Window::Surface::
 
 **Extension par passes personnalisées — décision B validée.** Les `EngineView::Contributor` peuvent contribuer aux passes standard initialisées par `RenderingEngine` **et** créer leurs propres `RenderPass`, en utilisant le `RenderSnapshot::Builder` existant et des `RenderPass::Key` à ordre numérique explicite. `RenderingEngine` réserve les identifiants de ses passes système et des bornes/plages d'ordonnancement pour les étapes qu'il doit garantir (notamment la composition finale et les transitions de cibles). Une passe ajoutée par un Contributor doit respecter ces réservations et ne peut pas intercaler ses commandes à l'intérieur d'une étape réservée ni déplacer la finalisation. Les passes personnalisées restent **locales au sous-snapshot de l'EngineView concernée** : elles ne peuvent pas réordonner deux vues, et elles doivent préparer explicitement les états OpenGL dont elles dépendent. Aucune nouvelle interface de scheduling ou ordonnanceur de dépendances n'est introduit. Les clés et limites numériques exactes ainsi que le contrôle des collisions seront finalisés dans le contrat des passes avant implémentation ; ne pas inventer de valeurs fixes dans la présente spécification.
 
-**À préciser sans réouvrir ces décisions :** politique d'attribution d'un ordre lorsqu'il n'est pas fourni (si une telle API est proposée), valeurs exactes des bornes réservées, contrats précis des attachments/blend WBOIT, **clés/positionnement concret de la transition EngineWidget/fenêtre désormais validée**, réentrance effective des commandes existantes (dont les UBO partagés), et qualification des mesures Profiler lors de l'exécution imbriquée. Une construction incomplète ne publie pas de snapshot partiel et conserve la précédente publication.
+**À préciser sans réouvrir ces décisions :** encodage interne des clés des passes de délégation après calcul de la séquence des vues (sans priorité automatique pour les vues non ordonnées), valeurs exactes des bornes réservées, contrats précis des attachments/blend WBOIT, **clés/positionnement concret de la transition EngineWidget/fenêtre désormais validée**, réentrance effective des commandes existantes (dont les UBO partagés), et qualification des mesures Profiler lors de l'exécution imbriquée. Une construction incomplète ne publie pas de snapshot partiel et conserve la précédente publication.
 
 
 
