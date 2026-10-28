@@ -700,7 +700,40 @@ Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightCompon
 
 **Projection omnidirectionnelle des lumières ponctuelles — nouveau choix validé.** Une `PointLightComponent` autorisée à projeter des ombres dispose pour chaque vue de **deux cubemaps de profondeur logiques à six faces chacune** : cache statique et carte finale, indépendants des autres lumières et réalisés par `Window::Surface`. Les six faces couvrent l'ensemble des directions, avec six orientations et une projection perspective carrée à **90° par face**, bornée par les plans proche/lointain adaptés à la portée de la lumière. Le `ShadowMap::RenderingSystem` choisit les seuls casters opaques qui peuvent influencer cette lumière (intersection avec son volume d'influence, puis culling facultatif par face), classe leur mode effectif `Static`/`Dynamic`, et écrit les commandes de profondeur nécessaires aux faces dans **la seule RenderPass d'ombres de la vue**. Il ne parcourt pas ni ne dessine systématiquement la totalité des Entities pour chaque point light.
 
-**Cache et consommation des cubemaps.** Le cache statique cubemap est reconstruit si invalide, puis copié **face par face** dans la cubemap finale avant le rendu des casters dynamiques lorsque la finale doit être actualisée ; une invalidation statique impose également la finale. Une invalidation dynamique ne reconstruit que la finale, en réutilisant les six faces statiques encore valides. La portée de l'invalidation peut rester **globale aux six faces de la lumière** en V0.1.4 : optimisation par face non obligatoire. L'éclairage Forward+ échantillonne uniquement la **cubemap finale**, avec une comparaison de profondeur cohérente avec la distance à la source et ses paramètres proche/lointain. Les cas spécifiques de filtrage/PCF, de couture entre faces, de biais, de résolution, de profondeur encodée et d'exécution GPU (six dessins ou rendu layered) restent à préciser ; **ne pas imposer un geometry shader** avant de mesurer les coûts.
+**Cache et consommation des cubemaps.** Le cache statique cubemap est reconstruit si invalide, puis copié **face par face** dans la cubemap finale avant le rendu des casters dynamiques lorsque la finale doit être actualisée ; une invalidation statique impose également la finale. Une invalidation dynamique ne reconstruit que la finale, en réutilisant les six faces statiques encore valides. La portée de l'invalidation peut rester **globale aux six faces de la lumière** en V0.1.4 : optimisation par face non obligatoire. L'éclairage Forward+ échantillonne uniquement la **cubemap finale**, avec une comparaison de profondeur cohérente avec la distance à la source et ses paramètres proche/lointain. Les cas spécifiques de filtrage/PCF, de couture entre faces, de biais, de résolution et de profondeur encodée restent à préciser ; **pour V0.1.4, chaque face doit pouvoir être attachée et rendue explicitement**, sans imposer de geometry shader ni de rendu layered.
+
+**Extension des primitives OpenGL existantes — décision validée (V0.1.4).** Le type `Texture::Target::TextureCubeMap` existe déjà, mais `Texture::State::_synchronize()` ne sait actuellement synchroniser que `Texture2D`. Compléter **`Texture`**, sans créer de classe `ShadowCubeMap` ni de nouveau gestionnaire de ressources : une texture de cible cubemap doit pouvoir allouer et synchroniser **ses six faces carrées** en format de profondeur déjà pris en charge, sous une identité logique `GPUResource::State` et avec une instance OpenGL distincte par `Window::Surface`. Le recyclage des instances reste dans `GPUResourceCollection`, avec compatibilité de cible et resynchronisation obligatoire après réutilisation ; une ancienne profondeur recyclée n'est jamais considérée comme valide.
+
+**Attachement des faces au Framebuffer — décision validée (V0.1.4).** `Framebuffer` doit permettre de désigner explicitement **une face d'une cubemap de profondeur** comme attachment `GL_DEPTH_ATTACHMENT`, au lieu de limiter cette opération à une `Texture2D`. La face ciblée est sélectionnée par les commandes de rendu de profondeur de la lumière, et non devinée à partir d'un état global. Une cible depth-only reste valide sans attachment couleur (draw/read buffers désactivés) si le framebuffer est complet. L'API précise des opérations d'attachement reste à consolider avec les autres `RenderCommand` typées ; **aucune classe, cache ou file GPU spécifique aux cubemaps d'ombres** n'est introduit. L'extension est générique pour les usages futurs de cubemaps.
+
+**Snapshots, générations et budget inchangés.** Lors de la construction d'un snapshot, capturer les handles forts vers les deux cubemaps et les paramètres immuables de face/projection ; une nouvelle paire après éviction ou reconstruction ne modifie jamais les textures ou attachments encore référencés par un ancien snapshot. Sur chaque surface, l'exécution OpenGL prépare/attache explicitement chaque face avant de reconstruire la profondeur correspondante, puis consomme seulement la cubemap finale valide. Les six faces forment **une unique reconstruction au regard du budget existant** (statique et finale si nécessaire). Cette extension n'ajoute ni nouveau propriétaire GPU ni mécanisme de libération différée.
+
+```mermaid
+sequenceDiagram
+    participant SH as ShadowMap RenderingSystem
+    participant SNAP as Snapshot et handles immuables
+    participant TEX as Texture cubemap existante
+    participant FBO as Framebuffer existant
+    participant GPU as GPU de la Window Surface
+    SH->>SNAP: Capturer les deux handles de cubemap et les commandes de faces
+    SNAP->>TEX: Activer les ressources sur la surface courante
+    TEX->>GPU: Allouer ou synchroniser six faces depth si necessaire
+    alt Cache statique invalide
+        loop Six faces
+            SNAP->>FBO: Attacher face de cubemap statique en profondeur
+            FBO->>GPU: Dessiner les casters statiques admissibles
+        end
+    end
+    alt Carte finale invalide et reconstruction autorisee
+        loop Six faces
+            SNAP->>FBO: Attacher face de cubemap finale en profondeur
+            FBO->>GPU: Copier profondeur statique puis dessiner casters dynamiques
+        end
+        Note over SNAP,GPU: Publier valide seulement apres six faces coherentes
+    end
+    Note over TEX,GPU: Instance par surface et recuperation par GPUResourceCollection
+```
+
 
 **Budget ponctuel souple par EngineView — choix A validé, remplace le plafond strict unique.** Les `PointLightComponent` ont les ombres **désactivées par défaut**, puis activables individuellement. Le sous-système `ShadowMap` associe à chaque `EngineView`, **sans étendre l'API générique d'EngineView aux ombres**, trois paramètres configurables :
 
@@ -773,6 +806,7 @@ sequenceDiagram
         Note over COL,GPU: Aucune reclamation tant que la State est vivante
     else Derniere reference relachee
         STATE->>COL: LifeTime signale identifiant dans ReclamationQueue
+        COL->>GPU: Garantir contexte de cette surface avant recuperation
         COL->>COL: reclaimReleased sur le runtime de rendu
         alt Instance Texture recyclable
             COL->>COL: Mettre instance dans pool de textures
@@ -856,7 +890,8 @@ flowchart TD
   Evict --> LightOnly
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
   Available --> Forward["Forward+ : echantillonnage ombre ponctuelle"]
-  Faces --> Static["Cubemap statique : six faces si invalides"]
+  Faces --> FaceDepth["Texture : six faces depth et Framebuffer : face attachee"]
+  FaceDepth --> Static["Cubemap statique : six faces si invalides"]
   Static -->|"Copie de profondeur face par face"| Final["Cubemap finale : six faces"]
   Faces --> Dyn["Casters dynamiques : dessin dans finale"]
   Dyn --> Final
