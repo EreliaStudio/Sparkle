@@ -23,6 +23,9 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 - **Architecture graphique validée :** `spk::RenderingEngine : public spk::Engine`, dans `sparkle::sparkle`, possède les `EngineView` et son `ThreadSafeSlot<RenderSnapshot>`. `Engine` demeure utilisable seul par les serveurs headless et ne dépend ni des vues ni d'OpenGL. `EngineView` n'est plus une classe de `sparkle::core`. Le destructeur d'Engine doit permettre la destruction polymorphique.
 - **Caméras et vues explicites :** chaque vue a un nom unique, une caméra, une résolution et un ordre de capture. `camera.view(name)` utilise le contexte moteur existant et lance `spk::Exception` sur un nom inconnu ou une mauvaise caméra. `"main"` est uniquement l'identifiant demandé par défaut pour `Drawing`. Aucune vue/caméra/projection/resize automatique.
 - **Une classe `EngineWidget` :** `bind(RenderingEngine*)`, non propriétaire ; rôles indépendants et combinables `Update`, `Render`, `Drawing`. Pas d'`EngineViewWidget` distinct et pas de protection des updates/rendus redondants demandés par le développeur.
+- **Sous-snapshots par vue (approche A) :** chaque `EngineView` dispose d'un Builder et d'un sous-`RenderSnapshot` indépendants, inséré par commande de délégation dans une passe du snapshot moteur ordonnée par la vue. Une vue est entièrement rendue avant la suivante ; pas de mutualisation inter-vues exigée pour V0.1.4.
+- **Contribution explicitement liée à une vue :** `EngineView::Contributor` remplace `RenderingObjectTrait` pour les variantes graphiques de Component/Behaviour/Entity/System. `EngineView::CaptureContext` transmet les informations figées de caméra, matrices, ressources logiques, etc. ; les widgets conservent `RenderSnapshotContributorTrait`.
+- **États GPU explicitement préparés par passes :** `RenderingEngine` initialise les passes avec des `RenderCommand` génériques par famille : blending (y compris par attachment), depth, culling, color mask, framebuffer et viewport/scissor adaptés. Chaque phase configure les états qu'elle utilise et la fenêtre restaure explicitement son état de présentation avant Drawing/UI, sans monolithe de sauvegarde d'état GL.
 - **Deux snapshots, deux cadences distinctes :** `Engine::updateState` met à jour les entités sans capture. `RenderingEngine::refreshRenderSnapshot` construit et publie le snapshot moteur, uniquement sur demande au moment de préparer un snapshot de fenêtre avec rôle `Render`. L'Application conserve ses slots de snapshots par fenêtre ; une commande y capture et exécute un `shared_ptr<const RenderSnapshot>` moteur. Les fenêtres ne sont pas rafraîchies automatiquement lors de la publication moteur.
 - **Ressources OpenGL séparées par fenêtre, sans map dédiée :** `Framebuffer` et `Texture` sont déjà des `GPUResource`, matérialisées par la `GPUResourceCollection` de chaque `Window::Surface`. Une même EngineView peut être rendue dans plusieurs fenêtres ; produire A n'actualise pas B. `Drawing` seul affiche la dernière texture locale courante, sans warning si elle n'a jamais été initialisée.
 - **Emprunts et snapshots :** détruire une `EngineView` invalide ses références logiques et les matériaux qui l'empruntent. Les RenderSnapshot déjà publiés peuvent conserver leurs handles GPU concrets jusqu'à utilisation ; ce mécanisme ne prolonge pas l'existence de la vue. Les changements de résolution exigent une nouvelle version de framebuffer/attachments, et non un resize en place des States capturés.
@@ -31,31 +34,31 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 ### P0 — Représentation et ordonnancement complet des vues
 
-**Références :** sections 7, 7.1 et 7.5 de la spécification.
+**Références :** sections 7 et 7.1 de la spécification.
 
-**Ce qui est désormais tranché.** L'Engine graphique possède ses vues et un snapshot partagé. Chaque fenêtre exécute ce dernier dans son contexte OpenGL grâce à une commande imbriquée dans son propre snapshot. Le `Framebuffer` et les `Texture` disposent déjà d'instances GPU par fenêtre. Le jeu fixe un ordre explicite des vues ; il ne demande aucun tri des dépendances en fonction des Materials.
+**Décisions closes.** Approche A : un Builder et un sous-`RenderSnapshot` par EngineView, indépendants et reconstruits à chaque rafraîchissement ; le snapshot moteur possède une commande d'exécution par vue, ordonnée par le jeu. Un même `EngineView::Contributor` remplit le Builder de chaque vue avec son `CaptureContext` explicite. Aucun rendu de vue n'est entrelacé avec le suivant ; pas de mutualisation, de graphe de dépendances ni d'ordonnanceur supplémentaire. Les passes standard sont initialisées avec des RenderCommand d'état GPU et le retour à la présentation précède les widgets UI. Les slots moteur et fenêtre et les GPUResource par surface restent inchangés.
 
-**Points restants :**
+**Questions résiduelles avant implémentation :**
 
-1. Le `RenderSnapshot::Builder` fusionne les passes par nom et effectue un tri global par `RenderPass::Key::order`. Comment garantir une **suite complète de passes par vue** (ombres, opaque, WBOIT, composition finale) avant la vue suivante, en conservant les mécanismes existants ? Options techniques : séquences de sous-snapshots ou clés isolées/ordres non ambigus ; aucune option n'est encore approuvée.
-2. Comment faire parvenir le contexte de caméra, matrices de projection, lumières, view ID et ressources GPU logiques aux contributeurs (`RenderingSystem` et `VoxelRenderingSystem`), dont l'API actuelle `buildRenderSnapshot(Builder&)` ne reçoit pas de contexte de vue ?
-3. Comment établir la commande de délégation du snapshot moteur au snapshot de fenêtre sans collision de passes avec l'UI, avec une restauration **explicite** du framebuffer de présentation et des paramètres OpenGL avant les widgets ?
-4. Quelles sont les garanties et la sémantique de l'**ordre par défaut** d'une vue, des réordonnancements, d'un nom manquant pour `Drawing` et de la disparition d'une caméra pendant la vie d'une EngineView ? La responsabilité des références pendantes est tranchée, mais les erreurs observables avant destruction peuvent encore être précisées.
+1. Quelle politique publique appliquer à **deux vues portant le même ordre numérique** ? Le Builder existant utilise un tri stable ; faut-il accepter cette priorité d'insertion ou refuser l'ambiguïté ? Quel ordre attribuer lorsqu'il n'est pas fourni ?
+2. Quel contrat permet aux Contributors d'ajouter des **passes graphiques personnalisées** sans déborder les phases réservées ni intercaler la composition ou les transitions de framebuffer ? Les plages/clés concrètes et la méthode d'extension restent à fixer.
+3. Où précisément placer les commandes de remise en état du framebuffer de présentation dans le **snapshot de fenêtre** pour qu'elles précèdent tous les widgets Drawing/UI, y compris lorsqu'un widget effectue uniquement Drawing ? Les invariants sont validés, leur encodage exact reste à préciser.
+4. Confirmer les règles d'erreur des vues manquantes, des changements d'ordre et de l'absence/déconnexion de caméra ; les références pendantes restent sous responsabilité du développeur.
 
-**Critère de clôture.** Un snapshot moteur à deux vues (`surveillance` d'ordre 0 et `main` d'ordre 1) rend complètement la première puis l'utilise comme texture pendant le dessin de la seconde, dans deux fenêtres différentes, sans algorithme caché ni interleaving de passes.
+**Critère de clôture.** Deux vues `surveillance` (ordre 0) et `main` (ordre 1) exécutent chacune leur pipeline complet sans collision de nom de passe ; la texture locale de surveillance est consommée par main puis la fenêtre retourne à son état UI correct.
 
 ### P0 — Contrat du pipeline Forward, des ombres et du WBOIT
 
 **Références :** sections 7.1 à 7.5.
 
-**Constat.** `Framebuffer`, `RenderPass`, `RenderSnapshot` et les handles GPU existent ; un pipeline Forward complet, la configuration WBOIT et les shadow maps génériques restent à implémenter. Les passes d'initialisation sont des commandes explicites ; le suffixe `.init` n'a pas de valeur magique.
+**Constat.** `Framebuffer`, `RenderPass`, `RenderSnapshot` et les handles GPU existent ; Forward, WBOIT et shadow maps génériques restent à implémenter. Le principe d'état d'entrée explicite par `RenderPass` et les familles génériques de nouvelles `RenderCommand` (Blend, Depth, CullFace, ColorMask, Framebuffer et adaptation Viewport/Scissor) sont validés. Les valeurs de ces états, les formats et le contrat précis du pipeline restent à déterminer. Un suffixe `.init` n'a aucune signification automatique.
 
 **Points restants :**
 
-1. Formats et nombre d'attachments WBOIT (accumulation/révélation), profondeur, blending, contraintes OpenGL et commandes de composition ; `Texture::Format` n'expose pas encore tous les formats possibles nécessaires.
-2. Paramètres d'éclairage générique (directionnelle, point, spot), limites, shadow maps des directionnelles/spots, qualité, biais, portée, rafraîchissement et éventuellement mutualisation entre vues. Les points lumineux n'ont pas d'ombres et les directionnelles utilisent une seule shadow map par vue/lumière ; ni Deferred ni Forward+ n'est prévu.
+1. Formats et nombre d'attachments WBOIT (accumulation/révélation), profondeur, **valeurs exactes du blending par attachment**, limites OpenGL et commandes de composition ; `Texture::Format` n'expose pas encore tous les formats potentiellement nécessaires.
+2. Paramètres d'éclairage générique (directionnelle, point, spot), limites, shadow maps des directionnelles/spots, qualité, biais, portée et rafraîchissement. Le rendu est préparé indépendamment par vue, **sans mutualisation des shadow maps exigée**. Les points lumineux n'ont pas d'ombres et les directionnelles utilisent une seule carte par vue/lumière ; ni Deferred ni Forward+ n'est prévu.
 3. Remplacement sûr des framebuffers/attachments après changement **explicite** de taille : toute capture déjà publiée doit référencer des States immuables, et les anciennes ressources GPU ne doivent pas être réutilisées pendant leur exécution. `Framebuffer::resize()` en place ne fournit pas ce contrat.
-4. Comment assurer la **réentrance** des `RenderCommand::execute(RenderContext&) const` d'un snapshot moteur exécuté simultanément dans deux contextes de fenêtre ? Les caches CPU mutables et l'état global OpenGL implicite sont à auditer.
+4. Comment assurer la **réentrance** des `RenderCommand::execute(RenderContext&) const` d'un snapshot moteur exécuté simultanément dans deux contextes de fenêtre ? Les caches CPU mutables, dont le `ViewportUniformRenderCommand` actuel, et l'état OpenGL par contexte sont à auditer. Ajuster aussi les compteurs et durées du `Profiler`, aujourd'hui calculés par `RenderSnapshot::execute()` de manière plate, pour les sous-snapshots imbriqués.
 
 **Critère de clôture.** Un ensemble de passes par vue, documenté puis testé, marche avec plusieurs vues et deux surfaces GPU, y compris pendant le resize et la coexistence de snapshots anciens et nouveaux.
 
@@ -69,7 +72,7 @@ La spécification principale établit déjà les éléments suivants, qui ne son
 
 1. Quelle représentation publique (variante de source, overload de Builder, autre type minimal) porte une référence **non propriétaire** à une EngineView et permet de la résoudre pendant `refreshRenderSnapshot()` sans nouvelle lecture pendant le rendu GPU ?
 2. Comment cette source s'intègre-t-elle à la **règle d'un seul atlas par passe et par couple Model/Palette**, actuellement fondée sur des identités `Texture::Handle` stables ? Une vue peut-elle fournir le rôle `albedo` d'un Material voxel ? Si oui, quel est le contrat de compatibilité avant le premier rendu et après resize ?
-3. Comment garantir que la sortie d'une vue A sera déjà produite dans **la même surface OpenGL** avant la commande qui l'échantillonne dans la vue B, sans créer une dépendance implicite ou un transfert interfenêtre ?
+3. **Résolu pour l'ordonnancement :** la vue A est entièrement exécutée avant B dans la même surface grâce aux sous-snapshots séquentiels, sans transfert interfenêtre ni dépendance déduite du Material. Reste à préciser le binding concret de la texture de A dans les commandes de B et le traitement d'une référence invalide ou d'une dépendance cyclique déclarée par le jeu.
 4. Quelles opérations sur une vue (renommage, suppression, rebinding de caméra, remplacement de cible) sont autorisées, et comment leurs références empruntées deviennent-elles invalides ou restent-elles stables ?
 
 **Critère de clôture.** Un écran 3D de vidéosurveillance reste affichable après resize explicite sans reconstruire son Material, tandis qu'un Material référençant une vue détruite n'est plus utilisable.
@@ -164,8 +167,8 @@ Les principales responsabilités sont établies ; plusieurs noms/types exacts re
 
 ## 4. Ordre de résolution recommandé
 
-1. **P0 :** choisir l'encodage de l'ordre complet des vues et des passes, la représentation du contexte de vue dans les contributions et le rétablissement de l'état de rendu des widgets.
-2. **P0 :** fixer le pipeline Forward/ombres/WBOIT et le remplacement des cibles lors des resizes en protégeant tous les snapshots en vol.
+1. **P0 partiellement clos :** les sous-snapshots par vue, `EngineView::Contributor` et les commandes d'état typées sont validés ; finaliser seulement l'extension par passes personnalisées, les ordres égaux et le placement exact des commandes de présentation UI.
+2. **P0 :** fixer les configurations concrètes Forward/ombres/WBOIT (formats, blending par attachment et composition) et le remplacement des cibles lors des resizes en protégeant tous les snapshots en vol.
 3. **P0 :** finaliser la source `Material` fondée sur une `EngineView` et l'identité d'atlas dans les `VoxelPalette`, pour que la vidéosurveillance soit réellement implémentable.
 4. **P1 :** clarifier les frontières de thread et de propriété pendant la capture, y compris input et lifetimes des composants, puis la composition des Assemblies et le JSON complet des Materials.
 5. **Préparation technique :** finaliser tests, algorithmes géométriques, layouts GPU et APIs dans une seule passe cohérente ; seules les implications architecturales demandent un nouveau choix du mainteneur.
