@@ -594,7 +594,7 @@ La classe publique **`ShadowMap`** représente une **passe logique de rendu d'om
 
 **Contenu de la passe commune.** Pour chacune des lumières **directionnelles et spots dont les ombres sont activées, ainsi que des ponctuelles activées et retenues par le budget souple X/Y/tolérance de la vue**, le système écrit, à l'intérieur de **la même `RenderPass`**, la suite **ordonnée** des commandes nécessaires : choisir les cibles de profondeur **propres à cette lumière**, reconstruire le cache statique seulement s'il est invalide, reconstruire la carte finale par copie de la statique puis dessins des casters dynamiques seulement si la finale est invalide, et poursuivre avec la lumière suivante. Si aucune reconstruction n'est requise, ne pas redessiner ni recopier inutilement. Les caches **ne sont jamais partagés entre lumières** : la combinaison `EngineView × lumière` conserve ses deux ressources logiques et ses générations, matérialisées séparément pour chaque `Window::Surface`. Les lumières ponctuelles dont les ombres sont activées ajoutent **des commandes de projection omnidirectionnelle sur les six faces d'une cubemap de profondeur** dans cette même `RenderPass`, et non six `RenderPass` indépendantes. Les spots et directionnelles conservent chacun une projection 2D ; les six faces d'une lumière ponctuelle forment une seule source d'ombre logique à caches séparés par lumière. Le comportement exact lorsqu'aucune lumière compatible n'est présente (passe vide ou absente) reste un détail à finaliser, sans remettre en cause l'unicité maximale de la passe par vue.
 
-**Sécurité des commandes conditionnelles.** Le snapshot CPU doit encoder suffisamment d'informations immuables pour que l'exécution GPU sur chaque surface reconstruise uniquement les caches invalides **de cette surface**, sans lire des `Contributor` mutables ; aucun changement de cible entre deux lumières n'est implicite. Le passage des textures de profondeur finales à l'éclairage reste une intégration générique à définir, sans ajouter une dépendance d'`EngineView` vers `ShadowMap`.
+**Sécurité des commandes conditionnelles.** Le snapshot CPU doit encoder suffisamment d'informations immuables pour que l'exécution GPU sur chaque surface reconstruise uniquement les caches invalides **de cette surface et dans la limite du budget de reconstructions de l'image**. Une PointLight retenue mais non actualisée éclaire sans ombre. Les commandes ne lisent aucun `Contributor` mutable ; aucun changement de cible entre deux lumières n'est implicite. Le passage des textures de profondeur finales à l'éclairage reste une intégration générique à définir, sans ajouter une dépendance d'`EngineView` vers `ShadowMap`.
 
 **Séquence de construction de la passe unique — choix A.**
 
@@ -614,12 +614,22 @@ sequenceDiagram
     S->>S: Conserver surplus historiques admissibles, remplir places libres
     S->>S: Evincer surplus seulement si nouveau > retenu x (1 + hysteresis)
     Note over S: Tolerance prime, X premieres obligatoires, total <= Y
-    S->>S: Figer ensemble et references cubemaps dans snapshot
+    S->>S: Figer demandes des vues et scores dans snapshot
+    Note over S,V: Plan de reconstruction par image et surface
+    loop Pour chaque Window Surface
+        S->>S: Rassembler toutes les demandes invalides des vues de cette image
+        S->>S: Classer par priorite decroissante et attribuer au plus N unites
+    end
     loop Chaque directionnelle, spot et PointLight retenue
-        S->>C: Selectionner les casters admissibles a cette lumiere
-        S->>V: Commandes de cible et cache statique si invalide
-        S->>V: Commandes de copie depth et casters dynamiques si finale invalide
-        Note over S,V: Ressources et generations propres a la lumiere et a la surface
+        S->>C: Selectionner les casters admissibles
+        alt PointLight avec cubemap valide sur cette surface
+            S->>V: Reutiliser sans consommer le budget
+        else PointLight invalide et budget GPU non attribue
+            S->>V: Eclairer sans ombre et sans ancienne cubemap
+        else Reconstruction autorisee ou autre type de lumiere
+            S->>V: Refaire cache statique si necessaire
+            S->>V: Copie profondeur et dynamiques si finale invalide
+        end
     end
     Note over V,S: Une RenderPass ombres, N lumieres, N paires de caches independantes
     Note over V,S: Passes Forward ulterieures utilisent les profondeurs finales
@@ -657,6 +667,10 @@ flowchart LR
   Remove --> Keep["Hysteresis seulement entre surplus admissibles"]
   Keep --> Max["Maximum absolu Y, socle X obligatoire"]
   Max --> RP["Une RenderPass ombres par EngineView"]
+  Max --> Pending["Demandes de reconstruction PointLight des vues"]
+  Pending --> SurfaceBudget["Budget global par image et Window Surface"]
+  SurfaceBudget --> Priority["Plan des reconstructions par score prioritaire"]
+  Priority --> RP
   RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode effectif"]
   Checks --> SM["Cache statique individuel de la lumiere"]
   SM -->|"Copie si finale invalide"| FM["Carte finale individuelle de la lumiere"]
@@ -765,11 +779,16 @@ flowchart TD
   Replace --> Full
   Swap -->|"Non"| Selection
   Selection --> Hard["Max Y jamais depasse"]
-  Hard --> Cubes["Cubemaps valides"]
-  Cubes --> Pass["RenderPass ombres unique par vue"]
+  Hard --> Validity{"Cubemaps valides sur cette surface ?"}
+  Validity -->|"Oui"| Cubes["Reutiliser cubemap sans budget GPU"]
+  Validity -->|"Non"| Requests["Demandes invalides de toutes les vues"]
+  Requests --> Rebuild["Au plus N reconstructions par image et surface, tri par score"]
+  Rebuild -->|"Autorisee"| CubesReady["Reconstruire statique et finale atomiquement si necessaire"]
+  Rebuild -->|"Differee"| NoShadow["Forward+ sans ombre, jamais de carte perimee"]
   Cubes --> Lit["Forward+ avec ombre"]
-  Hard --> Excluded["Ecartees : raison observable"]
-  Excluded --> NoShadow["Forward+ sans ombre"]
+  CubesReady --> Lit
+  Hard --> Excluded["Hors budget de selection : raison observable"]
+  Excluded --> NoShadow
   Empty --> NoShadow
 ```
 
@@ -779,9 +798,13 @@ flowchart TD
   Score --> Soft["X premieres garanties, surplus seulement dans tolerance de PX"]
   Soft --> Hist["Retirer retenues historiques hors tolerance"]
   Hist --> Limit["Hysteresis entre surplus admissibles, maximum Y"]
-  Limit -->|"Retenue"| Range["Culling sphere de portee et casters pertinents"]
-  Limit -->|"Hors budget"| LightOnly["Forward+ sans ombres"]
+  Limit -->|"Retenue et valide"| Available["Reutiliser cubemap : cout nul"]
+  Limit -->|"Retenue et invalide"| Surface["Budget de reconstruction par image et surface"]
+  Surface -->|"Autorisee par priorite"| Range["Culling sphere de portee et casters pertinents"]
+  Surface -->|"Differee"| LightOnly["Forward+ sans ombres"]
+  Limit -->|"Non retenue"| LightOnly
   Range --> Faces["Six orientations de cubemap, projection 90 degres"]
+  Available --> Forward["Forward+ : echantillonnage ombre ponctuelle"]
   Faces --> Static["Cubemap statique : six faces si invalides"]
   Static -->|"Copie de profondeur face par face"| Final["Cubemap finale : six faces"]
   Faces --> Dyn["Casters dynamiques : dessin dans finale"]
@@ -1303,7 +1326,9 @@ Les `DepthRenderCommand` et `FramebufferRenderCommand` typées établissent cet 
 flowchart LR
   S["EngineView : contexte generique"] --> SR["ShadowMap::RenderingSystem"]
   SR --> RP["Une RenderPass ombres dans le Builder de cette vue"]
-  RP -->|"Directionnelle / spot / PointLight retenue par budget"| Light["Lumiere courante : ressources propres"]
+  SR --> GlobalBudget["Plan des demandes PointLight de toutes les vues par image / surface"]
+  GlobalBudget --> RP
+  RP -->|"Directionnelle / spot / PointLight avec carte valide ou reconstruite"| Light["Lumiere courante : ressources propres"]
   Light --> Kind{"Type de projection ?"}
   Kind -->|"Spot / directionnelle"| TwoD["Textures profondeur 2D"]
   Kind -->|"Ponctuelle"| Cube["Cubemaps profondeur : six faces"]
