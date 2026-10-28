@@ -777,7 +777,7 @@ sequenceDiagram
     alt Budget de reconstruction disponible
         GPU->>GPU: Construire les six faces de la nouvelle paire
     else Budget epuise
-        GPU-->>VIEW: Eclairage Forward plus sans ombres
+        GPU->>GPU: Shaders Forward plus eclairent sans echantillonner de cubemap
     end
 ```
 
