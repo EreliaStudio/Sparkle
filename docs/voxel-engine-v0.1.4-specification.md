@@ -660,21 +660,26 @@ classDiagram
   }
   class Contributor {
     +layers : string names
-    +shadowMode : ShadowMode
-    +shadowPropagation : ShadowPropagation
-    +setShadowMode(mode, propagation)
     +buildViewRenderSnapshot(Builder, CaptureContext)
-    +invalidateShadowMap(...)
   }
-  class RenderingComponent {
-    +setShadowMode(mode, propagation)
-    +contrat de notification herite du Contributor
-  }
+  class RenderingComponent
   class RenderingBehaviour
   class RenderingEntity
-  class RenderingSystem {
+  class RenderingSystem
+  class ShadowMapContributor {
+    +layers : string names
+    +shadowMode : ShadowMode
+    +shadowPropagation : ShadowPropagation
+    +meshFilter : MeshFilter
     +setShadowMode(mode, propagation)
-    +subscribeToComponents : contrats RAII
+  }
+  class MeshFilter {
+    +mesh : source de geometrie ombre
+  }
+  class ShadowRenderingSystem {
+    +discoverShadowCasters(Registry)
+    +buildViewRenderSnapshot(Builder, CaptureContext)
+    +cacheInvalidationContracts
   }
   class ShadowMode {
     <<enumeration>>
@@ -687,12 +692,13 @@ classDiagram
     SelfOnly
     Descendants
   }
-  Contributor --> ShadowMode : classification propre
-  Contributor --> ShadowPropagation : portee du mode
-  RenderingSystem --> RenderingComponent : collecte graphique / descendants
-  RenderingEntity --> RenderingEntity : parente Entity / descendants
-  RenderingEntity --> RenderingComponent : composant graphique de Entity
-  RenderingSystem ..> RenderingEntity : collecte possible
+  ShadowMapContributor *-- MeshFilter
+  ShadowMapContributor --> ShadowMode
+  ShadowMapContributor --> ShadowPropagation
+  RenderingSystem <|-- ShadowRenderingSystem
+  ShadowRenderingSystem --> ShadowMapContributor : Registry et contrats RAII
+  RenderingSystem --> RenderingComponent : collecte visuelle
+  RenderingEntity --> RenderingEntity : InherenceTrait (un parent)
   class EngineWidget {
     +bind(RenderingEngine*)
     +roles()
@@ -909,8 +915,8 @@ sequenceDiagram
       E->>E: filtre non configure : tous ; filtre vide : aucun ; sinon intersection non vide
       E->>C: buildViewRenderSnapshot(V, CaptureContext) pour les Contributors admis
       C->>C: pour chaque composant graphique interne : isLayerCompatible(component.layers)
-      C->>C: determiner le ShadowMode effectif via parente Entity et collecte graphique (conflits ouverts)
-      C->>V: commandes des composants admis et casters compatibles
+      C->>C: systemes visuels dessinent ; systeme ombres decouvre ses propres casters
+      C->>V: commandes de passes generiques, dont les ombres du systeme dedie
       E->>V: finaliser les phases de la vue
       V-->>E: sous-RenderSnapshot immuable
       E->>M: ajouter passe de vue + ExecuteViewSnapshotCommand
@@ -925,7 +931,7 @@ sequenceDiagram
   R->>R: retablir framebuffer de presentation et etat UI
 ```
 
-**Contribution graphique.** `EngineView::Contributor` remplace `RenderingObjectTrait`. Il conserve les responsabilités de `EventDispatcher` et `UpdatableByDeviceTrait`, mais ne dérive plus de `RenderSnapshotContributorTrait`. Les variantes existantes `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity` (y compris 2D/3D) et `RenderingSystem` en héritent. Les widgets gardent le trait générique `RenderSnapshotContributorTrait`. Le Contributor peut participer à **toutes les vues dont le filtre de layers l'admet**, sans appartenir à l'une d'elles ; sa contribution reçoit `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` (API illustrative), avec vérification d'activation et propagation d'exceptions. La capture CPU fige les matrices et handles utilisés par les commandes ; aucune « caméra active » mutable n'est consultée pendant l'exécution GPU. **Pour les ombres, `ShadowMode { None, Static, Dynamic }` remplace le booléen `castShadow` et le tag réservé `shadowmap.static`.** Chaque Contributor et chaque composant graphique possède un mode explicite. Un `setShadowMode(...)` qui modifie sa valeur **déclenche automatiquement l’invalidation des deux shadow maps** par le mécanisme de contrats décrit en section 7.5, sans appel manuel du développeur. **La portée est maintenant explicite via `ShadowPropagation { SelfOnly, Descendants }`, applicable à `None`, `Static` et `Dynamic` sans mutation du mode propre des descendants.** Le périmètre exact des liens parent/enfant reste ouvert. Ces capacités restent dans la partie graphique de Sparkle, sans modifier `sparkle::core`. Le Contributor expose un `ContractProvider` d'invalidation des ombres et une méthode **`invalidateShadowMap()`** sans argument qui le notifie pour invalider **statique et finale** ; des portées sélectives pour d'autres types de mutation demeurent à arbitrer, sans changer cette sémantique ; les `EngineView` auxquelles il contribue s'y abonnent, puis retransmettent l'invalidation sur **leur propre `ContractProvider`** aux cartes d'ombres de la vue. Un Contributor n'a **aucune vue unique implicite** et ne conserve pas obligatoirement une liste de vues : chaque vue détient son contrat d'abonnement. Les abonnements d'une vue à un Contributor sont conditionnés par son **admission logique au filtre de layers**, jamais par sa visibilité dans le frustum caméra. Ces abonnements sont réconciliés à chaque `refreshRenderSnapshot()` à partir du Registry et du filtre de la vue ; aucun contrat par composant interne d'un `RenderingSystem` n'est imposé.
+**Contribution graphique générique.** `EngineView::Contributor` remplace `RenderingObjectTrait` pour les classes graphiques visibles (`RenderingComponent`, `RenderingBehaviour`, `RenderingEntity`, `RenderingSystem`). Les widgets gardent `RenderSnapshotContributorTrait`. Le Contributor construit des commandes via `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` pour chaque vue admise par layers, sans propriété de scène, caméra globale mutable ni API d'ombres. **Les enums `ShadowMode`/`ShadowPropagation`, le `MeshFilter`, les notifications d'ombres et les caches appartiennent exclusivement à `ShadowMapContributor` et au `ShadowRenderingSystem`**. Ce dernier est un `RenderingSystem` participant au Builder au même titre que les autres, sans que `EngineView` connaisse le sens des passes qu'il ajoute.
 
 **Filtrage des Contributors par layers — choix de principe confirmé.** Les layers sont des **identifiants textuels** portés par les `EngineView::Contributor` (un ou plusieurs noms de layer ; représentation C++ finale `std::string` ou collection de chaînes à définir). Chaque `EngineView` expose une sélection explicite de layers (API illustrative : `setLayers({"layerA", "layerB"})`). Le rendu reste celui du **RenderingEngine entier**, restreint par ce **filtre d'admission**, et non par une liste de scènes, d'entités ou de Contributors assignés manuellement à la vue. Un Contributor correspondant au filtre est sollicité normalement pour construire le sous-snapshot de cette vue. Un Contributor exclu n'ajoute **aucune commande graphique** à cette vue, **y compris dans ses passes shadow maps** ; un caster situé hors champ caméra mais admis par layers doit néanmoins pouvoir projeter une ombre.
 
@@ -940,17 +946,15 @@ Un Contributor (ou composant graphique filtré explicitement dans un RenderingSy
 | `setLayers({"layerA", "layerB"})` | `{"layerA"}` ou `{"layerB", "layerC"}` | Oui |
 | `setLayers({"layerA", "layerB"})` | `{"layerC"}` ou aucun layer | Non |
 
-L'état **« non configuré »** doit être représenté distinctement de la liste vide dans l'état logique de l'EngineView et **figé distinctement dans chaque `CaptureContext`**. La réconciliation des abonnements compare la sélection résultante au Registry à chaque `refreshRenderSnapshot()` : passer de « tout accepter » à `setLayers({})` désabonne les Contributors et **invalide les cartes statiques et finales** de la vue pour faire disparaître les anciens shadow casters ; le retour à « non configuré » réabonne et invalide à nouveau les cartes. Le filtre vide ne supprime ni l'EngineView, ni ses ressources logiques, ni les passes intrinsèques de vue : **il supprime seulement les contributions des Contributors**. Les RenderSnapshot déjà publiés restent immuables.
+L'état **« non configuré »** doit rester distinct d'une liste vide et être figé dans le `CaptureContext`. La sélection des `EngineView::Contributor` (notamment les systèmes visuels et `ShadowRenderingSystem`) est recalculée sur le Registry à chaque `RenderingEngine::refreshRenderSnapshot()` ; une nouvelle capture utilise l'ensemble admissible sans modifier les snapshots déjà publiés. **EngineView ne détient aucun contrat d'abonnement aux shadow casters et n'invalide aucune shadow map.** Son filtre reste générique, et les vues à caméra détachée restent recensées mais n'émettent pas de passes de scène.
 
-**Réconciliation des abonnements lors de chaque capture CPU — choix B validé.** Les `ContractProvider` d'invalidation d'ombres s'articulent avec le filtre : une vue détient **un contrat RAII par Contributor logiquement admissible** au regard du Registry du même RenderingEngine et des layers, indépendamment du fait qu'il émette effectivement un triangle ou qu'il soit visible dans la caméra. **Au début de chaque `RenderingEngine::refreshRenderSnapshot()`**, pour **chaque EngineView, y compris celles dont la caméra est détachée**, Sparkle calcule l'ensemble des Contributors admissibles et le compare aux abonnements déjà détenus par la vue. Les nouveaux entrants sont abonnés ; les sortants sont désabonnés avant de pouvoir être détruits. **Toute modification de cet ensemble invalide conservativement les caches statiques et finaux des lumières de la vue**, afin d'intégrer les nouvelles ombres et d'effacer celles des Contributors retirés, sans exiger d'identifiant stable de groupe ni d'inspection de l'ancien contenu des ombres. Une simple absence temporaire de triangles ou de visibilité depuis la caméra n'entraîne ni désabonnement ni invalidation.
-
-Cette réconciliation traite notamment une édition de `EngineView::setLayers(...)`, les changements de layers d'un Contributor et ses ajouts/retraits du Registry **à la prochaine capture**, sans événement dédié aux changements de layers, sans abonnement préalable aux Contributors exclus et sans registre de scène maintenu par la vue. Entre deux captures, le nouveau membership n'est pas réputé reflété par le snapshot déjà publié ; le jeu coordonne les mutations de layers/Registry et la capture CPU comme les autres états de l'Engine. La réconciliation elle-même ne produit **aucune commande GPU** ; une vue détachée ne reprend pas de rendu de scène du seul fait de cette opération. Les futures commandes de rendu ne capturent que les Contributions admises par la sélection réconciliée. Les anciens snapshots et leurs handles ne sont pas modifiés rétroactivement. La réalisation GPU et les générations restent locales à chaque `Window::Surface`, avec les garanties de non-perte des invalidations à finaliser.
+**Réconciliation des casters par le sous-système d'ombres.** Le `ShadowRenderingSystem` découvre ses `ShadowMapContributor` dans leur Registry, filtre leurs layers au moyen du `CaptureContext` figé, et surveille par contrats RAII les invalidations qu'ils produisent. Un changement de casters admissibles (ajout, retrait, layers, activation, parenté, source de mesh ou projection lumineuse) doit rendre périmées les ressources d'ombre nécessaires **dans le sous-système d'ombres** : pour prévenir les anciennes silhouettes, un changement de membership peut invalider les deux cartes conservativement. La synchronisation pendant les captures, le remplacement des ressources et la reprise d'une vue détachée devront garantir qu'aucune invalidation n'est perdue ; **ce n'est pas la vue qui réconcilie un tableau de contrats d'ombres**. Le système calcule un état logique d'ombres par vue/lumière, avec matérialisation GPU distincte par surface ; aucune exécution GPU immédiate lors d'un changement de layers ou de Registry.
 
 **Filtrage interne des RenderingSystem — choix A validé.** L'admission automatique par Sparkle reste **au niveau du Contributor dans son ensemble** : chaque `EngineView` sélectionne les Contributors selon les layers qu'ils déclarent, sans posséder leurs objets ou gérer une scène. **Un `RenderingSystem` admis reste entièrement responsable du choix des objets qu'il dessine à l'intérieur de sa contribution**, y compris lorsque ceux-ci portent des layers différents. Pour garantir une règle unique sans imposer de connaissance de la structure des entités à la vue, `EngineView::CaptureContext` expose un helper de comparaison des layers (signature illustrative `bool isLayerCompatible(const LayerCollection&) const`). Le helper compare les layers fournis au **filtre de la vue figé lors de la capture CPU** ; il ne reçoit pas de `Entity*` ou de `Component*`, ne lit pas une EngineView mutable et ne filtre **jamais automatiquement** les éléments d'un `RenderingSystem`.
 
-**Cas voxel validé — ShadowMode et ShadowPropagation par Contributor et composant graphique.** Les layers individuels sont portés par les composants graphiques qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), indépendamment de leurs `Entity`. Le `VoxelRenderingSystem` est lui-même Contributor et doit être admis par les layers de chaque `EngineView` ; il filtre les composants à l'aide de `CaptureContext::isLayerCompatible(component.layers())`, sans scène implicite. **Chaque composant graphique possède son propre `ShadowMode`** : `None` ne projette pas d'ombre, `Static` contribue au cache statique, `Dynamic` contribue à la carte finale, pour ses surfaces opaques uniquement. Sans propagation, `Static`, `Dynamic` et `None` du `VoxelRenderingSystem` ne modifient **pas** le rendu d'ombres de ses composants. **Avec `ShadowPropagation::Descendants`, chacun de ces trois modes devient temporairement effectif sur la descendance entière** (enfants, petits-enfants, etc.), sans changer les modes propres stockés des composants. Les liens de descendance sont **la hiérarchie des Entities et la collecte des RenderingSystem réunies**, sans écrire de propriétés d'ombre dans le coeur headless. La priorité en cas de plusieurs chemins reste ouverte.
+**Cas voxel — responsabilité visuelle exclusive.** Les `AssemblyRenderingComponent` fournissent les meshes visibles des voxels ainsi que leurs layers de scène. `VoxelRenderingSystem`, s'il passe le filtre externe de la vue, filtre ses composants avec `CaptureContext::isLayerCompatible(component.layers())` et produit uniquement les dessins visibles. Il n'interprète ni `ShadowMode`, ni `ShadowPropagation`, ne soumet aucun caster et ne transmet aucune invalidation liée à un mesh d'ombre.
 
-**Invalidation du mode d'un composant.** Lorsqu'un composant dont les ombres sont collectées par `VoxelRenderingSystem` change de mode avec `setShadowMode(...)`, son fournisseur de notification émet automatiquement l'événement d'invalidation. Le système **détient des contrats RAII vers les composants dont il utilise les contributions** et relaie cet événement par son `ContractProvider` vers les EngineView abonnées. Il résilie ces contrats lorsqu'il cesse de collecter les composants et n'en détient pas pour les objets qu'il ne gère pas. Aucun nouvel abonnement ne représente une possession de scène ; il ne détermine pas l'admission par layers.
+**Cas d'ombre voxel séparé.** Une `Entity3D` hébergeant un modèle ou assemblage voxel peut aussi posséder un `ShadowMapContributor`, dont le `MeshFilter` fournit un mesh de projection distinct — éventuellement issu d'un greedy meshing. `ShadowRenderingSystem` découvre cette source via Registry et vérifie activation, layers, mode effectif (y compris propagations), opacité de la géométrie et projection lumineuse. Les deux systèmes peuvent considérer une même Entity tout en produisant **des commandes différentes** ; la présence du mesh visible n'implique pas automatiquement la présence ou la création d'un mesh d'ombre.
 
 ```cpp
 // API conceptuelle, signatures finales à vérifier durant l'implémentation.
@@ -963,12 +967,12 @@ void VoxelRenderingSystem::contribute(
         if (!captureContext.isLayerCompatible(component.layers()))
             continue;
 
-        // Ajouter les commandes scène et ombres du composant admis.
+        // Ajouter uniquement les commandes de rendu visuel du composant admis.
     }
 }
 ```
 
-**Responsabilité explicite du développeur.** `ShadowMode` est indépendant des layers : seul le filtre de layers détermine l’admission d’un Contributor ou d’un composant dans une vue. Les modes d’ombres ne sont pas lus sur les Entities headless. Le filtre interne **n'élargit pas** le filtre externe : si un `VoxelRenderingSystem` n'appartient à aucun layer admis par la vue, il n'est pas appelé, même si un de ses composants aurait été compatible. Il appartient au développeur de configurer les layers du système pour toutes les vues dans lesquelles il souhaite pouvoir dessiner ses composants, et de filtrer correctement les composants quand le système contribue. Une implémentation qui omet le helper ou émet des commandes inappropriées est une **erreur du RenderingSystem**, pas un cas où Sparkle doit déduire ou corriger implicitement le contenu. Une modification de **layers** d’un composant interne peut changer les ombres sans modifier la liste des Contributors admis : le système ou le jeu doit toujours invalider les ombres concernées. En revanche, un **changement de `ShadowMode` via son setter notifie automatiquement** le système qui a souscrit au composant, puis les vues, sans appel manuel. La réconciliation des abonnements entre EngineView et Contributors reste indépendante de cette notification d’état graphique.
+**Responsabilité explicite du développeur.** Le filtrage des layers reste indépendant des ombres : `EngineView` fournit un helper générique, que chacun des systèmes utilise pour ses propres sources. Le `VoxelRenderingSystem` n'élargit pas le filtre de la vue, ne devient pas une scène et ne s'occupe pas de la projection des ombres. Le `ShadowRenderingSystem` filtre les `ShadowMapContributor` et calcule leur mode effectif via les liens d'Entities/`InherenceTrait` et les relations graphiques explicites réellement définies, sans inférer de parenté du simple Registry. Modifier `ShadowMode` ou `ShadowPropagation` sur `ShadowMapContributor` notifie automatiquement le système d'ombres ; modifier une géométrie ou des layers exige les notifications appropriées sur la source d'ombres, jamais sur `VoxelRenderingSystem`.
 
 **Limites déjà fixées.** Le helper applique strictement le choix A : filtre non configuré = tout accepter ; filtre `setLayers({})` = tout exclure ; layers non définis/vides d'un composant = accepté uniquement si le filtre de vue est non configuré. Aucun héritage implicite de layer Entity → composant ni surcharge automatique des layers du Contributor par ceux du composant n'est introduit. Les layers ne remplacent pas le culling spatial : un caster admis mais hors frustum caméra peut encore projeter des ombres.
 
@@ -983,11 +987,13 @@ flowchart TD
   I -->|"Non, y compris sans layer"| X
   A --> B["Capture CPU : sous-RenderSnapshot"]
   A2 --> B
-  B --> C["Contrats RAII d'invalidation des admis"]
-  C --> S["Shadow maps de cette EngineView"]
   B --> VS["VoxelRenderingSystem admis"]
-  VS -->|"CaptureContext.isLayerCompatible : meme regle"| VC["Composants graphiques voxel admis"]
-  VC --> P["Passes scene et ombres par vue"]
+  VS -->|"CaptureContext.isLayerCompatible"| VC["Composants visuels admis"]
+  VC --> P["Passes visuelles seulement"]
+  B --> SR["ShadowRenderingSystem admis"]
+  SR -->|"CaptureContext.isLayerCompatible"| REG["Registry des ShadowMapContributor"]
+  REG --> CAST["Passes d ombres via Builder generique"]
+  CAST --> P
 ```
 
 **Initialisation des passes et transitions GPU.** Sparkle emploie déjà ce principe pour `RootWidget` : les passes `sparkle.Background`, `sparkle.Overlay`, `sparkle.Popup` et `sparkle.Tooltip` reçoivent des commandes de viewport, scissor ou clear avant les dessins. De même, `RenderingEngine` ajoute les commandes d'état en **début de chaque passe standard de chaque vue**, puis les Contributors enrichissent ces passes. Les phases shadow, opaque, WBOIT et composition établissent chacune leurs états d'entrée (framebuffer, viewport, scissor, blending, profondeur, culling et masques d'écriture), sans supposer ceux de la phase précédente. Les clear tiennent compte des masques d'écriture actifs.
