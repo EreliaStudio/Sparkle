@@ -627,13 +627,13 @@ classDiagram
     +invalidateShadowMap(...)
   }
   class RenderingComponent {
-    +setShadowMode(mode)
+    +setShadowMode(mode, propagation)
     +contrat de notification herite du Contributor
   }
   class RenderingBehaviour
   class RenderingEntity
   class RenderingSystem {
-    +setShadowMode(mode)
+    +setShadowMode(mode, propagation)
     +subscribeToComponents : contrats RAII
   }
   class ShadowMode {
