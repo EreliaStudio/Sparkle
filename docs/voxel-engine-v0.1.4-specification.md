@@ -624,6 +624,8 @@ engine.view("main").setSize({1600, 900});
 playerCamera.setProjection(/* choix du jeu */);
 ```
 
+**Responsabilité du développeur en cas de producteurs multiples.** Si deux `EngineWidget` sont associés au même Engine, chacun effectue ses propres demandes d'update et de rendu. Sparkle ne bloque, ne fusionne et ne déduplique **ni les mises à jour, ni les captures**. Le cache de textures reste partagé par fenêtre, mais cela ne constitue **pas** une garantie de production unique lorsque plusieurs widgets producteurs écrivent dans les mêmes vues. L'application doit organiser leur usage et leur ordre de contribution si elle choisit cette configuration. Aucune protection automatique contre le « multi-update » ne fait partie de V0.1.4.
+
 **Points encore ouverts :** signatures finales des API de gestion des vues, règles d'identité/durée de vie des caméras et Engines référencés, comportement si `ViewID` est introuvable ou si aucune image n'est disponible, accès au cache par fenêtre lors de la **construction du snapshot**, synchronisation entre update et render, politiques précises des ressources d'ombres et des cibles WBOIT, et adaptation des contributions graphiques existantes pour recevoir la vue courante. **Aucune protection contre plusieurs `EngineWidget` d'un même Engine n'est demandée.** La présence d'une vue déclarée ne signifie pas qu'elle est rendue immédiatement hors du cycle de snapshot. Ce modèle ne duplique ni le Registry, ni les `RenderPass`, ni le `RenderSnapshot` existants.
 
 ```mermaid
