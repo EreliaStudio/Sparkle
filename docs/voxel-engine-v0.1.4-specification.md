@@ -560,7 +560,13 @@ Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T
 
 Les **caméras et les lumières sont représentées par des composants spécialisés dérivant de `spk::Component3D`**, attachés aux `Entity3D` existantes. Leur position et leur orientation dans le monde proviennent des **`Transform3D` des entités qui les portent** : il n'existe pas de seconde hiérarchie de transformations dédiée aux caméras ou aux lumières. Ces composants appartiennent à l'Engine concerné et sont découvrables par ses mécanismes de Registry, comme les autres composants du moteur.
 
-Les noms `CameraComponent`, `DirectionalLightComponent`, `PointLightComponent` et `SpotLightComponent` sont **illustratifs** : cette décision ne présuppose pas quels types de lumières seront effectivement disponibles en V0.1.4, ni leur API exacte. Les paramètres de caméra (projection, plans proche/lointain, etc.) et de lumière (couleur, intensité, ombres éventuelles) appartiendront à leurs composants respectifs ; les matrices et données graphiques nécessaires seront préparées par le système de rendu générique, puis capturées dans les commandes et snapshots concernés.
+**Types de lumières requis en V0.1.4 :** l'infrastructure de rendu 3D générique prendra en charge les trois catégories suivantes, représentées par des composants spécialisés de l'Engine :
+
+- **Directionnelle** : une direction d'éclairage globale, sans atténuation liée à la distance, adaptée notamment au soleil ; sa direction est issue de l'orientation de l'Entity3D porteuse.
+- **Ponctuelle** : une source située à la position de son Entity3D, émettant dans toutes les directions, avec une portée et une atténuation à définir dans son contrat d'éclairage.
+- **Spot** : une source positionnée et orientée par son Entity3D, dont l'émission est limitée à un cône, avec des paramètres de portée et d'ouverture à définir.
+
+Les noms d'API `CameraComponent`, `DirectionalLightComponent`, `PointLightComponent` et `SpotLightComponent` restent **illustratifs**, mais la prise en charge des **trois catégories de lumières** est requise. Les paramètres de caméra (projection, plans proche/lointain, etc.) et de lumière (couleur, intensité, portée, cône selon le type) appartiendront à leurs composants respectifs ; les matrices et données graphiques nécessaires seront préparées par le système de rendu générique, puis capturées dans les commandes et snapshots concernés. **La capacité de projeter des ombres par catégorie de lumière n'est pas encore décidée** ; ne pas présumer que les trois types en produisent.
 
 ```mermaid
 flowchart LR
@@ -579,7 +585,7 @@ flowchart LR
 
 Le pipeline graphique prépare pour **chaque vue** les matrices de vue issues du `Transform3D` de sa caméra sélectionnée et la projection adaptée aux paramètres de celle-ci et aux dimensions **de ce viewport** ; il capture les valeurs nécessaires dans les commandes/`RenderSnapshot`, sans relire la caméra mutable lors de leur exécution. Cette exigence concerne également les vues non voxels et n'impose pas la création d'une nouvelle classe publique nommée `Viewport3D` : l'interface concrète doit s'intégrer aux mécanismes de viewport, `RenderPass` et `RenderSnapshot` déjà fournis par Sparkle, complétés au besoin par l'infrastructure de rendu 3D de cette version.
 
-**Restent à concevoir :** les projections à proposer, l'API exacte de sélection et le comportement en cas de caméra absente/détruite, les catégories de lumières, leurs capacités d'ombre et l'orchestration des passes. Le modèle n'introduit pas de registre parallèle, de `CameraHolder3D` ni de conteneur `Scene3D` distinct pour dupliquer les composants de l'Engine.
+**Restent à concevoir :** les projections à proposer, l'API exacte de sélection et le comportement en cas de caméra absente/détruite, les paramètres et les capacités de projection d'ombres **des trois catégories de lumières retenues**, ainsi que l'orchestration des passes. Le modèle n'introduit pas de registre parallèle, de `CameraHolder3D` ni de conteneur `Scene3D` distinct pour dupliquer les composants de l'Engine.
 
 ### 7.1 Responsabilité et cycle d'un RenderSnapshot
 
