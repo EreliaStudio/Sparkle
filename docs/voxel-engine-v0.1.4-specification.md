@@ -39,7 +39,8 @@ flowchart LR
     Window["Snapshot de fenêtre + EngineWidget à rôles"]
     GPU["GPUResourceCollection : cibles par surface"]
     Engine --> Render --> Views --> ViewSnap --> EngineSnap --> Slot
-    Assembly --> Components --> Sys
+    Assembly --> Components
+    Components -->|"Layers + tags graphiques"| Sys
     Views -->|"Layers filtres"| Sys
     Sys -->|"Filtre ses composants"| ViewSnap
     Slot --> Window --> GPU
@@ -846,7 +847,8 @@ sequenceDiagram
       E->>E: filtre non configure : tous ; filtre vide : aucun ; sinon intersection non vide
       E->>C: buildViewRenderSnapshot(V, CaptureContext) pour les Contributors admis
       C->>C: pour chaque composant graphique interne : isLayerCompatible(component.layers)
-      C->>V: commandes des seuls composants retenus, y compris ombres
+      C->>C: classer ombres opaques par tags shadowmap.none / shadowmap.static / aucun
+      C->>V: commandes des composants admis et casters compatibles
       E->>V: finaliser les phases de la vue
       V-->>E: sous-RenderSnapshot immuable
       E->>M: ajouter passe de vue + ExecuteViewSnapshotCommand
