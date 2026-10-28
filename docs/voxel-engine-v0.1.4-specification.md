@@ -32,7 +32,7 @@ flowchart LR
     Engine["Engine : core headless"]
     Render["RenderingEngine : hérite d'Engine"]
     Views["EngineView nommées"]
-    Sys["VoxelRenderingSystem : Contributor, castShadow + tags"]
+    Sys["VoxelRenderingSystem : Contributor, ShadowMode"]
     ViewSnap["Sous-RenderSnapshot indépendant par EngineView"]
     EngineSnap["RenderSnapshot moteur : délégation ordonnée"]
     Slot["ThreadSafeSlot du snapshot moteur"]
@@ -40,7 +40,7 @@ flowchart LR
     GPU["GPUResourceCollection : cibles par surface"]
     Engine --> Render --> Views --> ViewSnap --> EngineSnap --> Slot
     Assembly --> Components
-    Components -->|"Layers, tags graphiques, castShadow"| Sys
+    Components -->|"Layers + ShadowMode"| Sys
     Views -->|"Layers filtres"| Sys
     Sys -->|"Filtre ses composants"| ViewSnap
     Slot --> Window --> GPU
@@ -620,22 +620,28 @@ classDiagram
   }
   class Contributor {
     +layers : string names
-    +tags : graphic string names
-    +castShadow : bool
-    +hasTag(name)
+    +shadowMode : ShadowMode
+    +setShadowMode(mode)
     +buildViewRenderSnapshot(Builder, CaptureContext)
     +invalidateShadowMap(...)
   }
   class RenderingComponent {
-    +tags : graphic string names
-    +castShadow : bool
+    +setShadowMode(mode)
+    +onShadowModeChanged : ContractProvider
   }
   class RenderingBehaviour
   class RenderingEntity
   class RenderingSystem {
-    +castShadow : bool
-    +tags directs (sans heritage aux composants)
+    +setShadowMode(mode)
+    +subscribeToComponents : contrats RAII
   }
+  class ShadowMode {
+    <<enumeration>>
+    None
+    Static
+    Dynamic
+  }
+  Contributor --> ShadowMode : classification
   class EngineWidget {
     +bind(RenderingEngine*)
     +roles()
@@ -852,7 +858,7 @@ sequenceDiagram
       E->>E: filtre non configure : tous ; filtre vide : aucun ; sinon intersection non vide
       E->>C: buildViewRenderSnapshot(V, CaptureContext) pour les Contributors admis
       C->>C: pour chaque composant graphique interne : isLayerCompatible(component.layers)
-      C->>C: verifier castShadow global, puis castShadow et tag shadowmap.static de chaque composant opaque
+      C->>C: lire ShadowMode du Contributor et des composants (portee enfants a arbitrer)
       C->>V: commandes des composants admis et casters compatibles
       E->>V: finaliser les phases de la vue
       V-->>E: sous-RenderSnapshot immuable
@@ -868,7 +874,7 @@ sequenceDiagram
   R->>R: retablir framebuffer de presentation et etat UI
 ```
 
-**Contribution graphique.** `EngineView::Contributor` remplace `RenderingObjectTrait`. Il conserve les responsabilités de `EventDispatcher` et `UpdatableByDeviceTrait`, mais ne dérive plus de `RenderSnapshotContributorTrait`. Les variantes existantes `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity` (y compris 2D/3D) et `RenderingSystem` en héritent. Les widgets gardent le trait générique `RenderSnapshotContributorTrait`. Le Contributor peut participer à **toutes les vues dont le filtre de layers l'admet**, sans appartenir à l'une d'elles ; sa contribution reçoit `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` (API illustrative), avec vérification d'activation et propagation d'exceptions. La capture CPU fige les matrices et handles utilisés par les commandes ; aucune « caméra active » mutable n'est consultée pendant l'exécution GPU. **Pour les ombres, le booléen `castShadow` et le tag graphique `shadowmap.static` remplacent `ShadowMode`** : un Contributor désactive globalement ses ombres via `castShadow == false` ; un RenderingSystem autorisé à projeter des ombres interprète aussi les propriétés individuelles `castShadow` et les tags de ses composants graphiques. Ces capacités restent dans la partie graphique de Sparkle, sans modifier `sparkle::core` ; voir la section 7.5. Le Contributor expose un `ContractProvider` d'invalidation des ombres et une méthode **`invalidateShadowMap()`** sans argument qui le notifie pour invalider **statique et finale** ; des portées sélectives pour d'autres types de mutation demeurent à arbitrer, sans changer cette sémantique ; les `EngineView` auxquelles il contribue s'y abonnent, puis retransmettent l'invalidation sur **leur propre `ContractProvider`** aux cartes d'ombres de la vue. Un Contributor n'a **aucune vue unique implicite** et ne conserve pas obligatoirement une liste de vues : chaque vue détient son contrat d'abonnement. Les abonnements d'une vue à un Contributor sont conditionnés par son **admission logique au filtre de layers**, jamais par sa visibilité dans le frustum caméra. Ces abonnements sont réconciliés à chaque `refreshRenderSnapshot()` à partir du Registry et du filtre de la vue ; aucun contrat par composant interne d'un `RenderingSystem` n'est imposé.
+**Contribution graphique.** `EngineView::Contributor` remplace `RenderingObjectTrait`. Il conserve les responsabilités de `EventDispatcher` et `UpdatableByDeviceTrait`, mais ne dérive plus de `RenderSnapshotContributorTrait`. Les variantes existantes `RenderingComponent`, `RenderingBehaviour`, `RenderingEntity` (y compris 2D/3D) et `RenderingSystem` en héritent. Les widgets gardent le trait générique `RenderSnapshotContributorTrait`. Le Contributor peut participer à **toutes les vues dont le filtre de layers l'admet**, sans appartenir à l'une d'elles ; sa contribution reçoit `RenderSnapshot::Builder&` et `const EngineView::CaptureContext&` (API illustrative), avec vérification d'activation et propagation d'exceptions. La capture CPU fige les matrices et handles utilisés par les commandes ; aucune « caméra active » mutable n'est consultée pendant l'exécution GPU. **Pour les ombres, `ShadowMode { None, Static, Dynamic }` remplace le booléen `castShadow` et le tag réservé `shadowmap.static`.** Chaque Contributor et chaque composant graphique possède un mode explicite. Un `setShadowMode(...)` qui modifie sa valeur **déclenche automatiquement l’invalidation des deux shadow maps** par le mécanisme de contrats décrit en section 7.5, sans appel manuel du développeur. La portée éventuelle du mode sur les enfants reste à arbitrer. Ces capacités restent dans la partie graphique de Sparkle, sans modifier `sparkle::core`. Le Contributor expose un `ContractProvider` d'invalidation des ombres et une méthode **`invalidateShadowMap()`** sans argument qui le notifie pour invalider **statique et finale** ; des portées sélectives pour d'autres types de mutation demeurent à arbitrer, sans changer cette sémantique ; les `EngineView` auxquelles il contribue s'y abonnent, puis retransmettent l'invalidation sur **leur propre `ContractProvider`** aux cartes d'ombres de la vue. Un Contributor n'a **aucune vue unique implicite** et ne conserve pas obligatoirement une liste de vues : chaque vue détient son contrat d'abonnement. Les abonnements d'une vue à un Contributor sont conditionnés par son **admission logique au filtre de layers**, jamais par sa visibilité dans le frustum caméra. Ces abonnements sont réconciliés à chaque `refreshRenderSnapshot()` à partir du Registry et du filtre de la vue ; aucun contrat par composant interne d'un `RenderingSystem` n'est imposé.
 
 **Filtrage des Contributors par layers — choix de principe confirmé.** Les layers sont des **identifiants textuels** portés par les `EngineView::Contributor` (un ou plusieurs noms de layer ; représentation C++ finale `std::string` ou collection de chaînes à définir). Chaque `EngineView` expose une sélection explicite de layers (API illustrative : `setLayers({"layerA", "layerB"})`). Le rendu reste celui du **RenderingEngine entier**, restreint par ce **filtre d'admission**, et non par une liste de scènes, d'entités ou de Contributors assignés manuellement à la vue. Un Contributor correspondant au filtre est sollicité normalement pour construire le sous-snapshot de cette vue. Un Contributor exclu n'ajoute **aucune commande graphique** à cette vue, **y compris dans ses passes shadow maps** ; un caster situé hors champ caméra mais admis par layers doit néanmoins pouvoir projeter une ombre.
 
@@ -891,7 +897,9 @@ Cette réconciliation traite notamment une édition de `EngineView::setLayers(..
 
 **Filtrage interne des RenderingSystem — choix A validé.** L'admission automatique par Sparkle reste **au niveau du Contributor dans son ensemble** : chaque `EngineView` sélectionne les Contributors selon les layers qu'ils déclarent, sans posséder leurs objets ou gérer une scène. **Un `RenderingSystem` admis reste entièrement responsable du choix des objets qu'il dessine à l'intérieur de sa contribution**, y compris lorsque ceux-ci portent des layers différents. Pour garantir une règle unique sans imposer de connaissance de la structure des entités à la vue, `EngineView::CaptureContext` expose un helper de comparaison des layers (signature illustrative `bool isLayerCompatible(const LayerCollection&) const`). Le helper compare les layers fournis au **filtre de la vue figé lors de la capture CPU** ; il ne reçoit pas de `Entity*` ou de `Component*`, ne lit pas une EngineView mutable et ne filtre **jamais automatiquement** les éléments d'un `RenderingSystem`.
 
-**Cas voxel validé.** Le tag `shadowmap.static` porté par `VoxelRenderingSystem` ne classe **aucun** de ses composants : chaque `AssemblyRenderingComponent` est autonome pour sa classification statique/dynamique, même si le système lui-même est tagué. Le `castShadow` du système reste le verrou global. Les layers individuels sont portés par les **composants graphiques** qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), **pas par leur Entity propriétaire** : deux composants graphiques sur une même Entity peuvent donc déclarer des layers distincts. Le `VoxelRenderingSystem`, lui-même `EngineView::Contributor`, déclare également **ses propres layers** ; Sparkle ne l'appelle que si son filtre externe est compatible. **Une fois appelé**, le système parcourt ses composants graphiques et ne soumet à la vue que ceux pour lesquels `captureContext.isLayerCompatible(component.layers())` est vrai. Le filtrage est appliqué aux commandes de scène **et aux shadow casters**, puis, **si son `castShadow` global est vrai**, le système vérifie le `castShadow` de chaque composant graphique retenu : `false` exclut sa projection ; `true` autorise ses **seules surfaces opaques**, classées statiques avec le tag `shadowmap.static` et dynamiques en l’absence de ce tag. Les tags ne déterminent jamais l’admission par layers. Les tags ne sont jamais utilisés pour l'admission par layers.
+**Cas voxel validé — ShadowMode par Contributor et composant graphique.** Les layers individuels sont portés par les composants graphiques qui exposent un `Voxel::Assembly` (par exemple `AssemblyRenderingComponent`), indépendamment de leurs `Entity`. Le `VoxelRenderingSystem` est lui-même Contributor et doit être admis par les layers de chaque `EngineView` ; il filtre les composants à l'aide de `CaptureContext::isLayerCompatible(component.layers())`, sans scène implicite. **Chaque composant graphique possède son propre `ShadowMode`** : `None` ne projette pas d'ombre, `Static` contribue au cache statique, `Dynamic` contribue à la carte finale, pour ses surfaces opaques uniquement. `Static` sur le `VoxelRenderingSystem` ne classe **jamais automatiquement** ses composants comme statiques. La question de savoir si `None` sur un système ou parent supprime aussi les contributions d'ombres de ses enfants dépend d'une **politique de propagation explicite encore à valider** : ne pas figer son comportement dans l'implémentation avant arbitrage.
+
+**Invalidation du mode d'un composant.** Lorsqu'un composant dont les ombres sont collectées par `VoxelRenderingSystem` change de mode avec `setShadowMode(...)`, son fournisseur de notification émet automatiquement l'événement d'invalidation. Le système **détient des contrats RAII vers les composants dont il utilise les contributions** et relaie cet événement par son `ContractProvider` vers les EngineView abonnées. Il résilie ces contrats lorsqu'il cesse de collecter les composants et n'en détient pas pour les objets qu'il ne gère pas. Aucun nouvel abonnement ne représente une possession de scène ; il ne détermine pas l'admission par layers.
 
 ```cpp
 // API conceptuelle, signatures finales à vérifier durant l'implémentation.
@@ -909,7 +917,7 @@ void VoxelRenderingSystem::contribute(
 }
 ```
 
-**Responsabilité explicite du développeur.** Les tags graphiques des composants sont distincts de leurs layers et de ceux du Contributor ; ils ne sélectionnent pas de `EngineView`. Leur collection ne dépend pas des Entities du cœur du moteur. Le filtre interne **n'élargit pas** le filtre externe : si un `VoxelRenderingSystem` n'appartient à aucun layer admis par la vue, il n'est pas appelé, même si un de ses composants aurait été compatible. Il appartient au développeur de configurer les layers du système pour toutes les vues dans lesquelles il souhaite pouvoir dessiner ses composants, et de filtrer correctement les composants quand le système contribue. Une implémentation qui omet le helper ou émet des commandes inappropriées est une **erreur du RenderingSystem**, pas un cas où Sparkle doit déduire ou corriger implicitement le contenu. De même, une modification de layers d'un composant interne peut changer les ombres **sans modifier la liste des Contributors admis** : le système ou le jeu doit alors déclencher explicitement l'invalidation d'ombres via le `ContractProvider` du Contributor. La réconciliation des abonnements entre EngineView et Contributors ne remplace pas cette notification métier.
+**Responsabilité explicite du développeur.** `ShadowMode` est indépendant des layers : seul le filtre de layers détermine l’admission d’un Contributor ou d’un composant dans une vue. Les modes d’ombres ne sont pas lus sur les Entities headless. Le filtre interne **n'élargit pas** le filtre externe : si un `VoxelRenderingSystem` n'appartient à aucun layer admis par la vue, il n'est pas appelé, même si un de ses composants aurait été compatible. Il appartient au développeur de configurer les layers du système pour toutes les vues dans lesquelles il souhaite pouvoir dessiner ses composants, et de filtrer correctement les composants quand le système contribue. Une implémentation qui omet le helper ou émet des commandes inappropriées est une **erreur du RenderingSystem**, pas un cas où Sparkle doit déduire ou corriger implicitement le contenu. Une modification de **layers** d’un composant interne peut changer les ombres sans modifier la liste des Contributors admis : le système ou le jeu doit toujours invalider les ombres concernées. En revanche, un **changement de `ShadowMode` via son setter notifie automatiquement** le système qui a souscrit au composant, puis les vues, sans appel manuel. La réconciliation des abonnements entre EngineView et Contributors reste indépendante de cette notification d’état graphique.
 
 **Limites déjà fixées.** Le helper applique strictement le choix A : filtre non configuré = tout accepter ; filtre `setLayers({})` = tout exclure ; layers non définis/vides d'un composant = accepté uniquement si le filtre de vue est non configuré. Aucun héritage implicite de layer Entity → composant ni surcharge automatique des layers du Contributor par ceux du composant n'est introduit. Les layers ne remplacent pas le culling spatial : un caster admis mais hors frustum caméra peut encore projeter des ombres.
 
@@ -983,64 +991,62 @@ L'initialisation du framebuffer et des états est indépendante de la passe de d
 
 La sélection des contributeurs aux shadow maps respecte la séparation **opaque/translucide** : pour les voxels, seul le mesh opaque d'un `Model` fournit les éventuels shadow casters ; son mesh translucide n'est jamais dessiné dans une passe d'ombres. L'infrastructure d'ombres reste **générique Sparkle** et ne doit pas traiter différemment les voxels et les autres géométries classées opaques/translucides. Le contrat particulier des mécanismes de *cutout* non voxel préexistants reste distinct et n'est pas redéfini par cette décision. Le moteur ne doit pas fabriquer de stratégie d'ombres translucides implicite. Les points lumineux restent sans ombres, conformément au périmètre déjà validé.
 
-**Tags graphiques et classification des ombres — choix A, puis choix B sur `castShadow`.** Les **layers** déterminent exclusivement l'admission et la visibilité des contributions dans les `EngineView`. Les **tags** sont des métadonnées graphiques textuelles distinctes, disponibles sur les `EngineView::Contributor` et les **composants graphiques** : le tag réservé `shadowmap.static` distingue les casters statiques. Ni les tags ni `castShadow` ne sont ajoutés aux `Entity` ou `Component` génériques de `sparkle::core` ; le serveur headless n'en dépend pas. `EngineView::setLayers(...)` et `CaptureContext::isLayerCompatible(...)` ne consultent jamais les tags ni `castShadow`.
+**Classification d'ombres — choix C validé, remplace `castShadow` et le tag `shadowmap.static`.** `ShadowMode { None, Static, Dynamic }` est une propriété dédiée de chaque `EngineView::Contributor` et de chaque composant graphique concerné. Il n'existe plus de booléen `castShadow` ou de tag `shadowmap.static` / `shadowmap.none` dans ce contrat. La classification n'a aucun effet sur le filtrage des layers et ne modifie pas `sparkle::core`.
 
-**Le choix B le plus récent remplace `ShadowMode` et le projet de tag `shadowmap.none`.** L'enum `ShadowMode { None, Static, Dynamic }` est supprimé du contrat cible. La permission de projeter une ombre passe **exclusivement** par `castShadow` : le tag `shadowmap.none`, envisagé dans l'étape précédente, est **abandonné** pour ne pas dupliquer le booléen. La combinaison de règles retenue est la suivante :
+- **`None`** : l'objet lui-même ne projette aucune ombre ; il peut toujours participer au dessin de scène et recevoir les ombres.
+- **`Static`** : les surfaces opaques de l'objet contribuent au cache statique.
+- **`Dynamic`** : les surfaces opaques de l'objet contribuent à la reconstruction de la carte finale après copie de la statique.
+- Les surfaces translucides ne projettent jamais d'ombre, quel que soit le mode. Un caster pertinent hors champ caméra ne doit pas être omis sur ce seul critère.
 
-- **`Contributor::castShadow == false` : aucune des contributions du Contributor ne projette d'ombre**, quelles que soient les propriétés de ses objets internes ; le rendu normal peut rester actif.
-- **`Contributor::castShadow == true` : les ombres sont globalement autorisées**, sans forcer les objets internes à en projeter.
-- Un `RenderingSystem` comme `VoxelRenderingSystem` consulte lui-même le **`castShadow` de chaque composant graphique** qu'il souhaite dessiner. À `false`, pas de projection pour ce composant ; à `true`, sa géométrie **opaque** peut projeter des ombres.
-- Parmi les casters opaques ainsi autorisés, le **tag `shadowmap.static` présent** classe la contribution dans le **cache statique** ; **tag absent** classe la contribution dans la partie **dynamique** de la carte finale. Les translucides ne projettent jamais d'ombres, mais peuvent en recevoir.
-- Un Contributor graphique autonome peut utiliser **son propre tag `shadowmap.static`** pour classer ses contributions. Pour un `RenderingSystem` comportant plusieurs composants graphiques, **les tags individuels de ceux-ci** sont utilisés par le système pour classifier ses objets.
+**Indépendance des modes.** Un `RenderingSystem` et les composants qu'il collecte ont chacun leur `ShadowMode`. Le mode `Static` du système ne transforme ni ne reclasse implicitement les enfants : chaque composant garde sa catégorie. La signification de `None` à l'égard des enfants **reste expressément ouverte** : le mainteneur propose une **politique de propagation distincte**, fournie éventuellement à `setShadowMode(mode, propagation)`, pour choisir si `None` supprime uniquement les ombres de l'objet ou celles de son sous-ensemble de descendants. La valeur initiale, la portée exacte de « descendants » (composants collectés par un RenderingSystem versus hiérarchie de Entities) et l'effet de cette politique sur l'état individuel des enfants ne sont **pas encore validés**. Ne pas introduire de mutation récursive, d'héritage de `Static` ou de comportement de `None` par défaut avant cet arbitrage.
 
-**La responsabilité de filtrage demeure explicite.** Sparkle ne classe pas automatiquement les objets internes d'un `RenderingSystem` ; ce dernier applique le filtre des layers via `CaptureContext`, vérifie son autorisation globale, puis vérifie les propriétés `castShadow` et **les tags propres à chacun** des composants retenus. Le tag du système ne sert pas de valeur par défaut à ses composants. Un `VoxelRenderingSystem` peut ainsi produire dans un même snapshot des casters opaques statiques, dynamiques et des objets sans ombre. **Choix A validé : le tag `shadowmap.static` d’un `RenderingSystem` n’est jamais transmis à ses composants internes.** Il s’applique uniquement aux contributions graphiques **directement produites par le système lui-même**, et non aux composants graphiques qu’il collecte. Chaque composant interne est classé exclusivement selon **ses propres tags** : `shadowmap.static` présent → statique ; absent → dynamique, sous réserve de `castShadow` et de l’opacité. Le booléen `castShadow` du système reste, lui, une **autorisation globale obligatoire** : s’il vaut `false`, aucun composant ne projette d’ombre. Le système doit appliquer explicitement ces règles dans son propre code ; aucune propagation de tags ou reclassement implicite par Sparkle.
+**Setter et invalidation automatiques — choix C validé.** `setShadowMode(newMode)` compare la valeur courante à la nouvelle ; à valeur différente, il enregistre le mode et **notifie automatiquement** son `ContractProvider` d'invalidation d'ombres. Par prudence, tout changement de mode invalide **les deux caches, statique et final**, des vues concernées, sans chercher à reconstruire l'ancienne catégorie. Un setter qui ne change pas la valeur n'envoie aucune invalidation. Il n'est donc plus nécessaire que le développeur appelle manuellement `invalidateShadowMap()` après ce setter. Le mécanisme demeure logique et ne lance aucun travail GPU immédiat ; les snapshots publiés restent immuables.
 
-**Invalidation et snapshots.** La capture CPU fige les couches de rendu, les permissions et la classification retenues dans les commandes immuables ; aucune lecture GPU d'un booléen ou tag mutable n'est autorisée. Une transformation, modification de géométrie, apparition/disparition de caster, modification de `castShadow` ou changement d'opacité exige une invalidation correspondant aux ombres affectées, dans le respect du mécanisme explicite validé. **Exception conservative choisie pour les tags d'ombres : tout ajout ou retrait du tag graphique réservé `shadowmap.static` sur un Contributor ou composant graphique rend systématiquement périmées la carte statique ET la carte finale des vues concernées**, sans chercher à retrouver la classification antérieure ou à calculer un diff. Ce coût est accepté, les changements de classification étant supposés rares. **Notification explicite — choix B validé :** changer le tag, y compris via un setter de composant graphique, **ne provoque aucune notification automatique**. Le développeur ou le `RenderingSystem` qui organise la modification doit appeler explicitement **`invalidateShadowMap()` sur le Contributor effectivement abonné aux EngineView**. Si les composants voxels sont dessinés par `VoxelRenderingSystem`, cet appel est donc effectué sur le **`VoxelRenderingSystem`** ; appeler seulement une éventuelle méthode d'un composant non abonné ne saurait invalider les cartes de la vue. Pour un Contributor autonome, l'appel s'effectue sur ce même Contributor. **Cet appel sans argument invalide complètement les deux caches logiques (statique et final) des vues abonnées** ; il ne construit pas immédiatement une carte GPU. Il n'y a ni écoute RAII ajoutée entre composants et RenderingSystem, ni détection par comparaison de tags à chaque capture, ni notification implicite par `addTag`/`removeTag`. Le développeur reste responsable d'effectuer cet appel lorsque la mutation impacte les ombres ; faute de notification, Sparkle n'est pas tenu de corriger les caches. Une transition de `castShadow` ne doit pas laisser de casters périmés. La projection d'ombres reste indépendante du frustum de la caméra : un caster hors champ peut être pertinent pour une lumière. Les abonnements restent par Contributor et par vue, **sans `GroupID` persistant imposé** ; le payload précis de l'invalidation et les règles de générations GPU restent à finaliser.
+**Relais RAII des RenderingSystem.** Lorsqu'un composant graphique est dessiné au travers d'un `RenderingSystem`, le système se **souscrit par contrat RAII** aux notifications de mode des composants qu'il utilise. Une édition du mode du composant émet alors son signal, le système relaie une invalidation complète via son propre `ContractProvider`, les `EngineView` logiquement abonnées la reçoivent et invalident les caches statique et final. Les souscriptions composant → RenderingSystem sont distinctes des souscriptions Contributor → EngineView ; elles ne signifient ni propriété d'un composant, ni inscription dans une scène. Leur synchronisation, la suppression des contrats au retrait du composant et la gestion d'un composant susceptible d'être dessiné directement **et** par un système nécessitent un contrat de durée de vie sûr ; ne pas créer une notification automatique de tous les changements de géométrie ou de layers par extrapolation de cette décision.
 
-**Propagation à deux niveaux — décision révisée.** La propagation de l'invalidation suit le schéma **`EngineView::Contributor` → `EngineView` abonnées → shadow maps de chacune de ces vues**. Chaque Contributor possède **son propre `ContractProvider`** et expose la méthode indicative `invalidateShadowMap(...)` ; cet appel notifie **uniquement ses abonnés**, sans recherche implicite de la « vue courante » ni parcours aveugle des vues du `RenderingEngine`. Chaque `EngineView` qui utilise le Contributor détient un **contrat RAII de souscription** auprès de celui-ci. Lorsque ce Contributor déclenche son fournisseur, les callbacks des vues abonnées relayent la demande sur **l'unique `ContractProvider` de chaque EngineView** (nom indicatif `onShadowMapInvalidated`). Les shadow maps statiques et finales des lumières de cette vue sont abonnées à ce second fournisseur et mettent à jour leur **état logique d'invalidation**, pas directement leurs textures OpenGL.
+**Autres mutations.** `invalidateShadowMap(...)` demeure utile pour les changements de géométrie, transformations, composants ajoutés/retirés et modifications de layers susceptibles d'affecter les ombres ; la portée exacte des événements pour ces cas reste ouverte. Le changement de `ShadowMode` impose en revanche systématiquement une invalidation complète des deux caches. Les cartes sont reconstruites à la demande, séparément dans chaque `Window::Surface` et seulement sur la base de snapshots immuables.
 
-**Registre d'abonnements et durée de vie.** Une vue doit pouvoir enregistrer/désenregistrer **son abonnement au Contributor** lorsqu'elle commence/cesse effectivement de l'utiliser pour ses contributions aux ombres ; les contrats sont révoqués avant destruction du fournisseur ou du receveur. **Une absence ponctuelle de dessin due au culling de la caméra ne signifie pas qu'un Contributor ne peut plus influencer les ombres de la vue** : des casters hors frustum caméra peuvent compter. L'inscription est donc liée à la **participation logique persistante** du Contributor à la vue, et non à une liste fluctuante de commandes émises sur une frame. Le contrat existant prévoit que les Contributors sont sollicités pour toutes les vues du moteur : **le nouveau contrat de layers admet automatiquement le Contributor dans les vues dont les filtres sont compatibles**, et seules celles-ci doivent être abonnées. L'appartenance n'est pas une inscription manuelle à une scène : elle découle de la sélection de layers et du Registry du moteur. **Les souscriptions sont réconciliées à chaque `refreshRenderSnapshot()`** par comparaison des Contributors admissibles et des contrats RAII détenus, avec invalidation des shadow maps sur différence, sans événement de changement de layers ni association implicite `Contributor → EngineView` unique.
-
-**Portée de l'invalidation.** La classification des ombres dépend désormais de `castShadow` et du tag `shadowmap.static`, **pas de `ShadowMode`**. Le mécanisme de notification **ne requiert pas** de `GroupID` stable ni d'événement par objet. **Lors d'un ajout ou retrait de `shadowmap.static`, le développeur ou RenderingSystem appelle explicitement `invalidateShadowMap()` sans argument sur le Contributor abonné. Cet appel invalide toujours les caches statique et final des vues concernées**, indépendamment des valeurs précédentes. Il n'est pas nécessaire de stocker l'ancien tag ni d'inférer la carte d'origine, et l'édition du tag seule n'envoie aucune notification. Pour les autres mutations susceptibles de modifier les ombres, une invalidation statique rend aussi la finale périmée, une invalidation dynamique ne touche que la finale, et une portée inconnue invalide les deux. Le payload précis du signal (portée et éventuelle lumière) reste ouvert.
+**Propagation à deux niveaux maintenue.** Les invalidations atteignent les cartes via `Contributor → EngineView → shadow maps`. Chaque Contributor possède son `ContractProvider`, auquel ses EngineView logiquement admissibles sont abonnées par contrats RAII ; la vue relaie sur son propre `ContractProvider` aux cartes des lumières. Les notifications ne déclenchent pas de rendu GPU ; la réconciliation des vues par Registry + layers reste effectuée à chaque `RenderingEngine::refreshRenderSnapshot()`, indépendamment du frustum de la caméra. Le relais facultatif d'un `RenderingSystem` depuis les composants qu'il utilise ajoute **un étage de notification en amont**, sans modifier ce chemin à deux niveaux jusqu'aux cartes.
 
 **Sécurité de capture et rendu.** Les callbacks ne reconstruisent aucune carte et ne modifient aucun `RenderSnapshot` publié. Les notifications doivent être prises en compte par l'état logique des cartes, puis par les captures et versions réalisées **séparément pour chaque `Window::Surface`**. Les souscriptions RAII et les callbacks doivent respecter la durée de vie des vues, Contributors et cartes ; la synchronisation avec la capture CPU et l'exécution GPU reste à préciser. La vue doit invalider ses cartes lorsque sa liste de Contributors pertinents change, y compris lors d'une désinscription, sans dépendre d'un callback venant d'un Contributor déjà détruit.
 
 ```mermaid
 flowchart TD
-  Tag["Le jeu ou RenderingSystem modifie shadowmap.static"] --> Call["Appel explicite : Contributor::invalidateShadowMap()"]
-  Call --> Full["Invalidation logique : statique + finale"]
-  Full --> CP["ContractProvider du Contributor abonne aux vues"]
-  CP -->|"Contrat RAII de chaque vue concernée"| V["Callbacks des EngineView abonnées"]
-  V --> VP["ContractProvider de chaque EngineView"]
-  VP -->|"Contrats RAII des cartes"| SM["Cache d'ombres statique"]
-  VP -->|"Contrats RAII des cartes"| FM["Carte d'ombres finale"]
-  SM -->|"Invalide aussi la finale"| FM
-  FM --> GPU["Recalcul à la demande, par surface"]
+  Setter["Composant graphique : setShadowMode(mode)"] --> Change{"Mode modifie ?"}
+  Change -->|"Non"| Stop["Aucune invalidation"]
+  Change -->|"Oui"| CC["ContractProvider du composant"]
+  CC -->|"Contrat RAII du RenderingSystem collecteur"| Sys["RenderingSystem : relais d'invalidation"]
+  Sys --> SC["ContractProvider du Contributor systeme"]
+  Direct["Contributor autonome : setShadowMode(mode)"] --> SC
+  SC -->|"Contrats RAII des EngineView admises"| View["ContractProvider de chaque EngineView"]
+  View --> Static["Invalider cache statique"]
+  View --> Final["Invalider carte finale"]
+  Static --> GPU["Reconstruction GPU differee par surface"]
+  Final --> GPU
 ```
 
 ```mermaid
 flowchart TD
-  C["Contributor"] --> A{"castShadow global ?"}
-  A -->|"Non"| None["Rendu de scene sans ombres"]
-  A -->|"Oui"| Obj{"Nature de la contribution ?"}
-  Obj -->|"Directe"| Direct["Utiliser le tag du Contributor"]
-  Obj -->|"Composant interne"| B{"castShadow du composant ?"}
-  B -->|"Non"| None
-  B -->|"Oui"| Child["Utiliser uniquement le tag du composant"]
-  Direct --> O{"Surface opaque ?"}
-  Child --> O
-  O -->|"Non"| None
-  O -->|"Oui"| T{"Tag shadowmap.static de la contribution choisie ?"}
-  T -->|"Oui"| Static["Cache statique"]
-  T -->|"Non"| Dynamic["Ombres dynamiques de la carte finale"]
-  Static --> Final["Copie dans la carte finale"]
+  C["Contributor : ShadowMode"] --> Direct["Contributions directes : mode propre"]
+  C --> Sys["RenderingSystem : composants collectes"]
+  Sys --> Child["Chaque composant : ShadowMode propre"]
+  Direct --> D{"Mode ?"}
+  Child --> E{"Mode du composant ?"}
+  D -->|"Static"| Static["Cache statique si opaque"]
+  D -->|"Dynamic"| Dynamic["Carte finale si opaque"]
+  D -->|"None"| No["Pas d'ombre pour cet objet"]
+  E -->|"Static"| Static
+  E -->|"Dynamic"| Dynamic
+  E -->|"None"| No
+  Sys -.-> Scope["Propagation de None aux enfants : a arbitrer"]
+  Static --> Final["Copie vers carte finale"]
   Dynamic --> Final
-```
+``
 
-**Cache d'ombres statiques et carte finale — choix B validé.** Pour chaque combinaison **`EngineView` × lumière projetant des ombres**, l'infrastructure graphique distingue deux ressources de profondeur logiques : une **shadow map statique mise en cache** (contribution des *shadow casters* opaques classés statiques), et une **shadow map finale** utilisée par l'éclairage Forward. Les géométries opaques classées dynamiques ne sont pas dessinées dans le cache statique. Ces deux catégories sont des **politiques de mise à jour des ombres**, et non une nouvelle classification de transparence ; les translucides ne projettent toujours pas d'ombres. **La classification est déterminée à partir du `castShadow` global du Contributor, puis, pour les composants graphiques internes d’un RenderingSystem, de leur `castShadow` et de leur propre tag `shadowmap.static` ; le tag du RenderingSystem ne les reclasse jamais**, selon le contrat ci-dessus ; **la demande d'invalidation transite d'abord par le `ContractProvider` du Contributor vers ses `EngineView` abonnées, puis par le `ContractProvider` de chaque vue vers ses cartes d'ombres**. Aucun identifiant persistant par groupe n'est requis. La portée exacte des événements, les règles d'appartenance vue/Contributor et le suivi des générations restent à préciser ; aucune détection implicite du mouvement.
+**Cache d'ombres statiques et carte finale — choix B validé.** Pour chaque combinaison **`EngineView` × lumière projetant des ombres**, l'infrastructure graphique distingue deux ressources de profondeur logiques : une **shadow map statique mise en cache** (contribution des *shadow casters* opaques classés statiques), et une **shadow map finale** utilisée par l'éclairage Forward. Les géométries opaques classées dynamiques ne sont pas dessinées dans le cache statique. Ces deux catégories sont des **politiques de mise à jour des ombres**, et non une nouvelle classification de transparence ; les translucides ne projettent toujours pas d'ombres. **La classification dépend du `ShadowMode` propre au Contributor ou composant graphique ; `Static` sur un RenderingSystem ne reclassifie pas ses enfants et la portée de `None` sur eux reste à arbitrer**, selon le contrat ci-dessus ; **la demande d'invalidation transite d'abord par le `ContractProvider` du Contributor vers ses `EngineView` abonnées, puis par le `ContractProvider` de chaque vue vers ses cartes d'ombres**. Aucun identifiant persistant par groupe n'est requis. La portée exacte des événements, les règles d'appartenance vue/Contributor et le suivi des générations restent à préciser ; aucune détection implicite du mouvement.
 
 **Actualisation à la demande, par invalidation :**
-- Après tout changement du tag réservé `shadowmap.static` susceptible d’affecter le rendu, **le développeur ou RenderingSystem appelle explicitement `invalidateShadowMap()` sur le Contributor responsable**. Cette notification invalide **les deux caches logiques**, statique et final, reconstruits à la prochaine exécution qui les requiert ; aucune comparaison avec l’ancienne classification n’est nécessaire. La mutation du tag seule ne notifie rien et l’appel n’exécute aucune commande GPU immédiatement.
+- **Tout changement effectif de `ShadowMode` par `setShadowMode(...)` notifie automatiquement les intéressés et invalide statique + finale.** Un composant utilisé par un RenderingSystem est relié par un contrat RAII ; aucun appel manuel supplémentaire ne doit être exigé pour ce changement. La reconstruction des caches intervient lors d’un rendu ultérieur, jamais dans le setter.
 - Lorsqu'une contribution **statique** change ou lorsque la carte statique n'a encore jamais été construite, la partie statique est invalidée. Au prochain rendu demandant ses ombres, Sparkle redessine **uniquement les casters statiques** dans la carte statique, puis invalide et reconstruit la carte finale.
 - Lorsqu'une contribution **dynamique** change (ajout, retrait, position, géométrie ou toute modification affectant sa projection), seule la **carte finale** doit être reconstruite : **copie de la profondeur statique valide dans la carte finale, puis dessin des casters dynamiques** avec depth test et depth write activés. Les casters statiques ne sont pas redessinés pour ce changement.
 - Une modification de la **lumière ou de sa projection**, de la région couverte ou de la définition/version des cibles qui affecte les deux cartes invalide **les deux**. La carte statique est reconstruite en premier, puis la finale.
