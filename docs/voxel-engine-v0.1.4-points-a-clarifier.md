@@ -12,15 +12,6 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-005 — Schéma JSON complet d'un `spk::Material` multi-rôles
-**Priorité : P0** — [Matériaux, §4.1–4.3](voxel-engine-v0.1.4/04-materiaux-textures-palettes.md) · [AssetManager, §5](voxel-engine-v0.1.4/05-asset-manager.md)
-
-**Validé :** rôles de textures **libres et nommés** ; seul `albedo` est requis par le voxel ; une source peut être une Texture ou SpriteSheet et choisir UV explicites ou coordonnées de sprite ; les exemples JSON actuels sont des **blocs de texture**, pas un Material complet ; `Material::Builder::bind(AssetManager*)` rejette `nullptr`, et la factory d'asset est spécialisée par type.
-
-**À définir :** structure normative du document Material multi-rôles (objet de rôles, représentation des sources, options et sections UV), politique de noms dupliqués et valeurs invalides, références d'assets, messages d'erreur, et équivalence entre création via Builder et chargement JSON. Le chargement JSON de vue ne doit pas inventer une résolution implicite d'EngineView.
-
-**Clôture :** schéma et exemples complets, règles explicites de validation, tests aller-retour de sens sémantique Builder/JSON et clés d'assets structurelles.
-
 ### Q-ARCH-006 — API d'ordonnancement des `RenderPass` personnalisées dans une EngineView
 **Priorité : P0** — [Vues et passes, §7.1–7.2](voxel-engine-v0.1.4/07-vues-et-passes.md)
 
