@@ -291,8 +291,9 @@ flowchart TD
   Gate -->|"Non"| Skip["Ne pas remplacer"]
   Swap --> Next["Candidate suivante"]
   Skip --> Next
-  Next --> Full
-  Next --> Output["Publier une Light.Selection immutable en fin de capture"]
+  Next --> More{"Reste-t-il des candidates ?"}
+  More -->|"Oui"| Full
+  More -->|"Non"| Output["Publier une Light.Selection immutable en fin de capture"]
 ```
 
 **Sélection immuable et invalidation.** Le Prioritizer produit à la demande une `shared_ptr<const Light::Selection>` immuable, mise en cache et partagée par `Lighting::System` et `ShadowMap::RenderingSystem` à travers le `Light::Channel`. Un mutex sérialise l'accès et une reconstruction concurrente de cette sélection. Les modifications du Registry et des composants de lumière invalident les caches des vues dépendantes ; les modifications d'une caméra ou projection invalident la sélection de cette vue uniquement. Une ancienne `Light::Selection` déjà capturée reste utilisable sans mutation rétroactive.
