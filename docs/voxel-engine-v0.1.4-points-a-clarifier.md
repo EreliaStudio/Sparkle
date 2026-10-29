@@ -12,15 +12,6 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-004 — Composition d'une `Voxel::Assembly` dans une autre
-**Priorité : P0** — [Assembly, §6.1](voxel-engine-v0.1.4/06-assemblies-scene.md)
-
-**Validé :** Assembly = hiérarchie mutable de Parts, copie autonome des transforms et de la hiérarchie, partage léger des Model/Palette immuables ; animation gérée par le jeu ; aucune ombre automatique ; transformation monde `M_entityWorld * M_assembly * M_partAccumulated` lorsque le jeu fournit explicitement les MeshInstance d'ombres.
-
-**À définir :** l'ajout d'une autre Assembly constitue-t-il une **copie/expansion de ses Parts** dans la hiérarchie hôte ou une **référence à un sous-assemblage** qui reste autonome ? Quels contrats en découlent pour la propriété, la modification après insertion, les identifiants de Parts, le parentage, l'interdiction de cycles, la copie et la suppression ? Comment les transforms locales et les adaptations aux ombres sont-elles composées sans double application ?
-
-**Clôture :** un seul modèle public de composition décrit et testé avec sous-assemblies, copie, animation, reparenting, cycles et suppression.
-
 ### Q-ARCH-005 — Schéma JSON complet d'un `spk::Material` multi-rôles
 **Priorité : P0** — [Matériaux, §4.1–4.3](voxel-engine-v0.1.4/04-materiaux-textures-palettes.md) · [AssetManager, §5](voxel-engine-v0.1.4/05-asset-manager.md)
 
