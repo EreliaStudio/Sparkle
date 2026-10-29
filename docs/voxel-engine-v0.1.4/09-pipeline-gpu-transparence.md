@@ -32,6 +32,8 @@ Une association compatible emploie au plus **un atlas `albedo` par mesh/passe**,
 
 **Capture et buffers.** La capture CPU fige la `Light::Selection`, les paramètres des lumières retenues et les matrices de vue ; les mêmes données alimentent la passe opaque et l'unique passe WBOIT de cette EngineView. Les ressources GPU sont matérialisées sur la `Window::Surface` courante et synchronisées avant les dessins. `RenderCommand::execute()` ne relit pas de lumière, caméra, vue ou Assembly mutable. La sélection ne dépend pas du depth buffer opaque et reste valide pour les fragments translucides.
 
+**Préparation GPU commune avant les vues.** Le snapshot moteur commence par une commande de préparation des reconstructions de PointLight qui examine les **demandes immuables de toutes ses EngineView** et vérifie leur état GPU **sur la `Window::Surface` exécutante**. Elle dédoublonne les paires, trie strictement leurs scores capturés et attribue un budget unique pour cette image/surface. Le plan figé et les marques de paires traitées sont **temporaires dans le `RenderContext` de l'image**, indépendants du snapshot et des autres surfaces. Chaque passe d'ombres ponctuelles de vue ne reconstruit que ses paires autorisées, une seule fois par image ; l'opaque et le WBOIT s'exécutent ensuite selon l'ordre inchangé des vues. Les cartes anciennes admissibles continuent à pouvoir être utilisées en cas de report.
+
 **Ombres et états historiques cohérents.** `ShadowMap::RenderingSystem` travaille seulement sur les lumières admissibles issues de la sélection commune et applique ses budgets et invalidations indépendamment. Chaque carte publiée transporte, par surface et lumière, son **identité d'admission**, sa génération, son ordinal de capture source et l'**état lumineux géométrique historique** (position/direction, portée, atténuation, projection et paramètres de profondeur). Après les ombres, `Lighting::System` appelle `Light::ShadowResults::acquireLatest()` pendant `execute()`, refuse toute ancienne admission ou capture source postérieure au snapshot consommateur, puis emploie **tous les paramètres historiques géométriquement dépendants** de la carte admissible. La couleur et les autres paramètres indépendants proviennent de la sélection immuable capturée ; l'intensité liée à la portée/atténuation reste historique. Sans carte compatible, la lumière éclaire sans ombre avec ses paramètres capturés. Les passes opaque et WBOIT partagent une résolution effective unique par exécution de vue, sans lecture d'objet de gameplay mutable.
 
 ```mermaid
@@ -41,8 +43,10 @@ flowchart TD
   S --> C["Capture CPU des paramètres"]
   C --> O["Shaders opaques Forward"]
   C --> W["Shaders translucides Forward / WBOIT"]
-  S --> SH["ShadowMap::RenderingSystem et budgets"]
-  SH --> R["ShadowResults par Window Surface"]
+  S --> SH["ShadowMap::RenderingSystem : demandes de toutes les vues"]
+  SH --> Prep["Première commande GPU : plan par image et surface"]
+  Prep --> Passes["Ombres PointLight autorisées dans les passes des vues"]
+  Passes --> R["ShadowResults par Window Surface"]
   R --> G["Verifier admission, ordinal source et geometrie historique"]
   G --> O
   G --> W
@@ -59,10 +63,12 @@ sequenceDiagram
   participant GPU as Window Surface GPU
   V->>P: demander selection commune
   P-->>V: selection immuable partagee
-  V->>SH: preparer cartes des lumieres retenues
+  V->>SH: capturer demandes PointLight de chaque vue
   V->>LI: capturer memes lumières pour opaque et WBOIT
-  V-->>GPU: RenderSnapshot immuable
-  GPU->>SH: reconstruire selon budgets
+  V-->>GPU: Snapshot moteur avec prelude puis vues
+  GPU->>SH: commande prelude : validites par surface, plan global
+  SH->>SH: classer par score et reserver budget de l image
+  GPU->>SH: vues : reconstruire uniquement paires autorisees
   SH->>SH: publier cartes completes
   GPU->>LI: executer opaque puis WBOIT
   LI->>LI: acquireLatest des ombres par surface
