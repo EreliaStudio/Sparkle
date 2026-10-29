@@ -187,6 +187,7 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Éclairage Forward classique et WBOIT**
 
+- **Q-TECH-001 — profil initial accepté :** une nouvelle EngineView construit son `Light::Prioritizer` avec **`N = 8`** (places communes Point et Spot) et **`h = 0,10`** (hystérésis relative de 10 %). Vérifier qu'une autre EngineView créée ensuite reçoit ses propres valeurs initiales, qu'une configuration explicite modifie uniquement la vue visée et que les Directional actives demeurent hors N. Avec une retenue de score 10 et une candidate de score 11, le seuil strict `11 > 10 × (1 + 0,10)` n'est pas satisfait ; une candidate de score 11,1 peut évincer sous les conditions d'admissibilité et de places applicables. Aucun changement implicite du budget d'ombres ponctuelles `X/Y/epsilon/shadowSelectionHysteresis`.
 - Une EngineView sélectionne un Top-N commun Point/Spot, avec N/h configurables, et toutes les Directional actives sans consommer N ; même sélection immuable en entrée de Lighting et ShadowMap.
 - Vérifier les invalidations Registry/lumières/caméra, la sérialisation de reconstruction du cache sous mutex et l'absence de recalcul redondant pour plusieurs consommateurs ; des EngineView distinctes peuvent avoir des sélections différentes.
 - Vérifier que les shaders opaque et WBOIT utilisent la même liste globale capturée sans culling GPU par tile, et que l'éligibilité aux ombres est un sous-ensemble des lumières de cette liste.
