@@ -349,7 +349,42 @@ flowchart TD
   Reset --> Output
 ```
 
-**Sélection immuable et invalidation.** Le Prioritizer produit à la demande une `shared_ptr<const Light::Selection>` immuable, mise en cache et partagée par `Lighting::System` et `ShadowMap::RenderingSystem` à travers le `Light::Channel`. Un mutex sérialise l'accès et une reconstruction concurrente de cette sélection. Les modifications du Registry et des composants de lumière invalident les caches des vues dépendantes ; les modifications d'une caméra ou projection invalident la sélection de cette vue uniquement. Une ancienne `Light::Selection` déjà capturée reste utilisable sans mutation rétroactive.
+**Sélection immuable et invalidation.** Le Prioritizer produit à la demande une `shared_ptr<const Light::Selection>` immuable, mise en cache et partagée par `Lighting::System` et `ShadowMap::RenderingSystem` à travers le `Light::Channel`. Les modifications du Registry et des composants de lumière invalident les caches des vues dépendantes ; les modifications d'une caméra ou de sa projection invalident la sélection de cette vue uniquement. Une ancienne `Light::Selection` déjà capturée reste utilisable sans mutation rétroactive. **Q-TECH-001 : le cache est protégé par génération, avec une seule reconstruction active par Channel, sans verrouillage prolongé du calcul** ; voir le contrat détaillé ci-dessous.
+
+**Q-TECH-001 — publication générationnelle du Top-N (option A validée).** Chaque `Light::Channel` possède, **indépendamment par EngineView**, un compteur monotone `invalidationGeneration` (entier non signé, initialement zéro), une génération associée à sa dernière sélection publiée, un `shared_ptr<const Light::Selection>` publié, le dernier historique de retenues **effectivement validé** et un indicateur de reconstruction active, synchronisés par le **même mutex court de Channel**. Une modification pertinente (inscription, suppression, activation, état influant sur score ou admissibilité ; caméra, projection, paramètres `N/h`) déclenche l'invalidation de cette vue en incrémentant sa génération **une seule fois par événement de changement cohérent**. Une modification effective de `N` ou `h` marque en outre une réinitialisation du Top-N brut, selon leur contrat déjà validé ; **un recalcul rejeté ne doit ni consommer ce marqueur ni modifier l'historique publié**. Une valeur inchangée ne crée pas de génération artificielle. Le dépassement de capacité du compteur est une erreur `spk::Exception`, sans retour à zéro ni réutilisation de génération.
+
+**Reconstruction sans verrou long :**
+
+1. Sous mutex de `Light::Channel`, un consommateur constate si la sélection publiée correspond **à la génération courante**. Si oui, il acquiert ce `shared_ptr` immédiatement. Sinon, **un seul** constructeur devient actif pour cette vue et relève la génération `G`, les paramètres configurés et la référence à l'historique **publié** ; le mutex est ensuite libéré.
+2. Le constructeur obtient un **ensemble cohérent et possédé de données de capture CPU** (candidates, scores/paramètres, caméra/frustum, ordinals), puis calcule le Top-N **hors du mutex de Channel**. Il ne doit pas conserver de référence nue à un `Light::Contributor`, une `Entity` ou un `Registry` mutable pendant le classement. Les modifications concurrentes des sources doivent être observables par l'invalidation de la génération et ne peuvent se produire sans signaler le Channel avant qu'un ancien résultat ne soit publiable.
+3. Avant publication, il reprend le mutex, et compare **`G` à la génération courante**. Si elles diffèrent, il **jette intégralement** le résultat (y compris retenues/historique, demande d'ombres ou marqueur de reset provisoires) ; il ne publie **aucun** résultat périmé, conserve le rôle d'unique constructeur et recommence avec une **nouvelle capture cohérente** et la génération la plus récente. Si `G` correspond, il publie **atomiquement** le nouveau `shared_ptr<const Light::Selection>`, son numéro de génération et le nouvel historique, puis libère le rôle de constructeur et signale les consommateurs en attente.
+4. Plusieurs consommateurs de la **même vue** ne lancent jamais des reconstructions parallèles ni ne calculent leur propre Top-N. Lorsqu'une reconstruction est en cours, les demandes de nouvelle capture attendent son résultat **valide pour la génération courante**, ou réutilisent la sélection **déjà courante** si celle-ci existe ; elles ne reçoivent jamais une génération invalidée comme sélection de leur **nouvelle capture**. Les snapshots déjà publiés gardent librement leur ancienne sélection.
+5. Une interruption, exception de calcul ou échec d'acquisition des données libère systématiquement l'état « reconstruction active », sans publier ni consommer l'historique ou le marqueur de reconfiguration ; réveiller les consommateurs en attente et **propager l'erreur** suivant la politique générale `spk::Exception`. Ne pas laisser un Channel bloqué indéfiniment par un drapeau de calcul actif après une exception.
+
+**Ordonnancement et propriété.** Les sections critiques du mutex de Channel sont limitées aux lectures/écritures de génération, cache, historique et état de construction ; **aucune itération du Registry, calcul de scores, tri, création de commandes GPU ou callback utilisateur n'y est exécuté**. Le contrat d'événement doit ordonner de manière sûre la **visibilité du changement source** et l'incrément de génération : le double contrôle de génération ne suffit pas si un changement devient visible sans invalider le cache avant sa publication. La stratégie précise de diffusion des abonnements/notifications du Registry et des lumières (tous les Channels ou uniquement un ensemble suivi sans perte de nouvelle candidate) reste la **prochaine précision à arbitrer**, sans ajouter de compteur par lumière ni second scheduler. Un changement de caméra ne cible que le Channel de sa vue. La génération d'invalidation est une donnée **CPU par Channel**, pas l'ordinal CPU de `RenderSnapshot`, le `LightRegistrationOrder`, la génération d'une shadow map ou la validité GPU par `Window::Surface`.
+
+**Consommation et effets secondaires.** `Lighting::System` et `ShadowMap::RenderingSystem` utilisent **la même publication immuable acceptée** pour cette vue et cette capture. Les transitions d'admission d'ombres ou l'éviction de caches logiques actifs ne doivent pas être déclenchées sur un résultat de Top-N rejeté ; elles découlent seulement de la sélection **validée et publiée**, conformément au contrat d'ombres déjà établi. Deux EngineView ont des générations et constructeurs indépendants ; deux surfaces rendues simultanément n'altèrent pas cette synchronisation CPU. La politique `N/h` et les valeurs de scores utilisées pour la publication sont celles de la génération acceptée, et non celles d'une tentative devenue périmée.
+
+```mermaid
+sequenceDiagram
+  participant C1 as Capture 1
+  participant C2 as Capture 2
+  participant CH as Light Channel
+  participant L as Registre / lumière
+  C1->>CH: acquérir sélection courante
+  CH->>CH: verrou : G=17, aucun cache valide, devenir constructeur
+  CH-->>C1: calculer hors verrou sur données CPU cohérentes
+  C2->>CH: acquérir sélection courante
+  CH-->>C2: reconstruction active, attendre publication valide
+  L->>CH: mutation visible + invalidation
+  CH->>CH: verrou court : G=18, cache invalide
+  C1->>CH: tentative publication du résultat G=17
+  CH-->>C1: rejeter G=17 et recommencer hors verrou
+  C1->>CH: publication du résultat G=18
+  CH->>CH: verrou : G=18, publier sélection et historique
+  CH-->>C1: sélection immuable G=18
+  CH-->>C2: réveiller et fournir sélection G=18
+```
 
 **Cohérence éclairage/ombres.** Seules les lumières retenues par ce classement pour l'éclairage peuvent demander des cartes d'ombres pour cette vue. `ShadowMap::RenderingSystem` applique ensuite ses propres budgets et politiques sur les candidates admissibles sans dupliquer le score ni modifier la liste d'éclairage. Une lumière éclairante dont aucune carte d'ombres exploitable n'est disponible continue à éclairer **sans ombre**. Les dessins opaques et WBOIT d'une même capture utilisent cette **même sélection globale**, sans liste par tile.
 
