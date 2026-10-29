@@ -12,14 +12,7 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-007 — Composition des attachments et versionnement des render targets
-**Priorité : P0** — [Vues, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md) · [Pipeline, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
-
-**Validé :** opaque et WBOIT partagent **le même attachment de profondeur par surface et version de vue**, la profondeur est écrite par opaque puis lue en test sans écriture par WBOIT ; les buffers WBOIT sont `RGBA16F` et `R8`. Les anciennes cibles doivent rester vivantes pour les snapshots en vol. `GPUResourceCollection` est seule responsable de récupération des instances GPU.
-
-**À définir :** API générique permettant à plusieurs Framebuffer de partager des attachments logiques, capture sûre des handles lors d'un resize, ciblage d'une face de cubemap de profondeur, vérification des formats/capacités OpenGL et politiques d'erreur. Préciser comment les attachments/Framebuffers sont construits sans modifier en place le State encore référencé par un ancien snapshot.
-
-**Clôture :** modèle public d'attachments, commandes de framebuffer typées, scénarios multifenêtres/resize et tests de depth partagé, faces cubemap et gestion des handles.
+**Aucun arbitrage architectural Q-ARCH ne reste ouvert.** Les décisions Q-ARCH-001 à Q-ARCH-007 ont été validées et intégrées aux chapitres normatifs ; seules les précisions techniques Q-TECH suivantes restent à consolider avant implémentation.
 
 ## 2. Précisions techniques à consolider
 
