@@ -12,15 +12,6 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-003 — `EngineView` comme source `albedo` d'un Material voxel
-**Priorité : P0** — [Matériaux et palettes, §4.1 et §4.4](voxel-engine-v0.1.4/04-materiaux-textures-palettes.md) · [Vues, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md)
-
-**Validé :** `Material` peut emprunter une EngineView **sans en devenir propriétaire** ; l'identité logique demeure après resize, une nouvelle capture résout le nouvel état de sortie, et l'exécution vérifie la production sur la surface concernée. Les politiques `Invalid`, `KeepLastFrame` et `DefaultTexture` sont établies. Un couple (Model, VoxelPalette) ne peut requérir **plus d'un atlas albedo par mesh/passe** ; aucune copie de texture entre surfaces et aucun ordonnancement automatique des vues.
-
-**À définir :** interface publique de cette source et définition de son **identité d'atlas** lors des validations Model/Palette et du batching. Quelles combinaisons sont admises dans une même passe (vue seule, static + vue, plusieurs vues distinctes, fallback temporaire) ? À quel moment les incompatibilités sont-elles détectées ? Quelles règles empêchent les dépendances impossibles ou cycliques entre vues, tout en conservant l'ordre explicite déjà choisi par le jeu ?
-
-**Clôture :** contrat d'identité, de compatibilité et d'erreur pour sources dynamiques, exemples et tests après resize, fallback, fermeture de surface et textures encore non produites.
-
 ### Q-ARCH-004 — Composition d'une `Voxel::Assembly` dans une autre
 **Priorité : P0** — [Assembly, §6.1](voxel-engine-v0.1.4/06-assemblies-scene.md)
 
