@@ -19,7 +19,9 @@
 ### Q-TECH-002 — Constantes d'éclairage et projections d'ombres
 **Priorité : P1** — [Lumières, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md)
 
-Fixer unités d'intensité et de distance, loi d'atténuation, `minLightDistance`, seuil d'influence, valeurs par défaut des budgets et taux, projections Spot/Directional/Point, domaine de couverture de l'unique carte directionnelle, résolution et qualité de filtrage/biais. **Pas de CSM ni de nouveau type de lumière implicite.**
+**Décision validée (option A) :** `Point` et `Spot` utilisent une seule loi radiale `E(d) = intensity / max(d, d_floor)^2`, avec `d_floor > 0`, et un seuil unique `E_min > 0` ; `Directional` ne s'atténue pas avec la distance. La portée locale découle de `R = sqrt(intensity/E_min)` sous réserve que le maximum borné atteigne effectivement `E_min`. Aucune loi d'atténuation alternative par lumière en V0.1.4. Voir le contrat normatif du chapitre 08 et les scénarios du chapitre 10.
+
+**Reste à définir :** unités d'intensité et de distance, valeur et portée de configuration de `d_floor` (question suivante), `E_min`, `minLightDistance` du score (indépendant tant qu'aucune décision ne les relie), profil angulaire du Spot, valeurs par défaut des budgets et taux, projections Spot/Directional/Point, couverture de l'unique carte directionnelle, résolution et filtrage/biais. **Pas de CSM ni de nouveau type de lumière implicite.**
 
 ### Q-TECH-003 — WBOIT et états OpenGL
 **Priorité : P1** — [GPU, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
