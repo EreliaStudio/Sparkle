@@ -1,0 +1,462 @@
+# Sparkle V0.1.4 — Lumières et ombres
+
+[Sommaire de l'architecture](../voxel-engine-v0.1.4-specification.md)
+
+### 7.3 `ShadowMap` : contributeurs, invalidation et caches
+
+**Séparation des responsabilités.** `VoxelRenderingSystem` produit **exclusivement** les passes visibles des voxels (opaque, WBOIT translucide, matériaux et SSBO). Il ne génère **aucune commande** de shadow map, n'observe aucun mode d'ombre de ses composants et ne gère aucune souscription RAII de cache d'ombres.
+
+**Producteur et consommateur indépendants.** `spk::ShadowMap` est une abstraction de profondeur comprenant `ShadowMap::Contributor` (géométrie des casters et mode `None/Static/Dynamic`) et `ShadowMap::RenderingSystem` (découverte des casters, cache statique/final et reconstruction GPU). `spk::Lighting::System` est le consommateur Forward : il prépare les données de lumière pour les objets opaques et WBOIT et utilise les cartes finalisées. Les deux systèmes sont indépendants et accèdent à `Light::Channel`, sans dépendance de `Lighting` vers `ShadowMap`.
+
+**Passe d'ombres unique par vue.** Le `ShadowMap::RenderingSystem` inscrit au plus une `RenderPass` d'ombres dans le sous-snapshot de la vue, avant les passes de lumière. Cette passe regroupe les reconstructions de toutes les lumières sélectionnées, avec cibles statiques et finales propres à chaque lumière et à chaque surface. Les six faces d'une cubemap `Point` sont entièrement rendues avant que la carte puisse être publiée. Un budget de reconstruction ponctuelle par image/surface arbitre les demandes de toutes les vues de cette image selon leur score décroissant, sans bonus d'attente, indépendamment de l'ordre dans lequel les vues seront exécutées.
+
+**Réutilisation et publication.** Une carte complète précédemment produite reste exploitable durant l'attente ou la reconstruction d'une nouvelle génération, avec **ses propres matrices et paramètres d'origine**, si la lumière reste sélectionnée et ses ombres activées. Une reconstruction opère dans de **nouvelles ressources GPU logiques** sans modifier les textures antérieures. Aussitôt une carte complète obtenue, le système publie un nouveau `Light::ShadowResult` immuable dans le slot de la surface. Une commande d'éclairage ultérieure de **la même image** peut donc l'utiliser sans attendre l'image suivante. Si aucune carte n'existe ou si la lumière est désélectionnée/désactivée, elle éclaire sans ombre. `GPUResourceCollection` assure le recyclage/la libération des ressources après extinction des références.
+
+```mermaid
+sequenceDiagram
+  participant CPU as CaptureContext de la vue
+  participant P as Light::Prioritizer
+  participant SH as ShadowMap RenderingSystem
+  participant Slot as ThreadSafeSlot par Surface
+  participant LI as Lighting System
+  CPU->>P: capturer sélection et scores
+  CPU->>SH: préparer la passe d'ombres de la vue
+  CPU->>LI: préparer les passes Forward de la vue
+  Note over CPU,LI: RenderSnapshot immuable
+  SH->>SH: execute reconstruction sur la surface courante
+  alt Reconstruction complète admise
+    SH->>Slot: fusionner et publier ShadowResult
+  else Différée
+    Note over SH,Slot: dernière carte complète inchangée
+  end
+  LI->>Slot: acquireLatest pendant execute
+  Slot-->>LI: cartes et matrices par lumière
+  LI->>LI: vérifier sélection actuelle et ombres activées
+```
+
+**Répartition des responsabilités.** `ShadowMap::Contributor` fournit les meshes de profondeur via le `MeshFilter`, sans porter de lumière ni participer comme `EngineView::Contributor`. Le `ShadowMap::RenderingSystem` souscrit aux casters et gère les invalidations de ses caches, sans transférer cette responsabilité à l'`EngineView`. Le `Light::Prioritizer` consulte les scores propres aux composants `Light` et sélectionne les lumières sans produire de shadow map. La `EngineView` détient le Channel mais ne connaît pas la politique des casters.
+
+
+
+**A2 — aucune propagation des modes d'ombres en V0.1.4.** Chaque `ShadowMap::Contributor` porte **son seul `ShadowMode`** : `None`, `Static` ou `Dynamic`. La relation parent/enfant de `InherenceTrait` **ne transmet jamais** ce mode ; le parent ne peut donc ni activer, ni désactiver, ni reclassifier les ombres d'un descendant. Un regroupement graphique ou une inscription dans `Registry` ne modifie pas davantage les modes. `Registry` sert exclusivement à **découvrir** les Contributors, pas à établir des priorités ou des héritages. Aucune enum `ShadowPropagation`, aucune surcharge de `setShadowMode` acceptant une politique et aucun mécanisme d'override `Descendants` ne sont introduits dans cette version. Les relations de parenté restent pertinentes pour **calculer la transformation monde** d'une Entity et invalider ses caches si elle bouge avec son parent, sans propagation de configuration d'ombre. Un développeur voulant changer les ombres de plusieurs Entities modifie explicitement chaque Contributor concerné ; il n'existe pas de modification récursive automatique.
+
+**Invalidations du sous-système d'ombres.** Les notifications `ContractProvider` des casters (mode, matrices, geometries, layers), des transforms et des lumières rendent les caches de production statique/finale obsolètes sans déclencher immédiatement une commande GPU. L'ancienne carte finale complète et ses anciennes matrices restent lisibles tant que la lumière est toujours sélectionnée et que les ombres restent activées. La désélection et l'extinction des ombres interdisent immédiatement son échantillonnage, même si des snapshots en vol détiennent encore ses handles. Les `EngineView` ne possèdent aucun contrat d'invalidation des casters.
+
+```mermaid
+flowchart LR
+  Entity["Entity3D et InherenceTrait"] --> Visual["Composants visuels"]
+  Entity --> ShadowComp["ShadowMap::Contributor"]
+  M["ShadowMap : passe logique"] --> ShadowComp
+  M --> SR
+  M --> PassKey["Une cle par Builder de vue : cle statique commune possible"]
+  ShadowComp --> ShadowMode["ShadowMode propre : None, Static, Dynamic"]
+  ShadowComp --> Filter["MeshFilter : collection de MeshInstance"]
+  SourceMesh["spk::Mesh de TVertex"] -->|"extracteur Vector3 + indices"| Converted["ShadowMap::Mesh"]
+  Converted -->|"copie legere"| Instance["MeshInstance : mesh + matrice locale"]
+  AssemblyPose["Assembly : matrices cumulees des Parts relatives a Assembly"] -->|"valeurs explicites"| Instance
+  AssemblyMatrix["Matrice Assembly relative a Entity"] -->|"bind(collection, assemblyMatrix)"| Filter
+  Instance -->|"bind(collection, assemblyMatrix) : remplace tout"| Filter
+  Visual --> VR["VoxelRenderingSystem : rendu visuel"]
+  VR --> Scene["Passes opaques et WBOIT"]
+  ShadowComp --> Registry["Registry des casters"]
+  Registry --> SR["ShadowMap::RenderingSystem"]
+  Filter --> SR
+  SR --> Score["PointLight : intensite x poids / distance bornee"]
+  Score --> Target["Cible X : score de la Xe lumiere"]
+  Target --> Tolerance["Admissibles en surplus si score >= PX x (1 - tolerance)"]
+  Tolerance --> Remove["Ecarter anciennes retenues hors tolerance"]
+  Remove --> Keep["Hysteresis seulement entre surplus admissibles"]
+  Keep --> Max["Maximum absolu Y, socle X obligatoire"]
+  Max --> RP["Une RenderPass ombres par EngineView"]
+  Max --> Removed["PointLight sortie : caches actifs retires"]
+  Removed --> Retire["Anciennes versions conservees par snapshots et GPU"]
+  Max --> Pending["Demandes de reconstruction PointLight des vues"]
+  Pending --> SurfaceBudget["Budget global par image et Window Surface"]
+  SurfaceBudget --> Priority["Score brut decroissant seulement, sans bonus d attente"]
+  Priority --> RP
+  RP -->|"Pour chaque lumiere compatible"| Checks["Layers + activation + mode propre"]
+  Checks --> SM["Cache statique individuel de la lumiere"]
+  SM -->|"Copie si finale invalide"| FM["Carte finale individuelle de la lumiere"]
+  Checks --> FM
+  FM --> Scene
+  View["EngineView : donnees generiques de capture"] --> Builder["RenderingEngine : Builder de sous-snapshot"]
+  Builder --> VR
+  Builder --> SR
+```
+
+**Sources d'ombres et mode propre.** Le `ShadowMap::Contributor` est un **composant graphique spécialisé de caster**, distinct de `EngineView::Contributor`. Il porte **son seul** `ShadowMode { None, Static, Dynamic }`, ses layers et un **`MeshFilter` intégré contenant une collection de `MeshInstance`**, chaque entrée ayant son mesh partagé et sa matrice locale par valeur. La source doit être liée explicitement par l'application, sans recherche automatique d'un mesh visuel. Le `ShadowMap::RenderingSystem` seul lit ces données et émet les passes d'ombres.
+
+**`ShadowMap::Mesh` : géométrie de profondeur (A1, validé).** `ShadowMap::Mesh` est une **classe** dérivant de `spk::Mesh<spk::Vector3>`, et non un alias. Elle dispose d'un Builder dont l'unique attribut de sommet est une position `Vector3`. Une factory **statique générique** (nom indicatif `from`) accepte `const spk::Mesh<TVertex>&` et un extracteur invocable avec un `const TVertex&` et retournant `spk::Vector3`. Cette fonction n'est pas un prédicat booléen. La factory applique l'extracteur à chaque sommet et recopie les indices dans leur ordre d'origine, préservant triangles, winding et sommets partagés. Elle ne calcule ni volume fermé, ni enveloppe convexe, ni simplification, ni matériaux, et ne fait aucun rendu GPU. Le développeur choisit explicitement le mesh d'origine : opaque, proxy simplifié ou autre géométrie de projection **composée exclusivement des surfaces que l'application considère comme opaques**. Le format de position seule ne permet pas de contrôler l'opacité d'un mesh arbitraire ; cette sélection relève du producteur, pas d'une analyse de matériaux par la factory. La conversion CPU peut employer `source.layout().vertexBuffer().cast<TVertex>()` et `source.layout().indexBuffer().cast<std::uint32_t>()`, disponibles dans Sparkle ; elle ne requiert aucun contexte OpenGL. Les entrées triangulaires malformées (indices invalides, nombre d'indices non multiple de trois, positions non finies) sont refusées avec une `spk::Exception` descriptive sans publier de résultat partiel ; un mesh source vide donne un mesh d'ombre vide.
+
+**`ShadowMap::MeshInstance` et transformations locales (A1, complément matrice commune).** Une `MeshInstance` est une structure publique contenant un `ShadowMap::Mesh mesh` et une `spk::Matrix4x4 localTransform`. La copie de `mesh` est **légère** : elle partage les données immuables de `spk::Mesh`. La matrice est détenue **par valeur**, sans pointeur, abonnement ni dépendance à un autre `Transform3D`. Elle exprime la pose du mesh **dans le repère local de la collection**, par exemple le repère d'une `Voxel::Assembly`, et non le monde. Le `MeshFilter` conserve également **une seule `spk::Matrix4x4 baseTransform` commune à toutes les instances**, exprimée dans le repère de l'`Entity3D` porteuse ; à défaut elle est identité. Pour chaque position, la matrice complète est `M_world = M_entityWorld * M_base * M_instanceLocal`, appliquée au sommet du mesh, selon la convention algébrique de Sparkle. `M_base` peut être la matrice de l'Assembly : chaque descendant conserve sa propre matrice cumulée **relative à l'Assembly**, sans incorporer `M_base` une seconde fois. Plusieurs instances peuvent partager le même mesh avec des matrices différentes ; elles n'ont pas d'identifiant ni de cycle de vie indépendant. Le système peut composer les matrices à la capture CPU sans modifier ni prétransformer les buffers des meshes.
+
+**API de liaison, remplacement intégral et état atomique (A1, complément matrice commune).** Le `MeshFilter` intégré au Contributor contient **une collection ordonnée** de `MeshInstance` **et une matrice commune `baseTransform`**. Les signatures conceptuelles sont `bind(const ShadowMap::Mesh&)`, `bind(const ShadowMap::Mesh&, const spk::Matrix4x4&)`, `bind(collection<MeshInstance>)` et **`bind(collection<MeshInstance>, const spk::Matrix4x4& baseMatrix)`**. Pour un mesh unique, `bind(mesh, matrix)` équivaut à une collection d'une entrée avec `localTransform = identité` et `baseTransform = matrix` ; pour une collection sans second argument, `baseTransform = identité`. **Toutes les surcharges remplacent intégralement et atomiquement le couple `(instances, baseTransform)`**, sans ajout incrémental ni conservation cachée de l'ancienne matrice commune. Une collection vide supprime toutes les instances, remet la matrice commune à l'identité ; `unbind()` peut être un raccourci explicite à cette remise à zéro. Il n'existe ni `add(mesh, transform)`, ni `remove(id)`, ni `setTransform(id)` ni identifiants pérennes d'entrée. Les wrappers des meshes immuables sont copiés légèrement ; toutes les matrices (instance et base) sont copiées par valeur. La destruction des wrappers, du Model ou de l'Assembly de départ ne rend pas les copies invalides. Une matrice non finie, qu'elle soit commune ou particulière, est refusée par `spk::Exception`, et toute erreur de validation laisse **collection et matrice commune anciennes intactes**.
+
+**Invalidation des bindings et capture sûre (A1, clos).** Le Contributor prépare sa nouvelle collection avant de remplacer la précédente. Chaque **appel `bind()` réussi**, même si le contenu est identique, effectue un remplacement logique puis émet **une notification unique** via son `ContractProvider`, quel que soit le nombre de meshes ou matrices changés ; il n'existe aucune notification par entrée ni comparaison profonde implicite. Le système d'ombres invalide les caches selon le **mode propre du Contributor** : un changement purement `Dynamic` n'invalide que la **carte finale**, tandis qu'un changement `Static` invalide **statique et finale**. Un changement de `ShadowMode` conserve sa propre invalidation statique + finale déjà spécifiée. La notification unique d'un `bind()` suffit à déclencher cette logique de classification. Pour actualiser la pose d'une `Voxel::Assembly`, le jeu recalcule les matrices locales **cumulées par rapport à l'Assembly** des Parts et rappelle `bind(collection, assemblyMatrix)` ; pour déplacer l'Assembly entière relativement à l'Entity, il peut réutiliser la même collection et fournir **une nouvelle matrice commune**, sans rebake, ni fusion géométrique, ni suivi automatique d'Assembly. Un mouvement global de l'Entity ne nécessite pas de nouveau bind local, mais sa notification de transformation demeure nécessaire au système d'ombres. Lors de la capture CPU, chaque entrée admise est transformée par `M_entityWorld * M_base * M_instanceLocal` ; les **commandes du snapshot copient/capturent les matrices finales, buffers et handles**. `execute(RenderContext&) const` n'accède jamais au conteneur du Contributor, à l'Entity mutable ou à une Part d'Assembly. Les snapshots publiés avant le bind continuent d'utiliser leurs anciennes versions.
+
+**État initial et absence de sources (A1, clos).** Un `ShadowMap::Contributor` est **facultatif** sur une Entity ; aucun composant visuel ne le crée automatiquement. À la construction : `ShadowMode = None`, collection de `MeshInstance` **vide**, `baseTransform = identité`, et **aucun layer** (collection de noms vide). `None` évite toute projection implicite ; l'application demande explicitement `Static` ou `Dynamic` **sur ce Contributor**. Aucun mesh, une collection vide ou des meshes vides ne produisent de triangles d'ombre et ne déclenchent pas d'exception. Le Contributor ne transmet aucun mode d'ombre aux descendants, même s'il n'a lui-même aucune géométrie. Les layers ne s'héritent ni de l'Entity ni du visuel : selon §7.2, une liste vide est admise par une vue **sans filtre configuré**, et exclue d'une vue **avec filtre explicite**, même si la liste de filtre est vide. Aucune liaison implicite au premier mesh visuel n'est autorisée. Le producteur garantit l'opacité des triangles fournis ; le mesh position-seule ne peut pas vérifier l'alpha.
+
+**Exemple d'utilisation conceptuel :**
+
+```cpp
+std::vector<spk::ShadowMap::MeshInstance> instances;
+instances.push_back({bodyShadowMesh, bodyLocalMatrix});
+instances.push_back({armShadowMesh, armAccumulatedLocalMatrix});
+shadowContributor.bind(instances, assemblyLocalMatrix); // M_assembly sur toutes les Parts ; remplace TOUT.
+shadowContributor.setShadowMode(ShadowMode::Dynamic);
+// Nouvelle pose : recalculer les matrices des Parts, puis bind(instances, assemblyLocalMatrix).
+// Deplacement de toute l Assembly : bind(instances, nouvelleAssemblyLocalMatrix).
+// Cas simple : shadowContributor.bind(modelShadowMesh); // Matrice identite.
+```
+
+Les noms secondaires et la qualification exacte des enums sont illustratifs ; le contrat de possession, de remplacement et de capture est normatif.
+
+
+- `None` interdit la projection pour le caster concerné, `Static` le classe dans le cache statique, `Dynamic` dans la partie dynamique de la carte finale. Seules les contributions opaques sont susceptibles de projeter des ombres ; les translucides n'en projettent pas, mais peuvent en recevoir lors de l'éclairage Forward. `ShadowMode` n'est ni un booléen `castShadow` ni un tag de Contributor générique.
+- **A2 : pas de `ShadowPropagation`.** `ShadowMode` s'applique exclusivement aux `MeshInstance` du Contributor qui le porte. Aucune relation de parenté (`InherenceTrait`, Entity, Assembly ou collecte graphique) ne l'étend à un autre Contributor. Une Entity parent en mode `None` n'interdit pas les ombres d'une Entity enfant en mode `Dynamic` ; inversement un parent `Dynamic` n'active pas un enfant `None`. Les valeurs des autres Contributors ne changent jamais lorsque le parent change de mode.
+- Les layers de `ShadowMap::Contributor` sont testés **par le `ShadowMap::RenderingSystem`** via le filtre générique figé de la vue. Ils ne sont pas lus implicitement depuis les layers du mesh visuel : **initialement vides**, ils ne permettent l'admission que dans une vue dont le filtre est non configuré, selon §7.2. L'activation de l'Entity reste une condition indépendante.
+
+**Setter et notifications automatiques (A2).** `ShadowMap::Contributor::setShadowMode(mode)` compare uniquement le nouveau `ShadowMode` à la valeur stockée. Si le mode change, il l'enregistre et notifie son **`ContractProvider` propre aux ombres** ; sinon il ne notifie rien. Aucune politique de propagation, ni mise à jour des composants parents ou enfants, n'est effectuée. `ShadowMap::RenderingSystem` souscrit par contrats RAII à ses `ShadowMap::Contributor` connus ; à la réception, il marque **ses caches statique et final** logiquement invalides pour les vues/lumières concernées. Aucun appel manuel à `invalidateShadowMap()` n'est exigé après le setter, et aucune copie de l'ancienne catégorie n'est requise. Les événements de transformation (y compris un reparenting qui change une transformation monde), de modification de la géométrie `MeshFilter`, des layers ou de la disponibilité d'une source demandent également une invalidation, selon des mécanismes précis encore à finaliser. Le reparenting ne modifie **aucun** `ShadowMode`.
+
+**Séquence de liaison d'une Assembly animée (A1, matrice commune).** Le jeu calcule les matrices des Parts relatives au repère de l'Assembly et sa matrice commune relative à l'Entity, puis soumet l'ensemble atomiquement. Le système graphique n'extrait pas de Parts depuis l'Assembly et la thread GPU ne consulte pas les objets mutables.
+
+```mermaid
+sequenceDiagram
+  participant Jeu as Jeu/animation
+  participant Assembly as Voxel::Assembly
+  participant C as ShadowMap::Contributor
+  participant Sh as ShadowMap::RenderingSystem
+  participant B as Builder de vue
+  participant GPU as RenderContext
+  Jeu->>Assembly: modifier poses des Parts
+  Jeu->>Assembly: invalidate() pour chemin visuel
+  Jeu->>Assembly: lire meshes et matrices Parts relatives a Assembly
+  Assembly-->>Jeu: collection de MeshInstance (valeurs)
+  Jeu->>Jeu: preparer M_base = matrice Assembly dans repere Entity
+  Jeu->>C: bind(collection, M_base) (remplacement entier)
+  C->>C: copier Mesh partages + matrices Parts + M_base, valider
+  alt Erreur de validation
+    C-->>Jeu: Exception ; collection et M_base precedentes intactes
+  else Liaison acceptee
+    C->>C: substituer ensemble collection et M_base
+    C-->>Sh: ContractProvider : un evenement
+    Sh->>Sh: invalider caches des ombres concernes
+  end
+  Jeu->>Sh: capture vue suivante via RenderingEngine
+  Sh->>C: lire collection et Entity world matrix sur thread capture
+  C-->>Sh: MeshInstance[], M_base et M_entityWorld
+  loop Chaque MeshInstance et lumiere admissible
+    Sh->>Sh: M_world = M_entityWorld * M_base * M_instanceLocal
+    Sh->>B: commandes profondeur avec mesh et matrice captures
+  end
+  B-->>GPU: snapshot immuable publie et execute plus tard
+  Note over GPU: Aucune lecture de Contributor, Entity ou Assembly mutable
+```
+
+**`Light::ShadowResult` : résultat immuable par surface.** Une publication représente les **shadow maps finales** déjà produites pour une `EngineView` sur une `Window::Surface` particulière. Elle contient des entrées par lumière, chacune avec identité logique, génération individuelle, texture de profondeur finale (2D pour Spot/Directional, cubemap pour Point), projections et matrices correspondantes, et paramètres d'échantillonnage. Les caches statiques restent internes à `ShadowMap::RenderingSystem`. Un `ShadowResult` ne contient pas un framebuffer de production, ni des copies de pixels CPU, ni des références aux Entities mutables.
+
+**`Light::ShadowResults` et le Channel.** Un `Light::Channel` par vue possède un `Light::Prioritizer` et une collection `Light::ShadowResults`. Cette dernière est un dictionnaire d'instances vivantes de `Window::Surface` vers des `ThreadSafeSlot<Light::ShadowResult>`, avec un slot indépendant par surface. `ThreadSafeSlot` fournit un `shared_ptr<const Light::ShadowResult>` : le consommateur garde cette version pendant son dessin. Deux fenêtres affichant la même vue partagent la sélection logique mais pas leurs instances OpenGL, puisque Sparkle V0.1.4 n'utilise pas de groupe de partage des contextes.
+
+**Fermeture des surfaces.** `Window::Surface` expose un abonnement de destruction fondé sur `ContractProvider` (nom indicatif `subscribeToDestruction()`). `Light::ShadowResults` s'abonne aux surfaces dont il possède un slot et efface l'entrée et le contrat à leur fermeture effective, en synchronisant les accès concurrentiels au dictionnaire. Le signal est émis une seule fois, alors qu'aucune nouvelle commande de rendu ne peut débuter sur cette surface. `GPUResourceCollection` reste seule responsable de libérer les instances OpenGL avant destruction de leur contexte. Ni `Window::State` ni `Window::Surface` ne stockent de caches d'ombres. Les identifiants textuels de fenêtre et handles `HGLRC` pouvant être réutilisés, une fenêtre recréée ne doit jamais voir des résultats de l'ancien contexte.
+
+**Reconstruction non destructive.** Le système produit chaque carte remplacée dans de **nouvelles ressources GPU logiques**, sans réécrire la profondeur de la carte antérieure. Cette dernière et les matrices/projections de sa propre génération demeurent cohérentes et consultables pendant l'attente si la lumière est encore sélectionnée et projette toujours des ombres. Une nouvelle reconstruction complète peut être publiée même si la simulation a évolué depuis la capture CPU. Cependant, une génération plus ancienne ne peut jamais écraser une génération plus récente de la même lumière. Une cubemap `Point` est publiée uniquement après les six faces cohérentes, jamais partiellement.
+
+**Publication incrémentale par lumière.** Aussitôt la reconstruction complète d'une lumière, `ShadowMap::RenderingSystem` publie dans le slot correspondant à sa surface **un nouvel état complet de `Light::ShadowResult`** qui remplace uniquement l'entrée de cette lumière et conserve les entrées, générations et handles des autres. Le contrôle anti-régression, la fusion et la publication sont atomiques/serialisés afin qu'une mise à jour concurrente d'une autre lumière ne soit pas perdue. L'ancienne valeur immuable reste disponible aux `shared_ptr` déjà acquis. Les générations sont monotones par lumière et par contexte logique de vue, sans ressusciter les caches après désélection ou destruction/recréation.
+
+**Consommation au rendu.** Les commandes de `Lighting::System` capturent une liaison sûre au Channel mais appellent `acquireLatest()` dans leur `execute(RenderContext&) const`, après la passe d'ombres de la vue. Elles utilisent donc les résultats déjà terminés **dans la même image**. Aucune attente de reconstruction GPU n'est ajoutée ; une carte antérieure toujours éligible peut être échantillonnée avec ses anciennes matrices. L'éligibilité des lumières et l'activation des ombres sont vérifiées séparément de la simple présence d'une texture. Un résultat absent, incomplet ou appartenant à un ancien contexte est indisponible et la lumière continue à éclairer sans ombre. L'exécution ne lit aucune `Entity`, caméra, lumière ou vue mutable.
+
+```mermaid
+sequenceDiagram
+  participant U as Thread Update
+  participant SH as ShadowMap RenderingSystem
+  participant R as ShadowResults surface A
+  participant LI as Lighting System
+  participant GPU as GPUResourceCollection A
+  U->>SH: capturer paramètres génération 12
+  U->>U: déplacer lumière, future génération 13
+  SH->>GPU: reconstruire génération 12 dans nouvelle ressource
+  alt Carte complète et génération non régressive
+    SH->>R: fusionner entrée lumière, conserver les autres
+  else Carte incomplète ou plus ancienne que publication
+    SH->>SH: ne pas publier
+  end
+  LI->>R: acquireLatest au moment de execute
+  R-->>LI: texture et matrices de même génération
+  LI->>LI: vérifier sélection et castShadows
+  GPU-->>GPU: Recycler anciennes instances sans références
+```
+
+
+
+**Admission et prévention du double rendu.** `ShadowMap::RenderingSystem` découvre uniquement les sources du Registry de `ShadowMap::Contributor`; chaque source est traitée **une seule fois par parcours de casters pour chaque lumière/cible admissible**, indépendamment de l'arborescence des Entities et des éventuels regroupements graphiques. `VoxelRenderingSystem` et les autres systèmes de rendu visuel ne produisent **aucun caster en parallèle**. Une contribution hors frustum caméra peut continuer à projeter sur les objets visibles si elle est pertinente pour la projection lumineuse.
+
+```mermaid
+flowchart TD
+  Source["ShadowMap::Contributor : ShadowMode + MeshFilter"] --> Change{"setShadowMode : mode modifie ?"}
+  Bind["bind(mesh, matrice) ou bind(collection, matrice commune)"] --> Validate["Preparer et valider la collection et la matrice commune"]
+  Validate -->|"Echec : garder ancienne"| Failure["Aucun changement ni notification"]
+  Validate -->|"Succes"| Swap["Remplacer collection ET matrice commune"]
+  Swap --> Geom["Une notification par bind reussi"]
+  Geom --> Provider
+  Change -->|"Non"| Nothing["Aucun evenement"]
+  Change -->|"Oui"| Provider["ContractProvider du ShadowMap::Contributor"]
+  Provider -->|"Contrat RAII"| S["ShadowMap::RenderingSystem"]
+  S --> Reason{"Cause d invalidation ?"}
+  Reason -->|"setShadowMode ou Static"| Both["Statique ET finale invalides"]
+  Reason -->|"bind ou mouvement Dynamic"| Final["Finale seule invalide"]
+  Registry["Registry des ShadowMap::Contributor"] --> S
+  S --> PerView["Caches du sous-systeme : par vue / lumiere"]
+  PerView --> Surface["Generations GPU par Window Surface"]
+  Both --> PerView
+  Final --> PerView
+  Context["EngineView CaptureContext : generique"] -->|"Layers et matrices"| S
+  S --> Builder["RenderSnapshot Builder : passes generiques"]
+```
+
+```mermaid
+flowchart TD
+  Registry["Registry : decouverte de Contributors"] --> Each["Pour chaque Contributor admissible"]
+  Each --> OwnMode{"ShadowMode propre"}
+  OwnMode -->|"None"| None["Aucun dessin ombre"]
+  OwnMode -->|"Static et mesh opaque"| Static["Dessiner les MeshInstance dans cache statique"]
+  OwnMode -->|"Dynamic et mesh opaque"| Dynamic["Dessiner les MeshInstance dans carte finale"]
+  Parent["Parent Entity / InherenceTrait"] -.->|"Aucune transmission de ShadowMode"| Each
+  Trans["Transform monde Entity et matrices locales capturees"] --> Static
+  Trans --> Dynamic
+```
+**Cache de profondeur statique et carte finale.** Pour chaque combinaison **`EngineView` × lumière projetant des ombres**, l'infrastructure graphique distingue **un cache statique** (caster opaques classés statiques) et **une carte finale** (utilisée par l'éclairage Forward). Les deux ressources ont la même topologie : **deux textures de profondeur 2D** pour une directionnelle ou un spot ; **deux cubemaps de profondeur à six faces chacune** pour une ponctuelle. Ces cibles ne sont jamais partagées entre lumières. Les géométries opaques classées dynamiques ne sont pas dessinées dans le cache statique. Ces deux catégories sont des **politiques de mise à jour des ombres**, et non une nouvelle classification de transparence ; les translucides ne projettent toujours pas d'ombres. **La classification dépend exclusivement du `ShadowMode` propre de chaque `ShadowMap::Contributor`, sans recherche ni priorité d'ancêtres.** Les notifications vont de la source de caster au **`ShadowMap::RenderingSystem` par contrat RAII**, et celui-ci invalide **ses propres caches** par vue/lumière ; aucune invalidation ne transite par `EngineView`. Aucun identifiant persistant par groupe n'est requis. La portée exacte des événements, les règles d'appartenance vue/Contributor et le suivi des générations restent à préciser ; aucune détection implicite du mouvement.
+
+**Actualisation à la demande, par invalidation :**
+- **Tout changement effectif de `ShadowMode` sur `ShadowMap::Contributor` invalide automatiquement statique + finale par notification directe au `ShadowMap::RenderingSystem`.** Une valeur inchangée ne notifie pas ; le dessin GPU intervient ultérieurement, jamais dans le setter.
+- Lorsqu'une contribution **statique** change ou lorsque la carte statique n'a encore jamais été construite, la partie statique est invalidée. Au prochain rendu **autorisé par le budget de reconstructions lorsqu'il s'agit d'une PointLight**, Sparkle redessine **uniquement les casters statiques** dans la carte statique, puis invalide et reconstruit la carte finale. Si aucune unité de budget n'est attribuée, la PointLight peut réutiliser la dernière carte finale complète et ses matrices tant qu'elle est sélectionnée et que ses ombres sont activées ; sans carte complète, elle éclaire sans ombre.
+- Lorsqu'une contribution **dynamique** change (ajout, retrait, position, géométrie ou toute modification affectant sa projection), seule la **carte finale** doit être reconstruite : **copie de la profondeur statique valide dans la carte finale, puis dessin des casters dynamiques** avec depth test et depth write activés. Les casters statiques ne sont pas redessinés pour ce changement.
+- Une modification de la **lumière ou de sa projection**, de la région couverte ou de la définition/version des cibles qui affecte les deux cartes invalide **les deux**. La carte statique est reconstruite en premier, puis la finale.
+- Tant que les cartes restent valides, **aucune copie ni nouveau dessin d'ombres n'est exigé** pour cette combinaison vue/lumière/surface. Une image finale valide demeure consultable par les dessins opaques et translucides de la vue.
+
+**Combinaison de profondeur.** Les deux ressources d'une lumière utilisent **la même projection** (pour une ponctuelle, le même ensemble des six projections) et des dimensions, formats de profondeur et conventions compatibles. Pour une cubemap, la copie et les tests de profondeur sont réalisés pour chaque face, sans copie entre faces ou lumières. La reconstruction finale **copie la profondeur** du cache statique vers la cible finale (opération GPU de copie/blit adaptée), puis rend les objets dynamiques dans cette cible. Le test de profondeur réalise alors l'occlusion par le plus proche fragment opaque des deux catégories. **Les shaders d'éclairage Forward n'échantillonnent que la carte finale, 2D pour un spot/directionnelle ou cubemap pour une ponctuelle** : aucun second échantillonnage statique/dynamique ni atlas d'ombres regroupant plusieurs lumières n'est prescrit. Le support d'une copie de profondeur compatible doit être vérifié ; aucune copie entre fenêtres n'est autorisée et un contexte/cible incompatibles déclenchent `spk::Exception` plutôt qu'un fallback silencieux.
+
+**Isolation des surfaces et des snapshots.** Les `Light::ShadowResult` sont publiés séparément pour chaque surface dans le Channel de la vue. Une reconstruction sur la surface A ne met jamais à jour la carte sur B. Les `RenderSnapshot` sont immuables et peuvent être exécutés sur deux surfaces ; le slot est acquis au moment du dessin. Les ressources GPU logiques référencées survivent à la publication suivante selon les mécanismes existants de `GPUResourceCollection` ; la fermeture de surface invalide les publications locales. Une ancienne génération peut éclairer avec ses **anciennes matrices** tant que la sélection et `castShadows` l'autorisent.
+
+### 7.4 Composants lumineux, cubemaps et budgets
+
+Les **caméras et les lumières sont représentées par des composants spécialisés dérivant de `spk::Component3D`**, attachés aux `Entity3D` existantes. Leur position et leur orientation dans le monde proviennent des **`Transform3D` des entités qui les portent** : il n'existe pas de seconde hiérarchie de transformations dédiée aux caméras ou aux lumières. Ces composants appartiennent à l'Engine concerné et sont découvrables par ses mécanismes de Registry, comme les autres composants du moteur.
+
+**Types et paramètres lumineux.** `spk::Light::Contributor` est un composant 3D attachable portant couleur, intensité, poids de priorité individuel, activation des ombres et notifications. `spk::Light::Point`, `spk::Light::Spot` et `spk::Light::Directional` l'étendent. Les Transform3D des Entity3D parentes déterminent leurs positions et axes ; aucune hiérarchie de transform spécifique aux lumières n'est créée. `Directional` est une direction globale sans atténuation de distance. `Point` émet omnidirectionnellement, `Spot` dans un cône fini. Les ombres de Point sont initialement désactivées et activables explicitement ; celles de Spot et Directional sont activées par défaut et désactivables. Le mode d'un caster `ShadowMap::Contributor` reste indépendant des paramètres de la lumière.
+
+**Seuil unique d'influence lumineuse.** Sparkle définit une **unique constante `E_min` strictement positive** correspondant au seuil minimal d'éclairement retenu pour les lumières locales. Sa valeur numérique n'est pas fixée. Avec une loi d'atténuation `1/d²` et des unités compatibles, le rayon de portée vaut `R = sqrt(intensity / E_min)`. Si une autre loi d'atténuation est retenue, son inverse donnera la portée correspondante. Le poids de priorité n'influence pas ce rayon et ne modifie pas l'intensité effectivement utilisée dans les shaders.
+
+**Volumes précalculés.** `Light::Point` conserve une sphère décrite par centre et rayon : le rayon est calculé à la construction et **uniquement lors d'un changement d'intensité ou de paramètres d'atténuation** ; le mouvement de l'Entity ne change que le centre monde. `Light::Spot` conserve de même la portée, l'ouverture et la géométrie locale du cône, ainsi qu'une **sphère englobante conservative**. Le rayon et les paramètres de cette sphère sont recalculés à la construction puis aux changements d'intensité, d'ouverture ou de portée, et non pendant chaque classement ; une translation/rotation met à jour seulement la position et direction monde.
+
+**Frustum et test sphère.** Les six plans normalisés du frustum caméra sont calculés à la capture de la vue, sans recalcul par lumière. Pour un plan de normale unitaire `n` orientée vers le volume intérieur et de constante `D`, une sphère de centre `C` et rayon `R` est exclue si `dot(n,C) + D < -R`. Il suffit qu'un seul plan rejette la sphère pour donner un score nul. Les faux positifs conservateurs sont admis ; un volume réellement intersectant n'est jamais rejeté.
+
+**Frustum et test cône du Spot.** Le spot applique d'abord **le test de sa sphère englobante**, plus léger ; seul un candidat survivant subit le test de son **cône fini**. Pour chaque plan unitaire `(n,D)`, un cône de sommet `A`, d'axe unitaire `u`, longueur `L` et rayon de base `r` est entièrement exclu lorsque `dot(n,A)+D+max(0,L*dot(n,u)+r*sqrt(max(0,1-dot(n,u)^2))) < 0`. Les deux tests rejettent au premier plan excluant entièrement le volume. Ils représentent un pré-filtrage conservateur, sans calculer le volume d'intersection ni un coefficient de recouvrement. La sphère est moins chère par plan, mais le gain réel du filtrage en deux étapes dépend des scènes et doit être mesurable.
+
+**Formules de priorité par type.** Chaque spécialisation de `Light::Contributor` calcule son score à partir de ses paramètres et du frustum/caméra capturés. Pour `Point` et `Spot`, le score vaut `0` si le volume est rejeté ; sinon `P = intensity * priorityWeight / max(distanceCamera,minLightDistance)`. La borne `minLightDistance` est strictement positive, et sa valeur reste à fixer. Le poids initial vaut 1 et affecte uniquement le classement, jamais l'éclairage physique ni le rayon. Les scores sont finis, non négatifs et comparables entre types. Les `Directional` sont hors Top-N local et n'emploient pas cette distance.
+
+**`spk::Light::Prioritizer`.** Le `Light::Prioritizer` du `Light::Channel` de chaque EngineView sélectionne les lumières pour **l'éclairage Forward classique de cette vue entière**. Il ne calcule aucun score propre ; chaque type fournit son score, et le Prioritizer compare ces valeurs. `Point` et `Spot` à score positif participent au **même Top-N global**, alors que **toutes les `Directional` actives** sont retenues séparément, sans consommer N. `N` et l'hystérésis relative `h` sont **configurables par EngineView**. Une candidate nouvelle n'évince une lumière locale retenue que lorsque `score(candidate) > score(retained) * (1 + h)`. Les égalités sont départagées de façon déterministe ; les valeurs par défaut et la procédure de remplacement aux limites du Top-N restent à consolider sans changer ces invariants.
+
+**Sélection immuable et invalidation.** Le Prioritizer produit à la demande une `shared_ptr<const Light::Selection>` immuable, mise en cache et partagée par `Lighting::System` et `ShadowMap::RenderingSystem` à travers le `Light::Channel`. Un mutex sérialise l'accès et une reconstruction concurrente de cette sélection. Les modifications du Registry et des composants de lumière invalident les caches des vues dépendantes ; les modifications d'une caméra ou projection invalident la sélection de cette vue uniquement. Une ancienne `Light::Selection` déjà capturée reste utilisable sans mutation rétroactive.
+
+**Cohérence éclairage/ombres.** Seules les lumières retenues par ce classement pour l'éclairage peuvent demander des cartes d'ombres pour cette vue. `ShadowMap::RenderingSystem` applique ensuite ses propres budgets et politiques sur les candidates admissibles sans dupliquer le score ni modifier la liste d'éclairage. Une lumière éclairante dont aucune carte d'ombres exploitable n'est disponible continue à éclairer **sans ombre**. Les dessins opaques et WBOIT d'une même capture utilisent cette **même sélection globale**, sans liste par tile.
+
+**Sélection des cartes d'ombres.** Les budgets souples X/Y/tolérance/hystérésis de cartes ponctuelles décrits plus bas s'appliquent comme une sous-sélection aux `Point` admissibles demandant des ombres. Le `ShadowMap::RenderingSystem` consomme cette sélection et les scores déjà calculés au lieu d'implémenter lui-même la formule. Cette sélection des ombres est distincte du culling GPU conservateur Forward classique par tiles.
+
+
+
+**Projection omnidirectionnelle des PointLight.** Une `PointLightComponent` autorisée à projeter des ombres dispose pour chaque vue de **deux cubemaps de profondeur logiques à six faces chacune** : cache statique et carte finale, indépendants des autres lumières et réalisés par `Window::Surface`. Les six faces couvrent l'ensemble des directions, avec six orientations et une projection perspective carrée à **90° par face**, bornée par les plans proche/lointain adaptés à la portée de la lumière. Le `ShadowMap::RenderingSystem` choisit les seuls casters opaques qui peuvent influencer cette lumière (intersection avec son volume d'influence, puis culling facultatif par face), classe leur mode propre `Static`/`Dynamic`, et écrit les commandes de profondeur nécessaires aux faces dans **la seule RenderPass d'ombres de la vue**. Il ne parcourt pas ni ne dessine systématiquement la totalité des Entities pour chaque point light.
+
+**Cache et consommation des cubemaps.** Le cache statique cubemap est reconstruit si invalide, puis copié **face par face** dans la cubemap finale avant le rendu des casters dynamiques lorsque la finale doit être actualisée ; une invalidation statique impose également la finale. Une invalidation dynamique ne reconstruit que la finale, en réutilisant les six faces statiques encore valides. La portée de l'invalidation peut rester **globale aux six faces de la lumière** en V0.1.4 : optimisation par face non obligatoire. L'éclairage Forward échantillonne uniquement la **cubemap finale**, avec une comparaison de profondeur cohérente avec la distance à la source et ses paramètres proche/lointain. Les cas spécifiques de filtrage/PCF, de couture entre faces, de biais, de résolution et de profondeur encodée restent à préciser ; **pour V0.1.4, chaque face doit pouvoir être attachée et rendue explicitement**, sans imposer de geometry shader ni de rendu layered.
+
+**Extension de `Texture` pour les cubemaps.** Le type `Texture::Target::TextureCubeMap` existe déjà, mais `Texture::State::_synchronize()` ne sait actuellement synchroniser que `Texture2D`. Compléter **`Texture`**, sans créer de classe `ShadowCubeMap` ni de nouveau gestionnaire de ressources : une texture de cible cubemap doit pouvoir allouer et synchroniser **ses six faces carrées** en format de profondeur déjà pris en charge, sous une identité logique `GPUResource::State` et avec une instance OpenGL distincte par `Window::Surface`. Le recyclage des instances reste dans `GPUResourceCollection`, avec compatibilité de cible et resynchronisation obligatoire après réutilisation ; une ancienne profondeur recyclée n'est jamais considérée comme valide.
+
+**Attachement de faces dans `Framebuffer`.** `Framebuffer` doit permettre de désigner explicitement **une face d'une cubemap de profondeur** comme attachment `GL_DEPTH_ATTACHMENT`, au lieu de limiter cette opération à une `Texture2D`. La face ciblée est sélectionnée par les commandes de rendu de profondeur de la lumière, et non devinée à partir d'un état global. Une cible depth-only reste valide sans attachment couleur (draw/read buffers désactivés) si le framebuffer est complet. L'API précise des opérations d'attachement reste à consolider avec les autres `RenderCommand` typées ; **aucune classe, cache ou file GPU spécifique aux cubemaps d'ombres** n'est introduit. L'extension est générique pour les usages futurs de cubemaps.
+
+**Snapshots, générations et budget inchangés.** Lors de la construction d'un snapshot, capturer les handles forts vers les deux cubemaps et les paramètres immuables de face/projection ; une nouvelle paire après éviction ou reconstruction ne modifie jamais les textures ou attachments encore référencés par un ancien snapshot. Sur chaque surface, l'exécution OpenGL prépare/attache explicitement chaque face avant de reconstruire la profondeur correspondante, puis consomme seulement la cubemap finale valide. Les six faces forment **une unique reconstruction au regard du budget existant** (statique et finale si nécessaire). Cette extension n'ajoute ni nouveau propriétaire GPU ni mécanisme de libération différée.
+
+```mermaid
+sequenceDiagram
+    participant SH as ShadowMap RenderingSystem
+    participant SNAP as Snapshot et handles immuables
+    participant TEX as Texture cubemap existante
+    participant FBO as Framebuffer existant
+    participant GPU as GPU de la Window Surface
+    SH->>SNAP: Capturer les deux handles de cubemap et les commandes de faces
+    SNAP->>TEX: Activer les ressources sur la surface courante
+    TEX->>GPU: Allouer ou synchroniser six faces depth si necessaire
+    alt Cache statique invalide
+        loop Six faces
+            SNAP->>FBO: Attacher face de cubemap statique en profondeur
+            FBO->>GPU: Dessiner les casters statiques admissibles
+        end
+    end
+    alt Carte finale invalide et reconstruction autorisee
+        loop Six faces
+            SNAP->>FBO: Attacher face de cubemap finale en profondeur
+            FBO->>GPU: Copier profondeur statique puis dessiner casters dynamiques
+        end
+        Note over SNAP,GPU: Publier valide seulement apres six faces coherentes
+    end
+    Note over TEX,GPU: Instance par surface et recuperation par GPUResourceCollection
+```
+
+
+**Budget souple de sélection des ombres ponctuelles par EngineView.** Le `Light::Channel` de la vue conserve une politique X/Y/tolérance/hystérésis complémentaire au Prioritizer pour les cartes des `Light::Point` demandant des ombres. Le `ShadowMap::RenderingSystem` consomme la sélection résultante. Trois paramètres configurables structurent son budget souple :
+
+- `targetShadowCount` (`X`) : **nombre cible** de lumières ponctuelles retenues, prioritaires par leur score.
+- `maxShadowCount` (`Y`) : **limite supérieure absolue**, incluant toutes les lumières supplémentaires acceptées au voisinage du seuil. La contrainte `0 <= X <= Y` doit être validée explicitement, et les valeurs entières sont non négatives.
+- `shadowPriorityTolerance` (`epsilon`) : **tolérance relative** sur le score de la **Xe lumière du classement brut**, exprimée comme fraction comprise dans `[0, 1]`. Par exemple `0.10` autorise des lumières supplémentaires jusqu'à **10 % sous** le score de référence ; le score est supposé fini et non négatif.
+
+Les valeurs numériques par défaut et les signatures précises sont non spécifiées. `X = 0` signifie **aucune ombre ponctuelle sélectionnée**, même si `Y > 0` : en l'absence de Xe lumière, il n'existe pas de seuil de tolérance. `Y = X` reproduit un budget strict ; `epsilon = 0` autorise seulement des supplémentaires de **score égal** à la Xe. Une contrainte de `Y` n'est jamais transgressée, même lorsqu'il existe plus de lumières de score proche. Ce budget **ne limite toujours pas** le nombre de mises à jour de cubemaps par image et ne concerne pas les directionnelles/spots.
+
+**Filtrage spatial et classement.** Les candidates sont les `Light::Point` encore sélectionnées par `Light::Prioritizer`, actives et demandant des ombres. Leur score et leur éligibilité géométrique ont déjà été calculés par `Light::Point` : sphère d'influence contre six plans, puis `intensity * priorityWeight / max(distanceCamera,minLightDistance)` pour les candidates non rejetées. `ShadowMap::RenderingSystem` n'utilise donc aucune formule propre aux lumières ; il applique la politique d'ombres complémentaires X/Y/tolérance/hystérésis aux scores déjà obtenus. Seules les candidates à score strictement positif participent.
+
+
+
+**Sélection initiale à partir des scores.** Pour `n` candidates spatialement admissibles et triées par score brut décroissant, choisir d'abord `min(X, n)` meilleures. Si `n >= X > 0`, noter `P_X` le score de la **Xe du classement complet**, puis considérer **les suivantes dans cet ordre**. Tant que `score(candidate) >= P_X * (1 - epsilon)` et que le total retenu reste strictement inférieur à `Y`, accepter la candidate supplémentaire. Dès qu'une candidate est sous ce seuil, les suivantes du classement décroissant le sont aussi : arrêter. **Toujours comparer au score de la Xe**, jamais à celui de la dernière supplémentaire, afin d'éviter un effet de chaîne. Si `n < X`, toutes les candidates sont retenues (aucune Xe à utiliser comme référence) ; si `X = 0`, aucune n'est retenue. Les égalités de score sont départagées de manière stable, y compris lorsque le seuil et le maximum `Y` coupent un groupe d'ex æquo.
+
+```text
+target = min(targetShadowCount, eligibleCount)
+referenceScore = score(sortedCandidates[targetShadowCount - 1])  // si eligibleCount >= X > 0
+extraThreshold = referenceScore * (1 - shadowPriorityTolerance)
+acceptExtra = score(candidate) >= extraThreshold && selectedCount < maxShadowCount
+```
+
+**Admissibilité et hystérésis.** L'ensemble des lumières **admissibles** est déterminé **avant toute hystérésis** : il comprend toujours les `min(X, n)` meilleures candidates spatialement éligibles (**socle cible**) et, seulement si `n >= X > 0`, les suivantes dont le score brut vérifie `score >= P_X * (1 - epsilon)` (**supplémentaires admissibles**). La tolérance est un **critère strict d'admission** pour les supplémentaires : une lumière précédemment retenue, mais sortie de cette plage, perd **immédiatement** son droit à une shadow map, même si l'hystérésis aurait empêché son remplacement. Aucune source hors de l'ensemble admissible ne peut être protégée par l'hystérésis. Le maximum absolu `Y` demeure intangible.
+
+La politique de sélection d'ombres ponctuelles du `Light::Channel` conserve, **pour cette EngineView**, l'ensemble des `Light::Point` retenues lors de la précédente capture ; la mémoire d'hystérésis appartient au Channel, pas à `ShadowMap::RenderingSystem` ni directement à la vue. **Les X meilleures candidates admissibles sont toujours retenues**, sans être bloquées par une ancienne lumière supplémentaire : la cible demeure prioritaire. L'hystérésis ne concerne **que les remplacements entre lumières supplémentaires encore admissibles** lorsque les places au-delà des X premières sont pleines (jusqu'à `Y-X`). Une lumière supplémentaire nouvelle ne peut évincer une supplémentaire précédente toujours admissible que si son score dépasse **strictement** celui de la retenue selon le seuil proportionnel configurable :
+
+```text
+score(candidate) > score(incumbent) * (1 + shadowSelectionHysteresis)
+```
+
+- `shadowSelectionHysteresis` est un **taux fractionnaire** configurable pour la sélection d'ombres ponctuelles de la vue (par exemple `0.10` représente **10 %** d'avance requis) ; il est **fini et supérieur ou égal à zéro**. **Sa valeur par défaut et sa forme d'API restent à décider.** Un taux nul supprime la marge proportionnelle mais laisse l'obligation de dépasser strictement le score pour évincer une lumière encore éligible.
+- **Ordre du calcul :** classer par score brut décroissant (égalité départagée par identité stable), construire le socle des X meilleures, calculer `P_X`, puis déterminer **toutes** les supplémentaires admissibles par le seuil fixe (sans troncature préalable à `Y`). Éliminer immédiatement les retenues précédentes sorties de cet ensemble, qu'elles soient désactivées, supprimées, hors d'influence ou passées sous le seuil de tolérance. Les retenues historiques désormais entrées dans les X meilleures appartiennent directement au socle.
+- **Premier classement ou places supplémentaires libres :** retenir obligatoirement le socle des X meilleures, conserver les **supplémentaires précédemment retenues encore admissibles** tant que le maximum le permet, puis remplir les places libres avec les meilleures nouvelles supplémentaires, **sans appliquer l'hystérésis aux places vacantes**. Il est inutile de refuser une nouvelle supplémentaire si une place libre existe sous `Y`.
+- **Plafond `Y` atteint :** une candidate supplémentaire **elle-même admissible** peut remplacer la **moins bien classée des seules supplémentaires retenues**, pas une des X lumières du socle, si et seulement si son score vérifie l'inégalité stricte d'hystérésis. Répéter cette comparaison dans l'ordre des nouvelles candidates décroissantes, en gardant `Y` absolu. Les supplémentaires sorties de la tolérance ne sont **jamais comparées** : elles ont déjà perdu leur place. Lorsque `X = Y`, aucune place supplémentaire n'existe ; le socle des X meilleures est sélectionné sans hystérésis.
+- **Cas limites :** pour un score retenu nul, seule une nouvelle supplémentaire de score strictement positif peut l'évincer ; deux scores nuls ne provoquent aucun échange par hystérésis. Les scores nuls sont éliminés avant ce budget : si une Xe candidate existe, son score de référence est strictement positif. Si `X = 0`, ne sélectionner aucune lumière ponctuelle ; si `n < X`, sélectionner les `n` candidates ; si `X = Y`, ne sélectionner que le socle, sans marge supplémentaire. Si les paramètres `X`, `Y` ou `epsilon` changent, **recalculer d'abord l'admissibilité** : supprimer les retenues devenues interdites, puis appliquer l'hystérésis uniquement entre les supplémentaires toujours admissibles. Lorsque `Y` baisse, garder le socle et retirer en priorité les supplémentaires aux plus faibles scores (égalité stable). Les scores/coefficients et taux doivent respecter leurs contraintes de finitude et de signe.
+
+**Ordre de précédence entre tolérance et hystérésis.** La tolérance **délimite l'admissibilité** et prime toujours l'hystérésis. Une ancienne supplémentaire passée sous le seuil `P_X * (1 - epsilon)` est retirée **à la capture suivante** sans protection historique, même si son score reste proche de celui d'une autre supplémentaire ; elle continue d'éclairer via Forward **sans ombres**. À l'inverse, une ancienne supplémentaire toujours dans la plage admissible peut résister à une nouvelle supplémentaire marginalement mieux classée **si les places supplémentaires sont pleines**, sans jamais dépasser `Y`. Cette stabilité de l'historique n'empêche pas l'admission obligatoire des X meilleures. L'absence de place sous `Y` ne permet aucun dépassement, même si beaucoup de lumières ont exactement le score `P_X`.
+
+**Portée et diagnostic.** L'hystérésis limite **les changements de membership**, et non le classement ou les intensités des sources d'éclairage Forward ; une `PointLight` moins bien classée mais conservée grâce à l'hystérésis continue à projeter une ombre valide. Une candidate bloquée par le seuil de tolérance, le maximum `Y` ou l'hystérésis reste **observable** comme `ombres demandées mais non sélectionnées`, avec une raison distinguant `hors tolérance`, `plafond atteint`, `remplacement évité par hystérésis` et `ombres désactivées explicitement`. Toute capture encode la sélection et les références de cartes d'ombres de façon **immuable** ; aucun changement de sélection n'est fait par le thread de rendu GPU. Les mêmes données d'entrée **et le même état antérieur de sélection** entraînent le même résultat ; l'hystérésis signifie qu'une sélection peut dépendre intentionnellement de l'historique. Le culling des `ShadowMap::Contributor` reste distinct du classement Forward.
+
+**Éviction des caches de PointLight.** Dès qu'une `PointLight` **sort de l'ensemble retenu pour une `EngineView`** après classement, tolérance et hystérésis, le `ShadowMap::RenderingSystem` **retire immédiatement de son registre de caches actifs la paire logique statique/finale associée à cette vue et à cette lumière**, y compris ses réalisations par `Window::Surface`. Cette éviction vise aussi les sorties par désactivation des ombres, disparition de la lumière, exclusion spatiale ou abaissement de `X/Y` ; elle concerne la **perte de sélection pour une vue**, et non la simple attente d'une reconstruction GPU pour une lumière **encore retenue**. Une même `PointLight` retenue dans une autre vue garde **indépendamment** ses caches pour cette autre vue. Une variation temporaire de score ne doit pas laisser un cache invisible dans le système actif.
+
+**Cycle de vie des caches d'ombres et des instances GPU.** La sortie d'une PointLight de la sélection retire immédiatement ses caches logiques actifs de `ShadowMap::RenderingSystem`. Le système relâche ses références à la paire statique/finale, sans détruire directement les objets OpenGL. Les `GPUResource::Handle` des `RenderSnapshot` antérieurs conservent par `shared_ptr` les `GPUResource::State` capturées, sans modifier rétroactivement la version de profondeur.
+
+À la disparition du dernier propriétaire d'une `GPUResource::State`, son `LifeTime` signale la libération à la `GPUResourceCollection::ReclamationQueue` des surfaces abonnées. `Application::RenderRuntime::tickOnce()` appelle `reclaimReleased()` ; les instances `Texture`, `Framebuffer` et `Buffer` rejoignent normalement les pools natifs de leur surface, tandis que les instances non recyclables sont détruites. Une instance mise en pool peut **rester allouée en VRAM** ; sa mise en pool n'est pas une conservation de cache d'ombres et elle ne rend pas réutilisable l'ancienne profondeur. À l'activation d'une nouvelle `GPUResource::State`, une instance native compatible peut être recyclée **après resynchronisation**, jamais comme une carte d'ombres valide sans nouveau rendu.
+
+**Contexte OpenGL requis pour la récupération.** Le runtime de rendu garantit le contexte courant de la bonne `Window::Surface` avant toute récupération/destruction native, **même lors d'un tick sans nouveau rendu** et lorsque plusieurs surfaces sont utilisées. L'implémentation existante de `tickOnce()` appelle `reclaimReleased()` après un chemin de rendu conditionnel ; ce contrat doit être assuré dans le runtime graphique générique. La fermeture de surface vide les instances de la collection avec son contexte valide. Aucune file d'éviction `ShadowMap` supplémentaire, aucun pool de cartes dormantes, aucun LRU d'ombres et aucun `GLsync` dédié ne découlent de ce contrat ; les dépendances de commandes GPU restent correctement ordonnées sur chaque contexte.
+
+**Réadmission et budgets.** Une `PointLight` revenant dans la sélection de la vue est traitée **comme une première admission pour les ombres de cette combinaison** : elle crée une **nouvelle paire logique statique/finale**, avec **générations distinctes**, et les réalisations GPU nécessaires par surface sont invalides jusqu'à reconstruction complète. La nouvelle paire **ne réutilise jamais l'ancien couple de State/Handle ni les données de profondeur** : elle peut toutefois acquérir **une instance OpenGL native recyclée via GPUResourceCollection** lorsqu'elle est disponible et compatible, après synchronisation avec le nouvel état. Sa reconstruction consomme **une unité du budget par image et par `Window::Surface`** suivant la priorité stricte validée, que la précédente paire ait été entièrement statique ou non ; si le budget est épuisé, la lumière éclaire sans ombre jusqu'à actualisation. Les valeurs `targetShadowCount/maxShadowCount/shadowPriorityTolerance`, l'hystérésis de sélection et le score restent inchangés par cette règle d'éviction. Une destruction/recréation de `EngineView` ou de `PointLight` ne peut pas ressusciter des caches rattachés à une ancienne identité.
+
+```mermaid
+sequenceDiagram
+    participant SH as ShadowMap RenderingSystem
+    participant SNAP as Ancien RenderSnapshot
+    participant STATE as GPUResource State et LifeTime
+    participant COL as GPUResourceCollection de la Surface
+    participant GPU as Contexte OpenGL de la Surface
+    SH->>SH: PointLight sortie, retirer paire des caches actifs
+    Note over SH,SNAP: Le snapshot ancien conserve des handles forts
+    SH->>STATE: Relacher handles courants
+    alt Ancien snapshot conserve la State
+        SNAP-->>STATE: Reference encore vivante
+        Note over COL,GPU: Aucune reclamation tant que la State est vivante
+    else Derniere reference relachee
+        STATE->>COL: LifeTime signale identifiant dans ReclamationQueue
+        COL->>GPU: Garantir contexte de cette surface avant recuperation
+        COL->>COL: reclaimReleased sur le runtime de rendu
+        alt Instance Texture recyclable
+            COL->>COL: Mettre instance dans pool de textures
+        else Instance non recyclable
+            COL->>GPU: Destruction via le contexte OpenGL approprie
+        end
+    end
+    SH->>SH: Re-admission : nouvelle paire logique invalide
+    SH->>COL: Nouveau GPUResource State, activation si budget attribue
+    COL->>COL: Reutiliser instance compatible du pool ou creer nouvelle
+    COL->>GPU: Synchroniser nouvelle instance et reconstruire cubemap
+```
+
+
+
+**Éclairage et observabilité.** Les lumières ponctuelles **écartées par le budget cible, la tolérance, le plafond absolu ou l'hystérésis continuent d'éclairer via Forward sans ombre**. Seules les lumières sélectionnées ajoutent des opérations de cubemap à l'**unique `RenderPass` d'ombres de la vue**. L'éclairage ne doit jamais échantillonner une carte périmée d'une lumière non sélectionnée, même si la ressource GPU existe encore. L'exclusion `ombres demandées mais refusées par budget` doit être **observable** (statut par vue/lumière et raison ou diagnostic équivalent) et distincte de `ombres désactivées explicitement`. Pas de journalisation répétée par lumière et par frame non sollicitée.
+
+
+**Budget de reconstruction de cubemaps.** Le sous-système autonome `ShadowMap::RenderingSystem` expose une configuration **non négative** limitant, pour chaque **image rendue sur une `Window::Surface`**, le nombre d'**instances de cubemap ponctuelle à reconstruire** (nom indicatif : `maxPointShadowRebuildsPerImage`). Il s'agit d'un **compteur unique à la surface et à l'image**, partagé entre **toutes les `EngineView` effectivement dessinées dans cette image sur cette surface** ; ce n'est ni un compteur par EngineView, ni une modification de `targetShadowCount`/`maxShadowCount`. Les fenêtres/surfaces indépendantes possèdent des compteurs distincts ; un snapshot CPU ne consomme pas le budget tant qu'il n'est pas exécuté. La valeur numérique par défaut et le mode précis de configuration restent à définir, sans créer d'API d'ombres dans `EngineView`.
+
+**Unité atomique de reconstruction.** Une unité du budget correspond à **une paire logique statique/finale pour une combinaison (EngineView, PointLight) sur la surface**, lorsqu'au moins une carte doit être mise à jour. Si seule la finale est invalide, la reconstruction de la finale et ses six faces coûte **une unité** ; si la statique et la finale sont invalides, reconstruire la statique, copier chaque face puis reconstruire la finale constitue **une unique unité**. Les **six faces** ne sont pas comptées individuellement et aucune carte finale **partiellement remise à jour** ne peut être publiée comme valide. Une paire entièrement valide ne coûte **aucune unité** et sa shadow map demeure disponible, même si le budget de reconstructions est épuisé. Les images où le budget vaut zéro peuvent donc continuer à afficher **les ombres déjà valides** sans aucune reconstruction.
+
+**Priorisation stricte des reconstructions.** Le système considère uniquement les `PointLight` **déjà retenues** par le budget souple propre à chaque vue. Il examine leur validité **spécifique à la surface** et classe **toutes les reconstructions nécessaires par le score brut de priorité déjà validé** (score brut déjà calculé par `Light::Point`), **strictement décroissant**, pour chaque image et chaque surface. Pour un même score, le départage est **déterministe** par identité stable de la vue puis de la lumière (ou clef équivalente), jamais selon l'ordre accidentel du Registry. **Aucun bonus lié à l'attente**, aucune ancienneté de demande, priorité croissante avec les frames différées, rotation round-robin, quota de rattrapage ni garantie de délai maximal de reconstruction : une demande moins prioritaire peut légitimement **rester différée indéfiniment** si des demandes plus prioritaires occupent le budget à chaque image. Ce comportement est voulu et observable, sans changement du score utilisé pour choisir les lumières ombrées par `EngineView`.
+
+**Réévaluation à chaque image.** Les demandes dont les caches restent invalides et qui ont été différées **tant que leur PointLight reste sélectionnée** sont **réévaluées à la prochaine image réellement rendue sur cette surface**, avec le score de cette image et la nouvelle validité de leurs caches ; aucune file FIFO ni compteur d'attente persistants ne sont nécessaires. Une lumière perdant sa place est évincée de la liste des demandes et du cache actif, plutôt que maintenue en attente. Les lumières désormais valides n'entrent plus dans la liste de reconstructions ; celles dont l'intensité, le poids ou la distance caméra ont changé peuvent changer de rang immédiatement. La liste des demandes de **toutes les vues dessinées sur cette surface** est classée **avant** d'accorder les unités du budget commun, y compris si une vue à plus haute priorité est rendue plus tard dans l'ordre des vues établi. Le plan utilise les captures immuables et l'état de ressources propre à la surface, **sans modifier l'ordre des vues ni introduire un ordonnanceur de passes général**, sans accéder aux Entities mutables sur le thread GPU. Une paire (vue, lumière, surface) reconstruite une fois dans l'image ne consomme pas deux unités lors de son éventuelle réexécution. Les détails de synchronisation inter-vues et inter-snapshots restent à préciser, mais **aucune équité implicite entre vues** ne doit renverser le score brut. La même lumière peut être prioritaire pour une vue et moins prioritaire pour une autre en raison de leurs caméras distinctes.
+
+**Report et diagnostic.** Une reconstruction différée par manque de budget reste candidate au rendu suivant, sans bonus d'attente. Tant que la `Point` demeure sélectionnée et que ses ombres restent activées, `Lighting::System` peut continuer à échantillonner **sa dernière carte complète publiée avec ses anciennes matrices** ; si aucune carte n'existe, la lumière éclaire sans ombre. La désélection, la désactivation ou la destruction de la lumière interdit toute réutilisation de cette carte. Les diagnostics distinguent l'exclusion de sélection, le budget différé avec ancienne carte disponible et l'absence de carte utilisable.
+
+**Générations.** Une reconstruction peut être publiée même si sa capture est devenue obsolète, mais jamais si une génération plus récente de cette même lumière est déjà publiée sur cette surface. Le `ShadowResult` est publié par fusion incrémentale, sans remplacer les autres lumières. Les six faces d'une Point sont atomiques. Chaque nouvelle ressource logique GPU garde ses propres matrices et génération ; les anciennes sont recyclées seulement par `GPUResourceCollection`.
+
+
+
+**Autres lumières et sécurité d'exécution.** Les ombres des **spots et directionnelles** suivent leur politique de cache déjà établie et ne consomment pas les unités du budget réservé aux cubemaps ponctuelles. Le budget est consommé **au rendu effectif d'une image par surface**, pas lors de `refreshRenderSnapshot()`, avec génération/validité vérifiées à l'exécution GPU sur la surface, tout en conservant les captures et les handles des `RenderSnapshot` immuables. Les snapshots anciens encore en vol doivent rester exécutables sans état mutable de gameplay ni altération des ressources qu'ils référencent : réutilisation de caches obsolètes, recomptage abusif d'une même paire et état de budget partagé par erreur entre surfaces sont interdits. Le nombre de faces actualisées par unité n'est pas un paramètre supplémentaire de cette décision.
+
+```mermaid
+flowchart TD
+  Registry["Registry des lumières"] --> Volume["Point : sphère / Spot : sphère puis cône"]
+  Volume --> Score["Score calculé par le type de lumière"]
+  Score --> Prior["Light::Prioritizer : Top-N partagé Point et Spot"]
+  Prior --> Shadow["Point retenue : X/Y/tolérance/hystérésis pour ses ombres"]
+  Shadow --> Requests["Demandes de reconstruction sur surface"]
+  Requests --> Budget["Budget commun par image et surface, score décroissant"]
+  Budget -->|"Attribué"| New["Nouvelles ressources ; carte complète atomique"]
+  New --> Publish["ShadowResults : fusion et publication incrémentale"]
+  Budget -->|"Différé"| Old["Ancienne carte complète conservée si disponible"]
+  Old --> Gate["Toujours sélectionnée et ombres activées ?"]
+  Publish --> Gate
+  Gate -->|"Oui"| Read["Lighting::System : acquireLatest à execute"]
+  Gate -->|"Non"| Off["Éclairer sans ombre"]
+  Shadow -->|"Désélection"| Evict["Retirer caches actifs ; GPUResourceCollection"]
+```
+
+
+
+**Projection des ombres directionnelles :** chaque lumière directionnelle ayant les ombres activées utilise **une seule shadow map de profondeur pour le rendu concerné**, représentant une région pertinente pour celui-ci. Il n'y a **ni Cascaded Shadow Maps (CSM), ni subdivision obligatoire du frustum en plusieurs cascades**, ni atlas de cascades pour une même lumière directionnelle dans V0.1.4. Cela n'interdit pas plusieurs lumières directionnelles, chacune avec sa propre carte pour un rendu donné. En présence de plusieurs EngineView, aucune mutualisation des shadow maps n'est exigée en V0.1.4 : chaque vue peut préparer les siennes indépendamment. Le choix d'une seule carte par lumière directionnelle dans une vue n'impose aucune cache inter-vues. La définition de la région couverte, des matrices de projection d'ombre, de la résolution, du biais et de la fréquence de rafraîchissement reste à finaliser ; ne pas inventer de couverture mondiale infinie ni de mécanisme de sélection automatique des cascades. Le contrat des ombres des spots sera précisé séparément.
+
+**Flux complet d'un modèle voxel jusqu'aux commandes par vue.** Les données métier sont créées indépendamment du thread GPU. Le bake sépare les meshes opaques et translucides ; le rendu réunit les composants actifs par vue, tandis que les casters utilisent un chemin de capture distinct.
+
+```mermaid
+flowchart TD
+    Shape["Voxel::Shape : polygones et slots"] --> Definition["Voxel::Definition : association des slots"]
+    Definition --> Volume["Voxel::Volume : Cells orientees et donnees immuables"]
+    Volume --> Mesher["VoxelMesher : bake du Volume"]
+    Occlusion["OcclusionCache optionnel"] -.-> Mesher
+    Mesher --> Model["Voxel::Model : meshes et slots semantiques"]
+    Model --> Opaque["Mesh opaque"]
+    Model --> Translucent["Mesh translucide"]
+    Model --> ShadowDepth["ShadowMap::Mesh : positions + indices"]
+    Material["Material : textures nommees et UV"] --> Palette["VoxelPalette : materials par slot"]
+    Model --> Assembly["Assembly : parties et transforms locales"]
+    Palette --> Assembly
+    Model --> ModelComp["ModelRenderingComponent : references empruntees"]
+    Palette --> ModelComp
+    Assembly --> AssemblyComp["AssemblyRenderingComponent : reference empruntee"]
+    ModelComp --> VR["VoxelRenderingSystem : filtrage par vue et layers"]
+    AssemblyComp --> VR
+    Opaque --> VR
+    Translucent --> VR
+    VR --> Buckets["Buckets : mesh, atlas et material compatibles"]
+    Buckets --> SSBO["SSBO instances et materials du snapshot"]
+    SSBO --> Draw["DrawVoxelBucketCommand avec handles captures"]
+    Draw --> Forward["Passe opaque Forward"]
+    Draw --> WBOIT["Passe translucide WBOIT"]
+    ShadowDepth -->|"copie partagee"| MeshPart["MeshInstance : Mesh + matrice locale"]
+    Assembly -->|"Composer matrices Parts relatives a Assembly"| MeshPart
+    AssemblyMatrix["Matrice Assembly relative a Entity"] -->|"appliquer avant toutes les Parts"| Caster["ShadowMap::Contributor : MeshFilter"]
+    MeshPart -->|"bind(collection, assemblyMatrix) : remplacement complet"| Caster
+    Caster --> Shadow["ShadowMap::RenderingSystem : caches ombres"]
+    Shadow --> Out["Light::ShadowResults : slot de la surface, entrées par lumière"]
+    Out --> SurfaceCheck["Lighting : acquireLatest et filtrage de sélection"]
+    SurfaceCheck -->|"Valide ou sans ombre"| Forward
+    SurfaceCheck -->|"Valide ou sans ombre"| WBOIT
+```
+
+Les liaisons depuis `Model` et ses **meshes visuels** vers le rendu représentent la **géométrie du modèle emprunté**, et non la possession des objets par `VoxelRenderingSystem`. Un `ShadowMap::Contributor` est distinct des composants de rendu visuel ; il n'est jamais créé automatiquement par ce flux. Le mesh d'ombre du Model doit aussi être **lié explicitement** à un Contributor. Le `MeshFilter` détient une collection de `MeshInstance` dont les meshes partagent leurs données immuables et dont les matrices locales sont des valeurs. Pour une `Assembly`, le jeu compose les matrices des Parts **relatives à l'Assembly**, et fournit la **matrice commune de l'Assembly relative à l'Entity** à `bind(collection, assemblyMatrix)` après chaque nouvelle pose ou changement de la matrice commune. Le résultat suit `M_entityWorld * M_assembly * M_partLocal` sans double application des transformations. La matrice commune peut changer sans remailler ou recalculer les transformations locales des Parts ; aucune fusion géométrique ni notification automatique par l'Assembly n'est introduite.
