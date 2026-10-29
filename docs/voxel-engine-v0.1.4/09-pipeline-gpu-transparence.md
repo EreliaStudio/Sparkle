@@ -32,7 +32,7 @@ Une association compatible emploie au plus **un atlas `albedo` par mesh/passe**,
 
 **Capture et buffers.** La capture CPU fige la `Light::Selection`, les paramètres des lumières retenues et les matrices de vue ; les mêmes données alimentent la passe opaque et l'unique passe WBOIT de cette EngineView. Les ressources GPU sont matérialisées sur la `Window::Surface` courante et synchronisées avant les dessins. `RenderCommand::execute()` ne relit pas de lumière, caméra, vue ou Assembly mutable. La sélection ne dépend pas du depth buffer opaque et reste valide pour les fragments translucides.
 
-**Ombres.** `ShadowMap::RenderingSystem` travaille seulement sur les lumières admissibles issues de la sélection commune et applique ses budgets et invalidations indépendamment. Il publie chaque carte finale complète et ses matrices/génération par surface. `Lighting::System` consulte `Light::ShadowResults::acquireLatest()` après la passe d'ombres, pendant `execute()`. Une carte encore exploitable peut être utilisée avec les matrices de **sa propre génération** ; toute lumière sélectionnée dépourvue de carte compatible reste éclairante sans ombre. Le contrat d'association entre les données lumineuses capturées et les générations de cartes acquises doit éviter de combiner des paramètres incompatibles.
+**Ombres et états historiques cohérents.** `ShadowMap::RenderingSystem` travaille seulement sur les lumières admissibles issues de la sélection commune et applique ses budgets et invalidations indépendamment. Chaque carte publiée transporte, par surface et lumière, son **identité d'admission**, sa génération, son ordinal de capture source et l'**état lumineux géométrique historique** (position/direction, portée, atténuation, projection et paramètres de profondeur). Après les ombres, `Lighting::System` appelle `Light::ShadowResults::acquireLatest()` pendant `execute()`, refuse toute ancienne admission ou capture source postérieure au snapshot consommateur, puis emploie **tous les paramètres historiques géométriquement dépendants** de la carte admissible. La couleur et les autres paramètres indépendants proviennent de la sélection immuable capturée ; l'intensité liée à la portée/atténuation reste historique. Sans carte compatible, la lumière éclaire sans ombre avec ses paramètres capturés. Les passes opaque et WBOIT partagent une résolution effective unique par exécution de vue, sans lecture d'objet de gameplay mutable.
 
 ```mermaid
 flowchart TD
@@ -43,8 +43,9 @@ flowchart TD
   C --> W["Shaders translucides Forward / WBOIT"]
   S --> SH["ShadowMap::RenderingSystem et budgets"]
   SH --> R["ShadowResults par Window Surface"]
-  R --> O
-  R --> W
+  R --> G["Verifier admission, ordinal source et geometrie historique"]
+  G --> O
+  G --> W
   O --> F["Composition finale"]
   W --> F
 ```
@@ -65,7 +66,9 @@ sequenceDiagram
   SH->>SH: publier cartes completes
   GPU->>LI: executer opaque puis WBOIT
   LI->>LI: acquireLatest des ombres par surface
-  Note over LI,GPU: Pas de carte exploitable : eclairage sans ombre
+  LI->>LI: verifier admission et ordinal source <= capture
+  LI->>LI: geometrie historique et couleur capturee pour opaque et WBOIT
+  Note over LI,GPU: Carte incompatible : eclairage sans ombre
 ```
 
 La passe opaque calcule directement l'éclairage des fragments sélectionnés. Les fragments translucides utilisent la **même sélection**, reçoivent éventuellement les ombres des opaques et sont ensuite accumulés dans le WBOIT.
