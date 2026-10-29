@@ -12,15 +12,6 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-002 — Préparation du budget global de reconstruction des ombres ponctuelles
-**Priorité : P0** — [Lumières et ombres, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) · [Vues et passes, §7.1–7.2](voxel-engine-v0.1.4/07-vues-et-passes.md)
-
-**Validé :** budget **unique par image rendue et `Window::Surface`**, partagé entre toutes les EngineView ; classement strict par score décroissant, sans bonus d'attente ; la liste **de toutes les vues** doit être évaluée avant attribution, même si la vue la plus prioritaire s'exécute en dernier ; une paire (vue, lumière, surface) ne doit pas consommer le budget deux fois dans la même image ; les sous-snapshots restent exécutés dans l'ordre explicite des vues.
-
-**À définir :** quelle étape/commande GPU effectue la préparation globale avant la première vue ? Comment reconnaître de façon sûre l'identité d'une image sur une surface, les captures anciennes et la réexécution éventuelle d'un snapshot ? Comment le plan immutable de demandes se combine-t-il avec la validité GPU propre à la surface, sans lecture d'objets de gameplay mutables et sans second ordonnanceur de passes ?
-
-**Clôture :** séquence exécutable avant toutes les vues, contrat d'identité d'image, de dédoublonnage et de synchronisation, tests multivues/multisurfaces et snapshots réexécutés.
-
 ### Q-ARCH-003 — `EngineView` comme source `albedo` d'un Material voxel
 **Priorité : P0** — [Matériaux et palettes, §4.1 et §4.4](voxel-engine-v0.1.4/04-materiaux-textures-palettes.md) · [Vues, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md)
 
