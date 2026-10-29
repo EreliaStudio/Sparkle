@@ -28,6 +28,27 @@ Une association compatible emploie au plus **une identité de source `albedo` pa
 
 **Résolution de source dynamique au dessin.** La validation du couple Model/Palette utilise uniquement la clé logique `Static(Texture::Handle/State)` ou `EngineView(identité de vie)`, dès l'association et avant la publication. Les ressources GPU sont capturées **par snapshot** : pour chaque occurrence utilisant une source `EngineView`, la capture choisit le handle logique et la version de cible (ou le fallback explicitement configuré) sur la base de l'état de cette vue. Le rendu sur la `Window::Surface` courante utilise ce handle capturé, après vérification que l'image a effectivement été produite pour la surface et cette version ; il ne recalcule ni l'identité de l'atlas, ni le batching, ni la politique du Material selon le dernier framebuffer disponible. Lorsqu'un producteur et un consommateur participent au même snapshot moteur, la composition de la vue source doit avoir été exécutée **avant** la vue consommatrice ; aucune dépendance inverse, réflexive ou cyclique n'est autorisée. Les vues absentes du snapshot ne produisent pas d'image par ce seul accès : seul un contenu local antérieurement valide ou le fallback explicitement choisi peut être échantillonné. Une cible en cours d'écriture ne peut être échantillonnée simultanément : `spk::Exception` plutôt qu'une lecture indéfinie.
 
+**Ordre des passes GPU de chaque EngineView (Q-ARCH-006).** Le `RenderSnapshot::Builder` de la vue conserve `RenderPass::Key{name, order}` et les phases système ont des clés numériques **fixes et réservées** : ombres `sparkle.engineview.shadow/-1000000`, opaque `sparkle.engineview.opaque/0`, WBOIT `sparkle.engineview.wboit/1000000` et composition `sparkle.engineview.composition/2000000`. Les Contributions personnalisées peuvent être placées **avant les ombres** (`INT32_MIN..-1000001`), **entre ombres et opaque** (`-999999..-1`), **entre opaque et WBOIT** (`1..999999`), ou **entre WBOIT et composition** (`1000001..1999999`). La composition reste strictement la dernière passe du sous-snapshot ; après `2000000`, toute clé personnalisée est refusée. Le `RenderingEngine` crée et initialise ses quatre passes système, même sans draw, et les Contributors ne peuvent en altérer ni le nom ni l'ordre. Une contribution directe à une passe système emploie sa clé exacte ; des passes distinctes au même ordre sont interdites, alors que la fusion intentionnelle par nom/ordre identique demeure permise. Les erreurs sont vérifiées à la capture, avant publication du snapshot moteur, sans changer le comportement du Builder générique hors des vues. Toutes les passes restaurent explicitement leurs états GL requis ; la préparation du budget de PointLight a lieu **dans le snapshot moteur en amont des vues** et ne consomme aucune plage de passe interne à une vue.
+
+```mermaid
+sequenceDiagram
+  participant E as RenderingEngine CPU
+  participant V as Builder par EngineView
+  participant C as Contributor
+  participant G as Window Surface GPU
+  E->>V: initialiser 4 cles systeme et leurs etats GPU
+  E->>C: contribuer avec Builder et CaptureContext
+  C->>V: renderPass(name, order) et commandes
+  E->>V: verifier plages, noms et collisions
+  alt Cle invalide
+    V-->>E: spk.Exception avant publication
+  else Cles valides
+    E->>V: build sous-snapshot immutable
+    V-->>G: shadow puis opaque puis WBOIT puis composition
+    Note over V,G: Passes applicatives intercalees dans les plages
+  end
+```
+
 ### 7.8 Pipeline Forward classique, opaque et WBOIT
 
 **Éclairage global par EngineView.** Les shaders calculent directement la couleur éclairée des surfaces opaques et translucides (Forward classique), sans G-buffer, Deferred ni culling lumineux par tiles GPU. Le `Light::Prioritizer` de la vue retient un Top-N global des `Point` et `Spot`, plus toutes les `Directional` actives hors budget N. La sélection immutable est commune à `Lighting::System` et `ShadowMap::RenderingSystem`. Aucun compute shader de culling de tiles, buffer de listes par tile ou mécanisme d'overflow de telles listes n'est requis.
