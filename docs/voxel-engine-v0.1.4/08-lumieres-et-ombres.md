@@ -282,7 +282,9 @@ Les **caméras et les lumières sont représentées par des composants spéciali
 
 **Extension de `Texture` pour les cubemaps.** Le type `Texture::Target::TextureCubeMap` existe déjà, mais `Texture::State::_synchronize()` ne sait actuellement synchroniser que `Texture2D`. Compléter **`Texture`**, sans créer de classe `ShadowCubeMap` ni de nouveau gestionnaire de ressources : une texture de cible cubemap doit pouvoir allouer et synchroniser **ses six faces carrées** en format de profondeur déjà pris en charge, sous une identité logique `GPUResource::State` et avec une instance OpenGL distincte par `Window::Surface`. Le recyclage des instances reste dans `GPUResourceCollection`, avec compatibilité de cible et resynchronisation obligatoire après réutilisation ; une ancienne profondeur recyclée n'est jamais considérée comme valide.
 
-**Attachement de faces dans `Framebuffer`.** `Framebuffer` doit permettre de désigner explicitement **une face d'une cubemap de profondeur** comme attachment `GL_DEPTH_ATTACHMENT`, au lieu de limiter cette opération à une `Texture2D`. La face ciblée est sélectionnée par les commandes de rendu de profondeur de la lumière, et non devinée à partir d'un état global. Une cible depth-only reste valide sans attachment couleur (draw/read buffers désactivés) si le framebuffer est complet. L'API précise des opérations d'attachement reste à consolider avec les autres `RenderCommand` typées ; **aucune classe, cache ou file GPU spécifique aux cubemaps d'ombres** n'est introduit. L'extension est générique pour les usages futurs de cubemaps.
+**Attachement de faces dans `Framebuffer` (Q-ARCH-007 validée).** `Framebuffer::State` référence les attachments par `Texture::Handle` partageables, jamais par propriété exclusive des wrappers `Texture` ; les deux cubemaps statique/finale sont des **States logiques distincts**. Une instance de `Framebuffer` **depth-only** peut recevoir un handle de cubemap, mais **la face ciblée est toujours sélectionnée explicitement** dans la `FramebufferRenderCommand` (ou commande générique de binding équivalente) pour chaque dessin : enum des faces `PositiveX`, `NegativeX`, `PositiveY`, `NegativeY`, `PositiveZ`, `NegativeZ`. Sur le contexte GPU de la `Window::Surface`, la commande active le handle de cubemap de cette surface, lie le FBO natif et attache **une face** avec `glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, ...)`, sans modifier le State logique. Le `RenderCommand` capture le handle et la face : un snapshot ancien ou exécuté en parallèle sur une autre surface reste indépendant. L'API des attachments est également générique pour un `Texture2D` ordinaire (sans paramètre de face). La face doit être valide, correspondre à une cubemap render-target de profondeur carrée, et avoir le même niveau/dimensions que les autres attachments actifs. Aucune sélection implicite de face, aucun geometry shader/layered draw obligatoire, ni cache GPU dédié aux cubemaps.
+
+**Contrôles depth-only et isolation.** Une cible depth-only **n'a aucun attachment couleur** : activer `glDrawBuffer(GL_NONE)` et `glReadBuffer(GL_NONE)`, puis vérifier `glCheckFramebufferStatus` **après chaque changement de face** sur la surface courante, avant `clear` ou dessin. L'attachement cubemap est **une modification du FBO natif local à la surface** ; il ne doit jamais modifier les `Texture::State` ni les `Framebuffer::State` détenus par les snapshots. En cas de texture non allouable, face invalide, format incompatible, dimensions non carrées ou FBO incomplet, lever une `spk::Exception` descriptive et **ne publier aucune carte incomplète**. Le cache statique et la carte finale utilisent chacun leur propre handle, et la copie de profondeur d'une face vers la finale doit garder source et destination **différentes**, sans feedback GL. Les limites natives de formats, taille des cubemaps et capabilities sont vérifiées à l'exécution ; les handles CPU restent valables sur une autre surface malgré un échec sur la première. Les anciennes générations de cartes terminées conservent leur texture inchangée jusqu'à la disparition des handles propriétaires, puis suivent exclusivement la récupération par `GPUResourceCollection`.
 
 **Snapshots, générations et budget inchangés.** Lors de la construction d'un snapshot, capturer les handles forts vers les deux cubemaps et les paramètres immuables de face/projection ; une nouvelle paire après éviction ou reconstruction ne modifie jamais les textures ou attachments encore référencés par un ancien snapshot. Sur chaque surface, l'exécution OpenGL prépare/attache explicitement chaque face avant de reconstruire la profondeur correspondante, puis consomme seulement la cubemap finale valide. Les six faces forment **une unique reconstruction au regard du budget existant** (statique et finale si nécessaire). Cette extension n'ajoute ni nouveau propriétaire GPU ni mécanisme de libération différée.
 
@@ -291,21 +293,24 @@ sequenceDiagram
     participant SH as ShadowMap RenderingSystem
     participant SNAP as Snapshot et handles immuables
     participant TEX as Texture cubemap existante
-    participant FBO as Framebuffer existant
+    participant FBO as Framebuffer par Texture Handles
     participant GPU as GPU de la Window Surface
     SH->>SNAP: Capturer les deux handles de cubemap et les commandes de faces
+    SNAP->>TEX: Capturer Texture Handles de cubemaps et faces explicites
     SNAP->>TEX: Activer les ressources sur la surface courante
     TEX->>GPU: Allouer ou synchroniser six faces depth si necessaire
     alt Cache statique invalide
         loop Six faces
-            SNAP->>FBO: Attacher face de cubemap statique en profondeur
+            SNAP->>FBO: Commander face + framebuffer handle statique
+            FBO->>GPU: glFramebufferTexture2D face puis complétude
             FBO->>GPU: Dessiner les casters statiques admissibles
         end
     end
     alt Carte finale invalide et reconstruction autorisee
         loop Six faces
-            SNAP->>FBO: Attacher face de cubemap finale en profondeur
-            FBO->>GPU: Copier profondeur statique puis dessiner casters dynamiques
+            SNAP->>FBO: Commander face + framebuffer handle final
+            FBO->>GPU: glFramebufferTexture2D face puis complétude
+            FBO->>GPU: Copier depth statique face puis casters dynamiques
         end
         Note over SNAP,GPU: Publier valide seulement apres six faces coherentes
     end
