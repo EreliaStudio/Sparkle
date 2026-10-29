@@ -137,7 +137,7 @@ La construction du snapshot moteur produit d'abord cette séquence complète de 
 
 **Accès aux vues depuis l'Engine ou la caméra.** `renderingEngine.view("monitor")` retrouve une vue par son nom et lance `spk::Exception` si absente. `surveillanceCamera.view("monitor")` est également prévu : il utilise le contexte `Engine*` déjà transmis aux composants pour retrouver le `RenderingEngine`, puis vérifie que la vue demandée désigne bien cette caméra. Absence de moteur graphique, nom inconnu ou mauvaise caméra : `spk::Exception`. Cela ne demande **aucun registre inverse** dans la caméra. Signatures et noms secondaires restent illustratifs.
 
-**Resize sous contrôle du jeu.** Redimensionner la fenêtre ou un widget ne change **ni la résolution d'une EngineView ni la projection de la caméra**. Le jeu ajuste chacune explicitement. L'affichage peut simplement étirer la texture existante. Une vue dont la résolution change crée une **nouvelle version des cibles logiques** ; les handles déjà publiés ne doivent pas être modifiés rétroactivement. Le `Framebuffer::resize()` actuel, qui modifie les States de ses attachments sur place, n'est donc pas le mécanisme à employer sur une cible encore référencée par des snapshots.
+**Resize sous contrôle du jeu.** Redimensionner la fenêtre ou un widget ne change **ni la résolution d'une EngineView ni la projection de la caméra**. Le jeu ajuste chacune explicitement. L'affichage peut simplement étirer la texture existante. Une vue dont la résolution change crée une **nouvelle version des cibles logiques** ; les handles déjà publiés ne doivent pas être modifiés rétroactivement. Le `Framebuffer::resize()` **actuel** modifie les States de ses attachments sur place ; sa sémantique doit être adaptée ou ce chemin doit être explicitement interdit pour les framebuffers à attachments partagés. Le resize des vues reconstruit **un ensemble cohérent de nouvelles Texture::Handle et Framebuffer::Handle**, sans altérer les versions antérieures capturées par des snapshots.
 
 **Politique de sortie d'une vue sans caméra.** Chaque `EngineView` expose une politique configurable, représentée par un **enum C++ explicite** (noms indicatifs : `DetachedOutputPolicy::KeepLastFrame`, `DetachedOutputPolicy::Invalid`, `DetachedOutputPolicy::DefaultTexture`). **La valeur initiale est `DetachedOutputPolicy::Invalid`** pour toute nouvelle `EngineView` ; le jeu peut la modifier explicitement ensuite. Elle détermine **la source de texture disponible aux consommateurs** lorsque la vue n'a pas de caméra. Elle n'entraîne dans aucun des trois modes un nouveau rendu 3D, un clear ou une mise à jour des sous-snapshots de cette vue.
 
@@ -158,7 +158,81 @@ Un rattachement de caméra rend à nouveau possible une capture normale de la vu
 
 **Scénario multifenêtre de validation.** Le snapshot moteur contient `surveillance` (vue exécutée en premier) puis `main` (qui échantillonne la sortie de `surveillance`). La capture CPU accepte cette source logiquement valide, même si la `Window::Surface` B n'a jamais rendu la surveillance. Sur B, l'exécution GPU de `surveillance` produit/valide son image locale avant l'échantillonnage par `main` : aucune erreur prématurée. En revanche, une utilisation de la même texture sur B **sans production préalable** (ni image précédente valide sur sa cible courante) déclenche une `spk::Exception` à l'étape GPU. L'image existante sur la surface A ne rend pas valide la source sur B.
 
-**Un framebuffer logique, plusieurs réalisations OpenGL.** `spk::Framebuffer` dérive déjà de `GPUResource` ; ses attachments de couleur sont des `Texture`, elles-mêmes `GPUResource`. `GPUResource::activate(context)` passe par la `GPUResourceCollection` de `context.targetSurface` et matérialise une instance OpenGL **par Window::Surface**. Une `EngineView` peut donc décrire un framebuffer logique, réalisé indépendamment en fenêtre A et B, sans ajout d'une map `(Window, Engine, ViewID)` à l'API des vues. Il s'agit d'images **locales et distinctes** : rendre A ne copie ni ne met à jour les pixels de B. La dernière image rendue dans B reste disponible tant que sa cible locale n'est pas remplacée. Pour une cible locale jamais rendue (ou nouvellement remplacée), les pixels ne sont pas garantis ; aucune image n'est créée ni transférée automatiquement. **Lorsqu'un consommateur demande effectivement cette sortie alors qu'aucune texture valide n'est disponible, une `spk::Exception` doit être déclenchée**, conformément au contrat de politique de sortie ci-dessus. La texture de remplacement est utilisée exclusivement lorsque le développeur sélectionne et configure explicitement `DefaultTexture`.
+**Un framebuffer logique, plusieurs réalisations OpenGL.** `spk::Framebuffer` dérive déjà de `GPUResource` ; ses attachments de couleur et de profondeur sont des **`Texture::Handle` réutilisables**, eux-mêmes adossés à un `GPUResource::State` partagé. La cible logique suit le contrat Q-ARCH-007 ci-dessous : les deux framebuffers opaque/WBOIT d'une même version d'EngineView partagent le **même handle de profondeur**, et non deux copies de texture. `GPUResource::activate(context)` passe par la `GPUResourceCollection` de `context.targetSurface` et matérialise une instance OpenGL **par Window::Surface**. Une `EngineView` peut donc décrire un framebuffer logique, réalisé indépendamment en fenêtre A et B, sans ajout d'une map `(Window, Engine, ViewID)` à l'API des vues. Il s'agit d'images **locales et distinctes** : rendre A ne copie ni ne met à jour les pixels de B. La dernière image rendue dans B reste disponible tant que sa cible locale n'est pas remplacée. Pour une cible locale jamais rendue (ou nouvellement remplacée), les pixels ne sont pas garantis ; aucune image n'est créée ni transférée automatiquement. **Lorsqu'un consommateur demande effectivement cette sortie alors qu'aucune texture valide n'est disponible, une `spk::Exception` doit être déclenchée**, conformément au contrat de politique de sortie ci-dessus. La texture de remplacement est utilisée exclusivement lorsque le développeur sélectionne et configure explicitement `DefaultTexture`.
+
+### 7.1.1 Attachments partageables et versions des cibles (Q-ARCH-007 validée)
+
+**Choix de conception : Framebuffer composé de handles, sans `RenderTarget` dédié.** `spk::Framebuffer` reste le type public générique représentant un framebuffer logique. Son `Framebuffer::State` contient une **collection ordonnée de `Texture::Handle` pour les attachments couleur** et **un `Texture::Handle` optionnel pour la profondeur ou profondeur/stencil** ; il n'est plus nécessaire qu'il possède ses propres wrappers `std::unique_ptr<Texture>`. Deux `Framebuffer` logiques peuvent donc faire référence au **même `Texture::Handle`**, sans duplication de `Texture::State` ni de contenu GPU. Les handles sont propriétaires de leur `GPUResource::State` par partage et ne constituent pas des pointeurs empruntés à une `Texture` ni une propriété d'une nouvelle classe `RenderTarget`. L'API historique de création par taille + formats peut rester un **raccourci constructeur** qui alloue des Textures logiques et ne conserve ensuite que leurs handles. Un chemin public de construction explicite accepte, à l'inverse, des attachments déjà créés (signature indicative ci-dessous).
+
+```cpp
+// Exemple conceptuel ; les noms définitifs de factory sont indicatifs.
+auto depth = Texture::createRenderTarget(Texture::Target::Texture2D,
+                                         size, Texture::Format::Depth24);
+auto opaqueColor = Texture::createRenderTarget(Texture::Target::Texture2D,
+                                               size, Texture::Format::RGBA);
+auto accum = Texture::createRenderTarget(Texture::Target::Texture2D,
+                                         size, Texture::Format::RGBA16F);
+auto reveal = Texture::createRenderTarget(Texture::Target::Texture2D,
+                                          size, Texture::Format::GreyLevel); // R8
+
+Framebuffer opaque(size, {opaqueColor.handle()}, depth.handle());
+Framebuffer wboit(size, {accum.handle(), reveal.handle()}, depth.handle());
+// Même State logique de profondeur dans opaque et WBOIT.
+```
+
+**Création logique sans OpenGL.** Une factory/constructeur public de `Texture` destinée aux attachments prépare une ressource `ContentSource::RenderTarget` de taille, cible et format explicites **sans appeler OpenGL pendant la capture CPU** ; `Texture::Handle` reste le mécanisme de propriété. Pour cette version, les cibles nécessaires sont `Texture2D` pour opaque/WBOIT et `TextureCubeMap` pour les ombres ponctuelles ; les deux demandent une matérialisation GPU par `Window::Surface`. Le format d'accumulation `RGBA16F` doit être pris en charge par `Texture::Format` et sa description OpenGL ; `GreyLevel` correspond déjà à l'attachement `R8`. Aucune conversion automatique depuis une texture de pixels CPU, aucune allocation implicite au moment du `Material`, aucun multisampling silencieux et aucun nouveau gestionnaire d'attachments ne sont ajoutés.
+
+**Compatibilité et validation des attachments.** À la construction du `Framebuffer`, valider le caractère non vide des handles, la taille non nulle et identique des images attachées, le nombre d'attachments couleur compatible avec l'ordre des slots, la catégorie des formats (couleur pour couleur, profondeur ou depth/stencil pour profondeur), leur `ContentSource::RenderTarget` et leur cible supportée. Un framebuffer doit comporter **au moins un attachment** ; pour un framebuffer de profondeur seule, aucun slot couleur n'est exigé. Les attachments actifs d'un même framebuffer doivent avoir **la même configuration d'échantillonnage** ; V0.1.4 n'active pas de multisampling automatiquement. Les réglages de charge/effacement et le binding explicite des cibles sont établis par les commandes des passes, pas par l'état OpenGL résiduel. Une même texture ne doit pas occuper simultanément deux rôles d'attachment incompatibles dans le même framebuffer. À l'exécution GPU, vérifier les limites et capacités réellement offertes par la surface (formats supportés, `GL_MAX_COLOR_ATTACHMENTS`, `GL_MAX_DRAW_BUFFERS`, taille maximale et complétude `glCheckFramebufferStatus`) avant tout draw ; l'absence d'une capacité nécessaire donne une `spk::Exception` descriptive avec surface, formats, attachments et statut GL, sans fallback implicite.
+
+**Profondeur partagée opaque/WBOIT.** `RenderingEngine` construit pour **chaque version logique d'EngineView** un handle de profondeur unique référencé par le framebuffer opaque et le framebuffer WBOIT. Une même `Window::Surface` matérialise ce handle en **une unique texture OpenGL locale** accessible par ces deux framebuffers ; l'opaque écrit dans ce depth, puis WBOIT effectue son test de profondeur avec les écritures désactivées. Le framebuffer de la composition finale peut référencer les textures couleur déjà produites ; aucun copy/blit de profondeur ni synchronisation CPU entre deux textures n'est nécessaire. La validation d'identité exige une **égalité de `Texture::Handle`/State**, pas seulement des dimensions, du format ou des pixels identiques. La vue doit également empêcher la lecture d'une texture pendant l'écriture de ce même attachment sur cette surface.
+
+**Versionnement et resize non destructif.** Lors d'un resize explicite, l'EngineView prépare **une nouvelle famille** de Textures render-target avec de **nouveaux States/identifiants logiques** (sortie finale, couleurs opaques, accumulation/reveal et profondeur), puis **de nouveaux framebuffers** qui référencent ces handles de la même génération de cible. La nouvelle famille est publiée **atomiquement** comme version logique courante de la vue, seulement après validation CPU ; si cette construction échoue, l'ancienne version reste courante. Les anciens `Framebuffer::Handle`, `Texture::Handle` et commandes des `RenderSnapshot` restent valables et indépendants ; ni la texture source ni la taille/format des anciens States ne sont modifiés. La nouvelle version n'a **aucune image produite** sur une surface avant son premier rendu effectif. Aucune copie de pixels de l'ancienne version n'est effectuée. L'`EngineView` conserve son identité logique pour les Materials (Q-ARCH-003) malgré ce changement de handles. Pour les framebuffers **à attachments partagés**, appeler isolément l'ancien `Framebuffer::resize()` pour reconfigurer les States est interdit : il faut reconstruire l'ensemble coordonné de nouvelles références ; l'API historique doit devenir sûre par détachement/copie des States pour les usages indépendants ou signaler explicitement l'opération non supportée, sans écriture en place sur un State encore référencé.
+
+**Durée de vie et surfaces.** Chaque State logique de framebuffer ou texture est activé **dans la `GPUResourceCollection` de la surface courante**, créant ou retrouvant son instance OpenGL propre à cette surface. Deux surfaces qui exécutent les **mêmes handles CPU** n'échangent jamais de pixels ou de noms d'objets GL. Une ancienne version peut encore être utilisée par un snapshot en vol sur A pendant que la version suivante est rendue sur B ; aucune commande ne relit l'EngineView mutable au rendu. Les handles détenus par les snapshots gardent les anciens States vivants ; leur libération native ou mise en pool suit **exclusivement** les mécanismes existants de `GPUResourceCollection` et le bon contexte OpenGL, sans liste de destruction différée supplémentaire dans `EngineView`. La fermeture d'une surface supprime ses réalisations locales et invalide toute disponibilité d'image de cette surface, pas les autres.
+
+**Cubemaps de profondeur et faces explicites.** `Texture::Target::TextureCubeMap` doit accepter une texture render-target à six faces **carrées, de même taille et format de profondeur**. Une paire de cartes statique/finale de `PointLight` conserve deux `Texture::Handle` de cubemap indépendants. Un framebuffer **depth-only** peut attacher la cubemap en choisissant **explicitement une seule face** lors du rendu ; la face est un enum fini (positive/negative X, Y et Z), sans indice implicite ni face par défaut pour un dessin de profondeur. La commande générique d'activation d'un framebuffer (nom indicatif `FramebufferRenderCommand`) capture `Framebuffer::Handle` et, lorsqu'une cubemap est ciblée, **la face concernée** ; au GPU, elle lie le framebuffer natif de la surface, matérialise la cubemap et attache la face via `glFramebufferTexture2D(..., GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, ...)`, puis vérifie la complétude avant le clear/draw. Le changement de face est **une opération d'attachement native sur le framebuffer de cette surface** ; il ne modifie ni le `Texture::State` ni le `Framebuffer::State` partagé des snapshots. Aucun mode layered implicite ou `gl_Layer` n'est exigé. Le cache de cartes `ShadowMap` continue d'assurer l'atomicité des six faces et la publication seulement après reconstruction intégrale, comme décrit au chapitre 08.
+
+```mermaid
+flowchart TD
+  Size["EngineView version V : taille explicitement choisie"] --> D["Texture Handle depth V"]
+  Size --> O["Texture Handle couleur opaque V"]
+  Size --> A["Texture Handle RGBA16F accumulation V"]
+  Size --> R["Texture Handle R8 reveal V"]
+  D --> FO["Framebuffer opaque V"]
+  O --> FO
+  D --> FW["Framebuffer WBOIT V"]
+  A --> FW
+  R --> FW
+  FO --> S["GPUResourceCollection surface A"]
+  FW --> S
+  FO --> T["GPUResourceCollection surface B"]
+  FW --> T
+  Size --> Resize["Resize : nouvelle famille V+1 sans modifier V"]
+  Resize --> Vnext["Nouveaux handles textures + framebuffers"]
+  Vnext --> S
+  Vnext --> T
+```
+
+```mermaid
+sequenceDiagram
+  participant U as Jeu / Thread Update
+  participant V as EngineView
+  participant A as GPU Surface A
+  participant B as GPU Surface B
+  U->>V: setResolution(nouvelle taille)
+  V->>V: construire nouveaux Texture Handles + Framebuffer Handles
+  V->>V: publier version logique V2 en un bloc
+  Note over U,V: Snapshot S1 garde les handles de V1
+  U->>V: refreshRenderSnapshot -> S2 capture V2
+  par Render ancien S1 sur A
+    V-->>A: S1 : activer V1 via handles captures
+    A->>A: depth V1 + opaque + WBOIT V1
+  and Render nouveau S2 sur B
+    V-->>B: S2 : activer V2 via handles captures
+    B->>B: depth V2 + opaque + WBOIT V2
+  end
+  Note over A,B: Pas de partage des instances ni de copie entre surfaces
+```
 
 **Durées de vie.** Les vues sont possédées par `RenderingEngine` et peuvent être supprimées immédiatement par `removeView(name)`. Toutes les références vers une `EngineView`, y compris celles éventuellement détenues par des matériaux, sont **non propriétaires** et deviennent invalides lorsque la vue disparaît. Une vue volontairement détachée de sa caméra est valide et simplement non rendue ; à l'inverse, une vue qui référence une caméra **détruite sans détachement préalable** possède une référence pendante et devient impropre à l'utilisation : le développeur doit détacher ou remplacer la caméra avant de la détruire. Utiliser une référence C++ pendante peut être un comportement indéfini, pas une exception garantie. Une vue supprimée ne doit pas laisser une texture accessible aux **nouveaux rendus**. En revanche, les `RenderSnapshot` **déjà construits** peuvent conserver les `Framebuffer::Handle` et `Texture::Handle` concrets jusqu'à leur fin d'utilisation, sans prolonger la vie logique de la vue.
 
