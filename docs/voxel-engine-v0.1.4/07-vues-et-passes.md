@@ -50,14 +50,16 @@ classDiagram
     +texturesEtMatrices
   }
   class LightContributor {
-    +intensity
+    +color : spk::RGB
     +priorityWeight
     +priority(camera, frustum)
   }
   class LightPoint {
+    +range : U
     +sphereInfluence
   }
   class LightSpot {
+    +range : U
     +sphereEnglobante
     +coneInfluence
   }
