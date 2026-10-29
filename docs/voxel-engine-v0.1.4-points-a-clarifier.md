@@ -19,7 +19,7 @@
 ### Q-TECH-001 — Règles de Top-N et d'hystérésis lumineuse
 **Priorité : P1** — [Lumières, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md)
 
-**Profil initial résolu :** `N = 8` et `h = 0,10` pour le `Light::Prioritizer` de chaque nouvelle EngineView ; ces paramètres restent configurables indépendamment par vue et ne concernent pas les budgets d'ombres. **Toujours ouvert dans Q-TECH-001 :** tie-break stable, séquence exacte de remplacement lorsque N est atteint, cas `N=0`, réduction de N, changements de score/admissibilité, mutex du cache et notifications Registry/lumières/caméra. **Ne pas rouvrir** le Forward classique, le Top-N partagé Point/Spot ou les Directional hors quota.
+**Décisions partielles résolues :** chaque nouvelle EngineView initialise son `Light::Prioritizer` avec `N = 8` et `h = 0,10`, paramètres indépendants et configurables par vue. **Top-N complet :** les nouvelles candidates Point/Spot sont examinées par score décroissant ; chacune affronte **la plus faible lumière actuellement retenue** et ne la remplace que si `score(candidate) > score(lowestRetained) * (1 + h)` ; recalculer le minimum après chaque remplacement. **Toujours ouvert dans Q-TECH-001 :** identité de départage stable des ex æquo, remplissage initial et des places libres, cas `N=0`, réduction de N et reconfiguration de `h`, réactions aux changements de score/admissibilité, mutex de cache et notifications Registry/lumières/caméra. **Ne pas rouvrir** le Forward classique, le Top-N commun Point/Spot, les Directional hors quota ou les budgets d'ombres ponctuelles distincts.
 
 ### Q-TECH-002 — Constantes d'éclairage et projections d'ombres
 **Priorité : P1** — [Lumières, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md)
