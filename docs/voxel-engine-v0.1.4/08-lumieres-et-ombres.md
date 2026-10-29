@@ -307,6 +307,16 @@ flowchart TD
   Publish --> After["Captures ulterieures : seuil strict avec le nouveau h"]
 ```
 
+**Q-TECH-001 — places vacantes : remplissage sans hystérésis et conservation des titulaires admissibles (option A validée).** En l'absence de changement effectif de `N` ou de `h`, chaque nouveau classement part de **l'ensemble précédemment retenu pour cette EngineView**, et retire d'abord les lumières qui ne sont plus admissibles (supprimées du Registry, désactivées, hors volume d'influence/frustum donc de score nul, ou de score non strictement positif). Leur ancienne place n'est **pas protégée** par l'hystérésis. Les autres titulaires Point/Spot admissibles conservent leur place, même si leurs scores sont devenus inférieurs à ceux de nouvelles candidates qui n'ont pas encore franchi l'hystérésis.
+
+Classer ensuite les **candidates Point/Spot non déjà retenues** de score strictement positif par **score décroissant puis `LightRegistrationOrder` croissant**. Pour chacune : tant qu'il existe une place disponible (`retainedCount < N`), **l'admettre immédiatement sans test d'hystérésis**. Dès que les `N` places sont occupées, reprendre pour toutes les candidates suivantes **la seule règle déjà validée** : comparer à la plus faible retenue actuelle (score minimal, puis ordinal le plus récent en cas d'égalité) et remplacer uniquement si `score(candidate) > score(lowestRetained) * (1 + h)`, puis recalculer le minimum. Il n'y a ni recalcul brut complet des `N` meilleurs à cause d'une simple disparition, ni quota souple, ni place gardée vide en présence d'une candidate admissible.
+
+**Première sélection sans historique.** Une EngineView qui n'a encore **aucune sélection historique** commence avec un ensemble retenu vide et suit ce même remplissage : au plus `min(N, eligibleCount)` candidates, par score décroissant puis ancienneté, sans hystérésis pour les places initialement libres. Les captures suivantes réutilisent l'historique. `N=0` ne retient aucune Point/Spot ; les Directional actives restent hors quota. La décision de **réinitialiser entièrement le Top-N brut lorsque le jeu modifie effectivement `N` ou `h`** conserve la priorité sur ce mécanisme ordinaire de places vacantes ; elle ne doit jamais être confondue avec la disparition d'une lumière.
+
+**Exemple obligatoire (`N=3`, `h=0,10`).** Retenues historiques `A=100`, `B=96`, `C=95`, tandis que `D=102` et `E=99` sont non retenues (leurs scores ne dépassaient pas `95 × 1,10 = 104,5`). `C` est supprimée sans modification de `N` ni de `h` : conserver `A` et `B`, puis **admettre `D` sans hystérésis** dans la place vacante. La sélection devient `{D=102,A=100,B=96}`. `E=99` ne remplace pas `B=96` car `99 > 96 × 1,10 = 105,6` est faux. Un recalcul brut `{D,A,E}` est **interdit** dans ce cas. La suppression de `C` peut parallèlement entraîner son éviction de la sous-sélection d'ombres et de ses caches actifs, sans toucher aux cartes encore utilisées par des snapshots en vol.
+
+**Identité et publication.** Aucun `LightRegistrationOrder` n'est réattribué au remplissage. Si la candidate admissible est une PointLight à ombres, son admission à l'éclairage ne contourne ni `X/Y/epsilon`, ni l'hystérésis propre aux ombres, ni le budget de reconstruction GPU. Les `Light::Selection` précédemment publiées restent immuables, et les sorties de sélection d'une vue ne modifient pas une autre vue qui retient toujours la même lumière.
+
 **Q-TECH-001 — remplacement progressif validé lorsque le Top-N est complet (option A).** Pour chaque nouvelle sélection d'une `EngineView`, le `Light::Prioritizer` considère les **lumières locales Point/Spot précédemment retenues encore actives et de score strictement positif** comme les titulaires historiques ; une lumière qui a disparu, a été désactivée ou a un score nul n'est pas protégée par l'hystérésis. Les autres candidates locales actives et de score strictement positif, non déjà retenues, sont évaluées **par score décroissant, puis par ordinal d'enregistrement croissant** ; à score égal, la plus ancienne est évaluée d'abord. **Lorsque N places sont effectivement occupées**, la candidate considérée affronte exclusivement **la lumière au score le plus faible parmi toutes celles actuellement retenues**, y compris une lumière entrée lors d'un remplacement plus tôt dans cette même sélection. Le remplacement est accepté **si et seulement si** :
 
 ```text
@@ -317,15 +327,16 @@ En cas d'échec, la candidate est écartée **pour cette capture**, sans modifie
 
 **Exemple vérifiable (`N=2`, `h=0,10`).** L'ancienne sélection contient `A=100` et `B=95`; les nouvelles candidates sont `C=110` puis `D=106`. `C` remplace `B` car `110 > 95 × 1,10 = 104,5`. La plus faible retenue devient `A=100` ; `D` est refusée car `106 > 100 × 1,10 = 110` est faux. La sélection devient `{A,C}`. Avec `h=0,10`, une candidate à `110` ne remplace pas une retenue à `100` car le seuil est **strict**.
 
-**Portée de cette décision partielle.** La présente règle de remplacement traite le cas d'un Top-N complet **sans reconfiguration**. Les règles exactes de **remplissage des places vacantes** et d'**initialisation sans sélection précédente** restent à consolider sous Q-TECH-001. Les changements effectifs de `N` ou de `h`, y compris `N=0`, relèvent **déjà** du reset brut décrit ci-dessus. Ne pas les confondre avec la sélection distincte d'ombres ponctuelles `X/Y/epsilon` et son hystérésis propre.
+**Portée de ces règles.** La sélection ordinaire **sans reconfiguration** comprend désormais la conservation des retenues admissibles, le remplissage sans hystérésis des places libres et les remplacements stricts une fois `N` complet, y compris lors de la toute première capture sans historique. Les changements effectifs de `N` ou `h` relèvent au contraire de la réinitialisation brute déjà validée. Le protocole précis d'invalidation concurrente et de publication du cache reste à finaliser sous Q-TECH-001. Ne pas confondre ces règles avec la sous-sélection distincte d'ombres ponctuelles `X/Y/epsilon` et son hystérésis propre.
 
 ```mermaid
 flowchart TD
-  Prev["Retenues historiques actives : Point/Spot score positif"] --> Full{"N places occupees ?"}
+  Prev["Conserver retenues encore actives avec score positif, sinon retirer"] --> Full{"N places occupees ?"}
   Changed{"N ou h modifie avant capture ?"} -->|"Oui"| Reset["Reset selection : Top-N brut score puis ordinal, sans hysteresis"]
   Changed -->|"Non"| Prev
-  Candidates["Nouvelles candidates triees par score decroissant"] --> Full
-  Full -->|"Non : regle a consolider"| Open["Places vacantes : Q-TECH-001 encore ouverte"]
+  Candidates["Candidates non retenues triees score decroissant et ordinal croissant"] --> Full
+  Full -->|"Non"| Admit["Admettre meilleure nouvelle candidate sans hysteresis"]
+  Admit --> Next
   Full -->|"Oui"| Weak["Identifier la plus faible des retenues actuelles"]
   Weak --> Gate{"candidate > weakest x (1+h) ?"}
   Gate -->|"Oui"| Swap["Remplacer la plus faible et recalculer le minimum"]
