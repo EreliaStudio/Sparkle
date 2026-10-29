@@ -21,6 +21,10 @@ Ce fichier est le **sommaire normatif** des huit chapitres de Sparkle V0.1.4. Le
 | 7.5–7.8 | [GPU, Forward et WBOIT](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) |
 | 8 | [Contrats et validation](voxel-engine-v0.1.4/10-contrats-et-validation.md) |
 
+## Questions à résoudre avant l'implémentation
+
+Le [document des questions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) recense les arbitrages architecturaux **Q-ARCH** à valider avec le mainteneur et les précisions techniques **Q-TECH** à finaliser. Il n'annule aucune décision contenue dans les chapitres normatifs. Les points résolus seront intégrés dans les chapitres concernés puis retirés de ce suivi.
+
 ## Invariants de lecture
 
 - **Éclairage :** Forward classique avec Top-N global Point/Spot par EngineView, N et hystérésis configurables ; toutes les Directional actives hors quota. `Light::Selection` partagée par Lighting/ShadowMap et par opaque/WBOIT ; aucune grille de culling de lumières par tile.
