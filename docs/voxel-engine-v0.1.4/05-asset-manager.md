@@ -34,6 +34,36 @@ auto& b = assets.load<MyAsset>(
 
 La forme à un seul argument signifie **exactement un objet JSON vide**, obtenu par `spk::JSON::Value::object()`. Un `spk::JSON::Value{}` est en revanche **Null** dans l'API actuelle et demeure une clé **différente**. Ne jamais confondre objet vide et Null.
 
+**Application au schéma `Material` multi-rôles (Q-ARCH-005 validée).** Le document `Material` du chapitre 04 est un objet `{ "textures": { "<role>": { "Texture": ..., "UV": ... } } }`. Une factory spécialisée `AssetFactory<spk::Material>` peut déléguer sa construction au `Material::Builder` explicitement lié à l'`AssetManager&` reçu, sans registre de factories ni méthode `fromJSON()` universelle. Un chargement par `load<Material>(id, config)` possède **exactement la même identité de cache structurelle** que tout autre type d'asset ; l'ordre des clés `textures` ne distingue pas deux Materials. Des variations réelles de rôles, de sources, de grilles ou de sections UV sont conservées dans la configuration, donc participent à cette identité.
+
+**Résolution explicite de chaque rôle.** Pour `Texture: { "path": "fichier.png" }`, le constructeur de Material utilise `assets.load<Texture>("fichier.png", JSON::Value::object())`. La forme `{ "path": "atlas.png", "size": {"x":16,"y":16} }` fait appel à `assets.load<SpriteSheet>("atlas.png", { "size": ... })` ; le `size` désigne la **grille de sprites** et jamais une résolution en pixels. Ces formes fichier passent le chemin comme identifiant de factory, sans normalisation par l'AssetManager lui-même. Pour `Texture: { "asset": { "type": "Texture" | "SpriteSheet", "id": "...", "config": {...} } }`, le type est choisi **explicitement** puis `assets.load<T>(id, config)` est appelé avec le JSON de configuration intact. L'absence de `config` correspond à **un objet JSON vide**, pas à `Null`. Le code spécifique à `AssetFactory<T>` choisit lui-même comment interpréter `id` et `config` ; le schéma de Material ne lui impose aucune convention de chemin en mode référence typée.
+
+```json
+{
+  "textures": {
+    "albedo": {
+      "Texture": {
+        "asset": {
+          "type": "SpriteSheet",
+          "id": "terrain.png",
+          "config": { "size": { "x": 16, "y": 16 } }
+        }
+      },
+      "UV": { "sprite": { "x": 3, "y": 5 } }
+    },
+    "normal": {
+      "Texture": {
+        "asset": { "type": "Texture", "id": "terrain_normal.png" }
+      }
+    }
+  }
+}
+```
+
+Les deux formes `path + size` et `asset + type + id + config` qui aboutissent au **même triplet de dépendance** utilisent la même instance de `SpriteSheet` ou `Texture`. Deux configurations différentes (par exemple grille 16×16 et 8×8) créent des dépendances distinctes même si elles portent le même identifiant ; aucun rôle ne reconfigure une instance déjà chargée. La résolution d'un rôle ne change pas les règles de possession : après création, le Material conserve un `Texture::Handle` et une `Texture::Section`, sans emprunt au SpriteSheet ou à l'AssetManager. Un `AssetManager::clear()` invalide les références à ses assets, **mais n'invalide pas rétroactivement les handles** déjà conservés par les Materials.
+
+**Validation et échecs de chargement.** Le texte de fichier Material est lu avec `JSON::ParseOptions::rejectDuplicateKeys = true` (valeur déjà par défaut) ; `JSON::Value` conserve ensuite les objets sous forme de map et ne mémorise pas les doublons rejetés par le parseur. L'intégralité du schéma et de ses rôles est validée, avec `spk::Exception` contextualisée par le chemin `textures.<role>...`, avant de publier le Material. Une erreur sur le dernier rôle ne doit pas publier le Material partiel ; les dépendances déjà construites avec succès peuvent rester dans le cache, conformément au contrat général d'échec des factories. En cas d'erreur de dépendance ou de cycle direct/indirect, la cause native est conservée dans l'exception descriptive et la pile de détection de cycles est nettoyée.
+
 ### 5.2 Factories statiques par type
 
 Lorsqu'une clé est absente, le gestionnaire appelle une **factory spécialisée statiquement pour T**. Aucune inscription de factory par instance, aucun `registerFactory<T>()` et aucun registre dynamique de constructeurs ne sont requis.
