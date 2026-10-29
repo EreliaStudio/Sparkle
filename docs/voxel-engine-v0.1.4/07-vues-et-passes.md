@@ -435,6 +435,64 @@ Les nouvelles `RenderCommand` sont **génériques à Sparkle, par famille d'éta
 
 Les configurations de rendu jusqu'ici fixées uniquement dans `Window::Surface::initializeRenderState()` doivent être exprimées dans les passes appropriées ; l'initialisation effective du contexte OpenGL reste dans `Window::Surface`. Les commandes sont construites sur CPU sans appel GL, puis exécutées dans le `RenderContext` de chaque surface, sans état CPU mutable partagé.
 
-**Passes personnalisées des Contributors.** Les `EngineView::Contributor` peuvent contribuer aux passes standard initialisées par `RenderingEngine` **et** créer leurs propres `RenderPass`, en utilisant le `RenderSnapshot::Builder` existant et des `RenderPass::Key` à ordre numérique explicite. `RenderingEngine` réserve les identifiants de ses passes système et des bornes/plages d'ordonnancement pour les étapes qu'il doit garantir (notamment la composition finale et les transitions de cibles). Une passe ajoutée par un Contributor doit respecter ces réservations et ne peut pas intercaler ses commandes à l'intérieur d'une étape réservée ni déplacer la finalisation. Les passes personnalisées restent **locales au sous-snapshot de l'EngineView concernée** : elles ne peuvent pas réordonner deux vues, et elles doivent préparer explicitement les états OpenGL dont elles dépendent. Aucune nouvelle interface de scheduling ou ordonnanceur de dépendances n'est introduit. Les clés et limites numériques exactes ainsi que le contrôle des collisions seront finalisés dans le contrat des passes avant implémentation ; ne pas inventer de valeurs fixes dans la présente spécification.
+### 7.2.1 RenderPass personnalisées — Q-ARCH-006 validée : plages numériques
+
+**API retenue.** Les `EngineView::Contributor` reçoivent **le même `RenderSnapshot::Builder&`** et continuent de demander les passes par `renderPass(RenderPass::Key{name, order})`, comme dans Sparkle actuel : **aucune API de placement sémantique, aucun tri de dépendances et aucun autre ordonnanceur**. Cette politique s'applique seulement **aux passes à l'intérieur d'un sous-snapshot EngineView**, pas aux passes UI d'Application ni à la passe de préparation globale des PointLight et aux délégations de vues du snapshot moteur. `RenderPass::Order` reste un **`std::int32_t`**, sans conversion vers un ordre public de vue.
+
+**Plages et clés normatives.** Les quatre passes de base ont un **ordre numérique réservé** et un nom système stable. Les Contributors peuvent ajouter des passes **personnalisées** dans les seules plages ouvertes suivantes. Chaque intervalle est **inclusif** ; les valeurs du tableau sont des valeurs exactes et ne sont pas calculées en ajoutant 1 à une sentinelle en borne entière.
+
+| Étape de la vue | `RenderPass::Order` | Nom/usage |
+|---|---:|---|
+| Personnalisée avant ombres | `[-2147483648, -1000001]` | Avant la passe système des ombres |
+| **Système — ombres** | **`-1000000`** | **`sparkle.engineview.shadow`** |
+| Personnalisée après ombres | `[-999999, -1]` | Après ombres, avant opaque |
+| **Système — opaque** | **`0`** | **`sparkle.engineview.opaque`** |
+| Personnalisée après opaque | `[1, 999999]` | Après opaque, avant WBOIT |
+| **Système — WBOIT** | **`1000000`** | **`sparkle.engineview.wboit`** |
+| Personnalisée après WBOIT | `[1000001, 1999999]` | Avant composition finale |
+| **Système — composition** | **`2000000`** | **`sparkle.engineview.composition`** |
+| Interdite après composition | `[2000001, 2147483647]` | Aucun draw de vue après la finalisation |
+
+Le domaine des nombres autorisés comprend les valeurs minimales et maximales **du type signé 32 bits** sans débordement ; les constantes de phases sont visibles dans les en-têtes de l'EngineView ou dans une configuration équivalente de Sparkle (noms C++ définitifs à consolider). Ces valeurs sont **un contrat de V0.1.4**, pas de simples exemples. L'ordre croissant des clés suffit à garantir le classement du `Builder` existant. La composition reste la dernière passe de la vue : des post-traitements personnalisés appartiennent donc à l'intervalle immédiatement **avant composition**, et non à une hypothétique passe implicite après la sortie finale.
+
+**Contributeurs et passes système.** `RenderingEngine` crée les quatre passes système dans chaque sous-snapshot actif, **même si elles ne possèdent aucun draw**, puis y place les commandes d'état framebuffer/viewport/scissor/blending/depth/cull/clear avant les contributions. Un Contributor peut contribuer **intentionnellement** à une de ces passes en demandant **exactement sa paire nom + ordre système** ; ses commandes sont ajoutées après l'initialisation système et, comme pour toute autre commande, doivent préparer explicitement l'état GL qu'elles requièrent. Il ne peut ni déplacer, ni renommer, ni recréer la passe système sous une autre clé, ni changer la cible GPU implicitement. L'API garde ainsi une insertion directe à l'intérieur des phases système sans placer arbitrairement d'autres passes entre deux commandes d'une même phase.
+
+**Noms, collisions et fusion existante.** Tout nom de passe est **non vide** ; le préfixe `sparkle.` est réservé aux passes de Sparkle, sauf pour demander **exactement** une des quatre clés système existantes. Une passe personnalisée doit utiliser un nom hors de cet espace et un ordre dans **une plage personnalisée valide**. Plusieurs Contributors peuvent **fusionner explicitement leurs commandes** dans une même passe personnalisée en demandant **le même nom et le même ordre** : c'est le comportement existant de `RenderSnapshot::Builder::renderPass()`. Un nom demandé à **des ordres différents** reste une erreur, comme déjà dans le Builder ; **deux noms distincts au même ordre numérique** sont une **collision interdite dans un sous-snapshot EngineView**, même si le tri stable du Builder les aurait autrement ordonnés selon l'insertion. Les clés système ne peuvent être usurpées ni entrer en conflit avec un autre nom. Les passes personnalisées ne sont jamais mutualisées entre des vues différentes : le même nom/ordre est légal dans deux Builders de vues distincts. L'ordre des commandes volontairement fusionnées dans une passe suit leur insertion dans ce Builder, et n'est **pas** un nouvel ordre de priorité entre Contributors ; le jeu souhaitant un ordre strict choisit des clés numériques distinctes.
+
+**Contrôle à la capture et implémentation minimale.** Toutes les demandes de passe du Builder de vue doivent être validées **avant `build()` et publication du snapshot moteur**. Les contraintes sont : nom non vide, domaine entier autorisé, réservations système, doublons de noms/ordres, et absence de noms distincts partageant le même ordre. Une violation lève une **`spk::Exception` descriptive** donnant la vue, le nom, l'ordre en cause et la plage attendue, sans publier de snapshot moteur partiel ; le dernier snapshot déjà publié demeure inchangé. Le `Builder` générique garde son mécanisme de fusion par nom et de tri stable, et ses usages hors EngineView ne deviennent **pas** soumis implicitement à cette politique. Pour vérifier aussi les passes ajoutées directement par les Contributors via `Builder&`, `RenderingEngine` peut lire les clés préparées au moyen d'un accès **en lecture seule** (getter/visiteur indicatif ajouté au Builder), puis appliquer la validation **spécifique à la vue** ; ce contrôle n'est pas une nouvelle API de scheduling.
+
+**État GPU et cibles.** Chaque passe système réinstalle au début les états explicitement prescrits ; chaque passe applicative fait de même pour les états dont elle dépend. Une passe entre opaque et WBOIT ne suppose pas que le depth mask ou la cible MRT précédemment activée restent utiles. Les couleurs et la profondeur produites par les phases standard ne doivent pas être invalidées en silence ; une passe personnalisée demeure responsable de ses framebuffer, textures et synchronisations. Aucune passe ne peut forcer le changement d'ordre entre vues, ni contourner la composition finale, ni déplacer les commandes de retour aux états UI qui appartiennent **au snapshot de fenêtre**, après la délégation complète de la vue/moteur.
+
+**Exemple (clés et valeurs retenues ; signatures de création de Contributor indicatives) :**
+
+```cpp
+// Depuis un EngineView::Contributor, dans le Builder de cette vue :
+auto& outline = builder.renderPass({"game.outline", 100});
+outline.emplace<OutlineRenderCommand>(/* paramètres immuables */);
+
+// Contribution directe à la passe système opaque :
+auto& opaque = builder.renderPass({"sparkle.engineview.opaque", 0});
+opaque.emplace<DrawMyOpaqueCommand>(/* ressources capturées */);
+
+// builder.renderPass({"game.late", 2000001});          // interdit : après composition
+// builder.renderPass({"game.conflict", 100});          // interdit si game.outline existe
+// builder.renderPass({"sparkle.engineview.opaque", 42}); // interdit : ordre système
+```
+
+```mermaid
+flowchart TD
+  C["Contributor : RenderSnapshot.Builder et RenderPass.Key"] --> V["Valider nom, plage, cles systeme, ordre unique"]
+  V -->|"Violation"| E["spk.Exception avant publication"]
+  V -->|"Valide"| B["Builder existant : tri par ordre croissant"]
+  B --> Pre["Passes applicatives avant ombres"]
+  Pre --> S["Systeme shadow -1000000"]
+  S --> AS["Passes applicatives avant opaque"]
+  AS --> O["Systeme opaque 0"]
+  O --> AO["Passes applicatives avant WBOIT"]
+  AO --> W["Systeme WBOIT 1000000"]
+  W --> AW["Passes applicatives avant composition"]
+  AW --> F["Systeme composition 2000000 : derniere passe"]
+```
+
 
 **Contraintes de construction et de réentrance.** L'encodage des clés de délégation respecte l'ordre explicite des vues puis leur ordre de création, sans attribuer de priorité numérique cachée aux vues non ordonnées. La transition `EngineWidget`/fenêtre intervient avant toute commande UI ultérieure. Les `RenderCommand` existantes, y compris celles utilisant des UBO, doivent être réentrantes entre plusieurs `RenderContext` ; le `Profiler` doit décrire correctement l'exécution de sous-snapshots imbriqués. Une construction incomplète conserve le snapshot précédemment publié. Les bornes numériques des clés et les coefficients WBOIT non spécifiés figurent dans le document complémentaire.
