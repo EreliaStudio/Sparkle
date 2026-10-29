@@ -12,15 +12,6 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-001 — Compatibilité entre paramètres lumineux capturés et générations de shadow maps
-**Priorité : P0** — [Lumières et ombres, §7.3–7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) · [Pipeline, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
-
-**Validé :** une ancienne carte complète reste utilisable, avec **ses propres matrices, projections et génération**, tant que la lumière est toujours sélectionnée pour les ombres ; `Lighting::System` appelle `acquireLatest()` sur le slot de la surface lors de `execute()` ; aucune génération plus ancienne ne peut écraser une plus récente.
-
-**À définir :** quelle information de la lumière capturée est consommée avec une carte d'une autre génération (position, direction, portée, intensité, autres paramètres) ? Quel test de compatibilité précis empêche de combiner une nouvelle shadow map et une ancienne représentation lumineuse d'un snapshot en vol ? Quand faut-il réutiliser la carte avec **l'état historique qui lui appartient**, et quand faut-il éclairer sans ombre ? Que se passe-t-il après désélection puis réadmission sous une nouvelle identité logique ?
-
-**Clôture :** contrat complet de cohérence et de décision de consommation, plus tests de captures entrelacées A/B, anciennes/nouvelles générations et changement de lumière entre capture et rendu.
-
 ### Q-ARCH-002 — Préparation du budget global de reconstruction des ombres ponctuelles
 **Priorité : P0** — [Lumières et ombres, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) · [Vues et passes, §7.1–7.2](voxel-engine-v0.1.4/07-vues-et-passes.md)
 
