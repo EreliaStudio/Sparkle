@@ -224,11 +224,12 @@ flowchart TB
   subgraph G["Thread GPU : par Window::Surface"]
     Consume["Snapshot de fenêtre"]
     EngineExec["Exécuter le snapshot moteur"]
+    Plan["Préparer budget PointLight global par image/surface"]
     Surveillance["Vue surveillance : shadow, opaque, WBOIT, composition"]
     Main["Vue main : shadow, opaque, WBOIT, composition"]
     Restore["Framebuffer de fenêtre et état UI explicites"]
     UI["Drawing et autres widgets"]
-    Consume --> EngineExec --> Surveillance --> Main --> Restore --> UI
+    Consume --> EngineExec --> Plan --> Surveillance --> Main --> Restore --> UI
   end
   WindowSnap --> Consume
 ```
@@ -287,7 +288,15 @@ sequenceDiagram
 
 **Sous-snapshot propre à chaque EngineView.** À chaque `RenderingEngine::refreshRenderSnapshot()`, le moteur **réconcilie d'abord les abonnements de chaque vue** au regard des Contributors présents dans le Registry et des layers, même si sa caméra est détachée. Il crée ensuite un `RenderSnapshot::Builder` neuf pour chaque **vue ayant une caméra liée à l'instant de la capture** ; il ignore pour ce nouveau rendu les vues volontairement détachées. Les `EngineView::Contributor` actifs **admis par le filtre de layers de la vue** contribuent au **même Builder de cette vue**, à l'aide d'un `EngineView::CaptureContext` explicite (caméra, matrices, résolution, identifiant de vue, lumières pertinentes et handles de cibles logiques). Le moteur prépare les passes standard avant de solliciter les contributeurs.
 
-Le sous-snapshot de chaque vue est construit puis **détenu par valeur** par une commande de délégation (nom illustratif : `ExecuteViewSnapshotCommand`). Le Builder du snapshot moteur contient une passe par vue, de nom unique, dont l'ordre **interne** respecte la séquence calculée à partir des vues à priorité explicite, puis des vues non ordonnées dans leur ordre de création (voir règle ci-dessus). L'exécution d'une passe du moteur appelle `subSnapshot.execute(renderContext)` : **toutes** les phases de `surveillance` (ombres, opaque, WBOIT, composition) sont exécutées avant la première phase de `main`, lorsque leurs ordres explicites sont 0 et 1. Toute vue sans ordre est exécutée après ces deux vues. Les noms et ordres des passes **internes aux sous-snapshots** sont isolés entre vues. Aucun second ordonnanceur, tri de dépendances des Materials ou encodage global des phases n'est introduit.
+Le sous-snapshot de chaque vue est construit puis **détenu par valeur** par une commande de délégation (nom illustratif : `ExecuteViewSnapshotCommand`). Le Builder du snapshot moteur contient **une passe de préparation globale des reconstructions de PointLight, puis une passe par vue**, de noms distincts. Leurs ordres **internes** respectent cette étape préalable et la séquence calculée à partir des vues à priorité explicite, puis des vues non ordonnées dans leur ordre de création (voir règle ci-dessus). Les numéros internes des passes ne reprennent pas directement les priorités publiques des vues et n'emploient aucune sentinelle supérieure à la borne maximale de `RenderPass::Order`. L'exécution d'une passe du moteur appelle `subSnapshot.execute(renderContext)` : **toutes** les phases de `surveillance` (ombres, opaque, WBOIT, composition) sont exécutées avant la première phase de `main`, lorsque leurs ordres explicites sont 0 et 1. Toute vue sans ordre est exécutée après ces deux vues. Les noms et ordres des passes **internes aux sous-snapshots** sont isolés entre vues. Aucun second ordonnanceur, tri de dépendances des Materials ou encodage global des phases n'est introduit.
+
+**Commande préalable de budget des PointLight.** Pendant la capture CPU, le `ShadowMap::RenderingSystem` fournit à la construction du snapshot moteur les **demandes immuables de toutes les EngineView effectivement capturées** : identité de vue, identité de lumière/admission, score déjà calculé par `Light::Prioritizer`, ordinal CPU de capture, références fortes des ressources/caches logiques et commandes de reconstruction potentielles. Cette agrégation n'est **pas** une mutualisation des données de dessin des vues et ne vérifie pas la validité OpenGL sur le thread CPU. Le moteur place une seule commande préalable (nom indicatif `PreparePointShadowRebuildsCommand`) **avant la première délégation de vue**. Elle n'ajoute ni dépendance automatique entre vues, ni second ordonnanceur de passes : chaque sous-snapshot conserve son ordre et ses passes habituelles.
+
+**Exécution et durée de vie du plan.** Sur le `RenderContext` de la `Window::Surface` courante, cette commande examine **toutes** les demandes capturées, consulte uniquement la validité/génération GPU et l'admission synchronisée pertinentes **pour cette surface**, supprime les doublons puis classe les paires à reconstruire par score décroissant (départage stable vue/lumière). Elle réserve jusqu'au budget commun les paires éligibles dans un **plan figé pour l'exécution de l'image**. Le plan et un ensemble transitoire de paires déjà traitées appartiennent à l'**état d'exécution de l'image**, lié au `RenderContext` et à ce système d'ombres, non au snapshot ni à une commande partagée. Le `RenderContext` est créé pour chaque rendu effectif de fenêtre et détruit à son terme ; ses données n'existent pas pendant la capture et ne survivent pas à l'image. Une seconde exécution du même snapshot **dans ce même contexte d'image** conserve le plan et n'autorise pas deux reconstructions de la même paire ; une nouvelle image, même si elle réexécute un ancien snapshot, recalcule un plan neuf depuis les demandes immuables et les validités de sa surface.
+
+**Utilisation du plan.** Chaque commande d'ombres ponctuelles de la vue consulte l'autorisation préparée pour sa paire (vue, lumière, admission, surface) au moment d'exécuter les faces. Elle revérifie la validité GPU et l'admission avant reconstruction : une paire devenue valide ou révoquée ne doit pas être redessinée ni publiée. Une paire non attribuée n'effectue aucune reconstruction et reste disponible pour éclairer avec sa carte complète antérieure si celle-ci est admissible. Une annulation, un échec GPU ou un changement de validité **après la préparation** ne provoque pas de redistribution implicite du budget aux candidats moins bien classés pendant l'image : les demandes seront réévaluées à l'image suivante. Une paire ne peut être marquée reconstruite et publiée qu'après traitement complet des six faces (statique/finale selon invalidation) ; les erreurs propagent `spk::Exception` et ne publient pas de carte partielle.
+
+**Portée et réentrance.** Le budget demeure propre au `ShadowMap::RenderingSystem`, commun à toutes les vues de **son snapshot moteur** et isolé par `Window::Surface`. Deux surfaces peuvent exécuter le même snapshot simultanément avec des plans et réalisations GPU indépendants. Comme déjà établi pour les `EngineWidget`, l'application est responsable d'éviter les doubles déclenchements logiques du même `RenderingEngine` dans une fenêtre : aucun ordonnanceur global inter-`EngineWidget` ou inter-moteurs n'est créé pour agréger plusieurs snapshots moteurs indépendants dans une image. Si une même paire est rencontrée à nouveau au cours de cette image, elle n'est jamais reconstruite ou débitée deux fois. Le protocole d'exécution des vues et leurs `RenderPass` reste strictement inchangé.
 
 **Pas de mutualisation inter-vues pour V0.1.4.** Chaque vue recalcule indépendamment ses transforms, sa visibilité, ses buckets, ses SSBO d'instances et ses commandes. Les ressources sources préexistantes (meshes, matériaux, textures, handles) demeurent réutilisables ; aucun cache ou objet de capture partagé entre vues n'est exigé. La mutualisation est une optimisation future éventuelle, seulement après mesures. La simulation `Engine::updateState()` n'est pas répétée pour chaque vue.
 
@@ -303,6 +312,7 @@ sequenceDiagram
   participant R as RenderContext GPU
   G->>E: updateState() (simulation)
   G->>E: refreshRenderSnapshot()
+  E->>E: initialiser collecte globale de demandes PointLight
   loop Pour chaque EngineView dans l'ordre
     E->>E: reconcilier les Contributors visuels selon Registry et layers
     alt Ensemble admissible modifie
@@ -317,6 +327,7 @@ sequenceDiagram
       C->>V: commandes visuelles et passes generiques
       SH->>SH: filtrer casters et reconcilier contrats d ombre
       SH->>V: commandes de la RenderPass d ombres unique
+      SH->>E: ajouter demandes PointLight immuables de cette vue
       E->>V: finaliser les phases de la vue
       V-->>E: sous-RenderSnapshot immuable
       E->>M: ajouter passe de vue + ExecuteViewSnapshotCommand
@@ -324,10 +335,14 @@ sequenceDiagram
       E->>E: ne pas construire de rendu pour cette vue
     end
   end
-  M-->>E: RenderSnapshot moteur
+  E->>M: ajouter passe initiale de preparation globale PointLight
+  M-->>E: RenderSnapshot moteur immuable
   E->>S: publish(snapshot moteur)
   S-->>R: snapshot immuable capture par la fenetre
-  R->>R: executer chaque sous-snapshot complet dans son ordre
+  R->>R: preparer plan GPU global pour cette surface et image
+  loop Pour chaque vue dans son ordre initial
+    R->>R: executer sous-snapshot et ombres autorisees par plan
+  end
   R->>R: retablir framebuffer de presentation et etat UI
 ```
 
