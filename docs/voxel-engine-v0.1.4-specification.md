@@ -23,7 +23,7 @@ Ce fichier est le **sommaire normatif** des huit chapitres de Sparkle V0.1.4. Le
 
 ## Questions à résoudre avant l'implémentation
 
-Les **sept arbitrages architecturaux Q-ARCH-001 à Q-ARCH-007 sont clos** et leurs décisions figurent désormais dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **sept Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
+Les **sept arbitrages architecturaux Q-ARCH-001 à Q-ARCH-007 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`) et leurs décisions figurent désormais dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
 
 ## Invariants de lecture
 
