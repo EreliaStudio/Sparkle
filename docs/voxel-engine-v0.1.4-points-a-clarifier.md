@@ -19,7 +19,7 @@
 ### Q-TECH-001 — Règles de Top-N et d'hystérésis lumineuse
 **Priorité : P1** — [Lumières, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md)
 
-Définir les valeurs initiales de `N` et `h`, le tie-break stable, la séquence exacte de remplacement lorsque N est atteint, le cas `N=0`, la réduction de N et les changements de score/admissibilité. Documenter le mutex de cache et les notifications de Registry/lumières/caméra. **Ne pas rouvrir** le Forward classique, le Top-N partagé Point/Spot ou les Directional hors quota.
+**Profil initial résolu :** `N = 8` et `h = 0,10` pour le `Light::Prioritizer` de chaque nouvelle EngineView ; ces paramètres restent configurables indépendamment par vue et ne concernent pas les budgets d'ombres. **Toujours ouvert dans Q-TECH-001 :** tie-break stable, séquence exacte de remplacement lorsque N est atteint, cas `N=0`, réduction de N, changements de score/admissibilité, mutex du cache et notifications Registry/lumières/caméra. **Ne pas rouvrir** le Forward classique, le Top-N partagé Point/Spot ou les Directional hors quota.
 
 ### Q-TECH-002 — Constantes d'éclairage et projections d'ombres
 **Priorité : P1** — [Lumières, §7.4](voxel-engine-v0.1.4/08-lumieres-et-ombres.md)
