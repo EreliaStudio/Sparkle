@@ -12,15 +12,6 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-### Q-ARCH-006 — API d'ordonnancement des `RenderPass` personnalisées dans une EngineView
-**Priorité : P0** — [Vues et passes, §7.1–7.2](voxel-engine-v0.1.4/07-vues-et-passes.md)
-
-**Validé :** un sous-snapshot **indépendant par EngineView**, détenu par valeur dans une commande de délégation, s'exécute entièrement avant la vue suivante ; les vues explicitement ordonnées précèdent les autres ; les `RenderPass::Key` existantes sont classées par entier signé et les noms sont fusionnés par Builder. Aucun ordonnanceur de dépendances général ni tri automatique des Materials.
-
-**À définir :** contrat des noms et plages des passes **à l'intérieur d'une vue**, emplacement possible des contributions applicatives personnalisées (avant/après opaque, WBOIT, composition), conflits de noms ou ordres numériques, comportement en cas de dépassement des limites de `RenderPass::Order`. Comment garantir que les phases standard existent et sont correctement ordonnées sans réserver des numéros impossibles à respecter ?
-
-**Clôture :** règles publiques d'admission/ordonnancement des passes personnalisées, adaptation du Builder clairement décrite et tests de collisions ainsi que des bornes entières. **Ne pas rouvrir le choix des sous-snapshots**, déjà approuvé.
-
 ### Q-ARCH-007 — Composition des attachments et versionnement des render targets
 **Priorité : P0** — [Vues, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md) · [Pipeline, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
 
