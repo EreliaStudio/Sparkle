@@ -49,6 +49,27 @@ sequenceDiagram
   end
 ```
 
+**Famille d'attachments et versions d'EngineView.** La composition de `Framebuffer` par `Texture::Handle` explicites appartient au type générique déjà existant, sans nouveau `RenderTarget`. L'EngineView construit atomiquement une famille de cibles (opaque, WBOIT, composition et profondeur **partagée**) pour chaque taille/version logique. Ses commandes GPU capturent des `Framebuffer::Handle` et `Texture::Handle` forts vers cette version. Un resize choisi par le jeu alloue des **nouveaux States** avant publication du nouveau snapshot ; jamais de `Framebuffer::resize()` mutable en place sur les anciens States, ni de réaffectation des attachments d'une version déjà capturée. Un snapshot ancien exécuté après resize continue à rendre sur **ses propres** ressources GPU logiques ; sur la même `Window::Surface` ses anciennes textures peuvent rester indépendamment valides, mais ne sont pas utilisées comme la nouvelle sortie courante. La disponibilité des pixels produits est suivie **par (surface, version/handle)** et pas par nom d'EngineView seul. Les deux surfaces A/B matérialisent les mêmes handles CPU en instances GL distinctes, avec un depth commun **à l'intérieur de chacune**, jamais partagé entre A et B.
+
+```mermaid
+flowchart LR
+  View["EngineView cible V"] --> OpaqueColor["Opaque couleur handle V"]
+  View --> Depth["Depth handle V"]
+  View --> Accum["Accumulation RGBA16F handle V"]
+  View --> Reveal["Reveal R8 handle V"]
+  OpaqueColor --> FBOOpaque["FBO opaque handle V"]
+  Depth --> FBOOpaque
+  Depth --> FBOWBOIT["FBO WBOIT handle V"]
+  Accum --> FBOWBOIT
+  Reveal --> FBOWBOIT
+  FBOOpaque --> DrawOpaque["Opaque : depth write"]
+  DrawOpaque --> DrawWBOIT["WBOIT : depth test, mask off"]
+  FBOWBOIT --> DrawWBOIT
+  DrawWBOIT --> Compose["Composition finale"]
+  View --> Resize["Resize explicite"]
+  Resize --> V2["Famille V2 : nouveaux handles, V conservee"]
+```
+
 ### 7.8 Pipeline Forward classique, opaque et WBOIT
 
 **Éclairage global par EngineView.** Les shaders calculent directement la couleur éclairée des surfaces opaques et translucides (Forward classique), sans G-buffer, Deferred ni culling lumineux par tiles GPU. Le `Light::Prioritizer` de la vue retient un Top-N global des `Point` et `Spot`, plus toutes les `Directional` actives hors budget N. La sélection immutable est commune à `Lighting::System` et `ShadowMap::RenderingSystem`. Aucun compute shader de culling de tiles, buffer de listes par tile ou mécanisme d'overflow de telles listes n'est requis.
@@ -110,9 +131,9 @@ L'initialisation du framebuffer et des états est indépendante de la passe de d
 
 La sélection des contributeurs aux shadow maps respecte la séparation **opaque/translucide** : pour les voxels, une géométrie de profondeur **explicitement fournie par le `MeshFilter` du `ShadowMap::Contributor`** est la source des éventuels casters ; elle peut être différente du mesh visuel opaque. Le rendu translucide du `VoxelRenderingSystem` ne contribue jamais directement à une passe d’ombres. La source d’ombre doit respecter la règle de projection opaque, sans transmission translucide en V0.1.4 : cette précondition incombe au producteur du `ShadowMap::Mesh`, dont le seul attribut est la position, et n'est pas vérifiable par le système d'ombres. L'infrastructure d'ombres reste **générique Sparkle** et ne doit pas traiter différemment les voxels et les autres géométries classées opaques/translucides. Le contrat particulier des mécanismes de *cutout* non voxel préexistants reste distinct et n'est pas redéfini par cette décision. Le moteur ne doit pas fabriquer de stratégie d'ombres translucides implicite. Les lumières ponctuelles peuvent projeter des ombres lorsque leur composant les active explicitement et que les budgets de leur vue et de leur surface les autorisent.
 
-**Profondeur partagée entre opaque et WBOIT.** Pour chaque `EngineView` et chaque `Window::Surface`, la passe opaque et la passe translucide WBOIT utilisent **le même attachment de profondeur logique et la même instance GPU locale**, associés aux framebuffers des phases correspondantes. La profondeur est initialisée pour le rendu opaque ; l'opaque effectue ses tests et ses écritures habituels. La passe WBOIT réutilise ensuite **sans copie ni recalcul** les profondeurs opaques : **depth test activé, depth write mask désactivé** pendant tous les dessins translucides. Le WBOIT ne doit ni effacer ni écraser le depth buffer de l'opaque. Les fragments translucides derrière une surface opaque sont ainsi écartés par ce test ; la transparence entre fragments translucides reste gérée par l'accumulation WBOIT, sans depth write.
+**Profondeur partagée entre opaque et WBOIT (Q-ARCH-007).** Pour chaque **version logique** d'une `EngineView` et chaque `Window::Surface`, la passe opaque et la passe translucide WBOIT utilisent **exactement le même `Texture::Handle` de profondeur et la même instance GPU locale**, placés dans deux `Framebuffer::State` distincts par référence partagée, pas par copies de `Texture` ou deux textures de profondeur synchronisées. Une même instance GL de depth est ainsi attachée au FBO opaque puis au FBO WBOIT, sans copie/blit intermédiaire. La profondeur est initialisée pour le rendu opaque ; l'opaque effectue ses tests et ses écritures habituels. La passe WBOIT réutilise ensuite **sans copie ni recalcul** les profondeurs opaques : **depth test activé, depth write mask désactivé** pendant tous les dessins translucides. Le WBOIT ne doit ni effacer ni écraser le depth buffer de l'opaque. Les fragments translucides derrière une surface opaque sont ainsi écartés par ce test ; la transparence entre fragments translucides reste gérée par l'accumulation WBOIT, sans depth write.
 
-Les `DepthRenderCommand` et `FramebufferRenderCommand` typées établissent cet état **explicitement à l'entrée de la passe**, sans dépendre de l'état GL résiduel des phases précédentes. Les attachments couleur MRT (`RGBA16F` et `R8`) sont propres au WBOIT, mais leur framebuffer doit référencer **le même depth attachment** que celui de l'opaque, et non une copie ou une texture différente. La compatibilité des dimensions, des échantillons et la complétude des framebuffers doivent être validées lors de leur matérialisation sur chaque surface ; toute incompatibilité déclenche `spk::Exception`. Le depth buffer possède la même règle de **versionnement des cibles immuables** lors du resize explicite : un nouveau snapshot ne modifie pas rétroactivement le depth attachment capturé par un snapshot antérieur. La fonction de comparaison exacte reste à choisir dans le contrat de profondeur du pipeline.
+Les `DepthRenderCommand` et `FramebufferRenderCommand` typées établissent cet état **explicitement à l'entrée de la passe**, sans dépendre de l'état GL résiduel des phases précédentes. Le framebuffer WBOIT contient les **deux** `Texture::Handle` couleur ordonnés : accumulation `RGBA16F` (support à ajouter à `Texture::Format`, encore absent du code actuel) et révélation `R8` (format `Texture::Format::GreyLevel`), plus **le même handle de profondeur** que l'opaque. Les capacités MRT, blending par attachment, formats color-renderable, nombre maximal de draw buffers, dimensions et échantillonnage compatibles sont vérifiés **sur la surface au moment de la matérialisation** ; le framebuffer doit être complet avant les draws, sinon `spk::Exception` descriptive, jamais de repli silencieux. La profondeur opaque n'est effacée qu'au début de la phase opaque ; WBOIT **ne la réinitialise pas**, conserve son test de profondeur et désactive ses écritures. Une commande de composition ne modifie pas rétroactivement les profondeurs capturées. La comparaison exacte reste un détail du contrat de profondeur du pipeline.
 
 ```mermaid
 flowchart LR
