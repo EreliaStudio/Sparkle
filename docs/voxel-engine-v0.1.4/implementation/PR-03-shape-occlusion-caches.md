@@ -33,6 +33,13 @@ La transformation ne doit plus être portée par `Cell` (ni publique, ni privée
 ## Tests obligatoires
 
 - [ ] Huit orientations sur cube, slab, slope et stair JSON, avec positions, UV, normales, boundaries et winding.
+- [ ] Migrer les scénarios de tests géométriques retirés de PR-01 vers les tests du `ShapeTransformationCache` :
+  - `EightOrientationsTransformPositionsAndNormals` : transformer la position (0.2, 0.3, 0.4) et le vecteur (1, 2, 3) dans les huit orientations ; comparer aux résultats attendus pour les quatre rotations et les quatre flips.
+  - `WindingUVAndFrontFacesSurviveEveryVerticalFlip` : position et UV restent associés au même sommet sous flip ; normales géométriques et d'éclairage et winding CCW restent cohérents.
+  - `FlippedTopAndBottomOuterFacesSwap` : le bord `PositiveY` devient `NegativeY` après inversion verticale.
+  - `SixSidedCubeKeepsEachPhysicalFrontFaceUnderEveryOrientation` : conserver les six frontières distinctes et faces avant des six polygones.
+  - `EveryShapeSupportsEightOrientedCellsWithoutUVOrWindingLoss` : reprendre les fixtures `cube.json`, `slab.json`, `slope.json`, `stair.json` depuis `tests/TU/Core/resources/voxel/shapes/` sans dupliquer leurs géométries, puis vérifier positions, UV, normales, slots locaux et winding.
+  - Les tests appellent exclusivement la nouvelle API de transformation ; ne pas réintroduire d'adaptateur `CellTestAccess` ou de friend `VoxelMesher`.
 - [ ] Identité partagée : même Shape/orientation réutilise le résultat, deux Shapes de contenu égal restent distinctes.
 - [ ] Refus d'utilisation de `OcclusionCache` non lié ou lié à `nullptr` par `spk::Exception`.
 - [ ] A→B différent de B→A, absence différente d'un résultat valide vide, opacités et tolérance dans la clé.
