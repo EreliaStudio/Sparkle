@@ -10,24 +10,24 @@ Ce dossier contient **26 fiches de développement successives**, destinées à u
 |---|---|---|
 | [PR-01 — Shape, Definition et Cell](PR-01-voxel-foundations.md) | — | Constituer le modèle voxel public sans Engine et sans OpenGL. |
 | [PR-02 — Volume dense et Builder](PR-02-voxel-volume.md) | 01 | Éditer une grille voxel puis publier des snapshots immuables. |
-| [PR-03 — VoxelMesher, clipping et Model](PR-03-voxel-mesher-model.md) | 02 | Générer un modèle voxel complet et déterministe à partir du Volume. |
-| [PR-04 — OcclusionCache facultatif](PR-04-occlusion-cache.md) | 03 | Mettre en cache le clipping sans changer les triangles produits. |
+| [PR-03 — ShapeTransformationCache et OcclusionCache](PR-03-shape-occlusion-caches.md) | 01 | Calculer les huit orientations et l'occlusion CPU directionnelle avec bindings obligatoires. |
+| [PR-04 — VoxelMesher, clipping et Model](PR-04-voxel-mesher-model.md) | 02, 03 | Produire un Model depuis Volume + OcclusionCache lié. |
 | [PR-05 — AssetManager et AssetFactory typés](PR-05-asset-manager.md) | — | Charger et posséder des assets C++ génériques à identité stable. |
 | [PR-06 — Material multi-rôles, Texture et SpriteSheet](PR-06-materials-json.md) | 05 | Construire des Materials immuables via Builder ou JSON. |
-| [PR-07 — VoxelPalette et compatibilité des Models](PR-07-voxel-palette.md) | 03, 06 | Associer les slots sémantiques de Models à des Materials sans rebake. |
+| [PR-07 — VoxelPalette et compatibilité des Models](PR-07-voxel-palette.md) | 04, 06 | Associer les slots sémantiques de Models à des Materials sans rebake. |
 | [PR-08 — Voxel::Assembly par copie et expansion](PR-08-assembly-hierarchy.md) | 07 | Composer une hiérarchie de Parts animables sans Entity par Part. |
 | [PR-09 — RenderingEngine : Engine et Contributors](PR-09-rendering-engine-inheritance.md) | — | Moderniser l'API moteur graphique tout en préservant le moteur headless. |
 | [PR-10 — EngineView, layers et sous-RenderSnapshots](PR-10-engineview-snapshot.md) | 09 | Construire des snapshots graphiques immuables ordonnés par vues. |
 | [PR-11 — Attachments partagés et ressources GPU par Surface](PR-11-gpu-attachments-surfaces.md) | — | Rendre sûrs Texture/Framebuffer versionnés et la récupération GPU en multifenêtres. |
 | [PR-12 — EngineWidget et première EngineView visible](PR-12-enginewidget-first-view.md) | 09, 10, 11 | Afficher une vue et sa sortie HDR finale dans un widget sans dessin voxel. |
-| [PR-13 — VoxelRenderingSystem et rendu de Model opaque](PR-13-voxel-render-first.md) | 03, 07, 10, 11, 12 | Dessiner un Model voxel texturé dans sa première EngineView. |
+| [PR-13 — VoxelRenderingSystem et rendu de Model opaque](PR-13-voxel-render-first.md) | 04, 07, 10, 11, 12 | Dessiner un Model voxel texturé dans sa première EngineView. |
 | [PR-14 — AssemblyRenderingComponent et instancing articulé](PR-14-assembly-render.md) | 08, 13 | Afficher plusieurs Parts d'Assembly sans rémailler. |
 | [PR-15 — EngineView comme source de Material](PR-15-material-view-source.md) | 06, 10, 11, 12, 13 | Permettre l'usage de la sortie finale d'une EngineView par un Material dans une autre vue. |
 | [PR-16 — Skybox unlit à six Materials](PR-16-skybox-component.md) | 06, 10, 11, 12, 15 | Ajouter un Skybox générique comme composant RenderingComponent3D ordinaire. |
 | [PR-17 — Point, Spot, Directional et scores](PR-17-light-components.md) | 09 | Introduire les sources lumineuses directes et leur mathématique CPU. |
 | [PR-18 — Light::Channel, Top-N et cohérence CPU](PR-18-light-channel.md) | 09, 10, 17 | Fournir une sélection immuable par EngineView cohérente avec ses mutations. |
 | [PR-19 — Lighting::System et éclairage Forward](PR-19-forward-lighting.md) | 12, 13, 17, 18 | Éclairer les meshes opaques à partir d'une sélection globale par vue. |
-| [PR-20 — ShadowMap::Contributor et MeshFilter](PR-20-shadow-contributor.md) | 03, 09 | Définir des sources d'ombres géométriques explicites indépendantes du visuel. |
+| [PR-20 — ShadowMap::Contributor et MeshFilter](PR-20-shadow-contributor.md) | 04, 09 | Définir des sources d'ombres géométriques explicites indépendantes du visuel. |
 | [PR-21 — ShadowResults, admission et durée de vie des surfaces](PR-21-shadowresults-surfaces.md) | 10, 11, 18 | Publier les résultats de shadow maps de façon sûre et isolée par Surface. |
 | [PR-22 — ShadowMap::RenderingSystem pour Spot/Directional](PR-22-shadowmaps-spot-directional.md) | 17, 18, 19, 20, 21 | Produire des ombres 2D avec caches depth statiques et finals, puis éclairer avec. |
 | [PR-23 — Cubemaps PointLight et PCF inter-faces](PR-23-point-cubemaps.md) | 11, 17, 21, 22 | Étendre les cartes statique/finale aux PointLight omnidirectionnelles. |
@@ -51,6 +51,8 @@ Chaque PR d'implémentation possède une **branche Git dédiée**, créée depui
 - Exécuter les tests CTest/GoogleTest pertinents en Debug et Release, Core Windows/Linux et Graphics Windows lorsque ces cibles sont touchées. Les images de référence nécessitent une revue humaine.
 - Réaliser une revue indépendante et obtenir accord du propriétaire pour chaque fusion.
 
-**Jalons :** PR01 premières cellules orientées ; PR03 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 Assembly articulée ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
+**Jalons :** PR01 premières cellules orientées (description seulement) ; PR03 caches de transformation/occlusion ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 Assembly articulée ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
 
-**Hors scope volontaire :** cache par orientation de Shape non approuvé, raffinements adaptatifs d'ombres, Tiled Forward+, moteur de chunks, scheduling GPU global, optimisation SSBO incrémentale.
+**Hors scope volontaire :** éviction automatique des caches de géométrie, raffinements adaptatifs d'ombres, Tiled Forward+, moteur de chunks, scheduling GPU global, optimisation SSBO incrémentale.
+
+**Ordre voxel révisé :** PR-01 → PR-02 (Volume) et PR-03 (caches) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Model) attend les deux. Les bindings ShapeTransformationCache → OcclusionCache → VoxelMesher sont obligatoires, sans création implicite ni fallback.
