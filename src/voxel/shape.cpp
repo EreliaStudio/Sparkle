@@ -277,6 +277,11 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
+	const Shape::Instance &Shape::instance() const
+	{
+		return instance(Orientation{});
+	}
+
 	const Shape::Instance &Shape::instance(Orientation orientation) const
 	{
 		const unsigned degrees = static_cast<unsigned>(orientation.horizontal);
