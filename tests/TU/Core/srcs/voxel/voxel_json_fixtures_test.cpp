@@ -11,6 +11,7 @@
 #include "container/json/object.hpp"
 #include "exception.hpp"
 #include "voxel/cell.hpp"
+#include "voxel_cell_test_access.hpp"
 
 namespace
 {
@@ -139,7 +140,7 @@ namespace
 			const Definition definition(shape, std::move(mapping));
 			for (const auto &cell : orientations(definition))
 			{
-				const auto oriented = cell.orientedPolygons();
+				const auto oriented = spk::Voxel::CellTestAccess::orientedPolygons(cell);
 				ASSERT_EQ(oriented.size(), shape.polygons().size());
 				for (std::size_t polygonIndex = 0; polygonIndex < oriented.size(); ++polygonIndex)
 				{
@@ -156,9 +157,9 @@ namespace
 						const auto &source = original.vertices[sourceIndex];
 						const auto &transformed = result.vertices[vertexIndex];
 						EXPECT_EQ(transformed.uv, source.uv);
-						const auto expected = cell.transformPosition(source.position);
+						const auto expected = spk::Voxel::CellTestAccess::transformPosition(cell, source.position);
 						EXPECT_NEAR((transformed.position - expected).length(), 0.0, 1.0e-6);
-						EXPECT_NEAR((*transformed.normal - cell.transformNormal(*source.normal)).length(), 0.0, 1.0e-6);
+						EXPECT_NEAR((*transformed.normal - spk::Voxel::CellTestAccess::transformNormal(cell, *source.normal)).length(), 0.0, 1.0e-6);
 					}
 					const auto edgeA = result.vertices[1].position - result.vertices[0].position;
 					const auto edgeB = result.vertices[2].position - result.vertices[0].position;

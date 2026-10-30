@@ -58,9 +58,6 @@ namespace spk::Voxel
 		private:
 			std::vector<Slot> _slots;
 			std::vector<Polygon> _polygons;
-			bool _consumed = false;
-
-			void _check() const;
 
 		public:
 			Builder() = default;

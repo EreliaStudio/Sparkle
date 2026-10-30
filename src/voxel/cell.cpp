@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "exception.hpp"
 
 namespace
 {
@@ -16,23 +15,6 @@ namespace
 			value.z = isPosition ? 1.0f - x : -x;
 		}
 		return value;
-	}
-
-	unsigned quarterTurns(spk::Voxel::Cell::HorizontalOrientation orientation) noexcept
-	{
-		using Horizontal = spk::Voxel::Cell::HorizontalOrientation;
-		switch (orientation)
-		{
-		case Horizontal::XPositive:
-			return 0;
-		case Horizontal::ZPositive:
-			return 3;
-		case Horizontal::XNegative:
-			return 2;
-		case Horizontal::ZNegative:
-			return 1;
-		}
-		return 0;
 	}
 
 	spk::Vector3 faceDirection(spk::Voxel::Shape::Face face) noexcept
@@ -93,14 +75,6 @@ namespace spk::Voxel
 		_horizontalOrientation(horizontal),
 		_verticalOrientation(vertical)
 	{
-		if (static_cast<unsigned>(horizontal) > static_cast<unsigned>(HorizontalOrientation::ZNegative))
-		{
-			throw spk::Exception("Voxel Cell horizontal orientation is invalid");
-		}
-		if (static_cast<unsigned>(vertical) > static_cast<unsigned>(VerticalOrientation::YNegative))
-		{
-			throw spk::Exception("Voxel Cell vertical orientation is invalid");
-		}
 	}
 
 	const Definition &Cell::definition() const noexcept
@@ -129,7 +103,7 @@ namespace spk::Voxel
 		{
 			position.y = 1.0f - position.y;
 		}
-		return rotateY(position, quarterTurns(_horizontalOrientation), true);
+		return rotateY(position, static_cast<unsigned>(_horizontalOrientation) / 90u, true);
 	}
 
 	spk::Vector3 Cell::transformNormal(spk::Vector3 normal) const noexcept
@@ -138,7 +112,7 @@ namespace spk::Voxel
 		{
 			normal.y = -normal.y;
 		}
-		return rotateY(normal, quarterTurns(_horizontalOrientation), false);
+		return rotateY(normal, static_cast<unsigned>(_horizontalOrientation) / 90u, false);
 	}
 
 	Shape::Polygon Cell::orientedPolygon(const Shape::Polygon &polygon) const

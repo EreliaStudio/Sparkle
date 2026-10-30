@@ -13,6 +13,7 @@
 #include "diagnostics/logger.hpp"
 #include "exception.hpp"
 #include "voxel/cell.hpp"
+#include "voxel_cell_test_access.hpp"
 
 namespace
 {
@@ -86,8 +87,12 @@ namespace
 		EXPECT_TRUE(first.slots().empty());
 		EXPECT_FALSE(first == second);
 		EXPECT_TRUE(first == Shape(first));
-		EXPECT_THROW(firstBuilder.build(), spk::Exception);
-		EXPECT_THROW(firstBuilder.addSlot("later"), spk::Exception);
+		const Shape another = firstBuilder.build();
+		EXPECT_FALSE(first == another);
+		firstBuilder.addSlot("later");
+		const Shape extended = firstBuilder.build();
+		EXPECT_EQ(extended.slots().size(), 1u);
+		EXPECT_TRUE(first.slots().empty());
 	}
 
 	TEST(VoxelShapeTest, ValidPolygonsRetainSlotsWindingLightingNormalsAndClassification)
@@ -196,7 +201,7 @@ namespace
 		EXPECT_TRUE(explicitAir.isAir());
 		EXPECT_TRUE(air.definition() == Definition::air());
 		EXPECT_TRUE(air.definition().shape().polygons().empty());
-		EXPECT_TRUE(explicitAir.orientedPolygons().empty());
+		EXPECT_TRUE(spk::Voxel::CellTestAccess::orientedPolygons(explicitAir).empty());
 		EXPECT_EQ(air.horizontalOrientation(), Cell::HorizontalOrientation::XPositive);
 		EXPECT_EQ(air.verticalOrientation(), Cell::VerticalOrientation::YPositive);
 	}
@@ -225,12 +230,14 @@ namespace
 		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
 			const Cell cell = makeOrientedCell(definition, index);
-			expectVectorNear(cell.transformPosition({0.2f, 0.3f, 0.4f}), positions[index]);
-			expectVectorNear(cell.transformNormal({1, 2, 3}), normals[index]);
+			expectVectorNear(spk::Voxel::CellTestAccess::transformPosition(cell, {0.2f, 0.3f, 0.4f}), positions[index]);
+			expectVectorNear(spk::Voxel::CellTestAccess::transformNormal(cell, {1, 2, 3}), normals[index]);
 			EXPECT_TRUE(cell.definition() == definition);
 		}
-		EXPECT_THROW((Cell(definition, static_cast<Cell::HorizontalOrientation>(255))), spk::Exception);
-		EXPECT_THROW((Cell(definition, Cell::HorizontalOrientation::XPositive, static_cast<Cell::VerticalOrientation>(255))), spk::Exception);
+		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::XPositive), 0u);
+		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZNegative), 90u);
+		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::XNegative), 180u);
+		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZPositive), 270u);
 	}
 
 	TEST(VoxelCellTest, WindingUVAndFrontFacesSurviveEveryVerticalFlip)
@@ -239,7 +246,7 @@ namespace
 		for (unsigned value = 0; value < 8; ++value)
 		{
 			const Cell cell = makeOrientedCell(definition, value);
-			const auto polygons = cell.orientedPolygons();
+			const auto polygons = spk::Voxel::CellTestAccess::orientedPolygons(cell);
 			ASSERT_EQ(polygons.size(), 1u);
 			const auto &polygon = polygons.front();
 			ASSERT_EQ(polygon.vertices.size(), 4u);
@@ -255,7 +262,7 @@ namespace
 			for (std::size_t i = 0; i < original.vertices.size(); ++i)
 			{
 				const std::size_t dest = value >= 4 ? original.vertices.size() - 1 - i : i;
-				expectVectorNear(polygon.vertices[dest].position, cell.transformPosition(original.vertices[i].position));
+				expectVectorNear(polygon.vertices[dest].position, spk::Voxel::CellTestAccess::transformPosition(cell, original.vertices[i].position));
 				EXPECT_EQ(polygon.vertices[dest].uv, original.vertices[i].uv);
 			}
 			EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
@@ -269,7 +276,7 @@ namespace
 		builder.addSlot("top");
 		builder.addPolygon("top", {vertex(0, 1, 0), vertex(0, 1, 1), vertex(1, 1, 1), vertex(1, 1, 0)});
 		const Cell cell(Definition(builder.build(), {{"top", "roof"}}), Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YNegative);
-		const auto polygon = cell.orientedPolygons().front();
+		const auto polygon = spk::Voxel::CellTestAccess::orientedPolygons(cell).front();
 		EXPECT_EQ(polygon.boundary, Shape::Face::NegativeY);
 		EXPECT_FLOAT_EQ(polygon.vertices[0].position.y, 0.0f);
 	}
@@ -286,6 +293,13 @@ namespace
 		builder.addPolygon("sheet", reversed);
 		const Shape shape = builder.build();
 		ASSERT_EQ(shape.polygons().size(), 3u);
+		ASSERT_EQ(shape.slots().size(), 1u);
+		const Definition definition(shape, {{"sheet", "stone"}});
+		for (const auto &polygon : shape.polygons())
+		{
+			EXPECT_EQ(polygon.slotKey, "sheet");
+			EXPECT_EQ(definition.semanticSlot(polygon.slotKey), "stone");
+		}
 		EXPECT_EQ(shape.polygons()[0].geometricNormal, shape.polygons()[1].geometricNormal);
 		EXPECT_EQ(shape.polygons()[0].geometricNormal, -shape.polygons()[2].geometricNormal);
 	}
@@ -324,7 +338,7 @@ namespace
 		{
 			const Cell cell = makeOrientedCell(definition, index);
 			std::set<Shape::Face> boundaries;
-			const auto polygons = cell.orientedPolygons();
+			const auto polygons = spk::Voxel::CellTestAccess::orientedPolygons(cell);
 			ASSERT_EQ(polygons.size(), 6u);
 			for (const auto &polygon : polygons)
 			{

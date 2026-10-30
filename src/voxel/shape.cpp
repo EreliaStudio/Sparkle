@@ -241,17 +241,8 @@ namespace spk::Voxel
 		addFromJSON(json);
 	}
 
-	void Shape::Builder::_check() const
-	{
-		if (_consumed)
-		{
-			throw spk::Exception("Voxel Shape Builder has already been consumed");
-		}
-	}
-
 	void Shape::Builder::addSlot(std::string name, float opacity)
 	{
-		_check();
 		if (name.empty() || !std::isfinite(opacity) || opacity < 0.0f || opacity > 1.0f)
 		{
 			throw spk::Exception("Voxel Shape slot requires a name and opacity in [0,1]");
@@ -268,7 +259,6 @@ namespace spk::Voxel
 
 	void Shape::Builder::addPolygon(std::string slotKey, std::vector<Vertex> vertices)
 	{
-		_check();
 		bool found = false;
 		for (const Slot &entry : _slots)
 		{
@@ -307,7 +297,6 @@ namespace spk::Voxel
 
 	void Shape::Builder::addFromJSON(const spk::JSON::Value &value)
 	{
-		_check();
 		Builder pending = *this;
 		try
 		{
@@ -342,8 +331,6 @@ namespace spk::Voxel
 		auto data = std::make_shared<Data>();
 		data->slots = _slots;
 		data->polygons = _polygons;
-		Shape result(std::move(data));
-		_consumed = true;
-		return result;
+		return Shape(std::move(data));
 	}
 }
