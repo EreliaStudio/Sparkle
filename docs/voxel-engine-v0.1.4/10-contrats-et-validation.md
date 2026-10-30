@@ -249,13 +249,15 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Éclairage Forward classique et WBOIT**
 
-**Q-TECH-007 — capture moteur historiquement cohérente (option C validée)**
+**Q-TECH-007 — capture moteur historiquement cohérente (option C validée, groupe clôturé)**
 
 - Capturer sous la coordination CPU une version `T1` cohérente (lumières, Transform3D, caméra, commandes d'une vue et sélection Top-N validée), suspendre **la construction du `RenderSnapshot` après la capture** et muter les valeurs sources en `T2`. Sans suppression de vue, vérifier que le snapshot `T1` peut **être publié** malgré la mutation, que ses valeurs restent entièrement `T1`, et que le snapshot suivant peut porter `T2` ; **ne pas rejeter/recommencer** seulement à cause du changement de génération des sources depuis `T1`.
 - Intercaler plusieurs mutations synchronisées du moteur (lumière/Registry, Transform parent-enfant, caméra, Skybox/Contributor) pendant le travail du Builder : aucune commande GPU capturée ne doit relire de source mutable, ni mélanger matrices, géométrie, UV ou sélection de différentes versions ; les ressources et identités empruntées sont stabilisées. Une capture invalide ou échouée ne remplace jamais la publication précédente.
 - **Frontière Q-TECH-001 :** invalider une génération Top-N **avant** le commit de sa nouvelle `Light::Selection` : le constructeur de Channel la rejette toujours et recalcule, même si le snapshot moteur accepte ultérieurement une capture historique déjà **validée**. Interdire toute admission d'ombre révoquée et toute nouvelle publication dans un Channel fermé ; tester le fallback éclairage sans ombre sur un snapshot historique.
 - **Exception `removeView()` :** capturer `T1` avec une vue V, supprimer V puis la recréer sous le même nom avant le commit du snapshot. Le contrôle bref sous verrou moteur doit **refuser la publication qui réintroduirait l'incarnation supprimée** ; les snapshots publiés auparavant gardent leurs handles/Channel historiques. Vérifier que ce contrôle ne devient pas une validation globale des dernières valeurs CPU ni un verrou prolongé sur tout le Builder.
 
+
+- **Q-TECH-007 — captures CPU séquentielles, exécution GPU multifenêtres.** Deux fenêtres A et B portent chacune un `EngineWidget` de rôle `Render` lié au même moteur. Dans `Application::UpdateRuntime::executeOnce()`, instrumenter les appels synchrones : terminer **entièrement** `refreshRenderSnapshot()` de A (construction et publication) avant de commencer celui de B. Vérifier que la capture S2 ne peut pas terminer avant S1 sur ce chemin et qu'**aucune politique de départage de publications CPU en sens inverse**, aucun mutex de sérialisation supplémentaire ni file d'ordonnancement ne sont nécessaires. Exécuter ensuite leurs snapshots immuables sur deux surfaces GPU en parallèle : cette exécution concurrente reste permise et indépendante de l'ordre des captures CPU. Un utilisateur qui crée volontairement plusieurs threads appelant `refreshRenderSnapshot()` doit coordonner ces appels lui-même ; ce n'est pas une garantie du runtime normal.
 
 **Q-TECH-001 — transaction synchronisée et cycle de vie (option A validée)**
 
