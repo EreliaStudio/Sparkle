@@ -4,22 +4,26 @@
 
 ## 3. Meshing, visibilité et occlusion
 
+### 3.0 Géométries orientées déjà présentes dans `Shape`
+
+Les huit `Shape::Instance` (quatre rotations horizontales × inversion verticale) sont créées et conservées dans `Shape::Data` lors de `Shape::Builder::build()`, conformément au §2. Le Mesher et l'algorithme d'occlusion consultent **les mêmes instances const** via `Shape::instance(orientation)`. Positions, normales, UV, winding, frontières et classifications y sont déjà finalisés. Aucun `ShapeTransformationCache` séparé n'existe et ni l'occlusion ni le Mesher ne réorientent les polygones.
+
 ### 3.1 `spk::Voxel::VoxelMesher`
 
 Le Mesher transforme un `Volume` immuable en un **nouveau `Model` immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
 
-Son travail est indépendant des matériaux concrets et des pixels de texture. Il peut, de manière facultative, emprunter un `OcclusionCache` externe :
+Son travail est indépendant des matériaux concrets et des pixels de texture. Le `VoxelMesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
 
 ```cpp
 spk::Voxel::VoxelMesher mesher;
-spk::Voxel::OcclusionCache cache;
+auto uncachedModel = mesher.bake(volume); // Occlusion recalculée
 
-mesher.bind(&cache);
-auto model = mesher.bake(volume);
-mesher.unbind();
+spk::Voxel::OcclusionCache occlusion;
+mesher.bind(&occlusion);                   // Optimisation facultative
+auto cachedModel = mesher.bake(volume);
 ```
 
-`bind(OcclusionCache*)` est un emprunt non propriétaire ; le cache doit rester vivant tant qu'il est lié et utilisé. La liaison est facultative : sans cache, le même algorithme de visibilité s'exécute sans mémorisation de ses résultats. Une nouvelle liaison à cible unique exige normalement un `unbind()` préalable ; le type exact du Mesher et ses méthodes secondaires restent à finaliser.
+La liaison du cache, lorsqu'elle existe, est non propriétaire : l'appelant garantit sa durée de vie pendant le bake. Une absence de cache ou une liaison retirée signifie le mode sans cache, **pas une erreur**. La forme exacte de `bind(nullptr)` ou `unbind()` reste un détail d'API locale ; aucune liaison de cache de transformations n'est nécessaire. Le clipping partagé ne doit pas être dupliqué entre le chemin avec cache et le chemin sans cache.
 
 La tolérance de clipping est un seul paramètre configurable du Mesher, **`1e-5` par défaut** dans les unités locales du cube. Toute valeur non finie ou non strictement positive est rejetée par `spk::Exception`. Cette tolérance contribue à la clé du cache. La détermination des longueurs, aires et seuils de dégénérescence doit rester dimensionnellement cohérente : ne pas comparer une aire directement à une longueur.
 
@@ -82,13 +86,13 @@ Les `outerShell` continuent à être traités par clipping directionnel indépen
 
 ### 3.5 `spk::Voxel::OcclusionCache`
 
-Le cache est une ressource autonome **facultative** et indépendante des Meshers, des palettes et du GPU. Plusieurs Meshers peuvent l'utiliser.
+Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et GPU, et **facultative pour le VoxelMesher**. Plusieurs Meshers peuvent partager une même instance. Il n'a aucun binding de transformation et n'a pas de `ShapeTransformationCache` interne : les deux chemins d'occlusion (avec et sans cache) consomment directement `Shape::instance(orientation)`. En cas d'absence d'entrée, le cache utilise le même calcul CPU directionnel que le Mesher non caché, puis peut mémoriser le résultat.
 
 Une entrée représente **une requête directionnelle A → B** : quels fragments de l'`outerShell` de A restent visibles après occultation par B ? Le sens **B → A** constitue une autre requête, une autre clé et éventuellement un autre résultat. Une valeur valide contenant zéro fragment signifie **occlusion totale**, tandis que l'absence d'entrée est représentée par `std::nullopt`.
 
 La clé identifie les blocs immuables `Shape::Data` des deux cellules, leurs orientations, la direction du voisinage, les contrats géométriques d'opacité pertinents et la tolérance de clipping. L'identité de Shape vient du Data partagé, **pas d'un hash de contenu ni d'un identifiant artificiel**. Les clés conservent une propriété partagée suffisante sur ces Data pour empêcher le recyclage d'adresse de créer de fausses correspondances. Les slots sémantiques de Model et les matériaux concrets n'entrent pas dans l'identité d'un résultat si les contrats géométriques sont équivalents.
 
-`OcclusionResult` est une valeur immuable, à copie légère, contenant les **fragments visibles de A dans le repère local de la Shape A**, leurs UV, leurs attributs et leurs **slots géométriques locaux**. Il ne contient ni indices des slots du Model ni pointeurs vers une palette. Après lecture du cache, le Mesher applique le mapping de la Definition, l'orientation et le placement dans le Volume.
+`OcclusionResult` est une valeur immuable, à copie légère, contenant les **fragments visibles de A dans le repère local de la Shape A**, leurs UV, leurs attributs et leurs **slots géométriques locaux**. Il ne contient ni indices des slots du Model ni pointeurs vers une palette. Après lecture ou calcul de l'occlusion, le Mesher applique le mapping de la Definition et le placement dans le Volume ; la géométrie utilisée est déjà orientée.
 
 `OcclusionCache` protège sa table par un `spk::ProtectedData<Data>` **privé** :
 
@@ -98,7 +102,7 @@ La clé identifie les blocs immuables `Shape::Data` des deux cellules, leurs ori
 
 Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`OcclusionResult` récupérées avant une purge restent valides. Les entrées du cache et les références aux Shapes restent détenues **jusqu'à `clear()` ou destruction** : aucune éviction automatique, aucun LRU et aucun budget de mémoire obligatoire.
 
-Un cache partagé peut être interrogé simultanément ; en revanche, sa **destruction** et la modification de son binding pendant un bake actif ne sont pas rendues sûres par la seule synchronisation de `find/store/clear`.
+Un cache partagé peut être interrogé simultanément ; sa **destruction** ou le changement de liaison facultative du Mesher pendant un bake actif ne sont pas rendus sûrs par la seule synchronisation de `find/store/clear`.
 
 ### 3.6 `spk::Voxel::Model` : résultat immuable
 

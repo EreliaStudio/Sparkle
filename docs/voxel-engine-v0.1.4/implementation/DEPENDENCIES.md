@@ -4,16 +4,18 @@ Les liens entre fiches sont des prérequis **techniques**, pas seulement un ordr
 
 ```mermaid
 flowchart TD
-  P01["01 Shape"] --> P02["02 Volume"] --> P03["03 Mesher"]
-  P03 --> P04["04 OcclusionCache"]
+  P01["01 Shape"] --> P02["02 Volume"]
+  P01 --> P03["03 Clipping + OcclusionCache"]
+  P02 --> P04["04 Mesher + Model"]
+  P03 --> P04
   P05["05 Assets"] --> P06["06 Material"]
-  P03 --> P07["07 Palette"]
+  P04 --> P07["07 Palette"]
   P06 --> P07 --> P08["08 Assembly"]
   P09["09 RenderingEngine"] --> P10["10 EngineView"]
   P11["11 GPU Targets"] --> P12["12 EngineWidget"]
   P10 --> P12
   P09 --> P12
-  P03 --> P13["13 Voxel opaque"]
+  P04 --> P13["13 Voxel opaque"]
   P07 --> P13
   P12 --> P13 --> P14["14 Assembly Render"]
   P08 --> P14
@@ -27,7 +29,7 @@ flowchart TD
   P18 --> P19["19 Forward"]
   P13 --> P19
   P17 --> P19
-  P03 --> P20["20 Shadow Contrib"]
+  P04 --> P20["20 Shadow Contrib"]
   P09 --> P20
   P18 --> P21["21 ShadowResults"]
   P11 --> P21
@@ -47,10 +49,12 @@ flowchart TD
   P25 --> P26
 ```
 
-**Deux chaînes parallèles au début :** la chaîne voxel (PR01–04) et la chaîne graphique (PR09–12). La chaîne AssetManager/Material (PR05–06) peut commencer sans les autres. Elles convergent sur PR13. Les ombres dépendent de l'éclairage mais PR25 WBOIT ne dépend pas du calcul des shadow maps ; elle peut progresser en parallèle des PR20–24.
+**Deux chaînes parallèles au début :** la chaîne voxel (PR01–04, avec PR02 et PR03 parallèles) et la chaîne graphique (PR09–12). La chaîne AssetManager/Material (PR05–06) peut commencer sans les autres. Elles convergent sur PR13. Les ombres dépendent de l'éclairage mais PR25 WBOIT ne dépend pas du calcul des shadow maps ; elle peut progresser en parallèle des PR20–24.
 
-**Chemin critique visible :** PR09 → PR10 et PR11 → PR12, puis PR03 + PR07 + PR12 → PR13. Il donne le fond d'une EngineView d'abord, puis un vrai voxel texturé.
+**Chemin critique visible :** PR09 → PR10 et PR11 → PR12, puis PR04 + PR07 + PR12 → PR13. Il donne le fond d'une EngineView d'abord, puis un vrai voxel texturé.
 
 **Risques :** préserver l'input après le remplacement de RenderingEngine en PR09, l'immuabilité des anciens Handles au resize en PR11 et les transactions mutation+invalidation en PR18. Tester ces frontières dès les PR correspondantes.
 
 **Mode de collaboration :** une branche par fiche, créée **depuis la tête courante de `V0.1.4`** et ciblant **`V0.1.4`**. Fusionner d'abord les prérequis dans `V0.1.4` ; deux fiches indépendantes peuvent avancer en branches parallèles, à resynchroniser avant fusion. Ne jamais créer une branche sur une autre branche de développement, ni cibler `main` avec une des 26 PR. La PR #37 reste le regroupement final `V0.1.4` → `main`.
+
+**Contrat voxel :** PR-01 fournit les huit `Shape::Instance` dans `Shape::Data` ; PR-03 fournit le clipping directionnel CPU et son `OcclusionCache` facultatif ; PR-04 consomme le même algorithme de clipping avec ou sans cache. Aucun `ShapeTransformationCache` autonome, aucune liaison obligatoire au Mesher et aucune transformation répétée des Shapes.

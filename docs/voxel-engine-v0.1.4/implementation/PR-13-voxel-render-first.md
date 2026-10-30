@@ -6,7 +6,7 @@
 
 **Objectif :** Dessiner un Model voxel texturé dans sa première EngineView.
 
-**Prérequis :** [PR-03](PR-03-voxel-mesher-model.md), [PR-07](PR-07-voxel-palette.md), [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md)
+**Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-07](PR-07-voxel-palette.md), [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md)
 
 ## Spécifications normatives
 

@@ -6,7 +6,7 @@
 
 **Objectif :** Définir des sources d'ombres géométriques explicites indépendantes du visuel.
 
-**Prérequis :** [PR-03](PR-03-voxel-mesher-model.md), [PR-09](PR-09-rendering-engine-inheritance.md)
+**Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-09](PR-09-rendering-engine-inheritance.md)
 
 ## Spécifications normatives
 

@@ -1,8 +1,6 @@
 # PR-01 — Shape, Definition et Cell
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
->
-> **Branche source :** `impl/v0.1.4/01-voxel-foundations`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **PR-01 en cours :** [PR GitHub #40](https://github.com/EreliaStudio/Sparkle/pull/40), sur `impl/v0.1.4/01-voxel-foundations` créée depuis `V0.1.4` et ciblant `V0.1.4`. Ne pas fusionner sans validation du propriétaire.
 
 **Objectif :** Constituer le modèle voxel public sans Engine et sans OpenGL.
 
@@ -24,11 +22,11 @@
 - [ ] outerShell et innerShell
 - [ ] Definition et correspondance de slots
 - [ ] Definition Air
-- [ ] Cell par valeur et 8 orientations.
+- [ ] Cell par valeur et deux enums décrivant huit orientations, sans méthodes de transformation géométrique.
 
 ## Instructions techniques et intégration
 
-Valider avant chaque ajout avec garantie forte; conserver positions dans [0,1]^3, UV arbitraires et warning Logger; bloc de données partagé immuable et identité distincte entre constructions; flip vertical conserve winding et normales; build réussi consomme Builder.
+Valider avant chaque ajout avec garantie forte; conserver positions dans [0,1]^3, UV arbitraires et warning Logger; bloc de données partagé immuable et identité distincte entre constructions; le flip vertical est précalculé dans les huit `Shape::Instance` lors de `Shape::Builder::build()`, pas dans Cell ; build réussi laisse le Builder réutilisable, sans mutation rétroactive des Shapes publiées.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
@@ -38,14 +36,18 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] Builder inchangé après échec
 - [ ] deux Shapes de même contenu mais identités différentes
 - [ ] UV hors [0,1] avertis
-- [ ] 8 orientations géométrie UV normale winding
+- [ ] Huit `Shape::Instance` distinctes et stables, partagées par copie de Shape, sans mutation rétroactive après réutilisation du Builder.
+- [ ] Copies conservant les instances après destruction de la Shape d'origine ; plusieurs threads peuvent les lire simultanément sans nouveau calcul ni modification.
+- [ ] Deux Definitions avec des noms sémantiques différents partageant la même Shape récupèrent les mêmes huit instances ; les slots locaux ne sont pas remappés dans le cache.
+- [ ] Un ajout invalide au Builder n'invalide aucune des huit références d'instances précédemment publiées ; la publication suivante conserve sa propre identité.
+- [ ] Vérifier toutes les orientations sur positions, normales géométriques et personnalisées, UV, winding, frontières et slots ; inclure Shape vide et les quatre fixtures JSON. La géométrie orientée relève de PR-01, pas de PR-03.
 - [ ] Air sans face.
 
 **Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
 
 ## Définition de terminé / critère de fusion
 
-Exemple de cube par Definition et 8 Cell orientées vérifié numériquement en tests CPU.
+Exemple de cube par Definition et huit Cell décrivant les orientations, vérifié en tests CPU. Les huit géométries orientées sont construites et testées dans PR-01 et accessibles par `Shape::instance()`.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
@@ -54,7 +56,7 @@ Exemple de cube par Definition et 8 Cell orientées vérifié numériquement en 
 
 ## Hors périmètre
 
-Volume, Model, maillage GPU, cache par orientation.
+Volume, Model, maillage GPU, `OcclusionCache`, clipping directionnel et toute opération transformant la géométrie depuis `Cell`. Le cache par orientation est interne à `Shape` et appartient à cette PR.
 
 ## Consigne de passation
 
