@@ -213,6 +213,92 @@ namespace
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZPositive), 270u);
 	}
 
+	TEST(VoxelShapeTest, EightOrientationsProvideStableInstancesAndPhysicalFrontFaces)
+	{
+		const Shape shape = makeSquare();
+		const Shape copied = shape;
+		const Shape independent = makeSquare();
+		const std::array<Shape::Face, 8> expectedFaces = {
+			Shape::Face::NegativeX, Shape::Face::PositiveZ,
+			Shape::Face::PositiveX, Shape::Face::NegativeZ,
+			Shape::Face::NegativeX, Shape::Face::PositiveZ,
+			Shape::Face::PositiveX, Shape::Face::NegativeZ};
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const auto orientation = Shape::Orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			const auto &instance = shape.instance(orientation);
+			EXPECT_EQ(&instance, &copied.instance(orientation));
+			EXPECT_NE(&instance, &independent.instance(orientation));
+			ASSERT_EQ(instance.polygons().size(), 1u);
+			const auto &polygon = instance.polygons()[0];
+			EXPECT_EQ(polygon.boundary, expectedFaces[index]);
+			EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
+			EXPECT_EQ(polygon.slotKey, "wall");
+			ASSERT_EQ(polygon.vertices.size(), 4u);
+			const auto edgeA = polygon.vertices[1].position - polygon.vertices[0].position;
+			const auto edgeB = polygon.vertices[2].position - polygon.vertices[0].position;
+			EXPECT_GT(edgeA.cross(edgeB).dot(polygon.geometricNormal), 0.0f);
+			for (const auto &vertex : polygon.vertices)
+			{
+				ASSERT_TRUE(vertex.normal.has_value());
+				EXPECT_EQ(*vertex.normal, polygon.geometricNormal);
+				EXPECT_GE(vertex.position.x, 0.0f);
+				EXPECT_LE(vertex.position.x, 1.0f);
+				EXPECT_GE(vertex.position.y, 0.0f);
+				EXPECT_LE(vertex.position.y, 1.0f);
+				EXPECT_GE(vertex.position.z, 0.0f);
+				EXPECT_LE(vertex.position.z, 1.0f);
+			}
+		}
+	}
+
+	TEST(VoxelShapeTest, VerticalFlipPreservesVertexUVAndSwapsTopBottomBoundaries)
+	{
+		Shape::Builder builder;
+		builder.addSlot("face");
+		builder.addPolygon("face", {
+			vertex(0, 1, 0, 0, 0), vertex(1, 1, 0, 1, 0), vertex(0, 1, 1, 0, 1)});
+		builder.addPolygon("face", {
+			vertex(0, 0, 0, 0, 0), vertex(0, 0, 1, 0, 1), vertex(1, 0, 0, 1, 0)});
+		const Shape shape = builder.build();
+		const auto &original = shape.instance().polygons();
+		const auto &flipped = shape.instance({
+			Shape::HorizontalOrientation::XPositive,
+			Shape::VerticalOrientation::YNegative}).polygons();
+		ASSERT_EQ(flipped.size(), 2u);
+		EXPECT_EQ(original[0].boundary, Shape::Face::PositiveY);
+		EXPECT_EQ(original[1].boundary, Shape::Face::NegativeY);
+		EXPECT_EQ(flipped[0].boundary, Shape::Face::NegativeY);
+		EXPECT_EQ(flipped[1].boundary, Shape::Face::PositiveY);
+		for (std::size_t polygonIndex = 0; polygonIndex < original.size(); ++polygonIndex)
+		{
+			const auto &source = original[polygonIndex];
+			const auto &result = flipped[polygonIndex];
+			EXPECT_EQ(result.geometricNormal.y, -source.geometricNormal.y);
+			for (std::size_t index = 0; index < source.vertices.size(); ++index)
+			{
+				const auto &before = source.vertices[source.vertices.size() - 1 - index];
+				const auto &after = result.vertices[index];
+				EXPECT_EQ(after.uv, before.uv);
+				EXPECT_EQ(after.position.y, 1.0f - before.position.y);
+				EXPECT_EQ(after.position.x, before.position.x);
+				EXPECT_EQ(after.position.z, before.position.z);
+			}
+			const auto a = result.vertices[1].position - result.vertices[0].position;
+			const auto b = result.vertices[2].position - result.vertices[0].position;
+			EXPECT_GT(a.cross(b).dot(result.geometricNormal), 0.0f);
+		}
+	}
+
+	TEST(VoxelShapeTest, InvalidOrientationsThrowInsteadOfIndexingOutsideInstances)
+	{
+		const Shape shape = makeSquare();
+		EXPECT_THROW((void)shape.instance({
+			static_cast<Shape::HorizontalOrientation>(45), Shape::VerticalOrientation::YPositive}), spk::Exception);
+		EXPECT_THROW((void)shape.instance({
+			Shape::HorizontalOrientation::XPositive, static_cast<Shape::VerticalOrientation>(2)}), spk::Exception);
+	}
+
 	TEST(VoxelShapeTest, OverlappingAndOppositeWindingPolygonsRemainDistinct)
 	{
 		Shape::Builder builder;
