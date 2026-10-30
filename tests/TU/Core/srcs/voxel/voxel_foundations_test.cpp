@@ -50,7 +50,6 @@ namespace
 		EXPECT_NEAR(actual.z, expected.z, 1.0e-6);
 	}
 
-
 	struct OrientationPair
 	{
 		Cell::HorizontalOrientation horizontal;
@@ -370,12 +369,21 @@ namespace
 			SCOPED_TRACE(fixture.name);
 			const Shape shape = loadFixture(fixture.name);
 			ASSERT_EQ(shape.polygons().size(), fixture.polygons);
-			EXPECT_EQ(std::count_if(shape.polygons().begin(), shape.polygons().end(), [](const auto &polygon) {
-				return polygon.shell == Shape::Shell::Outer;
-			}), fixture.outer);
-			EXPECT_EQ(std::count_if(shape.polygons().begin(), shape.polygons().end(), [](const auto &polygon) {
-				return polygon.shell == Shape::Shell::Inner;
-			}), fixture.inner);
+			std::size_t outer = 0;
+			std::size_t inner = 0;
+			for (const auto &polygon : shape.polygons())
+			{
+				if (polygon.shell == Shape::Shell::Outer)
+				{
+					++outer;
+				}
+				else
+				{
+					++inner;
+				}
+			}
+			EXPECT_EQ(outer, fixture.outer);
+			EXPECT_EQ(inner, fixture.inner);
 			for (const auto &polygon : shape.polygons())
 			{
 				EXPECT_FLOAT_EQ(shape.slot(polygon.slotKey).opacity, 1.0f);
