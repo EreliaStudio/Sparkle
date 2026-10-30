@@ -1,6 +1,7 @@
 #include "voxel/shape.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <exception>
 #include <utility>
@@ -177,6 +178,58 @@ namespace
 		return vertex;
 	}
 
+	spk::Vector3 rotateY(spk::Vector3 value, unsigned turns, bool position) noexcept
+	{
+		for (unsigned index = 0; index < turns; ++index)
+		{
+			const float x = value.x;
+			value.x = value.z;
+			value.z = position ? 1.0f - x : -x;
+		}
+		return value;
+	}
+
+	spk::Vector3 transformPosition(spk::Vector3 value, unsigned turns, bool flipped) noexcept
+	{
+		value = rotateY(value, turns, true);
+		if (flipped)
+		{
+			value.y = 1.0f - value.y;
+		}
+		return value;
+	}
+
+	spk::Vector3 transformNormal(spk::Vector3 value, unsigned turns, bool flipped) noexcept
+	{
+		value = rotateY(value, turns, false);
+		if (flipped)
+		{
+			value.y = -value.y;
+		}
+		return value;
+	}
+
+	spk::Voxel::Shape::Polygon orientedPolygon(
+		spk::Voxel::Shape::Polygon polygon, unsigned turns, bool flipped)
+	{
+		for (auto &vertex : polygon.vertices)
+		{
+			vertex.position = transformPosition(vertex.position, turns, flipped);
+			if (vertex.normal)
+			{
+				vertex.normal = transformNormal(*vertex.normal, turns, flipped);
+			}
+		}
+		polygon.geometricNormal = transformNormal(polygon.geometricNormal, turns, flipped);
+		if (flipped)
+		{
+			std::reverse(polygon.vertices.begin(), polygon.vertices.end());
+		}
+		polygon.boundary = boundaryOf(polygon.vertices);
+		polygon.shell = polygon.boundary ? spk::Voxel::Shape::Shell::Outer : spk::Voxel::Shape::Shell::Inner;
+		return polygon;
+	}
+
 	bool hasUVOutsideUnit(const std::vector<spk::Voxel::Shape::Vertex> &vertices)
 	{
 		return std::any_of(vertices.begin(), vertices.end(), [](const auto &vertex) {
@@ -191,8 +244,23 @@ namespace spk::Voxel
 	struct Shape::Data
 	{
 		std::vector<Slot> slots;
-		std::vector<Polygon> polygons;
+		std::array<Instance, 8> instances;
 	};
+
+	Shape::Instance::Instance(std::vector<Polygon> polygons) :
+		_polygons(std::move(polygons))
+	{
+	}
+
+	const std::vector<Shape::Polygon> &Shape::Instance::polygons() const noexcept
+	{
+		return _polygons;
+	}
+
+	bool Shape::Instance::empty() const noexcept
+	{
+		return _polygons.empty();
+	}
 
 	Shape::Shape(std::shared_ptr<const Data> data) noexcept :
 		_data(std::move(data))
@@ -209,14 +277,20 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-	const std::vector<Shape::Polygon> &Shape::polygons() const noexcept
+	const Shape::Instance &Shape::instance(Orientation orientation) const
 	{
-		return _data->polygons;
+		const unsigned degrees = static_cast<unsigned>(orientation.horizontal);
+		const unsigned vertical = static_cast<unsigned>(orientation.vertical);
+		if (degrees % 90 != 0 || degrees > 270 || vertical > 1)
+		{
+			throw spk::Exception("Invalid Voxel Shape orientation");
+		}
+		return _data->instances[(vertical * 4) + (degrees / 90)];
 	}
 
 	bool Shape::empty() const noexcept
 	{
-		return _data->polygons.empty();
+		return _data->instances[0].empty();
 	}
 
 	bool Shape::operator==(const Shape &other) const noexcept
@@ -329,7 +403,19 @@ namespace spk::Voxel
 	{
 		auto data = std::make_shared<Data>();
 		data->slots = _slots;
-		data->polygons = _polygons;
+		for (unsigned flipped = 0; flipped < 2; ++flipped)
+		{
+			for (unsigned turns = 0; turns < 4; ++turns)
+			{
+				std::vector<Polygon> polygons;
+				polygons.reserve(_polygons.size());
+				for (const Polygon &polygon : _polygons)
+				{
+					polygons.push_back(orientedPolygon(polygon, turns, flipped != 0));
+				}
+				data->instances[flipped * 4 + turns] = Instance(std::move(polygons));
+			}
+		}
 		return Shape(std::move(data));
 	}
 }
