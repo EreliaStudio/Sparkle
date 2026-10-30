@@ -433,6 +433,8 @@ sequenceDiagram
 
 **Cohérence éclairage/ombres.** Seules les lumières retenues par ce classement pour l'éclairage peuvent demander des cartes d'ombres pour cette vue. `ShadowMap::RenderingSystem` applique ensuite ses propres budgets et politiques sur les candidates admissibles sans dupliquer le score ni modifier la liste d'éclairage. Une lumière éclairante dont aucune carte d'ombres exploitable n'est disponible continue à éclairer **sans ombre**. Les dessins opaques et WBOIT d'une même capture utilisent cette **même sélection globale**, sans liste par tile.
 
+**Q-TECH-006 — bindings des consommateurs Forward.** Les programmes d'éclairage opaque/WBOIT choisissent et documentent leurs points de liaison SSBO **par pipeline**, sans réservation globale Sparkle. Les commandes qui consomment les données lumineuses capturées réactivent explicitement leurs SSBO, avec le programme correspondant, **avant chaque draw** ; cela ne modifie ni la `Light::Selection`, ni le `Light::Channel`, ni la génération des ombres. Les shaders depth-only du `ShadowMap::RenderingSystem` ne doivent pas recevoir un SSBO lumineux qu'ils ne lisent pas. Les détails de layout et les indices numériques sont à consolider au [§7.5](09-pipeline-gpu-transparence.md).
+
 **Sélection des cartes d'ombres.** Les budgets souples X/Y/tolérance/hystérésis ne concernent que les `Point` admissibles demandant des ombres, sous-sélection de la sélection globale du `Light::Prioritizer`. `ShadowMap::RenderingSystem` consomme les scores déjà calculés, indépendamment du Forward classique ; aucune grille GPU par tile n'est introduite.
 
 

@@ -54,6 +54,7 @@ Les **treize arbitrages architecturaux Q-ARCH-001 à Q-ARCH-013 sont clos**, ain
 - **Pas de raffinement progressif :** reconstruction complète à la résolution configurée lorsque nécessaire et autorisée ; ancienne carte complète admissible conservée en attendant la suivante. Pas de scheduling GPU adaptatif ni de nouveau rendu d'une scène immobile pour affiner les ombres.
 - **Sortie :** texture unique `GL_SRGB8_ALPHA8` après Reinhard et encodage sRGB, avec alpha toujours à 1.
 - **Données GPU :** échelles rendues homogènes strictement positives, SSBO d'instances avec matrice modèle seule, normales transformées avec `w=0` ; `spk::Vector2` pour UV, `spk::Vector3` pour données tridimensionnelles et RGB, padding explicite minimal vérifié par assertions.
+- **Bindings SSBO (Q-TECH-006, option B) :** indices choisis par chaque pipeline, sans réservation globale par Sparkle ; chaque commande de dessin active son programme et tous les SSBO nécessaires sur sa surface **avant chaque draw**. Les handles existants conservent un indice fixe dans leur State : partage possible entre programmes à indice compatible, jamais de rebinding implicite. Voir [§7.5–7.7](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) et [tests §8.5](voxel-engine-v0.1.4/10-contrats-et-validation.md).
 - **FPS :** cible de 60 configurable par EngineView ; ne constitue ni limiteur de FPS ni contrôleur de raffinement en V0.1.4.
 
 ## Invariants de lecture
