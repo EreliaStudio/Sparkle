@@ -74,7 +74,7 @@ flowchart LR
 
 **Éclairage global par EngineView.** Les shaders calculent directement la couleur éclairée des surfaces opaques et translucides (Forward classique), sans G-buffer, Deferred ni culling lumineux par tiles GPU. Le `Light::Prioritizer` de la vue retient un Top-N global des `Point` et `Spot`, plus toutes les `Directional` actives hors budget N. La sélection immutable est commune à `Lighting::System` et `ShadowMap::RenderingSystem`. Aucun compute shader de culling de tiles, buffer de listes par tile ou mécanisme d'overflow de telles listes n'est requis.
 
-**Ambiance locale à chaque vue.** Le shader reçoit pour chaque `EngineView` un unique RGB linéaire `ambientRGB` copié dans son snapshot depuis l'éventuel `spk::AmbientLight` attaché (`color × intensity`), ou `(0,0,0)` si absent. La couleur ambiante s'applique uniformément à l'albedo des surfaces de la vue, puis s'ajoute aux contributions directes Point/Spot/Directional en HDR linéaire, **sans ombre**, sans échantillonnage de depth, sans portée ni calcul de lumière indirecte. Elle ne modifie pas l'alpha du fragment, ne consomme aucun slot du Top-N et ne crée aucune shadow map. Le rendu opaque et WBOIT de la même vue utilisent exactement le même `ambientRGB` ; une autre vue peut utiliser un autre AmbientLight. Le shader ne lit jamais l'objet mutable à l'exécution.
+**Ambiance possédée par chaque vue.** Chaque `EngineView` possède son propre `spk::AmbientLight`, et le shader reçoit son unique RGB linéaire `ambientRGB` **copié par valeur** dans le snapshot (`color × intensity`). Les valeurs initiales `RGB{1,1,1}` et `intensity = 0` donnent `(0,0,0)` sans configuration ; il n'existe jamais d'état « AmbientLight absent » ou de pointeur externe à résoudre. La couleur ambiante module uniformément l'albedo des surfaces de la vue et s'ajoute aux contributions directes Point/Spot/Directional en HDR linéaire, **sans ombre**, sans lecture de profondeur, sans portée ni illumination globale. Elle ne modifie pas l'alpha, ne consomme aucun slot Top-N et ne crée aucune shadow map. Opaque et WBOIT partagent cette valeur immuable ; les autres EngineView utilisent chacune leur instance et leur capture. `execute()` ne lit ni l'objet ni la vue mutable.
 
 **Capture et buffers.** La capture CPU fige la `Light::Selection`, les paramètres des lumières retenues et les matrices de vue ; les mêmes données alimentent la passe opaque et l'unique passe WBOIT de cette EngineView. Les ressources GPU sont matérialisées sur la `Window::Surface` courante et synchronisées avant les dessins. `RenderCommand::execute()` ne relit pas de lumière, caméra, vue ou Assembly mutable. La sélection ne dépend pas du depth buffer opaque et reste valide pour les fragments translucides.
 
@@ -89,7 +89,7 @@ flowchart TD
   L["Lumières du Registry"] --> P["Light::Prioritizer par EngineView"]
   P --> S["Selection immutable : Point et Spot Top-N, Directional sans quota"]
   S --> C["Capture CPU des paramètres"]
-  A["AmbientLight unique attachée à EngineView"] --> AC["Capture par valeur du RGB ambiant ou zero"]
+  A["AmbientLight possédée par chaque EngineView, intensité initiale 0"] --> AC["Capture par valeur du RGB ambiant"]
   AC --> O
   AC --> W
   C --> O["Shaders opaques Forward"]
