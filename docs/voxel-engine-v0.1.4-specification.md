@@ -38,12 +38,12 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 
 ## Questions à résoudre avant l'implémentation
 
-Les **onze arbitrages architecturaux Q-ARCH-001 à Q-ARCH-011 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`), et figurent dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **Q-ARCH-012** sur la mutabilité de la configuration des faces d'une `spk::Skybox` et **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
+Les **douze arbitrages architecturaux Q-ARCH-001 à Q-ARCH-012 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`), et figurent dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **Q-ARCH-013** sur le traitement d'éclairage reçu par les Materials de `spk::Skybox` et **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
 
 ## Invariants de lecture
 
 - **Q-ARCH-009 — fond opaque :** couleur RGB configurable, noire par défaut, alpha final toujours égal à 1.
-- **Q-ARCH-010 — classe Skybox dédiée :** six textures 2D sur un cube inversé centré sur la caméra et suivant sa rotation ; aucune conversion obligatoire en `TextureCubeMap`. Q-ARCH-011 valide une Skybox autonome, partagée et empruntée par les vues ; Q-ARCH-012 reste ouverte sur sa mutabilité.
+- **Q-ARCH-010/011/012 — Skybox et Materials :** Skybox autonome, empruntée par plusieurs EngineView, avec six `spk::Material` génériques sur un cube inversé. Chaque affectation face→Material est remplaçable explicitement, même si les valeurs Material sont immuables. Captures cohérentes et handles résolus par snapshot, pas de `SkyboxMaterial` ou `TextureCubeMap` de couleur obligatoire. Q-ARCH-013 reste ouverte pour l'éclairage reçu.
 - **Q-ARCH-008 — sortie unique :** la sortie finale de toute EngineView, après exposition et tone mapping, sert à l'affichage et aux Materials d'autres vues ; les attachments HDR sont internes. Les règles existantes d'ordre des vues, disponibilité par surface/version et fallback restent impératives.
 
 - **Q-ARCH-011 — partage de Skybox (option B) :** la Skybox appartient au jeu, une ou plusieurs EngineView y sont liées explicitement par référence non propriétaire (`setSkybox(Skybox*)` indicatif, `nullptr` délie et rétablit le fond RGB). La Skybox doit survivre à toutes les vues qui l'empruntent ou être déliée avant destruction ; les anciens snapshots conservent leurs handles sans posséder l'objet Skybox.
