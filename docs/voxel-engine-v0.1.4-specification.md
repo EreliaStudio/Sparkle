@@ -38,10 +38,11 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 
 ## Questions à résoudre avant l'implémentation
 
-Les **huit arbitrages architecturaux Q-ARCH-001 à Q-ARCH-008 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`), et figurent dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
+Les **neuf arbitrages architecturaux Q-ARCH-001 à Q-ARCH-009 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`), et figurent dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **Q-ARCH-010** sur le type public de la cubemap de fond et **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
 
 ## Invariants de lecture
 
+- **Q-ARCH-009 — fond opaque :** couleur RGB configurable (noir par défaut), alpha de sortie toujours égal à 1. L'extension demandée permet une cubemap couleur de fond par vue ; Q-ARCH-010 reste ouverte sur le type public à utiliser.
 - **Q-ARCH-008 — sortie unique :** la sortie finale de toute EngineView, après exposition et tone mapping, sert à l'affichage et aux Materials d'autres vues ; les attachments HDR sont internes. Les règles existantes d'ordre des vues, disponibilité par surface/version et fallback restent impératives.
 
 - **Éclairage :** Forward classique avec Top-N global Point/Spot par EngineView, N et hystérésis configurables ; toutes les Directional actives hors quota. `Light::Selection` partagée par Lighting/ShadowMap et par opaque/WBOIT ; aucune grille de culling de lumières par tile.

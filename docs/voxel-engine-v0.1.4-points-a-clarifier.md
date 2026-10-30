@@ -1,6 +1,6 @@
 # Sparkle V0.1.4 — Questions d'architecture et précisions restantes
 
-> **Document de travail — aucune question ci-dessous n'est une décision validée.** Ce fichier complète la [spécification d'architecture](voxel-engine-v0.1.4-specification.md) sur la branche `V0.1.4`, dans la PR #37. Il ne remplace pas les contrats déjà validés dans les chapitres thématiques. **Aucun développement C++ n'est autorisé** par cette liste.
+> **Document de travail — seules les options explicitement ouvertes restent à valider.** Ce fichier complète la [spécification d'architecture](voxel-engine-v0.1.4-specification.md) sur la branche `V0.1.4`, dans la PR #37. Il ne remplace pas les contrats déjà validés dans les chapitres thématiques. **Aucun développement C++ n'est autorisé** par cette liste.
 
 ## Mode de suivi
 
@@ -12,7 +12,20 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-**Aucun arbitrage Q-ARCH encore ouvert.** Q-ARCH-001 à **Q-ARCH-008** sont closes dans les chapitres normatifs ; seules les précisions techniques ci-dessous restent à consolider.
+**Q-ARCH-009 validée (option A) :** le fond de chaque EngineView est RGB configurable, noir par défaut ; l'image finale reste toujours opaque (alpha=1), y compris avec une cubemap de fond.
+
+### Q-ARCH-010 — Type public de la cubemap de fond
+**Priorité : P0** — [EngineView, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md) · [Pipeline, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
+
+**Besoin fonctionnel accepté :** une EngineView peut choisir une cubemap couleur comme fond, à la place de son RGB uniforme. Le ciel suit l'orientation de la caméra sans sa translation, ne modifie pas le depth ni l'éclairage, est rendu dans la phase opaque avant la géométrie puis composé avec WBOIT et tone mapping. La sortie reste alpha=1. Une cubemap invalide ne déclenche aucun fallback silencieux ; en l'absence de cubemap, utiliser le RGB.
+
+**Choix du contrat public à valider :**
+- **A (recommandée) :** réutiliser `spk::Texture` et sa cible `Texture::Target::TextureCubeMap` existante, avec la construction/chargement de six faces couleur ; EngineView référence cette texture, sans classe publique supplémentaire.
+- **B :** créer un type public dédié `spk::Cubemap` pour le chargement et la représentation des six faces couleur, puis l'associer à EngineView ; la matérialisation GPU reste une texture cubique.
+
+**Encore à préciser :** signatures et intégration AssetManager (Q-TECH-005), formats et conventions de faces, échantillonnage et encodage des couleurs (Q-TECH-003/006). **Clôture :** faire choisir A ou B par le mainteneur et intégrer ensuite le contrat final.
+
+Q-ARCH-001 à Q-ARCH-009 sont closes.
 
 ## 2. Précisions techniques à consolider
 
@@ -37,7 +50,7 @@
 ### Q-TECH-003 — WBOIT, tone mapping HDR et états OpenGL
 **Priorité : P1** — [GPU, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
 
-Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Q-ARCH-008 close (option A) :** widgets et Materials utilisent uniquement l'image finale tone-mappée ; aucune source HDR alternative. L'encodage/décodage sRGB reste une précision technique à consolider. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
+Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Q-ARCH-009 close (option A) :** sortie toujours opaque (alpha=1), fond RGB configurable et noir par défaut ; cubemap de fond optionnelle, son type public restant Q-ARCH-010. **Q-ARCH-008 close (option A) :** widgets et Materials utilisent uniquement l'image finale tone-mappée ; aucune source HDR alternative. L'encodage/décodage sRGB reste une précision technique à consolider. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
 
 ### Q-TECH-004 — Précision numérique du VoxelMesher et d'OcclusionCache
 **Priorité : P1** — [Meshing, §3](voxel-engine-v0.1.4/03-meshing-occlusion.md)
@@ -71,6 +84,7 @@ Ce rappel sert seulement à **exclure les faux points ouverts** :
 - **Publication d'ombres :** cubemap de six faces atomique, publication incrémentale par lumière, anciens résultats complets conservés sans régression si encore admissibles ; aucune file d'éviction ou recyclage spécialisé ShadowMap.
 - **Voxel :** Volume/Model/Material/VoxelPalette immuables après construction, meshing synchrone ; un atlas par mesh/passe par association Model/Palette ; Assembly animée explicitement ; casters d'ombres définis par le jeu et non inférés du système voxel.
 - **Q-ARCH-008 :** une sortie finale tone-mappée par EngineView, utilisée par les widgets et les Materials ; aucune sortie HDR supplémentaire ou choix public d'étape de rendu.
+- **Q-ARCH-009 :** fond RGB configurable noir par défaut et alpha final toujours égal à 1 ; une cubemap couleur optionnelle n'introduit pas de transparence. Q-ARCH-010 porte uniquement sur son type public.
 - **Transparence et affichage HDR :** WBOIT avec une passe géométrique MRT et depth opaque partagé ; les surfaces translucides ne projettent pas d'ombres. Opaque et accumulation WBOIT en `RGBA16F` HDR avant composition, puis tone mapping unique avec exposition réglable sur chaque `EngineView`, sans auto-exposure ni traitement des widgets UI.
 
 ## 4. Procédure de clôture
