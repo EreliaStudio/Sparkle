@@ -34,10 +34,10 @@
 
 **Clôture :** rendre tous les paramètres restants vérifiables dans §7.4 et §8.5 puis retirer Q-TECH-002 du suivi.
 
-### Q-TECH-003 — WBOIT et états OpenGL
+### Q-TECH-003 — WBOIT, tone mapping HDR et états OpenGL
 **Priorité : P1** — [GPU, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
 
-Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
+Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Arbitrage encore ouvert :** lorsqu'une vue sert de source de texture à une autre, faut-il exposer sa sortie déjà tone mappée ou fournir une représentation HDR distincte ? Ce choix affecte l'API, les handles et le résultat visuel. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
 
 ### Q-TECH-004 — Précision numérique du VoxelMesher et d'OcclusionCache
 **Priorité : P1** — [Meshing, §3](voxel-engine-v0.1.4/03-meshing-occlusion.md)
@@ -70,7 +70,7 @@ Ce rappel sert seulement à **exclure les faux points ouverts** :
 - **PointLight :** budget souple X/Y/tolérance/hystérésis pour retenir des ombres ; budget commun de reconstruction par image et surface, priorité stricte des scores, sans bonus d'attente ; sortie de sélection = éviction immédiate des **caches logiques actifs**, récupération GPU par l'infrastructure générique.
 - **Publication d'ombres :** cubemap de six faces atomique, publication incrémentale par lumière, anciens résultats complets conservés sans régression si encore admissibles ; aucune file d'éviction ou recyclage spécialisé ShadowMap.
 - **Voxel :** Volume/Model/Material/VoxelPalette immuables après construction, meshing synchrone ; un atlas par mesh/passe par association Model/Palette ; Assembly animée explicitement ; casters d'ombres définis par le jeu et non inférés du système voxel.
-- **Transparence :** WBOIT avec une passe géométrique MRT et depth opaque partagé ; les surfaces translucides ne projettent pas d'ombres.
+- **Transparence et affichage HDR :** WBOIT avec une passe géométrique MRT et depth opaque partagé ; les surfaces translucides ne projettent pas d'ombres. Opaque et accumulation WBOIT en `RGBA16F` HDR avant composition, puis tone mapping unique avec exposition réglable sur chaque `EngineView`, sans auto-exposure ni traitement des widgets UI.
 
 ## 4. Procédure de clôture
 
