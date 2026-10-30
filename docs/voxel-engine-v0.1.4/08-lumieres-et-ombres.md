@@ -647,7 +647,35 @@ score(candidate) > score(incumbent) * (1 + shadowSelectionHysteresis)
 
 À la disparition du dernier propriétaire d'une `GPUResource::State`, son `LifeTime` signale la libération à la `GPUResourceCollection::ReclamationQueue` des surfaces abonnées. `Application::RenderRuntime::tickOnce()` appelle `reclaimReleased()` ; les instances `Texture`, `Framebuffer` et `Buffer` rejoignent normalement les pools natifs de leur surface, tandis que les instances non recyclables sont détruites. Une instance mise en pool peut **rester allouée en VRAM** ; sa mise en pool n'est pas une conservation de cache d'ombres et elle ne rend pas réutilisable l'ancienne profondeur. À l'activation d'une nouvelle `GPUResource::State`, une instance native compatible peut être recyclée **après resynchronisation**, jamais comme une carte d'ombres valide sans nouveau rendu.
 
-**Contexte OpenGL requis pour la récupération.** Le runtime de rendu garantit le contexte courant de la bonne `Window::Surface` avant toute récupération/destruction native, **même lors d'un tick sans nouveau rendu** et lorsque plusieurs surfaces sont utilisées. L'implémentation existante de `tickOnce()` appelle `reclaimReleased()` après un chemin de rendu conditionnel ; ce contrat doit être assuré dans le runtime graphique générique. **À la fermeture**, la notification des abonnés a déjà eu lieu et tous les rendus de cette surface sont arrêtés **avant** que `GPUResourceCollection::clear()` vide les instances sous son contexte GL toujours valide ; le contexte est ensuite détruit. Aucune file d'éviction `ShadowMap` supplémentaire, aucun pool de cartes dormantes, aucun LRU d'ombres et aucun `GLsync` dédié ne découlent de ce contrat ; les dépendances de commandes GPU restent correctement ordonnées sur chaque contexte.
+**Contexte OpenGL requis pour la récupération (Q-TECH-007, option A validée).** Le **RenderRuntime** est responsable de garantir le bon contexte courant : chaque tick d'une `Window::Surface` **Ready** appelle explicitement **`surface.makeCurrent()` immédiatement avant `GPUResourceCollection::reclaimReleased()`**, même sans rendu et même si le dernier snapshot n'a pas changé. `reclaimReleased()` ne sélectionne pas de contexte à sa place. Une surface non Ready n'est pas récupérée par ce chemin. À la fermeture, le cycle de destruction reste distinct : fin des rendus, notification des abonnés, `GPUResourceCollection::clear()` sous le contexte encore valide, puis destruction WGL. Aucun pool ou GC spécialisé d'ombres, aucune file d'éviction `ShadowMap` ni `GLsync` dédié n'est ajouté ; voir le protocole et la séquence ci-dessous.
+
+**Q-TECH-007 — récupération à chaque tick sous le bon contexte (option A validée).** Dans `Application::RenderRuntime::tickOnce(identifier, surface)`, pour **chaque surface en état `Window::LifeCycle::Ready`**, une branche de rendu éventuel peut exécuter un snapshot, mais la récupération n'en dépend **jamais**. À la fin du chemin de tick normal, **même sans nouveau snapshot, sans consommateur enregistré, si le snapshot est inchangé ou si la zone de dessin est nulle**, le runtime appelle explicitement `surface.makeCurrent()` **immédiatement avant** `surface._gpuResources().reclaimReleased()`. `makeCurrent()` est idempotent si le bon couple contexte/device est déjà actif ; aucun changement inutile de contexte n'est exigé. Sur un tick contenant plusieurs surfaces, la séquence `makeCurrent(A) → reclaimReleased(A)`, puis `makeCurrent(B) → reclaimReleased(B)` s'effectue **pour chacune** : ne jamais présumer que le contexte laissé courant par le dessin précédent appartient encore à la surface traitée. La boucle de tick ne lance pas un nouveau dessin simplement pour vider la file et ne force ni `present()` ni `refreshRenderSnapshot()`.
+
+**Frontières et responsabilités.** Pour une surface `Pending`, `Releasing` ou `Released`, `tickOnce()` ne doit **ni activer un contexte absent**, ni appeler `reclaimReleased()` : la fermeture `Releasing` conserve le protocole validé **arrêt des rendus → notification de destruction → `GPUResourceCollection::clear()` sous son contexte valide → destruction WGL**. Le nettoyage normal des ressources devenues sans propriétaire reste sous `GPUResourceCollection`, qui **ne reçoit pas de référence à `Window::Surface` et ne gère pas `makeCurrent()`** ; `GPUResourceCollection::reclaimReleased()` suppose explicitement que l'appelant a déjà activé le bon contexte. Si `makeCurrent()` échoue, aucune récupération ne s'exécute dans un contexte différent ou invalide : l'erreur suit le traitement habituel des erreurs de runtime/GL, sans récupération CPU de substitution, sans contexte par défaut et sans masquer l'échec. La décision n'introduit **ni test préalable « ressources en attente »**, ni événement additionnel, ni GC spécialisé pour les ombres. Le contrat s'applique aussi aux allocations/render-targets génériques et laisse intacte la durée de vie des `GPUResource::State` détenus par les snapshots en vol.
+
+**Écart observé dans le code actuel, à corriger à l'implémentation.** Dans `src/core/application_render_runtime.cpp`, `_render()` active le contexte avec `surface.makeCurrent()` **seulement si** la taille est non nulle ; `tickOnce()` termine par `reclaimReleased()` sans activation explicite et peut retourner plus tôt lorsque `_tryGetSnapshotConsumer(identifier)` est nul. Lors de l'implémentation de V0.1.4, séparer l'étape optionnelle de rendu de la phase **obligatoire de récupération par tick pour toute surface Ready**, et placer `surface.makeCurrent()` devant chaque appel `reclaimReleased()`. Aucun code source n'est modifié dans cette PR documentaire.
+
+**Séquence du tick de rendu et de la récupération GPU sans dessin (Q-TECH-007, option A).**
+
+```mermaid
+sequenceDiagram
+  participant RT as Application RenderRuntime
+  participant A as Window Surface A
+  participant B as Window Surface B
+  participant G as GPUResourceCollection
+  opt Snapshot A a dessiner et surface A Ready
+    RT->>A: _render() / makeCurrent() / execute()
+  end
+  RT->>A: makeCurrent() explicite
+  RT->>G: reclaimReleased() pour A
+  Note over RT,G: Aucune image n est imposee pour recuperer
+  opt Snapshot B a dessiner et surface B Ready
+    RT->>B: _render() / makeCurrent() / execute()
+  end
+  RT->>B: makeCurrent() explicite
+  RT->>G: reclaimReleased() pour B
+  Note over A,B: Surface Releasing ou Released : aucun reclaim dans tickOnce
+```
 
 **Réadmission et budgets.** Une `PointLight` revenant dans la sélection de la vue est traitée **comme une première admission pour les ombres de cette combinaison** : elle crée une **nouvelle paire logique statique/finale**, avec **générations distinctes**, et les réalisations GPU nécessaires par surface sont invalides jusqu'à reconstruction complète. La nouvelle paire **ne réutilise jamais l'ancien couple de State/Handle ni les données de profondeur** : elle peut toutefois acquérir **une instance OpenGL native recyclée via GPUResourceCollection** lorsqu'elle est disponible et compatible, après synchronisation avec le nouvel état. Sa reconstruction consomme **une unité du budget par image et par `Window::Surface`** suivant la priorité stricte validée, que la précédente paire ait été entièrement statique ou non ; si le budget est épuisé, la lumière éclaire sans ombre jusqu'à actualisation. Les valeurs `targetShadowCount/maxShadowCount/shadowPriorityTolerance`, l'hystérésis de sélection et le score restent inchangés par cette règle d'éviction. Une destruction/recréation de `EngineView` ou de `PointLight` ne peut pas ressusciter des caches rattachés à une ancienne identité.
 
@@ -656,6 +684,8 @@ sequenceDiagram
     participant SH as ShadowMap RenderingSystem
     participant SNAP as Ancien RenderSnapshot
     participant STATE as GPUResource State et LifeTime
+    participant RT as Application RenderRuntime
+    participant SURF as Window Surface
     participant COL as GPUResourceCollection de la Surface
     participant GPU as Contexte OpenGL de la Surface
     SH->>SH: PointLight sortie, retirer paire des caches actifs
@@ -666,8 +696,10 @@ sequenceDiagram
         Note over COL,GPU: Aucune reclamation tant que la State est vivante
     else Derniere reference relachee
         STATE->>COL: LifeTime signale identifiant dans ReclamationQueue
-        COL->>GPU: Garantir contexte de cette surface avant recuperation
-        COL->>COL: reclaimReleased sur le runtime de rendu
+        RT->>SURF: tickOnce Surface Ready, dessin facultatif
+        RT->>SURF: makeCurrent() meme sans dessin
+        SURF->>GPU: activer le bon contexte OpenGL
+        RT->>COL: reclaimReleased() avec contexte courant
         alt Instance Texture recyclable
             COL->>COL: Mettre instance dans pool de textures
         else Instance non recyclable
