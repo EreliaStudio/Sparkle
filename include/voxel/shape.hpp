@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -53,6 +54,39 @@ namespace spk::Voxel
 			std::optional<Face> boundary;
 		};
 
+		enum class HorizontalOrientation : std::uint16_t
+		{
+			XPositive = 0,
+			ZPositive = 270,
+			XNegative = 180,
+			ZNegative = 90
+		};
+
+		enum class VerticalOrientation : std::uint8_t
+		{
+			YPositive,
+			YNegative
+		};
+
+		struct Orientation
+		{
+			HorizontalOrientation horizontal = HorizontalOrientation::XPositive;
+			VerticalOrientation vertical = VerticalOrientation::YPositive;
+		};
+
+		class Instance
+		{
+		private:
+			std::vector<Polygon> _polygons;
+
+		public:
+			Instance() = default;
+			explicit Instance(std::vector<Polygon> polygons);
+
+			[[nodiscard]] const std::vector<Polygon> &polygons() const noexcept;
+			[[nodiscard]] bool empty() const noexcept;
+		};
+
 		class Builder
 		{
 		private:
@@ -79,7 +113,7 @@ namespace spk::Voxel
 		Shape();
 
 		[[nodiscard]] const std::vector<Slot> &slots() const noexcept;
-		[[nodiscard]] const std::vector<Polygon> &polygons() const noexcept;
+		[[nodiscard]] const Instance &instance(Orientation orientation = {}) const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
 		[[nodiscard]] bool operator==(const Shape &other) const noexcept;
 		[[nodiscard]] const Slot &slot(std::string_view name) const;
