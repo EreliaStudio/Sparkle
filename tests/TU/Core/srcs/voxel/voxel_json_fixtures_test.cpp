@@ -74,7 +74,7 @@ namespace
 			const Shape second = fixtureShape(fixture.name);
 			EXPECT_FALSE(first == second);
 			EXPECT_TRUE(first == Shape(first));
-			EXPECT_EQ(first.polygons().size(), fixture.polygonCount);
+			EXPECT_EQ(first.instance().polygons().size(), fixture.polygonCount);
 			EXPECT_EQ(first.slots().size(), 3u);
 		}
 	}
@@ -87,7 +87,7 @@ namespace
 			const Shape shape = fixtureShape(fixture.name);
 			std::size_t outerCount = 0;
 			std::size_t innerCount = 0;
-			for (const auto &polygon : shape.polygons())
+			for (const auto &polygon : shape.instance().polygons())
 			{
 				ASSERT_GE(polygon.vertices.size(), 3u);
 				EXPECT_FLOAT_EQ(shape.slot(polygon.slotKey).opacity, 1.0f);
@@ -141,7 +141,7 @@ namespace
 			{
 				EXPECT_TRUE(cell.definition() == definition);
 				EXPECT_TRUE(cell.definition().shape() == shape);
-				EXPECT_EQ(cell.definition().shape().polygons().size(), fixture.polygonCount);
+				EXPECT_EQ(cell.definition().shape().instance().polygons().size(), fixture.polygonCount);
 				for (const auto &slot : shape.slots())
 				{
 					EXPECT_EQ(cell.definition().semanticSlot(slot.name), fixture.name + std::string(".") + slot.name);
@@ -155,10 +155,10 @@ namespace
 		const auto json = spk::JSON::Value::fromString(
 			R"({"slots":{"surface":0.75},"polygons":[{"slot":"surface","vertices":[{"position":[0,0,0],"uv":[0.25,0.75],"normal":[0,0,1]},{"position":[1,0,0],"uv":[1,0],"normal":[0,0,1]},{"position":[0,1,0],"uv":[0,1],"normal":[0,0,1]}]}]})");
 		const Shape shape = Shape::Builder(json).build();
-		ASSERT_EQ(shape.polygons().size(), 1u);
+		ASSERT_EQ(shape.instance().polygons().size(), 1u);
 		EXPECT_FLOAT_EQ(shape.slot("surface").opacity, 0.75f);
-		EXPECT_EQ(shape.polygons()[0].vertices[0].uv, spk::Vector2(0.25f, 0.75f));
-		EXPECT_EQ(shape.polygons()[0].vertices[0].normal.value(), spk::Vector3(0, 0, 1));
+		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].uv, spk::Vector2(0.25f, 0.75f));
+		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].normal.value(), spk::Vector3(0, 0, 1));
 	}
 
 	TEST(VoxelShapeFixtureTest, InvalidJSONDoesNotPartiallyModifyExistingBuilder)
@@ -175,8 +175,8 @@ namespace
 		builder.addPolygon("existing", std::move(vertices));
 		const Shape shape = builder.build();
 		EXPECT_EQ(shape.slots().size(), 1u);
-		EXPECT_EQ(shape.polygons().size(), 1u);
-		EXPECT_EQ(shape.polygons()[0].slotKey, "existing");
+		EXPECT_EQ(shape.instance().polygons().size(), 1u);
+		EXPECT_EQ(shape.instance().polygons()[0].slotKey, "existing");
 	}
 
 	TEST(VoxelShapeFixtureTest, RejectsLegacyMultiShapeCollectionAsOneShape)
