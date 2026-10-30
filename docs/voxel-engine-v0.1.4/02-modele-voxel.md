@@ -33,14 +33,23 @@ classDiagram
     +materialSlots()
     -données immuables partagées
   }
+  class ShapeTransformationCache {
+    +get(Shape, orientations) TransformedShape
+  }
+  class OcclusionCache {
+    +bind(ShapeTransformationCache*)
+    +find/store/clear
+  }
   class VoxelMesher {
     +bake(Volume) Model
     +bind(OcclusionCache*)
-    +unbind()
   }
   Shape <-- Definition
   Definition <-- Cell
   Cell <-- Volume
+  Shape --> ShapeTransformationCache
+  ShapeTransformationCache <-- OcclusionCache
+  OcclusionCache <-- VoxelMesher
   Volume --> VoxelMesher
   VoxelMesher --> Model
 ```
@@ -83,7 +92,7 @@ Sparkle fournit une **Definition Air prédéfinie**. Elle représente une vraie 
 
 L'API publique représente une Cell **par valeur**, contenant sa Definition (copie légère) et une orientation discrète. Les orientations disponibles comprennent les quatre rotations de 90° autour de Y et une possibilité d'inversion verticale, soit **huit orientations**.
 
-L'orientation transforme correctement la géométrie, les UV et les normales. Un flip qui modifie la parité doit également préserver la **face avant physique voulue** par adaptation appropriée du winding/des indices, afin d'éviter qu'une surface visible ou occultante ne se retourne accidentellement.
+La `Cell` **ne transforme pas la géométrie** et n'expose ni `transformPosition`, ni `transformNormal`, ni `orientedPolygon(s)`, ni accès `friend` au Mesher. Le futur `ShapeTransformationCache` réalise la transformation des positions et normales, conserve les UV attachés aux sommets et corrige, lors d'un flip de parité, le winding/les indices pour préserver la **face avant physique voulue**.
 
 Une cellule d'air est une Cell valide, et non `null`, un `optional` vide ou un indicateur « absence ».
 
