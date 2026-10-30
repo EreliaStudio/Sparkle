@@ -181,21 +181,54 @@ flowchart LR
   View["EngineView et Light Channel"] --> Selection["Selection globale immuable"]
   Selection --> Shadow["ShadowMap RenderingSystem"]
   Shadow --> Results["ShadowResults par surface"]
-  Selection --> Opaque["Opaque Forward avec depth write"]
-  View --> Background["Passe Skybox unlit : Component Contributor, pas de depth write"]
+  Selection --> Opaque["Opaque HDR / depth LEQUAL, write"]
+  View --> Background["Fond et Skybox unlit en HDR"]
   Background --> Opaque
-  Selection --> WBOIT["WBOIT Forward avec depth read-only"]
-  Results -->|"acquireLatest apres ombres"| Opaque
-  Results -->|"acquireLatest apres ombres"| WBOIT
-  Opaque -->|"Meme depth attachment"| WBOIT
-  Opaque --> Compose["Composition opaque et WBOIT en HDR"]
-  WBOIT --> Compose
-  View --> Exposure["Exposition capturee par EngineView"]
-  Exposure --> Tone["Reinhard RGB : max(C,0)*E / (1+max(C,0)*E)"]
+  Selection --> WBOIT["WBOIT Forward / depth LEQUAL, read only"]
+  Results -->|"ombres capturees"| Opaque
+  Results -->|"ombres capturees"| WBOIT
+  Opaque -->|"Meme handle depth"| WBOIT
+  WBOIT --> Weight["Poids fixe : w = 1 + 7 * (1 - z)"]
+  Weight --> Accum["MRT0 RGBA16F : somme C*a*w et a*w"]
+  Weight --> Reveal["MRT1 R8 : produit (1-a)"]
+  Accum --> Compose["Composition opaque*T + accumRGB/accumA*(1-T)"]
+  Reveal --> Compose
+  Opaque --> Compose
+  View --> Exposure["Exposition capturee"]
+  Exposure --> Tone["Reinhard RGB par canal"]
   Compose --> Tone
-  Tone --> Tex["GL_SRGB8_ALPHA8 finale par surface, alpha 1"]
-  Tex --> Widget["EngineWidget avec role Drawing"]
+  Tone --> Tex["GL_SRGB8_ALPHA8 finale / alpha 1"]
+  Tex --> Widget["EngineWidget Drawing"]
   Tex --> MaterialView["Material source EngineView"]
+```
+
+**Séquence GPU d'une vue et bornes du blending (Q-TECH-003).** Le rendu sur chaque surface prépare les attachments avant de les utiliser, sans accès à une EngineView mutable pendant les commandes.
+
+```mermaid
+sequenceDiagram
+  participant S as Window Surface / RenderContext
+  participant O as Passe Skybox puis Opaque
+  participant W as Passe WBOIT
+  participant MRT as FBO WBOIT : Accum + Reveal + Depth partage
+  participant C as Passe Composition
+  S->>O: Bind cible HDR, clear fond et depth = 1
+  O->>O: Skybox unlit puis opaque, depth LEQUAL et write
+  O-->>W: Depth opaque produit, meme handle sur surface
+  W->>MRT: Bind FBO, clear accum = 0 et reveal = 1
+  W->>MRT: Blend par attachment, depth LEQUAL et no write
+  loop Chaque fragment translucide valide
+    W->>W: a = albedo.a * slotOpacity, z = gl_FragCoord.z
+    W->>W: w = 1 + 7 * (1 - clamp(z,0,1))
+    W->>MRT: MRT0 += vec4(C*a*w,a*w)
+    W->>MRT: MRT1 *= (1-a)
+  end
+  W-->>C: Accum RGBA16F et Reveal R8
+  O-->>C: Couleur opaque HDR, fond compris
+  C->>C: C_HDR = opaque*T + (accumRGB/accumA)*(1-T)
+  Note over C: Si accumA = 0, conserver opaque
+  C->>C: Exposition puis Reinhard une seule fois
+  C-->>S: Sortie finale SRGB8_ALPHA8, alpha = 1
+  Note over S: Transition GPU vers les etats UI par le snapshot de fenetre
 ```
 
 L'éclairage Forward classique avec sélection Top-N globale par vue, les ombres génériques et WBOIT font partie du pipeline V0.1.4. Les deux passes visuelles consomment la même sélection de lumières du Channel. `ShadowMap::RenderingSystem` produit et publie les cartes complètes, et `Lighting::System` les acquiert à l'exécution sur la surface appropriée.
