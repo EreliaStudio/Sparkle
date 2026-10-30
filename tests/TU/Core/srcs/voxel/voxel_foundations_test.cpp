@@ -5,9 +5,9 @@
 #include <cmath>
 #include <limits>
 #include <set>
-#include <utility>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "diagnostics/logger.hpp"
@@ -273,12 +273,21 @@ namespace
 	TEST(VoxelCellTest, SixSidedCubeKeepsEachPhysicalFrontFaceUnderEveryOrientation)
 	{
 		const std::array<spk::Vector3, 8> corners = {
-			spk::Vector3{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
-			{0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}};
+			spk::Vector3{0, 0, 0},
+			{1, 0, 0},
+			{1, 1, 0},
+			{0, 1, 0},
+			{0, 0, 1},
+			{1, 0, 1},
+			{1, 1, 1},
+			{0, 1, 1}};
 		const std::array<std::array<std::size_t, 4>, 6> faces = {
 			std::array<std::size_t, 4>{0, 3, 2, 1},
-			{4, 5, 6, 7}, {0, 4, 7, 3}, {1, 2, 6, 5},
-			{0, 1, 5, 4}, {3, 7, 6, 2}};
+			{4, 5, 6, 7},
+			{0, 4, 7, 3},
+			{1, 2, 6, 5},
+			{0, 1, 5, 4},
+			{3, 7, 6, 2}};
 		Shape::Builder builder;
 		builder.addSlot("cube");
 		for (const auto &indices : faces)
