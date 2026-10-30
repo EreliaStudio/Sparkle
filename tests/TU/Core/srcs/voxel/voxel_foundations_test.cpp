@@ -70,7 +70,6 @@ namespace
 		return Cell(definition, Orientations[index].horizontal, Orientations[index].vertical);
 	}
 
-
 	static_assert(std::is_copy_constructible_v<Shape>);
 	static_assert(std::is_copy_constructible_v<Definition>);
 	static_assert(std::is_copy_constructible_v<Cell>);
