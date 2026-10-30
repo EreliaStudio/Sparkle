@@ -3,7 +3,7 @@
 | Contrat fonctionnel obligatoire | Référence normative | Fiche(s) |
 |---|---|---|
 | Shape, Definition, Cell, enums d'orientation, Air | [02](../02-modele-voxel.md) | PR01 |
-| Huit `Shape::Instance` préconstruites, partage/immutabilité, winding/UV/normales | [02](../02-modele-voxel.md), [03](../03-meshing-occlusion.md) | PR01 |
+| Huit `Shape::Instance` préconstruites, partage entre Definitions, immutabilité après échec du Builder, winding/UV/normales | [02](../02-modele-voxel.md), [03](../03-meshing-occlusion.md) | PR01 |
 | Volume dense et snapshots | [02](../02-modele-voxel.md) | PR02 |
 | Mesher, assemblage des fragments, innerShell, voisins extérieurs | [03](../03-meshing-occlusion.md) | PR04 |
 | Model : meshes opaques, translucides et d'ombre | [03](../03-meshing-occlusion.md) | PR04 |
