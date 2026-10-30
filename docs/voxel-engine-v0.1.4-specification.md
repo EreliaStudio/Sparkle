@@ -4,7 +4,7 @@
 >
 > **Objectif :** offrir au sein de Sparkle une infrastructure voxel publique, générique, utilisable pour des objets, personnages articulés et volumes de cellules, sans introduire de dépendance à un jeu, à un terrain, à Erelia ou à un catalogue global.
 
-Ce fichier est le **sommaire normatif** des huit chapitres de Sparkle V0.1.4. Les chapitres sont répartis par domaine sans supprimer la géométrie voxel, les matériaux, les assets, les Assemblies ou les systèmes de rendu.
+Ce fichier est le **sommaire normatif** des dix fichiers thématiques de Sparkle V0.1.4. Les chapitres sont répartis par domaine sans supprimer la géométrie voxel, les matériaux, les assets, les Assemblies ou les systèmes de rendu.
 
 ## Chapitres
 
@@ -34,17 +34,17 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 - **Casters géométriques uniquement (option A validée) :** les `ShadowMap::Mesh` représentent des triangles de profondeur entièrement opaques sans UV, texture ou test alpha. Une texture albedo trouée ne découpe pas sa shadow map ; l'auteur peut fournir explicitement un mesh d'ombre dont la géométrie correspond aux ouvertures. Les polygones de slots translucides ne projettent pas d'ombres, et changer une palette seule ne reconstruit pas les cartes.
 - **Résolution des ombres :** Point, Spot et Directional utilisent **1024×1024 en D32F (`GL_DEPTH_COMPONENT32F`) par défaut**, configurable individuellement par lumière (`shadowResolution`, nom indicatif). Les cartes statique/finale sont de même taille, avec six faces identiques pour Point. Toute modification explicite invalide les cartes concernées sans modifier les anciens snapshots ; aucune adaptation automatique de résolution.
 - **Directional :** une seule shadow map orthographique par lumière et par vue ; couverture automatique à partir du frustum de caméra, **plafonnée par `shadowDistance` configurable sur la lumière**, en unités `U` (far infini accepté grâce au plafond fini). Ce paramètre limite uniquement les ombres, jamais l'éclairage ; aucune saisie manuelle des bornes, aucun CSM. La valeur initiale de `shadowDistance` et les détails des bornes de profondeur et casters hors frustum restent à préciser.
-- **Statut :** les valeurs et formats de profondeur validés ne sont plus à arbitrer. Restent dans [Q-TECH-002](voxel-engine-v0.1.4-points-a-clarifier.md) les limites de taille et de capacités GPU, les cas numériques aux bornes, les conventions PCF et les détails de couverture des Directional. Aucune implémentation n'est autorisée.
+- **Statut :** les valeurs et formats de profondeur validés ne sont plus à arbitrer. Les limites de taille et de capacités GPU, les cas numériques aux bornes, les conventions PCF et les détails de couverture des Directional sont à vérifier pendant les PR concernées, sans remettre en cause les choix validés.
 
-## Questions à résoudre avant l'implémentation
+## Préparation de l'implémentation
 
-Les **treize arbitrages architecturaux Q-ARCH-001 à Q-ARCH-013 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`) et **Q-TECH-007** (captures CPU, `ShadowResults`, fermeture des surfaces et ressources GPU), et figurent dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) ne conserve **aucune Q-ARCH ouverte** et garde **cinq Q-TECH (002 à 006)** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
+Les **treize arbitrages Q-ARCH-001 à Q-ARCH-013** sont clos, ainsi que **Q-TECH-001** (Top-N et transactions des Light::Channel) et **Q-TECH-007** (captures CPU, résultats d'ombres et cycles de vie GPU). Le [dossier d'implémentation](voxel-engine-v0.1.4/implementation/README.md) décrit 26 PR successives, avec leurs tests et dépendances. Les détails de bas niveau non spécifiés (signatures finales, états GPU, cas numériques limites) sont à décider et vérifier dans les PR concernées, sans rouvrir les choix validés.
 
-## Pondération WBOIT — Q-TECH-003 partiellement résolue
+## Pondération WBOIT — contrat validé
 
-**Option B validée :** le Forward translucide utilise la profondeur fenêtre `z` et le poids borné fixe `w=1+7×(1-clamp(z,0,1))`, sans paramétrage public. Accumulation `RGBA16F` additive (`Σ(C*a*w,a*w)`), reveal `R8` multiplicatif (`Π(1-a)`), depth opaque partagé en `GL_LEQUAL` sans écriture translucide, puis mélange HDR `opaque*T + accum.rgb/accum.a*(1-T)` avant exposition/Reinhard ; voir [§7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) et [tests §8.5](voxel-engine-v0.1.4/10-contrats-et-validation.md). Les tests de saturation/quantification GPU et le transfert `GL_FRAMEBUFFER_SRGB` aux widgets restent ouverts et conservent **Q-TECH-003** dans le suivi.
+**Option B validée :** le Forward translucide utilise la profondeur fenêtre `z` et le poids borné fixe `w=1+7×(1-clamp(z,0,1))`, sans paramétrage public. Accumulation `RGBA16F` additive (`Σ(C*a*w,a*w)`), reveal `R8` multiplicatif (`Π(1-a)`), depth opaque partagé en `GL_LEQUAL` sans écriture translucide, puis mélange HDR `opaque*T + accum.rgb/accum.a*(1-T)` avant exposition/Reinhard ; voir [§7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) et [tests §8.5](voxel-engine-v0.1.4/10-contrats-et-validation.md). La saturation/quantification GPU et les états `GL_FRAMEBUFFER_SRGB` sont à valider dans les tests des PR concernées.
 
-## Courbe de tone mapping — Q-TECH-003 partiellement résolue
+## Courbe de tone mapping — contrat validé
 
 **Reinhard classique (option B).** Après la composition HDR opaque/WBOIT, chaque `EngineView` applique par canal `C_final = x/(1+x)` avec `x=max(C_HDR,0)*E`, `E` exposition capturée et strictement positive (1 par défaut). Aucun ajustement de luminance, white point, ACES ni courbe alternative ; alpha final 1. Le fond RGB, la Skybox unlit et la scène utilisent tous la même transformation ; les widgets UI sont exclus. Le format de sortie `GL_SRGB8_ALPHA8` est validé ; les états GL et la lecture dans les widgets/Materials doivent éviter les doubles conversions gamma (Q-TECH-003).
 
