@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "container/json/object.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 
@@ -46,7 +47,7 @@ namespace spk::Voxel
 		struct Polygon
 		{
 			std::vector<Vertex> vertices;
-			std::string slot;
+			std::string slotKey;
 			spk::Vector3 geometricNormal{};
 			Shell shell = Shell::Inner;
 			std::optional<Face> boundary;
@@ -63,7 +64,8 @@ namespace spk::Voxel
 
 		public:
 			void addSlot(std::string name, float opacity = 1.0f);
-			void addPolygon(std::string slot, std::vector<Vertex> vertices);
+			void addPolygon(std::string slotKey, std::vector<Vertex> vertices);
+			void addFromJSON(const spk::JSON::Value &value);
 			[[nodiscard]] Shape build();
 		};
 
@@ -79,7 +81,7 @@ namespace spk::Voxel
 		[[nodiscard]] const std::vector<Slot> &slots() const noexcept;
 		[[nodiscard]] const std::vector<Polygon> &polygons() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
-		[[nodiscard]] bool sameIdentity(const Shape &other) const noexcept;
+		[[nodiscard]] bool operator==(const Shape &other) const noexcept;
 		[[nodiscard]] const Slot &slot(std::string_view name) const;
 	};
 }
