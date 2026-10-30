@@ -68,13 +68,18 @@ namespace
 
 namespace spk::Voxel
 {
-	Cell::Cell(Definition definition, Orientation orientation) :
+	Cell::Cell(
+		Definition definition,
+		HorizontalOrientation horizontal,
+		VerticalOrientation vertical) :
 		_definition(std::move(definition)),
-		_orientation(orientation)
+		_horizontal(horizontal),
+		_vertical(vertical)
 	{
-		if (static_cast<unsigned>(orientation) > static_cast<unsigned>(Orientation::FlippedY270))
+		if (static_cast<unsigned>(horizontal) > static_cast<unsigned>(HorizontalOrientation::XNegative) ||
+			static_cast<unsigned>(vertical) > static_cast<unsigned>(VerticalOrientation::YNegative))
 		{
-			throw spk::Exception("Voxel Cell orientation must be one of the eight discrete values");
+			throw spk::Exception("Voxel Cell has an invalid horizontal or vertical orientation");
 		}
 	}
 
@@ -83,9 +88,14 @@ namespace spk::Voxel
 		return _definition;
 	}
 
-	Cell::Orientation Cell::orientation() const noexcept
+	Cell::HorizontalOrientation Cell::horizontalOrientation() const noexcept
 	{
-		return _orientation;
+		return _horizontal;
+	}
+
+	Cell::VerticalOrientation Cell::verticalOrientation() const noexcept
+	{
+		return _vertical;
 	}
 
 	bool Cell::isAir() const noexcept
@@ -95,12 +105,12 @@ namespace spk::Voxel
 
 	spk::Vector3 Cell::transformPosition(spk::Vector3 position) const noexcept
 	{
-		const unsigned value = static_cast<unsigned>(_orientation);
-		if (value >= 4)
+		const unsigned turns = static_cast<unsigned>(_horizontal);
+		if (_vertical == VerticalOrientation::YNegative)
 		{
 			position.y = 1.0f - position.y;
 		}
-		return rotateY(position, value % 4, true);
+		return rotateY(position, turns, true);
 	}
 
 	spk::Vector3 Cell::transformNormal(spk::Vector3 normal) const noexcept
@@ -110,7 +120,7 @@ namespace spk::Voxel
 		{
 			normal.y = -normal.y;
 		}
-		return rotateY(normal, value % 4, false);
+		return rotateY(normal, turns, false);
 	}
 
 	Shape::Polygon Cell::orientedPolygon(const Shape::Polygon &polygon) const
@@ -129,7 +139,7 @@ namespace spk::Voxel
 		{
 			result.boundary = directionFace(transformNormal(faceDirection(*result.boundary)));
 		}
-		if (static_cast<unsigned>(_orientation) >= 4)
+		if (_vertical == VerticalOrientation::YNegative)
 		{
 			std::reverse(result.vertices.begin(), result.vertices.end());
 		}
