@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <utility>
 
-
 namespace
 {
 	spk::Vector3 rotateY(spk::Vector3 value, unsigned quarterTurns, bool isPosition) noexcept
