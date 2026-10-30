@@ -22,6 +22,7 @@
 **Décisions déjà validées — ne pas rouvrir :**
 - Point/Spot/Directional : couleur `spk::RGB` linéaire, canaux bornés à `[0,1]`, intensité scalaire `float` finie `>=0` sans plafond artificiel ; `spk::Color` devient `spk::RGBA`, avec `using Color = RGBA;`. Point/Spot ont une portée `range` indépendante de l'intensité, Spot un seul angle, Directional n'a pas de portée et utilise l'orientation de `Transform3D`.
 - Point/Spot : atténuation radiale cubique Smoothstep `1-3x²+2x³`, `x=d/range` dans `[0,1]`, nulle à ou au-delà de `range`, ou pour `range=0`. `d_floor`, l'inverse du carré et `E_min` ne sont **plus** applicables. Spot multiplie par le Smoothstep angulaire en cosinus, de l'axe au bord du cône ; Directional contribue `RGB×intensity` sans décroissance de distance.
+- Ambiance par EngineView (décision validée) : zéro ou **un `spk::AmbientLight` attaché explicitement** à une vue, avec `spk::RGB` linéaire `[0,1]` et intensité scalaire finie `>=0`. Contribution `RGB×intensity` capturée par valeur et appliquée à l'albedo opaque/WBOIT ; sans objet, contribution nulle. Pas de `Light::Contributor`, Registry, Transform3D, Top-N, ombres ou lumière indirecte. Pas de collection d'ambiances dans la scène.
 - Top-N Point/Spot : `score = intensity × range² × priorityWeight / max(distanceCamera,minLightDistance)` après culling ; RGB exclu du score ; les Directional actives restent hors Top-N.
 - Projections d'ombres Point/Spot : `near=range×0,001`, `far=range` ; six perspectives 90° pour Point. `range=0` interdit la construction d'une carte ; une projection non représentable déclenche `spk::Exception`, sans clamp caché. Récepteur avant `near` : échantillon non ombré.
 - Biais automatique appliqué au **test** (pas à la génération de carte), avec `constantFactor`/`slopeFactor` publics (défaut 1), `max(B_texel,ULP(z)) × (constantFactor + slopeFactor×sinθ)`, dépendant du format, de la résolution, de la normale géométrique et de la projection historique.
@@ -46,7 +47,7 @@ Préciser tolérances de coplanarité, union/différence de polygones, triangula
 ### Q-TECH-005 — Signatures C++23 et adaptation aux interfaces existantes
 **Priorité : P1** — [Contrats, §8](voxel-engine-v0.1.4/10-contrats-et-validation.md)
 
-Finaliser signatures de Builders, identifiants de Parts, factories d'assets, API des composants et des vues, `CaptureContext`, abonnements RAII et exceptions. Vérifier l'intégration à `Mesh<T>`, `RenderSnapshot::Builder`, `Texture::Handle`, `GPUResourceCollection`, `Registry` et `VersionedTrait`, sans changer les contrats publics approuvés.
+Finaliser signatures de Builders, identifiants de Parts, factories d'assets, API des composants et des vues (**dont attachement/détachement et propriété de l'unique `spk::AmbientLight` par `EngineView`**), `CaptureContext`, abonnements RAII et exceptions. Vérifier l'intégration à `Mesh<T>`, `RenderSnapshot::Builder`, `Texture::Handle`, `GPUResourceCollection`, `Registry` et `VersionedTrait`, sans changer les contrats publics approuvés.
 
 ### Q-TECH-006 — Formats CPU/GPU, limites et bindings
 **Priorité : P1** — [GPU, §7.5–7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
@@ -62,6 +63,7 @@ Définir les verrous de fusion incrémentale des `ShadowResult` par surface, l'o
 
 Ce rappel sert seulement à **exclure les faux points ouverts** :
 
+- **AmbientLight :** un objet ambiant optionnel unique attaché à chaque EngineView, couleur RGB et intensité, capture immuable ; sans lumière attachée, ambiance nulle. Ni liste de lumières ambiantes ni contribution aux budgets des autres lumières.
 - **Éclairage Forward classique**, sans Tiled Forward+, sans listes GPU par tile ni politique de saturation ; sélection globale `Light::Prioritizer` **Top-N commun Point/Spot**, Directional actives hors quota ; sélection immuable commune aux consommateurs.
 - **Sous-snapshots par EngineView**, intégralement exécutés dans l'ordre choisi par le jeu ; aucun ordonnanceur global caché ni dépendance automatique entre vues ; resize explicitement piloté par le jeu.
 - **Ombres :** producteur `ShadowMap::RenderingSystem`, consommateur `Lighting::System` ; `ShadowMode` de chaque Contributor indépendant de sa hiérarchie, pas de propagation ; aucune shadow map générée par `VoxelRenderingSystem`. **Option A validée : ombres entièrement géométriques**, chaque triangle d'ombre admis est opaque sans échantillonner d'UV, albedo ou alpha. Les textures trouées ne découpent pas les ombres ; un mesh d'ombre explicitement ajouré est nécessaire. Pas de catégorie cutout ni d'invalidation liée au seul changement de palette/texture.
