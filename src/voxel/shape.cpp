@@ -236,6 +236,11 @@ namespace spk::Voxel
 		throw spk::Exception("Voxel Shape references an unknown geometric slot");
 	}
 
+	Shape::Builder::Builder(const spk::JSON::Value &json)
+	{
+		addFromJSON(json);
+	}
+
 	void Shape::Builder::_check() const
 	{
 		if (_consumed)
@@ -288,7 +293,7 @@ namespace spk::Voxel
 
 		Polygon polygon;
 		polygon.vertices = std::move(vertices);
-		polygon.slotKey = std::move(slot);
+		polygon.slotKey = std::move(slotKey);
 		polygon.geometricNormal = normal;
 		polygon.boundary = boundaryOf(polygon.vertices);
 		polygon.shell = polygon.boundary ? Shell::Outer : Shell::Inner;
