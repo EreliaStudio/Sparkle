@@ -150,6 +150,76 @@ namespace
 		}
 	}
 
+	TEST(VoxelShapeFixtureTest, EightInstancesRetainGeometryAndUVWithConsistentWinding)
+	{
+		for (const Fixture &fixture : Fixtures)
+		{
+			SCOPED_TRACE(fixture.name);
+			const Shape shape = fixtureShape(fixture.name);
+			const auto &original = shape.instance().polygons();
+			const Definition definition(shape, [&] {
+				Definition::SlotMapping mapping;
+				for (const auto &slot : shape.slots())
+				{
+					mapping.emplace(slot.name, slot.name);
+				}
+				return mapping;
+			}());
+			for (const Cell &cell : orientations(definition))
+			{
+				const auto &polygons = shape.instance({
+					cell.horizontalOrientation(), cell.verticalOrientation()}).polygons();
+				ASSERT_EQ(polygons.size(), original.size());
+				const bool flipped = cell.verticalOrientation() == Cell::VerticalOrientation::YNegative;
+				for (std::size_t polygonIndex = 0; polygonIndex < polygons.size(); ++polygonIndex)
+				{
+					const auto &polygon = polygons[polygonIndex];
+					const auto &source = original[polygonIndex];
+					ASSERT_EQ(polygon.vertices.size(), source.vertices.size());
+					EXPECT_EQ(polygon.slotKey, source.slotKey);
+					EXPECT_EQ(polygon.shell, source.shell);
+					for (std::size_t index = 0; index < polygon.vertices.size(); ++index)
+					{
+						const std::size_t sourceIndex = flipped ? source.vertices.size() - 1 - index : index;
+						const auto &vertex = polygon.vertices[index];
+						EXPECT_EQ(vertex.uv, source.vertices[sourceIndex].uv);
+						ASSERT_TRUE(vertex.normal.has_value());
+						EXPECT_NEAR(vertex.normal->length(), 1.0, 1.0e-5);
+					}
+					const auto a = polygon.vertices[1].position - polygon.vertices[0].position;
+					const auto b = polygon.vertices[2].position - polygon.vertices[0].position;
+					EXPECT_GT(a.cross(b).dot(polygon.geometricNormal), 0.0f);
+				}
+			}
+		}
+	}
+
+	TEST(VoxelShapeFixtureTest, CubeKeepsSixDistinctBoundariesInEveryOrientation)
+	{
+		const Shape cube = fixtureShape("cube");
+		for (unsigned flipped = 0; flipped != 2; ++flipped)
+		{
+			for (const auto horizontal : {
+				Shape::HorizontalOrientation::XPositive, Shape::HorizontalOrientation::ZNegative,
+				Shape::HorizontalOrientation::XNegative, Shape::HorizontalOrientation::ZPositive})
+			{
+				const auto vertical = flipped ? Shape::VerticalOrientation::YNegative : Shape::VerticalOrientation::YPositive;
+				const auto &polygons = cube.instance({horizontal, vertical}).polygons();
+				std::array<bool, 6> boundaries{};
+				ASSERT_EQ(polygons.size(), 6u);
+				for (const auto &polygon : polygons)
+				{
+					ASSERT_TRUE(polygon.boundary.has_value());
+					boundaries[static_cast<std::size_t>(*polygon.boundary)] = true;
+				}
+				for (bool present : boundaries)
+				{
+					EXPECT_TRUE(present);
+				}
+			}
+		}
+	}
+
 	TEST(VoxelShapeFixtureTest, JSONLoaderPreservesExplicitUVAndLightingNormal)
 	{
 		const auto json = spk::JSON::Value::fromString(
