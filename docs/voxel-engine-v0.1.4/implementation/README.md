@@ -10,8 +10,8 @@ Ce dossier contient **26 fiches de développement successives**, destinées à u
 |---|---|---|
 | [PR-01 — Shape, Definition et Cell](PR-01-voxel-foundations.md) | — | Constituer le modèle voxel public sans Engine et sans OpenGL. |
 | [PR-02 — Volume dense et Builder](PR-02-voxel-volume.md) | 01 | Éditer une grille voxel puis publier des snapshots immuables. |
-| [PR-03 — ShapeTransformationCache et OcclusionCache](PR-03-shape-occlusion-caches.md) | 01 | Calculer les huit orientations et l'occlusion CPU directionnelle avec bindings obligatoires. |
-| [PR-04 — VoxelMesher, clipping et Model](PR-04-voxel-mesher-model.md) | 02, 03 | Produire un Model depuis Volume + OcclusionCache lié. |
+| [PR-03 — Clipping directionnel et OcclusionCache](PR-03-occlusion-cache.md) | 01 | Fournir le clipping CPU commun et un cache de résultats facultatif. |
+| [PR-04 — VoxelMesher, clipping et Model](PR-04-voxel-mesher-model.md) | 02, 03 | Produire un Model depuis Volume avec ou sans OcclusionCache. |
 | [PR-05 — AssetManager et AssetFactory typés](PR-05-asset-manager.md) | — | Charger et posséder des assets C++ génériques à identité stable. |
 | [PR-06 — Material multi-rôles, Texture et SpriteSheet](PR-06-materials-json.md) | 05 | Construire des Materials immuables via Builder ou JSON. |
 | [PR-07 — VoxelPalette et compatibilité des Models](PR-07-voxel-palette.md) | 04, 06 | Associer les slots sémantiques de Models à des Materials sans rebake. |
@@ -51,8 +51,8 @@ Chaque PR d'implémentation possède une **branche Git dédiée**, créée depui
 - Exécuter les tests CTest/GoogleTest pertinents en Debug et Release, Core Windows/Linux et Graphics Windows lorsque ces cibles sont touchées. Les images de référence nécessitent une revue humaine.
 - Réaliser une revue indépendante et obtenir accord du propriétaire pour chaque fusion.
 
-**Jalons :** PR01 premières cellules orientées (description seulement) ; PR03 caches de transformation/occlusion ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 Assembly articulée ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
+**Jalons :** PR01 huit Shape::Instance précalculées ; PR03 clipping et cache d'occlusion facultatif ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 Assembly articulée ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
 
 **Hors scope volontaire :** éviction automatique des caches de géométrie, raffinements adaptatifs d'ombres, Tiled Forward+, moteur de chunks, scheduling GPU global, optimisation SSBO incrémentale.
 
-**Ordre voxel révisé :** PR-01 → PR-02 (Volume) et PR-03 (caches) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Model) attend les deux. Les bindings ShapeTransformationCache → OcclusionCache → VoxelMesher sont obligatoires, sans création implicite ni fallback.
+**Ordre voxel révisé :** PR-01 crée les huit instances dans Shape ; PR-02 (Volume) et PR-03 (clipping + cache facultatif) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Model) attend les deux. Le Mesher sans cache recalcule seulement l'occlusion, jamais les orientations.

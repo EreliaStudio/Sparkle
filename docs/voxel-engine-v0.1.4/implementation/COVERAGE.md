@@ -3,11 +3,11 @@
 | Contrat fonctionnel obligatoire | Référence normative | Fiche(s) |
 |---|---|---|
 | Shape, Definition, Cell, enums d'orientation, Air | [02](../02-modele-voxel.md) | PR01 |
-| Géométries orientées mises en cache, winding/UV/normales | [02](../02-modele-voxel.md), [03](../03-meshing-occlusion.md) | PR03 |
+| Huit `Shape::Instance` préconstruites, partage/immutabilité, winding/UV/normales | [02](../02-modele-voxel.md), [03](../03-meshing-occlusion.md) | PR01 |
 | Volume dense et snapshots | [02](../02-modele-voxel.md) | PR02 |
 | Mesher, assemblage des fragments, innerShell, voisins extérieurs | [03](../03-meshing-occlusion.md) | PR04 |
 | Model : meshes opaques, translucides et d'ombre | [03](../03-meshing-occlusion.md) | PR04 |
-| OcclusionCache obligatoire pour Mesher, clipping directionnel | [03](../03-meshing-occlusion.md) | PR03 |
+| OcclusionCache facultatif et clipping directionnel partagé avec le mode sans cache | [03](../03-meshing-occlusion.md) | PR03, PR04 |
 | AssetManager, AssetFactory, JSON structurel et cycles | [05](../05-asset-manager.md) | PR05 |
 | Material multi-rôles, texture, SpriteSheet, JSON strict | [04](../04-materiaux-textures-palettes.md) | PR06 |
 | VoxelPalette, compatibilité Model et identités d'albedo | [04](../04-materiaux-textures-palettes.md) | PR07 |

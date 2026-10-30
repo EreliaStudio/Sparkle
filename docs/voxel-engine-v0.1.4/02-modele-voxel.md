@@ -9,8 +9,9 @@ classDiagram
   direction LR
   class Shape {
     +Builder
-    +slots locaux et polygones
-    -Data immutable partagé
+    +slots géométriques
+    +instance(orientation) Instance
+    -Data immuable partagé avec 8 instances
   }
   class Definition {
     +shape
@@ -33,23 +34,21 @@ classDiagram
     +materialSlots()
     -données immuables partagées
   }
-  class ShapeTransformationCache {
-    +get(Shape, orientations) TransformedShape
+  class ShapeInstance {
+    +polygons() const
   }
   class OcclusionCache {
-    +bind(ShapeTransformationCache*)
     +find/store/clear
   }
   class VoxelMesher {
     +bake(Volume) Model
-    +bind(OcclusionCache*)
+    +bind(OcclusionCache*) facultatif
   }
   Shape <-- Definition
   Definition <-- Cell
   Cell <-- Volume
-  Shape --> ShapeTransformationCache
-  ShapeTransformationCache <-- OcclusionCache
-  OcclusionCache <-- VoxelMesher
+  Shape *-- ShapeInstance : huit orientations
+  VoxelMesher ..> OcclusionCache : facultatif
   Volume --> VoxelMesher
   VoxelMesher --> Model
 ```
@@ -80,6 +79,8 @@ Les positions et les UV ne sont pas confondus : les **positions** doivent être 
 
 Une Shape publiée conserve un bloc `shared_ptr<const Data>` interne : les copies sont légères et partagent les mêmes données et la même identité. Deux Shapes construites indépendamment peuvent avoir des données géométriquement identiques mais des **identités de Data distinctes**. Cette identité est notamment utilisée par le cache d'occlusion. La représentation propriétaire n'est pas exposée dans les API publiques.
 
+Chaque `Shape::Data` détient **huit `Shape::Instance` immuables** (`std::array<Instance, 8>`), une pour chacun des quatre angles autour de Y et des deux orientations verticales. `Shape::Builder::build()` produit toutes les géométries orientées en une fois : positions, normales géométriques et d'éclairage, winding, frontières et classifications sont transformés ; les UV restent attachés aux sommets et les noms de slots géométriques sont conservés. `Shape::instance(orientation)` renvoie ensuite une référence const à la variante déjà calculée, sans transformation ni allocation supplémentaire. Les copies de Shape réutilisent les mêmes instances ; des Shapes construites indépendamment ne partagent pas leurs instances. Cette représentation interne remplace définitivement le `ShapeTransformationCache` externe.
+
 ### 2.2 `spk::Voxel::Definition` : sens des slots
 
 Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → nom de slot sémantique** destiné au Model. Elle ne contient pas de `Material` et n'ajoute ni catégorie de rendu, ni règle d'occlusion indépendante à l'opacité déclarée dans la Shape.
@@ -92,7 +93,7 @@ Sparkle fournit une **Definition Air prédéfinie**. Elle représente une vraie 
 
 L'API publique représente une Cell **par valeur**, contenant sa Definition (copie légère) et une orientation discrète. Les orientations disponibles comprennent les quatre rotations de 90° autour de Y et une possibilité d'inversion verticale, soit **huit orientations**.
 
-La `Cell` **ne transforme pas la géométrie** et n'expose ni `transformPosition`, ni `transformNormal`, ni `orientedPolygon(s)`, ni accès `friend` au Mesher. Le futur `ShapeTransformationCache` réalise la transformation des positions et normales, conserve les UV attachés aux sommets et corrige, lors d'un flip de parité, le winding/les indices pour préserver la **face avant physique voulue**.
+La `Cell` **ne transforme pas la géométrie** et n'expose ni `transformPosition`, ni `transformNormal`, ni `orientedPolygon(s)`, ni accès `friend` au Mesher. La `Cell` utilise les enums d'orientation de `Shape` ; les consommateurs accèdent à la géométrie par `cell.definition().shape().instance(orientation)`. La transformation et la correction du winding sont effectuées **exclusivement à la construction de Shape**, jamais lors d'un bake.
 
 Une cellule d'air est une Cell valide, et non `null`, un `optional` vide ou un indicateur « absence ».
 
