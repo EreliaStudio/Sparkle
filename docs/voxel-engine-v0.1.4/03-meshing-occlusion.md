@@ -4,22 +4,26 @@
 
 ## 3. Meshing, visibilité et occlusion
 
+### 3.0 `spk::Voxel::ShapeTransformationCache`
+
+`ShapeTransformationCache` calcule et mémorise une seule fois, pour chaque identité immuable de `Shape::Data` et chaque couple d'orientations, sa géométrie orientée. Les huit variantes concernent quatre rotations horizontales et deux orientations verticales. Le résultat immuable conserve les slots géométriques, UV attachés aux sommets, positions, normales d'éclairage, normales géométriques, classifications et boundaries transformées. L'inversion verticale corrige le winding afin de conserver la face avant physique et le CCW. Aucune transformation géométrique n'appartient à `Cell` : elle porte exclusivement Definition et orientation. Le cache est CPU et indépendant de l'Engine, d'OpenGL, des voisins et des matériaux.
+
 ### 3.1 `spk::Voxel::VoxelMesher`
 
 Le Mesher transforme un `Volume` immuable en un **nouveau `Model` immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
 
-Son travail est indépendant des matériaux concrets et des pixels de texture. Il peut, de manière facultative, emprunter un `OcclusionCache` externe :
+Son travail est indépendant des matériaux concrets et des pixels de texture. Il **requiert** un `OcclusionCache` externe explicitement lié, qui lui-même **requiert** un `ShapeTransformationCache`. Aucun de ces caches n'est créé implicitement et aucun calcul de remplacement n'est autorisé.
 
 ```cpp
+spk::Voxel::ShapeTransformationCache transformations;
+spk::Voxel::OcclusionCache occlusion;
+occlusion.bind(&transformations);
 spk::Voxel::VoxelMesher mesher;
-spk::Voxel::OcclusionCache cache;
-
-mesher.bind(&cache);
+mesher.bind(&occlusion);
 auto model = mesher.bake(volume);
-mesher.unbind();
 ```
 
-`bind(OcclusionCache*)` est un emprunt non propriétaire ; le cache doit rester vivant tant qu'il est lié et utilisé. La liaison est facultative : sans cache, le même algorithme de visibilité s'exécute sans mémorisation de ses résultats. Une nouvelle liaison à cible unique exige normalement un `unbind()` préalable ; le type exact du Mesher et ses méthodes secondaires restent à finaliser.
+Les liaisons sont des emprunts non propriétaires et leurs cibles doivent rester vivantes pendant leur utilisation. Toute liaison nulle, utilisation d'`OcclusionCache` non lié, ou tentative de `VoxelMesher::bake()` sans cache lié lève `spk::Exception`. `unbind()`, lorsqu'il existe, rend les opérations dépendantes invalides jusqu'à une nouvelle liaison. Ni le Mesher ni l'OcclusionCache ne peuvent calculer la transformation par un second algorithme.
 
 La tolérance de clipping est un seul paramètre configurable du Mesher, **`1e-5` par défaut** dans les unités locales du cube. Toute valeur non finie ou non strictement positive est rejetée par `spk::Exception`. Cette tolérance contribue à la clé du cache. La détermination des longueurs, aires et seuils de dégénérescence doit rester dimensionnellement cohérente : ne pas comparer une aire directement à une longueur.
 
@@ -82,7 +86,7 @@ Les `outerShell` continuent à être traités par clipping directionnel indépen
 
 ### 3.5 `spk::Voxel::OcclusionCache`
 
-Le cache est une ressource autonome **facultative** et indépendante des Meshers, des palettes et du GPU. Plusieurs Meshers peuvent l'utiliser.
+Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et GPU, mais **obligatoire pour tout VoxelMesher**. Plusieurs Meshers peuvent le partager. Un `OcclusionCache` emprunte obligatoirement un `ShapeTransformationCache` fourni par l'appelant ; s'il n'est pas lié, toute opération de calcul/consultation d'occlusion échoue avec `spk::Exception`. Il ne construit jamais son propre cache de transformations. Sur une absence d'entrée, il calcule le clipping en utilisant le cache de transformations lié, puis peut mémoriser le résultat, sans voie alternative.
 
 Une entrée représente **une requête directionnelle A → B** : quels fragments de l'`outerShell` de A restent visibles après occultation par B ? Le sens **B → A** constitue une autre requête, une autre clé et éventuellement un autre résultat. Une valeur valide contenant zéro fragment signifie **occlusion totale**, tandis que l'absence d'entrée est représentée par `std::nullopt`.
 
