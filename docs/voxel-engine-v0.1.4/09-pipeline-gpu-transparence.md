@@ -40,7 +40,7 @@ sequenceDiagram
   participant V as Builder par EngineView
   participant C as Contributor
   participant G as Window Surface GPU
-  E->>V: initialiser 4 cles systeme et leurs etats GPU
+  E->>V: initialiser 5 cles systeme et leurs etats GPU
   E->>C: contribuer avec Builder et CaptureContext
   C->>V: renderPass(name, order) et commandes
   E->>V: verifier plages, noms et collisions
@@ -48,7 +48,7 @@ sequenceDiagram
     V-->>E: spk.Exception avant publication
   else Cles valides
     E->>V: build sous-snapshot immutable
-    V-->>G: shadow puis opaque puis WBOIT puis composition
+    V-->>G: shadow puis Skybox puis opaque puis WBOIT puis composition
     Note over V,G: Passes applicatives intercalees dans les plages
   end
 ```
@@ -182,7 +182,7 @@ flowchart LR
   Exposure --> Tone["Reinhard RGB : max(C,0)*E / (1+max(C,0)*E)"]
   Compose --> Tone
   Tone --> Tex["GL_SRGB8_ALPHA8 finale par surface, alpha 1"]
-  Tex --> Widget["EngineWidget ou EngineViewWidget"]
+  Tex --> Widget["EngineWidget avec role Drawing"]
   Tex --> MaterialView["Material source EngineView"]
 ```
 
