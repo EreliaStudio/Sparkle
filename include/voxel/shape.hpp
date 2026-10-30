@@ -113,7 +113,8 @@ namespace spk::Voxel
 		Shape();
 
 		[[nodiscard]] const std::vector<Slot> &slots() const noexcept;
-		[[nodiscard]] const Instance &instance(Orientation orientation = {}) const;
+		[[nodiscard]] const Instance &instance() const;
+		[[nodiscard]] const Instance &instance(Orientation orientation) const;
 		[[nodiscard]] bool empty() const noexcept;
 		[[nodiscard]] bool operator==(const Shape &other) const noexcept;
 		[[nodiscard]] const Slot &slot(std::string_view name) const;
