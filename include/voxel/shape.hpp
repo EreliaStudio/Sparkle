@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "container/json/object.hpp"
+#include "container/json/object.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 
@@ -63,6 +64,9 @@ namespace spk::Voxel
 			void _check() const;
 
 		public:
+			Builder() = default;
+			explicit Builder(const spk::JSON::Value &json);
+
 			void addSlot(std::string name, float opacity = 1.0f);
 			void addPolygon(std::string slotKey, std::vector<Vertex> vertices);
 			void addFromJSON(const spk::JSON::Value &value);
