@@ -1,6 +1,8 @@
 # PR-03 — VoxelMesher, clipping et Model
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/03-voxel-mesher-model`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Générer un modèle voxel complet et déterministe à partir du Volume.
 

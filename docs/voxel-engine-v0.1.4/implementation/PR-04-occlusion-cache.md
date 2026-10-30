@@ -1,6 +1,8 @@
 # PR-04 — OcclusionCache facultatif
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/04-occlusion-cache`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Mettre en cache le clipping sans changer les triangles produits.
 

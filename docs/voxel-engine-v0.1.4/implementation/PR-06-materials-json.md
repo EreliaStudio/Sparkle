@@ -1,6 +1,8 @@
 # PR-06 — Material multi-rôles, Texture et SpriteSheet
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/06-materials-json`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Construire des Materials immuables via Builder ou JSON.
 

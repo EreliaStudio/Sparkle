@@ -53,4 +53,4 @@ flowchart TD
 
 **Risques :** préserver l'input après le remplacement de RenderingEngine en PR09, l'immuabilité des anciens Handles au resize en PR11 et les transactions mutation+invalidation en PR18. Tester ces frontières dès les PR correspondantes.
 
-**Mode de collaboration :** fusionner d'abord les prérequis nécessaires, éviter les chaînes de branches divergentes et toute PR géante ; il n'est pas nécessaire de linéariser des branches indépendantes.
+**Mode de collaboration :** une branche par fiche, créée **depuis la tête courante de `V0.1.4`** et ciblant **`V0.1.4`**. Fusionner d'abord les prérequis dans `V0.1.4` ; deux fiches indépendantes peuvent avancer en branches parallèles, à resynchroniser avant fusion. Ne jamais créer une branche sur une autre branche de développement, ni cibler `main` avec une des 26 PR. La PR #37 reste le regroupement final `V0.1.4` → `main`.

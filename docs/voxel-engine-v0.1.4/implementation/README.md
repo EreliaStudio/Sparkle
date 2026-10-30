@@ -35,9 +35,16 @@ Ce dossier contient **26 fiches de développement successives**, destinées à u
 | [PR-25 — WBOIT MRT et composition HDR complète](PR-25-wboit-hdr.md) | 11, 12, 13, 19 | Afficher des surfaces translucides avec une seule passe de géométrie et HDR jusqu'à la sortie. |
 | [PR-26 — Intégration complète et publication v0.1.4](PR-26-integration-validation.md) | 04, 08, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25 | Vérifier collectivement toutes les fonctionnalités sans introduire une nouvelle architecture. |
 
-## Consignes d'exécution
+## Règle Git — une branche indépendante par PR
 
-- La **PR #37** est la source architecturale. Après sa fusion, partir de `main` ; tant qu'elle n'est pas fusionnée, baser des branches de code sur `V0.1.4` et cibler cette branche puis rebaser/retargeter vers `main`. **Ne pas ajouter les implémentations à la PR #37**.
+Chaque PR d'implémentation possède une **branche Git dédiée**, créée depuis la tête courante de `V0.1.4` **au moment de commencer** la fiche, et sa PR GitHub cible exclusivement `V0.1.4`.
+
+1. Pour PR-XX, créer `impl/v0.1.4/XX-nom-de-fiche` **depuis `V0.1.4`**, après fusion dans `V0.1.4` de tous ses prérequis. Ne pas créer les 26 branches en avance.
+2. Développer et tester sur cette branche, puis ouvrir une unique PR `impl/v0.1.4/XX-nom-de-fiche` → **`V0.1.4`**. Ne jamais committer l'implémentation directement sur `V0.1.4` ou `main`.
+3. Ne pas empiler les branches des fiches dépendantes : fusionner les prérequis dans `V0.1.4` avant de démarrer la suivante. Deux fiches indépendantes peuvent démarrer en parallèle depuis `V0.1.4`, puis se resynchroniser avec sa tête avant fusion.
+4. Garder la PR #37 (`V0.1.4` → `main`) comme PR de regroupement de la version. Dès que les PR de code sont fusionnées dans `V0.1.4`, leurs changements apparaîtront aussi dans la #37. Ne fusionner la #37 vers `main` qu'après la validation globale du propriétaire.
+
+## Consignes d'exécution
 - Une PR de code par fiche, indépendante lorsque le graphe le permet. Un nom de fiche `PR-XX` ne préjuge pas du numéro réel attribué par GitHub.
 - Inspecter les vraies API et les tests, n'introduire aucun moteur de ressources, mutex, cache ou ordonnanceur déjà couvert par Sparkle. `sparkle::core` reste headless ; `sparkle::sparkle` porte le graphique.
 - Les signatures illustratives ne sont pas des décisions imposant une refonte. Les détails d'implémentation restent à trancher localement et à tester ; pas de nouveau registre de questions ni de réouverture des choix approuvés.
