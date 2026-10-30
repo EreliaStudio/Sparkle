@@ -9,7 +9,7 @@ namespace spk::Voxel
 	struct Definition::Data
 	{
 		Shape shape;
-		SlotMappings slots;
+		SlotMapping slots;
 	};
 
 	Definition::Definition() :
@@ -17,25 +17,24 @@ namespace spk::Voxel
 	{
 	}
 
-	Definition::Definition(Shape shape, SlotMappings mapping)
+	Definition::Definition(Shape shape, SlotMapping mapping)
 	{
 		if (mapping.size() != shape.slots().size())
 		{
 			throw spk::Exception("Voxel Definition must map every Shape slot exactly once");
 		}
-
 		for (const auto &slot : shape.slots())
 		{
 			if (!mapping.contains(slot.name))
 			{
-				throw spk::Exception("Voxel Definition has a missing or repeated Shape slot mapping");
+				throw spk::Exception("Voxel Definition has a missing Shape slot mapping");
 			}
 		}
 		for (const auto &[key, value] : mapping)
 		{
 			if (value.empty())
 			{
-				throw spk::Exception("Voxel Definition semantic slot value cannot be empty");
+				throw spk::Exception("Voxel Definition semantic slot name cannot be empty");
 			}
 			(void)shape.slot(key);
 		}
@@ -57,19 +56,19 @@ namespace spk::Voxel
 		return _data->shape;
 	}
 
-	const Definition::SlotMappings &Definition::slots() const noexcept
+	const Definition::SlotMapping &Definition::slots() const noexcept
 	{
 		return _data->slots;
 	}
 
-	const std::string &Definition::semanticSlot(std::string_view geometric) const
+	const std::string &Definition::semanticSlot(std::string_view geometricKey) const
 	{
-		const auto iterator = _data->slots.find(std::string(geometric));
-		if (iterator != _data->slots.end())
+		const auto found = _data->slots.find(std::string(geometricKey));
+		if (found == _data->slots.end())
 		{
-			return iterator->second;
+			throw spk::Exception("Voxel Definition references an unmapped geometric slot");
 		}
-		throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+		return found->second;
 	}
 
 	bool Definition::operator==(const Definition &other) const noexcept
