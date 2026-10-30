@@ -21,6 +21,16 @@ Ce fichier est le **sommaire normatif** des huit chapitres de Sparkle V0.1.4. Le
 | 7.5–7.8 | [GPU, Forward et WBOIT](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) |
 | 8 | [Contrats et validation](voxel-engine-v0.1.4/10-contrats-et-validation.md) |
 
+## État consolidé de l'éclairage (Q-TECH-002)
+
+Les arbitrages suivants sont **validés** et décrits de façon normative dans le [chapitre Lumières et ombres](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) et ses [tests](voxel-engine-v0.1.4/10-contrats-et-validation.md) :
+
+- **API lumineuse :** Point, Spot et Directional ont une couleur `spk::RGB` linéaire à trois canaux bornés `[0,1]` et une intensité scalaire finie `>=0` ; Point/Spot ont une portée `range` directement définie en `U`, Spot possède un seul angle, Directional aucune portée. L'ancienne API `spk::Color` (RGBA) conserve son alias lors du renommage `spk::RGBA`.
+- **Shading :** Point et Spot utilisent `A(x)=1−3x²+2x³` (`x=d/range` borné à `[0,1]`), extinction à `range`, sans inverse du carré ni `d_floor` ; Spot multiplie par un Smoothstep angulaire en cosinus. Directional utilise `RGB×intensity` sans atténuation radiale.
+- **Sélection :** score Point/Spot `intensity×range²×priorityWeight/max(distanceCamera,minLightDistance)`, calculé après culling ; sélection Forward classique, sans Tiled Forward+.
+- **Ombres :** Point/Spot `near=0,001×range`, `far=range` ; Point six faces à 90°, PCF manuel 3×3 inter-faces (±1 texel sur face centrale, reprojection individuelle), règle d'égalité X > Y > Z, biais automatique par tap fondé sur la projection historique ; centre exact non ombré, tap avant near non ombré. Cartes historiques géométriquement cohérentes ; RGB/intensity courants.
+- **Statut :** les précisions non validées (certaines résolutions/formats, limites numériques, ombres directionnelles et conventions exactes de plans) restent dans [Q-TECH-002](voxel-engine-v0.1.4-points-a-clarifier.md). La conception n'autorise pas encore l'implémentation.
+
 ## Questions à résoudre avant l'implémentation
 
 Les **sept arbitrages architecturaux Q-ARCH-001 à Q-ARCH-007 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`) et leurs décisions figurent désormais dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) conserve **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
