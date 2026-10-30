@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "container/json/object.hpp"
-#include "container/json/object.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 
