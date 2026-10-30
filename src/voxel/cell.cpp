@@ -18,6 +18,23 @@ namespace
 		return value;
 	}
 
+	unsigned quarterTurns(spk::Voxel::Cell::HorizontalOrientation orientation) noexcept
+	{
+		using Horizontal = spk::Voxel::Cell::HorizontalOrientation;
+		switch (orientation)
+		{
+		case Horizontal::XPositive:
+			return 0;
+		case Horizontal::ZPositive:
+			return 3;
+		case Horizontal::XNegative:
+			return 2;
+		case Horizontal::ZNegative:
+			return 1;
+		}
+		return 0;
+	}
+
 	spk::Vector3 faceDirection(spk::Voxel::Shape::Face face) noexcept
 	{
 		using Face = spk::Voxel::Shape::Face;
@@ -73,13 +90,16 @@ namespace spk::Voxel
 		HorizontalOrientation horizontal,
 		VerticalOrientation vertical) :
 		_definition(std::move(definition)),
-		_horizontal(horizontal),
-		_vertical(vertical)
+		_horizontalOrientation(horizontal),
+		_verticalOrientation(vertical)
 	{
-		if (static_cast<unsigned>(horizontal) > static_cast<unsigned>(HorizontalOrientation::XNegative) ||
-			static_cast<unsigned>(vertical) > static_cast<unsigned>(VerticalOrientation::YNegative))
+		if (static_cast<unsigned>(horizontal) > static_cast<unsigned>(HorizontalOrientation::ZNegative))
 		{
-			throw spk::Exception("Voxel Cell has an invalid horizontal or vertical orientation");
+			throw spk::Exception("Voxel Cell horizontal orientation is invalid");
+		}
+		if (static_cast<unsigned>(vertical) > static_cast<unsigned>(VerticalOrientation::YNegative))
+		{
+			throw spk::Exception("Voxel Cell vertical orientation is invalid");
 		}
 	}
 
@@ -90,12 +110,12 @@ namespace spk::Voxel
 
 	Cell::HorizontalOrientation Cell::horizontalOrientation() const noexcept
 	{
-		return _horizontal;
+		return _horizontalOrientation;
 	}
 
 	Cell::VerticalOrientation Cell::verticalOrientation() const noexcept
 	{
-		return _vertical;
+		return _verticalOrientation;
 	}
 
 	bool Cell::isAir() const noexcept
@@ -105,22 +125,20 @@ namespace spk::Voxel
 
 	spk::Vector3 Cell::transformPosition(spk::Vector3 position) const noexcept
 	{
-		const unsigned turns = static_cast<unsigned>(_horizontal);
-		if (_vertical == VerticalOrientation::YNegative)
+		if (_verticalOrientation == VerticalOrientation::YNegative)
 		{
 			position.y = 1.0f - position.y;
 		}
-		return rotateY(position, turns, true);
+		return rotateY(position, quarterTurns(_horizontalOrientation), true);
 	}
 
 	spk::Vector3 Cell::transformNormal(spk::Vector3 normal) const noexcept
 	{
-		const unsigned value = static_cast<unsigned>(_orientation);
-		if (value >= 4)
+		if (_verticalOrientation == VerticalOrientation::YNegative)
 		{
 			normal.y = -normal.y;
 		}
-		return rotateY(normal, turns, false);
+		return rotateY(normal, quarterTurns(_horizontalOrientation), false);
 	}
 
 	Shape::Polygon Cell::orientedPolygon(const Shape::Polygon &polygon) const
@@ -139,7 +157,7 @@ namespace spk::Voxel
 		{
 			result.boundary = directionFace(transformNormal(faceDirection(*result.boundary)));
 		}
-		if (_vertical == VerticalOrientation::YNegative)
+		if (_verticalOrientation == VerticalOrientation::YNegative)
 		{
 			std::reverse(result.vertices.begin(), result.vertices.end());
 		}
