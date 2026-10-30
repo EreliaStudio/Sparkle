@@ -290,6 +290,135 @@ namespace
 		}
 	}
 
+
+	TEST(VoxelShapeTest, EightCachedInstancesHaveDistinctStableAddresses)
+	{
+		const Shape shape = makeSquare();
+		const Shape copy = shape;
+		const Shape independent = makeSquare();
+		std::array<const Shape::Instance *, 8> addresses{};
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			const auto &instance = shape.instance(orientation);
+			addresses[index] = &instance;
+			EXPECT_EQ(&shape.instance(orientation), addresses[index]);
+			EXPECT_EQ(&copy.instance(orientation), addresses[index]);
+			EXPECT_NE(&independent.instance(orientation), addresses[index]);
+			for (std::size_t previous = 0; previous < index; ++previous)
+			{
+				EXPECT_NE(addresses[index], addresses[previous]);
+			}
+		}
+		EXPECT_EQ(&shape.instance(), addresses[0]);
+	}
+
+	TEST(VoxelShapeTest, EveryOrientationTransformsPositionsAndCustomLightingNormals)
+	{
+		Shape::Builder builder;
+		builder.addSlot("panel");
+		auto vertices = std::vector<Shape::Vertex>{
+			vertex(0.2f, 0.3f, 0.4f, 0.15f, 0.85f),
+			vertex(0.2f, 0.3f, 0.8f, 0.4f, 0.2f),
+			vertex(0.2f, 0.7f, 0.8f, 0.9f, 0.6f)};
+		vertices[0].normal = spk::Vector3{1.0f, 2.0f, 3.0f};
+		builder.addPolygon("panel", vertices);
+		const Shape shape = builder.build();
+
+		const std::array<spk::Vector3, 8> expectedPositions = {
+			spk::Vector3{0.2f, 0.3f, 0.4f}, {0.4f, 0.3f, 0.8f},
+			{0.8f, 0.3f, 0.6f}, {0.6f, 0.3f, 0.2f},
+			{0.2f, 0.7f, 0.4f}, {0.4f, 0.7f, 0.8f},
+			{0.8f, 0.7f, 0.6f}, {0.6f, 0.7f, 0.2f}};
+		const std::array<spk::Vector3, 8> expectedNormals = {
+			spk::Vector3{1.0f, 2.0f, 3.0f}, {3.0f, 2.0f, -1.0f},
+			{-1.0f, 2.0f, -3.0f}, {-3.0f, 2.0f, 1.0f},
+			{1.0f, -2.0f, 3.0f}, {3.0f, -2.0f, -1.0f},
+			{-1.0f, -2.0f, -3.0f}, {-3.0f, -2.0f, 1.0f}};
+		const std::array<spk::Vector3, 4> expectedGeometricNormals = {
+			spk::Vector3{-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f},
+			{1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}};
+
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			SCOPED_TRACE(index);
+			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			const auto &polygons = shape.instance(orientation).polygons();
+			ASSERT_EQ(polygons.size(), 1u);
+			const auto &polygon = polygons[0];
+			ASSERT_EQ(polygon.vertices.size(), 3u);
+			const std::size_t anchorIndex = index >= 4 ? 2u : 0u;
+			const auto &anchor = polygon.vertices[anchorIndex];
+			EXPECT_EQ(anchor.position, expectedPositions[index]);
+			EXPECT_EQ(anchor.uv, spk::Vector2(0.15f, 0.85f));
+			ASSERT_TRUE(anchor.normal.has_value());
+			EXPECT_EQ(*anchor.normal, expectedNormals[index]);
+			EXPECT_EQ(polygon.geometricNormal, expectedGeometricNormals[index % 4]);
+			EXPECT_EQ(polygon.slotKey, "panel");
+			EXPECT_EQ(polygon.shell, Shape::Shell::Inner);
+			EXPECT_FALSE(polygon.boundary.has_value());
+			const auto edgeA = polygon.vertices[1].position - polygon.vertices[0].position;
+			const auto edgeB = polygon.vertices[2].position - polygon.vertices[0].position;
+			EXPECT_GT(edgeA.cross(edgeB).dot(polygon.geometricNormal), 0.0f);
+		}
+	}
+
+	TEST(VoxelShapeTest, PublishedInstancesRemainUnchangedWhenBuilderIsReused)
+	{
+		Shape::Builder builder;
+		builder.addSlot("first", 0.5f);
+		builder.addPolygon("first", square());
+		const Shape original = builder.build();
+		const Shape originalCopy = original;
+		std::array<const Shape::Instance *, 8> before{};
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			before[index] = &original.instance(orientation);
+		}
+
+		builder.addSlot("second", 1.0f);
+		builder.addPolygon("second", square());
+		const Shape extended = builder.build();
+		const Shape repeated = builder.build();
+		EXPECT_FALSE(original == extended);
+		EXPECT_FALSE(extended == repeated);
+		EXPECT_EQ(original.slots().size(), 1u);
+		EXPECT_EQ(extended.slots().size(), 2u);
+		EXPECT_FLOAT_EQ(original.slot("first").opacity, 0.5f);
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			const auto &instance = original.instance(orientation);
+			EXPECT_EQ(&instance, before[index]);
+			EXPECT_EQ(&originalCopy.instance(orientation), before[index]);
+			ASSERT_EQ(instance.polygons().size(), 1u);
+			EXPECT_EQ(instance.polygons()[0].slotKey, "first");
+			EXPECT_EQ(extended.instance(orientation).polygons().size(), 2u);
+			EXPECT_EQ(repeated.instance(orientation).polygons().size(), 2u);
+		}
+	}
+
+	TEST(VoxelShapeTest, EmptyShapePublishesEightReusableEmptyInstances)
+	{
+		const Shape empty = Shape::Builder{}.build();
+		const Shape copied = empty;
+		std::array<const Shape::Instance *, 8> addresses{};
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			const auto &instance = empty.instance(orientation);
+			addresses[index] = &instance;
+			EXPECT_TRUE(instance.empty());
+			EXPECT_TRUE(instance.polygons().empty());
+			EXPECT_EQ(addresses[index], &copied.instance(orientation));
+			for (std::size_t previous = 0; previous < index; ++previous)
+			{
+				EXPECT_NE(addresses[index], addresses[previous]);
+			}
+		}
+	}
+
 	TEST(VoxelShapeTest, InvalidOrientationsThrowInsteadOfIndexingOutsideInstances)
 	{
 		const Shape shape = makeSquare();
