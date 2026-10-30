@@ -3,6 +3,8 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <set>
+#include <utility>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -249,5 +251,61 @@ namespace
 		const auto polygon = cell.orientedPolygons().front();
 		EXPECT_EQ(polygon.boundary, Shape::Face::NegativeY);
 		EXPECT_FLOAT_EQ(polygon.vertices[0].position.y, 0.0f);
+	}
+
+	TEST(VoxelShapeTest, OverlappingAndOppositeWindingPolygonsRemainDistinct)
+	{
+		Shape::Builder builder;
+		builder.addSlot("sheet");
+		const auto vertices = square();
+		builder.addPolygon("sheet", vertices);
+		builder.addPolygon("sheet", vertices);
+		auto reversed = vertices;
+		std::reverse(reversed.begin(), reversed.end());
+		builder.addPolygon("sheet", reversed);
+		const Shape shape = builder.build();
+		ASSERT_EQ(shape.polygons().size(), 3u);
+		EXPECT_EQ(shape.polygons()[0].geometricNormal, shape.polygons()[1].geometricNormal);
+		EXPECT_EQ(shape.polygons()[0].geometricNormal, -shape.polygons()[2].geometricNormal);
+	}
+
+	TEST(VoxelCellTest, SixSidedCubeKeepsEachPhysicalFrontFaceUnderEveryOrientation)
+	{
+		const std::array<spk::Vector3, 8> corners = {
+			spk::Vector3{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
+			{0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}};
+		const std::array<std::array<std::size_t, 4>, 6> faces = {
+			std::array<std::size_t, 4>{0, 3, 2, 1},
+			{4, 5, 6, 7}, {0, 4, 7, 3}, {1, 2, 6, 5},
+			{0, 1, 5, 4}, {3, 7, 6, 2}};
+		Shape::Builder builder;
+		builder.addSlot("cube");
+		for (const auto &indices : faces)
+		{
+			std::vector<Shape::Vertex> vertices;
+			for (const auto index : indices)
+			{
+				vertices.push_back({corners[index], {}, std::nullopt});
+			}
+			builder.addPolygon("cube", std::move(vertices));
+		}
+		const Definition definition(builder.build(), {{"cube", "stone"}});
+		for (unsigned index = 0; index < 8; ++index)
+		{
+			const Cell cell(definition, static_cast<Cell::Orientation>(index));
+			std::set<Shape::Face> boundaries;
+			const auto polygons = cell.orientedPolygons();
+			ASSERT_EQ(polygons.size(), 6u);
+			for (const auto &polygon : polygons)
+			{
+				ASSERT_TRUE(polygon.boundary.has_value());
+				boundaries.insert(*polygon.boundary);
+				EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
+				const auto edgeA = polygon.vertices[1].position - polygon.vertices[0].position;
+				const auto edgeB = polygon.vertices[2].position - polygon.vertices[0].position;
+				EXPECT_GT(edgeA.cross(edgeB).dot(polygon.geometricNormal), 0.0f);
+			}
+			EXPECT_EQ(boundaries.size(), 6u);
+		}
 	}
 }
