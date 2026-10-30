@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -221,10 +221,14 @@ namespace
 		const Shape copied = shape;
 		const Shape independent = makeSquare();
 		const std::array<Shape::Face, 8> expectedFaces = {
-			Shape::Face::NegativeX, Shape::Face::PositiveZ,
-			Shape::Face::PositiveX, Shape::Face::NegativeZ,
-			Shape::Face::NegativeX, Shape::Face::PositiveZ,
-			Shape::Face::PositiveX, Shape::Face::NegativeZ};
+			Shape::Face::NegativeX,
+			Shape::Face::PositiveZ,
+			Shape::Face::PositiveX,
+			Shape::Face::NegativeZ,
+			Shape::Face::NegativeX,
+			Shape::Face::PositiveZ,
+			Shape::Face::PositiveX,
+			Shape::Face::NegativeZ};
 		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
 			const auto orientation = Shape::Orientation{Orientations[index].horizontal, Orientations[index].vertical};
@@ -258,15 +262,20 @@ namespace
 	{
 		Shape::Builder builder;
 		builder.addSlot("face");
-		builder.addPolygon("face", {
-			vertex(0, 1, 0, 0, 0), vertex(1, 1, 0, 1, 0), vertex(0, 1, 1, 0, 1)});
-		builder.addPolygon("face", {
-			vertex(0, 0, 0, 0, 0), vertex(0, 0, 1, 0, 1), vertex(1, 0, 0, 1, 0)});
+		const std::vector<Shape::Vertex> top{
+			vertex(0, 1, 0, 0, 0),
+			vertex(1, 1, 0, 1, 0),
+			vertex(0, 1, 1, 0, 1)};
+		const std::vector<Shape::Vertex> bottom{
+			vertex(0, 0, 0, 0, 0),
+			vertex(0, 0, 1, 0, 1),
+			vertex(1, 0, 0, 1, 0)};
+		builder.addPolygon("face", top);
+		builder.addPolygon("face", bottom);
 		const Shape shape = builder.build();
 		const auto &original = shape.instance().polygons();
-		const auto &flipped = shape.instance({
-			Shape::HorizontalOrientation::XPositive,
-			Shape::VerticalOrientation::YNegative}).polygons();
+		const Shape::Orientation flippedOrientation{Shape::HorizontalOrientation::XPositive, Shape::VerticalOrientation::YNegative};
+		const auto &flipped = shape.instance(flippedOrientation).polygons();
 		ASSERT_EQ(flipped.size(), 2u);
 		EXPECT_EQ(original[0].boundary, Shape::Face::PositiveY);
 		EXPECT_EQ(original[1].boundary, Shape::Face::NegativeY);
@@ -292,7 +301,6 @@ namespace
 		}
 	}
 
-
 	TEST(VoxelShapeTest, EightCachedInstancesHaveDistinctStableAddresses)
 	{
 		const Shape shape = makeSquare();
@@ -314,7 +322,6 @@ namespace
 		}
 		EXPECT_EQ(&shape.instance(), addresses[0]);
 	}
-
 
 	TEST(VoxelShapeTest, SharedShapeCacheDoesNotDependOnDefinitionSemanticSlots)
 	{
@@ -432,18 +439,28 @@ namespace
 		const Shape shape = builder.build();
 
 		const std::array<spk::Vector3, 8> expectedPositions = {
-			spk::Vector3{0.2f, 0.3f, 0.4f}, {0.4f, 0.3f, 0.8f},
-			{0.8f, 0.3f, 0.6f}, {0.6f, 0.3f, 0.2f},
-			{0.2f, 0.7f, 0.4f}, {0.4f, 0.7f, 0.8f},
-			{0.8f, 0.7f, 0.6f}, {0.6f, 0.7f, 0.2f}};
+			spk::Vector3{0.2f, 0.3f, 0.4f},
+			{0.4f, 0.3f, 0.8f},
+			{0.8f, 0.3f, 0.6f},
+			{0.6f, 0.3f, 0.2f},
+			{0.2f, 0.7f, 0.4f},
+			{0.4f, 0.7f, 0.8f},
+			{0.8f, 0.7f, 0.6f},
+			{0.6f, 0.7f, 0.2f}};
 		const std::array<spk::Vector3, 8> expectedNormals = {
-			spk::Vector3{1.0f, 2.0f, 3.0f}, {3.0f, 2.0f, -1.0f},
-			{-1.0f, 2.0f, -3.0f}, {-3.0f, 2.0f, 1.0f},
-			{1.0f, -2.0f, 3.0f}, {3.0f, -2.0f, -1.0f},
-			{-1.0f, -2.0f, -3.0f}, {-3.0f, -2.0f, 1.0f}};
+			spk::Vector3{1.0f, 2.0f, 3.0f},
+			{3.0f, 2.0f, -1.0f},
+			{-1.0f, 2.0f, -3.0f},
+			{-3.0f, 2.0f, 1.0f},
+			{1.0f, -2.0f, 3.0f},
+			{3.0f, -2.0f, -1.0f},
+			{-1.0f, -2.0f, -3.0f},
+			{-3.0f, -2.0f, 1.0f}};
 		const std::array<spk::Vector3, 4> expectedGeometricNormals = {
-			spk::Vector3{-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f},
-			{1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}};
+			spk::Vector3{-1.0f, 0.0f, 0.0f},
+			{0.0f, 0.0f, 1.0f},
+			{1.0f, 0.0f, 0.0f},
+			{0.0f, 0.0f, -1.0f}};
 
 		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
@@ -528,10 +545,10 @@ namespace
 	TEST(VoxelShapeTest, InvalidOrientationsThrowInsteadOfIndexingOutsideInstances)
 	{
 		const Shape shape = makeSquare();
-		EXPECT_THROW((void)shape.instance({
-			static_cast<Shape::HorizontalOrientation>(45), Shape::VerticalOrientation::YPositive}), spk::Exception);
-		EXPECT_THROW((void)shape.instance({
-			Shape::HorizontalOrientation::XPositive, static_cast<Shape::VerticalOrientation>(2)}), spk::Exception);
+		const Shape::Orientation invalidHorizontal{static_cast<Shape::HorizontalOrientation>(45), Shape::VerticalOrientation::YPositive};
+		const Shape::Orientation invalidVertical{Shape::HorizontalOrientation::XPositive, static_cast<Shape::VerticalOrientation>(2)};
+		EXPECT_THROW((void)shape.instance(invalidHorizontal), spk::Exception);
+		EXPECT_THROW((void)shape.instance(invalidVertical), spk::Exception);
 	}
 
 	TEST(VoxelShapeTest, OverlappingAndOppositeWindingPolygonsRemainDistinct)
