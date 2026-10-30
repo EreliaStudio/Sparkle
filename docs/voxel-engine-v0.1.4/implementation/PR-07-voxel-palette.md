@@ -6,7 +6,7 @@
 
 **Objectif :** Associer les slots sémantiques de Models à des Materials sans rebake.
 
-**Prérequis :** [PR-03](PR-03-voxel-mesher-model.md), [PR-06](PR-06-materials-json.md)
+**Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-06](PR-06-materials-json.md)
 
 ## Spécifications normatives
 
