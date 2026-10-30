@@ -316,6 +316,55 @@ namespace
 	}
 
 
+	TEST(VoxelShapeTest, SharedShapeCacheDoesNotDependOnDefinitionSemanticSlots)
+	{
+		const Shape shape = makeSquare();
+		const Definition stone(shape, {{"wall", "stone"}});
+		const Definition glass(shape, {{"wall", "glass"}});
+		EXPECT_FALSE(stone == glass);
+		EXPECT_TRUE(stone.shape() == glass.shape());
+		for (const auto &pair : Orientations)
+		{
+			const Cell first(stone, pair.horizontal, pair.vertical);
+			const Cell second(glass, pair.horizontal, pair.vertical);
+			const Shape::Orientation orientation{pair.horizontal, pair.vertical};
+			const auto &firstInstance = first.definition().shape().instance(orientation);
+			const auto &secondInstance = second.definition().shape().instance(orientation);
+			EXPECT_EQ(&firstInstance, &secondInstance);
+			ASSERT_EQ(firstInstance.polygons().size(), 1u);
+			EXPECT_EQ(firstInstance.polygons()[0].slotKey, "wall");
+			EXPECT_EQ(first.definition().semanticSlot("wall"), "stone");
+			EXPECT_EQ(second.definition().semanticSlot("wall"), "glass");
+		}
+	}
+
+	TEST(VoxelShapeTest, FailedBuilderAdditionDoesNotInvalidatePublishedInstances)
+	{
+		Shape::Builder builder;
+		builder.addSlot("wall");
+		builder.addPolygon("wall", square());
+		const Shape published = builder.build();
+		std::array<const Shape::Instance *, 8> addresses{};
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const auto &pair = Orientations[index];
+			addresses[index] = &published.instance({pair.horizontal, pair.vertical});
+		}
+		EXPECT_THROW(builder.addPolygon("missing", square()), spk::Exception);
+		const Shape next = builder.build();
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const auto &pair = Orientations[index];
+			const Shape::Orientation orientation{pair.horizontal, pair.vertical};
+			const auto &cached = published.instance(orientation);
+			EXPECT_EQ(&cached, addresses[index]);
+			EXPECT_NE(&next.instance(orientation), addresses[index]);
+			ASSERT_EQ(cached.polygons().size(), 1u);
+			EXPECT_EQ(cached.polygons()[0].slotKey, "wall");
+			EXPECT_EQ(next.instance(orientation).polygons().size(), 1u);
+		}
+	}
+
 	TEST(VoxelShapeTest, CachedInstancesStayAliveAfterOriginalShapeIsDestroyed)
 	{
 		Shape survivor;
