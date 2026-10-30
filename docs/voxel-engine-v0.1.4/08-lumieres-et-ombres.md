@@ -50,7 +50,7 @@ flowchart LR
   Entity --> ShadowComp["ShadowMap::Contributor"]
   M["ShadowMap : passe logique"] --> ShadowComp
   M --> SR
-  M --> PassKey["Une cle par Builder de vue : cle statique commune possible"]
+  M --> PassKey["Cle systeme reservee : sparkle.engineview.shadow / -1000000"]
   ShadowComp --> ShadowMode["ShadowMode propre : None, Static, Dynamic"]
   ShadowComp --> Filter["MeshFilter : collection de MeshInstance"]
   SourceMesh["spk::Mesh de TVertex"] -->|"extracteur Vector3 + indices"| Converted["ShadowMap::Mesh"]
@@ -218,7 +218,7 @@ flowchart TD
   Provider -->|"Contrat RAII"| S["ShadowMap::RenderingSystem"]
   S --> Reason{"Cause d invalidation ?"}
   Reason -->|"setShadowMode ou Static"| Both["Statique ET finale invalides"]
-  Reason -->|"bind ou mouvement Dynamic"| Final["Finale seule invalide"]
+  Reason -->|"bind ou mouvement du caster Dynamic"| Final["Finale seule invalide"]
   Registry["Registry des ShadowMap::Contributor"] --> S
   S --> PerView["Caches du sous-systeme : par vue / lumiere"]
   PerView --> Surface["Generations GPU par Window Surface"]
