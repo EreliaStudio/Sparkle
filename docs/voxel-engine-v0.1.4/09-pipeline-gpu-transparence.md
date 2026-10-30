@@ -58,7 +58,8 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   View["EngineView cible V"] --> OpaqueColor["Opaque HDR RGBA16F handle V"]
-  Skybox["Skybox autonome partageable (6 textures 2D)"] --> View
+  View --> Skybox["Skybox autonome partageable (6 textures 2D)"]
+  Skybox --> Background
   View --> Background["Fond RGB ou Skybox : cube inverse + 6 textures 2D"]
   Background --> DrawOpaque
   View --> Depth["Depth handle V"]
