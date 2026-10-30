@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <filesystem>
 #include <limits>
 #include <set>
 #include <string>
@@ -49,6 +50,36 @@ namespace
 		EXPECT_NEAR(actual.z, expected.z, 1.0e-6);
 	}
 
+
+	struct OrientationPair
+	{
+		Cell::HorizontalOrientation horizontal;
+		Cell::VerticalOrientation vertical;
+	};
+
+	const std::array<OrientationPair, 8> Orientations = {
+		OrientationPair{Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive},
+		{Cell::HorizontalOrientation::ZNegative, Cell::VerticalOrientation::YPositive},
+		{Cell::HorizontalOrientation::XNegative, Cell::VerticalOrientation::YPositive},
+		{Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive},
+		{Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YNegative},
+		{Cell::HorizontalOrientation::ZNegative, Cell::VerticalOrientation::YNegative},
+		{Cell::HorizontalOrientation::XNegative, Cell::VerticalOrientation::YNegative},
+		{Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative}};
+
+	Cell makeOrientedCell(const Definition &definition, std::size_t index)
+	{
+		return Cell(definition, Orientations[index].horizontal, Orientations[index].vertical);
+	}
+
+	Shape loadFixture(const std::string &name)
+	{
+		const auto path = std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (name + ".json");
+		Shape::Builder builder;
+		builder.addFromJSON(spk::JSON::Value::loadFromFile(path));
+		return builder.build();
+	}
+
 	static_assert(std::is_copy_constructible_v<Shape>);
 	static_assert(std::is_copy_constructible_v<Definition>);
 	static_assert(std::is_copy_constructible_v<Cell>);
@@ -63,8 +94,8 @@ namespace
 		const Shape second = secondBuilder.build();
 		EXPECT_TRUE(first.empty());
 		EXPECT_TRUE(first.slots().empty());
-		EXPECT_FALSE(first.sameIdentity(second));
-		EXPECT_TRUE(first.sameIdentity(Shape(first)));
+		EXPECT_FALSE(first == second);
+		EXPECT_TRUE(first == Shape(first));
 		EXPECT_THROW(firstBuilder.build(), spk::Exception);
 		EXPECT_THROW(firstBuilder.addSlot("later"), spk::Exception);
 	}
@@ -143,15 +174,15 @@ namespace
 	{
 		const Shape shape = makeSquare();
 		const Shape identical = makeSquare();
-		EXPECT_FALSE(shape.sameIdentity(identical));
+		EXPECT_FALSE(shape == identical);
 		const Definition first(shape, {{"wall", "stone"}});
 		const Definition copied = first;
 		const Definition second(shape, {{"wall", "glass"}});
 		const Definition third(identical, {{"wall", "stone"}});
-		EXPECT_TRUE(first.sameIdentity(copied));
-		EXPECT_FALSE(first.sameIdentity(second));
-		EXPECT_FALSE(first.sameIdentity(third));
-		EXPECT_TRUE(first.shape().sameIdentity(second.shape()));
+		EXPECT_TRUE(first == copied);
+		EXPECT_FALSE(first == second);
+		EXPECT_FALSE(first == third);
+		EXPECT_TRUE(first.shape() == second.shape());
 		EXPECT_EQ(first.semanticSlot("wall"), "stone");
 		EXPECT_EQ(second.semanticSlot("wall"), "glass");
 		EXPECT_EQ(first.shape().polygons().size(), 1u);
@@ -170,21 +201,20 @@ namespace
 	TEST(VoxelCellTest, DefaultAirIsValidAndDoesNotOcclude)
 	{
 		const Cell air;
-		const Cell explicitAir(Definition::air(), Cell::Orientation::FlippedY270);
+		const Cell explicitAir(Definition::air(), Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative);
 		EXPECT_TRUE(air.isAir());
 		EXPECT_TRUE(explicitAir.isAir());
-		EXPECT_TRUE(air.definition().sameIdentity(Definition::air()));
+		EXPECT_TRUE(air.definition() == Definition::air());
 		EXPECT_TRUE(air.definition().shape().polygons().empty());
 		EXPECT_TRUE(explicitAir.orientedPolygons().empty());
-		EXPECT_EQ(air.orientation(), Cell::Orientation::Y0);
+		EXPECT_EQ(air.horizontalOrientation(), Cell::HorizontalOrientation::XPositive);
+		EXPECT_EQ(air.verticalOrientation(), Cell::VerticalOrientation::YPositive);
 	}
 
 	TEST(VoxelCellTest, EightOrientationsTransformPositionsAndNormals)
 	{
 		const Definition definition(makeSquare(), {{"wall", "stone"}});
-		using O = Cell::Orientation;
-		const std::array orientations = {
-			O::Y0, O::Y90, O::Y180, O::Y270, O::FlippedY0, O::FlippedY90, O::FlippedY180, O::FlippedY270};
+		
 		const std::array<spk::Vector3, 8> positions = {
 			spk::Vector3{0.2f, 0.3f, 0.4f},
 			{0.4f, 0.3f, 0.8f},
@@ -203,14 +233,15 @@ namespace
 			{3, -2, -1},
 			{-1, -2, -3},
 			{-3, -2, 1}};
-		for (std::size_t index = 0; index < orientations.size(); ++index)
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
-			const Cell cell(definition, orientations[index]);
+			const Cell cell = makeOrientedCell(definition, index);
 			expectVectorNear(cell.transformPosition({0.2f, 0.3f, 0.4f}), positions[index]);
 			expectVectorNear(cell.transformNormal({1, 2, 3}), normals[index]);
-			EXPECT_TRUE(cell.definition().sameIdentity(definition));
+			EXPECT_TRUE(cell.definition() == definition);
 		}
-		EXPECT_THROW((Cell(definition, static_cast<O>(255))), spk::Exception);
+		EXPECT_THROW((Cell(definition, static_cast<Cell::HorizontalOrientation>(255))), spk::Exception);
+		EXPECT_THROW((Cell(definition, Cell::HorizontalOrientation::XPositive, static_cast<Cell::VerticalOrientation>(255))), spk::Exception);
 	}
 
 	TEST(VoxelCellTest, WindingUVAndFrontFacesSurviveEveryVerticalFlip)
@@ -218,7 +249,7 @@ namespace
 		const Definition definition(makeSquare(), {{"wall", "stone"}});
 		for (unsigned value = 0; value < 8; ++value)
 		{
-			const Cell cell(definition, static_cast<Cell::Orientation>(value));
+			const Cell cell = makeOrientedCell(definition, value);
 			const auto polygons = cell.orientedPolygons();
 			ASSERT_EQ(polygons.size(), 1u);
 			const auto &polygon = polygons.front();
@@ -248,7 +279,7 @@ namespace
 		Shape::Builder builder;
 		builder.addSlot("top");
 		builder.addPolygon("top", {vertex(0, 1, 0), vertex(0, 1, 1), vertex(1, 1, 1), vertex(1, 1, 0)});
-		const Cell cell(Definition(builder.build(), {{"top", "roof"}}), Cell::Orientation::FlippedY0);
+		const Cell cell(Definition(builder.build(), {{"top", "roof"}}), Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YNegative);
 		const auto polygon = cell.orientedPolygons().front();
 		EXPECT_EQ(polygon.boundary, Shape::Face::NegativeY);
 		EXPECT_FLOAT_EQ(polygon.vertices[0].position.y, 0.0f);
@@ -302,7 +333,7 @@ namespace
 		const Definition definition(builder.build(), {{"cube", "stone"}});
 		for (unsigned index = 0; index < 8; ++index)
 		{
-			const Cell cell(definition, static_cast<Cell::Orientation>(index));
+			const Cell cell = makeOrientedCell(definition, index);
 			std::set<Shape::Face> boundaries;
 			const auto polygons = cell.orientedPolygons();
 			ASSERT_EQ(polygons.size(), 6u);
