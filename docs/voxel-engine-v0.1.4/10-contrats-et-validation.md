@@ -249,6 +249,14 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Éclairage Forward classique et WBOIT**
 
+**Q-TECH-007 — capture moteur historiquement cohérente (option C validée)**
+
+- Capturer sous la coordination CPU une version `T1` cohérente (lumières, Transform3D, caméra, commandes d'une vue et sélection Top-N validée), suspendre **la construction du `RenderSnapshot` après la capture** et muter les valeurs sources en `T2`. Sans suppression de vue, vérifier que le snapshot `T1` peut **être publié** malgré la mutation, que ses valeurs restent entièrement `T1`, et que le snapshot suivant peut porter `T2` ; **ne pas rejeter/recommencer** seulement à cause du changement de génération des sources depuis `T1`.
+- Intercaler plusieurs mutations synchronisées du moteur (lumière/Registry, Transform parent-enfant, caméra, Skybox/Contributor) pendant le travail du Builder : aucune commande GPU capturée ne doit relire de source mutable, ni mélanger matrices, géométrie, UV ou sélection de différentes versions ; les ressources et identités empruntées sont stabilisées. Une capture invalide ou échouée ne remplace jamais la publication précédente.
+- **Frontière Q-TECH-001 :** invalider une génération Top-N **avant** le commit de sa nouvelle `Light::Selection` : le constructeur de Channel la rejette toujours et recalcule, même si le snapshot moteur accepte ultérieurement une capture historique déjà **validée**. Interdire toute admission d'ombre révoquée et toute nouvelle publication dans un Channel fermé ; tester le fallback éclairage sans ombre sur un snapshot historique.
+- **Exception `removeView()` :** capturer `T1` avec une vue V, supprimer V puis la recréer sous le même nom avant le commit du snapshot. Le contrôle bref sous verrou moteur doit **refuser la publication qui réintroduirait l'incarnation supprimée** ; les snapshots publiés auparavant gardent leurs handles/Channel historiques. Vérifier que ce contrôle ne devient pas une validation globale des dernières valeurs CPU ni un verrou prolongé sur tout le Builder.
+
+
 **Q-TECH-001 — transaction synchronisée et cycle de vie (option A validée)**
 
 - **Q-TECH-001 — mutation et diffusion atomiques :** intercaler avec des barrières une publication de sélection pendant une mutation de lumière (portée `range`, couleur RGB, activation, déplacement direct/hérité, inscription/suppression Registry). Sous le même verrou moteur, rendre changement et invalidation de tous les Channels concernés indivisibles pour les captures ; ne jamais publier un ancien G après la transaction. Inclure une lumière jusque-là hors frustum ou non sélectionnée.
