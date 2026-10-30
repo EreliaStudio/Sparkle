@@ -1,6 +1,8 @@
 # PR-15 — EngineView comme source de Material
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/15-material-view-source`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Permettre l'usage de la sortie finale d'une EngineView par un Material dans une autre vue.
 

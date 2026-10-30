@@ -1,6 +1,8 @@
 # PR-10 — EngineView, layers et sous-RenderSnapshots
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/10-engineview-snapshot`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Construire des snapshots graphiques immuables ordonnés par vues.
 

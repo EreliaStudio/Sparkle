@@ -1,6 +1,8 @@
 # PR-12 — EngineWidget et première EngineView visible
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/12-enginewidget-first-view`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Afficher une vue et sa sortie HDR finale dans un widget sans dessin voxel.
 

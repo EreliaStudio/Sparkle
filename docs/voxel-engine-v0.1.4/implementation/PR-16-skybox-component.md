@@ -1,6 +1,8 @@
 # PR-16 — Skybox unlit à six Materials
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/16-skybox-component`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Ajouter un Skybox générique comme composant RenderingComponent3D ordinaire.
 
