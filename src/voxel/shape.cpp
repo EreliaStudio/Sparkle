@@ -63,8 +63,7 @@ namespace
 		const spk::Vector3 origin = vertices.front().position;
 		for (std::size_t index = 1; index + 1 < vertices.size(); ++index)
 		{
-			const auto cross = (vertices[index].position - origin).cross(
-				vertices[index + 1].position - origin);
+			const auto cross = (vertices[index].position - origin).cross(vertices[index + 1].position - origin);
 			const float length = static_cast<float>(cross.length());
 			if (length > AreaTolerance)
 			{
@@ -105,8 +104,9 @@ namespace
 		}
 	}
 
-	void validateConvexPlanar(const std::vector<spk::Voxel::Shape::Vertex> &vertices,
-							 const spk::Vector3 &normal)
+	void validateConvexPlanar(
+		const std::vector<spk::Voxel::Shape::Vertex> &vertices,
+		const spk::Vector3 &normal)
 	{
 		const auto origin = vertices.front().position;
 		for (const auto &vertex : vertices)
@@ -206,9 +206,12 @@ namespace spk::Voxel
 		{
 			throw spk::Exception("Voxel Shape slot requires a name and opacity in [0,1]");
 		}
-		if (std::any_of(_slots.begin(), _slots.end(), [&](const Slot &slot) { return slot.name == name; }))
+		for (const Slot &slot : _slots)
 		{
-			throw spk::Exception("Voxel Shape slot name already exists");
+			if (slot.name == name)
+			{
+				throw spk::Exception("Voxel Shape slot name already exists");
+			}
 		}
 		_slots.push_back(Slot{std::move(name), opacity});
 	}
@@ -216,7 +219,12 @@ namespace spk::Voxel
 	void Shape::Builder::addPolygon(std::string slot, std::vector<Vertex> vertices)
 	{
 		_check();
-		if (std::none_of(_slots.begin(), _slots.end(), [&](const Slot &entry) { return entry.name == slot; }))
+		bool found = false;
+		for (const Slot &entry : _slots)
+		{
+			found = found || entry.name == slot;
+		}
+		if (!found)
 		{
 			throw spk::Exception("Voxel Shape polygon refers to an undeclared slot");
 		}
