@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <utility>
 
 #include "diagnostics/logger.hpp"
@@ -132,6 +133,50 @@ namespace
 		}
 	}
 
+	spk::Vector3 readPosition(const spk::JSON::Value &value)
+	{
+		const auto &coordinates = value.asArray();
+		if (coordinates.size() != 3)
+		{
+			throw spk::Exception("Voxel Shape JSON position requires exactly three coordinates");
+		}
+		return {coordinates[0].as<float>(), coordinates[1].as<float>(), coordinates[2].as<float>()};
+	}
+
+	spk::Vector2 readUV(const spk::JSON::Value &value)
+	{
+		const auto &coordinates = value.asArray();
+		if (coordinates.size() != 2)
+		{
+			throw spk::Exception("Voxel Shape JSON UV requires exactly two coordinates");
+		}
+		return {coordinates[0].as<float>(), coordinates[1].as<float>()};
+	}
+
+	spk::Voxel::Shape::Vertex readVertex(const spk::JSON::Value &value)
+	{
+		spk::Voxel::Shape::Vertex vertex;
+		if (value.isArray())
+		{
+			vertex.position = readPosition(value);
+			return vertex;
+		}
+		if (!value.isObject())
+		{
+			throw spk::Exception("Voxel Shape JSON vertex must be an XYZ array or an object");
+		}
+		vertex.position = readPosition(value.at("position"));
+		if (value.contains("uv"))
+		{
+			vertex.uv = readUV(value.at("uv"));
+		}
+		if (value.contains("normal"))
+		{
+			vertex.normal = readPosition(value.at("normal"));
+		}
+		return vertex;
+	}
+
 	bool hasUVOutsideUnit(const std::vector<spk::Voxel::Shape::Vertex> &vertices)
 	{
 		return std::any_of(vertices.begin(), vertices.end(), [](const auto &vertex) {
@@ -216,13 +261,13 @@ namespace spk::Voxel
 		_slots.push_back(Slot{std::move(name), opacity});
 	}
 
-	void Shape::Builder::addPolygon(std::string slot, std::vector<Vertex> vertices)
+	void Shape::Builder::addPolygon(std::string slotKey, std::vector<Vertex> vertices)
 	{
 		_check();
 		bool found = false;
 		for (const Slot &entry : _slots)
 		{
-			found = found || entry.name == slot;
+			found = found || entry.name == slotKey;
 		}
 		if (!found)
 		{
@@ -253,6 +298,37 @@ namespace spk::Voxel
 		{
 			SPK_LOG(Warning) << "Voxel Shape polygon contains UV outside [0,1]" << std::endl;
 		}
+	}
+
+	void Shape::Builder::addFromJSON(const spk::JSON::Value &value)
+	{
+		_check();
+		Builder pending = *this;
+		try
+		{
+			const auto &data = value.contains("data") ? value.at("data") : value;
+			for (const auto &[name, opacity] : data.at("slots").asObject())
+			{
+				pending.addSlot(name, opacity.as<float>());
+			}
+			for (const auto &entry : data.at("polygons").asArray())
+			{
+				const auto slotKey = entry.at("slot").as<std::string>();
+				std::vector<Vertex> vertices;
+				const auto &source = entry.at("vertices").asArray();
+				vertices.reserve(source.size());
+				for (const auto &item : source)
+				{
+					vertices.push_back(readVertex(item));
+				}
+				pending.addPolygon(slotKey, std::move(vertices));
+			}
+		} catch (...)
+		{
+			throw spk::Exception("Invalid Voxel Shape JSON description", std::current_exception());
+		}
+		_slots.swap(pending._slots);
+		_polygons.swap(pending._polygons);
 	}
 
 	Shape Shape::Builder::build()
