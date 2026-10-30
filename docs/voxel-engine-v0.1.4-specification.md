@@ -29,6 +29,7 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 - **Shading :** Point et Spot utilisent `A(x)=1−3x²+2x³` (`x=d/range` borné à `[0,1]`), extinction à `range`, sans inverse du carré ni `d_floor` ; Spot multiplie par un Smoothstep angulaire en cosinus. Directional utilise `RGB×intensity` sans atténuation radiale.
 - **Sélection :** score Point/Spot `intensity×range²×priorityWeight/max(distanceCamera,minLightDistance)`, calculé après culling ; sélection Forward classique, sans Tiled Forward+.
 - **Ombres :** Point/Spot `near=0,001×range`, `far=range` ; Point six faces à 90°, PCF manuel 3×3 inter-faces (±1 texel sur face centrale, reprojection individuelle), règle d'égalité X > Y > Z, biais automatique par tap fondé sur la projection historique ; centre exact non ombré, tap avant near non ombré. Cartes historiques géométriquement cohérentes ; RGB/intensity courants.
+- **Directional :** une seule shadow map orthographique par lumière et par vue ; son volume est déterminé automatiquement à partir du frustum capturé de la caméra, sans configuration manuelle de couverture, sans CSM. La définition précise des bornes de profondeur, des casters hors frustum et des cas infinis reste technique et ouverte.
 - **Statut :** les précisions non validées (certaines résolutions/formats, limites numériques, ombres directionnelles et conventions exactes de plans) restent dans [Q-TECH-002](voxel-engine-v0.1.4-points-a-clarifier.md). La conception n'autorise pas encore l'implémentation.
 
 ## Questions à résoudre avant l'implémentation
