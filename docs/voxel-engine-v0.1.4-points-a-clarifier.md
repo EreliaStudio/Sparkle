@@ -12,20 +12,19 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-**Q-ARCH-009 validée (option A) :** le fond de chaque EngineView est RGB configurable, noir par défaut ; l'image finale reste toujours opaque (alpha=1), y compris avec une cubemap de fond.
+**Q-ARCH-009 validée (option A) :** fond RGB configurable, noir par défaut ; sortie d'EngineView toujours opaque (alpha=1), y compris avec une Skybox.
 
-### Q-ARCH-010 — Type public de la cubemap de fond
-**Priorité : P0** — [EngineView, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md) · [Pipeline, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
+**Q-ARCH-010 close — Skybox dédiée validée.** Le besoin exprimé est une classe publique **`spk::Skybox`** qui affiche **six textures 2D indépendantes** sur les **six faces intérieures d'un mesh cubique inversé**. La caméra observe le cube depuis l'intérieur. Le ciel suit la rotation de caméra, mais pas ses déplacements ; il est dessiné avant la scène opaque, sans écriture de profondeur, dans la passe opaque existante. Il ne produit ni éclairage ambiant, ni ombres, ni passe supplémentaire. Le rendu final reste opaque, soumis à la composition HDR et au tone mapping. Les six sources sont des `Texture::Handle` 2D, sans assemblage obligatoire en `Texture::Target::TextureCubeMap` GPU ni création d'une classe `spk::Cubemap` : ces deux propositions précédentes sont retirées.
 
-**Besoin fonctionnel accepté :** une EngineView peut choisir une cubemap couleur comme fond, à la place de son RGB uniforme. Le ciel suit l'orientation de la caméra sans sa translation, ne modifie pas le depth ni l'éclairage, est rendu dans la phase opaque avant la géométrie puis composé avec WBOIT et tone mapping. La sortie reste alpha=1. Une cubemap invalide ne déclenche aucun fallback silencieux ; en l'absence de cubemap, utiliser le RGB.
+### Q-ARCH-011 — Qui possède et peut partager une Skybox ?
+**Priorité : P0** — [Vues, §7.1](voxel-engine-v0.1.4/07-vues-et-passes.md) · [Contrats, §8](voxel-engine-v0.1.4/10-contrats-et-validation.md)
 
-**Choix du contrat public à valider :**
-- **A (recommandée) :** réutiliser `spk::Texture` et sa cible `Texture::Target::TextureCubeMap` existante, avec la construction/chargement de six faces couleur ; EngineView référence cette texture, sans classe publique supplémentaire.
-- **B :** créer un type public dédié `spk::Cubemap` pour le chargement et la représentation des six faces couleur, puis l'associer à EngineView ; la matérialisation GPU reste une texture cubique.
+- **A — Skybox possédée par l'EngineView :** chaque vue contient une Skybox optionnelle indépendante, dont les six textures sont configurées directement. Pas de référence externe à gérer.
+- **B — Skybox créée séparément et empruntée :** le jeu construit une `spk::Skybox` autonome, une ou plusieurs `EngineView` y font explicitement référence. La durée de vie de la Skybox reste à la charge du jeu ; les snapshots déjà capturés conservent les handles nécessaires.
 
-**Encore à préciser :** signatures et intégration AssetManager (Q-TECH-005), formats et conventions de faces, échantillonnage et encodage des couleurs (Q-TECH-003/006). **Clôture :** faire choisir A ou B par le mainteneur et intégrer ensuite le contrat final.
+**À décider :** modèle de propriété et de partage, sans remettre en question les six textures 2D sur cube inversé. Conventions de face, orientation UV, formats, signatures et gestion GPU restent à préciser dans Q-TECH-003/005/006.
 
-Q-ARCH-001 à Q-ARCH-009 sont closes.
+Q-ARCH-001 à Q-ARCH-010 sont closes.
 
 ## 2. Précisions techniques à consolider
 
@@ -50,7 +49,7 @@ Q-ARCH-001 à Q-ARCH-009 sont closes.
 ### Q-TECH-003 — WBOIT, tone mapping HDR et états OpenGL
 **Priorité : P1** — [GPU, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
 
-Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Q-ARCH-009 close (option A) :** sortie toujours opaque (alpha=1), fond RGB configurable et noir par défaut ; cubemap de fond optionnelle, son type public restant Q-ARCH-010. **Q-ARCH-008 close (option A) :** widgets et Materials utilisent uniquement l'image finale tone-mappée ; aucune source HDR alternative. L'encodage/décodage sRGB reste une précision technique à consolider. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
+Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Q-ARCH-009 close (option A) :** sortie toujours opaque (alpha=1), fond RGB configurable et noir par défaut ; Skybox optionnelle à six textures 2D sur cube inversé (Q-ARCH-010 close) ; Q-ARCH-011 est ouverte sur sa propriété. **Q-ARCH-008 close (option A) :** widgets et Materials utilisent uniquement l'image finale tone-mappée ; aucune source HDR alternative. L'encodage/décodage sRGB et les formats/filtrages des six images 2D d'une Skybox restent des précisions techniques à consolider. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
 
 ### Q-TECH-004 — Précision numérique du VoxelMesher et d'OcclusionCache
 **Priorité : P1** — [Meshing, §3](voxel-engine-v0.1.4/03-meshing-occlusion.md)
@@ -60,12 +59,12 @@ Préciser tolérances de coplanarité, union/différence de polygones, triangula
 ### Q-TECH-005 — Signatures C++23 et adaptation aux interfaces existantes
 **Priorité : P1** — [Contrats, §8](voxel-engine-v0.1.4/10-contrats-et-validation.md)
 
-Finaliser signatures de Builders, identifiants de Parts, factories d'assets, API des composants et des vues (**dont le seul nom de l'accesseur et des setters de son `spk::AmbientLight` possédé ; propriété directe et absence de liaison déjà validées**), `CaptureContext`, abonnements RAII et exceptions. Vérifier l'intégration à `Mesh<T>`, `RenderSnapshot::Builder`, `Texture::Handle`, `GPUResourceCollection`, `Registry` et `VersionedTrait`, sans changer les contrats publics approuvés.
+Finaliser signatures de Builders, identifiants de Parts, factories d'assets, API de `spk::Skybox` à six faces et API des composants et des vues (**dont le seul nom de l'accesseur et des setters de son `spk::AmbientLight` possédé ; propriété directe et absence de liaison déjà validées**), `CaptureContext`, abonnements RAII et exceptions. Vérifier l'intégration à `Mesh<T>`, `RenderSnapshot::Builder`, `Texture::Handle`, `GPUResourceCollection`, `Registry` et `VersionedTrait`, sans changer les contrats publics approuvés.
 
 ### Q-TECH-006 — Formats CPU/GPU, limites et bindings
 **Priorité : P1** — [GPU, §7.5–7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
 
-Décrire les structures d'instances, matériaux et lumières, alignements/tailles SSBO, bindings, limites OpenGL, régénération des buffers par snapshot, allocation des formats `RGBA16F`/`R8` et depth cubemap, tests de capacité et validation de commandes réentrantes multi-surface.
+Décrire les structures d'instances, matériaux et lumières, alignements/tailles SSBO, bindings, limites OpenGL, mesh cubique inversé et UV des six faces de Skybox, régénération des buffers par snapshot, allocation des formats `RGBA16F`/`R8` et depth cubemap, tests de capacité et validation de commandes réentrantes multi-surface.
 
 ### Q-TECH-007 — Synchronisation, fermeture de surface et durée de vie GPU
 **Priorité : P1** — [Vues, §7.1–7.2](voxel-engine-v0.1.4/07-vues-et-passes.md) · [Ombres, §7.3](voxel-engine-v0.1.4/08-lumieres-et-ombres.md)
@@ -84,7 +83,8 @@ Ce rappel sert seulement à **exclure les faux points ouverts** :
 - **Publication d'ombres :** cubemap de six faces atomique, publication incrémentale par lumière, anciens résultats complets conservés sans régression si encore admissibles ; aucune file d'éviction ou recyclage spécialisé ShadowMap.
 - **Voxel :** Volume/Model/Material/VoxelPalette immuables après construction, meshing synchrone ; un atlas par mesh/passe par association Model/Palette ; Assembly animée explicitement ; casters d'ombres définis par le jeu et non inférés du système voxel.
 - **Q-ARCH-008 :** une sortie finale tone-mappée par EngineView, utilisée par les widgets et les Materials ; aucune sortie HDR supplémentaire ou choix public d'étape de rendu.
-- **Q-ARCH-009 :** fond RGB configurable noir par défaut et alpha final toujours égal à 1 ; une cubemap couleur optionnelle n'introduit pas de transparence. Q-ARCH-010 porte uniquement sur son type public.
+- **Q-ARCH-009 :** fond RGB noir par défaut et sortie finale alpha=1, même avec une Skybox.
+- **Q-ARCH-010 :** `spk::Skybox` dédiée au dessin de six textures 2D sur un cube inversé, sans nécessité de TextureCubeMap GPU ; propriété/lien vers la vue à décider en Q-ARCH-011.
 - **Transparence et affichage HDR :** WBOIT avec une passe géométrique MRT et depth opaque partagé ; les surfaces translucides ne projettent pas d'ombres. Opaque et accumulation WBOIT en `RGBA16F` HDR avant composition, puis tone mapping unique avec exposition réglable sur chaque `EngineView`, sans auto-exposure ni traitement des widgets UI.
 
 ## 4. Procédure de clôture
