@@ -23,12 +23,18 @@ namespace
 		using Face = spk::Voxel::Shape::Face;
 		switch (face)
 		{
-		case Face::NegativeX: return {-1.0f, 0.0f, 0.0f};
-		case Face::PositiveX: return {1.0f, 0.0f, 0.0f};
-		case Face::NegativeY: return {0.0f, -1.0f, 0.0f};
-		case Face::PositiveY: return {0.0f, 1.0f, 0.0f};
-		case Face::NegativeZ: return {0.0f, 0.0f, -1.0f};
-		case Face::PositiveZ: return {0.0f, 0.0f, 1.0f};
+		case Face::NegativeX:
+			return {-1.0f, 0.0f, 0.0f};
+		case Face::PositiveX:
+			return {1.0f, 0.0f, 0.0f};
+		case Face::NegativeY:
+			return {0.0f, -1.0f, 0.0f};
+		case Face::PositiveY:
+			return {0.0f, 1.0f, 0.0f};
+		case Face::NegativeZ:
+			return {0.0f, 0.0f, -1.0f};
+		case Face::PositiveZ:
+			return {0.0f, 0.0f, 1.0f};
 		}
 		return {};
 	}
@@ -36,11 +42,26 @@ namespace
 	spk::Voxel::Shape::Face directionFace(spk::Vector3 direction) noexcept
 	{
 		using Face = spk::Voxel::Shape::Face;
-		if (direction.x < 0.0f) return Face::NegativeX;
-		if (direction.x > 0.0f) return Face::PositiveX;
-		if (direction.y < 0.0f) return Face::NegativeY;
-		if (direction.y > 0.0f) return Face::PositiveY;
-		if (direction.z < 0.0f) return Face::NegativeZ;
+		if (direction.x < 0.0f)
+		{
+			return Face::NegativeX;
+		}
+		if (direction.x > 0.0f)
+		{
+			return Face::PositiveX;
+		}
+		if (direction.y < 0.0f)
+		{
+			return Face::NegativeY;
+		}
+		if (direction.y > 0.0f)
+		{
+			return Face::PositiveY;
+		}
+		if (direction.z < 0.0f)
+		{
+			return Face::NegativeZ;
+		}
 		return Face::PositiveZ;
 	}
 }
