@@ -48,6 +48,5 @@ namespace spk::Voxel
 		[[nodiscard]] HorizontalOrientation horizontalOrientation() const noexcept;
 		[[nodiscard]] VerticalOrientation verticalOrientation() const noexcept;
 		[[nodiscard]] bool isAir() const noexcept;
-
 	};
 }

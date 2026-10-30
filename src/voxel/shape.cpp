@@ -327,7 +327,6 @@ namespace spk::Voxel
 
 	Shape Shape::Builder::build()
 	{
-		_check();
 		auto data = std::make_shared<Data>();
 		data->slots = _slots;
 		data->polygons = _polygons;
