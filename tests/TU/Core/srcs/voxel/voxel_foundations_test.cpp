@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <atomic>
 #include <array>
 #include <cmath>
 #include <limits>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -311,6 +313,61 @@ namespace
 			}
 		}
 		EXPECT_EQ(&shape.instance(), addresses[0]);
+	}
+
+
+	TEST(VoxelShapeTest, CachedInstancesStayAliveAfterOriginalShapeIsDestroyed)
+	{
+		Shape survivor;
+		const Shape::Instance *stored = nullptr;
+		const Shape::Orientation orientation{
+			Shape::HorizontalOrientation::ZNegative, Shape::VerticalOrientation::YNegative};
+		{
+			const Shape original = makeSquare();
+			survivor = original;
+			stored = &original.instance(orientation);
+			EXPECT_EQ(stored, &survivor.instance(orientation));
+		}
+		EXPECT_EQ(stored, &survivor.instance(orientation));
+		ASSERT_EQ(stored->polygons().size(), 1u);
+		EXPECT_EQ(stored->polygons()[0].slotKey, "wall");
+		EXPECT_EQ(stored->polygons()[0].boundary, Shape::Face::PositiveZ);
+	}
+
+	TEST(VoxelShapeTest, CachedInstancesSupportConcurrentReaders)
+	{
+		const Shape shape = makeSquare();
+		const Shape copied = shape;
+		std::array<const Shape::Instance *, 8> expected{};
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+			expected[index] = &shape.instance(orientation);
+		}
+
+		std::atomic<bool> consistent{true};
+		std::vector<std::thread> readers;
+		for (std::size_t index = 0; index < Orientations.size(); ++index)
+		{
+			readers.emplace_back([&, index]() {
+				const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
+				for (unsigned iteration = 0; iteration < 512; ++iteration)
+				{
+					const auto &instance = (iteration % 2 == 0 ? shape : copied).instance(orientation);
+					if (&instance != expected[index] || instance.polygons().size() != 1u ||
+						instance.polygons()[0].slotKey != "wall")
+					{
+						consistent.store(false, std::memory_order_relaxed);
+						break;
+					}
+				}
+			});
+		}
+		for (auto &reader : readers)
+		{
+			reader.join();
+		}
+		EXPECT_TRUE(consistent.load(std::memory_order_relaxed));
 	}
 
 	TEST(VoxelShapeTest, EveryOrientationTransformsPositionsAndCustomLightingNormals)
