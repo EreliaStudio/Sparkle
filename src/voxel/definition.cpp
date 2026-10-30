@@ -1,6 +1,5 @@
 #include "voxel/definition.hpp"
 
-#include <algorithm>
 #include <utility>
 
 #include "exception.hpp"
@@ -10,7 +9,7 @@ namespace spk::Voxel
 	struct Definition::Data
 	{
 		Shape shape;
-		std::vector<SlotMapping> slots;
+		SlotMappings slots;
 	};
 
 	Definition::Definition() :
@@ -18,7 +17,7 @@ namespace spk::Voxel
 	{
 	}
 
-	Definition::Definition(Shape shape, std::vector<SlotMapping> mapping)
+	Definition::Definition(Shape shape, SlotMappings mapping)
 	{
 		if (mapping.size() != shape.slots().size())
 		{
@@ -27,21 +26,18 @@ namespace spk::Voxel
 
 		for (const auto &slot : shape.slots())
 		{
-			const auto count = std::count_if(mapping.begin(), mapping.end(), [&](const SlotMapping &entry) {
-				return entry.geometric == slot.name;
-			});
-			if (count != 1)
+			if (!mapping.contains(slot.name))
 			{
 				throw spk::Exception("Voxel Definition has a missing or repeated Shape slot mapping");
 			}
 		}
-		for (const auto &entry : mapping)
+		for (const auto &[key, value] : mapping)
 		{
-			if (entry.semantic.empty())
+			if (value.empty())
 			{
-				throw spk::Exception("Voxel Definition semantic slot name cannot be empty");
+				throw spk::Exception("Voxel Definition semantic slot value cannot be empty");
 			}
-			(void)shape.slot(entry.geometric);
+			(void)shape.slot(key);
 		}
 
 		auto data = std::make_shared<Data>();
@@ -61,30 +57,28 @@ namespace spk::Voxel
 		return _data->shape;
 	}
 
-	const std::vector<Definition::SlotMapping> &Definition::slots() const noexcept
+	const Definition::SlotMappings &Definition::slots() const noexcept
 	{
 		return _data->slots;
 	}
 
 	const std::string &Definition::semanticSlot(std::string_view geometric) const
 	{
-		for (const auto &entry : _data->slots)
+		const auto iterator = _data->slots.find(std::string(geometric));
+		if (iterator != _data->slots.end())
 		{
-			if (entry.geometric == geometric)
-			{
-				return entry.semantic;
-			}
+			return iterator->second;
 		}
 		throw spk::Exception("Voxel Definition references an unmapped geometric slot");
 	}
 
-	bool Definition::sameIdentity(const Definition &other) const noexcept
+	bool Definition::operator==(const Definition &other) const noexcept
 	{
 		return _data == other._data;
 	}
 
 	bool Definition::isAir() const noexcept
 	{
-		return sameIdentity(air());
+		return *this == air();
 	}
 }
