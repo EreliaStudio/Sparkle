@@ -51,6 +51,7 @@ classDiagram
   }
   class LightContributor {
     +color : spk::RGB
+    +intensity : float
     +priorityWeight
     +priority(camera, frustum)
   }
