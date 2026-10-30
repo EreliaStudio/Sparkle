@@ -9,19 +9,8 @@ namespace spk::Voxel
 	class Cell
 	{
 	public:
-		enum class HorizontalOrientation : std::uint16_t
-		{
-			XPositive = 0,
-			ZPositive = 270,
-			XNegative = 180,
-			ZNegative = 90
-		};
-
-		enum class VerticalOrientation : std::uint8_t
-		{
-			YPositive,
-			YNegative
-		};
+		using HorizontalOrientation = Shape::HorizontalOrientation;
+		using VerticalOrientation = Shape::VerticalOrientation;
 
 	private:
 		Definition _definition;
