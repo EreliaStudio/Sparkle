@@ -40,6 +40,10 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 
 Les **treize arbitrages architecturaux Q-ARCH-001 à Q-ARCH-013 sont clos**, ainsi que **Q-TECH-001** (Top-N et transaction synchronisée des `Light::Channel`), et figurent dans les chapitres normatifs. Le [document des précisions encore ouvertes](voxel-engine-v0.1.4-points-a-clarifier.md) ne conserve **aucune Q-ARCH ouverte** et garde **six Q-TECH** à consolider avant l'implémentation, sans annuler ni rouvrir les contrats validés. Toute précision susceptible de changer un comportement public doit être soumise explicitement au mainteneur avant rédaction de ce nouveau choix.
 
+## Pondération WBOIT — Q-TECH-003 partiellement résolue
+
+**Option B validée :** le Forward translucide utilise la profondeur fenêtre `z` et le poids borné fixe `w=1+7×(1-clamp(z,0,1))`, sans paramétrage public. Accumulation `RGBA16F` additive (`Σ(C*a*w,a*w)`), reveal `R8` multiplicatif (`Π(1-a)`), depth opaque partagé en `GL_LEQUAL` sans écriture translucide, puis mélange HDR `opaque*T + accum.rgb/accum.a*(1-T)` avant exposition/Reinhard ; voir [§7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) et [tests §8.5](voxel-engine-v0.1.4/10-contrats-et-validation.md). Les tests de saturation/quantification GPU et le transfert `GL_FRAMEBUFFER_SRGB` aux widgets restent ouverts et conservent **Q-TECH-003** dans le suivi.
+
 ## Courbe de tone mapping — Q-TECH-003 partiellement résolue
 
 **Reinhard classique (option B).** Après la composition HDR opaque/WBOIT, chaque `EngineView` applique par canal `C_final = x/(1+x)` avec `x=max(C_HDR,0)*E`, `E` exposition capturée et strictement positive (1 par défaut). Aucun ajustement de luminance, white point, ACES ni courbe alternative ; alpha final 1. Le fond RGB, la Skybox unlit et la scène utilisent tous la même transformation ; les widgets UI sont exclus. Le format de sortie `GL_SRGB8_ALPHA8` est validé ; les états GL et la lecture dans les widgets/Materials doivent éviter les doubles conversions gamma (Q-TECH-003).
