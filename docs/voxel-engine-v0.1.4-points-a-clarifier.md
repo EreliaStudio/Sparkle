@@ -12,7 +12,7 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-**Aucun arbitrage architectural Q-ARCH ne reste ouvert.** Les décisions Q-ARCH-001 à Q-ARCH-007 ont été validées et intégrées aux chapitres normatifs ; seules les précisions techniques Q-TECH suivantes restent à consolider avant implémentation.
+**Q-ARCH-008 — Format de sortie d'une EngineView consommée comme texture (P1).** Le tone mapping automatique produit une image affichable après la composition HDR, mais une `EngineView` peut aussi fournir sa texture comme `albedo` à un Material dans une autre vue. Faut-il n'exposer **que cette sortie déjà tone-mappée**, ou proposer **également une sortie HDR linéaire distincte** pour ce cas ? Le choix affecte l'API, les ressources et la colorimétrie ; aucune seconde sortie n'est autorisée avant arbitrage. Les décisions Q-ARCH-001 à Q-ARCH-007 restent closes.
 
 ## 2. Précisions techniques à consolider
 
