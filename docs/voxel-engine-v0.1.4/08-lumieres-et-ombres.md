@@ -10,7 +10,7 @@
 
 **Passe d'ombres unique par vue.** Le `ShadowMap::RenderingSystem` inscrit au plus une `RenderPass` d'ombres dans le sous-snapshot de la vue, avant les passes de lumière. Cette passe regroupe les reconstructions de toutes les lumières sélectionnées, avec cibles statiques et finales propres à chaque lumière et à chaque surface. Les six faces d'une cubemap `Point` sont entièrement rendues avant que la carte puisse être publiée. Une **commande de préparation globale placée au début du snapshot moteur** examine les demandes de toutes ses vues sur la surface de l'image avant toute reconstruction, puis attribue le budget ponctuel selon leur score décroissant, sans bonus d'attente, indépendamment de l'ordre dans lequel les vues seront exécutées.
 
-**Réutilisation et publication.** Une carte complète précédemment produite reste exploitable pendant l'attente ou la reconstruction d'une nouvelle génération, avec ses anciennes matrices, projections et son état lumineux géométrique. La couleur RGB, indépendante de la géométrie, vient du snapshot consommateur ; la portée `range` et les paramètres d'atténuation dérivés doivent rester cohérents avec la carte historique. Une reconstruction opère dans de nouvelles ressources GPU logiques sans modifier les textures antérieures. Aussitôt une carte complète obtenue, le système publie un `Light::ShadowResult` immuable dans le slot de la surface ; une commande d'éclairage ultérieure de la même image peut l'utiliser. Sans carte compatible ou après désélection/désactivation, la lumière éclaire sans ombre. `GPUResourceCollection` assure le recyclage après extinction des références.
+**Réutilisation et publication.** Une carte complète précédemment produite reste exploitable pendant l'attente ou la reconstruction d'une nouvelle génération, avec ses anciennes matrices, projections et son état lumineux géométrique. La couleur RGB et l'intensité scalaire, indépendantes de la géométrie des ombres, viennent du snapshot consommateur ; la portée `range` et toutes les données de projection et de profondeur restent cohérentes avec la carte historique. Une reconstruction opère dans de nouvelles ressources GPU logiques sans modifier les textures antérieures. Aussitôt une carte complète obtenue, le système publie un `Light::ShadowResult` immuable dans le slot de la surface ; une commande d'éclairage ultérieure de la même image peut l'utiliser. Sans carte compatible ou après désélection/désactivation, la lumière éclaire sans ombre. `GPUResourceCollection` assure le recyclage après extinction des références.
 
 ```mermaid
 sequenceDiagram
@@ -63,7 +63,7 @@ flowchart LR
   ShadowComp --> Registry["Registry des casters"]
   Registry --> SR["ShadowMap::RenderingSystem"]
   Filter --> SR
-  SR --> Score["PointLight : range² x poids / distance bornee"]
+  SR --> Score["PointLight : intensite x range² x poids / distance bornee"]
   Score --> Target["Cible X : score de la Xe lumiere"]
   Target --> Tolerance["Admissibles en surplus si score >= PX x (1 - tolerance)"]
   Tolerance --> Remove["Ecarter anciennes retenues hors tolerance"]
@@ -493,7 +493,7 @@ sequenceDiagram
 
 Les valeurs numériques par défaut et les signatures précises sont non spécifiées. `X = 0` signifie **aucune ombre ponctuelle sélectionnée**, même si `Y > 0` : en l'absence de Xe lumière, il n'existe pas de seuil de tolérance. `Y = X` reproduit un budget strict ; `epsilon = 0` autorise seulement des supplémentaires de **score égal** à la Xe. Une contrainte de `Y` n'est jamais transgressée, même lorsqu'il existe plus de lumières de score proche. Ce budget **ne limite toujours pas** le nombre de mises à jour de cubemaps par image et ne concerne pas les directionnelles/spots.
 
-**Filtrage spatial et classement.** Les candidates sont les `Light::Point` encore sélectionnées par `Light::Prioritizer`, actives et demandant des ombres. Leur score et leur éligibilité géométrique ont déjà été calculés par `Light::Point` : sphère d'influence contre six plans, puis `range² × priorityWeight / max(distanceCamera,minLightDistance)` pour les candidates non rejetées. `ShadowMap::RenderingSystem` n'utilise donc aucune formule propre aux lumières ; il applique la politique d'ombres complémentaires X/Y/tolérance/hystérésis aux scores déjà obtenus. Seules les candidates à score strictement positif participent.
+**Filtrage spatial et classement.** Les candidates sont les `Light::Point` encore sélectionnées par `Light::Prioritizer`, actives et demandant des ombres. Leur score et leur éligibilité géométrique ont déjà été calculés par `Light::Point` : sphère d'influence contre six plans, puis `intensity × range² × priorityWeight / max(distanceCamera,minLightDistance)` pour les candidates non rejetées. `ShadowMap::RenderingSystem` n'utilise donc aucune formule propre aux lumières ; il applique la politique d'ombres complémentaires X/Y/tolérance/hystérésis aux scores déjà obtenus. Seules les candidates à score strictement positif participent.
 
 
 
