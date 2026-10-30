@@ -17,7 +17,7 @@ sequenceDiagram
   participant CPU as CaptureContext de la vue
   participant P as Light::Prioritizer
   participant SH as ShadowMap RenderingSystem
-  participant Slot as ThreadSafeSlot par Surface
+  participant Slot as ThreadSafeSlot par Surface, producteur GPU unique
   participant LI as Lighting System
   CPU->>P: capturer sélection et scores
   CPU->>SH: capturer demandes et passe d'ombres de chaque vue
@@ -26,7 +26,9 @@ sequenceDiagram
   SH->>SH: preparer plan GPU commun avant la premiere vue
   SH->>SH: reconstruire seulement les paires autorisees dans leur vue
   alt Reconstruction complète admise
-    SH->>Slot: fusionner et publier ShadowResult
+    SH->>Slot: acquireLatest et copier valeur immuable
+    SH->>SH: mettre a jour entree lumiere
+    SH->>Slot: sous mutex Channel, valider admission et publier copie
   else Différée
     Note over SH,Slot: dernière carte complète inchangée
   end
@@ -34,6 +36,29 @@ sequenceDiagram
   Slot-->>LI: carte et etat geometrique historique par lumiere
   LI->>LI: verifier admission, capture source non future et castShadows
   LI->>LI: appliquer geometrie historique et couleur capturee
+```
+
+**Séquence de fusion de deux lumières sur la même surface (Q-TECH-007).**
+
+```mermaid
+sequenceDiagram
+  participant G as Flux GPU unique Surface A
+  participant C as Channel mutex existant
+  participant S as ThreadSafeSlot Surface A
+  participant L as Lighting lecteur
+  G->>S: acquireLatest V0
+  S-->>L: acquireLatest V0 immutable
+  G->>G: copie V0 puis fusion lumiere A en V1
+  G->>C: verifier admission et generation sous mutex
+  G->>S: publish V1 si admissible
+  G->>C: liberer mutex
+  G->>S: acquireLatest V1
+  G->>G: copie V1 puis fusion lumiere B en V2
+  G->>C: verifier admission et generation sous mutex
+  G->>S: publish V2 si admissible
+  G->>C: liberer mutex
+  Note over G,S: Une seule fusion GPU a la fois sur Surface A
+  Note over L,S: V0 conserve par le lecteur reste immutable
 ```
 
 **Répartition des responsabilités.** `ShadowMap::Contributor` fournit les meshes de profondeur via le `MeshFilter`, sans porter de lumière ni participer comme `EngineView::Contributor`. Le `ShadowMap::RenderingSystem` souscrit aux casters et gère les invalidations de ses caches, sans transférer cette responsabilité à l'`EngineView`. Le `Light::Prioritizer` consulte les scores propres aux composants `Light` et sélectionne les lumières sans produire de shadow map. La `EngineView` détient le Channel mais ne connaît pas la politique des casters.
@@ -161,21 +186,23 @@ sequenceDiagram
 
 **`Light::ShadowResults` et le Channel.** Un `Light::Channel` par vue possède un `Light::Prioritizer` et une collection `Light::ShadowResults`. Cette dernière est un dictionnaire d'instances vivantes de `Window::Surface` vers des `ThreadSafeSlot<Light::ShadowResult>`, avec un slot indépendant par surface. `ThreadSafeSlot` fournit un `shared_ptr<const Light::ShadowResult>` : le consommateur garde cette version pendant son dessin. Deux fenêtres affichant la même vue partagent la sélection logique mais pas leurs instances OpenGL, puisque Sparkle V0.1.4 n'utilise pas de groupe de partage des contextes.
 
+**Q-TECH-007 — mono-producteur par Window::Surface (validé).** Une surface n'exécute jamais simultanément deux flux de commandes GPU. Le flux de rendu de chaque surface est le **seul producteur** de son `ThreadSafeSlot<Light::ShadowResult>` ; les autres surfaces peuvent publier simultanément, mais chacune possède un slot distinct. `acquireLatest()` fournit un `shared_ptr<const ShadowResult>` dont la valeur ne doit jamais être modifiée en place. Les anciennes publications restent vivantes et immuables pour les lecteurs.
+
 **Fermeture des surfaces.** `Window::Surface` expose un abonnement de destruction fondé sur `ContractProvider` (nom indicatif `subscribeToDestruction()`). `Light::ShadowResults` s'abonne aux surfaces dont il possède un slot et efface l'entrée et le contrat à leur fermeture effective, en synchronisant les accès concurrentiels au dictionnaire. Le signal est émis une seule fois, alors qu'aucune nouvelle commande de rendu ne peut débuter sur cette surface. `GPUResourceCollection` reste seule responsable de libérer les instances OpenGL avant destruction de leur contexte. Ni `Window::State` ni `Window::Surface` ne stockent de caches d'ombres. Les identifiants textuels de fenêtre et handles `HGLRC` pouvant être réutilisés, une fenêtre recréée ne doit jamais voir des résultats de l'ancien contexte.
 
 **Reconstruction non destructive.** Le système produit chaque carte remplacée dans de **nouvelles ressources GPU logiques**, sans réécrire la profondeur de la carte antérieure. Cette dernière et les matrices/projections de sa propre génération demeurent cohérentes et consultables pendant l'attente si la lumière est encore sélectionnée et projette toujours des ombres. Une nouvelle reconstruction complète peut être publiée même si la simulation a évolué depuis la capture CPU. Cependant, une génération plus ancienne ne peut jamais écraser une génération plus récente de la même lumière. Une cubemap `Point` est publiée uniquement après les six faces cohérentes, jamais partiellement.
 
-**Publication incrémentale par lumière.** Aussitôt la reconstruction complète d'une lumière, `ShadowMap::RenderingSystem` publie dans le slot correspondant à sa surface **un nouvel état complet de `Light::ShadowResult`** qui remplace uniquement l'entrée de cette lumière et conserve les entrées, générations et handles des autres. Le contrôle anti-régression, la fusion et la publication sont atomiques/serialisés afin qu'une mise à jour concurrente d'une autre lumière ne soit pas perdue. L'ancienne valeur immuable reste disponible aux `shared_ptr` déjà acquis. Les générations sont monotones par lumière et par contexte logique de vue, sans ressusciter les caches après désélection ou destruction/recréation.
+**Publication incrémentale par lumière.** Aussitôt la reconstruction complète d'une lumière, `ShadowMap::RenderingSystem` publie dans le slot correspondant à sa surface **un nouvel état complet de `Light::ShadowResult`** qui remplace uniquement l'entrée de cette lumière et conserve les entrées, générations et handles des autres. **La fusion GPU est séquentielle par construction**, sans publication concurrente d'une seconde lumière sur cette surface : acquérir `shared_ptr<const ShadowResult>` via `acquireLatest()`, copier la valeur complète (ou créer une valeur vide), remplacer uniquement l'entrée reconstruite et retirer les admissions devenues invalides dans cette copie, puis `publish(std::move(copie))`. Aucune ancienne publication n'est modifiée et aucune entrée d'une autre lumière valide n'est perdue. La vérification finale de génération/admission et `publish()` sont coordonnées avec les révocations CPU par le **mutex déjà existant du Light::Channel**, sans appel OpenGL, reconstruction, callback ou attente sous ce mutex. Aucun mutex de fusion dédié au couple `(Channel, Surface)`, aucun CAS et aucune évolution de `ThreadSafeSlot` ne sont nécessaires. L'ancienne valeur immuable reste disponible aux `shared_ptr` déjà acquis. Les générations sont monotones par lumière et par contexte logique de vue, sans ressusciter les caches après désélection ou destruction/recréation.
 
-**Cohérence générationnelle entre lumière et shadow map (contrat validé).** L'entrée immuable de `Light::Selection` contient l'identité durable de la lumière, les paramètres d'éclairage capturés, son autorisation `castShadows` et son **identité d'admission aux ombres pour la vue**. Cette dernière est stable uniquement pendant une admission continue : toute désélection, désactivation, suppression ou recréation la révoque. Une réadmission reçoit une identité neuve, même si le nom ou l'identité applicative est réutilisé. L'éviction retire l'entrée active de la publication, et une reconstruction tardive d'une admission révoquée ne peut la republier. Cette identité n'est pas une génération de `GPUResource::Handle`.
+**Cohérence générationnelle entre lumière et shadow map (contrat validé).** L'entrée immuable de `Light::Selection` contient l'identité durable de la lumière, les paramètres d'éclairage capturés, son autorisation `castShadows` et son **identité d'admission aux ombres pour la vue**. Cette dernière est stable uniquement pendant une admission continue : toute désélection, désactivation, suppression ou recréation la révoque. Une réadmission reçoit une identité neuve, même si le nom ou l'identité applicative est réutilisé. L'éviction révoque **immédiatement l'admission logique** : les consommateurs refusent l'ancienne carte même si sa valeur reste physiquement présente dans un résultat immuable déjà publié. Seul le flux GPU de cette surface nettoie cette entrée lors d'une publication ultérieure ; le thread Update ne devient jamais un second producteur du slot. Une reconstruction tardive d'une admission révoquée ne peut republier cette carte. Cette identité n'est pas une génération de `GPUResource::Handle`.
 
-**Ordre des captures.** `RenderingEngine::refreshRenderSnapshot()` émet un **ordinal CPU strictement croissant pour le moteur**, partagé par les sous-snapshots de ses vues. Une shadow map publiée conserve l'ordinal **de la capture ayant produit ses casters et sa lumière**. Ce numéro distingue l'ordre logique des captures, sans être le numéro d'image GPU/surface ni le compteur de budget de reconstruction. Si une commande d'éclairage provient de la capture `C`, elle **refuse toute carte produite depuis une capture `R > C`**, même si les matrices semblent numériquement identiques : cela évite qu'un ancien snapshot emprunte une représentation géométrique future de la scène. Une carte `R <= C` est admissible seulement lorsque les identités lumière/admission correspondent, que la sélection capturée permet ses ombres et que l'admission n'a pas été révoquée. Les contrôles de publication/retrait sont sérialisés dans le Channel, sans consulter les composants de jeu mutables sur le thread GPU.
+**Ordre des captures.** `RenderingEngine::refreshRenderSnapshot()` émet un **ordinal CPU strictement croissant pour le moteur**, partagé par les sous-snapshots de ses vues. Une shadow map publiée conserve l'ordinal **de la capture ayant produit ses casters et sa lumière**. Ce numéro distingue l'ordre logique des captures, sans être le numéro d'image GPU/surface ni le compteur de budget de reconstruction. Si une commande d'éclairage provient de la capture `C`, elle **refuse toute carte produite depuis une capture `R > C`**, même si les matrices semblent numériquement identiques : cela évite qu'un ancien snapshot emprunte une représentation géométrique future de la scène. Une carte `R <= C` est admissible seulement lorsque les identités lumière/admission correspondent, que la sélection capturée permet ses ombres et que l'admission n'a pas été révoquée. Le contrôle d'admission et la publication GPU sont sérialisés **vis-à-vis de la révocation CPU** avec le mutex existant du Channel ; aucune lecture des composants de jeu mutables sur le thread GPU, ni prise inverse des verrous moteur/Channel.
 
 **Paramètres à combiner.** Une carte d'ombres historique admissible transporte l'état géométrique nécessaire à sa projection : position/orientation de source, `range`, angle Spot, matrices, plans proche/lointain, résolution, format et paramètres de profondeur par face. Elle ne doit pas mélanger géométrie récente et projection ancienne. `RGB` **et `intensity`**, qui modulent le shading sans changer la géométrie, proviennent du snapshot consommateur courant. Le même contrat s'applique à opaque et WBOIT ; en absence de carte compatible, la lumière éclaire sans ombre avec son état capturé.
 
 **Résolution au dessin.** Après la passe d'ombres, `Lighting::System` effectue `acquireLatest()` dans le slot de la **surface courante** et résout une seule fois, **par exécution de vue**, l'état effectif de chaque lumière. Si la carte est admissible, l'état géométrique vient de la carte et les paramètres indépendants viennent du snapshot ; sinon, la lumière utilise **tous ses paramètres capturés et éclaire sans ombre**. L'opaque et WBOIT partagent exactement cette résolution, sans lecture de lumière, caméra ou Entity mutable dans `execute()`. Le `ThreadSafeSlot` ne fournit aucun historique : si sa dernière carte est future ou incompatible, aucun retour automatique à une version antérieure n'est effectué. Ce contrat n'ajoute ni attente GPU, ni gestionnaire de ressources d'ombres, ni propriété GPU dans le Channel.
 
-**Publications entrelacées.** Une fusion incrémentale doit vérifier sous synchronisation l'identité encore active de l'admission ainsi que l'absence de régression de génération ; elle ne peut ressusciter une carte retirée. Une désélection empêche les **nouvelles acquisitions** de cette carte, sans annuler rétroactivement un draw GPU déjà soumis ou détruire les handles conservés par des snapshots en vol. Une ancienne capture peut produire une nouvelle carte si elle est toujours admissible, mais ne peut remplacer une génération plus récente.
+**Publications GPU séquentielles et révocations CPU entrelacées.** La fusion copie le dernier état et publie dans le même flux GPU de surface : aucune autre fusion de cette surface ne peut s'intercaler. L'identité active de l'admission et la non-régression des générations sont vérifiées **sous le mutex Channel existant lors du commit**, en même temps que la publication ; aucune révocation CPU ne peut s'insérer entre validation et publication. Les révocations CPU ne publient jamais de `ShadowResult` et ne peuvent donc effacer une autre mise à jour par une lecture-modification-publication concurrente. Une désélection empêche les **nouvelles acquisitions** de cette carte, sans annuler rétroactivement un draw GPU déjà soumis ou détruire les handles conservés par des snapshots en vol. Une ancienne capture peut produire une nouvelle carte si elle est toujours admissible, mais ne peut remplacer une génération plus récente.
 
 **Consommation au rendu.** Les commandes de `Lighting::System` capturent une liaison sûre au Channel mais appellent `acquireLatest()` dans leur `execute(RenderContext&) const`, après la passe d'ombres de la vue. Elles utilisent donc les résultats déjà terminés **dans la même image**. Aucune attente de reconstruction GPU n'est ajoutée ; une carte antérieure toujours éligible peut être échantillonnée avec **son état géométrique lumineux et ses matrices historiques**, après contrôles d'identité d'admission et d'ordinal source. L'éligibilité des lumières et l'activation des ombres sont vérifiées séparément de la simple présence d'une texture. Un résultat absent, incomplet ou appartenant à un ancien contexte est indisponible et la lumière continue à éclairer sans ombre. L'exécution ne lit aucune `Entity`, caméra, lumière ou vue mutable.
 
@@ -190,7 +217,9 @@ sequenceDiagram
   U->>U: deplacer lumiere en B, capture C13
   SH->>GPU: reconstruire depuis C12 dans nouvelle ressource
   alt Carte complète et génération non régressive
-    SH->>R: fusionner entrée lumière, conserver les autres
+    SH->>R: acquireLatest puis copier ShadowResult
+    SH->>SH: remplacer lumiere et conserver autres entrees
+    SH->>R: valider admission sous mutex Channel puis publier copie
   else Carte incomplète ou plus ancienne que publication
     SH->>SH: ne pas publier
   end
@@ -599,7 +628,7 @@ sequenceDiagram
 
 **Exécution des reconstructions dans les vues.** La `RenderPass` d'ombres de chaque vue conserve son emplacement habituel, avant opaque/WBOIT. Ses commandes consultent le plan déjà préparé et ne reconstruisent la paire `Point` que si elle est autorisée, encore admise et toujours invalide sur la surface. L'autorisation couvre **la totalité de la paire statique/finale nécessaire et les six faces atomiques**, au plus une fois dans l'image. Une paire devenue valide entre préparation et dessin est ignorée ; une paire révoquée est ignorée et son ancienne publication ne peut être ressuscitée. Si une reconstruction échoue, ne publier aucune carte partielle, remonter l'erreur normale de rendu et ne pas redistribuer dynamiquement la place vacante ; une demande devenue invalide après la préparation mais non sélectionnée attend l'image suivante. Ainsi **une vue exécutée plus tard peut gagner sur une vue exécutée plus tôt**, sans intervertir les vues, sans seconde boucle GPU et sans ordonnanceur global des passes.
 
-**Portée de partage et sûreté des threads.** Le plan appartient à une exécution de surface et au `ShadowMap::RenderingSystem` du moteur ; ses demandes couvrent **toutes les vues de ce snapshot moteur**, indépendamment de leur ordre. Les ressources OpenGL sont activées et vérifiées sur le contexte de la surface courante ; l'exécution simultanée du même snapshot sur deux surfaces crée deux plans et deux budgets indépendants. Les verrous de publication de `Light::ShadowResults` restent distincts des données locales de l'image : les publications par lumière continuent à respecter le contrat Q-ARCH-001 et la protection contre la régression. L'appelant reste responsable de ne pas provoquer des doubles rendus indépendants du même moteur par plusieurs `EngineWidget` dans une image : Sparkle n'invente pas de planification entre snapshots moteurs indépendants.
+**Portée de partage et sûreté des threads.** Le plan appartient à une exécution de surface et au `ShadowMap::RenderingSystem` du moteur ; ses demandes couvrent **toutes les vues de ce snapshot moteur**, indépendamment de leur ordre. Les ressources OpenGL sont activées et vérifiées sur le contexte de la surface courante ; l'exécution simultanée du même snapshot sur deux surfaces crée deux plans et deux budgets indépendants. Les publications `Light::ShadowResults` sont **séquentielles sur chaque surface**, sans mutex de fusion supplémentaire ; seules l'identité d'admission et sa révocation CPU nécessitent le mutex **existant du Channel**. Les publications par lumière continuent à respecter Q-ARCH-001 et la non-régression, sans confondre ce contrôle avec les données locales de l'image. L'appelant reste responsable de ne pas provoquer des doubles rendus indépendants du même moteur par plusieurs `EngineWidget` dans une image : Sparkle n'invente pas de planification entre snapshots moteurs indépendants.
 
 **Report et diagnostic.** Une reconstruction différée par manque de budget reste candidate au rendu suivant, sans bonus d'attente. Tant que la `Point` demeure sélectionnée et que ses ombres restent activées, `Lighting::System` peut continuer à échantillonner **sa dernière carte complète publiée avec ses anciennes matrices** ; si aucune carte n'existe, la lumière éclaire sans ombre. La désélection, la désactivation ou la destruction de la lumière interdit toute réutilisation de cette carte. Les diagnostics distinguent l'exclusion de sélection, le budget différé avec ancienne carte disponible et l'absence de carte utilisable.
 
