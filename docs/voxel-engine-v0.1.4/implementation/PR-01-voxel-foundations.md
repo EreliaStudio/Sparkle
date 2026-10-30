@@ -39,6 +39,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] deux Shapes de même contenu mais identités différentes
 - [ ] UV hors [0,1] avertis
 - [ ] Huit `Shape::Instance` distinctes et stables, partagées par copie de Shape, sans mutation rétroactive après réutilisation du Builder.
+- [ ] Copies conservant les instances après destruction de la Shape d'origine ; plusieurs threads peuvent les lire simultanément sans nouveau calcul ni modification.
 - [ ] Vérifier toutes les orientations sur positions, normales géométriques et personnalisées, UV, winding, frontières et slots ; inclure Shape vide et les quatre fixtures JSON. La géométrie orientée relève de PR-01, pas de PR-03.
 - [ ] Air sans face.
 
