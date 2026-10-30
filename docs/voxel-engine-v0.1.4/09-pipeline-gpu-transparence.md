@@ -49,11 +49,13 @@ sequenceDiagram
   end
 ```
 
+**Tone mapping HDR et exposition de la vue (option A validée).** Les contributions lumineuses Point, Spot, Directional et AmbientLight sont additionnées dans un espace **RGB linéaire HDR**, éventuellement au-dessus de `1`. Les rendus opaque et accumulation WBOIT conservent ces valeurs dans des cibles **`RGBA16F`** jusqu'à la composition finale ; reveal reste en `R8`. La dernière passe système `sparkle.engineview.composition` mélange les contributions opaques et translucides **en HDR**, applique l'exposition capturée de la vue puis **un seul tone mapping** vers la plage d'affichage. Cette conversion préserve graduellement les détails des fortes luminances, au lieu d'un clamp direct. **Aucune nouvelle passe GPU**, aucun histogramme, auto-exposure ou adaptation temporelle. Chaque `EngineView` expose un réglage `exposure` (nom indicatif), initialement `1,0f`, fini et strictement positif ; le réglage ne modifie pas les autres vues ni les snapshots antérieurs. Le tone mapping ne s'applique ni aux valeurs avant l'accumulation WBOIT, ni aux widgets UI rendus ensuite. Le calcul numérique de la courbe, les règles de conversion sRGB et les formats définitifs de sortie sont à préciser dans Q-TECH-003. La représentation utilisée si une EngineView sert de `Material` d'une autre vue reste un arbitrage ouvert : ne pas ajouter implicitement un second tone mapping.
+
 **Famille d'attachments et versions d'EngineView.** La composition de `Framebuffer` par `Texture::Handle` explicites appartient au type générique déjà existant, sans nouveau `RenderTarget`. L'EngineView construit atomiquement une famille de cibles (opaque, WBOIT, composition et profondeur **partagée**) pour chaque taille/version logique. Ses commandes GPU capturent des `Framebuffer::Handle` et `Texture::Handle` forts vers cette version. Un resize choisi par le jeu alloue des **nouveaux States** avant publication du nouveau snapshot ; jamais de `Framebuffer::resize()` mutable en place sur les anciens States, ni de réaffectation des attachments d'une version déjà capturée. Un snapshot ancien exécuté après resize continue à rendre sur **ses propres** ressources GPU logiques ; sur la même `Window::Surface` ses anciennes textures peuvent rester indépendamment valides, mais ne sont pas utilisées comme la nouvelle sortie courante. La disponibilité des pixels produits est suivie **par (surface, version/handle)** et pas par nom d'EngineView seul. Les deux surfaces A/B matérialisent les mêmes handles CPU en instances GL distinctes, avec un depth commun **à l'intérieur de chacune**, jamais partagé entre A et B.
 
 ```mermaid
 flowchart LR
-  View["EngineView cible V"] --> OpaqueColor["Opaque couleur handle V"]
+  View["EngineView cible V"] --> OpaqueColor["Opaque HDR RGBA16F handle V"]
   View --> Depth["Depth handle V"]
   View --> Accum["Accumulation RGBA16F handle V"]
   View --> Reveal["Reveal R8 handle V"]
@@ -65,7 +67,7 @@ flowchart LR
   FBOOpaque --> DrawOpaque["Opaque : depth write"]
   DrawOpaque --> DrawWBOIT["WBOIT : depth test, mask off"]
   FBOWBOIT --> DrawWBOIT
-  DrawWBOIT --> Compose["Composition finale"]
+  DrawWBOIT --> Compose["Composition HDR puis tone mapping selon exposition"]
   View --> Resize["Resize explicite"]
   Resize --> V2["Famille V2 : nouveaux handles, V conservee"]
 ```
@@ -75,6 +77,8 @@ flowchart LR
 **Éclairage global par EngineView.** Les shaders calculent directement la couleur éclairée des surfaces opaques et translucides (Forward classique), sans G-buffer, Deferred ni culling lumineux par tiles GPU. Le `Light::Prioritizer` de la vue retient un Top-N global des `Point` et `Spot`, plus toutes les `Directional` actives hors budget N. La sélection immutable est commune à `Lighting::System` et `ShadowMap::RenderingSystem`. Aucun compute shader de culling de tiles, buffer de listes par tile ou mécanisme d'overflow de telles listes n'est requis.
 
 **Ambiance possédée par chaque vue.** Chaque `EngineView` possède son propre `spk::AmbientLight`, et le shader reçoit son unique RGB linéaire `ambientRGB` **copié par valeur** dans le snapshot (`color × intensity`). Les valeurs initiales `RGB{1,1,1}` et `intensity = 0` donnent `(0,0,0)` sans configuration ; il n'existe jamais d'état « AmbientLight absent » ou de pointeur externe à résoudre. La couleur ambiante module uniformément l'albedo des surfaces de la vue et s'ajoute aux contributions directes Point/Spot/Directional en HDR linéaire, **sans ombre**, sans lecture de profondeur, sans portée ni illumination globale. Elle ne modifie pas l'alpha, ne consomme aucun slot Top-N et ne crée aucune shadow map. Opaque et WBOIT partagent cette valeur immuable ; les autres EngineView utilisent chacune leur instance et leur capture. `execute()` ne lit ni l'objet ni la vue mutable.
+
+**Exposition capturée.** La capture CPU fige pour chaque vue son exposition strictement positive ; les anciens snapshots conservent leur valeur même après modification de la configuration. Les commandes de composition consultent exclusivement cet état capturé, jamais l'EngineView mutable dans `execute()`. Les différentes surfaces exécutant une même capture reçoivent le même réglage logique, sur des ressources GPU distinctes.
 
 **Capture et buffers.** La capture CPU fige la `Light::Selection`, les paramètres des lumières retenues et les matrices de vue ; les mêmes données alimentent la passe opaque et l'unique passe WBOIT de cette EngineView. Les ressources GPU sont matérialisées sur la `Window::Surface` courante et synchronisées avant les dessins. `RenderCommand::execute()` ne relit pas de lumière, caméra, vue ou Assembly mutable. La sélection ne dépend pas du depth buffer opaque et reste valide pour les fragments translucides.
 
@@ -152,9 +156,12 @@ flowchart LR
   Results -->|"acquireLatest apres ombres"| Opaque
   Results -->|"acquireLatest apres ombres"| WBOIT
   Opaque -->|"Meme depth attachment"| WBOIT
-  Opaque --> Compose["Composition opaque et WBOIT"]
+  Opaque --> Compose["Composition opaque et WBOIT en HDR"]
   WBOIT --> Compose
-  Compose --> Tex["Texture finale par surface"]
+  View --> Exposure["Exposition capturee par EngineView"]
+  Exposure --> Tone["Tone mapping unique apres composition HDR"]
+  Compose --> Tone
+  Tone --> Tex["Texture finale par surface"]
   Tex --> Display["EngineWidget Drawing ou Material EngineView"]
 ```
 
