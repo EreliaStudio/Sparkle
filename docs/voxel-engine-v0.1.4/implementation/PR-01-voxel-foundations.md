@@ -1,8 +1,6 @@
 # PR-01 — Shape, Definition et Cell
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
->
-> **Branche source :** `impl/v0.1.4/01-voxel-foundations`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **PR-01 en cours :** [PR GitHub #40](https://github.com/EreliaStudio/Sparkle/pull/40), sur `impl/v0.1.4/01-voxel-foundations` créée depuis `V0.1.4` et ciblant `V0.1.4`. Ne pas fusionner sans validation du propriétaire.
 
 **Objectif :** Constituer le modèle voxel public sans Engine et sans OpenGL.
 
@@ -40,6 +38,8 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] UV hors [0,1] avertis
 - [ ] Huit `Shape::Instance` distinctes et stables, partagées par copie de Shape, sans mutation rétroactive après réutilisation du Builder.
 - [ ] Copies conservant les instances après destruction de la Shape d'origine ; plusieurs threads peuvent les lire simultanément sans nouveau calcul ni modification.
+- [ ] Deux Definitions avec des noms sémantiques différents partageant la même Shape récupèrent les mêmes huit instances ; les slots locaux ne sont pas remappés dans le cache.
+- [ ] Un ajout invalide au Builder n'invalide aucune des huit références d'instances précédemment publiées ; la publication suivante conserve sa propre identité.
 - [ ] Vérifier toutes les orientations sur positions, normales géométriques et personnalisées, UV, winding, frontières et slots ; inclure Shape vide et les quatre fixtures JSON. La géométrie orientée relève de PR-01, pas de PR-03.
 - [ ] Air sans face.
 
