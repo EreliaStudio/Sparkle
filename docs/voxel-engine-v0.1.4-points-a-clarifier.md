@@ -12,7 +12,7 @@
 
 ## 1. Arbitrages architecturaux encore ouverts
 
-**Q-ARCH-008 — Format de sortie d'une EngineView consommée comme texture (P1).** Le tone mapping automatique produit une image affichable après la composition HDR, mais une `EngineView` peut aussi fournir sa texture comme `albedo` à un Material dans une autre vue. Faut-il n'exposer **que cette sortie déjà tone-mappée**, ou proposer **également une sortie HDR linéaire distincte** pour ce cas ? Le choix affecte l'API, les ressources et la colorimétrie ; aucune seconde sortie n'est autorisée avant arbitrage. Les décisions Q-ARCH-001 à Q-ARCH-007 restent closes.
+**Aucun arbitrage Q-ARCH encore ouvert.** Q-ARCH-001 à **Q-ARCH-008** sont closes dans les chapitres normatifs ; seules les précisions techniques ci-dessous restent à consolider.
 
 ## 2. Précisions techniques à consolider
 
@@ -37,7 +37,7 @@
 ### Q-TECH-003 — WBOIT, tone mapping HDR et états OpenGL
 **Priorité : P1** — [GPU, §7.8](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md)
 
-Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Arbitrage encore ouvert :** lorsqu'une vue sert de source de texture à une autre, faut-il exposer sa sortie déjà tone mappée ou fournir une représentation HDR distincte ? Ce choix affecte l'API, les handles et le résultat visuel. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
+Préciser valeurs de clear, blending individuel des MRT, pondération d'accumulation, formule de revealage et de composition, gestion du `R8`, restauration d'états GL et comportement des cas limites alpha/profondeur. **Tone mapping HDR validé (option A) :** opaque et accumulation WBOIT en `RGBA16F` linéaire jusqu'à la composition, **tone mapping unique automatique après mélange HDR**, exposition configurable par `EngineView` (défaut `1,0f`, valeur finie strictement positive), capturée dans le snapshot et indépendante des vues. Aucun auto-exposure, nouvelle passe ni correction des widgets UI. **Reste technique :** courbe fixe de tone mapping, encodage sRGB/gamma, format final de sortie et cas extrêmes. **Q-ARCH-008 close (option A) :** widgets et Materials utilisent uniquement l'image finale tone-mappée ; aucune source HDR alternative. L'encodage/décodage sRGB reste une précision technique à consolider. **Une seule passe géométrique translucide**, sans ombres projetées par les surfaces translucides.
 
 ### Q-TECH-004 — Précision numérique du VoxelMesher et d'OcclusionCache
 **Priorité : P1** — [Meshing, §3](voxel-engine-v0.1.4/03-meshing-occlusion.md)
@@ -70,6 +70,7 @@ Ce rappel sert seulement à **exclure les faux points ouverts** :
 - **PointLight :** budget souple X/Y/tolérance/hystérésis pour retenir des ombres ; budget commun de reconstruction par image et surface, priorité stricte des scores, sans bonus d'attente ; sortie de sélection = éviction immédiate des **caches logiques actifs**, récupération GPU par l'infrastructure générique.
 - **Publication d'ombres :** cubemap de six faces atomique, publication incrémentale par lumière, anciens résultats complets conservés sans régression si encore admissibles ; aucune file d'éviction ou recyclage spécialisé ShadowMap.
 - **Voxel :** Volume/Model/Material/VoxelPalette immuables après construction, meshing synchrone ; un atlas par mesh/passe par association Model/Palette ; Assembly animée explicitement ; casters d'ombres définis par le jeu et non inférés du système voxel.
+- **Q-ARCH-008 :** une sortie finale tone-mappée par EngineView, utilisée par les widgets et les Materials ; aucune sortie HDR supplémentaire ou choix public d'étape de rendu.
 - **Transparence et affichage HDR :** WBOIT avec une passe géométrique MRT et depth opaque partagé ; les surfaces translucides ne projettent pas d'ombres. Opaque et accumulation WBOIT en `RGBA16F` HDR avant composition, puis tone mapping unique avec exposition réglable sur chaque `EngineView`, sans auto-exposure ni traitement des widgets UI.
 
 ## 4. Procédure de clôture
