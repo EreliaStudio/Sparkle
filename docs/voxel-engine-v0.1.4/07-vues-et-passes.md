@@ -57,9 +57,16 @@ classDiagram
     +selection(view)
   }
   class LightShadowResults {
+    +mutexDictionnaire
+    +entries : SurfaceIdentity vers shared_ptr Entry
     +slot(surface)
     +subscribeToDestruction(surface)
     +publicationGPUSequentielle(surface)
+  }
+  class LightShadowEntry {
+    +slot : ThreadSafeSlot ShadowResult
+    +closed : atomic bool
+    +closingContract : RAII
   }
   class LightShadowResult {
     +entriesByLight
@@ -119,7 +126,8 @@ classDiagram
   Contributor <|-- RenderingEntity
   LightChannel *-- LightPrioritizer
   LightChannel *-- LightShadowResults
-  LightShadowResults --> LightShadowResult : publication GPU sequentielle par surface
+  LightShadowResults *-- LightShadowEntry : shared_ptr par incarnation Surface
+  LightShadowEntry --> LightShadowResult : slot, publication sequentielle
   LightShadowResults ..> WindowSurface : ContractProvider RAII
   LightContributor <|-- LightPoint
   LightContributor <|-- LightSpot
@@ -169,6 +177,8 @@ Dans ce diagramme, `Contributor` désigne **`EngineView::Contributor`** : le lie
 **Q-TECH-007 — publication mono-producteur par surface (validé).** Une même `Window::Surface` n'exécute qu'un seul flux GPU à la fois. Son flux de rendu publie les `ShadowResult` successivement : `acquireLatest()`, **copie de la valeur immuable**, fusion d'une lumière, validation de l'admission et `publish()` de la copie. Les flux de surfaces A/B sont indépendants. **Pas de mutex de fusion dédié ni CAS** ; le mutex déjà existant du Channel sert uniquement à rendre le contrôle d'admission et la publication indivisibles vis-à-vis d'une révocation CPU, sans opérations GL sous verrou. La révocation CPU interdit immédiatement une admission, mais ne modifie pas le slot ; les consommateurs filtrent les admissions révoquées et leur suppression physique peut attendre un nouveau rendu. Aucun `shared_ptr<const ShadowResult>` détenu par un lecteur n'est modifié.
 
 **Q-TECH-007 — fermeture de `Window::Surface` avant nettoyage GPU (option A validée).** Le runtime interdit d'abord toute nouvelle exécution de commandes sur la surface et laisse terminer les exécutions déjà engagées ; `Window::Surface` est alors en état `Releasing`. Il déclenche **une seule fois** le `ContractProvider` de destruction, **synchroniquement et avant** le nettoyage des instances de `GPUResourceCollection`. Les `Light::ShadowResults` désabonnent les entrées de cette incarnation de surface et leurs slots logiques, sans commandes OpenGL ni locks applicatifs autour des callbacks. Après notification, le runtime rend courant le contexte de cette surface, détruit ses objets GPU avec `GPUResourceCollection::clear()`, puis délie et détruit le contexte WGL et termine en état `Released`. Les snapshots déjà publiés peuvent conserver leurs handles et Channels mais **ne peuvent jamais utiliser une surface fermée** ; une surface de même nom recréée ne partage aucun slot ni objet GL natif. **Exceptions de callbacks (option B validée) :** chaque callback est entouré d'un adaptateur local à l'événement qui capture la première exception et laisse le `ContractProvider` notifier les suivants ; `destroy()` finalise la libération GPU et le contexte, atteint `Released`, puis relance **l'exception d'origine** seulement à son retour. La sémantique ordinaire de `ContractProvider::trigger()` ne change pas. Seule la synchronisation exacte du dictionnaire et des abonnements face aux accès concurrents reste ouverte dans Q-TECH-007. Voir le [protocole et diagramme §7.3](08-lumieres-et-ombres.md).
+
+**Q-TECH-007 — dictionnaire de `Light::ShadowResults` (option A validée).** Les incarnations de `Window::Surface` sont indexées dans un dictionnaire `SurfaceIdentity → shared_ptr<Entry>` protégé par **un mutex court distinct du mutex Channel**. Chaque Entry possède un `ThreadSafeSlot<ShadowResult>`, un état `closed` synchronisé et un contrat RAII de fermeture. Chaque commande récupère une **copie forte de l'Entry sous verrou**, puis libère le mutex avant lecture, publication, validation d'admission et GPU. La fermeture marque `closed`, retire l'entrée sous mutex court **avant le nettoyage GL**, tandis qu'une référence déjà acquise conserve sa mémoire sans rendre la surface utilisable. Une création d'Entry et son abonnement à `subscribeToDestruction()` doivent être coordonnés avec `Releasing` : abonnement refusé trop tard ou notification reçue avant insertion empêche tout slot orphelin. Aucun mutex de fusion par surface, aucun emboîtement dictionnaire/Channel, aucun callback ni `ContractProvider::resign()` sous verrous. Voir le [contrat et la séquence §7.3](08-lumieres-et-ombres.md).
 
 **Identité immuable de la vue.** Le nom d'une `EngineView` est attribué lors de sa création et **ne peut jamais être modifié** pendant sa durée de vie. La collection du `RenderingEngine` garantit son unicité et refuse toute tentative de création avec un nom déjà utilisé via `spk::Exception`. Aucune méthode de renommage, propagation de noms vers les widgets, alias automatique ou registre de dépendances n'est introduit. Les recherches `renderingEngine.view(name)`, les identifiants sélectionnés dans les `EngineWidget` et les références logiques du jeu conservent ainsi un identifiant stable. La caméra, la résolution, l'ordre facultatif et la politique de sortie restent modifiables suivant leurs propres contrats ; elles n'affectent pas le nom. La destruction d'une vue peut libérer le nom pour une nouvelle vue, **sans rétablir la validité des anciennes références non propriétaires** ou modifier les snapshots déjà publiés.
 
