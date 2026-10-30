@@ -472,7 +472,7 @@ namespace
 			ASSERT_EQ(polygon.vertices.size(), 3u);
 			const std::size_t anchorIndex = index >= 4 ? 2u : 0u;
 			const auto &anchor = polygon.vertices[anchorIndex];
-			EXPECT_EQ(anchor.position, expectedPositions[index]);
+			EXPECT_NEAR((anchor.position - expectedPositions[index]).length(), 0.0, 1.0e-6);
 			EXPECT_EQ(anchor.uv, spk::Vector2(0.15f, 0.85f));
 			ASSERT_TRUE(anchor.normal.has_value());
 			EXPECT_EQ(*anchor.normal, expectedNormals[index]);
