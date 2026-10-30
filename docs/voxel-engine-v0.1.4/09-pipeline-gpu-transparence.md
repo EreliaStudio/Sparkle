@@ -80,6 +80,8 @@ flowchart LR
 
 ### 7.8 Pipeline Forward classique, opaque et WBOIT
 
+**Skybox unlit (Q-ARCH-013).** La géométrie inversée de Skybox n'est pas traitée par les shaders Forward éclairés. La passe opaque réutilise les Materials génériques uniquement pour échantillonner le rôle `albedo` et appliquer les UV par face, avec un shader **non éclairé** : aucun `Light::Selection`, SSBO de lumières, contribution `spk::AmbientLight`, évaluation de normale ou échantillonnage de shadow map. Le ciel n'est pas un Contributor lumineux et ne projette pas d'ombre. Sa couleur reste en RGB linéaire HDR dans l'attachment opaque ; WBOIT se compose normalement devant le ciel, et la composition finale applique l'exposition puis l'unique tone mapping de l'EngineView. Sortie finale alpha 1. Une nouvelle lampe ou un changement de son intensité ne change pas les couleurs de Skybox si son Material, la caméra et l'exposition restent identiques. Les Materials peuvent conserver d'autres rôles, mais aucun autre rôle n'est utilisé dans le shader Skybox V0.1.4.
+
 **Éclairage global par EngineView.** Les shaders calculent directement la couleur éclairée des surfaces opaques et translucides (Forward classique), sans G-buffer, Deferred ni culling lumineux par tiles GPU. Le `Light::Prioritizer` de la vue retient un Top-N global des `Point` et `Spot`, plus toutes les `Directional` actives hors budget N. La sélection immutable est commune à `Lighting::System` et `ShadowMap::RenderingSystem`. Aucun compute shader de culling de tiles, buffer de listes par tile ou mécanisme d'overflow de telles listes n'est requis.
 
 **Ambiance possédée par chaque vue.** Chaque `EngineView` possède son propre `spk::AmbientLight`, et le shader reçoit son unique RGB linéaire `ambientRGB` **copié par valeur** dans le snapshot (`color × intensity`). Les valeurs initiales `RGB{1,1,1}` et `intensity = 0` donnent `(0,0,0)` sans configuration ; il n'existe jamais d'état « AmbientLight absent » ou de pointeur externe à résoudre. La couleur ambiante module uniformément l'albedo des surfaces de la vue et s'ajoute aux contributions directes Point/Spot/Directional en HDR linéaire, **sans ombre**, sans lecture de profondeur, sans portée ni illumination globale. Elle ne modifie pas l'alpha, ne consomme aucun slot Top-N et ne crée aucune shadow map. Opaque et WBOIT partagent cette valeur immuable ; les autres EngineView utilisent chacune leur instance et leur capture. `execute()` ne lit ni l'objet ni la vue mutable.
@@ -158,7 +160,7 @@ flowchart LR
   Selection --> Shadow["ShadowMap RenderingSystem"]
   Shadow --> Results["ShadowResults par surface"]
   Selection --> Opaque["Opaque Forward avec depth write"]
-  View --> Background["Fond RGB ou Skybox 6 Materials sans depth write"]
+  View --> Background["Fond RGB ou Skybox unlit 6 Materials sans depth write"]
   Background --> Opaque
   Selection --> WBOIT["WBOIT Forward avec depth read-only"]
   Results -->|"acquireLatest apres ombres"| Opaque
