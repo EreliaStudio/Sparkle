@@ -28,7 +28,7 @@
 
 ## Instructions techniques et intégration
 
-Valider avant chaque ajout avec garantie forte; conserver positions dans [0,1]^3, UV arbitraires et warning Logger; bloc de données partagé immuable et identité distincte entre constructions; le flip vertical sera traité par ShapeTransformationCache en PR-03, pas dans Cell ; build réussi consomme Builder.
+Valider avant chaque ajout avec garantie forte; conserver positions dans [0,1]^3, UV arbitraires et warning Logger; bloc de données partagé immuable et identité distincte entre constructions; le flip vertical sera traité par ShapeTransformationCache en PR-03, pas dans Cell ; build réussi laisse le Builder réutilisable, sans mutation rétroactive des Shapes publiées.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
