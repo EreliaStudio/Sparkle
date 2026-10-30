@@ -214,7 +214,6 @@ namespace
 	TEST(VoxelCellTest, EightOrientationsTransformPositionsAndNormals)
 	{
 		const Definition definition(makeSquare(), {{"wall", "stone"}});
-		
 		const std::array<spk::Vector3, 8> positions = {
 			spk::Vector3{0.2f, 0.3f, 0.4f},
 			{0.4f, 0.3f, 0.8f},
@@ -348,5 +347,104 @@ namespace
 			}
 			EXPECT_EQ(boundaries.size(), 6u);
 		}
+	}
+
+	TEST(VoxelShapeTest, HistoricalJSONFixturesContainOneShapeWithExpectedGeometry)
+	{
+		struct Expected
+		{
+			const char *name;
+			std::size_t polygons;
+			std::size_t outer;
+			std::size_t inner;
+		};
+
+		const std::array fixtures = {
+			Expected{"cube", 6, 6, 0},
+			Expected{"slab", 6, 5, 1},
+			Expected{"slope", 5, 4, 1},
+			Expected{"stair", 10, 8, 2}};
+
+		for (const auto &fixture : fixtures)
+		{
+			SCOPED_TRACE(fixture.name);
+			const Shape shape = loadFixture(fixture.name);
+			ASSERT_EQ(shape.polygons().size(), fixture.polygons);
+			EXPECT_EQ(std::count_if(shape.polygons().begin(), shape.polygons().end(), [](const auto &polygon) {
+				return polygon.shell == Shape::Shell::Outer;
+			}), fixture.outer);
+			EXPECT_EQ(std::count_if(shape.polygons().begin(), shape.polygons().end(), [](const auto &polygon) {
+				return polygon.shell == Shape::Shell::Inner;
+			}), fixture.inner);
+			for (const auto &polygon : shape.polygons())
+			{
+				EXPECT_FLOAT_EQ(shape.slot(polygon.slotKey).opacity, 1.0f);
+				EXPECT_GE(polygon.vertices.size(), 3u);
+				for (const auto &vertex : polygon.vertices)
+				{
+					EXPECT_GE(vertex.position.x, 0.0f);
+					EXPECT_LE(vertex.position.x, 1.0f);
+					EXPECT_GE(vertex.position.y, 0.0f);
+					EXPECT_LE(vertex.position.y, 1.0f);
+					EXPECT_GE(vertex.position.z, 0.0f);
+					EXPECT_LE(vertex.position.z, 1.0f);
+				}
+			}
+			EXPECT_FALSE(shape == loadFixture(fixture.name));
+		}
+	}
+
+	TEST(VoxelCellTest, HistoricalJSONShapesKeepFrontFacesForAllOrientations)
+	{
+		for (const std::string name : {"cube", "slab", "slope", "stair"})
+		{
+			SCOPED_TRACE(name);
+			const Shape shape = loadFixture(name);
+			Definition::SlotMapping mapping;
+			for (const auto &slot : shape.slots())
+			{
+				mapping.emplace(slot.name, slot.name);
+			}
+			const Definition definition(shape, std::move(mapping));
+			for (std::size_t index = 0; index < Orientations.size(); ++index)
+			{
+				const Cell cell = makeOrientedCell(definition, index);
+				const auto polygons = cell.orientedPolygons();
+				ASSERT_EQ(polygons.size(), shape.polygons().size());
+				for (const auto &polygon : polygons)
+				{
+					const auto first = polygon.vertices[1].position - polygon.vertices[0].position;
+					const auto second = polygon.vertices[2].position - polygon.vertices[0].position;
+					EXPECT_GT(first.cross(second).dot(polygon.geometricNormal), 0.0f);
+				}
+			}
+		}
+	}
+
+	TEST(VoxelShapeTest, JSONInputFailureLeavesEntireBuilderUnchanged)
+	{
+		Shape::Builder builder;
+		builder.addSlot("original");
+		const auto invalid = spk::JSON::Value::fromString(
+			R"({"slots":{"extra":1},"polygons":[{"slot":"extra","vertices":[[0,0,0]]}]})");
+		EXPECT_THROW(builder.addFromJSON(invalid), spk::Exception);
+		const Shape shape = builder.build();
+		EXPECT_EQ(shape.slots().size(), 1u);
+		EXPECT_EQ(shape.slot("original").name, "original");
+		EXPECT_TRUE(shape.polygons().empty());
+	}
+
+	TEST(VoxelShapeTest, JSONVertexObjectPreservesUVAndCustomLightingNormal)
+	{
+		const auto input = spk::JSON::Value::fromString(
+			R"({"slots":{"paper":0.5},"polygons":[{"slot":"paper","vertices":[{"position":[0,0,0],"uv":[-2,0],"normal":[0,0,1]},{"position":[1,0,0],"uv":[2,0],"normal":[0,0,1]},{"position":[0,1,0],"uv":[-2,2],"normal":[0,0,1]}]}]})");
+		Shape::Builder builder;
+		builder.addFromJSON(input);
+		const Shape shape = builder.build();
+		ASSERT_EQ(shape.polygons().size(), 1u);
+		EXPECT_FLOAT_EQ(shape.slot("paper").opacity, 0.5f);
+		EXPECT_EQ(shape.polygons()[0].vertices[0].uv, spk::Vector2(-2.0f, 0.0f));
+		EXPECT_EQ(shape.polygons()[0].vertices[1].normal, spk::Vector3(0, 0, 1));
+		EXPECT_EQ(shape.polygons()[0].slotKey, "paper");
 	}
 }
