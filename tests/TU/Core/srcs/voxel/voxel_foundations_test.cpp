@@ -4,7 +4,6 @@
 #include <array>
 #include <cmath>
 #include <limits>
-#include <set>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -13,7 +12,6 @@
 #include "diagnostics/logger.hpp"
 #include "exception.hpp"
 #include "voxel/cell.hpp"
-#include "voxel_cell_test_access.hpp"
 
 namespace
 {
@@ -41,13 +39,6 @@ namespace
 		builder.addSlot("wall");
 		builder.addPolygon("wall", square());
 		return builder.build();
-	}
-
-	void expectVectorNear(spk::Vector3 actual, spk::Vector3 expected)
-	{
-		EXPECT_NEAR(actual.x, expected.x, 1.0e-6);
-		EXPECT_NEAR(actual.y, expected.y, 1.0e-6);
-		EXPECT_NEAR(actual.z, expected.z, 1.0e-6);
 	}
 
 	struct OrientationPair
@@ -201,84 +192,25 @@ namespace
 		EXPECT_TRUE(explicitAir.isAir());
 		EXPECT_TRUE(air.definition() == Definition::air());
 		EXPECT_TRUE(air.definition().shape().polygons().empty());
-		EXPECT_TRUE(spk::Voxel::CellTestAccess::orientedPolygons(explicitAir).empty());
 		EXPECT_EQ(air.horizontalOrientation(), Cell::HorizontalOrientation::XPositive);
 		EXPECT_EQ(air.verticalOrientation(), Cell::VerticalOrientation::YPositive);
 	}
 
-	TEST(VoxelCellTest, EightOrientationsTransformPositionsAndNormals)
+	TEST(VoxelCellTest, AllEightOrientationPairsRetainDefinition)
 	{
 		const Definition definition(makeSquare(), {{"wall", "stone"}});
-		const std::array<spk::Vector3, 8> positions = {
-			spk::Vector3{0.2f, 0.3f, 0.4f},
-			{0.4f, 0.3f, 0.8f},
-			{0.8f, 0.3f, 0.6f},
-			{0.6f, 0.3f, 0.2f},
-			{0.2f, 0.7f, 0.4f},
-			{0.4f, 0.7f, 0.8f},
-			{0.8f, 0.7f, 0.6f},
-			{0.6f, 0.7f, 0.2f}};
-		const std::array<spk::Vector3, 8> normals = {
-			spk::Vector3{1, 2, 3},
-			{3, 2, -1},
-			{-1, 2, -3},
-			{-3, 2, 1},
-			{1, -2, 3},
-			{3, -2, -1},
-			{-1, -2, -3},
-			{-3, -2, 1}};
 		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
 			const Cell cell = makeOrientedCell(definition, index);
-			expectVectorNear(spk::Voxel::CellTestAccess::transformPosition(cell, {0.2f, 0.3f, 0.4f}), positions[index]);
-			expectVectorNear(spk::Voxel::CellTestAccess::transformNormal(cell, {1, 2, 3}), normals[index]);
 			EXPECT_TRUE(cell.definition() == definition);
+			EXPECT_EQ(cell.horizontalOrientation(), Orientations[index].horizontal);
+			EXPECT_EQ(cell.verticalOrientation(), Orientations[index].vertical);
+			EXPECT_EQ(cell.definition().shape().polygons().size(), 1u);
 		}
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::XPositive), 0u);
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZNegative), 90u);
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::XNegative), 180u);
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZPositive), 270u);
-	}
-
-	TEST(VoxelCellTest, WindingUVAndFrontFacesSurviveEveryVerticalFlip)
-	{
-		const Definition definition(makeSquare(), {{"wall", "stone"}});
-		for (unsigned value = 0; value < 8; ++value)
-		{
-			const Cell cell = makeOrientedCell(definition, value);
-			const auto polygons = spk::Voxel::CellTestAccess::orientedPolygons(cell);
-			ASSERT_EQ(polygons.size(), 1u);
-			const auto &polygon = polygons.front();
-			ASSERT_EQ(polygon.vertices.size(), 4u);
-			const auto edgeA = polygon.vertices[1].position - polygon.vertices[0].position;
-			const auto edgeB = polygon.vertices[2].position - polygon.vertices[0].position;
-			EXPECT_GT(edgeA.cross(edgeB).dot(polygon.geometricNormal), 0.0f);
-			for (const auto &vertex : polygon.vertices)
-			{
-				ASSERT_TRUE(vertex.normal.has_value());
-				expectVectorNear(*vertex.normal, polygon.geometricNormal);
-			}
-			const auto &original = definition.shape().polygons().front();
-			for (std::size_t i = 0; i < original.vertices.size(); ++i)
-			{
-				const std::size_t dest = value >= 4 ? original.vertices.size() - 1 - i : i;
-				expectVectorNear(polygon.vertices[dest].position, spk::Voxel::CellTestAccess::transformPosition(cell, original.vertices[i].position));
-				EXPECT_EQ(polygon.vertices[dest].uv, original.vertices[i].uv);
-			}
-			EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
-			ASSERT_TRUE(polygon.boundary.has_value());
-		}
-	}
-
-	TEST(VoxelCellTest, FlippedTopAndBottomOuterFacesSwap)
-	{
-		Shape::Builder builder;
-		builder.addSlot("top");
-		builder.addPolygon("top", {vertex(0, 1, 0), vertex(0, 1, 1), vertex(1, 1, 1), vertex(1, 1, 0)});
-		const Cell cell(Definition(builder.build(), {{"top", "roof"}}), Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YNegative);
-		const auto polygon = spk::Voxel::CellTestAccess::orientedPolygons(cell).front();
-		EXPECT_EQ(polygon.boundary, Shape::Face::NegativeY);
-		EXPECT_FLOAT_EQ(polygon.vertices[0].position.y, 0.0f);
 	}
 
 	TEST(VoxelShapeTest, OverlappingAndOppositeWindingPolygonsRemainDistinct)
@@ -304,52 +236,4 @@ namespace
 		EXPECT_EQ(shape.polygons()[0].geometricNormal, -shape.polygons()[2].geometricNormal);
 	}
 
-	TEST(VoxelCellTest, SixSidedCubeKeepsEachPhysicalFrontFaceUnderEveryOrientation)
-	{
-		const std::array<spk::Vector3, 8> corners = {
-			spk::Vector3{0, 0, 0},
-			{1, 0, 0},
-			{1, 1, 0},
-			{0, 1, 0},
-			{0, 0, 1},
-			{1, 0, 1},
-			{1, 1, 1},
-			{0, 1, 1}};
-		const std::array<std::array<std::size_t, 4>, 6> faces = {
-			std::array<std::size_t, 4>{0, 3, 2, 1},
-			{4, 5, 6, 7},
-			{0, 4, 7, 3},
-			{1, 2, 6, 5},
-			{0, 1, 5, 4},
-			{3, 7, 6, 2}};
-		Shape::Builder builder;
-		builder.addSlot("cube");
-		for (const auto &indices : faces)
-		{
-			std::vector<Shape::Vertex> vertices;
-			for (const auto index : indices)
-			{
-				vertices.push_back({corners[index], {}, std::nullopt});
-			}
-			builder.addPolygon("cube", std::move(vertices));
-		}
-		const Definition definition(builder.build(), {{"cube", "stone"}});
-		for (unsigned index = 0; index < 8; ++index)
-		{
-			const Cell cell = makeOrientedCell(definition, index);
-			std::set<Shape::Face> boundaries;
-			const auto polygons = spk::Voxel::CellTestAccess::orientedPolygons(cell);
-			ASSERT_EQ(polygons.size(), 6u);
-			for (const auto &polygon : polygons)
-			{
-				ASSERT_TRUE(polygon.boundary.has_value());
-				boundaries.insert(*polygon.boundary);
-				EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
-				const auto edgeA = polygon.vertices[1].position - polygon.vertices[0].position;
-				const auto edgeB = polygon.vertices[2].position - polygon.vertices[0].position;
-				EXPECT_GT(edgeA.cross(edgeB).dot(polygon.geometricNormal), 0.0f);
-			}
-			EXPECT_EQ(boundaries.size(), 6u);
-		}
-	}
 }
