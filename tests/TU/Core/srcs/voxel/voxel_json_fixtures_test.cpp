@@ -185,10 +185,7 @@ namespace
 		const auto malformed = spk::JSON::Value::fromString(
 			R"({"slots":{"temporary":1},"polygons":[{"slot":"temporary","vertices":[[0,0,0],[1,0,0],[0,1,2]]}]})");
 		EXPECT_THROW(builder.addFromJSON(malformed), spk::Exception);
-		builder.addPolygon("existing", {
-			{{0, 0, 0}, {}, std::nullopt},
-			{{1, 0, 0}, {}, std::nullopt},
-			{{0, 1, 0}, {}, std::nullopt}});
+		builder.addPolygon("existing", {{{0, 0, 0}, {}, std::nullopt}, {{1, 0, 0}, {}, std::nullopt}, {{0, 1, 0}, {}, std::nullopt}});
 		const Shape shape = builder.build();
 		EXPECT_EQ(shape.slots().size(), 1u);
 		EXPECT_EQ(shape.polygons().size(), 1u);
