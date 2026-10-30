@@ -167,8 +167,8 @@ namespace
 			}());
 			for (const Cell &cell : orientations(definition))
 			{
-				const auto &polygons = shape.instance({
-					cell.horizontalOrientation(), cell.verticalOrientation()}).polygons();
+				const Shape::Orientation orientation{cell.horizontalOrientation(), cell.verticalOrientation()};
+				const auto &polygons = shape.instance(orientation).polygons();
 				ASSERT_EQ(polygons.size(), original.size());
 				const bool flipped = cell.verticalOrientation() == Cell::VerticalOrientation::YNegative;
 				for (std::size_t polygonIndex = 0; polygonIndex < polygons.size(); ++polygonIndex)
@@ -199,10 +199,9 @@ namespace
 		const Shape cube = fixtureShape("cube");
 		for (unsigned flipped = 0; flipped != 2; ++flipped)
 		{
-			for (const auto horizontal : {
-				Shape::HorizontalOrientation::XPositive, Shape::HorizontalOrientation::ZNegative,
-				Shape::HorizontalOrientation::XNegative, Shape::HorizontalOrientation::ZPositive})
+			for (unsigned degrees = 0; degrees != 360; degrees += 90)
 			{
+				const auto horizontal = static_cast<Shape::HorizontalOrientation>(degrees);
 				const auto vertical = flipped ? Shape::VerticalOrientation::YNegative : Shape::VerticalOrientation::YPositive;
 				const auto &polygons = cube.instance({horizontal, vertical}).polygons();
 				std::array<bool, 6> boundaries{};
