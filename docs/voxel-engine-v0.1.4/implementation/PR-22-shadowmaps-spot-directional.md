@@ -1,6 +1,8 @@
 # PR-22 — ShadowMap::RenderingSystem pour Spot/Directional
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/22-shadowmaps-spot-directional`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Produire des ombres 2D avec caches depth statiques et finals, puis éclairer avec.
 

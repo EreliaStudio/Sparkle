@@ -1,6 +1,8 @@
 # PR-21 — ShadowResults, admission et durée de vie des surfaces
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/21-shadowresults-surfaces`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Publier les résultats de shadow maps de façon sûre et isolée par Surface.
 

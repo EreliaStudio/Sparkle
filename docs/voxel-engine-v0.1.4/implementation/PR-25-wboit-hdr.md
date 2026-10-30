@@ -1,6 +1,8 @@
 # PR-25 — WBOIT MRT et composition HDR complète
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/25-wboit-hdr`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Afficher des surfaces translucides avec une seule passe de géométrie et HDR jusqu'à la sortie.
 

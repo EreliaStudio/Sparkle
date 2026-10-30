@@ -1,6 +1,8 @@
 # PR-24 — Sélection et budget PointLight multi-vues
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/24-point-shadow-budget`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Limiter à chaque image/surface les reconstructions intégrales de cubemaps selon la priorité réelle.
 

@@ -1,6 +1,8 @@
 # PR-18 — Light::Channel, Top-N et cohérence CPU
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+>
+> **Branche source :** `impl/v0.1.4/18-light-channel`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Fournir une sélection immuable par EngineView cohérente avec ses mutations.
 
