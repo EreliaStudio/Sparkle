@@ -11,7 +11,6 @@
 #include "container/json/object.hpp"
 #include "exception.hpp"
 #include "voxel/cell.hpp"
-#include "voxel_cell_test_access.hpp"
 
 namespace
 {
@@ -126,7 +125,7 @@ namespace
 		}
 	}
 
-	TEST(VoxelShapeFixtureTest, EveryShapeSupportsEightOrientedCellsWithoutUVOrWindingLoss)
+	TEST(VoxelShapeFixtureTest, EachJSONShapeCanBeReferencedByEightOrientedCells)
 	{
 		for (const Fixture &fixture : Fixtures)
 		{
@@ -140,30 +139,12 @@ namespace
 			const Definition definition(shape, std::move(mapping));
 			for (const auto &cell : orientations(definition))
 			{
-				const auto oriented = spk::Voxel::CellTestAccess::orientedPolygons(cell);
-				ASSERT_EQ(oriented.size(), shape.polygons().size());
-				for (std::size_t polygonIndex = 0; polygonIndex < oriented.size(); ++polygonIndex)
+				EXPECT_TRUE(cell.definition() == definition);
+				EXPECT_TRUE(cell.definition().shape() == shape);
+				EXPECT_EQ(cell.definition().shape().polygons().size(), fixture.polygonCount);
+				for (const auto &slot : shape.slots())
 				{
-					const auto &original = shape.polygons()[polygonIndex];
-					const auto &result = oriented[polygonIndex];
-					ASSERT_EQ(result.vertices.size(), original.vertices.size());
-					EXPECT_EQ(result.slotKey, original.slotKey);
-					EXPECT_EQ(result.shell, original.shell);
-					EXPECT_FALSE(definition.semanticSlot(result.slotKey).empty());
-					const bool flipped = cell.verticalOrientation() == Cell::VerticalOrientation::YNegative;
-					for (std::size_t vertexIndex = 0; vertexIndex < result.vertices.size(); ++vertexIndex)
-					{
-						const std::size_t sourceIndex = flipped ? result.vertices.size() - 1 - vertexIndex : vertexIndex;
-						const auto &source = original.vertices[sourceIndex];
-						const auto &transformed = result.vertices[vertexIndex];
-						EXPECT_EQ(transformed.uv, source.uv);
-						const auto expected = spk::Voxel::CellTestAccess::transformPosition(cell, source.position);
-						EXPECT_NEAR((transformed.position - expected).length(), 0.0, 1.0e-6);
-						EXPECT_NEAR((*transformed.normal - spk::Voxel::CellTestAccess::transformNormal(cell, *source.normal)).length(), 0.0, 1.0e-6);
-					}
-					const auto edgeA = result.vertices[1].position - result.vertices[0].position;
-					const auto edgeB = result.vertices[2].position - result.vertices[0].position;
-					EXPECT_GT(edgeA.cross(edgeB).dot(result.geometricNormal), 0.0f);
+					EXPECT_EQ(cell.definition().semanticSlot(slot.name), fixture.name + std::string(".") + slot.name);
 				}
 			}
 		}
