@@ -65,7 +65,7 @@ namespace
 	static_assert(std::is_copy_constructible_v<Shape>);
 	static_assert(std::is_copy_constructible_v<Definition>);
 	static_assert(std::is_copy_constructible_v<Cell>);
-	static_assert(std::is_same_v<decltype(std::declval<const Shape &>().polygons()), const std::vector<Shape::Polygon> &>);
+	static_assert(std::is_same_v<decltype(std::declval<const Shape::Instance &>().polygons()), const std::vector<Shape::Polygon> &>);
 	static_assert(std::is_same_v<decltype(std::declval<const Definition &>().shape()), const Shape &>);
 
 	TEST(VoxelShapeTest, EmptyIsValidAndDistinctFromOtherConstructions)
@@ -94,15 +94,15 @@ namespace
 		builder.addPolygon("wall", square());
 		builder.addPolygon("glass", {vertex(0.2f, 0.1f, 0.2f), vertex(0.8f, 0.1f, 0.2f), vertex(0.5f, 0.7f, 0.2f)});
 		const Shape shape = builder.build();
-		ASSERT_EQ(shape.polygons().size(), 2u);
+		ASSERT_EQ(shape.instance().polygons().size(), 2u);
 		EXPECT_FLOAT_EQ(shape.slot("wall").opacity, 1.0f);
 		EXPECT_FLOAT_EQ(shape.slot("glass").opacity, 0.25f);
-		EXPECT_EQ(shape.polygons()[0].shell, Shape::Shell::Outer);
-		EXPECT_EQ(shape.polygons()[0].boundary, Shape::Face::NegativeX);
-		EXPECT_EQ(shape.polygons()[1].shell, Shape::Shell::Inner);
-		EXPECT_FALSE(shape.polygons()[1].boundary.has_value());
-		EXPECT_EQ(shape.polygons()[0].geometricNormal, spk::Vector3(-1.0f, 0.0f, 0.0f));
-		EXPECT_EQ(shape.polygons()[0].vertices[2].normal.value(), spk::Vector3(-1.0f, 0.0f, 0.0f));
+		EXPECT_EQ(shape.instance().polygons()[0].shell, Shape::Shell::Outer);
+		EXPECT_EQ(shape.instance().polygons()[0].boundary, Shape::Face::NegativeX);
+		EXPECT_EQ(shape.instance().polygons()[1].shell, Shape::Shell::Inner);
+		EXPECT_FALSE(shape.instance().polygons()[1].boundary.has_value());
+		EXPECT_EQ(shape.instance().polygons()[0].geometricNormal, spk::Vector3(-1.0f, 0.0f, 0.0f));
+		EXPECT_EQ(shape.instance().polygons()[0].vertices[2].normal.value(), spk::Vector3(-1.0f, 0.0f, 0.0f));
 	}
 
 	TEST(VoxelShapeTest, BuilderValidationIsAtomicForInvalidSlotsAndPolygons)
@@ -130,7 +130,7 @@ namespace
 		EXPECT_THROW(builder.addPolygon("a", invalidNormal), spk::Exception);
 		const Shape shape = builder.build();
 		EXPECT_EQ(shape.slots().size(), 1u);
-		EXPECT_TRUE(shape.polygons().empty());
+		EXPECT_TRUE(shape.instance().polygons().empty());
 	}
 
 	TEST(VoxelShapeTest, UVOutOfRangeWarnsOnceAtConstructionAndRetainsCoordinates)
@@ -151,8 +151,8 @@ namespace
 		builder.addPolygon("wall", vertices);
 		const Shape shape = builder.build();
 		ASSERT_EQ(warnings, 1);
-		EXPECT_EQ(shape.polygons()[0].vertices[0].uv, spk::Vector2(-1.0f, 2.0f));
-		(void)shape.polygons();
+		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].uv, spk::Vector2(-1.0f, 2.0f));
+		(void)shape.instance().polygons();
 		EXPECT_EQ(warnings, 1);
 	}
 
@@ -171,7 +171,7 @@ namespace
 		EXPECT_TRUE(first.shape() == second.shape());
 		EXPECT_EQ(first.semanticSlot("wall"), "stone");
 		EXPECT_EQ(second.semanticSlot("wall"), "glass");
-		EXPECT_EQ(first.shape().polygons().size(), 1u);
+		EXPECT_EQ(first.shape().instance().polygons().size(), 1u);
 		EXPECT_THROW(first.semanticSlot("none"), spk::Exception);
 	}
 
@@ -191,7 +191,7 @@ namespace
 		EXPECT_TRUE(air.isAir());
 		EXPECT_TRUE(explicitAir.isAir());
 		EXPECT_TRUE(air.definition() == Definition::air());
-		EXPECT_TRUE(air.definition().shape().polygons().empty());
+		EXPECT_TRUE(air.definition().shape().instance().polygons().empty());
 		EXPECT_EQ(air.horizontalOrientation(), Cell::HorizontalOrientation::XPositive);
 		EXPECT_EQ(air.verticalOrientation(), Cell::VerticalOrientation::YPositive);
 	}
@@ -205,7 +205,7 @@ namespace
 			EXPECT_TRUE(cell.definition() == definition);
 			EXPECT_EQ(cell.horizontalOrientation(), Orientations[index].horizontal);
 			EXPECT_EQ(cell.verticalOrientation(), Orientations[index].vertical);
-			EXPECT_EQ(cell.definition().shape().polygons().size(), 1u);
+			EXPECT_EQ(cell.definition().shape().instance().polygons().size(), 1u);
 		}
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::XPositive), 0u);
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZNegative), 90u);
@@ -224,16 +224,16 @@ namespace
 		std::reverse(reversed.begin(), reversed.end());
 		builder.addPolygon("sheet", reversed);
 		const Shape shape = builder.build();
-		ASSERT_EQ(shape.polygons().size(), 3u);
+		ASSERT_EQ(shape.instance().polygons().size(), 3u);
 		ASSERT_EQ(shape.slots().size(), 1u);
 		const Definition definition(shape, {{"sheet", "stone"}});
-		for (const auto &polygon : shape.polygons())
+		for (const auto &polygon : shape.instance().polygons())
 		{
 			EXPECT_EQ(polygon.slotKey, "sheet");
 			EXPECT_EQ(definition.semanticSlot(polygon.slotKey), "stone");
 		}
-		EXPECT_EQ(shape.polygons()[0].geometricNormal, shape.polygons()[1].geometricNormal);
-		EXPECT_EQ(shape.polygons()[0].geometricNormal, -shape.polygons()[2].geometricNormal);
+		EXPECT_EQ(shape.instance().polygons()[0].geometricNormal, shape.instance().polygons()[1].geometricNormal);
+		EXPECT_EQ(shape.instance().polygons()[0].geometricNormal, -shape.instance().polygons()[2].geometricNormal);
 	}
 
 }
