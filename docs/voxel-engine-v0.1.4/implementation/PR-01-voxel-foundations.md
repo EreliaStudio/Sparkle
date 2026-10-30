@@ -24,11 +24,11 @@
 - [ ] outerShell et innerShell
 - [ ] Definition et correspondance de slots
 - [ ] Definition Air
-- [ ] Cell par valeur et 8 orientations.
+- [ ] Cell par valeur et deux enums décrivant huit orientations, sans méthodes de transformation géométrique.
 
 ## Instructions techniques et intégration
 
-Valider avant chaque ajout avec garantie forte; conserver positions dans [0,1]^3, UV arbitraires et warning Logger; bloc de données partagé immuable et identité distincte entre constructions; flip vertical conserve winding et normales; build réussi consomme Builder.
+Valider avant chaque ajout avec garantie forte; conserver positions dans [0,1]^3, UV arbitraires et warning Logger; bloc de données partagé immuable et identité distincte entre constructions; le flip vertical sera traité par ShapeTransformationCache en PR-03, pas dans Cell ; build réussi consomme Builder.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
@@ -38,14 +38,14 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] Builder inchangé après échec
 - [ ] deux Shapes de même contenu mais identités différentes
 - [ ] UV hors [0,1] avertis
-- [ ] 8 orientations géométrie UV normale winding
+- [ ] 8 couples d'orientation enregistrés par Cell ; les tests de géométrie/UV/normales/winding sont confiés à PR-03
 - [ ] Air sans face.
 
 **Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
 
 ## Définition de terminé / critère de fusion
 
-Exemple de cube par Definition et 8 Cell orientées vérifié numériquement en tests CPU.
+Exemple de cube par Definition et huit Cell décrivant les orientations, vérifié en tests CPU. La transformation géométrique effective est réservée à PR-03.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
@@ -54,7 +54,7 @@ Exemple de cube par Definition et 8 Cell orientées vérifié numériquement en 
 
 ## Hors périmètre
 
-Volume, Model, maillage GPU, cache par orientation.
+Volume, Model, maillage GPU, `ShapeTransformationCache`, `OcclusionCache` et toute opération transformant la géométrie d'une Cell.
 
 ## Consigne de passation
 
