@@ -72,10 +72,7 @@ namespace
 		builder.addSlot("wall");
 		builder.addSlot("glass", 0.25f);
 		builder.addPolygon("wall", square());
-		builder.addPolygon("glass", {
-			vertex(0.2f, 0.1f, 0.2f),
-			vertex(0.8f, 0.1f, 0.2f),
-			vertex(0.5f, 0.7f, 0.2f)});
+		builder.addPolygon("glass", {vertex(0.2f, 0.1f, 0.2f), vertex(0.8f, 0.1f, 0.2f), vertex(0.5f, 0.7f, 0.2f)});
 		const Shape shape = builder.build();
 		ASSERT_EQ(shape.polygons().size(), 2u);
 		EXPECT_FLOAT_EQ(shape.slot("wall").opacity, 1.0f);
@@ -102,12 +99,12 @@ namespace
 		EXPECT_THROW(builder.addPolygon("a", {vertex(0, 0, 0), vertex(0, 0, 1), vertex(0, 0, 0.5f)}), spk::Exception);
 		EXPECT_THROW(builder.addPolygon("a", {vertex(-0.1f, 0, 0), vertex(0, 0, 1), vertex(0, 1, 1)}), spk::Exception);
 		EXPECT_THROW(builder.addPolygon("a", {vertex(0, 0, 0), vertex(0, 0, 1), vertex(0, 1, 1), vertex(0.1f, 1, 0)}), spk::Exception);
-		EXPECT_THROW(builder.addPolygon("a", {
-			vertex(0, 0, 0), vertex(1, 0, 0), vertex(0.5f, 0.25f, 0), vertex(1, 1, 0), vertex(0, 1, 0)}), spk::Exception);
-		EXPECT_THROW(builder.addPolygon("a", {
-			vertex(0, 0, 0), vertex(1, 1, 0), vertex(0, 1, 0), vertex(1, 0, 0)}), spk::Exception);
-		EXPECT_THROW(builder.addPolygon("a", {
-			vertex(0, 0, 0), vertex(0, 0, 1, std::numeric_limits<float>::infinity(), 0), vertex(0, 1, 1)}), spk::Exception);
+		const std::vector<Shape::Vertex> concave = {vertex(0, 0, 0), vertex(1, 0, 0), vertex(0.5f, 0.25f, 0), vertex(1, 1, 0), vertex(0, 1, 0)};
+		EXPECT_THROW(builder.addPolygon("a", concave), spk::Exception);
+		const std::vector<Shape::Vertex> bowtie = {vertex(0, 0, 0), vertex(1, 1, 0), vertex(0, 1, 0), vertex(1, 0, 0)};
+		EXPECT_THROW(builder.addPolygon("a", bowtie), spk::Exception);
+		const std::vector<Shape::Vertex> infiniteUV = {vertex(0, 0, 0), vertex(0, 0, 1, std::numeric_limits<float>::infinity(), 0), vertex(0, 1, 1)};
+		EXPECT_THROW(builder.addPolygon("a", infiniteUV), spk::Exception);
 		auto invalidNormal = square();
 		invalidNormal[0].normal = spk::Vector3{};
 		EXPECT_THROW(builder.addPolygon("a", invalidNormal), spk::Exception);
@@ -184,8 +181,7 @@ namespace
 		const Definition definition(makeSquare(), {{"wall", "stone"}});
 		using O = Cell::Orientation;
 		const std::array orientations = {
-			O::Y0, O::Y90, O::Y180, O::Y270,
-			O::FlippedY0, O::FlippedY90, O::FlippedY180, O::FlippedY270};
+			O::Y0, O::Y90, O::Y180, O::Y270, O::FlippedY0, O::FlippedY90, O::FlippedY180, O::FlippedY270};
 		const std::array<spk::Vector3, 8> positions = {
 			spk::Vector3{0.2f, 0.3f, 0.4f},
 			{0.4f, 0.3f, 0.8f},
@@ -236,8 +232,7 @@ namespace
 			for (std::size_t i = 0; i < original.vertices.size(); ++i)
 			{
 				const std::size_t dest = value >= 4 ? original.vertices.size() - 1 - i : i;
-				expectVectorNear(polygon.vertices[dest].position,
-								 cell.transformPosition(original.vertices[i].position));
+				expectVectorNear(polygon.vertices[dest].position, cell.transformPosition(original.vertices[i].position));
 				EXPECT_EQ(polygon.vertices[dest].uv, original.vertices[i].uv);
 			}
 			EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
@@ -249,10 +244,8 @@ namespace
 	{
 		Shape::Builder builder;
 		builder.addSlot("top");
-		builder.addPolygon("top", {
-			vertex(0, 1, 0), vertex(0, 1, 1), vertex(1, 1, 1), vertex(1, 1, 0)});
-		const Cell cell(Definition(builder.build(), {{"top", "roof"}}),
-						Cell::Orientation::FlippedY0);
+		builder.addPolygon("top", {vertex(0, 1, 0), vertex(0, 1, 1), vertex(1, 1, 1), vertex(1, 1, 0)});
+		const Cell cell(Definition(builder.build(), {{"top", "roof"}}), Cell::Orientation::FlippedY0);
 		const auto polygon = cell.orientedPolygons().front();
 		EXPECT_EQ(polygon.boundary, Shape::Face::NegativeY);
 		EXPECT_FLOAT_EQ(polygon.vertices[0].position.y, 0.0f);
