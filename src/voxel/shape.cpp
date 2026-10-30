@@ -174,7 +174,7 @@ namespace spk::Voxel
 		return _data->polygons.empty();
 	}
 
-	bool Shape::sameIdentity(const Shape &other) const noexcept
+	bool Shape::operator==(const Shape &other) const noexcept
 	{
 		return _data == other._data;
 	}
@@ -243,7 +243,7 @@ namespace spk::Voxel
 
 		Polygon polygon;
 		polygon.vertices = std::move(vertices);
-		polygon.slot = std::move(slot);
+		polygon.slotKey = std::move(slot);
 		polygon.geometricNormal = normal;
 		polygon.boundary = boundaryOf(polygon.vertices);
 		polygon.shell = polygon.boundary ? Shell::Outer : Shell::Inner;
