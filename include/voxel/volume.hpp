@@ -6,7 +6,6 @@
 #include <memory>
 #include <vector>
 
-#include "exception.hpp"
 #include "math/vector3.hpp"
 #include "voxel/cell.hpp"
 
@@ -24,37 +23,10 @@ namespace spk::Voxel
 			[[nodiscard]] static Storage encode(
 				std::size_t id,
 				Cell::HorizontalOrientation horizontal,
-				Cell::VerticalOrientation vertical)
-			{
-				const auto degrees = static_cast<std::uint32_t>(horizontal);
-				if (degrees > 270 || degrees % 90 != 0 ||
-					(vertical != Cell::VerticalOrientation::YPositive && vertical != Cell::VerticalOrientation::YNegative))
-				{
-					throw spk::Exception("Invalid Voxel Volume cell orientation");
-				}
-				if (id > MaxDefinitionId)
-				{
-					throw spk::Exception("Voxel Volume Definition ID exceeds 29-bit capacity");
-				}
-				return (static_cast<Storage>(id) << 3) |
-					   (static_cast<Storage>(vertical == Cell::VerticalOrientation::YNegative) << 2) |
-					   (degrees / 90);
-			}
-
-			[[nodiscard]] static constexpr Storage definitionId(Storage value) noexcept
-			{
-				return value >> 3;
-			}
-
-			[[nodiscard]] static constexpr Cell::HorizontalOrientation horizontal(Storage value) noexcept
-			{
-				return static_cast<Cell::HorizontalOrientation>((value & 3U) * 90);
-			}
-
-			[[nodiscard]] static constexpr Cell::VerticalOrientation vertical(Storage value) noexcept
-			{
-				return (value & 4U) ? Cell::VerticalOrientation::YNegative : Cell::VerticalOrientation::YPositive;
-			}
+				Cell::VerticalOrientation vertical);
+			[[nodiscard]] static Storage definitionId(Storage value) noexcept;
+			[[nodiscard]] static Cell::HorizontalOrientation horizontal(Storage value) noexcept;
+			[[nodiscard]] static Cell::VerticalOrientation vertical(Storage value) noexcept;
 		};
 
 		class Builder
