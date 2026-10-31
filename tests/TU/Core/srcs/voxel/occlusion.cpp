@@ -24,14 +24,14 @@ std::vector<V> face(float x, float low, float high, bool positive)
  if (!positive) std::reverse(v.begin(),v.end());
  return v;
 }
-Shape shape(float x, float low=0, float high=1, float opacity=1, bool positive=true)
+Definition shape(float x, float low=0, float high=1, float opacity=1, bool positive=true)
 {
  Shape::Builder b;
- b.addSlot("surface",opacity);
+ b.addSlot("surface");
  b.addPolygon("surface",face(x,low,high,positive));
- return b.build();
+ return Definition(b.build(), {{"surface", "surface"}}, {{"surface", opacity}});
 }
-Cache::Key key(const Shape &a,const Shape &b)
+Cache::Key key(const Definition &a,const Definition &b)
 {
  Cache::Key k;
  k.source=a;
@@ -192,10 +192,10 @@ TEST(VoxelOcclusion, AllEightOrientationsAreDeterministic)
 TEST(VoxelOcclusion, MultipleOverlappingBlockersDoNotIncreaseVisibleArea)
 {
  Shape::Builder builder;
- builder.addSlot("surface",1.0f);
+ builder.addSlot("surface");
  builder.addPolygon("surface",face(0,0,0.5f,false));
  builder.addPolygon("surface",face(0,0,0.5f,false));
- auto blocker=builder.build();
+ auto blocker=Definition(builder.build(), {{"surface", "surface"}});
  auto source=shape(1);
  auto result=Algorithm::compute(source,{},blocker,{},Shape::Face::PositiveX);
  EXPECT_NEAR(surface(result),0.75f,1e-4f);
@@ -208,7 +208,7 @@ TEST(VoxelOcclusion, TransparentBlockerIsIgnored)
 }
 TEST(VoxelOcclusion, EmptySourceProducesNoFragments)
 {
- Shape empty;
+ Definition empty;
  auto blocker=shape(0,0,1,1,false);
  EXPECT_TRUE(Algorithm::compute(empty,{},blocker,{},Shape::Face::PositiveX).empty());
 }
