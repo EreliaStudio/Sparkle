@@ -145,9 +145,12 @@ TEST(VoxelOcclusion, ConcurrentCacheGet)
 	Cache cache;
 	auto k = key(a, b);
 	std::vector<std::future<Result>> jobs;
+	auto task = [&] {
+		return cache.get(k);
+	};
 	for (int i = 0; i < 16; ++i)
 	{
-		jobs.push_back(std::async(std::launch::async, [&] { return cache.get(k); }));
+		jobs.push_back(std::async(std::launch::async, task));
 	}
 	for (auto &job : jobs)
 	{
@@ -195,22 +198,24 @@ TEST(VoxelOcclusion, ConcurrentGetAndClear)
 	std::vector<std::future<void>> jobs;
 	for (int worker = 0; worker < 8; ++worker)
 	{
-		jobs.push_back(std::async(std::launch::async, [&, worker] {									 for (int i = 0; i < 100; ++i)
-									 {
-										 if (worker == 0)
-										 {
-											 cache.clear();
-										 }
-										 else
-										 {
-											 auto result = cache.get(k);
-											 if (std::abs(surface(result) - 0.75f) > 1e-4f)
-											 {
-												 throw std::runtime_error("Incorrect concurrent occlusion result");
-											 }
-										 }
-									 }
-								 		}));
+		auto task = [&, worker] {
+			for (int i = 0; i < 100; ++i)
+			{
+				if (worker == 0)
+				{
+					cache.clear();
+				}
+				else
+				{
+					auto result = cache.get(k);
+					if (std::abs(surface(result) - 0.75f) > 1e-4f)
+					{
+						throw std::runtime_error("Incorrect concurrent occlusion result");
+					}
+				}
+			}
+		};
+		jobs.push_back(std::async(std::launch::async, task));
 	}
 	for (auto &job : jobs)
 	{
