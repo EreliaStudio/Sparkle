@@ -1,34 +1,34 @@
-#include "asset/asset_manager.hpp"
+#include "asset/manager.hpp"
 
 #include <algorithm>
 #include <utility>
 
 #include "exception.hpp"
 
-namespace spk
+namespace spk::asset
 {
-	AssetManager::Asset::~Asset() = default;
+	Manager::Asset::~Asset() = default;
 
-	AssetManager::ActiveLoad::ActiveLoad(std::vector<Identity> &active, const Identity &identity) :
+	Manager::ActiveLoad::ActiveLoad(std::vector<Identity> &active, const Identity &identity) :
 		_active(active)
 	{
 		_active.push_back(identity);
 	}
 
-	AssetManager::ActiveLoad::~ActiveLoad()
+	Manager::ActiveLoad::~ActiveLoad()
 	{
 		_active.pop_back();
 	}
 
-	AssetManager::~AssetManager() = default;
+	Manager::~Manager() = default;
 
-	std::string AssetManager::_describe(const Identity &identity)
+	std::string Manager::_describe(const Identity &identity)
 	{
 		return std::string(identity.type.name()) + " '" + identity.id + "' " +
 			   identity.config.toString({.pretty = false});
 	}
 
-	std::string AssetManager::_describeCycle(const Identity &identity) const
+	std::string Manager::_describeCycle(const Identity &identity) const
 	{
 		std::string description = "Asset dependency cycle: ";
 		const auto first = std::find(_active.begin(), _active.end(), identity);
@@ -41,7 +41,7 @@ namespace spk
 		return description + _describe(identity);
 	}
 
-	AssetManager::Asset *AssetManager::_find(const Identity &identity) const
+	Manager::Asset *Manager::_find(const Identity &identity) const
 	{
 		const auto type = _assets.find(identity.type);
 		if (type == _assets.end())
@@ -65,7 +65,24 @@ namespace spk
 		return nullptr;
 	}
 
-	void AssetManager::_checkCycle(const Identity &identity) const
+
+	Manager::Asset *Manager::_getUnique(std::type_index type, const std::string &id) const
+	{
+		const auto family = _assets.find(type);
+		if (family == _assets.end() || !family->second.contains(id))
+		{
+			throw spk::Exception("Asset not loaded: " + std::string(type.name()) + " '" + id + "'");
+		}
+
+		const Entries &entries = family->second.at(id);
+		if (entries.size() != 1)
+		{
+			throw spk::Exception("Ambiguous asset: " + std::string(type.name()) + " '" + id + "'");
+		}
+		return entries.front().asset.get();
+	}
+
+	void Manager::_checkCycle(const Identity &identity) const
 	{
 		if (std::find(_active.begin(), _active.end(), identity) != _active.end())
 		{
@@ -73,12 +90,12 @@ namespace spk
 		}
 	}
 
-	void AssetManager::_publish(Identity identity, std::unique_ptr<Asset> asset)
+	void Manager::_publish(Identity identity, std::unique_ptr<Asset> asset)
 	{
 		_assets[identity.type][identity.id].push_back(Entry{std::move(identity.config), std::move(asset)});
 	}
 
-	void AssetManager::clear()
+	void Manager::clear()
 	{
 		_assets.clear();
 	}

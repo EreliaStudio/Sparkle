@@ -1,23 +1,20 @@
 #pragma once
 
-#include "container/json/object.hpp"
 #include <concepts>
 #include <memory>
 #include <string>
-#include <typeindex>
 #include <type_traits>
+#include <typeindex>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-namespace spk
+#include "asset/factory.hpp"
+#include "container/json/object.hpp"
+
+namespace spk::asset
 {
-	class AssetManager;
-
-	template <typename TType>
-	struct AssetFactory;
-
-	class AssetManager
+	class Manager
 	{
 	private:
 		struct Asset
@@ -30,8 +27,8 @@ namespace spk
 		{
 			TType value;
 
-			OwnedAsset(AssetManager &assets, const std::string &id, const JSON::Value &config) :
-				value(AssetFactory<TType>::create(assets, id, config))
+			OwnedAsset(Manager &assets, const std::string &id, const JSON::Value &config) :
+				value(Factory<TType>::create(assets, id, config))
 			{
 			}
 		};
@@ -73,27 +70,28 @@ namespace spk
 		[[nodiscard]] static std::string _describe(const Identity &identity);
 		[[nodiscard]] std::string _describeCycle(const Identity &identity) const;
 		[[nodiscard]] Asset *_find(const Identity &identity) const;
+		[[nodiscard]] Asset *_getUnique(std::type_index type, const std::string &id) const;
 		void _checkCycle(const Identity &identity) const;
 		void _publish(Identity identity, std::unique_ptr<Asset> asset);
 
 	public:
-		AssetManager() = default;
-		~AssetManager();
+		Manager() = default;
+		~Manager();
 
-		AssetManager(const AssetManager &) = delete;
-		AssetManager &operator=(const AssetManager &) = delete;
-		AssetManager(AssetManager &&) = delete;
-		AssetManager &operator=(AssetManager &&) = delete;
+		Manager(const Manager &) = delete;
+		Manager &operator=(const Manager &) = delete;
+		Manager(Manager &&) = delete;
+		Manager &operator=(Manager &&) = delete;
 
 		template <typename TType>
 		[[nodiscard]] TType &load(const std::string &id, const JSON::Value &config)
 		{
 			static_assert(std::is_object_v<TType> && !std::is_const_v<TType> && !std::is_volatile_v<TType>);
 			static_assert(
-				requires(AssetManager &assets, const std::string &name, const JSON::Value &settings) {
-					{ AssetFactory<TType>::create(assets, name, settings) } -> std::same_as<TType>;
+				requires(Manager &assets, const std::string &name, const JSON::Value &settings) {
+					{ Factory<TType>::create(assets, name, settings) } -> std::same_as<TType>;
 				},
-				"AssetFactory<T> must provide static T create(AssetManager&, const std::string&, const JSON::Value&)");
+				"Factory<T> must provide static T create(Manager&, const std::string&, const JSON::Value&)");
 
 			Identity identity{typeid(TType), id, config};
 			if (Asset *existing = _find(identity))
@@ -113,6 +111,13 @@ namespace spk
 		[[nodiscard]] TType &load(const std::string &id)
 		{
 			return load<TType>(id, JSON::Value::object());
+		}
+
+		template <typename TType>
+		[[nodiscard]] TType &get(const std::string &id)
+		{
+			static_assert(std::is_object_v<TType> && !std::is_const_v<TType> && !std::is_volatile_v<TType>);
+			return static_cast<OwnedAsset<TType> &>(*_getUnique(typeid(TType), id)).value;
 		}
 
 		void clear();
