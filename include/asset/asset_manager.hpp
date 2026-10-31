@@ -1,8 +1,6 @@
 #pragma once
 
 #include "container/json/object.hpp"
-#include "exception.hpp"
-#include <algorithm>
 #include <concepts>
 #include <memory>
 #include <string>
@@ -24,7 +22,7 @@ namespace spk
 	private:
 		struct Asset
 		{
-			virtual ~Asset() = default;
+			virtual ~Asset();
 		};
 
 		template <typename TType>
@@ -59,16 +57,8 @@ namespace spk
 			std::vector<Identity> &_active;
 
 		public:
-			ActiveLoad(std::vector<Identity> &active, const Identity &identity) :
-				_active(active)
-			{
-				_active.push_back(identity);
-			}
-
-			~ActiveLoad()
-			{
-				_active.pop_back();
-			}
+			ActiveLoad(std::vector<Identity> &active, const Identity &identity);
+			~ActiveLoad();
 
 			ActiveLoad(const ActiveLoad &) = delete;
 			ActiveLoad &operator=(const ActiveLoad &) = delete;
@@ -80,53 +70,15 @@ namespace spk
 		std::unordered_map<std::type_index, AssetsById> _assets;
 		std::vector<Identity> _active;
 
-		[[nodiscard]] static std::string _describe(const Identity &identity)
-		{
-			return std::string(identity.type.name()) + " '" + identity.id + "' " +
-				   identity.config.toString({.pretty = false});
-		}
-
-		[[nodiscard]] std::string _describeCycle(const Identity &identity) const
-		{
-			std::string description = "Asset dependency cycle: ";
-			const auto first = std::find(_active.begin(), _active.end(), identity);
-
-			for (auto current = first; current != _active.end(); ++current)
-			{
-				description += _describe(*current) + " -> ";
-			}
-
-			return description + _describe(identity);
-		}
-
-		template <typename TType>
-		[[nodiscard]] TType *_find(const Identity &identity)
-		{
-			const auto type = _assets.find(identity.type);
-			if (type == _assets.end())
-			{
-				return nullptr;
-			}
-
-			const auto id = type->second.find(identity.id);
-			if (id == type->second.end())
-			{
-				return nullptr;
-			}
-
-			for (Entry &entry : id->second)
-			{
-				if (entry.config == identity.config)
-				{
-					return &static_cast<OwnedAsset<TType> &>(*entry.asset).value;
-				}
-			}
-			return nullptr;
-		}
+		[[nodiscard]] static std::string _describe(const Identity &identity);
+		[[nodiscard]] std::string _describeCycle(const Identity &identity) const;
+		[[nodiscard]] Asset *_find(const Identity &identity) const;
+		void _checkCycle(const Identity &identity) const;
+		void _publish(Identity identity, std::unique_ptr<Asset> asset);
 
 	public:
 		AssetManager() = default;
-		~AssetManager() = default;
+		~AssetManager();
 
 		AssetManager(const AssetManager &) = delete;
 		AssetManager &operator=(const AssetManager &) = delete;
@@ -144,19 +96,16 @@ namespace spk
 				"AssetFactory<T> must provide static T create(AssetManager&, const std::string&, const JSON::Value&)");
 
 			Identity identity{typeid(TType), id, config};
-			if (TType *existing = _find<TType>(identity))
+			if (Asset *existing = _find(identity))
 			{
-				return *existing;
-			}
-			if (std::find(_active.begin(), _active.end(), identity) != _active.end())
-			{
-				throw spk::Exception(_describeCycle(identity));
+				return static_cast<OwnedAsset<TType> &>(*existing).value;
 			}
 
+			_checkCycle(identity);
 			ActiveLoad active(_active, identity);
 			auto owned = std::make_unique<OwnedAsset<TType>>(*this, identity.id, identity.config);
 			TType &result = owned->value;
-			_assets[identity.type][identity.id].push_back(Entry{std::move(identity.config), std::move(owned)});
+			_publish(std::move(identity), std::move(owned));
 			return result;
 		}
 
@@ -166,9 +115,6 @@ namespace spk
 			return load<TType>(id, JSON::Value::object());
 		}
 
-		void clear()
-		{
-			_assets.clear();
-		}
+		void clear();
 	};
 }
