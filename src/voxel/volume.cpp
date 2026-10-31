@@ -131,13 +131,6 @@ namespace
 
 namespace spk::Voxel
 {
-	struct Volume::Data
-	{
-		spk::Vector3UInt dimensions;
-		std::vector<Definition> definitions;
-		std::vector<PackedCell::Storage> cells;
-	};
-
 	Volume::Volume(std::shared_ptr<const Data> data) noexcept :
 		_data(std::move(data))
 	{

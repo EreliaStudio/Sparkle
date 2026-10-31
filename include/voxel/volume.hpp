@@ -18,7 +18,6 @@ namespace spk::Voxel
 	class Volume
 	{
 	private:
-		struct Data;
 		friend struct VolumeTestAccess;
 
 	public:
@@ -98,6 +97,13 @@ namespace spk::Voxel
 		};
 
 	private:
+		struct Data
+		{
+			spk::Vector3UInt dimensions;
+			std::vector<Definition> definitions;
+			std::vector<PackedCell::Storage> cells;
+		};
+
 		std::shared_ptr<const Data> _data;
 
 		explicit Volume(std::shared_ptr<const Data> data) noexcept;

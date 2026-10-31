@@ -36,7 +36,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - `DefinitionRegistry::operator[](id) const` est un accès **en lecture seule** identique à `at(id)`, y compris pour Air (ID 0). Un ID absent lève `spk::Exception` et n'insère jamais Air implicitement. L'enregistrement reste effectué par `add(id, Definition)`.
 - L'encodage compact est porté par `spk::Voxel::Volume::PackedCell` : aucun namespace ou fichier `Detail` autonome.
 - **Décision A validée :** le stockage interne conserve une grille dense d'entiers non signés sur **32 bits par cellule** (29 bits pour l'index local de Definition, 2 bits pour l'orientation horizontale, 1 bit pour l'inversion verticale) et une table locale de Definitions ; **ne pas remplacer la grille par `std::vector<Cell>`**. `Volume::cell(position)` reconstruit une `Cell` indépendante et la retourne par valeur.
-- Le `shared_ptr<const Volume::Data>` représente la propriété partagée d'un snapshot immuable, et non un pointeur de polymorphisme ; il conserve les copies de Volume à coût constant.
+- La structure privée `Volume::Data` est **définie intégralement dans `include/voxel/volume.hpp`**, sans forward declaration ni définition déportée dans le `.cpp`. `shared_ptr<const Data>` reste uniquement le mécanisme de propriété partagée d'un snapshot immuable et conserve les copies de Volume à coût constant.
 
 ## Extension demandée pendant PR-02 : fichier compact et collection nommée
 
