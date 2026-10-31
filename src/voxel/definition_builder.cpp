@@ -37,9 +37,7 @@ namespace spk::Voxel
 			}
 			spk::JSON::Reader slotReader(value, reader.file(), reader.pathFor("slots") + "." + key);
 			slotReader.forbidUnknown({"name", "opacity"});
-			slots.emplace(key, Slot{
-				slotReader.require<std::string>("name"),
-				slotReader.optional<float>("opacity", 1.0f)});
+			slots.emplace(key, Slot{slotReader.require<std::string>("name"), slotReader.optional<float>("opacity", 1.0f)});
 		}
 		(void)Definition(shape, slots);
 		_shape = std::move(shape);
