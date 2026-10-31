@@ -31,7 +31,6 @@ namespace spk::Voxel
 		struct Slot
 		{
 			std::string name;
-			float opacity = 1.0f;
 		};
 
 		enum class Shell
@@ -101,7 +100,7 @@ namespace spk::Voxel
 		public:
 			Builder() = default;
 
-			void addSlot(std::string name, float opacity = 1.0f);
+			void addSlot(std::string name);
 			void addPolygon(std::string slotKey, std::vector<Vertex> vertices);
 			void addFromJSON(const spk::JSON::Value &value);
 			[[nodiscard]] Shape build();
