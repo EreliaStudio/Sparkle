@@ -1,4 +1,4 @@
-# PR-05 — AssetManager et AssetFactory typés
+# PR-05 — asset::Manager et asset::Factory typés
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
@@ -17,13 +17,14 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] AssetManager::load<T>
-- [ ] AssetFactory<T> statique
+- [ ] asset::Manager::load<T>
+- [ ] asset::Factory<T> statique
 - [ ] clé type C++, id et JSON structurel
 - [ ] config omise = objet JSON vide
 - [ ] construction directe de T non déplaçable
 - [ ] dépendances et cycles
 - [ ] clear().
+- [ ] get<T>(id) sans config : retourne l'unique instance déjà chargée ou lève spk::Exception si absente ou ambiguë.
 
 ## Instructions techniques et intégration
 
@@ -32,6 +33,8 @@ Factory retourne T par valeur et peut recharger U dans le même gestionnaire; ca
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
 ## Tests obligatoires
+
+- [ ] get<T>(id) sans création, exception si absent ou si deux configurations du même type/id sont chargées ; retour après clear() également refusé.
 
 - [ ] Deux configs 16x16 et 8x8 distinctes
 - [ ] ordre des clés JSON indifférent
