@@ -186,7 +186,7 @@ namespace spk::Voxel::Occlusion
 				continue;
 			}
 			std::vector<Polygon> current{polygon};
-			for (const auto &occluder : blocker.shape().instance(blockerOrientation).polygons())
+			for (const auto &occluder : blocker.shape().instance(blockerOrientation).triangles())
 			{
 				if (occluder.shell != Shape::Shell::Outer || occluder.boundary != opposite(direction))
 				{

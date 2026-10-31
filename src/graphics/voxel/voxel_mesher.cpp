@@ -103,7 +103,7 @@ namespace spk::Voxel
 
 		[[nodiscard]] bool hasInnerShell(const Shape::Instance &instance)
 		{
-			return std::any_of(instance.polygons().begin(), instance.polygons().end(), [](const Polygon &polygon) {
+			return std::any_of(instance.triangles().begin(), instance.triangles().end(), [](const Polygon &polygon) {
 				return polygon.shell == Shape::Shell::Inner;
 			});
 		}
