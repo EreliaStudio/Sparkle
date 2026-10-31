@@ -148,13 +148,14 @@ namespace
 		EXPECT_EQ(second.semanticSlot("face"), "glass");
 	}
 
-	TEST(VoxelDefinitionBuilderTest, CannotBuildWithoutShapeOrWithMissingSlots)
+	TEST(VoxelDefinitionBuilderTest, MissingShapeOrSlotsRejectBuild)
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		Definition::Builder builder;
-		builder.bind(shapes);
 		EXPECT_THROW((void)builder.build(), spk::Exception);
 		EXPECT_THROW(builder.setShape("missing"), spk::Exception);
+		builder.bind(shapes);
+		EXPECT_THROW((void)builder.build(), spk::Exception);
 		builder.setShape("cube");
 		EXPECT_THROW((void)builder.build(), spk::Exception);
 	}
@@ -185,7 +186,7 @@ namespace
 		EXPECT_FLOAT_EQ(definition.shape().slot("side").opacity, 0.75f);
 	}
 
-	TEST(VoxelDefinitionBuilderTest, UnboundShapeLookupsThrowAndBindingEnablesBuild)
+	TEST(VoxelDefinitionBuilderTest, EmptyRegistryRejectsUnknownIDsAndBindingEnablesJSON)
 	{
 		Definition::Builder builder;
 		const auto json = spk::JSON::Value::fromString(
@@ -199,7 +200,7 @@ namespace
 		EXPECT_EQ(builder.build().semanticSlot("face"), "stone");
 	}
 
-	TEST(VoxelDefinitionBuilderTest, RebindingClearsPreviouslySelectedShape)
+	TEST(VoxelDefinitionBuilderTest, RebindingRequiresReselectingShape)
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		Definition::Builder builder;
@@ -209,10 +210,29 @@ namespace
 		const Definition original = builder.build();
 		builder.bind(Shape::Registry());
 		EXPECT_THROW((void)builder.build(), spk::Exception);
+		builder.setSlots({});
+		EXPECT_THROW((void)builder.build(), spk::Exception);
 		EXPECT_THROW(builder.setShape("cube"), spk::Exception);
 		builder.bind(shapes);
+		EXPECT_THROW((void)builder.build(), spk::Exception);
 		builder.setShape("cube");
+		builder.setSlots({{"face", "stone"}});
 		EXPECT_TRUE(builder.build().shape() == original.shape());
+	}
+
+	TEST(VoxelDefinitionBuilderTest, ExplicitlySelectedEmptyShapeIsNotAir)
+	{
+		Shape::Registry::Builder shapeBuilder;
+		shapeBuilder.add("empty", Shape::Builder{}.build());
+		const Shape::Registry shapes = shapeBuilder.build();
+		Definition::Builder builder;
+		builder.bind(shapes);
+		EXPECT_THROW((void)builder.build(), spk::Exception);
+		builder.setShape("empty");
+		const Definition result = builder.build();
+		EXPECT_TRUE(result.shape().empty());
+		EXPECT_TRUE(result.slots().empty());
+		EXPECT_FALSE(result.isAir());
 	}
 
 	TEST(VoxelDefinitionRegistryTest, LoadsNumericIDsThroughJSONCatalog)

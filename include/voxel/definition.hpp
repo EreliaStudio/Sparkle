@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -39,8 +38,9 @@ namespace spk::Voxel
 	class Definition::Builder
 	{
 	private:
-		std::optional<Shape::Registry> _shapes;
-		std::optional<Shape> _shape;
+		Shape::Registry _shapes;
+		Shape _shape;
+		bool _hasShape = false;
 		SlotMapping _slots;
 
 	public:
@@ -82,7 +82,7 @@ namespace spk::Voxel
 	class Definition::Registry::Builder final : public spk::JSON::Catalog<Definition, std::uint32_t>
 	{
 	private:
-		std::optional<Shape::Registry> _shapes;
+		Shape::Registry _shapes;
 
 		[[nodiscard]] ID _parseKey(const spk::JSON::Reader &reader) const override;
 		[[nodiscard]] Definition _parseElement(const spk::JSON::Reader &reader) const override;

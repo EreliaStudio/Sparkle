@@ -93,12 +93,8 @@ namespace spk::Voxel
 
 	Definition Definition::Registry::Builder::_parseElement(const spk::JSON::Reader &reader) const
 	{
-		if (!_shapes)
-		{
-			throw spk::Exception("Voxel Definition Registry Builder requires a bound Shape Registry to load JSON");
-		}
 		Definition::Builder builder;
-		builder.bind(*_shapes);
+		builder.bind(_shapes);
 		builder.addFromJSON(reader.value());
 		return builder.build();
 	}
