@@ -1,8 +1,5 @@
 #pragma once
 
-#include "container/json/object.hpp"
-#include "exception.hpp"
-
 #include <algorithm>
 #include <concepts>
 #include <memory>
@@ -12,6 +9,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "container/json/object.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
