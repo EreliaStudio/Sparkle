@@ -70,6 +70,22 @@ TEST(VoxelOcclusion, CompleteCoverage)
 	EXPECT_TRUE(Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX).empty());
 }
 
+TEST(VoxelOcclusion, CompleteCoverageWithOppositeTriangleDiagonals)
+{
+	auto source = shape(1);
+	Shape::Builder builder;
+	builder.addSlot("surface");
+	const std::vector<Shape::Vertex> quad = {
+		{{0, 0, 1}},
+		{{0, 1, 1}},
+		{{0, 1, 0}},
+		{{0, 0, 0}}};
+	builder.addPolygon("surface", quad);
+	const Definition blocker(builder.build(), {{"surface", {"surface"}}});
+	const auto result = Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX);
+	EXPECT_TRUE(result.empty());
+}
+
 TEST(VoxelOcclusion, NoCoverage)
 {
 	auto a = shape(1);

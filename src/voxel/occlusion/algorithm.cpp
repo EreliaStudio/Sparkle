@@ -116,7 +116,8 @@ namespace spk::Voxel::Occlusion
 				return output;
 			}
 			auto distance = [&](const Vertex &vertex) {
-				return sign * cross(a, b, project(vertex.position, face));
+				const float distance = sign * cross(a, b, project(vertex.position, face));
+				return std::abs(distance) <= tolerance ? 0.0f : distance;
 			};
 			for (std::size_t i = 0; i < input.size(); ++i)
 			{
@@ -124,8 +125,8 @@ namespace spk::Voxel::Occlusion
 				const auto &q = input[(i + 1) % input.size()];
 				float dp = distance(p);
 				float dq = distance(q);
-				bool pin = inside ? dp >= -tolerance : dp <= tolerance;
-				bool qin = inside ? dq >= -tolerance : dq <= tolerance;
+				bool pin = inside ? dp >= 0.0f : dp < 0.0f;
+				bool qin = inside ? dq >= 0.0f : dq < 0.0f;
 				if (pin)
 				{
 					output.push_back(p);
@@ -179,14 +180,14 @@ namespace spk::Voxel::Occlusion
 
 		std::vector<Polygon> fragments;
 		const auto translation = offset(direction);
-		for (const auto &polygon : source.shape().instance(sourceOrientation).polygons())
+		for (const auto &polygon : source.shape().instance(sourceOrientation).triangles())
 		{
 			if (polygon.shell != Shape::Shell::Outer || polygon.boundary != direction)
 			{
 				continue;
 			}
 			std::vector<Polygon> current{polygon};
-			for (const auto &occluder : blocker.shape().instance(blockerOrientation).polygons())
+			for (const auto &occluder : blocker.shape().instance(blockerOrientation).triangles())
 			{
 				if (occluder.shell != Shape::Shell::Outer || occluder.boundary != opposite(direction))
 				{

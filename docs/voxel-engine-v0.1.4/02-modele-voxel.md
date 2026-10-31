@@ -37,7 +37,7 @@ classDiagram
     -données immuables partagées
   }
   class ShapeInstance {
-    +polygons() const
+    +triangles() const
   }
   class OcclusionCache {
     +find/store/clear
@@ -81,7 +81,7 @@ Les positions et les UV ne sont pas confondus : les **positions** doivent être 
 
 Une Shape publiée conserve un bloc `shared_ptr<const Data>` interne : les copies sont légères et partagent les mêmes données et la même identité. Deux Shapes construites indépendamment peuvent avoir des données géométriquement identiques mais des **identités de Data distinctes**. Cette identité est notamment utilisée par le cache d'occlusion. La représentation propriétaire n'est pas exposée dans les API publiques.
 
-Chaque `Shape::Data` détient **huit `Shape::Instance` immuables** (`std::array<Instance, 8>`), une pour chacun des quatre angles autour de Y et des deux orientations verticales. `Shape::Builder::build()` produit toutes les géométries orientées en une fois : positions, normales géométriques et d'éclairage, winding, frontières et classifications sont transformés ; les UV restent attachés aux sommets et les noms de slots géométriques sont conservés. `Shape::instance(orientation)` renvoie ensuite une référence const à la variante déjà calculée, sans transformation ni allocation supplémentaire. Les copies de Shape réutilisent les mêmes instances ; des Shapes construites indépendamment ne partagent pas leurs instances. Cette représentation interne remplace définitivement le `ShapeTransformationCache` externe.
+Chaque `Shape::Data` détient **huit `Shape::Instance` immuables** (`std::array<Instance, 8>`), une pour chacun des quatre angles autour de Y et des deux orientations verticales. `Shape::Builder::build()` produit toutes les géométries orientées en une fois : positions, normales géométriques et d'éclairage, winding, frontières et classifications sont transformés ; les UV restent attachés aux sommets et les noms de slots géométriques sont conservés. `Shape::instance(orientation)` renvoie ensuite une référence const à la variante déjà calculée, sans transformation ni allocation supplémentaire. Les copies de Shape réutilisent les mêmes instances ; des Shapes construites indépendamment ne partagent pas leurs instances. Cette représentation interne remplace définitivement le `ShapeTransformationCache` externe. Chaque Instance ne conserve **que les triangles** issus des polygones convexes du Builder, obtenus par triangulation déterministe en éventail et accessibles par `triangles()`. Les polygones convexes d'origine restent uniquement dans le Builder ; ils ne sont pas dupliqués dans les huit instances publiées. Les triangles gardent les UV, normales, slots, windings et classifications de frontière des polygones sources.
 
 ### 2.2 `spk::Voxel::Definition` : sens des slots
 

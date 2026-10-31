@@ -247,19 +247,27 @@ namespace spk::Voxel
 		std::array<Instance, 8> instances;
 	};
 
-	Shape::Instance::Instance(std::vector<Polygon> polygons) :
-		_polygons(std::move(polygons))
+	Shape::Instance::Instance(std::vector<Polygon> polygons)
 	{
+		for (const Polygon &polygon : polygons)
+		{
+			for (std::size_t i = 1; i + 1 < polygon.vertices.size(); ++i)
+			{
+				Polygon triangle = polygon;
+				triangle.vertices = {polygon.vertices[0], polygon.vertices[i], polygon.vertices[i + 1]};
+				_triangles.push_back(std::move(triangle));
+			}
+		}
 	}
 
-	const std::vector<Shape::Polygon> &Shape::Instance::polygons() const noexcept
+	const std::vector<Shape::Polygon> &Shape::Instance::triangles() const noexcept
 	{
-		return _polygons;
+		return _triangles;
 	}
 
 	bool Shape::Instance::empty() const noexcept
 	{
-		return _polygons.empty();
+		return _triangles.empty();
 	}
 
 	Shape::Shape(std::shared_ptr<const Data> data) noexcept :

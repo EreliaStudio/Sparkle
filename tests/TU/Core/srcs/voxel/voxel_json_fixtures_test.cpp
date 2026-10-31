@@ -22,15 +22,16 @@ namespace
 	{
 		const char *name;
 		std::size_t polygonCount;
+		std::size_t triangleCount;
 		std::size_t outerCount;
 		std::size_t innerCount;
 	};
 
 	constexpr std::array<Fixture, 4> Fixtures = {
-		Fixture{"cube", 6, 6, 0},
-		{"slab", 6, 5, 1},
-		{"slope", 5, 4, 1},
-		{"stair", 10, 8, 2}};
+		Fixture{"cube", 6, 12, 12, 0},
+		{"slab", 6, 12, 10, 2},
+		{"slope", 5, 8, 6, 2},
+		{"stair", 10, 20, 16, 4}};
 
 	[[nodiscard]] spk::JSON::Value fixtureJSON(const std::string &name)
 	{
@@ -70,12 +71,13 @@ namespace
 			ASSERT_EQ(json.at("id").as<std::string>(), fixture.name);
 			EXPECT_FALSE(json.contains("elements"));
 			EXPECT_TRUE(json.at("polygons").isArray());
+			EXPECT_EQ(json.at("polygons").asArray().size(), fixture.polygonCount);
 
 			const Shape first = fixtureShape(fixture.name);
 			const Shape second = fixtureShape(fixture.name);
 			EXPECT_FALSE(first == second);
 			EXPECT_TRUE(first == Shape(first));
-			EXPECT_EQ(first.instance().polygons().size(), fixture.polygonCount);
+			EXPECT_EQ(first.instance().triangles().size(), fixture.triangleCount);
 			EXPECT_EQ(first.slots().size(), 3u);
 		}
 	}
@@ -88,7 +90,7 @@ namespace
 			const Shape shape = fixtureShape(fixture.name);
 			std::size_t outerCount = 0;
 			std::size_t innerCount = 0;
-			for (const auto &polygon : shape.instance().polygons())
+			for (const auto &polygon : shape.instance().triangles())
 			{
 				ASSERT_GE(polygon.vertices.size(), 3u);
 				EXPECT_EQ(shape.slot(polygon.slotKey).name, polygon.slotKey);
@@ -142,7 +144,7 @@ namespace
 			{
 				EXPECT_TRUE(cell.definition() == definition);
 				EXPECT_TRUE(cell.definition().shape() == shape);
-				EXPECT_EQ(cell.definition().shape().instance().polygons().size(), fixture.polygonCount);
+				EXPECT_EQ(cell.definition().shape().instance().triangles().size(), fixture.triangleCount);
 				for (const auto &slot : shape.slots())
 				{
 					EXPECT_EQ(cell.definition().semanticSlot(slot.name), fixture.name + std::string(".") + slot.name);
@@ -157,7 +159,7 @@ namespace
 		{
 			SCOPED_TRACE(fixture.name);
 			const Shape shape = fixtureShape(fixture.name);
-			const auto &original = shape.instance().polygons();
+			const auto &original = shape.instance().triangles();
 			const Definition definition(shape, [&] {
 				Definition::SlotMapping mapping;
 				for (const auto &slot : shape.slots())
@@ -169,27 +171,71 @@ namespace
 			for (const Cell &cell : orientations(definition))
 			{
 				const Shape::Orientation orientation{cell.horizontalOrientation(), cell.verticalOrientation()};
-				const auto &polygons = shape.instance(orientation).polygons();
-				ASSERT_EQ(polygons.size(), original.size());
-				const bool flipped = cell.verticalOrientation() == Cell::VerticalOrientation::YNegative;
-				for (std::size_t polygonIndex = 0; polygonIndex < polygons.size(); ++polygonIndex)
+				const auto &triangles = shape.instance(orientation).triangles();
+				ASSERT_EQ(triangles.size(), original.size());
+				for (std::size_t i = 0; i < triangles.size(); ++i)
 				{
-					const auto &polygon = polygons[polygonIndex];
-					const auto &source = original[polygonIndex];
-					ASSERT_EQ(polygon.vertices.size(), source.vertices.size());
-					EXPECT_EQ(polygon.slotKey, source.slotKey);
-					EXPECT_EQ(polygon.shell, source.shell);
-					for (std::size_t index = 0; index < polygon.vertices.size(); ++index)
+					const auto &triangle = triangles[i];
+					EXPECT_EQ(triangle.vertices.size(), 3u);
+					EXPECT_EQ(triangle.slotKey, original[i].slotKey);
+					EXPECT_EQ(triangle.shell, original[i].shell);
+					for (const auto &vertex : triangle.vertices)
 					{
-						const std::size_t sourceIndex = flipped ? source.vertices.size() - 1 - index : index;
-						const auto &vertex = polygon.vertices[index];
-						EXPECT_EQ(vertex.uv, source.vertices[sourceIndex].uv);
+						bool foundUV = false;
+						for (const auto &source : original)
+						{
+							for (const auto &candidate : source.vertices)
+							{
+								foundUV |= candidate.uv == vertex.uv;
+							}
+						}
+						EXPECT_TRUE(foundUV);
 						ASSERT_TRUE(vertex.normal.has_value());
 						EXPECT_NEAR(vertex.normal->length(), 1.0, 1.0e-5);
 					}
-					const auto a = polygon.vertices[1].position - polygon.vertices[0].position;
-					const auto b = polygon.vertices[2].position - polygon.vertices[0].position;
-					EXPECT_GT(a.cross(b).dot(polygon.geometricNormal), 0.0f);
+					const auto a = triangle.vertices[1].position - triangle.vertices[0].position;
+					const auto b = triangle.vertices[2].position - triangle.vertices[0].position;
+					EXPECT_GT(a.cross(b).dot(triangle.geometricNormal), 0.0f);
+				}
+			}
+		}
+	}
+
+	TEST(VoxelShapeFixtureTest, EveryFixturePrecomputesTriangleFansForAllOrientations)
+	{
+		for (const Fixture &fixture : Fixtures)
+		{
+			const Shape shape = fixtureShape(fixture.name);
+			const auto sourceJSON = fixtureJSON(fixture.name);
+			const auto &originals = sourceJSON.at("polygons").asArray();
+			for (unsigned flipped = 0; flipped < 2; ++flipped)
+			{
+				for (unsigned degrees = 0; degrees < 360; degrees += 90)
+				{
+					const Shape::Orientation orientation{
+						static_cast<Shape::HorizontalOrientation>(degrees),
+						flipped ? Shape::VerticalOrientation::YNegative : Shape::VerticalOrientation::YPositive};
+					const auto &triangles = shape.instance(orientation).triangles();
+					std::size_t offset = 0;
+					for (const auto &source : originals)
+					{
+						const std::size_t count = source.at("vertices").asArray().size() - 2;
+						ASSERT_LE(offset + count, triangles.size());
+						for (std::size_t i = 0; i < count; ++i)
+						{
+							const auto &triangle = triangles[offset + i];
+							EXPECT_EQ(triangle.slotKey, source.at("slot").as<std::string>());
+							ASSERT_EQ(triangle.vertices.size(), 3u);
+							if (i > 0)
+							{
+								EXPECT_EQ(triangle.vertices[0].position, triangles[offset].vertices[0].position);
+								EXPECT_EQ(triangle.vertices[1].position, triangles[offset + i - 1].vertices[2].position);
+							}
+						}
+						offset += count;
+					}
+					EXPECT_EQ(offset, triangles.size());
+					EXPECT_EQ(offset, fixture.triangleCount);
 				}
 			}
 		}
@@ -204,17 +250,17 @@ namespace
 			{
 				const auto horizontal = static_cast<Shape::HorizontalOrientation>(degrees);
 				const auto vertical = flipped ? Shape::VerticalOrientation::YNegative : Shape::VerticalOrientation::YPositive;
-				const auto &polygons = cube.instance({horizontal, vertical}).polygons();
-				std::array<bool, 6> boundaries{};
-				ASSERT_EQ(polygons.size(), 6u);
-				for (const auto &polygon : polygons)
+				const auto &triangles = cube.instance({horizontal, vertical}).triangles();
+				std::array<std::size_t, 6> boundaries{};
+				ASSERT_EQ(triangles.size(), 12u);
+				for (const auto &triangle : triangles)
 				{
-					ASSERT_TRUE(polygon.boundary.has_value());
-					boundaries[static_cast<std::size_t>(*polygon.boundary)] = true;
+					ASSERT_TRUE(triangle.boundary.has_value());
+					++boundaries[static_cast<std::size_t>(*triangle.boundary)];
 				}
-				for (bool present : boundaries)
+				for (const auto count : boundaries)
 				{
-					EXPECT_TRUE(present);
+					EXPECT_EQ(count, 2u);
 				}
 			}
 		}
@@ -227,10 +273,10 @@ namespace
 		Shape::Builder builder;
 		builder.addFromJSON(json);
 		const Shape shape = builder.build();
-		ASSERT_EQ(shape.instance().polygons().size(), 1u);
+		ASSERT_EQ(shape.instance().triangles().size(), 1u);
 		EXPECT_EQ(shape.slot("surface").name, "surface");
-		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].uv, spk::Vector2(0.25f, 0.75f));
-		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].normal.value(), spk::Vector3(0, 0, 1));
+		EXPECT_EQ(shape.instance().triangles()[0].vertices[0].uv, spk::Vector2(0.25f, 0.75f));
+		EXPECT_EQ(shape.instance().triangles()[0].vertices[0].normal.value(), spk::Vector3(0, 0, 1));
 	}
 
 	TEST(VoxelShapeFixtureTest, InvalidJSONDoesNotPartiallyModifyExistingBuilder)
@@ -247,8 +293,8 @@ namespace
 		builder.addPolygon("existing", std::move(vertices));
 		const Shape shape = builder.build();
 		EXPECT_EQ(shape.slots().size(), 1u);
-		EXPECT_EQ(shape.instance().polygons().size(), 1u);
-		EXPECT_EQ(shape.instance().polygons()[0].slotKey, "existing");
+		EXPECT_EQ(shape.instance().triangles().size(), 1u);
+		EXPECT_EQ(shape.instance().triangles()[0].slotKey, "existing");
 	}
 
 	TEST(VoxelShapeFixtureTest, RejectsLegacyMultiShapeCollectionAsOneShape)

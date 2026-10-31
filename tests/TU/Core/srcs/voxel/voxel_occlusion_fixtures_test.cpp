@@ -122,7 +122,7 @@ namespace
 			result.source[direction].resize(Samples);
 			result.blocker[direction].resize(Samples);
 		}
-		for (const auto &polygon : shape.instance(orientation).polygons())
+		for (const auto &polygon : shape.instance(orientation).triangles())
 		{
 			if (polygon.shell != Shape::Shell::Outer || !polygon.boundary)
 			{
@@ -192,7 +192,7 @@ namespace
 	float boundaryArea(const Shape &shape, Shape::Orientation orientation, Face direction)
 	{
 		std::vector<Shape::Polygon> polygons;
-		for (const auto &polygon : shape.instance(orientation).polygons())
+		for (const auto &polygon : shape.instance(orientation).triangles())
 		{
 			if (polygon.shell == Shape::Shell::Outer && polygon.boundary == direction)
 			{
@@ -296,6 +296,25 @@ TEST(VoxelOcclusionFixtures, EveryOrderedPairAndOrientationMatchesIndependentCov
 		}
 	}
 	EXPECT_EQ(cases, 4u * 4u * 8u * 8u * 6u);
+}
+
+TEST(VoxelOcclusionFixtures, OpaqueCubeCompletelyCoversEveryFaceWithDifferentTriangulations)
+{
+	const auto cube = fixtures()[0].opaque;
+	for (const auto sourceOrientation : Orientations)
+	{
+		for (const auto blockerOrientation : Orientations)
+		{
+			for (const Face direction : Directions)
+			{
+				SCOPED_TRACE(static_cast<unsigned>(sourceOrientation.horizontal));
+				SCOPED_TRACE(static_cast<unsigned>(blockerOrientation.horizontal));
+				SCOPED_TRACE(static_cast<unsigned>(direction));
+				const auto key = makeKey(cube, cube, sourceOrientation, blockerOrientation, direction);
+				EXPECT_TRUE(Algorithm::compute(key.source, key.sourceOrientation, key.blocker, key.blockerOrientation, direction).empty());
+			}
+		}
+	}
 }
 
 TEST(VoxelOcclusionFixtures, EveryTranslucentBlockerLeavesSourceBoundaryVisible)
