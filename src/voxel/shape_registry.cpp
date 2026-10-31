@@ -73,6 +73,8 @@ namespace spk::Voxel
 
 	Shape Shape::Registry::Builder::_parseElement(const spk::JSON::Reader &reader) const
 	{
-		return Shape::Builder(reader.value()).build();
+		Shape::Builder builder;
+		builder.addFromJSON(reader.value());
+		return builder.build();
 	}
 }

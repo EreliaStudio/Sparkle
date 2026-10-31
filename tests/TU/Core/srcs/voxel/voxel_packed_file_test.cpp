@@ -155,7 +155,11 @@ namespace
 		}
 		PackedFile file;
 		file.write(words);
-		const Volume volume = Volume::Builder({4, 2, 1}, file.path, registry).build();
+		Volume::Builder builder;
+		builder.setDimensions({4, 2, 1});
+		builder.bind(registry);
+		builder.loadPacked(file.path);
+		const Volume volume = builder.build();
 		for (std::uint32_t index = 0; index < 8; ++index)
 		{
 			EXPECT_EQ(volume.atRaw({index % 4, index / 4, 0}), words[index]);
@@ -170,7 +174,11 @@ namespace
 	{
 		PackedFile file;
 		file.write({Packed::encode(0, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
-		const Volume volume = Volume::Builder({1, 1, 1}, file.path, Registry()).build();
+		Volume::Builder builder;
+		builder.setDimensions({1, 1, 1});
+		builder.bind(Registry());
+		builder.loadPacked(file.path);
+		const Volume volume = builder.build();
 		const Cell cell = volume.at({0, 0, 0});
 		EXPECT_TRUE(cell.isAir());
 		EXPECT_EQ(cell.horizontalOrientation(), Cell::HorizontalOrientation::ZPositive);
@@ -189,7 +197,11 @@ namespace
 		words.push_back(0);
 		words.push_back(Packed::encode(0x010203, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive));
 		file.write(words);
-		const Volume volume = Volume::Builder({2, 2, 1}, file.path, registry).build();
+		Volume::Builder builder;
+		builder.setDimensions({2, 2, 1});
+		builder.bind(registry);
+		builder.loadPacked(file.path);
+		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
 		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == second);
 		EXPECT_TRUE(volume.at({0, 1, 0}).isAir());
@@ -202,10 +214,15 @@ namespace
 		const Registry registry = makeRegistry({{7, first}, {20, first}});
 		PackedFile file;
 		file.write({Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
-		const Volume volume = Volume::Builder({2, 1, 1}, file.path, registry).build();
+		Volume::Builder builder;
+		builder.setDimensions({2, 1, 1});
+		builder.bind(registry);
+		builder.loadPacked(file.path);
+		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
 		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == first);
-		Volume::Builder changed(volume);
+		Volume::Builder changed;
+		changed.load(volume);
 		changed.erase({0, 0, 0});
 		EXPECT_TRUE(changed.build().at({1, 0, 0}).definition() == first);
 	}
@@ -217,7 +234,8 @@ namespace
 		Registry::Builder definitions;
 		definitions.add(4, first);
 		const Registry before = definitions.build();
-		Volume::Builder builder({2, 1, 1});
+		Volume::Builder builder;
+		builder.setDimensions({2, 1, 1});
 		EXPECT_THROW(builder.set({0, 0, 0}, 4), spk::Exception);
 		builder.bind(before);
 		definitions.add(5, second);
@@ -233,7 +251,8 @@ namespace
 
 	TEST(VoxelPackedFileTest, BoundRegistryOutlivesItsOriginalOwner)
 	{
-		Volume::Builder builder({1, 1, 1});
+		Volume::Builder builder;
+		builder.setDimensions({1, 1, 1});
 		const Definition definition = createDefinition();
 		builder.bind(makeRegistry({{3, definition}}));
 		builder.set({0, 0, 0}, 3);
@@ -243,13 +262,18 @@ namespace
 	TEST(VoxelPackedFileTest, MissingFileAndInvalidSizesAreRejected)
 	{
 		PackedFile file;
-		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()), spk::Exception);
+		Volume::Builder builder;
+		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
+		builder.setDimensions({1, 1, 1});
+		builder.bind(Registry());
+		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		file.write({});
-		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()), spk::Exception);
+		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		file.write({0, 0});
-		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()), spk::Exception);
+		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		file.write({0});
-		EXPECT_NO_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()));
+		EXPECT_NO_THROW(builder.loadPacked(file.path));
+		EXPECT_TRUE(builder.build().at({0, 0, 0}).isAir());
 	}
 
 	TEST(VoxelPackedFileTest, UnknownIDsRejectLoadWithoutChangingPreviouslyEditedBuilder)
@@ -257,7 +281,9 @@ namespace
 		const Definition a = createDefinition();
 		Registry::Builder definitions;
 		definitions.add(2, a);
-		Volume::Builder builder({2, 1, 1}, definitions.build());
+		Volume::Builder builder;
+		builder.setDimensions({2, 1, 1});
+		builder.bind(definitions.build());
 		builder.set({0, 0, 0}, 2);
 		PackedFile file;
 		file.write({Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive), Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
@@ -278,7 +304,9 @@ namespace
 		const Definition first = createDefinition();
 		const Definition second = createDefinition();
 		const Registry registry = makeRegistry({{101, first}, {3, second}});
-		Volume::Builder builder({2, 1, 1}, registry);
+		Volume::Builder builder;
+		builder.setDimensions({2, 1, 1});
+		builder.bind(registry);
 		PackedFile file;
 		file.write({Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		builder.loadPacked(file.path);
@@ -296,7 +324,9 @@ namespace
 		const Registry registry = makeRegistry({{1, first}});
 		PackedFile file;
 		file.write({0, Packed::encode(1, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
-		Volume::Builder builder({2, 1, 1}, registry);
+		Volume::Builder builder;
+		builder.setDimensions({2, 1, 1});
+		builder.bind(registry);
 		builder.set({0, 0, 0}, 1);
 		EXPECT_NO_THROW(builder.loadPacked(file.path));
 		file.write({0});
@@ -313,10 +343,13 @@ namespace
 	{
 		PackedFile file;
 		file.write({0});
-		Volume::Builder builder({1, 1, 1});
+		Volume::Builder builder;
+		builder.setDimensions({1, 1, 1});
 		builder.bind(Registry());
 		const Volume volume = builder.build();
 		EXPECT_THROW(builder.bind(Registry()), spk::Exception);
+		EXPECT_THROW(builder.setDimensions({1, 1, 1}), spk::Exception);
+		EXPECT_THROW(builder.load(volume), spk::Exception);
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 0), spk::Exception);
 		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());

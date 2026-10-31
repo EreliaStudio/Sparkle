@@ -315,11 +315,6 @@ namespace spk::Voxel
 		throw spk::Exception("Voxel Shape references an unknown geometric slot");
 	}
 
-	Shape::Builder::Builder(const spk::JSON::Value &json)
-	{
-		addFromJSON(json);
-	}
-
 	void Shape::Builder::addSlot(std::string name, float opacity)
 	{
 		if (name.empty() || !std::isfinite(opacity) || opacity < 0.0f || opacity > 1.0f)

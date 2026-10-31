@@ -100,7 +100,6 @@ namespace spk::Voxel
 
 		public:
 			Builder() = default;
-			explicit Builder(const spk::JSON::Value &json);
 
 			void addSlot(std::string name, float opacity = 1.0f);
 			void addPolygon(std::string slotKey, std::vector<Vertex> vertices);

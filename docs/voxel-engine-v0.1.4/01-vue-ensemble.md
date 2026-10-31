@@ -89,10 +89,15 @@ Le `Voxel::Model` produit **au maximum deux meshes visuels** (opaque et transluc
 // Exemple conceptuel : noms secondaires et signatures à finaliser.
 spk::Voxel::Shape shape = makeShape();
 spk::Voxel::Definition stone = makeDefinition(shape);
+spk::Voxel::Definition::Registry::Builder definitionsBuilder;
+definitionsBuilder.add(1, stone);
+const auto definitions = definitionsBuilder.build();
 
-spk::Voxel::Volume::Builder volumeBuilder({16, 16, 16});
-volumeBuilder.set({2, 4, 1}, spk::Voxel::Cell{stone, orientation});
-spk::Voxel::Volume volume = std::move(volumeBuilder).build();
+spk::Voxel::Volume::Builder volumeBuilder;
+volumeBuilder.setDimensions({16, 16, 16});
+volumeBuilder.bind(definitions);
+volumeBuilder.set({2, 4, 1}, 1);
+spk::Voxel::Volume volume = volumeBuilder.build();
 
 spk::Voxel::VoxelMesher mesher;
 spk::Voxel::Model model = mesher.bake(volume);

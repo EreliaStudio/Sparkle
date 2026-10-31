@@ -89,8 +89,6 @@ namespace spk::Voxel
 
 	public:
 		Builder() = default;
-		explicit Builder(const Shape::Registry &shapes);
-
 		void bind(const Shape::Registry &shapes);
 		void add(ID id, Definition definition);
 		[[nodiscard]] Registry build() const;

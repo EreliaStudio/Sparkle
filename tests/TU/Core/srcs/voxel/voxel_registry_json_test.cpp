@@ -20,6 +20,14 @@ namespace
 	using Definition = spk::Voxel::Definition;
 	using Volume = spk::Voxel::Volume;
 
+	static_assert(std::is_default_constructible_v<Shape::Builder>);
+	static_assert(!std::is_constructible_v<Shape::Builder, const spk::JSON::Value &>);
+	static_assert(std::is_default_constructible_v<Definition::Registry::Builder>);
+	static_assert(!std::is_constructible_v<Definition::Registry::Builder, const Shape::Registry &>);
+	static_assert(std::is_default_constructible_v<Volume::Builder>);
+	static_assert(!std::is_constructible_v<Volume::Builder, spk::Vector3UInt>);
+	static_assert(!std::is_constructible_v<Volume::Builder, const Volume &>);
+	static_assert(!std::is_constructible_v<Volume::Builder, spk::Vector3UInt, const std::filesystem::path &, const Definition::Registry &>);
 	static_assert(std::is_default_constructible_v<Definition::Builder>);
 	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Registry &>);
 	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Registry &, const spk::JSON::Value &>);
@@ -239,7 +247,8 @@ namespace
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder builder(shapes);
+		Definition::Registry::Builder builder;
+		builder.bind(shapes);
 		builder.load(file.path());
 		const Definition::Registry registry = builder.build();
 		EXPECT_EQ(registry.size(), 3u);
@@ -265,7 +274,8 @@ namespace
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder builder(shapes);
+		Definition::Registry::Builder builder;
+		builder.bind(shapes);
 		builder.load(file.path());
 		const Definition::Registry registry = builder.build();
 		EXPECT_EQ(registry.tryGet(42), &registry.at(42));
@@ -289,14 +299,16 @@ namespace
 		Definition::Registry::Builder unbound;
 		EXPECT_THROW(unbound.load(file.path()), spk::Exception);
 		Shape::Registry shapes;
-		Definition::Registry::Builder builder(shapes);
+		Definition::Registry::Builder builder;
+		builder.bind(shapes);
 		EXPECT_THROW(builder.load(file.path()), spk::Exception);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, JSONRejectsReservedAndOversizedIDs)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Registry::Builder builder(shapes);
+		Definition::Registry::Builder builder;
+		builder.bind(shapes);
 		const JSONFile air(R"({"id":0,"data":{"shape":"cube","slots":{"face":"stone"}}})");
 		const JSONFile oversized(R"({"id":536870912,"data":{"shape":"cube","slots":{"face":"stone"}}})");
 		EXPECT_THROW(builder.load(air.path()), spk::Exception);
@@ -361,10 +373,12 @@ namespace
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder registryBuilder(shapes);
+		Definition::Registry::Builder registryBuilder;
+		registryBuilder.bind(shapes);
 		registryBuilder.load(file.path());
 		const Definition::Registry registry = registryBuilder.build();
-		Volume::Builder builder({2, 1, 1});
+		Volume::Builder builder;
+		builder.setDimensions({2, 1, 1});
 		builder.bind(registry);
 		builder.set({1, 0, 0}, 42);
 		const Volume volume = builder.build();

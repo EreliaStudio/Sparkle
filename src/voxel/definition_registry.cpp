@@ -57,11 +57,6 @@ namespace spk::Voxel
 		return _data->definitions.size() + 1;
 	}
 
-	Definition::Registry::Builder::Builder(const Shape::Registry &shapes)
-	{
-		bind(shapes);
-	}
-
 	void Definition::Registry::Builder::bind(const Shape::Registry &shapes)
 	{
 		_shapes = shapes;

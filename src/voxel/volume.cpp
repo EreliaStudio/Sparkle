@@ -129,40 +129,42 @@ namespace spk::Voxel
 		return at(position);
 	}
 
-	Volume::Builder::Builder(spk::Vector3UInt dimensions) :
-		_dimensions(dimensions),
-		_cells(checkedCellCount(dimensions), PackedCell::Air)
-	{
-	}
-
-	Volume::Builder::Builder(spk::Vector3UInt dimensions, const Definition::Registry &registry) :
-		Builder(dimensions)
-	{
-		bind(registry);
-	}
-
-	Volume::Builder::Builder(const Volume &volume) :
-		_dimensions(volume._data->dimensions),
-		_cells(volume._data->cells),
-		_registry(volume._data->definitions)
-	{
-	}
-
-	Volume::Builder::Builder(
-		spk::Vector3UInt dimensions,
-		const std::filesystem::path &filename,
-		const Definition::Registry &registry) :
-		Builder(dimensions, registry)
-	{
-		loadPacked(filename);
-	}
-
 	void Volume::Builder::_ensureActive() const
 	{
 		if (_consumed)
 		{
 			throw spk::Exception("Voxel Volume Builder has already been consumed");
 		}
+	}
+
+	void Volume::Builder::_ensureInitialized() const
+	{
+		_ensureActive();
+		if (_cells.empty())
+		{
+			throw spk::Exception("Voxel Volume Builder requires dimensions");
+		}
+	}
+
+	void Volume::Builder::setDimensions(spk::Vector3UInt dimensions)
+	{
+		_ensureActive();
+		if (!_cells.empty())
+		{
+			throw spk::Exception("Voxel Volume Builder dimensions are already set");
+		}
+		std::vector<PackedCell::Storage> cells(checkedCellCount(dimensions), PackedCell::Air);
+		_dimensions = dimensions;
+		_cells.swap(cells);
+	}
+
+	void Volume::Builder::load(const Volume &volume)
+	{
+		_ensureActive();
+		auto cells = volume._data->cells;
+		_dimensions = volume._data->dimensions;
+		_registry = volume._data->definitions;
+		_cells.swap(cells);
 	}
 
 	void Volume::Builder::bind(const Definition::Registry &registry)
@@ -191,7 +193,7 @@ namespace spk::Voxel
 		Cell::HorizontalOrientation horizontal,
 		Cell::VerticalOrientation vertical)
 	{
-		_ensureActive();
+		_ensureInitialized();
 		const auto offset = cellOffset(position, _dimensions);
 		const auto packed = PackedCell::encode(definitionId, horizontal, vertical);
 		(void)_registry.at(definitionId);
@@ -200,20 +202,20 @@ namespace spk::Voxel
 
 	void Volume::Builder::erase(spk::Vector3UInt position)
 	{
-		_ensureActive();
+		_ensureInitialized();
 		_cells[cellOffset(position, _dimensions)] = PackedCell::Air;
 	}
 
 	void Volume::Builder::loadPacked(const std::filesystem::path &filename)
 	{
-		_ensureActive();
+		_ensureInitialized();
 		auto decoded = readPackedFile(filename, _cells.size(), _registry);
 		_cells.swap(decoded);
 	}
 
 	Volume Volume::Builder::build()
 	{
-		_ensureActive();
+		_ensureInitialized();
 		auto data = std::make_shared<Data>();
 		data->dimensions = _dimensions;
 		data->definitions = _registry;
