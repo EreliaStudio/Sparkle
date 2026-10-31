@@ -165,11 +165,12 @@ namespace
 		registry.add(0x010203, first);
 		registry.add(0x100012, second);
 		PackedFile file;
-		file.write({
-			Packed::encode(0x010203, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
-			Packed::encode(0x100012, Cell::HorizontalOrientation::XNegative, Cell::VerticalOrientation::YNegative),
-			0,
-			Packed::encode(0x010203, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive)});
+		std::vector<std::uint32_t> words;
+		words.push_back(Packed::encode(0x010203, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive));
+		words.push_back(Packed::encode(0x100012, Cell::HorizontalOrientation::XNegative, Cell::VerticalOrientation::YNegative));
+		words.push_back(0);
+		words.push_back(Packed::encode(0x010203, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive));
+		file.write(words);
 		const Volume volume = Volume::Builder({2, 2, 1}, file.path, registry).build();
 		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
 		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == second);
@@ -184,8 +185,7 @@ namespace
 		registry.add(7, first);
 		registry.add(20, first);
 		PackedFile file;
-		file.write({Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
-					Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
+		file.write({Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
 		Volume::Builder builder({2, 1, 1}, file.path, registry);
 		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
@@ -251,8 +251,7 @@ namespace
 		builder.bind(registry);
 		builder.set({0, 0, 0}, Cell(a));
 		PackedFile file;
-		file.write({Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive),
-					Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
+		file.write({Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive), Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		const Volume unchanged = Volume::Builder(builder).build();
 		EXPECT_TRUE(unchanged.cell({0, 0, 0}).definition() == a);
@@ -275,8 +274,7 @@ namespace
 		Volume::Builder builder({2, 1, 1});
 		builder.bind(registry);
 		PackedFile file;
-		file.write({Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
-					Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
+		file.write({Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		builder.loadPacked(file.path);
 		file.write({Packed::encode(3, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), 0});
 		builder.loadPacked(file.path);
