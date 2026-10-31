@@ -1,5 +1,6 @@
 #pragma once
 
+#include "asset/asset_manager.hpp"
 #include "concept.hpp"
 #include "container/byte_stream.hpp"
 #include "container/cached_data.hpp"
