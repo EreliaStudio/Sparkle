@@ -256,7 +256,6 @@ namespace
 		return area;
 	}
 
-
 	void expectShadowGeometryMatchesOpaque(const Model &model)
 	{
 		const auto visualVertices = model.opaqueMesh().layout().vertexBuffer().cast<MeshVertex>();
@@ -334,9 +333,10 @@ namespace
 		const float plane = (static_cast<unsigned>(face) & 1U) ? 2.0f : 1.0f;
 		for (std::size_t i = 0; i < index.size(); i += 3)
 		{
-			const bool shared = vertex[index[i]].data[axis] == plane &&
-				vertex[index[i + 1]].data[axis] == plane &&
-				vertex[index[i + 2]].data[axis] == plane;
+			const auto &a = vertex[index[i]];
+			const auto &b = vertex[index[i + 1]];
+			const auto &c = vertex[index[i + 2]];
+			const bool shared = a.data[axis] == plane && b.data[axis] == plane && c.data[axis] == plane;
 			EXPECT_FALSE(shared);
 		}
 	}
@@ -359,7 +359,6 @@ namespace
 		}
 	};
 }
-
 
 TEST(VoxelMesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrientation)
 {

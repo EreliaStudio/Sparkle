@@ -265,12 +265,13 @@ namespace
 	{
 		Shape::Builder builder;
 		builder.addSlot("pentagon");
-		builder.addPolygon("pentagon", {
+		const std::vector<Shape::Vertex> vertices = {
 			vertex(0.0f, 0.0f, 0.0f),
 			vertex(1.0f, 0.0f, 0.0f),
 			vertex(1.0f, 0.5f, 0.0f),
 			vertex(0.5f, 1.0f, 0.0f),
-			vertex(0.0f, 0.5f, 0.0f)});
+			vertex(0.0f, 0.5f, 0.0f)};
+		builder.addPolygon("pentagon", vertices);
 		const Shape shape = builder.build();
 		for (const auto &entry : Orientations)
 		{
