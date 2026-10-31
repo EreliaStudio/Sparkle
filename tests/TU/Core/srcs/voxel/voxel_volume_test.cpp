@@ -308,8 +308,7 @@ namespace
 		try
 		{
 			(void)builder.build();
-		}
-		catch (const std::bad_alloc &)
+		} catch (const std::bad_alloc &)
 		{
 			failed = true;
 		}

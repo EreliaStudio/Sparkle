@@ -11,6 +11,7 @@ namespace spk::Voxel::Detail
 	struct PackedCell
 	{
 		using Storage = std::uint32_t;
+		static constexpr Storage Air = 0;
 		static constexpr Storage MaxDefinitionIndex = (Storage{1} << 29) - 1;
 
 		[[nodiscard]] static Storage encode(

@@ -31,6 +31,14 @@ Indexation et allocation sans débordement; déduplication par identité Definit
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
+## Extension demandée pendant PR-02 : fichier compact et collection nommée
+
+`DefinitionRegistry` est une collection **possédée par l'application**, non globale, associant des IDs entiers non signés (29 bits utiles) à des `Definition`. L'ID 0 est Air et ne peut pas être redéfini. Les autres IDs doivent être déclarés explicitement, uniques et valides. Le Builder peut copier une collection via `bind(registry)` ; toute modification ultérieure de la collection initiale n'affecte pas le Builder. `set(position, id, orientation...)` utilise cette collection.
+
+Le constructeur `Volume::Builder(dimensions, filename, registry)` et `Builder::loadPacked(filename)` lisent un fichier **brut sans en-tête** de **4 octets par cellule**, en little-endian. Les dimensions sont fournies par l'appelant, pas devinées depuis le fichier. Chaque mot correspond à 2 bits de rotation horizontale, 1 bit d'inversion verticale, et 29 bits d'ID de Definition dans la collection fournie. Le parcours est X le plus rapide, puis Y, puis Z. Un fichier doit contenir exactement `x*y*z*4` octets ; une taille différente, un ID non défini ou une erreur de lecture rejette toute l'opération. Le constructeur échoue sans publier de Volume partiel ; `loadPacked` conserve le Builder complètement inchangé en cas d'échec. L'import convertit les IDs externes en **indices locaux dédupliqués par identité** ; il ne suppose jamais que l'ID externe est l'indice interne du Volume.
+
+Ce format volontairement minimal ne transporte ni dimensions, ni identités de Definitions, ni version. Le fichier et le registre correspondant doivent être fournis ensemble ; aucun `TightData` public ou serialization générique n'est introduit.
+
 ## Tests obligatoires
 
 - [ ] Initialisation Air partout

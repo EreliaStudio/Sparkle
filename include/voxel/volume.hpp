@@ -2,11 +2,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <vector>
 
 #include "math/vector3.hpp"
 #include "voxel/cell.hpp"
+#include "voxel/definition_registry.hpp"
 
 namespace spk::Voxel
 {
@@ -26,6 +28,7 @@ namespace spk::Voxel
 			spk::Vector3UInt _dimensions;
 			std::vector<std::uint32_t> _cells;
 			std::vector<Definition> _definitions;
+			std::shared_ptr<const DefinitionRegistry> _registry;
 			bool _consumed = false;
 
 			void _ensureActive() const;
@@ -34,9 +37,20 @@ namespace spk::Voxel
 		public:
 			explicit Builder(spk::Vector3UInt dimensions);
 			explicit Builder(const Volume &volume);
+			Builder(
+				spk::Vector3UInt dimensions,
+				const std::filesystem::path &filename,
+				const DefinitionRegistry &registry);
 
+			void bind(const DefinitionRegistry &registry);
 			void set(spk::Vector3UInt position, Cell cell);
+			void set(
+				spk::Vector3UInt position,
+				std::uint32_t definitionId,
+				Cell::HorizontalOrientation horizontal = Cell::HorizontalOrientation::XPositive,
+				Cell::VerticalOrientation vertical = Cell::VerticalOrientation::YPositive);
 			void erase(spk::Vector3UInt position);
+			void loadPacked(const std::filesystem::path &filename);
 			[[nodiscard]] Volume build();
 		};
 
