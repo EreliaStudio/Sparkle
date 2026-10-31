@@ -65,7 +65,6 @@ namespace spk::asset
 		return nullptr;
 	}
 
-
 	Manager::Asset *Manager::_getUnique(std::type_index type, const std::string &id) const
 	{
 		const auto family = _assets.find(type);
