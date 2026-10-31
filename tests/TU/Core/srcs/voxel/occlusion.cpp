@@ -75,11 +75,12 @@ TEST(VoxelOcclusion, CompleteCoverageWithOppositeTriangleDiagonals)
 	auto source = shape(1);
 	Shape::Builder builder;
 	builder.addSlot("surface");
-	builder.addPolygon("surface", {
-		{{0, 0, 0}},
+	const std::vector<Shape::Vertex> quad = {
 		{{0, 0, 1}},
 		{{0, 1, 1}},
-		{{0, 1, 0}}});
+		{{0, 1, 0}},
+		{{0, 0, 0}}};
+	builder.addPolygon("surface", quad);
 	const Definition blocker(builder.build(), {{"surface", {"surface"}}});
 	const auto result = Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX);
 	EXPECT_TRUE(result.empty());

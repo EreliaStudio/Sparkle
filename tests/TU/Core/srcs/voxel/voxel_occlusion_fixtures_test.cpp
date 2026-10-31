@@ -307,9 +307,9 @@ TEST(VoxelOcclusionFixtures, OpaqueCubeCompletelyCoversEveryFaceWithDifferentTri
 		{
 			for (const Face direction : Directions)
 			{
-				SCOPED_TRACE(::testing::Message() << "source " << static_cast<unsigned>(sourceOrientation.horizontal)
-										 << ", blocker " << static_cast<unsigned>(blockerOrientation.horizontal)
-										 << ", face " << static_cast<unsigned>(direction));
+				SCOPED_TRACE(static_cast<unsigned>(sourceOrientation.horizontal));
+				SCOPED_TRACE(static_cast<unsigned>(blockerOrientation.horizontal));
+				SCOPED_TRACE(static_cast<unsigned>(direction));
 				const auto key = makeKey(cube, cube, sourceOrientation, blockerOrientation, direction);
 				EXPECT_TRUE(Algorithm::compute(key.source, key.sourceOrientation, key.blocker, key.blockerOrientation, direction).empty());
 			}
