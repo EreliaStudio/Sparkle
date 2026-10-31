@@ -21,19 +21,8 @@ namespace
 	using Vertical = Shape::VerticalOrientation;
 
 	constexpr std::array<const char *, 4> Names = {"cube", "slab", "slope", "stair"};
-	constexpr std::array<Shape::Orientation, 8> Orientations = {{
-		{Horizontal::XPositive, Vertical::YPositive},
-		{Horizontal::ZPositive, Vertical::YPositive},
-		{Horizontal::XNegative, Vertical::YPositive},
-		{Horizontal::ZNegative, Vertical::YPositive},
-		{Horizontal::XPositive, Vertical::YNegative},
-		{Horizontal::ZPositive, Vertical::YNegative},
-		{Horizontal::XNegative, Vertical::YNegative},
-		{Horizontal::ZNegative, Vertical::YNegative}}};
-	constexpr std::array<Face, 6> Directions = {
-		Face::NegativeX, Face::PositiveX,
-		Face::NegativeY, Face::PositiveY,
-		Face::NegativeZ, Face::PositiveZ};
+	constexpr std::array<Shape::Orientation, 8> Orientations = {{{Horizontal::XPositive, Vertical::YPositive}, {Horizontal::ZPositive, Vertical::YPositive}, {Horizontal::XNegative, Vertical::YPositive}, {Horizontal::ZNegative, Vertical::YPositive}, {Horizontal::XPositive, Vertical::YNegative}, {Horizontal::ZPositive, Vertical::YNegative}, {Horizontal::XNegative, Vertical::YNegative}, {Horizontal::ZNegative, Vertical::YNegative}}};
+	constexpr std::array<Face, 6> Directions = {Face::NegativeX, Face::PositiveX, Face::NegativeY, Face::PositiveY, Face::NegativeZ, Face::PositiveZ};
 	constexpr std::size_t Resolution = 64;
 	constexpr std::size_t Samples = Resolution * Resolution;
 
@@ -276,8 +265,7 @@ TEST(VoxelOcclusionFixtures, EveryOrderedPairAndOrientationMatchesIndependentCov
 				{
 					for (Face direction : Directions)
 					{
-						SCOPED_TRACE(::testing::Message() << shapes[source].name << "[" << sourceOrientation << "] -> "
-														  << shapes[blocker].name << "[" << blockerOrientation << "], face " << static_cast<int>(direction));
+						SCOPED_TRACE(::testing::Message() << shapes[source].name << "[" << sourceOrientation << "] -> " << shapes[blocker].name << "[" << blockerOrientation << "], face " << static_cast<int>(direction));
 						const auto key = makeKey(
 							shapes[source].opaque,
 							shapes[blocker].opaque,
@@ -325,8 +313,7 @@ TEST(VoxelOcclusionFixtures, EveryTranslucentBlockerLeavesSourceBoundaryVisible)
 				{
 					for (Face direction : Directions)
 					{
-						SCOPED_TRACE(::testing::Message() << source.name << "[" << sourceOrientation << "] -> translucent "
-														  << blocker.name << "[" << blockerOrientation << "], face " << static_cast<int>(direction));
+						SCOPED_TRACE(::testing::Message() << source.name << "[" << sourceOrientation << "] -> translucent " << blocker.name << "[" << blockerOrientation << "], face " << static_cast<int>(direction));
 						const auto key = makeKey(
 							source.opaque,
 							blocker.translucent,
