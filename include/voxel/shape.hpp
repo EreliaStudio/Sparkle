@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "container/json/catalog.hpp"
@@ -124,13 +125,41 @@ namespace spk::Voxel
 		[[nodiscard]] const Slot &slot(std::string_view name) const;
 	};
 
-	class Shape::Registry final : public spk::JSON::Catalog<Shape, std::string>
+	class Shape::Registry
+	{
+	public:
+		using ID = std::string;
+		class Builder;
+
+	private:
+		struct Data
+		{
+			std::unordered_map<ID, Shape> shapes;
+		};
+
+		std::shared_ptr<const Data> _data;
+
+		explicit Registry(std::shared_ptr<const Data> data) noexcept;
+
+	public:
+		Registry();
+
+		[[nodiscard]] const Shape &at(const ID &id) const;
+		[[nodiscard]] const Shape &operator[](const ID &id) const;
+		[[nodiscard]] const Shape *tryGet(const ID &id) const noexcept;
+		[[nodiscard]] bool contains(const ID &id) const noexcept;
+		[[nodiscard]] std::size_t size() const noexcept;
+	};
+
+	class Shape::Registry::Builder final : public spk::JSON::Catalog<Shape, std::string>
 	{
 	private:
 		[[nodiscard]] ID _parseKey(const spk::JSON::Reader &reader) const override;
 		[[nodiscard]] Shape _parseElement(const spk::JSON::Reader &reader) const override;
 
 	public:
+		Builder() = default;
 		void add(ID id, Shape shape);
+		[[nodiscard]] Registry build() const;
 	};
 }

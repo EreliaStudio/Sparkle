@@ -1,5 +1,6 @@
 #include "voxel/definition.hpp"
 
+#include <string>
 #include <utility>
 
 #include "exception.hpp"
@@ -7,65 +8,94 @@
 
 namespace spk::Voxel
 {
-	Definition::Registry::Registry(const Shape::Registry &shapes)
+	Definition::Registry::Registry() :
+		_data(std::make_shared<const Data>())
+	{
+	}
+
+	Definition::Registry::Registry(std::shared_ptr<const Data> data) noexcept :
+		_data(std::move(data))
+	{
+	}
+
+	const Definition &Definition::Registry::at(ID id) const
+	{
+		if (id == 0)
+		{
+			return Definition::air();
+		}
+		const auto found = _data->definitions.find(id);
+		if (found == _data->definitions.end())
+		{
+			throw spk::Exception("unknown Voxel Definition Registry ID: " + std::to_string(id));
+		}
+		return found->second;
+	}
+
+	const Definition &Definition::Registry::operator[](ID id) const
+	{
+		return at(id);
+	}
+
+	const Definition *Definition::Registry::tryGet(ID id) const noexcept
+	{
+		if (id == 0)
+		{
+			return &Definition::air();
+		}
+		const auto found = _data->definitions.find(id);
+		return found == _data->definitions.end() ? nullptr : &found->second;
+	}
+
+	bool Definition::Registry::contains(ID id) const noexcept
+	{
+		return id == 0 || _data->definitions.contains(id);
+	}
+
+	std::size_t Definition::Registry::size() const noexcept
+	{
+		return _data->definitions.size() + 1;
+	}
+
+	Definition::Registry::Builder::Builder(const Shape::Registry &shapes)
 	{
 		bind(shapes);
 	}
 
-	void Definition::Registry::bind(const Shape::Registry &shapes)
+	void Definition::Registry::Builder::bind(const Shape::Registry &shapes)
 	{
-		_shapes = std::make_shared<const Shape::Registry>(shapes);
+		_shapes = shapes;
 	}
 
-	void Definition::Registry::add(ID id, Definition definition)
+	void Definition::Registry::Builder::add(ID id, Definition definition)
 	{
-		if (id == 0 || id > Volume::PackedCell::MaxDefinitionIndex || definition.isAir())
+		if (id == 0 || id > Volume::PackedCell::MaxDefinitionId || definition.isAir())
 		{
 			throw spk::Exception("Voxel Definition Registry requires a non-Air Definition and a representable nonzero ID");
 		}
 		_insert(id, std::move(definition));
 	}
 
-	const Definition &Definition::Registry::at(const ID &id) const
+	Definition::Registry Definition::Registry::Builder::build() const
 	{
-		return id == 0 ? Definition::air() : spk::JSON::Catalog<Definition, ID>::at(id);
+		return Registry(std::make_shared<const Data>(Data{_entries()}));
 	}
 
-	const Definition &Definition::Registry::operator[](const ID &id) const
-	{
-		return at(id);
-	}
-
-	const Definition *Definition::Registry::tryGet(const ID &id) const noexcept
-	{
-		return id == 0 ? &Definition::air() : spk::JSON::Catalog<Definition, ID>::tryGet(id);
-	}
-
-	bool Definition::Registry::contains(const ID &id) const noexcept
-	{
-		return id == 0 || spk::JSON::Catalog<Definition, ID>::contains(id);
-	}
-
-	std::size_t Definition::Registry::size() const noexcept
-	{
-		return spk::JSON::Catalog<Definition, ID>::size() + 1;
-	}
-
-	Definition::Registry::ID Definition::Registry::_parseKey(const spk::JSON::Reader &reader) const
+	Definition::Registry::Builder::ID Definition::Registry::Builder::_parseKey(const spk::JSON::Reader &reader) const
 	{
 		const auto id = reader.require<ID>("id");
-		if (id == 0 || id > Volume::PackedCell::MaxDefinitionIndex)
+		if (id == 0 || id > Volume::PackedCell::MaxDefinitionId)
 		{
 			throw spk::Exception("Voxel Definition Registry JSON ID must be nonzero and fit 29 bits");
 		}
 		return id;
 	}
 
-	Definition Definition::Registry::_parseElement(const spk::JSON::Reader &reader) const
+	Definition Definition::Registry::Builder::_parseElement(const spk::JSON::Reader &reader) const
 	{
 		if (!_shapes)
 		{
-			throw spk::Exception("Voxel Definition Registry requires a bound Shape Registry to load JSON");
+			throw spk::Exception("Voxel Definition Registry Builder requires a bound Shape Registry to load JSON");
 		}
 		return Definition::Builder(*_shapes, reader.value()).build();
 	}

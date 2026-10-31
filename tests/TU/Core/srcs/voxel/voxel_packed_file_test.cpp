@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <limits>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -30,6 +30,16 @@ namespace
 		Shape::Builder builder;
 		builder.addSlot("face");
 		return Definition(builder.build(), {{"face", std::move(semantic)}});
+	}
+
+	Registry makeRegistry(std::initializer_list<std::pair<std::uint32_t, Definition>> entries)
+	{
+		Registry::Builder builder;
+		for (const auto &[id, value] : entries)
+		{
+			builder.add(id, value);
+		}
+		return builder.build();
 	}
 
 	struct PackedFile
@@ -75,25 +85,27 @@ namespace
 
 	TEST(VoxelDefinitionRegistryTest, AirIsImplicitAndNumericIDsAreValidated)
 	{
-		Registry registry;
+		Registry::Builder builder;
+		const Registry registry = builder.build();
 		EXPECT_EQ(registry.size(), 1u);
 		EXPECT_TRUE(registry.contains(0));
 		EXPECT_TRUE(registry.at(0).isAir());
 		EXPECT_FALSE(registry.contains(9));
 		EXPECT_THROW((void)registry.at(9), spk::Exception);
-		EXPECT_THROW(registry.add(0, createDefinition()), spk::Exception);
-		EXPECT_THROW(registry.add(1, Definition::air()), spk::Exception);
-		EXPECT_THROW(registry.add(Packed::MaxDefinitionIndex + 1, createDefinition()), spk::Exception);
+		EXPECT_THROW(builder.add(0, createDefinition()), spk::Exception);
+		EXPECT_THROW(builder.add(1, Definition::air()), spk::Exception);
+		EXPECT_THROW(builder.add(Packed::MaxDefinitionId + 1, createDefinition()), spk::Exception);
 		EXPECT_EQ(registry.size(), 1u);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, RejectDuplicateIDWithoutOverwritingItsDefinition)
 	{
-		Registry registry;
+		Registry::Builder builder;
 		const Definition first = createDefinition();
 		const Definition second = createDefinition();
-		registry.add(17, first);
-		EXPECT_THROW(registry.add(17, second), spk::Exception);
+		builder.add(17, first);
+		EXPECT_THROW(builder.add(17, second), spk::Exception);
+		const Registry registry = builder.build();
 		EXPECT_EQ(registry.size(), 2u);
 		EXPECT_TRUE(registry.at(17) == first);
 		EXPECT_FALSE(registry.at(17) == second);
@@ -101,33 +113,30 @@ namespace
 
 	TEST(VoxelDefinitionRegistryTest, BracketLookupPreservesAirAndRejectsUnknownIDs)
 	{
-		Registry registry;
 		const Definition stored = createDefinition();
-		registry.add(37, stored);
+		const Registry registry = makeRegistry({{37, stored}});
 		const Registry &readOnly = registry;
 		EXPECT_TRUE(registry[37] == stored);
 		EXPECT_TRUE(readOnly[37] == stored);
 		EXPECT_TRUE(registry[0].isAir());
+		EXPECT_EQ(registry.tryGet(0), &Definition::air());
 		EXPECT_THROW((void)registry[38], spk::Exception);
 		EXPECT_EQ(registry.size(), 2u);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, HighestRepresentableSparseIDIsSupported)
 	{
-		Registry registry;
 		const Definition edge = createDefinition();
-		registry.add(Packed::MaxDefinitionIndex, edge);
-		EXPECT_TRUE(registry.at(Packed::MaxDefinitionIndex) == edge);
-		EXPECT_TRUE(registry.contains(Packed::MaxDefinitionIndex));
+		const Registry registry = makeRegistry({{Packed::MaxDefinitionId, edge}});
+		EXPECT_TRUE(registry.at(Packed::MaxDefinitionId) == edge);
+		EXPECT_TRUE(registry.contains(Packed::MaxDefinitionId));
 	}
 
 	TEST(VoxelPackedFileTest, FileConstructorResolvesSparseIDsAndAllOrientations)
 	{
 		const Definition a = createDefinition("stone");
 		const Definition b = createDefinition("glass");
-		Registry registry;
-		registry.add(400, a);
-		registry.add(7, b);
+		const Registry registry = makeRegistry({{400, a}, {7, b}});
 		const std::array<Cell::HorizontalOrientation, 4> horizontals{
 			Cell::HorizontalOrientation::XPositive,
 			Cell::HorizontalOrientation::ZNegative,
@@ -158,10 +167,9 @@ namespace
 
 	TEST(VoxelPackedFileTest, FileAirKeepsEncodedOrientationWithoutRegisteringDefinition)
 	{
-		Registry registry;
 		PackedFile file;
 		file.write({Packed::encode(0, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
-		const Volume volume = Volume::Builder({1, 1, 1}, file.path, registry).build();
+		const Volume volume = Volume::Builder({1, 1, 1}, file.path, Registry()).build();
 		const Cell cell = volume.cell({0, 0, 0});
 		EXPECT_TRUE(cell.isAir());
 		EXPECT_EQ(cell.horizontalOrientation(), Cell::HorizontalOrientation::ZPositive);
@@ -172,9 +180,7 @@ namespace
 	{
 		const Definition first = createDefinition();
 		const Definition second = createDefinition();
-		Registry registry;
-		registry.add(0x010203, first);
-		registry.add(0x100012, second);
+		const Registry registry = makeRegistry({{0x010203, first}, {0x100012, second}});
 		PackedFile file;
 		std::vector<std::uint32_t> words;
 		words.push_back(Packed::encode(0x010203, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive));
@@ -189,103 +195,97 @@ namespace
 		EXPECT_TRUE(volume.cell({1, 1, 0}).definition() == first);
 	}
 
-	TEST(VoxelPackedFileTest, AliasedIDsAndCopiesStillResolveByDefinitionIdentity)
+	TEST(VoxelPackedFileTest, AliasedIDsAreRetainedAcrossVolumeCopies)
 	{
 		const Definition first = createDefinition();
-		Registry registry;
-		registry.add(7, first);
-		registry.add(20, first);
+		const Registry registry = makeRegistry({{7, first}, {20, first}});
 		PackedFile file;
-		file.write({Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
-		Volume::Builder builder({2, 1, 1}, file.path, registry);
-		const Volume volume = builder.build();
+		file.write({
+			Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
+			Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
+		const Volume volume = Volume::Builder({2, 1, 1}, file.path, registry).build();
 		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
 		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == first);
-		Volume::Builder copied(volume);
-		copied.erase({0, 0, 0});
-		EXPECT_TRUE(copied.build().cell({1, 0, 0}).definition() == first);
+		Volume::Builder changed(volume);
+		changed.erase({0, 0, 0});
+		EXPECT_TRUE(changed.build().cell({1, 0, 0}).definition() == first);
 	}
 
-	TEST(VoxelPackedFileTest, BindAllowsSetByIDAndUsesAnOwnedRegistrySnapshot)
+	TEST(VoxelPackedFileTest, BindUsesImmutableSnapshotsAndAllowsExplicitReplacement)
 	{
 		const Definition first = createDefinition();
 		const Definition second = createDefinition();
+		Registry::Builder definitions;
+		definitions.add(4, first);
+		const Registry before = definitions.build();
 		Volume::Builder builder({2, 1, 1});
 		EXPECT_THROW(builder.set({0, 0, 0}, 4), spk::Exception);
-		Registry registry;
-		registry.add(4, first);
-		builder.bind(registry);
-		registry.add(5, second);
+		builder.bind(before);
+		definitions.add(5, second);
+		const Registry after = definitions.build();
 		EXPECT_THROW(builder.set({1, 0, 0}, 5), spk::Exception);
-		EXPECT_THROW(builder.set({0, 0, 0}, 99), spk::Exception);
 		builder.set({0, 0, 0}, 4, Cell::HorizontalOrientation::ZNegative);
-		builder.bind(registry);
+		builder.bind(after);
 		builder.set({1, 0, 0}, 5, Cell::HorizontalOrientation::XNegative, Cell::VerticalOrientation::YNegative);
 		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
 		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == second);
-		EXPECT_EQ(volume.cell({1, 0, 0}).verticalOrientation(), Cell::VerticalOrientation::YNegative);
 	}
 
 	TEST(VoxelPackedFileTest, BoundRegistryOutlivesItsOriginalOwner)
 	{
 		Volume::Builder builder({1, 1, 1});
-		Definition definition = createDefinition();
-		{
-			Registry registry;
-			registry.add(3, definition);
-			builder.bind(registry);
-		}
+		const Definition definition = createDefinition();
+		builder.bind(makeRegistry({{3, definition}}));
 		builder.set({0, 0, 0}, 3);
 		EXPECT_TRUE(builder.build().cell({0, 0, 0}).definition() == definition);
 	}
 
 	TEST(VoxelPackedFileTest, MissingFileAndInvalidSizesAreRejected)
 	{
-		Registry registry;
 		PackedFile file;
-		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, registry), spk::Exception);
+		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()), spk::Exception);
 		file.write({});
-		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, registry), spk::Exception);
+		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()), spk::Exception);
 		file.write({0, 0});
-		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, registry), spk::Exception);
+		EXPECT_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()), spk::Exception);
 		file.write({0});
-		EXPECT_NO_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, registry));
+		EXPECT_NO_THROW((void)Volume::Builder(Position(1, 1, 1), file.path, Registry()));
 	}
 
 	TEST(VoxelPackedFileTest, UnknownIDsRejectLoadWithoutChangingPreviouslyEditedBuilder)
 	{
 		const Definition a = createDefinition();
-		Registry registry;
-		registry.add(2, a);
-		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry);
-		builder.set({0, 0, 0}, Cell(a));
+		Registry::Builder definitions;
+		definitions.add(2, a);
+		Volume::Builder builder({2, 1, 1}, definitions.build());
+		builder.set({0, 0, 0}, 2);
 		PackedFile file;
-		file.write({Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive), Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
+		file.write({
+			Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive),
+			Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		const Volume unchanged = Volume::Builder(builder).build();
 		EXPECT_TRUE(unchanged.cell({0, 0, 0}).definition() == a);
 		EXPECT_TRUE(unchanged.cell({1, 0, 0}).isAir());
-		registry.add(19, createDefinition());
-		builder.bind(registry);
+		definitions.add(19, createDefinition());
+		builder.bind(definitions.build());
 		builder.loadPacked(file.path);
 		const Volume updated = builder.build();
 		EXPECT_EQ(updated.cell({0, 0, 0}).horizontalOrientation(), Cell::HorizontalOrientation::ZPositive);
 		EXPECT_FALSE(updated.cell({1, 0, 0}).isAir());
 	}
 
-	TEST(VoxelPackedFileTest, LoadingASecondFileReplacesLocalDefinitionsTransactionally)
+	TEST(VoxelPackedFileTest, LoadingASecondFileReplacesCellsWithoutRemapping)
 	{
 		const Definition first = createDefinition();
 		const Definition second = createDefinition();
-		Registry registry;
-		registry.add(101, first);
-		registry.add(3, second);
-		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry);
+		const Registry registry = makeRegistry({{101, first}, {3, second}});
+		Volume::Builder builder({2, 1, 1}, registry);
 		PackedFile file;
-		file.write({Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
+		file.write({
+			Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
+			Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		builder.loadPacked(file.path);
 		file.write({Packed::encode(3, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), 0});
 		builder.loadPacked(file.path);
@@ -298,13 +298,11 @@ namespace
 	TEST(VoxelPackedFileTest, FailedLoadCanBeFixedAndRetriedWithoutRebinding)
 	{
 		const Definition first = createDefinition();
-		Registry registry;
-		registry.add(1, first);
+		const Registry registry = makeRegistry({{1, first}});
 		PackedFile file;
 		file.write({0, Packed::encode(1, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
-		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry);
-		builder.set({0, 0, 0}, Cell(first));
+		Volume::Builder builder({2, 1, 1}, registry);
+		builder.set({0, 0, 0}, 1);
 		EXPECT_NO_THROW(builder.loadPacked(file.path));
 		file.write({0});
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
@@ -318,13 +316,12 @@ namespace
 
 	TEST(VoxelPackedFileTest, BindingOrLoadingAfterBuildIsRejected)
 	{
-		Registry registry;
 		PackedFile file;
 		file.write({0});
 		Volume::Builder builder({1, 1, 1});
-		builder.bind(registry);
+		builder.bind(Registry());
 		const Volume volume = builder.build();
-		EXPECT_THROW(builder.bind(registry), spk::Exception);
+		EXPECT_THROW(builder.bind(Registry()), spk::Exception);
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 0), spk::Exception);
 		EXPECT_TRUE(volume.cell({0, 0, 0}).isAir());

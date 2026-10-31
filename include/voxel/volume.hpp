@@ -24,10 +24,10 @@ namespace spk::Voxel
 		{
 			using Storage = std::uint32_t;
 			static constexpr Storage Air = 0;
-			static constexpr Storage MaxDefinitionIndex = (Storage{1} << 29) - 1;
+			static constexpr Storage MaxDefinitionId = (Storage{1} << 29) - 1;
 
 			[[nodiscard]] static Storage encode(
-				std::size_t index,
+				std::size_t id,
 				Cell::HorizontalOrientation horizontal,
 				Cell::VerticalOrientation vertical)
 			{
@@ -37,16 +37,16 @@ namespace spk::Voxel
 				{
 					throw spk::Exception("Invalid Voxel Volume cell orientation");
 				}
-				if (index > MaxDefinitionIndex)
+				if (id > MaxDefinitionId)
 				{
-					throw spk::Exception("Voxel Volume Definition index exceeds 29-bit capacity");
+					throw spk::Exception("Voxel Volume Definition ID exceeds 29-bit capacity");
 				}
-				return (static_cast<Storage>(index) << 3) |
+				return (static_cast<Storage>(id) << 3) |
 					   (static_cast<Storage>(vertical == Cell::VerticalOrientation::YNegative) << 2) |
 					   (degrees / 90);
 			}
 
-			[[nodiscard]] static constexpr Storage definitionIndex(Storage value) noexcept
+			[[nodiscard]] static constexpr Storage definitionId(Storage value) noexcept
 			{
 				return value >> 3;
 			}
@@ -68,15 +68,14 @@ namespace spk::Voxel
 			friend struct VolumeTestAccess;
 			spk::Vector3UInt _dimensions;
 			std::vector<std::uint32_t> _cells;
-			std::vector<Definition> _definitions;
-			std::shared_ptr<const Definition::Registry> _registry;
+			Definition::Registry _registry;
 			bool _consumed = false;
 
 			void _ensureActive() const;
-			[[nodiscard]] std::size_t _definitionIndex(const Definition &definition) const noexcept;
 
 		public:
 			explicit Builder(spk::Vector3UInt dimensions);
+			Builder(spk::Vector3UInt dimensions, const Definition::Registry &registry);
 			explicit Builder(const Volume &volume);
 			Builder(
 				spk::Vector3UInt dimensions,
@@ -84,7 +83,6 @@ namespace spk::Voxel
 				const Definition::Registry &registry);
 
 			void bind(const Definition::Registry &registry);
-			void set(spk::Vector3UInt position, Cell cell);
 			void set(
 				spk::Vector3UInt position,
 				std::uint32_t definitionId,
@@ -99,7 +97,7 @@ namespace spk::Voxel
 		struct Data
 		{
 			spk::Vector3UInt dimensions;
-			std::vector<Definition> definitions;
+			Definition::Registry definitions;
 			std::vector<PackedCell::Storage> cells;
 		};
 

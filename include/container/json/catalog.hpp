@@ -48,6 +48,11 @@ namespace spk::JSON
 		[[nodiscard]] virtual ID _parseKey(const Reader &reader) const = 0;
 		[[nodiscard]] virtual Element _parseElement(const Reader &reader) const = 0;
 
+		[[nodiscard]] const std::unordered_map<ID, Element> &_entries() const noexcept
+		{
+			return _elements;
+		}
+
 		void _insert(ID id, Element element)
 		{
 			if (contains(id))

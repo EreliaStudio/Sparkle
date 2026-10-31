@@ -39,7 +39,7 @@ namespace spk::Voxel
 	class Definition::Builder
 	{
 	private:
-		std::shared_ptr<const Shape::Registry> _shapes;
+		Shape::Registry _shapes;
 		std::optional<Shape> _shape;
 		SlotMapping _slots;
 
@@ -53,25 +53,46 @@ namespace spk::Voxel
 		[[nodiscard]] Definition build() const;
 	};
 
-	class Definition::Registry final : public spk::JSON::Catalog<Definition, std::uint32_t>
+	class Definition::Registry
+	{
+	public:
+		using ID = std::uint32_t;
+		class Builder;
+
+	private:
+		struct Data
+		{
+			std::unordered_map<ID, Definition> definitions;
+		};
+
+		std::shared_ptr<const Data> _data;
+
+		explicit Registry(std::shared_ptr<const Data> data) noexcept;
+
+	public:
+		Registry();
+
+		[[nodiscard]] const Definition &at(ID id) const;
+		[[nodiscard]] const Definition &operator[](ID id) const;
+		[[nodiscard]] const Definition *tryGet(ID id) const noexcept;
+		[[nodiscard]] bool contains(ID id) const noexcept;
+		[[nodiscard]] std::size_t size() const noexcept;
+	};
+
+	class Definition::Registry::Builder final : public spk::JSON::Catalog<Definition, std::uint32_t>
 	{
 	private:
-		std::shared_ptr<const Shape::Registry> _shapes;
+		std::optional<Shape::Registry> _shapes;
 
 		[[nodiscard]] ID _parseKey(const spk::JSON::Reader &reader) const override;
 		[[nodiscard]] Definition _parseElement(const spk::JSON::Reader &reader) const override;
 
 	public:
-		Registry() = default;
-		explicit Registry(const Shape::Registry &shapes);
+		Builder() = default;
+		explicit Builder(const Shape::Registry &shapes);
 
 		void bind(const Shape::Registry &shapes);
 		void add(ID id, Definition definition);
-
-		[[nodiscard]] const Definition &at(const ID &id) const;
-		[[nodiscard]] const Definition &operator[](const ID &id) const;
-		[[nodiscard]] const Definition *tryGet(const ID &id) const noexcept;
-		[[nodiscard]] bool contains(const ID &id) const noexcept;
-		[[nodiscard]] std::size_t size() const noexcept;
+		[[nodiscard]] Registry build() const;
 	};
 }

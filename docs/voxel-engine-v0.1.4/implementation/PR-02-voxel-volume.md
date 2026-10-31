@@ -1,8 +1,8 @@
 # PR-02 — Volume dense et Builder
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **PR GitHub active :** [Draft PR #41](https://github.com/EreliaStudio/Sparkle/pull/41). Ne pas fusionner sans validation du propriétaire.
 >
-> **Branche source :** `impl/v0.1.4/02-voxel-volume`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche source :** `impl/v0.1.4/02-voxel-volume`, créée depuis `V0.1.4`. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
 **Objectif :** Éditer une grille voxel puis publier des snapshots immuables.
 
@@ -19,52 +19,68 @@
 
 - [ ] Volume::Builder depuis dimensions ou Volume existant
 - [ ] grille dense compacte
-- [ ] table locale de Definitions
-- [ ] Air index 0
+- [ ] Registry immuable partagé, sans table locale de Definitions
+- [ ] Air ID 0
 - [ ] lecture Cell par valeur
-- [ ] set et erase
+- [ ] set(position, ID, orientations) et erase
 - [ ] tailles immuables.
 
 ## Instructions techniques et intégration
 
-Indexation et allocation sans débordement; déduplication par identité Definition::Data; copie légère des snapshots; toute exception build laisse Builder inchangé et réessayable; pas de resize ni de span<Cell>.
+ID numérique externe stocké directement dans les 29 bits de chaque cellule, sans remappage; registry immuable partagé par copie O(1); indexation et allocation sans débordement; toute exception de build laisse Builder inchangé et réessayable; pas de resize ni de span<Cell>.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
-## Ajustements de review
+## Architecture validée : registres immuables et IDs directs
 
-- `Definition::Registry::operator[](id) const` est un accès **en lecture seule** identique à `at(id)`, y compris pour Air (ID 0). Un ID absent lève `spk::Exception` et n'insère jamais Air implicitement. L'enregistrement reste effectué par `add(id, Definition)`.
-- L'encodage compact est porté par `spk::Voxel::Volume::PackedCell` : aucun namespace ou fichier `Detail` autonome.
-- **Décision A validée :** le stockage interne conserve une grille dense d'entiers non signés sur **32 bits par cellule** (29 bits pour l'index local de Definition, 2 bits pour l'orientation horizontale, 1 bit pour l'inversion verticale) et une table locale de Definitions ; **ne pas remplacer la grille par `std::vector<Cell>`**. `Volume::cell(position)` reconstruit une `Cell` indépendante et la retourne par valeur.
-- La structure privée `Volume::Data` est **définie intégralement dans `include/voxel/volume.hpp`**, sans forward declaration ni définition déportée dans le `.cpp`. `shared_ptr<const Data>` reste uniquement le mécanisme de propriété partagée d'un snapshot immuable et conserve les copies de Volume à coût constant.
+- **`Shape::Registry`** associe `std::string → Shape`. `Shape::Registry::Builder` hérite de `spk::JSON::Catalog<Shape, std::string>` et propose `add`, `load`, `build()`.
+- **`Definition::Registry`** associe `std::uint32_t → Definition` avec un ID 0 implicitement Air et des IDs explicites limités à 29 bits. `Definition::Registry::Builder` hérite de `spk::JSON::Catalog<Definition, std::uint32_t>`, peut lier un Shape Registry, charger du JSON et publier un snapshot via `build()`.
+- Les deux Registry possèdent un **`shared_ptr<const Data>`**. Les Builders portent la mutation, les snapshots publiés ne sont jamais modifiables ; copier un Registry est **O(1)**. Les Builders restent réutilisables, les snapshots précédents inchangés.
+- `Definition::Builder` demeure responsable de construire une Definition immuable, à partir d'un Shape Registry publié, des noms de slots sémantiques et d'une référence JSON `"shape":"nom"`.
+- La mémoire publiée des registres utilise `unordered_map` : recherche moyenne **O(1)**, sans `set` ou tableau géant indexé par l'espace d'IDs 29 bits. Aucune optimisation spéculative spécifique au mesher.
+- `spk::JSON::Catalog` conserve son format standard `{"elements":[{"id":...,"data":...}]}`. Son paramètre de type ID reste facultatif, avec valeur par défaut `TElement::ID` ; un accesseur protégé fournit les entrées pour construire les snapshots.
+- `Volume::Data` défini **directement dans `include/voxel/volume.hpp`** ne conserve que `dimensions`, une **copie légère de `Definition::Registry`** et un `vector<uint32_t>` de cellules compactes. Aucune table d'indices locale n'est conservée.
+- Les 29 bits de chaque mot compact représentent **directement l'ID numérique externe** de Definition. Les 3 bits restants encodent les orientations. `Volume::cell(position)` reconstitue une Cell par valeur en consultant le Registry.
+- `Volume::Builder::set(position, Cell)` est **supprimé**. L'API restante est `set(position, ID, horizontal, vertical)` ; un ID absent est rejeté. `erase` remet le mot entier à zéro ; un ID 0 avec orientation non canonique reste légal.
+- `Volume::Builder::bind(registry)` remplace le snapshot référencé sans copier le contenu. Si le Builder contient déjà des cellules non-Air, il refuse toute nouvelle liaison qui modifierait l'identité des Definitions désignées par leurs IDs.
+- Le chargement d'un fichier compact vérifie strictement les dimensions, la taille `x*y*z*4`, les IDs et le format little-endian ; il importe les mots **sans conversion ni déduplication locale**. L'échec laisse le Builder intact.
+- Les erreurs d'accès `at`/`operator[]` identifient l'ID demandé. `tryGet` ne lève pas et renvoie `nullptr` pour les IDs inconnus ; pour `Definition::Registry`, `tryGet(0)` renvoie `&Definition::air()`.
+- `Volume::PackedCell` reste dans `spk::Voxel::Volume`, sans namespace `detail` ; la destruction et le partage immuable continuent à reposer sur des données propriétaires explicites.
 
-## Registres JSON et construction imbriquée (extension validée)
+### Exemple de chargement
 
-- `Shape::Registry : spk::JSON::Catalog<Shape, std::string>` associe un ID texte à une Shape immuable. Le registre peut être alimenté par `add(id, shape)` ou `load(path)`, avec le format `elements` des catalogues Sparkle.
-- `Definition::Builder` reçoit une copie/snapshot d'un `Shape::Registry` via sa construction et construit des Definitions immuables par `setShape(shapeId)`, `setSlots(mapping)`, `build()` ou `addFromJSON(data)`. Son JSON `data` contient `{"shape":"shape-id","slots":{"local":"semantic"}}`, sans duplication de polygones.
-- `Definition::Registry : spk::JSON::Catalog<Definition, std::uint32_t>` associe un ID numérique à une Definition immuable et fournit `add`, `bind(shapes)`, `load(path)`, `at` et `operator[]`. L'ID 0 est implicitement réservé à Air et n'apparaît pas dans le catalogue JSON.
-- `spk::JSON::Catalog` admet désormais un paramètre de type ID facultatif, avec valeur par défaut `TElement::ID` pour préserver les catalogues existants. Les formats mono-élément et `elements` restent inchangés.
-- La réutilisation des Shapes conserve leur identité et les huit instances orientées mises en cache. Les registres et Builders lient des snapshots sûrs, non des pointeurs pendants.
-- Les deux catalogues JSON sont séparés : charger d'abord les Shapes, puis les Definitions en associant le premier registre au second.
-- Les accès `at(id)` / `operator[](id)` sur une entrée absente lancent `spk::Exception` en indiquant l'ID demandé lorsque son type permet son affichage. `tryGet(id)` renvoie `nullptr` si l'ID est absent. Pour `Definition::Registry`, l'ID réservé `0` est traité de façon cohérente par `at`, `operator[]`, `contains` et `tryGet` : ce dernier renvoie `&Definition::air()`.
+```cpp
+Shape::Registry::Builder shapesBuilder;
+shapesBuilder.load("shapes.json");
+const Shape::Registry shapes = shapesBuilder.build();
 
-## Extension demandée pendant PR-02 : fichier compact et collection nommée
+Definition::Registry::Builder definitionsBuilder(shapes);
+definitionsBuilder.load("definitions.json");
+const Definition::Registry definitions = definitionsBuilder.build();
 
-`Definition::Registry` est un catalogue **possédé par l'application**, non global, associant des IDs entiers non signés (29 bits utiles) à des `Definition`. L'ID 0 est Air et ne peut pas être redéfini. Les autres IDs doivent être déclarés explicitement, uniques et valides. Le Builder peut copier une collection via `bind(registry)` ; toute modification ultérieure de la collection initiale n'affecte pas le Builder. `set(position, id, orientation...)` utilise cette collection.
+Volume::Builder volumeBuilder({16, 16, 16}, definitions);
+volumeBuilder.set({1, 2, 3}, 42);
+const Volume volume = volumeBuilder.build();
+```
 
-Le constructeur `Volume::Builder(dimensions, filename, registry)` et `Builder::loadPacked(filename)` lisent un fichier **brut sans en-tête** de **4 octets par cellule**, en little-endian. Les dimensions sont fournies par l'appelant, pas devinées depuis le fichier. Chaque mot correspond à 2 bits de rotation horizontale, 1 bit d'inversion verticale, et 29 bits d'ID de Definition dans la collection fournie. Le parcours est X le plus rapide, puis Y, puis Z. Un fichier doit contenir exactement `x*y*z*4` octets ; une taille différente, un ID non défini ou une erreur de lecture rejette toute l'opération. Le constructeur échoue sans publier de Volume partiel ; `loadPacked` conserve le Builder complètement inchangé en cas d'échec. L'import convertit les IDs externes en **indices locaux dédupliqués par identité** ; il ne suppose jamais que l'ID externe est l'indice interne du Volume.
+## Format binaire compact
 
-Ce format volontairement minimal ne transporte ni dimensions, ni identités de Definitions, ni version. Le fichier et le registre correspondant doivent être fournis ensemble ; aucun `TightData` public ou serialization générique n'est introduit.
+Le constructeur `Volume::Builder(dimensions, filename, registry)` et `loadPacked(filename)` lisent un fichier **brut sans en-tête** de **4 octets par cellule little-endian**. Dimensions explicitement fournies ; parcours X le plus rapide, puis Y, puis Z. Deux bits décrivent la rotation horizontale, un bit l'inversion verticale et 29 bits donnent **directement l'ID** dans le `Definition::Registry` fourni. ID 0 réservé Air.
+
+Un fichier d'une taille incorrecte, un ID non déclaré ou une erreur d'entrée-sortie rejette toute l'opération, sans publier d'état partiel. Ni dimensions, ni version, ni descriptions de Definitions ne sont stockées dans le fichier ; le Registry correspondant est indispensable pour reconstituer les cellules.
 
 ## Tests obligatoires
 
 - [ ] Initialisation Air partout
-- [ ] duplication par identité et non par contenu
+- [ ] copies des registres O(1), identité des Definitions stable et snapshots immuables
 - [ ] orientation maintenue
 - [ ] set/erase et hors bornes
 - [ ] overflow
 - [ ] ancien Volume après nouveau build
-- [ ] construction échouée non destructive.
+- [ ] construction échouée non destructive
+- [ ] registre JSON des Shapes puis registre JSON des Definitions
+- [ ] préservation des IDs externes et rejet des IDs absents
+- [ ] modification de Registry::Builder après publication sans mutation rétroactive
 
 **Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
 

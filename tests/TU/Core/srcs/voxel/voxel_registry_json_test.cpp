@@ -62,9 +62,9 @@ namespace
 
 	Shape::Registry shapeRegistry()
 	{
-		Shape::Registry result;
-		result.load(JSONFile(Shapes).path());
-		return result;
+		Shape::Registry::Builder builder;
+		builder.load(JSONFile(Shapes).path());
+		return builder.build();
 	}
 
 	TEST(VoxelShapeRegistryTest, LoadsNamedShapesThroughJSONCatalog)
@@ -95,20 +95,22 @@ namespace
 
 	TEST(VoxelShapeRegistryTest, SupportsProgrammaticAddAndRejectsDuplicateIDs)
 	{
-		Shape::Registry registry;
+		Shape::Registry::Builder builder;
 		Shape cube = Shape::Builder{}.build();
-		registry.add("cube", cube);
+		builder.add("cube", cube);
+		const Shape::Registry registry = builder.build();
 		EXPECT_TRUE(registry["cube"] == cube);
-		EXPECT_THROW(registry.add("cube", cube), spk::Exception);
-		EXPECT_THROW(registry.add("", cube), spk::Exception);
+		EXPECT_THROW(builder.add("cube", cube), spk::Exception);
+		EXPECT_THROW(builder.add("", cube), spk::Exception);
 		EXPECT_EQ(registry.size(), 1u);
 	}
 
 	TEST(VoxelShapeRegistryTest, SupportsIndividualJSONCatalogElement)
 	{
 		const JSONFile file(R"({"id":"single","data":{"slots":{},"polygons":[]}})");
-		Shape::Registry registry;
-		registry.load(file.path());
+		Shape::Registry::Builder builder;
+		builder.load(file.path());
+		const Shape::Registry registry = builder.build();
 		EXPECT_TRUE(registry.contains("single"));
 		EXPECT_TRUE(registry["single"].empty());
 	}
@@ -119,9 +121,9 @@ namespace
 			{"id":"same","data":{"slots":{},"polygons":[]}},
 			{"id":"same","data":{"slots":{},"polygons":[]}}
 		]})");
-		Shape::Registry registry;
-		EXPECT_THROW(registry.load(file.path()), spk::Exception);
-		EXPECT_EQ(registry.size(), 1u);
+		Shape::Registry::Builder builder;
+		EXPECT_THROW(builder.load(file.path()), spk::Exception);
+		EXPECT_EQ(builder.build().size(), 1u);
 	}
 
 	TEST(VoxelDefinitionBuilderTest, UsesRegisteredShapeAndBuildsImmutableDefinitions)
@@ -175,8 +177,9 @@ namespace
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		const JSONFile file(Definitions);
-		Definition::Registry registry(shapes);
-		registry.load(file.path());
+		Definition::Registry::Builder builder(shapes);
+		builder.load(file.path());
+		const Definition::Registry registry = builder.build();
 		EXPECT_EQ(registry.size(), 3u);
 		EXPECT_TRUE(registry[0].isAir());
 		EXPECT_TRUE(registry[42].shape() == shapes["cube"]);
@@ -200,8 +203,9 @@ namespace
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		const JSONFile file(Definitions);
-		Definition::Registry registry(shapes);
-		registry.load(file.path());
+		Definition::Registry::Builder builder(shapes);
+		builder.load(file.path());
+		const Definition::Registry registry = builder.build();
 		EXPECT_EQ(registry.tryGet(42), &registry.at(42));
 		EXPECT_EQ(registry.tryGet(7), &registry[7]);
 		EXPECT_FALSE(registry.contains(999));
@@ -220,22 +224,22 @@ namespace
 	TEST(VoxelDefinitionRegistryTest, JSONRejectsUnboundShapesAndUnknownShapeKeys)
 	{
 		const JSONFile file(Definitions);
-		Definition::Registry unbound;
+		Definition::Registry::Builder unbound;
 		EXPECT_THROW(unbound.load(file.path()), spk::Exception);
 		Shape::Registry shapes;
-		Definition::Registry registry(shapes);
-		EXPECT_THROW(registry.load(file.path()), spk::Exception);
+		Definition::Registry::Builder builder(shapes);
+		EXPECT_THROW(builder.load(file.path()), spk::Exception);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, JSONRejectsReservedAndOversizedIDs)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Registry registry(shapes);
+		Definition::Registry::Builder builder(shapes);
 		const JSONFile air(R"({"id":0,"data":{"shape":"cube","slots":{"face":"stone"}}})");
 		const JSONFile oversized(R"({"id":536870912,"data":{"shape":"cube","slots":{"face":"stone"}}})");
-		EXPECT_THROW(registry.load(air.path()), spk::Exception);
-		EXPECT_THROW(registry.load(oversized.path()), spk::Exception);
-		EXPECT_EQ(registry.size(), 1u);
+		EXPECT_THROW(builder.load(air.path()), spk::Exception);
+		EXPECT_THROW(builder.load(oversized.path()), spk::Exception);
+		EXPECT_EQ(builder.build().size(), 1u);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, ProgrammaticAddChecksBoundsAndAir)
@@ -245,21 +249,57 @@ namespace
 		builder.setShape("cube");
 		builder.setSlots({{"face", "stone"}});
 		const Definition stone = builder.build();
-		Definition::Registry registry;
-		registry.add(13, stone);
+		Definition::Registry::Builder builderRegistry;
+		builderRegistry.add(13, stone);
+		const Definition::Registry registry = builderRegistry.build();
 		EXPECT_TRUE(registry[13] == stone);
-		EXPECT_THROW(registry.add(13, stone), spk::Exception);
-		EXPECT_THROW(registry.add(0, stone), spk::Exception);
-		EXPECT_THROW(registry.add(14, Definition::air()), spk::Exception);
+		EXPECT_THROW(builderRegistry.add(13, stone), spk::Exception);
+		EXPECT_THROW(builderRegistry.add(0, stone), spk::Exception);
+		EXPECT_THROW(builderRegistry.add(14, Definition::air()), spk::Exception);
 		EXPECT_EQ(registry.size(), 2u);
+	}
+
+	TEST(VoxelShapeRegistryTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
+	{
+		Shape::Registry::Builder builder;
+		const Shape cube = Shape::Builder{}.build();
+		builder.add("cube", cube);
+		const Shape::Registry first = builder.build();
+		const Shape::Registry copy = first;
+		EXPECT_EQ(&first["cube"], &copy["cube"]);
+		builder.add("slab", Shape::Builder{}.build());
+		const Shape::Registry second = builder.build();
+		EXPECT_FALSE(first.contains("slab"));
+		EXPECT_TRUE(second.contains("slab"));
+		EXPECT_TRUE(first["cube"] == second["cube"]);
+	}
+
+	TEST(VoxelDefinitionRegistryTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
+	{
+		const Shape::Registry shapes = shapeRegistry();
+		Definition::Builder definitionBuilder(shapes);
+		definitionBuilder.setShape("cube");
+		definitionBuilder.setSlots({{"face", "rock"}});
+		Definition::Registry::Builder builder;
+		builder.add(9, definitionBuilder.build());
+		const Definition::Registry first = builder.build();
+		const Definition::Registry copy = first;
+		EXPECT_EQ(&first[9], &copy[9]);
+		definitionBuilder.setSlots({{"face", "glass"}});
+		builder.add(20, definitionBuilder.build());
+		const Definition::Registry second = builder.build();
+		EXPECT_FALSE(first.contains(20));
+		EXPECT_TRUE(second.contains(20));
+		EXPECT_TRUE(first[9] == second[9]);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, LoadedDefinitionsBindToVolumeByNumericID)
 	{
 		const Shape::Registry shapes = shapeRegistry();
 		const JSONFile file(Definitions);
-		Definition::Registry registry(shapes);
-		registry.load(file.path());
+		Definition::Registry::Builder registryBuilder(shapes);
+		registryBuilder.load(file.path());
+		const Definition::Registry registry = registryBuilder.build();
 		Volume::Builder builder({2, 1, 1});
 		builder.bind(registry);
 		builder.set({1, 0, 0}, 42);

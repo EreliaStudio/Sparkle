@@ -1,18 +1,19 @@
 #include "voxel/volume.hpp"
 
-#include <algorithm>
 #include <array>
 #include <filesystem>
 #include <fstream>
 #include <limits>
-#include <unordered_map>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "exception.hpp"
 
 namespace
 {
 	using PackedCell = spk::Voxel::Volume::PackedCell;
+	using Registry = spk::Voxel::Definition::Registry;
 
 	std::size_t checkedCellCount(spk::Vector3UInt dimensions)
 	{
@@ -58,29 +59,6 @@ namespace
 			   (std::uint32_t(bytes[3]) << 24);
 	}
 
-	std::uint32_t localDefinitionIndex(
-		std::vector<spk::Voxel::Definition> &definitions,
-		const spk::Voxel::Definition &definition)
-	{
-		const auto found = std::find(definitions.begin(), definitions.end(), definition);
-		const auto index = static_cast<std::size_t>(found - definitions.begin());
-		if (index == definitions.size())
-		{
-			if (index > PackedCell::MaxDefinitionIndex)
-			{
-				throw spk::Exception("Voxel Volume Definition index exceeds 29-bit capacity");
-			}
-			definitions.push_back(definition);
-		}
-		return static_cast<std::uint32_t>(index);
-	}
-
-	struct DecodedCells
-	{
-		std::vector<std::uint32_t> cells;
-		std::vector<spk::Voxel::Definition> definitions;
-	};
-
 	void validatePackedFileSize(const std::filesystem::path &filename, std::size_t cells)
 	{
 		if (cells > std::numeric_limits<std::uintmax_t>::max() / 4)
@@ -95,10 +73,10 @@ namespace
 		}
 	}
 
-	DecodedCells readPackedFile(
+	std::vector<PackedCell::Storage> readPackedFile(
 		const std::filesystem::path &filename,
 		std::size_t count,
-		const spk::Voxel::Definition::Registry &registry)
+		const Registry &registry)
 	{
 		validatePackedFileSize(filename, count);
 		std::ifstream input(filename, std::ios::binary);
@@ -106,27 +84,18 @@ namespace
 		{
 			throw spk::Exception("Could not open Voxel Volume packed file");
 		}
-		DecodedCells decoded{std::vector<std::uint32_t>(count), {spk::Voxel::Definition::air()}};
-		std::unordered_map<std::uint32_t, std::uint32_t> remapping;
-		for (auto &entry : decoded.cells)
+		std::vector<PackedCell::Storage> cells(count);
+		for (auto &packed : cells)
 		{
-			const auto packed = readPackedWord(input);
-			const auto id = PackedCell::definitionIndex(packed);
-			auto found = remapping.find(id);
-			if (found == remapping.end())
-			{
-				const auto index = localDefinitionIndex(decoded.definitions, registry.at(id));
-				found = remapping.emplace(id, index).first;
-			}
-			entry = PackedCell::encode(found->second, PackedCell::horizontal(packed), PackedCell::vertical(packed));
+			packed = readPackedWord(input);
+			(void)registry.at(PackedCell::definitionId(packed));
 		}
 		if (input.peek() != std::char_traits<char>::eof())
 		{
 			throw spk::Exception("Voxel Volume packed file contains trailing bytes");
 		}
-		return decoded;
+		return cells;
 	}
-
 }
 
 namespace spk::Voxel
@@ -145,22 +114,27 @@ namespace spk::Voxel
 	{
 		const auto packed = _data->cells[cellOffset(position, _data->dimensions)];
 		return Cell(
-			_data->definitions[PackedCell::definitionIndex(packed)],
+			_data->definitions[PackedCell::definitionId(packed)],
 			PackedCell::horizontal(packed),
 			PackedCell::vertical(packed));
 	}
 
 	Volume::Builder::Builder(spk::Vector3UInt dimensions) :
 		_dimensions(dimensions),
-		_cells(checkedCellCount(dimensions), PackedCell::Air),
-		_definitions{Definition::air()}
+		_cells(checkedCellCount(dimensions), PackedCell::Air)
 	{
+	}
+
+	Volume::Builder::Builder(spk::Vector3UInt dimensions, const Definition::Registry &registry) :
+		Builder(dimensions)
+	{
+		bind(registry);
 	}
 
 	Volume::Builder::Builder(const Volume &volume) :
 		_dimensions(volume._data->dimensions),
 		_cells(volume._data->cells),
-		_definitions(volume._data->definitions)
+		_registry(volume._data->definitions)
 	{
 	}
 
@@ -168,9 +142,8 @@ namespace spk::Voxel
 		spk::Vector3UInt dimensions,
 		const std::filesystem::path &filename,
 		const Definition::Registry &registry) :
-		Builder(dimensions)
+		Builder(dimensions, registry)
 	{
-		bind(registry);
 		loadPacked(filename);
 	}
 
@@ -182,35 +155,24 @@ namespace spk::Voxel
 		}
 	}
 
-	std::size_t Volume::Builder::_definitionIndex(const Definition &definition) const noexcept
-	{
-		for (std::size_t index = 0; index < _definitions.size(); ++index)
-		{
-			if (_definitions[index] == definition)
-			{
-				return index;
-			}
-		}
-		return _definitions.size();
-	}
-
 	void Volume::Builder::bind(const Definition::Registry &registry)
 	{
 		_ensureActive();
-		_registry = std::make_shared<const Definition::Registry>(registry);
-	}
-
-	void Volume::Builder::set(spk::Vector3UInt position, Cell cell)
-	{
-		_ensureActive();
-		const auto offset = cellOffset(position, _dimensions);
-		const auto index = _definitionIndex(cell.definition());
-		const auto packed = PackedCell::encode(index, cell.horizontalOrientation(), cell.verticalOrientation());
-		if (index == _definitions.size())
+		for (const auto packed : _cells)
 		{
-			_definitions.push_back(cell.definition());
+			const auto id = PackedCell::definitionId(packed);
+			if (id == 0)
+			{
+				continue;
+			}
+			const auto *current = _registry.tryGet(id);
+			const auto *replacement = registry.tryGet(id);
+			if (!current || !replacement || !(*current == *replacement))
+			{
+				throw spk::Exception("Voxel Volume Registry rebind would change Definition ID " + std::to_string(id));
+			}
 		}
-		_cells[offset] = packed;
+		_registry = registry;
 	}
 
 	void Volume::Builder::set(
@@ -220,11 +182,10 @@ namespace spk::Voxel
 		Cell::VerticalOrientation vertical)
 	{
 		_ensureActive();
-		if (!_registry)
-		{
-			throw spk::Exception("Voxel Volume Builder requires a bound Definition::Registry");
-		}
-		set(position, Cell(_registry->at(definitionId), horizontal, vertical));
+		const auto offset = cellOffset(position, _dimensions);
+		const auto packed = PackedCell::encode(definitionId, horizontal, vertical);
+		(void)_registry.at(definitionId);
+		_cells[offset] = packed;
 	}
 
 	void Volume::Builder::erase(spk::Vector3UInt position)
@@ -236,13 +197,8 @@ namespace spk::Voxel
 	void Volume::Builder::loadPacked(const std::filesystem::path &filename)
 	{
 		_ensureActive();
-		if (!_registry)
-		{
-			throw spk::Exception("Voxel Volume Builder requires a bound Definition::Registry");
-		}
-		auto decoded = readPackedFile(filename, _cells.size(), *_registry);
-		_cells.swap(decoded.cells);
-		_definitions.swap(decoded.definitions);
+		auto decoded = readPackedFile(filename, _cells.size(), _registry);
+		_cells.swap(decoded);
 	}
 
 	Volume Volume::Builder::build()
@@ -250,7 +206,7 @@ namespace spk::Voxel
 		_ensureActive();
 		auto data = std::make_shared<Data>();
 		data->dimensions = _dimensions;
-		data->definitions = std::move(_definitions);
+		data->definitions = _registry;
 		data->cells = std::move(_cells);
 		_consumed = true;
 		return Volume(std::move(data));

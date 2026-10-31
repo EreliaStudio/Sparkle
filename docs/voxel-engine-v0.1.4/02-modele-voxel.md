@@ -26,7 +26,7 @@ classDiagram
     +Builder
     +dimensions fixes
     +cell(position) Cell
-    -grille dense + table locale
+    -grille compacte + registre partagé
   }
   class Model {
     +opaqueMesh()
@@ -91,9 +91,13 @@ Sparkle fournit une **Definition Air prédéfinie**. Elle représente une vraie 
 
 #### Registres de Shapes et de Definitions (PR-02)
 
-`Shape::Registry` associe un **ID texte** (`std::string`) à une `Shape` immuable. `Definition::Registry` associe un **ID numérique non signé sur 29 bits** (`std::uint32_t`, 1 à 2^29 - 1) à une `Definition` immuable ; l'ID numérique **0 est Air**, accessible sans déclaration dans le JSON. Les deux registres héritent de `spk::JSON::Catalog<Element, ID>`, en exploitant son modèle de stockage, ses méthodes `load(file)`, `at`, `operator[]` et la convention `{"elements":[{"id":...,"data":...}]}`. Le type ID explicite est pris en charge par `Catalog` sans rompre les usages existants fondés sur `Element::ID`.
+Les deux registres sont des **snapshots immuables à copies légères**, chacun possédant son `shared_ptr<const Data>` : `Shape::Registry` associe un ID texte (`std::string`) à une `Shape`, tandis que `Definition::Registry` associe un ID numérique non signé (`std::uint32_t`, de 1 à `2^29-1`) à une `Definition`. L'ID **0 désigne implicitement Air** dans `Definition::Registry`.
 
-La construction d'une Definition à partir du JSON est assurée par `Definition::Builder` **lié à un `Shape::Registry`**. Le JSON de Definition contient un champ `shape` avec l'ID texte d'une Shape déjà enregistrée et un objet `slots` associant les slots géométriques aux noms sémantiques. Le Builder récupère la Shape par identité (copie légère), valide l'intégralité de la correspondance, puis construit une nouvelle Definition immuable. Plusieurs Definitions réutilisant la même Shape partagent ainsi les instances orientées de cette Shape. Le registre de Definitions doit être lié à un registre de Shapes via son constructeur ou `bind(shapes)` avant le chargement JSON.
+Leurs modifications sont exclusivement effectuées par `Shape::Registry::Builder` et `Definition::Registry::Builder`. Ces deux Builders **héritent de `spk::JSON::Catalog<Element, ID>`**, réutilisant `load(file)`, `add(id, value)`, les validations et le format `{"elements":[{"id":...,"data":...}]}`. `build()` publie un nouveau registre immuable, sans modifier les snapshots existants ; un Builder peut être réutilisé. Le paramètre ID explicite du catalogue garde la compatibilité avec `Catalog<Element>` et `Element::ID`.
+
+Le stockage d'un registre publié est un `std::unordered_map<ID, Value>` immuable. Une copie du registre partage exactement son bloc `Data`, à coût constant. L'accès par ID est en moyenne en **O(1)**, sans imposer un tableau dense de taille `2^29` ni ajouter un `std::set` (O(log n)). Aucun cache supplémentaire pour le mesher n'est introduit avant mesure de performances.
+
+`Definition::Builder` construit une Definition immuable à partir d'un **`Shape::Registry` publié**, qu'il copie à coût constant. Son JSON contient `shape` (l'ID texte d'une Shape existante) et `slots` (mapping des slots géométriques vers des noms sémantiques) : aucune copie de polygones n'est embarquée dans la Definition. `Definition::Registry::Builder` reçoit également le registre de Shapes afin de charger ces descriptions JSON. Toutes les Definitions associées à la même Shape partagent son identité et ses huit variantes orientées.
 
 Exemple de catalogue de Shapes :
 
@@ -124,7 +128,7 @@ Exemple de catalogue de Definitions utilisant les mêmes Shapes :
 }
 ```
 
-La correspondance des deux identifiants est **intentionnellement distincte** : une Shape est nommée par chaîne, une Definition est référencée par ID numérique dans les volumes binaires. Les IDs externes restent remappés vers les indices compacts locaux du Volume.
+La correspondance des deux identifiants est **intentionnellement distincte** : une Shape est nommée par chaîne, une Definition est référencée par ID numérique dans les volumes binaires. Ces IDs numériques sont conservés **tels quels** dans les cellules compactes ; aucun remappage local n'est effectué.
 
 ### 2.3 `spk::Voxel::Cell` et orientations
 
@@ -136,19 +140,14 @@ Une cellule d'air est une Cell valide, et non `null`, un `optional` vide ou un i
 
 ### 2.4 `spk::Voxel::Volume` : snapshot dense immuable
 
-Un Volume représente une grille **dense et contiguë** de cellules, d'extensions fixes. Chaque position a une entrée, y compris l'air. Pour éviter un `shared_ptr` complet par cellule, le stockage interne repose sur :
+Un Volume représente une grille **dense et contiguë** de cellules, d'extensions fixes, y compris l'air. Chaque cellule occupe **un entier non signé de 32 bits** : 29 bits pour l'**ID directement attribué par `Definition::Registry`**, 2 bits de rotation horizontale et 1 bit d'inversion verticale. L'ID `0` est toujours Air, jamais un sentinel d'absence. Le codec `Volume::PackedCell` réalise ce stockage ; l'API `cell(position)` reconstruit une `Cell` publique par valeur.
 
-1. une **table locale de Definitions** partageant leurs blocs Data ;
-2. une grille compacte d'indices vers cette table, avec l'orientation de chaque cellule.
+Un Volume contient une **copie légère de `Definition::Registry` immuable**, donc une référence partagée à ses données. Il ne possède **aucune table locale d'indices ou de Definitions**. Plusieurs Volumes utilisant le même registre partagent ses Definitions à coût constant. Des IDs distincts associés à la même Definition gardent leurs IDs distincts dans la grille et conservent la même identité de Definition à la lecture. Il n'existe pas de `span<const Cell>` vers le stockage compact.
 
-**Décision A confirmée lors de la review de PR-02 :** chaque emplacement reste encodé sur **un entier non signé de 32 bits** comprenant **29 bits d'index local de Definition, 2 bits de rotation horizontale et 1 bit d'inversion verticale**. Le Volume ne stocke **pas** directement de `std::vector<Cell>`. L'encodage est regroupé dans `Volume::PackedCell` ; la lecture reconstitue une `Cell` publique complète par valeur. Les IDs externes d'un `Definition::Registry` utilisés lors du chargement d'un fichier packed sont convertis en indices propres au Volume ; ils ne constituent pas des indices universels.
+`Volume::Builder` accepte des dimensions et un `Definition::Registry` publié (ou uniquement des dimensions pour initialiser un Volume entièrement Air), ou un `const Volume&` existant. La grille est modifiée avec **`set(position, definitionId, horizontal, vertical)`**, dont les paramètres d'orientation ont une valeur par défaut, ou `erase(position)`. **`set(position, Cell)` est supprimé** : une Cell arbitraire ne fournit pas un ID unique, particulièrement si plusieurs IDs pointent vers la même Definition. Tout ID utilisé doit exister dans le registre lié au Builder, sauf Air `0`. Les dimensions ne changent jamais ; les limites, la capacité 29 bits et les allocations sont vérifiées.
 
-L'index interne `0` est **toujours réservé à Air**. Une Cell d'air référence l'entrée `0`, jamais un sentinel d'absence.
+Le Builder peut recevoir un nouveau snapshot de registre via `bind(registry)` ; si des IDs non-Air sont déjà utilisés dans sa grille, leur Definition doit conserver **la même identité** dans le nouveau registre, sinon `bind` échoue sans modification de l'état. `Volume::Builder(volume)` reprend directement le registre immuable du Volume existant. Un `build()` réussi publie un nouveau snapshot immuable et consomme le Builder ; toute exception doit le laisser réutilisable.
 
-La table locale déduplique une Definition **par identité de `Definition::Data`**, pas par comparaison profonde de contenu. Deux copies d'une même Definition partagent donc un index ; deux Definitions indépendantes au contenu identique peuvent occuper deux entrées. La lecture publique `cell(position)` reconstitue une **Cell par valeur** et n'expose pas les indices ni une référence vers le stockage compact. Ne pas promettre un `span<const Cell>` vers la grille.
+L'import brut `loadPacked(filename)` ou le constructeur `Builder(dimensions, filename, registry)` lit des mots little-endian de quatre octets, sans en-tête ni dimensions encodées, avec l'ordre X puis Y puis Z. Les **29 bits sont déjà les IDs du registre** : aucune déduplication, aucune création de table locale ni conversion n'est nécessaire. Chaque ID est validé contre le registre avant publication ; un fichier incomplet, surdimensionné, illisible ou contenant un ID inconnu ne modifie pas le Builder. Un fichier binaire et son registre correspondant doivent toujours être fournis ensemble.
 
-`Volume::Builder` peut être initialisé depuis les dimensions d'une nouvelle grille entièrement remplie d'air ou depuis un `const Volume&` existant. Il propose des opérations de remplacement `set(position, Cell)` et de remise à l'air `erase(position)` ; les noms exacts peuvent être ajustés. **Ses dimensions ne changent jamais** : pas de `resize()` ni d'expansion implicite. Les accès hors limites sont invalides. Le produit des dimensions, les tailles d'indices et les allocations doivent être vérifiés avant tout débordement.
-
-Un build réussi publie un **nouveau snapshot immuable**, à copies légères, sans modifier d'anciens Volumes, puis consomme le Builder. Toute exception pendant `build()` laisse l'intégralité de son état inchangé et réutilisable. L'implémentation peut partager des données entre snapshots seulement si cela ne permet aucune mutation rétroactive.
-
-Les classes Shape, Definition, Cell et Volume fonctionnent **sans Engine ni OpenGL**.
+L'architecture garantit une lecture moyenne en O(1) par ID via `unordered_map`; une éventuelle optimisation spécifique au mesher attendra une mesure effective, sans complexité anticipée. Les classes Shape, Definition, Cell et Volume fonctionnent **sans Engine ni OpenGL**.

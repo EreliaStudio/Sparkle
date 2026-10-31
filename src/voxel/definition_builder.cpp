@@ -7,7 +7,7 @@
 namespace spk::Voxel
 {
 	Definition::Builder::Builder(const Shape::Registry &shapes) :
-		_shapes(std::make_shared<const Shape::Registry>(shapes))
+		_shapes(shapes)
 	{
 	}
 
@@ -19,7 +19,7 @@ namespace spk::Voxel
 
 	void Definition::Builder::setShape(std::string_view id)
 	{
-		_shape = _shapes->at(std::string(id));
+		_shape = _shapes.at(std::string(id));
 	}
 
 	void Definition::Builder::setSlots(SlotMapping slots)
@@ -31,7 +31,7 @@ namespace spk::Voxel
 	{
 		spk::JSON::Reader reader(value, "<definition>");
 		reader.forbidUnknown({"shape", "slots"});
-		Shape shape = _shapes->at(reader.require<std::string>("shape"));
+		Shape shape = _shapes.at(reader.require<std::string>("shape"));
 		SlotMapping slots;
 		for (const auto &[name, target] : reader.child("slots").value().asObject())
 		{
