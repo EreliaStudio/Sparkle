@@ -205,7 +205,7 @@ namespace
 					(static_cast<float>(x) + 0.37f) / resolution,
 					(static_cast<float>(y) + 0.63f) / resolution};
 				bool blocked = false;
-				for (const auto &polygon : blocker.instance(blockerOrientation).polygons())
+				for (const auto &polygon : blocker.instance(blockerOrientation).triangles())
 				{
 					if (polygon.shell == Shape::Shell::Outer && polygon.boundary == opposite(face) &&
 						polygon.geometricNormal.dot(offset(face)) < 0 && inside(polygon, face, sample))
@@ -217,7 +217,7 @@ namespace
 				{
 					continue;
 				}
-				for (const auto &polygon : source.instance(sourceOrientation).polygons())
+				for (const auto &polygon : source.instance(sourceOrientation).triangles())
 				{
 					if (polygon.shell == Shape::Shell::Outer && polygon.boundary == face && inside(polygon, face, sample))
 					{

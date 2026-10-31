@@ -122,7 +122,7 @@ namespace
 			result.source[direction].resize(Samples);
 			result.blocker[direction].resize(Samples);
 		}
-		for (const auto &polygon : shape.instance(orientation).polygons())
+		for (const auto &polygon : shape.instance(orientation).triangles())
 		{
 			if (polygon.shell != Shape::Shell::Outer || !polygon.boundary)
 			{
@@ -192,7 +192,7 @@ namespace
 	float boundaryArea(const Shape &shape, Shape::Orientation orientation, Face direction)
 	{
 		std::vector<Shape::Polygon> polygons;
-		for (const auto &polygon : shape.instance(orientation).polygons())
+		for (const auto &polygon : shape.instance(orientation).triangles())
 		{
 			if (polygon.shell == Shape::Shell::Outer && polygon.boundary == direction)
 			{

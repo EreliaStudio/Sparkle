@@ -67,7 +67,7 @@ namespace
 	static_assert(std::is_copy_constructible_v<Shape>);
 	static_assert(std::is_copy_constructible_v<Definition>);
 	static_assert(std::is_copy_constructible_v<Cell>);
-	static_assert(std::is_same_v<decltype(std::declval<const Shape::Instance &>().polygons()), const std::vector<Shape::Polygon> &>);
+	static_assert(std::is_same_v<decltype(std::declval<const Shape::Instance &>().triangles()), const std::vector<Shape::Polygon> &>);
 	static_assert(std::is_same_v<decltype(std::declval<const Definition &>().shape()), const Shape &>);
 
 	TEST(VoxelShapeTest, EmptyIsValidAndDistinctFromOtherConstructions)
@@ -97,15 +97,15 @@ namespace
 		builder.addPolygon("glass", {vertex(0.2f, 0.1f, 0.2f), vertex(0.8f, 0.1f, 0.2f), vertex(0.5f, 0.7f, 0.2f)});
 		const Shape shape = builder.build();
 		const Definition definition(shape, {{"wall", {"wall"}}, {"glass", {"glass", 0.25f}}});
-		ASSERT_EQ(shape.instance().polygons().size(), 2u);
+		ASSERT_EQ(shape.instance().triangles().size(), 3u);
 		EXPECT_FLOAT_EQ(definition.opacity("wall"), 1.0f);
 		EXPECT_FLOAT_EQ(definition.opacity("glass"), 0.25f);
-		EXPECT_EQ(shape.instance().polygons()[0].shell, Shape::Shell::Outer);
-		EXPECT_EQ(shape.instance().polygons()[0].boundary, Shape::Face::NegativeX);
-		EXPECT_EQ(shape.instance().polygons()[1].shell, Shape::Shell::Inner);
-		EXPECT_FALSE(shape.instance().polygons()[1].boundary.has_value());
-		EXPECT_EQ(shape.instance().polygons()[0].geometricNormal, spk::Vector3(-1.0f, 0.0f, 0.0f));
-		EXPECT_EQ(shape.instance().polygons()[0].vertices[2].normal.value(), spk::Vector3(-1.0f, 0.0f, 0.0f));
+		EXPECT_EQ(shape.instance().triangles()[0].shell, Shape::Shell::Outer);
+		EXPECT_EQ(shape.instance().triangles()[0].boundary, Shape::Face::NegativeX);
+		EXPECT_EQ(shape.instance().triangles()[2].shell, Shape::Shell::Inner);
+		EXPECT_FALSE(shape.instance().triangles()[2].boundary.has_value());
+		EXPECT_EQ(shape.instance().triangles()[0].geometricNormal, spk::Vector3(-1.0f, 0.0f, 0.0f));
+		EXPECT_EQ(shape.instance().triangles()[0].vertices[2].normal.value(), spk::Vector3(-1.0f, 0.0f, 0.0f));
 	}
 
 	TEST(VoxelShapeTest, BuilderValidationIsAtomicForInvalidSlotsAndPolygons)
@@ -131,7 +131,7 @@ namespace
 		EXPECT_THROW(builder.addPolygon("a", invalidNormal), spk::Exception);
 		const Shape shape = builder.build();
 		EXPECT_EQ(shape.slots().size(), 1u);
-		EXPECT_TRUE(shape.instance().polygons().empty());
+		EXPECT_TRUE(shape.instance().triangles().empty());
 	}
 
 	TEST(VoxelShapeTest, UVOutOfRangeWarnsOnceAtConstructionAndRetainsCoordinates)
@@ -152,8 +152,8 @@ namespace
 		builder.addPolygon("wall", vertices);
 		const Shape shape = builder.build();
 		ASSERT_EQ(warnings, 1);
-		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].uv, spk::Vector2(-1.0f, 2.0f));
-		(void)shape.instance().polygons();
+		EXPECT_EQ(shape.instance().triangles()[0].vertices[0].uv, spk::Vector2(-1.0f, 2.0f));
+		(void)shape.instance().triangles();
 		EXPECT_EQ(warnings, 1);
 	}
 
@@ -172,7 +172,7 @@ namespace
 		EXPECT_TRUE(first.shape() == second.shape());
 		EXPECT_EQ(first.slot("wall").name, "stone");
 		EXPECT_EQ(second.semanticSlot("wall"), "glass");
-		EXPECT_EQ(first.shape().instance().polygons().size(), 1u);
+		EXPECT_EQ(first.shape().instance().triangles().size(), 2u);
 		EXPECT_THROW(first.semanticSlot("none"), spk::Exception);
 	}
 
@@ -204,7 +204,7 @@ namespace
 		EXPECT_TRUE(air.isAir());
 		EXPECT_TRUE(explicitAir.isAir());
 		EXPECT_TRUE(air.definition() == Definition::air());
-		EXPECT_TRUE(air.definition().shape().instance().polygons().empty());
+		EXPECT_TRUE(air.definition().shape().instance().triangles().empty());
 		EXPECT_EQ(air.horizontalOrientation(), Cell::HorizontalOrientation::XPositive);
 		EXPECT_EQ(air.verticalOrientation(), Cell::VerticalOrientation::YPositive);
 	}
@@ -218,7 +218,7 @@ namespace
 			EXPECT_TRUE(cell.definition() == definition);
 			EXPECT_EQ(cell.horizontalOrientation(), Orientations[index].horizontal);
 			EXPECT_EQ(cell.verticalOrientation(), Orientations[index].vertical);
-			EXPECT_EQ(cell.definition().shape().instance().polygons().size(), 1u);
+			EXPECT_EQ(cell.definition().shape().instance().triangles().size(), 2u);
 		}
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::XPositive), 0u);
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZNegative), 90u);
@@ -230,38 +230,39 @@ namespace
 	{
 		const Shape shape = makeSquare();
 		const Shape copy = shape;
+		const auto source = square();
 		for (const auto &entry : Orientations)
 		{
 			const Shape::Orientation orientation{entry.horizontal, entry.vertical};
-			const auto &instance = shape.instance(orientation);
-			ASSERT_EQ(instance.polygons().size(), 1u);
-			ASSERT_EQ(instance.triangles().size(), 2u);
-			EXPECT_EQ(&instance.triangles(), &copy.instance(orientation).triangles());
-			const auto &source = instance.polygons()[0];
-			for (std::size_t i = 0; i < instance.triangles().size(); ++i)
+			const auto &triangles = shape.instance(orientation).triangles();
+			ASSERT_EQ(triangles.size(), 2u);
+			EXPECT_EQ(&triangles, &copy.instance(orientation).triangles());
+			EXPECT_EQ(triangles[0].vertices[0].position, triangles[1].vertices[0].position);
+			EXPECT_EQ(triangles[0].vertices[2].position, triangles[1].vertices[1].position);
+			float totalArea = 0.0f;
+			for (const auto &triangle : triangles)
 			{
-				const auto &triangle = instance.triangles()[i];
 				ASSERT_EQ(triangle.vertices.size(), 3u);
-				EXPECT_EQ(triangle.slotKey, source.slotKey);
-				EXPECT_EQ(triangle.boundary, source.boundary);
-				EXPECT_EQ(triangle.shell, source.shell);
-				EXPECT_EQ(triangle.geometricNormal, source.geometricNormal);
-				for (std::size_t j = 0; j < 3; ++j)
-				{
-					const auto &expected = source.vertices[j == 0 ? 0 : i + j];
-					const auto &actual = triangle.vertices[j];
-					EXPECT_EQ(actual.position, expected.position);
-					EXPECT_EQ(actual.uv, expected.uv);
-					EXPECT_EQ(actual.normal, expected.normal);
-				}
+				EXPECT_EQ(triangle.slotKey, "wall");
+				EXPECT_EQ(triangle.shell, Shape::Shell::Outer);
+				EXPECT_EQ(triangle.boundary, triangles[0].boundary);
 				const auto a = triangle.vertices[1].position - triangle.vertices[0].position;
 				const auto b = triangle.vertices[2].position - triangle.vertices[0].position;
 				EXPECT_GT(a.cross(b).dot(triangle.geometricNormal), 0.0f);
+				totalArea += static_cast<float>(a.cross(b).length()) * 0.5f;
+				for (const auto &vertex : triangle.vertices)
+				{
+					EXPECT_TRUE(std::any_of(source.begin(), source.end(), [&](const Shape::Vertex &original) {
+						return original.uv == vertex.uv;
+					}));
+					EXPECT_EQ(vertex.normal, triangle.geometricNormal);
+				}
 			}
+			EXPECT_NEAR(totalArea, 1.0f, 1.0e-5f);
 		}
 	}
 
-	TEST(VoxelShapeTest, ConvexPentagonProducesThreeTrianglesWithoutChangingOriginalPolygon)
+	TEST(VoxelShapeTest, ConvexPentagonProducesThreePrecomputedTriangles)
 	{
 		Shape::Builder builder;
 		builder.addSlot("pentagon");
@@ -276,14 +277,14 @@ namespace
 		for (const auto &entry : Orientations)
 		{
 			const Shape::Orientation orientation{entry.horizontal, entry.vertical};
-			const auto &instance = shape.instance(orientation);
-			ASSERT_EQ(instance.polygons().size(), 1u);
-			EXPECT_EQ(instance.polygons()[0].vertices.size(), 5u);
-			ASSERT_EQ(instance.triangles().size(), 3u);
-			for (const auto &triangle : instance.triangles())
+			const auto &triangles = shape.instance(orientation).triangles();
+			ASSERT_EQ(triangles.size(), 3u);
+			for (const auto &triangle : triangles)
 			{
 				EXPECT_EQ(triangle.vertices.size(), 3u);
-				EXPECT_EQ(triangle.boundary, instance.polygons()[0].boundary);
+				EXPECT_EQ(triangle.slotKey, "pentagon");
+				EXPECT_EQ(triangle.boundary, triangles[0].boundary);
+				EXPECT_EQ(triangle.geometricNormal, triangles[0].geometricNormal);
 			}
 		}
 	}
@@ -308,12 +309,12 @@ namespace
 			const auto &instance = shape.instance(orientation);
 			EXPECT_EQ(&instance, &copied.instance(orientation));
 			EXPECT_NE(&instance, &independent.instance(orientation));
-			ASSERT_EQ(instance.polygons().size(), 1u);
-			const auto &polygon = instance.polygons()[0];
+			ASSERT_EQ(instance.triangles().size(), 2u);
+			const auto &polygon = instance.triangles()[0];
 			EXPECT_EQ(polygon.boundary, expectedFaces[index]);
 			EXPECT_EQ(polygon.shell, Shape::Shell::Outer);
 			EXPECT_EQ(polygon.slotKey, "wall");
-			ASSERT_EQ(polygon.vertices.size(), 4u);
+			ASSERT_EQ(polygon.vertices.size(), 3u);
 			const auto edgeA = polygon.vertices[1].position - polygon.vertices[0].position;
 			const auto edgeB = polygon.vertices[2].position - polygon.vertices[0].position;
 			EXPECT_GT(edgeA.cross(edgeB).dot(polygon.geometricNormal), 0.0f);
@@ -346,9 +347,9 @@ namespace
 		builder.addPolygon("face", top);
 		builder.addPolygon("face", bottom);
 		const Shape shape = builder.build();
-		const auto &original = shape.instance().polygons();
+		const auto &original = shape.instance().triangles();
 		const Shape::Orientation flippedOrientation{Shape::HorizontalOrientation::XPositive, Shape::VerticalOrientation::YNegative};
-		const auto &flipped = shape.instance(flippedOrientation).polygons();
+		const auto &flipped = shape.instance(flippedOrientation).triangles();
 		ASSERT_EQ(flipped.size(), 2u);
 		EXPECT_EQ(original[0].boundary, Shape::Face::PositiveY);
 		EXPECT_EQ(original[1].boundary, Shape::Face::NegativeY);
@@ -411,8 +412,8 @@ namespace
 			const auto &firstInstance = first.definition().shape().instance(orientation);
 			const auto &secondInstance = second.definition().shape().instance(orientation);
 			EXPECT_EQ(&firstInstance, &secondInstance);
-			ASSERT_EQ(firstInstance.polygons().size(), 1u);
-			EXPECT_EQ(firstInstance.polygons()[0].slotKey, "wall");
+			ASSERT_EQ(firstInstance.triangles().size(), 2u);
+			EXPECT_EQ(firstInstance.triangles()[0].slotKey, "wall");
 			EXPECT_EQ(first.definition().semanticSlot("wall"), "stone");
 			EXPECT_EQ(second.definition().semanticSlot("wall"), "glass");
 		}
@@ -439,9 +440,9 @@ namespace
 			const auto &cached = published.instance(orientation);
 			EXPECT_EQ(&cached, addresses[index]);
 			EXPECT_NE(&next.instance(orientation), addresses[index]);
-			ASSERT_EQ(cached.polygons().size(), 1u);
-			EXPECT_EQ(cached.polygons()[0].slotKey, "wall");
-			EXPECT_EQ(next.instance(orientation).polygons().size(), 1u);
+			ASSERT_EQ(cached.triangles().size(), 2u);
+			EXPECT_EQ(cached.triangles()[0].slotKey, "wall");
+			EXPECT_EQ(next.instance(orientation).triangles().size(), 2u);
 		}
 	}
 
@@ -458,9 +459,9 @@ namespace
 			EXPECT_EQ(stored, &survivor.instance(orientation));
 		}
 		EXPECT_EQ(stored, &survivor.instance(orientation));
-		ASSERT_EQ(stored->polygons().size(), 1u);
-		EXPECT_EQ(stored->polygons()[0].slotKey, "wall");
-		EXPECT_EQ(stored->polygons()[0].boundary, Shape::Face::PositiveZ);
+		ASSERT_EQ(stored->triangles().size(), 2u);
+		EXPECT_EQ(stored->triangles()[0].slotKey, "wall");
+		EXPECT_EQ(stored->triangles()[0].boundary, Shape::Face::PositiveZ);
 	}
 
 	TEST(VoxelShapeTest, CachedInstancesSupportConcurrentReaders)
@@ -483,8 +484,8 @@ namespace
 				for (unsigned iteration = 0; iteration < 512; ++iteration)
 				{
 					const auto &instance = (iteration % 2 == 0 ? shape : copied).instance(orientation);
-					if (&instance != expected[index] || instance.polygons().size() != 1u ||
-						instance.polygons()[0].slotKey != "wall")
+					if (&instance != expected[index] || instance.triangles().size() != 2u ||
+						instance.triangles()[0].slotKey != "wall")
 					{
 						consistent.store(false, std::memory_order_relaxed);
 						break;
@@ -539,7 +540,7 @@ namespace
 		{
 			SCOPED_TRACE(index);
 			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
-			const auto &polygons = shape.instance(orientation).polygons();
+			const auto &polygons = shape.instance(orientation).triangles();
 			ASSERT_EQ(polygons.size(), 1u);
 			const auto &polygon = polygons[0];
 			ASSERT_EQ(polygon.vertices.size(), 3u);
@@ -588,10 +589,10 @@ namespace
 			const auto &instance = original.instance(orientation);
 			EXPECT_EQ(&instance, before[index]);
 			EXPECT_EQ(&originalCopy.instance(orientation), before[index]);
-			ASSERT_EQ(instance.polygons().size(), 1u);
-			EXPECT_EQ(instance.polygons()[0].slotKey, "first");
-			EXPECT_EQ(extended.instance(orientation).polygons().size(), 2u);
-			EXPECT_EQ(repeated.instance(orientation).polygons().size(), 2u);
+			ASSERT_EQ(instance.triangles().size(), 2u);
+			EXPECT_EQ(instance.triangles()[0].slotKey, "first");
+			EXPECT_EQ(extended.instance(orientation).triangles().size(), 4u);
+			EXPECT_EQ(repeated.instance(orientation).triangles().size(), 4u);
 		}
 	}
 
@@ -606,7 +607,7 @@ namespace
 			const auto &instance = empty.instance(orientation);
 			addresses[index] = &instance;
 			EXPECT_TRUE(instance.empty());
-			EXPECT_TRUE(instance.polygons().empty());
+			EXPECT_TRUE(instance.triangles().empty());
 			EXPECT_EQ(addresses[index], &copied.instance(orientation));
 			for (std::size_t previous = 0; previous < index; ++previous)
 			{
@@ -635,16 +636,16 @@ namespace
 		std::reverse(reversed.begin(), reversed.end());
 		builder.addPolygon("sheet", reversed);
 		const Shape shape = builder.build();
-		ASSERT_EQ(shape.instance().polygons().size(), 3u);
+		ASSERT_EQ(shape.instance().triangles().size(), 6u);
 		ASSERT_EQ(shape.slots().size(), 1u);
 		const Definition definition(shape, {{"sheet", {"stone"}}});
-		for (const auto &polygon : shape.instance().polygons())
+		for (const auto &polygon : shape.instance().triangles())
 		{
 			EXPECT_EQ(polygon.slotKey, "sheet");
 			EXPECT_EQ(definition.semanticSlot(polygon.slotKey), "stone");
 		}
-		EXPECT_EQ(shape.instance().polygons()[0].geometricNormal, shape.instance().polygons()[1].geometricNormal);
-		EXPECT_EQ(shape.instance().polygons()[0].geometricNormal, -shape.instance().polygons()[2].geometricNormal);
+		EXPECT_EQ(shape.instance().triangles()[0].geometricNormal, shape.instance().triangles()[2].geometricNormal);
+		EXPECT_EQ(shape.instance().triangles()[0].geometricNormal, -shape.instance().triangles()[4].geometricNormal);
 	}
 
 }
