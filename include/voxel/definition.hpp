@@ -19,6 +19,7 @@ namespace spk::Voxel
 		class Registry;
 
 		using SlotMapping = std::unordered_map<std::string, std::string>;
+		using OpacityMapping = std::unordered_map<std::string, float>;
 
 	private:
 		struct Data;
@@ -26,11 +27,12 @@ namespace spk::Voxel
 
 	public:
 		Definition();
-		Definition(Shape shape, SlotMapping mapping);
+		Definition(Shape shape, SlotMapping mapping, OpacityMapping opacity = {});
 
 		[[nodiscard]] static const Definition &air();
 		[[nodiscard]] const Shape &shape() const noexcept;
 		[[nodiscard]] const SlotMapping &slots() const noexcept;
+		[[nodiscard]] float opacity(std::string_view geometricKey) const;
 		[[nodiscard]] const std::string &semanticSlot(std::string_view geometricKey) const;
 		[[nodiscard]] bool operator==(const Definition &other) const noexcept;
 		[[nodiscard]] bool isAir() const noexcept;
@@ -42,6 +44,7 @@ namespace spk::Voxel
 		Shape::Registry _shapes;
 		std::optional<Shape> _shape;
 		SlotMapping _slots;
+		OpacityMapping _opacity;
 
 	public:
 		Builder() = default;
@@ -49,6 +52,7 @@ namespace spk::Voxel
 
 		void setShape(std::string_view id);
 		void setSlots(SlotMapping slots);
+		void setOpacity(std::string_view geometricKey, float opacity);
 		void addFromJSON(const spk::JSON::Value &value);
 		[[nodiscard]] Definition build() const;
 	};
