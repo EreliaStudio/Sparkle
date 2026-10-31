@@ -147,10 +147,7 @@ TEST(VoxelOcclusion, ConcurrentCacheGet)
 	std::vector<std::future<Result>> jobs;
 	for (int i = 0; i < 16; ++i)
 	{
-		jobs.push_back(std::async(std::launch::async, [&]
-								 {
-									 return cache.get(k);
-								 }));
+		jobs.push_back(std::async(std::launch::async, [&] { return cache.get(k); }));
 	}
 	for (auto &job : jobs)
 	{
@@ -198,9 +195,7 @@ TEST(VoxelOcclusion, ConcurrentGetAndClear)
 	std::vector<std::future<void>> jobs;
 	for (int worker = 0; worker < 8; ++worker)
 	{
-		jobs.push_back(std::async(std::launch::async, [&, worker]
-								 {
-									 for (int i = 0; i < 100; ++i)
+		jobs.push_back(std::async(std::launch::async, [&, worker] {									 for (int i = 0; i < 100; ++i)
 									 {
 										 if (worker == 0)
 										 {
@@ -215,7 +210,7 @@ TEST(VoxelOcclusion, ConcurrentGetAndClear)
 											 }
 										 }
 									 }
-								 }));
+								 		}));
 	}
 	for (auto &job : jobs)
 	{
@@ -228,13 +223,9 @@ TEST(VoxelOcclusion, AllEightOrientationsAreDeterministic)
 	auto a = shape(1);
 	auto b = shape(0, 0, 0.5f, 1, false);
 	Cache cache;
-	for (auto horizontal : {Shape::HorizontalOrientation::XPositive,
-							Shape::HorizontalOrientation::ZPositive,
-							Shape::HorizontalOrientation::XNegative,
-							Shape::HorizontalOrientation::ZNegative})
+	for (auto horizontal : {Shape::HorizontalOrientation::XPositive, Shape::HorizontalOrientation::ZPositive, Shape::HorizontalOrientation::XNegative, Shape::HorizontalOrientation::ZNegative})
 	{
-		for (auto vertical : {Shape::VerticalOrientation::YPositive,
-							  Shape::VerticalOrientation::YNegative})
+		for (auto vertical : {Shape::VerticalOrientation::YPositive, Shape::VerticalOrientation::YNegative})
 		{
 			auto k = key(a, b);
 			k.sourceOrientation = {horizontal, vertical};
