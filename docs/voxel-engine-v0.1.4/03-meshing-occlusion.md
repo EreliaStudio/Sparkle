@@ -53,7 +53,7 @@ La visibilité entre deux cellules adjacentes est calculée en géométrie flott
 Pour une face de la cellule A, la couverture de la cellule B n'est occultante que pour ses polygones qui remplissent **simultanément** ces conditions :
 
 1. le polygone appartient à `outerShell` sur la frontière correspondante ;
-2. son **slot local de Shape** possède `opacity == 1.0` ;
+2. son **`Definition::Slot` associé au slot géométrique** possède `opacity == 1.0` ;
 3. sa **face avant géométrique** est tournée vers la cellule A.
 
 Le canal alpha de `albedo`, les normales personnalisées d'éclairage, et les faces `innerShell` n'entrent jamais dans cette décision. Une texture trouée peut donc afficher visuellement un trou alors que son slot d'opacité 1 a été traité comme occultant : il appartient à l'auteur de la géométrie et des matériaux de ne pas introduire cette incohérence.
@@ -90,7 +90,7 @@ Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et 
 
 Une entrée représente **une requête directionnelle A → B** : quels fragments de l'`outerShell` de A restent visibles après occultation par B ? Le sens **B → A** constitue une autre requête, une autre clé et éventuellement un autre résultat. Une valeur valide contenant zéro fragment signifie **occlusion totale**, tandis que l'absence d'entrée est représentée par `std::nullopt`.
 
-La clé identifie les blocs immuables `Shape::Data` des deux cellules, leurs orientations, la direction du voisinage, les contrats géométriques d'opacité pertinents et la tolérance de clipping. L'identité de Shape vient du Data partagé, **pas d'un hash de contenu ni d'un identifiant artificiel**. Les clés conservent une propriété partagée suffisante sur ces Data pour empêcher le recyclage d'adresse de créer de fausses correspondances. Les slots sémantiques de Model et les matériaux concrets n'entrent pas dans l'identité d'un résultat si les contrats géométriques sont équivalents.
+La clé conserve les deux `Definition` immuables par valeur (copies légères), leurs orientations, la direction du voisinage et la tolérance de clipping. Deux Definitions partageant la même Shape mais définissant des opacités différentes ont des identités distinctes : leurs résultats d'occlusion ne sont pas confondus. Les objets conservés par la clé garantissent la durée de vie de leurs Shapes et évitent les faux résultats causés par le recyclage d'adresses. Les Materials concrets ne participent jamais au calcul.
 
 `OcclusionResult` est une valeur immuable, à copie légère, contenant les **fragments visibles de A dans le repère local de la Shape A**, leurs UV, leurs attributs et leurs **slots géométriques locaux**. Il ne contient ni indices des slots du Model ni pointeurs vers une palette. Après lecture ou calcul de l'occlusion, le Mesher applique le mapping de la Definition et le placement dans le Volume ; la géométrie utilisée est déjà orientée.
 
