@@ -82,12 +82,14 @@ namespace spk::Voxel
 		{
 		private:
 			std::vector<Polygon> _polygons;
+			std::vector<Polygon> _triangles;
 
 		public:
 			Instance() = default;
 			explicit Instance(std::vector<Polygon> polygons);
 
 			[[nodiscard]] const std::vector<Polygon> &polygons() const noexcept;
+			[[nodiscard]] const std::vector<Polygon> &triangles() const noexcept;
 			[[nodiscard]] bool empty() const noexcept;
 		};
 

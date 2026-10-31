@@ -259,7 +259,7 @@ namespace spk::Voxel
 						}
 						else
 						{
-							for (const auto &polygon : instance.polygons())
+							for (const auto &polygon : instance.triangles())
 							{
 								if (polygon.shell == Shape::Shell::Outer && polygon.boundary == face)
 								{
@@ -270,7 +270,7 @@ namespace spk::Voxel
 					}
 					if (!closed)
 					{
-						for (const auto &polygon : instance.polygons())
+						for (const auto &polygon : instance.triangles())
 						{
 							if (polygon.shell == Shape::Shell::Inner)
 							{

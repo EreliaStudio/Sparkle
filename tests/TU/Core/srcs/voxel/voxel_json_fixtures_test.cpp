@@ -195,6 +195,45 @@ namespace
 		}
 	}
 
+	TEST(VoxelShapeFixtureTest, EveryFixturePrecomputesEquivalentTrianglesForAllOrientations)
+	{
+		for (const Fixture &fixture : Fixtures)
+		{
+			const Shape shape = fixtureShape(fixture.name);
+			for (unsigned flipped = 0; flipped < 2; ++flipped)
+			{
+				for (unsigned degrees = 0; degrees < 360; degrees += 90)
+				{
+					const Shape::Orientation orientation{
+						static_cast<Shape::HorizontalOrientation>(degrees),
+						flipped ? Shape::VerticalOrientation::YNegative : Shape::VerticalOrientation::YPositive};
+					const auto &instance = shape.instance(orientation);
+					std::size_t triangleIndex = 0;
+					for (const auto &polygon : instance.polygons())
+					{
+						for (std::size_t i = 1; i + 1 < polygon.vertices.size(); ++i)
+						{
+							ASSERT_LT(triangleIndex, instance.triangles().size());
+							const auto &triangle = instance.triangles()[triangleIndex++];
+							EXPECT_EQ(triangle.slotKey, polygon.slotKey);
+							EXPECT_EQ(triangle.shell, polygon.shell);
+							EXPECT_EQ(triangle.boundary, polygon.boundary);
+							EXPECT_EQ(triangle.geometricNormal, polygon.geometricNormal);
+							const std::array<std::size_t, 3> indices{0, i, i + 1};
+							for (std::size_t j = 0; j < 3; ++j)
+							{
+								EXPECT_EQ(triangle.vertices[j].position, polygon.vertices[indices[j]].position);
+								EXPECT_EQ(triangle.vertices[j].uv, polygon.vertices[indices[j]].uv);
+								EXPECT_EQ(triangle.vertices[j].normal, polygon.vertices[indices[j]].normal);
+							}
+						}
+					}
+					EXPECT_EQ(triangleIndex, instance.triangles().size());
+				}
+			}
+		}
+	}
+
 	TEST(VoxelShapeFixtureTest, CubeKeepsSixDistinctBoundariesInEveryOrientation)
 	{
 		const Shape cube = fixtureShape("cube");

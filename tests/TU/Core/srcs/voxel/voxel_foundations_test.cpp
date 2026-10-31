@@ -226,6 +226,67 @@ namespace
 		EXPECT_EQ(static_cast<unsigned>(Cell::HorizontalOrientation::ZPositive), 270u);
 	}
 
+	TEST(VoxelShapeTest, OrientedInstancesExposePrecomputedTrianglesWithOriginalMetadata)
+	{
+		const Shape shape = makeSquare();
+		const Shape copy = shape;
+		for (const auto &entry : Orientations)
+		{
+			const Shape::Orientation orientation{entry.horizontal, entry.vertical};
+			const auto &instance = shape.instance(orientation);
+			ASSERT_EQ(instance.polygons().size(), 1u);
+			ASSERT_EQ(instance.triangles().size(), 2u);
+			EXPECT_EQ(&instance.triangles(), &copy.instance(orientation).triangles());
+			const auto &source = instance.polygons()[0];
+			for (std::size_t i = 0; i < instance.triangles().size(); ++i)
+			{
+				const auto &triangle = instance.triangles()[i];
+				ASSERT_EQ(triangle.vertices.size(), 3u);
+				EXPECT_EQ(triangle.slotKey, source.slotKey);
+				EXPECT_EQ(triangle.boundary, source.boundary);
+				EXPECT_EQ(triangle.shell, source.shell);
+				EXPECT_EQ(triangle.geometricNormal, source.geometricNormal);
+				for (std::size_t j = 0; j < 3; ++j)
+				{
+					const auto &expected = source.vertices[j == 0 ? 0 : i + j];
+					const auto &actual = triangle.vertices[j];
+					EXPECT_EQ(actual.position, expected.position);
+					EXPECT_EQ(actual.uv, expected.uv);
+					EXPECT_EQ(actual.normal, expected.normal);
+				}
+				const auto a = triangle.vertices[1].position - triangle.vertices[0].position;
+				const auto b = triangle.vertices[2].position - triangle.vertices[0].position;
+				EXPECT_GT(a.cross(b).dot(triangle.geometricNormal), 0.0f);
+			}
+		}
+	}
+
+	TEST(VoxelShapeTest, ConvexPentagonProducesThreeTrianglesWithoutChangingOriginalPolygon)
+	{
+		Shape::Builder builder;
+		builder.addSlot("pentagon");
+		builder.addPolygon("pentagon", {
+			vertex(0.0f, 0.0f, 0.0f),
+			vertex(1.0f, 0.0f, 0.0f),
+			vertex(1.0f, 0.5f, 0.0f),
+			vertex(0.5f, 1.0f, 0.0f),
+			vertex(0.0f, 0.5f, 0.0f)});
+		const Shape shape = builder.build();
+		for (const auto &entry : Orientations)
+		{
+			const Shape::Orientation orientation{entry.horizontal, entry.vertical};
+			const auto &instance = shape.instance(orientation);
+			ASSERT_EQ(instance.polygons().size(), 1u);
+			EXPECT_EQ(instance.polygons()[0].vertices.size(), 5u);
+			ASSERT_EQ(instance.triangles().size(), 3u);
+			for (const auto &triangle : instance.triangles())
+			{
+				EXPECT_EQ(triangle.vertices.size(), 3u);
+				EXPECT_EQ(triangle.boundary, instance.polygons()[0].boundary);
+			}
+		}
+	}
+
 	TEST(VoxelShapeTest, EightOrientationsProvideStableInstancesAndPhysicalFrontFaces)
 	{
 		const Shape shape = makeSquare();
