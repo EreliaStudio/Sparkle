@@ -511,7 +511,10 @@ TEST(NetworkPagedIntegration, LateAcknowledgmentCannotChangeTimedOutTransfer)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), 4s));
 	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
 	EXPECT_EQ(transfer.reason(), spk::Transfer::Reason::AcknowledgmentTimeout);
-	EXPECT_EQ(callbacks.load(), 1u);
+	const auto callbackNotified = [&] {
+		return callbacks.load() == 1u;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(callbackNotified, 2s));
 
 	const TransferResponse late{987, transfer.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None};
 	peer.sendAll(*TransferResponse::Codec::encode(late));

@@ -86,3 +86,6 @@
 #include "type/alignment.hpp"
 #include "type/orientation.hpp"
 #include "type/uuid.hpp"
+#include "voxel/cell.hpp"
+#include "voxel/definition.hpp"
+#include "voxel/shape.hpp"

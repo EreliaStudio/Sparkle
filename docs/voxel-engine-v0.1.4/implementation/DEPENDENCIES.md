@@ -1,0 +1,60 @@
+# Graphe de dépendances et chemin critique
+
+Les liens entre fiches sont des prérequis **techniques**, pas seulement un ordre de numérotation.
+
+```mermaid
+flowchart TD
+  P01["01 Shape"] --> P02["02 Volume"]
+  P01 --> P03["03 Clipping + OcclusionCache"]
+  P02 --> P04["04 Mesher + Model"]
+  P03 --> P04
+  P05["05 Assets"] --> P06["06 Material"]
+  P04 --> P07["07 Palette"]
+  P06 --> P07 --> P08["08 Assembly"]
+  P09["09 RenderingEngine"] --> P10["10 EngineView"]
+  P11["11 GPU Targets"] --> P12["12 EngineWidget"]
+  P10 --> P12
+  P09 --> P12
+  P04 --> P13["13 Voxel opaque"]
+  P07 --> P13
+  P12 --> P13 --> P14["14 Assembly Render"]
+  P08 --> P14
+  P06 --> P15["15 Material source View"]
+  P12 --> P15
+  P13 --> P15 --> P16["16 Skybox"]
+  P06 --> P16
+  P09 --> P17["17 Lights"]
+  P17 --> P18["18 Channel Top N"]
+  P10 --> P18
+  P18 --> P19["19 Forward"]
+  P13 --> P19
+  P17 --> P19
+  P04 --> P20["20 Shadow Contrib"]
+  P09 --> P20
+  P18 --> P21["21 ShadowResults"]
+  P11 --> P21
+  P19 --> P22["22 Spot Directional Shadows"]
+  P20 --> P22
+  P21 --> P22 --> P23["23 Point Cubemaps"] --> P24["24 Point Budget"]
+  P18 --> P24
+  P19 --> P25["25 WBOIT"]
+  P11 --> P25
+  P13 --> P25
+  P04 --> P26["26 Integration"]
+  P08 --> P26
+  P14 --> P26
+  P15 --> P26
+  P16 --> P26
+  P24 --> P26
+  P25 --> P26
+```
+
+**Deux chaînes parallèles au début :** la chaîne voxel (PR01–04, avec PR02 et PR03 parallèles) et la chaîne graphique (PR09–12). La chaîne AssetManager/Material (PR05–06) peut commencer sans les autres. Elles convergent sur PR13. Les ombres dépendent de l'éclairage mais PR25 WBOIT ne dépend pas du calcul des shadow maps ; elle peut progresser en parallèle des PR20–24.
+
+**Chemin critique visible :** PR09 → PR10 et PR11 → PR12, puis PR04 + PR07 + PR12 → PR13. Il donne le fond d'une EngineView d'abord, puis un vrai voxel texturé.
+
+**Risques :** préserver l'input après le remplacement de RenderingEngine en PR09, l'immuabilité des anciens Handles au resize en PR11 et les transactions mutation+invalidation en PR18. Tester ces frontières dès les PR correspondantes.
+
+**Mode de collaboration :** une branche par fiche, créée **depuis la tête courante de `V0.1.4`** et ciblant **`V0.1.4`**. Fusionner d'abord les prérequis dans `V0.1.4` ; deux fiches indépendantes peuvent avancer en branches parallèles, à resynchroniser avant fusion. Ne jamais créer une branche sur une autre branche de développement, ni cibler `main` avec une des 26 PR. La PR #37 reste le regroupement final `V0.1.4` → `main`.
+
+**Contrat voxel :** PR-01 fournit les huit `Shape::Instance` dans `Shape::Data` ; PR-03 fournit le clipping directionnel CPU et son `OcclusionCache` facultatif ; PR-04 consomme le même algorithme de clipping avec ou sans cache. Aucun `ShapeTransformationCache` autonome, aucune liaison obligatoire au Mesher et aucune transformation répétée des Shapes.
