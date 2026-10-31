@@ -15,6 +15,26 @@ namespace spk::Voxel::Occlusion
 		using Polygon = Shape::Polygon;
 		using Face = Shape::Face;
 
+		[[nodiscard]] std::vector<Polygon> triangulate(const Shape::Instance &instance)
+		{
+			std::vector<Polygon> triangles;
+			for (const auto &polygon : instance.polygons())
+			{
+				if (polygon.vertices.size() <= 3)
+				{
+					triangles.push_back(polygon);
+					continue;
+				}
+				for (std::size_t i = 1; i + 1 < polygon.vertices.size(); ++i)
+				{
+					Polygon triangle = polygon;
+					triangle.vertices = {polygon.vertices[0], polygon.vertices[i], polygon.vertices[i + 1]};
+					triangles.push_back(std::move(triangle));
+				}
+			}
+			return triangles;
+		}
+
 		spk::Vector3 offset(Face face)
 		{
 			switch (face)
@@ -179,7 +199,7 @@ namespace spk::Voxel::Occlusion
 
 		std::vector<Polygon> fragments;
 		const auto translation = offset(direction);
-		for (const auto &polygon : source.shape().instance(sourceOrientation).polygons())
+		for (const auto &polygon : triangulate(source.shape().instance(sourceOrientation)))
 		{
 			if (polygon.shell != Shape::Shell::Outer || polygon.boundary != direction)
 			{
