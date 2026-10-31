@@ -46,6 +46,7 @@ namespace spk::asset
 		{
 			JSON::Value config;
 			std::unique_ptr<Asset> asset;
+			bool isDefault = false;
 		};
 
 		class ActiveLoad
@@ -70,9 +71,10 @@ namespace spk::asset
 		[[nodiscard]] static std::string _describe(const Identity &identity);
 		[[nodiscard]] std::string _describeCycle(const Identity &identity) const;
 		[[nodiscard]] Asset *_find(const Identity &identity) const;
-		[[nodiscard]] Asset *_getUnique(std::type_index type, const std::string &id) const;
+		[[nodiscard]] Asset *_getDefault(std::type_index type, const std::string &id) const;
+		void _setDefault(const Identity &identity);
 		void _checkCycle(const Identity &identity) const;
-		void _publish(Identity identity, std::unique_ptr<Asset> asset);
+		void _publish(Identity identity, std::unique_ptr<Asset> asset, bool makeDefault);
 
 	public:
 		Manager() = default;
@@ -84,7 +86,7 @@ namespace spk::asset
 		Manager &operator=(Manager &&) = delete;
 
 		template <typename TType>
-		[[nodiscard]] TType &load(const std::string &id, const JSON::Value &config)
+		[[nodiscard]] TType &load(const std::string &id, const JSON::Value &config, bool makeDefault = false)
 		{
 			static_assert(std::is_object_v<TType> && !std::is_const_v<TType> && !std::is_volatile_v<TType>);
 			static_assert(
@@ -96,6 +98,10 @@ namespace spk::asset
 			Identity identity{typeid(TType), id, config};
 			if (Asset *existing = _find(identity))
 			{
+				if (makeDefault)
+				{
+					_setDefault(identity);
+				}
 				return static_cast<OwnedAsset<TType> &>(*existing).value;
 			}
 
@@ -103,7 +109,7 @@ namespace spk::asset
 			ActiveLoad active(_active, identity);
 			auto owned = std::make_unique<OwnedAsset<TType>>(*this, identity.id, identity.config);
 			TType &result = owned->value;
-			_publish(std::move(identity), std::move(owned));
+			_publish(std::move(identity), std::move(owned), makeDefault);
 			return result;
 		}
 
@@ -117,7 +123,20 @@ namespace spk::asset
 		[[nodiscard]] TType &get(const std::string &id)
 		{
 			static_assert(std::is_object_v<TType> && !std::is_const_v<TType> && !std::is_volatile_v<TType>);
-			return static_cast<OwnedAsset<TType> &>(*_getUnique(typeid(TType), id)).value;
+			return static_cast<OwnedAsset<TType> &>(*_getDefault(typeid(TType), id)).value;
+		}
+
+		template <typename TType>
+		void setDefault(const std::string &id, const JSON::Value &config)
+		{
+			static_assert(std::is_object_v<TType> && !std::is_const_v<TType> && !std::is_volatile_v<TType>);
+			_setDefault(Identity{typeid(TType), id, config});
+		}
+
+		template <typename TType>
+		void setDefault(const std::string &id)
+		{
+			setDefault<TType>(id, JSON::Value::object());
 		}
 
 		void clear();

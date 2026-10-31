@@ -24,7 +24,8 @@
 - [ ] construction directe de T non déplaçable
 - [ ] dépendances et cycles
 - [ ] clear().
-- [ ] get<T>(id) sans config : retourne l'unique instance déjà chargée ou lève spk::Exception si absente ou ambiguë.
+- [ ] sélection automatique du premier asset par type/id, promotion explicite avec load(..., true) et setDefault<T>(id, config).
+- [ ] get<T>(id) sans config : retourne la version par défaut, ou lève spk::Exception si absente.
 
 ## Instructions techniques et intégration
 
@@ -34,7 +35,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Tests obligatoires
 
-- [ ] get<T>(id) sans création, exception si absent ou si deux configurations du même type/id sont chargées ; retour après clear() également refusé.
+- [ ] get<T>(id) sans création : retourne la version par défaut ; erreur si aucun asset chargé ou après clear(). Vérifier le premier chargement par défaut, la promotion avec load(..., true), setDefault<T>(id, config) et la conservation du défaut après échec de factory.
 
 - [ ] Deux configs 16x16 et 8x8 distinctes
 - [ ] ordre des clés JSON indifférent

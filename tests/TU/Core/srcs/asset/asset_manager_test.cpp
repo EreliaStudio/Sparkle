@@ -521,14 +521,14 @@ TEST(AssetManagerTest, GetThrowsForUnknownNameOrType)
 	EXPECT_THROW((void)assets.get<asset_manager_test::Other>("terrain"), spk::Exception);
 }
 
-TEST(AssetManagerTest, GetThrowsWhenMultipleConfigurationsShareName)
+TEST(AssetManagerTest, GetSelectsFirstLoadedConfigurationByDefault)
 {
 	spk::asset::Manager assets;
-	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8));
 	auto &other = assets.load<asset_manager_test::Other>("terrain");
 
-	EXPECT_THROW((void)assets.get<asset_manager_test::Tracked>("terrain"), spk::Exception);
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &first);
 	EXPECT_EQ(&assets.get<asset_manager_test::Other>("terrain"), &other);
 }
 
@@ -541,4 +541,98 @@ TEST(AssetManagerTest, GetAfterClearCannotReturnAnExpiredAsset)
 	EXPECT_THROW((void)assets.get<asset_manager_test::Tracked>("terrain"), spk::Exception);
 	auto &newAsset = assets.load<asset_manager_test::Tracked>("terrain");
 	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &newAsset);
+}
+
+TEST(AssetManagerTest, LoadCanSelectNewConfigurationAsDefault)
+{
+	spk::asset::Manager assets;
+	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	auto &second = assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
+
+	EXPECT_NE(&first, &second);
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &second);
+}
+
+TEST(AssetManagerTest, ReloadingAnExistingConfigurationCanSelectItAsDefault)
+{
+	asset_manager_test::Tracked::constructions = 0;
+	spk::asset::Manager assets;
+	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
+
+	EXPECT_EQ(&assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16), true), &first);
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &first);
+	EXPECT_EQ(asset_manager_test::Tracked::constructions, 2);
+}
+
+TEST(AssetManagerTest, SetDefaultSwitchesAmongAlreadyLoadedConfigurations)
+{
+	asset_manager_test::Tracked::constructions = 0;
+	spk::asset::Manager assets;
+	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	auto &second = assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8));
+
+	assets.setDefault<asset_manager_test::Tracked>("terrain", grid(8, 8));
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &second);
+	assets.setDefault<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &first);
+	EXPECT_EQ(asset_manager_test::Tracked::constructions, 2);
+}
+
+TEST(AssetManagerTest, SetDefaultRejectsMissingConfigurationWithoutChangingDefault)
+{
+	spk::asset::Manager assets;
+	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	EXPECT_THROW(assets.setDefault<asset_manager_test::Tracked>("terrain", grid(8, 8)), spk::Exception);
+	EXPECT_THROW(assets.setDefault<asset_manager_test::Tracked>("unknown", grid(16, 16)), spk::Exception);
+	EXPECT_THROW(assets.setDefault<asset_manager_test::Other>("terrain"), spk::Exception);
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &first);
+}
+
+TEST(AssetManagerTest, FailedFactoryCannotChangeExistingDefault)
+{
+	asset_manager_test::Flaky::failNext = false;
+	spk::asset::Manager assets;
+	auto &first = assets.load<asset_manager_test::Flaky>("unstable");
+	asset_manager_test::Flaky::failNext = true;
+
+	EXPECT_THROW(
+		(void)assets.load<asset_manager_test::Flaky>("unstable", grid(8, 8), true),
+		std::runtime_error);
+	EXPECT_EQ(&assets.get<asset_manager_test::Flaky>("unstable"), &first);
+}
+
+TEST(AssetManagerTest, DefaultIsTrackedIndependentlyForEachTypeAndName)
+{
+	spk::asset::Manager assets;
+	auto &terrain = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	auto &other = assets.load<asset_manager_test::Other>("terrain");
+	auto &water = assets.load<asset_manager_test::Tracked>("water");
+	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
+
+	EXPECT_EQ(&assets.get<asset_manager_test::Other>("terrain"), &other);
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("water"), &water);
+	EXPECT_NE(&assets.get<asset_manager_test::Tracked>("terrain"), &terrain);
+}
+
+TEST(AssetManagerTest, SetDefaultWithoutConfigSelectsExplicitEmptyObject)
+{
+	spk::asset::Manager assets;
+	(void)assets.load<asset_manager_test::Tracked>("terrain", spk::JSON::Value{});
+	auto &emptyObject = assets.load<asset_manager_test::Tracked>("terrain");
+
+	assets.setDefault<asset_manager_test::Tracked>("terrain");
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &emptyObject);
+}
+
+TEST(AssetManagerTest, ClearResetsDefaultSelection)
+{
+	spk::asset::Manager assets;
+	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
+	assets.clear();
+
+	EXPECT_THROW((void)assets.get<asset_manager_test::Tracked>("terrain"), spk::Exception);
+	auto &fresh = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
+	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &fresh);
 }

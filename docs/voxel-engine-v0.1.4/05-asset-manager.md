@@ -64,21 +64,29 @@ Les deux formes `path + size` et `asset + type + id + config` qui aboutissent au
 
 **Validation et échecs de chargement.** Le texte de fichier Material est lu avec `JSON::ParseOptions::rejectDuplicateKeys = true` (valeur déjà par défaut) ; `JSON::Value` conserve ensuite les objets sous forme de map et ne mémorise pas les doublons rejetés par le parseur. L'intégralité du schéma et de ses rôles est validée, avec `spk::Exception` contextualisée par le chemin `textures.<role>...`, avant de publier le Material. Une erreur sur le dernier rôle ne doit pas publier le Material partiel ; les dépendances déjà construites avec succès peuvent rester dans le cache, conformément au contrat général d'échec des factories. En cas d'erreur de dépendance ou de cycle direct/indirect, la cause native est conservée dans l'exception descriptive et la pile de détection de cycles est nettoyée.
 
-### 5.1.1 Retrouver un asset sans configuration
+### 5.1.1 Sélection et lecture de l'asset par défaut
 
-`spk::asset::Manager::get<T>(id)` retourne un `T&` déjà chargé sans appeler de factory ni consulter de configuration JSON. La recherche utilise le **type C++ et l'identifiant littéral**. Elle n'a aucun effet de bord et ne charge jamais un asset manquant.
-
-- Si une seule configuration est chargée pour ce type et cet identifiant, `get<T>(id)` retourne l'instance existante.
-- Si aucune configuration n'est chargée, `get<T>(id)` lance une `spk::Exception` descriptive.
-- Si plusieurs configurations sont chargées pour ce type et cet identifiant, `get<T>(id)` lance une `spk::Exception` d'ambiguïté plutôt que de choisir arbitrairement.
+Chaque couple **(type C++ T, identifiant)** possède une version par défaut parmi ses configurations chargées. Le premier `load<T>(id, config)` réussi choisit automatiquement cette version, même lorsque le paramètre `makeDefault` vaut `false`. Les variantes chargées ensuite ne remplacent pas le défaut, sauf demande explicite.
 
 ```cpp
 spk::asset::Manager assets;
-auto &terrain = assets.load<MyAsset>("terrain", config16);
-auto &same = assets.get<MyAsset>("terrain");
+auto &sixteen = assets.load<MyAsset>("terrain", config16);
+auto &eight = assets.load<MyAsset>("terrain", config8);
+auto &current = assets.get<MyAsset>("terrain"); // sixteen
+
+assets.setDefault<MyAsset>("terrain", config8);
+auto &changed = assets.get<MyAsset>("terrain"); // eight
+
+assets.load<MyAsset>("terrain", config16, true); // promeut une version existante
 ```
 
-La configuration passée à `load<T>()` est une **valeur JSON de construction** transmise à `asset::Factory<T>`, pas un fichier que le gestionnaire lit automatiquement. L'éventuelle lecture d'un fichier et l'interprétation de l'identifiant appartiennent à la factory spécialisée.
+- `load<T>(id, config, bool makeDefault = false)` promeut la version chargée lorsqu'on lui passe `true`, même si elle existait déjà. Ce changement de sélection n'intervient qu'après une construction réussie.
+- `setDefault<T>(id, config)` choisit une **version déjà chargée** ; aucune création ni exécution de factory ne se produit. `setDefault<T>(id)` désigne explicitement la variante `{}`.
+- `get<T>(id)` retourne le `T&` de la version par défaut et **n'appelle jamais la factory**. Si aucun asset de ce type et de cet identifiant n'a été chargé, il lance une `spk::Exception`.
+- Plusieurs configurations peuvent coexister sous un même nom : leur existence n'entraîne plus d'ambiguïté pour `get<T>(id)`.
+- Les défauts sont indépendants pour chaque couple type/identifiant ; `clear()` détruit les ressources et réinitialise toutes ces sélections.
+
+`config` représente le JSON de **construction** transmis à `spk::asset::Factory<T>` et conservé par valeur pour identifier la variante ; il ne représente pas obligatoirement un fichier JSON, dont l'éventuelle lecture appartient à la factory. `get<T>(id)` ne requiert pas cette configuration.
 
 ### 5.2 Factories statiques par type
 

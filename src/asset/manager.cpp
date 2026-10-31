@@ -65,7 +65,7 @@ namespace spk::asset
 		return nullptr;
 	}
 
-	Manager::Asset *Manager::_getUnique(std::type_index type, const std::string &id) const
+	Manager::Asset *Manager::_getDefault(std::type_index type, const std::string &id) const
 	{
 		const auto family = _assets.find(type);
 		if (family == _assets.end() || !family->second.contains(id))
@@ -74,11 +74,38 @@ namespace spk::asset
 		}
 
 		const Entries &entries = family->second.at(id);
-		if (entries.size() != 1)
+		for (const Entry &entry : entries)
 		{
-			throw spk::Exception("Ambiguous asset: " + std::string(type.name()) + " '" + id + "'");
+			if (entry.isDefault)
+			{
+				return entry.asset.get();
+			}
 		}
-		return entries.front().asset.get();
+		throw spk::Exception("No default asset: " + std::string(type.name()) + " '" + id + "'");
+	}
+
+	void Manager::_setDefault(const Identity &identity)
+	{
+		const auto family = _assets.find(identity.type);
+		if (family == _assets.end() || !family->second.contains(identity.id))
+		{
+			throw spk::Exception("Asset not loaded: " + _describe(identity));
+		}
+
+		Entries &entries = family->second.at(identity.id);
+		const auto target = std::find_if(entries.begin(), entries.end(), [&](const Entry &entry) {
+			return entry.config == identity.config;
+		});
+		if (target == entries.end())
+		{
+			throw spk::Exception("Asset not loaded: " + _describe(identity));
+		}
+
+		for (Entry &entry : entries)
+		{
+			entry.isDefault = false;
+		}
+		target->isDefault = true;
 	}
 
 	void Manager::_checkCycle(const Identity &identity) const
@@ -89,9 +116,18 @@ namespace spk::asset
 		}
 	}
 
-	void Manager::_publish(Identity identity, std::unique_ptr<Asset> asset)
+	void Manager::_publish(Identity identity, std::unique_ptr<Asset> asset, bool makeDefault)
 	{
-		_assets[identity.type][identity.id].push_back(Entry{std::move(identity.config), std::move(asset)});
+		Entries &entries = _assets[identity.type][identity.id];
+		entries.push_back(Entry{std::move(identity.config), std::move(asset)});
+		if (makeDefault || entries.size() == 1)
+		{
+			for (Entry &entry : entries)
+			{
+				entry.isDefault = false;
+			}
+			entries.back().isDefault = true;
+		}
 	}
 
 	void Manager::clear()
