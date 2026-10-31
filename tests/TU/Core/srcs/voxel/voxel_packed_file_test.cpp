@@ -14,7 +14,6 @@
 
 #include "exception.hpp"
 #include "voxel/definition_registry.hpp"
-#include "voxel/detail/packed_cell.hpp"
 #include "voxel/volume.hpp"
 
 namespace
@@ -24,7 +23,7 @@ namespace
 	using Shape = spk::Voxel::Shape;
 	using Definition = spk::Voxel::Definition;
 	using Registry = spk::Voxel::DefinitionRegistry;
-	using Packed = spk::Voxel::Detail::PackedCell;
+	using Packed = Volume::PackedCell;
 	using Position = spk::Vector3UInt;
 
 	Definition createDefinition(std::string semantic = "stone")
@@ -99,6 +98,19 @@ namespace
 		EXPECT_EQ(registry.size(), 2u);
 		EXPECT_TRUE(registry.at(17) == first);
 		EXPECT_FALSE(registry.at(17) == second);
+	}
+
+	TEST(VoxelDefinitionRegistryTest, BracketLookupPreservesAirAndRejectsUnknownIDs)
+	{
+		Registry registry;
+		const Definition stored = createDefinition();
+		registry.add(37, stored);
+		const Registry &readOnly = registry;
+		EXPECT_TRUE(registry[37] == stored);
+		EXPECT_TRUE(readOnly[37] == stored);
+		EXPECT_TRUE(registry[0].isAir());
+		EXPECT_THROW((void)registry[38], spk::Exception);
+		EXPECT_EQ(registry.size(), 2u);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, HighestRepresentableSparseIDIsSupported)

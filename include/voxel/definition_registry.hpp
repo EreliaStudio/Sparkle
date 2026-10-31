@@ -16,6 +16,7 @@ namespace spk::Voxel
 	public:
 		void add(std::uint32_t id, Definition definition);
 		[[nodiscard]] const Definition &at(std::uint32_t id) const;
+		[[nodiscard]] const Definition &operator[](std::uint32_t id) const;
 		[[nodiscard]] bool contains(std::uint32_t id) const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 	};

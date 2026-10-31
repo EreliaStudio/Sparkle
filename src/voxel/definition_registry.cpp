@@ -3,13 +3,13 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "voxel/detail/packed_cell.hpp"
+#include "voxel/volume.hpp"
 
 namespace spk::Voxel
 {
 	void DefinitionRegistry::add(std::uint32_t id, Definition definition)
 	{
-		if (id == 0 || id > Detail::PackedCell::MaxDefinitionIndex || definition.isAir())
+		if (id == 0 || id > Volume::PackedCell::MaxDefinitionIndex || definition.isAir())
 		{
 			throw spk::Exception("Voxel DefinitionRegistry requires a non-Air Definition and a representable nonzero ID");
 		}
@@ -31,6 +31,11 @@ namespace spk::Voxel
 			throw spk::Exception("Voxel DefinitionRegistry ID is not registered");
 		}
 		return entry->second;
+	}
+
+	const Definition &DefinitionRegistry::operator[](std::uint32_t id) const
+	{
+		return at(id);
 	}
 
 	bool DefinitionRegistry::contains(std::uint32_t id) const noexcept

@@ -31,6 +31,13 @@ Indexation et allocation sans débordement; déduplication par identité Definit
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
+## Ajustements de review
+
+- `DefinitionRegistry::operator[](id) const` est un accès **en lecture seule** identique à `at(id)`, y compris pour Air (ID 0). Un ID absent lève `spk::Exception` et n'insère jamais Air implicitement. L'enregistrement reste effectué par `add(id, Definition)`.
+- L'encodage compact est porté par `spk::Voxel::Volume::PackedCell` : aucun namespace ou fichier `Detail` autonome.
+- Le stockage interne conserve la table locale de Definitions et les mots compacts sur 32 bits ; la proposition alternative de stocker une `std::vector<Cell>` n'est pas intégrée sans décision explicite, car elle change le contrat de densité mémoire.
+- Le `shared_ptr<const Volume::Data>` représente la propriété partagée d'un snapshot immuable, et non un pointeur de polymorphisme ; il conserve les copies de Volume à coût constant.
+
 ## Extension demandée pendant PR-02 : fichier compact et collection nommée
 
 `DefinitionRegistry` est une collection **possédée par l'application**, non globale, associant des IDs entiers non signés (29 bits utiles) à des `Definition`. L'ID 0 est Air et ne peut pas être redéfini. Les autres IDs doivent être déclarés explicitement, uniques et valides. Le Builder peut copier une collection via `bind(registry)` ; toute modification ultérieure de la collection initiale n'affecte pas le Builder. `set(position, id, orientation...)` utilise cette collection.

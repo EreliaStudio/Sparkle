@@ -9,11 +9,10 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "voxel/detail/packed_cell.hpp"
 
 namespace
 {
-	using PackedCell = spk::Voxel::Detail::PackedCell;
+	using PackedCell = spk::Voxel::Volume::PackedCell;
 
 	std::size_t checkedCellCount(spk::Vector3UInt dimensions)
 	{

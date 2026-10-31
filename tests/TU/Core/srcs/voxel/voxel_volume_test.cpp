@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "voxel/detail/packed_cell.hpp"
 #include "voxel/volume.hpp"
 
 namespace spk::Voxel
@@ -43,7 +42,7 @@ namespace
 	using Cell = spk::Voxel::Cell;
 	using Definition = spk::Voxel::Definition;
 	using Shape = spk::Voxel::Shape;
-	using PackedCell = spk::Voxel::Detail::PackedCell;
+	using PackedCell = Volume::PackedCell;
 	using Access = spk::Voxel::VolumeTestAccess;
 	using Position = spk::Vector3UInt;
 
