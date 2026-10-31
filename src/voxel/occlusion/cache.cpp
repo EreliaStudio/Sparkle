@@ -20,8 +20,6 @@ namespace spk::Voxel::Occlusion
   };
   std::size_t seed = std::hash<const void *>{}(&key.source.shape().instance(key.sourceOrientation));
   combine(seed, std::hash<const void *>{}(&key.blocker.shape().instance(key.blockerOrientation)));
-  combine(seed, std::hash<const void *>{}(&key.source));
-  combine(seed, std::hash<const void *>{}(&key.blocker));
   combine(seed, std::hash<unsigned>{}(static_cast<unsigned>(key.direction)));
   combine(seed, std::hash<float>{}(key.tolerance));
   return seed;
