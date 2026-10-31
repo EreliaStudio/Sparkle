@@ -11,8 +11,8 @@ namespace spk::Voxel::Occlusion
  public:
   struct Key
   {
-   Shape source;
-   Shape blocker;
+   Definition source;
+   Definition blocker;
    Shape::Orientation sourceOrientation{};
    Shape::Orientation blockerOrientation{};
    Shape::Face direction = Shape::Face::PositiveX;
