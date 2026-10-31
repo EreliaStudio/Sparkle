@@ -65,12 +65,12 @@ namespace
 	};
 
 	constexpr auto Shapes = R"({"elements":[
-		{"id":"cube","data":{"slots":{"face":1},"polygons":[]}},
-		{"id":"slab","data":{"slots":{"side":0.75},"polygons":[]}}
+		{"id":"cube","data":{"slots":{"face":null},"polygons":[]}},
+		{"id":"slab","data":{"slots":{"side":null},"polygons":[]}}
 	]})";
 	constexpr auto Definitions = R"({"elements":[
 		{"id":42,"data":{"shape":"cube","slots":{"face":"stone"}}},
-		{"id":7,"data":{"shape":"slab","slots":{"side":"glass"}}}
+		{"id":7,"data":{"shape":"slab","slots":{"side":"glass"},"opacity":{"side":0.75}}}
 	]})";
 
 	Shape::Registry shapeRegistry()
@@ -86,7 +86,7 @@ namespace
 		EXPECT_EQ(registry.size(), 2u);
 		EXPECT_TRUE(registry.contains("cube"));
 		EXPECT_TRUE(registry.contains("slab"));
-		EXPECT_FLOAT_EQ(registry["slab"].slot("side").opacity, 0.75f);
+		EXPECT_EQ(registry["slab"].slot("side").name, "side");
 		EXPECT_EQ(&registry.at("cube"), &registry["cube"]);
 		EXPECT_THROW((void)registry["missing"], spk::Exception);
 	}
@@ -190,8 +190,9 @@ namespace
 		}
 		builder.setShape("slab");
 		builder.setSlots({{"side", "transparent"}});
+		builder.setOpacity("side", 0.75f);
 		const Definition definition = builder.build();
-		EXPECT_FLOAT_EQ(definition.shape().slot("side").opacity, 0.75f);
+		EXPECT_FLOAT_EQ(definition.opacity("side"), 0.75f);
 	}
 
 	TEST(VoxelDefinitionBuilderTest, EmptyRegistryRejectsUnknownIDsAndBindingEnablesJSON)
@@ -256,6 +257,7 @@ namespace
 		EXPECT_TRUE(registry[42].shape() == shapes["cube"]);
 		EXPECT_EQ(registry[42].semanticSlot("face"), "stone");
 		EXPECT_EQ(registry[7].semanticSlot("side"), "glass");
+		EXPECT_FLOAT_EQ(registry[7].opacity("side"), 0.75f);
 		EXPECT_THROW((void)registry[10], spk::Exception);
 	}
 
