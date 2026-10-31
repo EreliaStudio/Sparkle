@@ -368,7 +368,7 @@ namespace
 		builder.bind(registry);
 		builder.set({1, 0, 0}, 42);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).isAir());
-		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == registry[42]);
+		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == registry[42]);
 	}
 }

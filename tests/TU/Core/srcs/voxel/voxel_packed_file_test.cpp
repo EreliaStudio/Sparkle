@@ -158,7 +158,8 @@ namespace
 		const Volume volume = Volume::Builder({4, 2, 1}, file.path, registry).build();
 		for (std::uint32_t index = 0; index < 8; ++index)
 		{
-			const Cell cell = volume.cell({index % 4, index / 4, 0});
+			EXPECT_EQ(volume.atRaw({index % 4, index / 4, 0}), words[index]);
+			const Cell cell = volume.at({index % 4, index / 4, 0});
 			EXPECT_TRUE(cell.definition() == (index < 4 ? a : b));
 			EXPECT_EQ(cell.horizontalOrientation(), horizontals[index % 4]);
 			EXPECT_EQ(cell.verticalOrientation(), verticals[index / 4]);
@@ -170,7 +171,7 @@ namespace
 		PackedFile file;
 		file.write({Packed::encode(0, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
 		const Volume volume = Volume::Builder({1, 1, 1}, file.path, Registry()).build();
-		const Cell cell = volume.cell({0, 0, 0});
+		const Cell cell = volume.at({0, 0, 0});
 		EXPECT_TRUE(cell.isAir());
 		EXPECT_EQ(cell.horizontalOrientation(), Cell::HorizontalOrientation::ZPositive);
 		EXPECT_EQ(cell.verticalOrientation(), Cell::VerticalOrientation::YNegative);
@@ -189,10 +190,10 @@ namespace
 		words.push_back(Packed::encode(0x010203, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive));
 		file.write(words);
 		const Volume volume = Volume::Builder({2, 2, 1}, file.path, registry).build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == second);
-		EXPECT_TRUE(volume.cell({0, 1, 0}).isAir());
-		EXPECT_TRUE(volume.cell({1, 1, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == second);
+		EXPECT_TRUE(volume.at({0, 1, 0}).isAir());
+		EXPECT_TRUE(volume.at({1, 1, 0}).definition() == first);
 	}
 
 	TEST(VoxelPackedFileTest, AliasedIDsAreRetainedAcrossVolumeCopies)
@@ -202,11 +203,11 @@ namespace
 		PackedFile file;
 		file.write({Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
 		const Volume volume = Volume::Builder({2, 1, 1}, file.path, registry).build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == first);
 		Volume::Builder changed(volume);
 		changed.erase({0, 0, 0});
-		EXPECT_TRUE(changed.build().cell({1, 0, 0}).definition() == first);
+		EXPECT_TRUE(changed.build().at({1, 0, 0}).definition() == first);
 	}
 
 	TEST(VoxelPackedFileTest, BindUsesImmutableSnapshotsAndAllowsExplicitReplacement)
@@ -226,8 +227,8 @@ namespace
 		builder.bind(after);
 		builder.set({1, 0, 0}, 5, Cell::HorizontalOrientation::XNegative, Cell::VerticalOrientation::YNegative);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == second);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == second);
 	}
 
 	TEST(VoxelPackedFileTest, BoundRegistryOutlivesItsOriginalOwner)
@@ -236,7 +237,7 @@ namespace
 		const Definition definition = createDefinition();
 		builder.bind(makeRegistry({{3, definition}}));
 		builder.set({0, 0, 0}, 3);
-		EXPECT_TRUE(builder.build().cell({0, 0, 0}).definition() == definition);
+		EXPECT_TRUE(builder.build().at({0, 0, 0}).definition() == definition);
 	}
 
 	TEST(VoxelPackedFileTest, MissingFileAndInvalidSizesAreRejected)
@@ -262,14 +263,14 @@ namespace
 		file.write({Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive), Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		const Volume unchanged = Volume::Builder(builder).build();
-		EXPECT_TRUE(unchanged.cell({0, 0, 0}).definition() == a);
-		EXPECT_TRUE(unchanged.cell({1, 0, 0}).isAir());
+		EXPECT_TRUE(unchanged.at({0, 0, 0}).definition() == a);
+		EXPECT_TRUE(unchanged.at({1, 0, 0}).isAir());
 		definitions.add(19, createDefinition());
 		builder.bind(definitions.build());
 		builder.loadPacked(file.path);
 		const Volume updated = builder.build();
-		EXPECT_EQ(updated.cell({0, 0, 0}).horizontalOrientation(), Cell::HorizontalOrientation::ZPositive);
-		EXPECT_FALSE(updated.cell({1, 0, 0}).isAir());
+		EXPECT_EQ(updated.at({0, 0, 0}).horizontalOrientation(), Cell::HorizontalOrientation::ZPositive);
+		EXPECT_FALSE(updated.at({1, 0, 0}).isAir());
 	}
 
 	TEST(VoxelPackedFileTest, LoadingASecondFileReplacesCellsWithoutRemapping)
@@ -284,9 +285,9 @@ namespace
 		file.write({Packed::encode(3, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), 0});
 		builder.loadPacked(file.path);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == second);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).isAir());
-		EXPECT_FALSE(volume.cell({0, 0, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == second);
+		EXPECT_TRUE(volume.at({1, 0, 0}).isAir());
+		EXPECT_FALSE(volume.at({0, 0, 0}).definition() == first);
 	}
 
 	TEST(VoxelPackedFileTest, FailedLoadCanBeFixedAndRetriedWithoutRebinding)
@@ -303,9 +304,9 @@ namespace
 		file.write({Packed::encode(1, Cell::HorizontalOrientation::ZNegative, Cell::VerticalOrientation::YPositive), 0});
 		EXPECT_NO_THROW(builder.loadPacked(file.path));
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
-		EXPECT_EQ(volume.cell({0, 0, 0}).horizontalOrientation(), Cell::HorizontalOrientation::ZNegative);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).isAir());
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
+		EXPECT_EQ(volume.at({0, 0, 0}).horizontalOrientation(), Cell::HorizontalOrientation::ZNegative);
+		EXPECT_TRUE(volume.at({1, 0, 0}).isAir());
 	}
 
 	TEST(VoxelPackedFileTest, BindingOrLoadingAfterBuildIsRejected)
@@ -318,6 +319,6 @@ namespace
 		EXPECT_THROW(builder.bind(Registry()), spk::Exception);
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 0), spk::Exception);
-		EXPECT_TRUE(volume.cell({0, 0, 0}).isAir());
+		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());
 	}
 }

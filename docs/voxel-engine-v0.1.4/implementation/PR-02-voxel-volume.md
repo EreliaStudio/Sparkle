@@ -21,7 +21,7 @@
 - [ ] grille dense compacte
 - [ ] Registry immuable partagé, sans table locale de Definitions
 - [ ] Air ID 0
-- [ ] lecture Cell par valeur
+- [ ] lecture Cell par valeur via `at` et `operator[]`, lecture compacte par valeur via `atRaw`
 - [ ] set(position, ID, orientations) et erase
 - [ ] tailles immuables.
 
@@ -40,12 +40,12 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - La mémoire publiée des registres utilise `unordered_map` : recherche moyenne **O(1)**, sans `set` ou tableau géant indexé par l'espace d'IDs 29 bits. Aucune optimisation spéculative spécifique au mesher.
 - `spk::JSON::Catalog` conserve son format standard `{"elements":[{"id":...,"data":...}]}`. Son paramètre de type ID reste facultatif, avec valeur par défaut `TElement::ID` ; un accesseur protégé fournit les entrées pour construire les snapshots.
 - `Volume::Data` défini **directement dans `include/voxel/volume.hpp`** ne conserve que `dimensions`, une **copie légère de `Definition::Registry`** et un `vector<uint32_t>` de cellules compactes. Aucune table d'indices locale n'est conservée.
-- Les 29 bits de chaque mot compact représentent **directement l'ID numérique externe** de Definition. Les 3 bits restants encodent les orientations. `Volume::cell(position)` reconstitue une Cell par valeur en consultant le Registry.
+- Les 29 bits de chaque mot compact représentent **directement l'ID numérique externe** de Definition. Les 3 bits restants encodent les orientations. `Volume::at(position)` et `Volume::operator[](position)` reconstruisent une Cell par valeur via le Registry, et `Volume::atRaw(position)` retourne le mot `PackedCell::Storage` (`uint32_t`) par valeur, sans conversion en Cell. Les trois vérifient les bornes ; `cell(position)` est retirée.
 - `Volume::Builder::set(position, Cell)` est **supprimé**. L'API restante est `set(position, ID, horizontal, vertical)` ; un ID absent est rejeté. `erase` remet le mot entier à zéro ; un ID 0 avec orientation non canonique reste légal.
 - `Volume::Builder::bind(registry)` remplace le snapshot référencé sans copier le contenu. Si le Builder contient déjà des cellules non-Air, il refuse toute nouvelle liaison qui modifierait l'identité des Definitions désignées par leurs IDs.
 - Le chargement d'un fichier compact vérifie strictement les dimensions, la taille `x*y*z*4`, les IDs et le format little-endian ; il importe les mots **sans conversion ni déduplication locale**. L'échec laisse le Builder intact.
 - Les erreurs d'accès `at`/`operator[]` identifient l'ID demandé. `tryGet` ne lève pas et renvoie `nullptr` pour les IDs inconnus ; pour `Definition::Registry`, `tryGet(0)` renvoie `&Definition::air()`.
-- `Volume::PackedCell` reste dans `spk::Voxel::Volume`, sans namespace `detail` ; la destruction et le partage immuable continuent à reposer sur des données propriétaires explicites.
+- `Volume::PackedCell` reste dans `spk::Voxel::Volume`, sans namespace `detail` ; la destruction et le partage immuable continuent à reposer sur des données propriétaires explicites. Le contournement `VolumeTestAccess` et ses déclarations `friend` sont supprimés ; les tests lisent l'encodage depuis `atRaw` et vérifient le comportement publié.
 
 ### Exemple de chargement
 
@@ -74,7 +74,7 @@ Un fichier d'une taille incorrecte, un ID non déclaré ou une erreur d'entrée-
 - [ ] Initialisation Air partout
 - [ ] copies des registres O(1), identité des Definitions stable et snapshots immuables
 - [ ] orientation maintenue
-- [ ] set/erase et hors bornes
+- [ ] set/erase, accès `at`, `operator[]` et `atRaw`, vérification des hors bornes
 - [ ] overflow
 - [ ] ancien Volume après nouveau build
 - [ ] construction échouée non destructive

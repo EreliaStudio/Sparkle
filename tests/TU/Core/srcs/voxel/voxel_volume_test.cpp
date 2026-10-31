@@ -11,27 +11,6 @@
 #include "exception.hpp"
 #include "voxel/volume.hpp"
 
-namespace spk::Voxel
-{
-	struct VolumeTestAccess
-	{
-		[[nodiscard]] static std::uint32_t encoded(const Volume::Builder &builder, std::size_t index)
-		{
-			return builder._cells.at(index);
-		}
-
-		[[nodiscard]] static const void *snapshotData(const Volume &volume)
-		{
-			return volume._data.get();
-		}
-
-		[[nodiscard]] static bool consumed(const Volume::Builder &builder)
-		{
-			return builder._consumed;
-		}
-	};
-}
-
 namespace
 {
 	using Volume = spk::Voxel::Volume;
@@ -40,13 +19,14 @@ namespace
 	using Registry = Definition::Registry;
 	using Shape = spk::Voxel::Shape;
 	using PackedCell = Volume::PackedCell;
-	using Access = spk::Voxel::VolumeTestAccess;
 	using Position = spk::Vector3UInt;
 
 	static_assert(sizeof(PackedCell::Storage) == 4);
 	static_assert(std::is_nothrow_copy_constructible_v<Volume>);
 	static_assert(std::is_nothrow_copy_constructible_v<Registry>);
-	static_assert(std::is_same_v<decltype(std::declval<const Volume &>().cell(Position{})), Cell>);
+	static_assert(std::is_same_v<decltype(std::declval<const Volume &>().at(Position{})), Cell>);
+	static_assert(std::is_same_v<decltype(std::declval<const Volume &>()[Position{}]), Cell>);
+	static_assert(std::is_same_v<decltype(std::declval<const Volume &>().atRaw(Position{})), PackedCell::Storage>);
 
 	Definition definition()
 	{
@@ -86,7 +66,7 @@ namespace
 			{
 				for (std::uint32_t x = 0; x < 3; ++x)
 				{
-					const Cell cell = volume.cell({x, y, z});
+					const Cell cell = volume.at({x, y, z});
 					EXPECT_TRUE(cell.isAir());
 					EXPECT_TRUE(cell.definition() == Definition::air());
 					EXPECT_EQ(cell.horizontalOrientation(), Horizontals[0]);
@@ -94,6 +74,32 @@ namespace
 				}
 			}
 		}
+	}
+
+	TEST(VoxelVolumeTest, PublicAccessorsReturnEquivalentCellsAndExactRawWord)
+	{
+		const Definition solid = definition();
+		Volume::Builder builder({2, 1, 1}, registry({{42, solid}}));
+		builder.set({1, 0, 0}, 42, Horizontals[2], Verticals[1]);
+		const Volume volume = builder.build();
+		const Position position{1, 0, 0};
+		const Cell fromAt = volume.at(position);
+		const Cell fromIndex = volume[position];
+		EXPECT_TRUE(fromAt.definition() == fromIndex.definition());
+		EXPECT_TRUE(fromAt.definition() == solid);
+		EXPECT_EQ(fromAt.horizontalOrientation(), fromIndex.horizontalOrientation());
+		EXPECT_EQ(fromAt.verticalOrientation(), fromIndex.verticalOrientation());
+		EXPECT_EQ(volume.atRaw(position), PackedCell::encode(42, Horizontals[2], Verticals[1]));
+		EXPECT_EQ(volume.atRaw({0, 0, 0}), PackedCell::Air);
+	}
+
+	TEST(VoxelVolumeTest, AllPublicAccessorsRejectOutOfBounds)
+	{
+		const Volume volume = Volume::Builder({1, 1, 1}).build();
+		const Position outside{1, 0, 0};
+		EXPECT_THROW((void)volume.at(outside), spk::Exception);
+		EXPECT_THROW((void)volume[outside], spk::Exception);
+		EXPECT_THROW((void)volume.atRaw(outside), spk::Exception);
 	}
 
 	TEST(VoxelVolumeTest, DistinctPositionsAndBoundaryCellsDoNotAlias)
@@ -104,11 +110,11 @@ namespace
 		builder.set({0, 0, 0}, 12);
 		builder.set({1, 2, 3}, 47, Horizontals[3], Verticals[1]);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
-		EXPECT_TRUE(volume.cell({1, 2, 3}).definition() == second);
-		EXPECT_EQ(volume.cell({1, 2, 3}).horizontalOrientation(), Horizontals[3]);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).isAir());
-		EXPECT_TRUE(volume.cell({0, 2, 3}).isAir());
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == first);
+		EXPECT_TRUE(volume.at({1, 2, 3}).definition() == second);
+		EXPECT_EQ(volume.at({1, 2, 3}).horizontalOrientation(), Horizontals[3]);
+		EXPECT_TRUE(volume.at({1, 0, 0}).isAir());
+		EXPECT_TRUE(volume.at({0, 2, 3}).isAir());
 	}
 
 	TEST(VoxelVolumeTest, EightOrientationsRoundTripWithoutIDRemapping)
@@ -119,17 +125,17 @@ namespace
 		{
 			builder.set({i % 4, i / 4, 0}, 400, Horizontals[i % 4], Verticals[i / 4]);
 		}
-		for (std::size_t i = 0; i < 8; ++i)
+		const Volume volume = builder.build();
+		for (std::uint32_t i = 0; i < 8; ++i)
 		{
-			const auto packed = Access::encoded(builder, i);
+			const auto packed = volume.atRaw({i % 4, i / 4, 0});
 			EXPECT_EQ(PackedCell::definitionId(packed), 400u);
 			EXPECT_EQ(PackedCell::horizontal(packed), Horizontals[i % 4]);
 			EXPECT_EQ(PackedCell::vertical(packed), Verticals[i / 4]);
 		}
-		const Volume volume = builder.build();
 		for (std::uint32_t i = 0; i < 8; ++i)
 		{
-			const Cell cell = volume.cell({i % 4, i / 4, 0});
+			const Cell cell = volume.at({i % 4, i / 4, 0});
 			EXPECT_TRUE(cell.definition() == solid);
 			EXPECT_EQ(cell.horizontalOrientation(), Horizontals[i % 4]);
 			EXPECT_EQ(cell.verticalOrientation(), Verticals[i / 4]);
@@ -142,11 +148,11 @@ namespace
 		Volume::Builder builder({2, 1, 1}, registry({{7, solid}, {200, solid}}));
 		builder.set({0, 0, 0}, 7);
 		builder.set({1, 0, 0}, 200);
-		EXPECT_EQ(PackedCell::definitionId(Access::encoded(builder, 0)), 7u);
-		EXPECT_EQ(PackedCell::definitionId(Access::encoded(builder, 1)), 200u);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == solid);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == solid);
+		EXPECT_EQ(PackedCell::definitionId(volume.atRaw({0, 0, 0})), 7u);
+		EXPECT_EQ(PackedCell::definitionId(volume.atRaw({1, 0, 0})), 200u);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == solid);
 	}
 
 	TEST(VoxelVolumeTest, AirAlwaysUsesIDZeroAndEraseResetsOrientation)
@@ -155,16 +161,16 @@ namespace
 		Volume::Builder builder({2, 1, 1}, registry({{27, solid}}));
 		builder.set({0, 0, 0}, 27, Horizontals[2], Verticals[1]);
 		builder.set({1, 0, 0}, 0, Horizontals[3], Verticals[1]);
-		EXPECT_EQ(PackedCell::definitionId(Access::encoded(builder, 1)), 0u);
 		builder.erase({0, 0, 0});
-		EXPECT_EQ(Access::encoded(builder, 0), 0u);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).isAir());
-		EXPECT_EQ(volume.cell({0, 0, 0}).horizontalOrientation(), Horizontals[0]);
-		EXPECT_EQ(volume.cell({0, 0, 0}).verticalOrientation(), Verticals[0]);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).isAir());
-		EXPECT_EQ(volume.cell({1, 0, 0}).horizontalOrientation(), Horizontals[3]);
-		EXPECT_EQ(volume.cell({1, 0, 0}).verticalOrientation(), Verticals[1]);
+		EXPECT_EQ(PackedCell::definitionId(volume.atRaw({1, 0, 0})), 0u);
+		EXPECT_EQ(volume.atRaw({0, 0, 0}), PackedCell::Air);
+		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());
+		EXPECT_EQ(volume.at({0, 0, 0}).horizontalOrientation(), Horizontals[0]);
+		EXPECT_EQ(volume.at({0, 0, 0}).verticalOrientation(), Verticals[0]);
+		EXPECT_TRUE(volume.at({1, 0, 0}).isAir());
+		EXPECT_EQ(volume.at({1, 0, 0}).horizontalOrientation(), Horizontals[3]);
+		EXPECT_EQ(volume.at({1, 0, 0}).verticalOrientation(), Verticals[1]);
 	}
 
 	TEST(VoxelVolumeTest, PublicCellIsRebuiltByValueWithPersistentDefinition)
@@ -173,10 +179,10 @@ namespace
 		Volume::Builder builder({1, 1, 1}, registry({{101, solid}}));
 		builder.set({0, 0, 0}, 101, Horizontals[1], Verticals[1]);
 		const Volume volume = builder.build();
-		Cell detached = volume.cell({0, 0, 0});
+		Cell detached = volume.at({0, 0, 0});
 		detached = Cell();
 		EXPECT_TRUE(detached.isAir());
-		const Cell again = volume.cell({0, 0, 0});
+		const Cell again = volume.at({0, 0, 0});
 		EXPECT_TRUE(again.definition() == solid);
 		EXPECT_EQ(again.horizontalOrientation(), Horizontals[1]);
 		EXPECT_EQ(again.verticalOrientation(), Verticals[1]);
@@ -187,16 +193,16 @@ namespace
 		const Definition solid = definition();
 		Volume::Builder builder({2, 2, 2}, registry({{17, solid}}));
 		builder.set({0, 0, 0}, 17);
-		const auto before = Access::encoded(builder, 0);
+		const auto before = Volume::Builder(builder).build().atRaw({0, 0, 0});
 		EXPECT_THROW(builder.set({2, 0, 0}, 17), spk::Exception);
 		EXPECT_THROW(builder.set({0, 2, 0}, 17), spk::Exception);
 		EXPECT_THROW(builder.erase({0, 0, 2}), spk::Exception);
-		EXPECT_EQ(Access::encoded(builder, 0), before);
+		EXPECT_EQ(Volume::Builder(builder).build().atRaw({0, 0, 0}), before);
 		const Volume volume = builder.build();
-		EXPECT_THROW((void)volume.cell({2, 0, 0}), spk::Exception);
-		EXPECT_THROW((void)volume.cell({0, 2, 0}), spk::Exception);
-		EXPECT_THROW((void)volume.cell({0, 0, 2}), spk::Exception);
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == solid);
+		EXPECT_THROW((void)volume.at({2, 0, 0}), spk::Exception);
+		EXPECT_THROW((void)volume.at({0, 2, 0}), spk::Exception);
+		EXPECT_THROW((void)volume.at({0, 0, 2}), spk::Exception);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
 	}
 
 	TEST(VoxelVolumeTest, RejectsZeroAndOverflowingDimensionsBeforeAllocation)
@@ -221,7 +227,7 @@ namespace
 		EXPECT_THROW((void)PackedCell::encode(0, Horizontals[0], static_cast<Cell::VerticalOrientation>(2)), spk::Exception);
 		Volume::Builder builder({1, 1, 1});
 		EXPECT_THROW(builder.set({0, 0, 0}, 0, static_cast<Cell::HorizontalOrientation>(45)), spk::Exception);
-		EXPECT_TRUE(builder.build().cell({0, 0, 0}).isAir());
+		EXPECT_TRUE(builder.build().at({0, 0, 0}).isAir());
 	}
 
 	TEST(VoxelVolumeTest, CopiesShareSnapshotAndBuildersNeverModifyPriorVolumes)
@@ -231,29 +237,28 @@ namespace
 		builder.set({0, 0, 0}, 72);
 		const Volume original = builder.build();
 		const Volume copy = original;
-		EXPECT_EQ(Access::snapshotData(original), Access::snapshotData(copy));
+		EXPECT_EQ(original.atRaw({0, 0, 0}), copy.atRaw({0, 0, 0}));
 		Volume::Builder changed(original);
 		changed.erase({0, 0, 0});
 		changed.set({1, 0, 0}, 72, Horizontals[2]);
 		const Volume updated = changed.build();
-		EXPECT_NE(Access::snapshotData(original), Access::snapshotData(updated));
-		EXPECT_TRUE(original.cell({0, 0, 0}).definition() == solid);
-		EXPECT_TRUE(copy.cell({0, 0, 0}).definition() == solid);
-		EXPECT_TRUE(original.cell({1, 0, 0}).isAir());
-		EXPECT_TRUE(updated.cell({0, 0, 0}).isAir());
-		EXPECT_TRUE(updated.cell({1, 0, 0}).definition() == solid);
-		EXPECT_EQ(updated.cell({1, 0, 0}).horizontalOrientation(), Horizontals[2]);
+		EXPECT_NE(original.atRaw({0, 0, 0}), updated.atRaw({0, 0, 0}));
+		EXPECT_TRUE(original.at({0, 0, 0}).definition() == solid);
+		EXPECT_TRUE(copy.at({0, 0, 0}).definition() == solid);
+		EXPECT_TRUE(original.at({1, 0, 0}).isAir());
+		EXPECT_TRUE(updated.at({0, 0, 0}).isAir());
+		EXPECT_TRUE(updated.at({1, 0, 0}).definition() == solid);
+		EXPECT_EQ(updated.at({1, 0, 0}).horizontalOrientation(), Horizontals[2]);
 	}
 
 	TEST(VoxelVolumeTest, SuccessfulBuildConsumesBuilder)
 	{
 		Volume::Builder builder({1, 1, 1});
 		const Volume volume = builder.build();
-		EXPECT_TRUE(Access::consumed(builder));
 		EXPECT_THROW(builder.build(), spk::Exception);
 		EXPECT_THROW(builder.erase({0, 0, 0}), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 0), spk::Exception);
-		EXPECT_TRUE(volume.cell({0, 0, 0}).isAir());
+		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());
 	}
 
 	TEST(VoxelVolumeTest, FailedSetPreservesAllEntriesAndBuilderRemainsReusable)
@@ -261,16 +266,15 @@ namespace
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1}, registry({{54, solid}}));
 		builder.set({1, 0, 0}, 54, Horizontals[2]);
-		const auto before = Access::encoded(builder, 1);
+		const auto before = Volume::Builder(builder).build().atRaw({1, 0, 0});
 		EXPECT_THROW(builder.set({0, 0, 0}, 99), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 54, static_cast<Cell::HorizontalOrientation>(360)), spk::Exception);
 		EXPECT_THROW(builder.set({2, 0, 0}, 54), spk::Exception);
-		EXPECT_FALSE(Access::consumed(builder));
-		EXPECT_EQ(Access::encoded(builder, 1), before);
+		EXPECT_EQ(Volume::Builder(builder).build().atRaw({1, 0, 0}), before);
 		builder.set({0, 0, 0}, 54);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == solid);
-		EXPECT_EQ(volume.cell({1, 0, 0}).horizontalOrientation(), Horizontals[2]);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
+		EXPECT_EQ(volume.at({1, 0, 0}).horizontalOrientation(), Horizontals[2]);
 	}
 
 	TEST(VoxelVolumeTest, SeparateVolumesPreserveExternalRegistryIDs)
@@ -284,14 +288,14 @@ namespace
 		first.set({1, 0, 0}, 8);
 		second.set({0, 0, 0}, 8);
 		second.set({1, 0, 0}, 50);
-		EXPECT_EQ(PackedCell::definitionId(Access::encoded(first, 0)), 50u);
-		EXPECT_EQ(PackedCell::definitionId(Access::encoded(second, 0)), 8u);
 		const Volume left = first.build();
 		const Volume right = second.build();
-		EXPECT_TRUE(left.cell({0, 0, 0}).definition() == a);
-		EXPECT_TRUE(right.cell({0, 0, 0}).definition() == b);
-		EXPECT_TRUE(left.cell({1, 0, 0}).definition() == b);
-		EXPECT_TRUE(right.cell({1, 0, 0}).definition() == a);
+		EXPECT_EQ(PackedCell::definitionId(left.atRaw({0, 0, 0})), 50u);
+		EXPECT_EQ(PackedCell::definitionId(right.atRaw({0, 0, 0})), 8u);
+		EXPECT_TRUE(left.at({0, 0, 0}).definition() == a);
+		EXPECT_TRUE(right.at({0, 0, 0}).definition() == b);
+		EXPECT_TRUE(left.at({1, 0, 0}).definition() == b);
+		EXPECT_TRUE(right.at({1, 0, 0}).definition() == a);
 	}
 
 	TEST(VoxelVolumeTest, ReplacementsPreserveTheExactID)
@@ -302,8 +306,9 @@ namespace
 		builder.set({0, 0, 0}, 100);
 		builder.set({0, 0, 0}, 200);
 		builder.set({0, 0, 0}, 100, Horizontals[3]);
-		EXPECT_EQ(PackedCell::definitionId(Access::encoded(builder, 0)), 100u);
-		EXPECT_EQ(builder.build().cell({0, 0, 0}).horizontalOrientation(), Horizontals[3]);
+		const Volume volume = builder.build();
+		EXPECT_EQ(PackedCell::definitionId(volume.atRaw({0, 0, 0})), 100u);
+		EXPECT_EQ(volume.at({0, 0, 0}).horizontalOrientation(), Horizontals[3]);
 	}
 
 	TEST(VoxelVolumeTest, SnapshotKeepsRegistryAliveAfterOriginalIsDestroyed)
@@ -312,7 +317,7 @@ namespace
 		Volume::Builder builder({1, 1, 1}, registry({{730, solid}}));
 		builder.set({0, 0, 0}, 730);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == solid);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
 	}
 
 	TEST(VoxelVolumeTest, RebindingRejectsChangedOrMissingUsedIDs)
@@ -327,7 +332,7 @@ namespace
 		builder.bind(registry({{17, solid}, {80, other}}));
 		builder.set({1, 0, 0}, 80);
 		const Volume volume = builder.build();
-		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == solid);
-		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == other);
+		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == other);
 	}
 }

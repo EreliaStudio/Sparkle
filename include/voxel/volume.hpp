@@ -12,13 +12,8 @@
 
 namespace spk::Voxel
 {
-	struct VolumeTestAccess;
-
 	class Volume
 	{
-	private:
-		friend struct VolumeTestAccess;
-
 	public:
 		struct PackedCell
 		{
@@ -65,7 +60,6 @@ namespace spk::Voxel
 		class Builder
 		{
 		private:
-			friend struct VolumeTestAccess;
 			spk::Vector3UInt _dimensions;
 			std::vector<std::uint32_t> _cells;
 			Definition::Registry _registry;
@@ -107,6 +101,8 @@ namespace spk::Voxel
 
 	public:
 		[[nodiscard]] spk::Vector3UInt dimensions() const noexcept;
-		[[nodiscard]] Cell cell(spk::Vector3UInt position) const;
+		[[nodiscard]] Cell at(spk::Vector3UInt position) const;
+		[[nodiscard]] Cell operator[](spk::Vector3UInt position) const;
+		[[nodiscard]] PackedCell::Storage atRaw(spk::Vector3UInt position) const;
 	};
 }

@@ -110,13 +110,23 @@ namespace spk::Voxel
 		return _data->dimensions;
 	}
 
-	Cell Volume::cell(spk::Vector3UInt position) const
+	Volume::PackedCell::Storage Volume::atRaw(spk::Vector3UInt position) const
 	{
-		const auto packed = _data->cells[cellOffset(position, _data->dimensions)];
+		return _data->cells[cellOffset(position, _data->dimensions)];
+	}
+
+	Cell Volume::at(spk::Vector3UInt position) const
+	{
+		const auto packed = atRaw(position);
 		return Cell(
 			_data->definitions[PackedCell::definitionId(packed)],
 			PackedCell::horizontal(packed),
 			PackedCell::vertical(packed));
+	}
+
+	Cell Volume::operator[](spk::Vector3UInt position) const
+	{
+		return at(position);
 	}
 
 	Volume::Builder::Builder(spk::Vector3UInt dimensions) :

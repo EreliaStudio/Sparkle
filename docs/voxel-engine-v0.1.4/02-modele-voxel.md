@@ -25,7 +25,9 @@ classDiagram
   class Volume {
     +Builder
     +dimensions fixes
-    +cell(position) Cell
+    +at(position) Cell
+    +operator[](position) Cell
+    +atRaw(position) uint32
     -grille compacte + registre partagé
   }
   class Model {
@@ -140,9 +142,9 @@ Une cellule d'air est une Cell valide, et non `null`, un `optional` vide ou un i
 
 ### 2.4 `spk::Voxel::Volume` : snapshot dense immuable
 
-Un Volume représente une grille **dense et contiguë** de cellules, d'extensions fixes, y compris l'air. Chaque cellule occupe **un entier non signé de 32 bits** : 29 bits pour l'**ID directement attribué par `Definition::Registry`**, 2 bits de rotation horizontale et 1 bit d'inversion verticale. L'ID `0` est toujours Air, jamais un sentinel d'absence. Le codec `Volume::PackedCell` réalise ce stockage ; l'API `cell(position)` reconstruit une `Cell` publique par valeur.
+Un Volume représente une grille **dense et contiguë** de cellules, d'extensions fixes, y compris l'air. Chaque cellule occupe **un entier non signé de 32 bits** : 29 bits pour l'**ID directement attribué par `Definition::Registry`**, 2 bits de rotation horizontale et 1 bit d'inversion verticale. L'ID `0` est toujours Air, jamais un sentinel d'absence. Le codec `Volume::PackedCell` réalise ce stockage. `at(position)` et `operator[](position)` reconstruisent une `Cell` publique par valeur ; `atRaw(position)` retourne le mot compact `Volume::PackedCell::Storage` (`uint32_t`) par valeur, sans reconstruire de `Cell`. Ces trois méthodes vérifient les bornes et lèvent `spk::Exception` en cas de position invalide. La méthode antérieure `cell(position)` est retirée.
 
-Un Volume contient une **copie légère de `Definition::Registry` immuable**, donc une référence partagée à ses données. Il ne possède **aucune table locale d'indices ou de Definitions**. Plusieurs Volumes utilisant le même registre partagent ses Definitions à coût constant. Des IDs distincts associés à la même Definition gardent leurs IDs distincts dans la grille et conservent la même identité de Definition à la lecture. Il n'existe pas de `span<const Cell>` vers le stockage compact.
+Un Volume contient une **copie légère de `Definition::Registry` immuable**, donc une référence partagée à ses données. Il ne possède **aucune table locale d'indices ou de Definitions**. Plusieurs Volumes utilisant le même registre partagent ses Definitions à coût constant. Des IDs distincts associés à la même Definition gardent leurs IDs distincts dans la grille et conservent la même identité de Definition à la lecture. Il n'existe pas de `span<const Cell>` vers le stockage compact. Aucun accès privilégié de test `VolumeTestAccess`, ni déclaration `friend` associée, n'existe : les tests utilisent les accesseurs publics, dont `atRaw`.
 
 `Volume::Builder` accepte des dimensions et un `Definition::Registry` publié (ou uniquement des dimensions pour initialiser un Volume entièrement Air), ou un `const Volume&` existant. La grille est modifiée avec **`set(position, definitionId, horizontal, vertical)`**, dont les paramètres d'orientation ont une valeur par défaut, ou `erase(position)`. **`set(position, Cell)` est supprimé** : une Cell arbitraire ne fournit pas un ID unique, particulièrement si plusieurs IDs pointent vers la même Definition. Tout ID utilisé doit exister dans le registre lié au Builder, sauf Air `0`. Les dimensions ne changent jamais ; les limites, la capacité 29 bits et les allocations sont vérifiées.
 
