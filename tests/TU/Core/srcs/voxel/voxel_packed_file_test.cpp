@@ -200,9 +200,7 @@ namespace
 		const Definition first = createDefinition();
 		const Registry registry = makeRegistry({{7, first}, {20, first}});
 		PackedFile file;
-		file.write({
-			Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
-			Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
+		file.write({Packed::encode(7, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(20, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YNegative)});
 		const Volume volume = Volume::Builder({2, 1, 1}, file.path, registry).build();
 		EXPECT_TRUE(volume.cell({0, 0, 0}).definition() == first);
 		EXPECT_TRUE(volume.cell({1, 0, 0}).definition() == first);
@@ -261,9 +259,7 @@ namespace
 		Volume::Builder builder({2, 1, 1}, definitions.build());
 		builder.set({0, 0, 0}, 2);
 		PackedFile file;
-		file.write({
-			Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive),
-			Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
+		file.write({Packed::encode(2, Cell::HorizontalOrientation::ZPositive, Cell::VerticalOrientation::YPositive), Packed::encode(19, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		EXPECT_THROW(builder.loadPacked(file.path), spk::Exception);
 		const Volume unchanged = Volume::Builder(builder).build();
 		EXPECT_TRUE(unchanged.cell({0, 0, 0}).definition() == a);
@@ -283,9 +279,7 @@ namespace
 		const Registry registry = makeRegistry({{101, first}, {3, second}});
 		Volume::Builder builder({2, 1, 1}, registry);
 		PackedFile file;
-		file.write({
-			Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive),
-			Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
+		file.write({Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), Packed::encode(101, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive)});
 		builder.loadPacked(file.path);
 		file.write({Packed::encode(3, Cell::HorizontalOrientation::XPositive, Cell::VerticalOrientation::YPositive), 0});
 		builder.loadPacked(file.path);
