@@ -137,32 +137,21 @@ namespace spk::Voxel
 		}
 	}
 
-	void Volume::Builder::_ensureInitialized() const
+	Volume::Builder::Builder(spk::Vector3UInt dimensions) :
+		_dimensions(dimensions),
+		_cells(checkedCellCount(dimensions), PackedCell::Air)
 	{
-		_ensureActive();
-		if (_cells.empty())
-		{
-			throw spk::Exception("Voxel Volume Builder requires dimensions");
-		}
-	}
-
-	void Volume::Builder::setDimensions(spk::Vector3UInt dimensions)
-	{
-		_ensureActive();
-		if (!_cells.empty())
-		{
-			throw spk::Exception("Voxel Volume Builder dimensions are already set");
-		}
-		std::vector<PackedCell::Storage> cells(checkedCellCount(dimensions), PackedCell::Air);
-		_dimensions = dimensions;
-		_cells.swap(cells);
 	}
 
 	void Volume::Builder::load(const Volume &volume)
 	{
 		_ensureActive();
+		const auto dimensions = volume.dimensions();
+		if (dimensions.x != _dimensions.x || dimensions.y != _dimensions.y || dimensions.z != _dimensions.z)
+		{
+			throw spk::Exception("Voxel Volume Builder cannot load a Volume with different dimensions");
+		}
 		auto cells = volume._data->cells;
-		_dimensions = volume._data->dimensions;
 		_registry = volume._data->definitions;
 		_cells.swap(cells);
 	}
@@ -193,7 +182,7 @@ namespace spk::Voxel
 		Cell::HorizontalOrientation horizontal,
 		Cell::VerticalOrientation vertical)
 	{
-		_ensureInitialized();
+		_ensureActive();
 		const auto offset = cellOffset(position, _dimensions);
 		const auto packed = PackedCell::encode(definitionId, horizontal, vertical);
 		(void)_registry.at(definitionId);
@@ -202,20 +191,20 @@ namespace spk::Voxel
 
 	void Volume::Builder::erase(spk::Vector3UInt position)
 	{
-		_ensureInitialized();
+		_ensureActive();
 		_cells[cellOffset(position, _dimensions)] = PackedCell::Air;
 	}
 
 	void Volume::Builder::loadPacked(const std::filesystem::path &filename)
 	{
-		_ensureInitialized();
+		_ensureActive();
 		auto decoded = readPackedFile(filename, _cells.size(), _registry);
 		_cells.swap(decoded);
 	}
 
 	Volume Volume::Builder::build()
 	{
-		_ensureInitialized();
+		_ensureActive();
 		auto data = std::make_shared<Data>();
 		data->dimensions = _dimensions;
 		data->definitions = _registry;

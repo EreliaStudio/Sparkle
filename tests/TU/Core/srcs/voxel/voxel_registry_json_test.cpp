@@ -24,8 +24,8 @@ namespace
 	static_assert(!std::is_constructible_v<Shape::Builder, const spk::JSON::Value &>);
 	static_assert(std::is_default_constructible_v<Definition::Registry::Builder>);
 	static_assert(!std::is_constructible_v<Definition::Registry::Builder, const Shape::Registry &>);
-	static_assert(std::is_default_constructible_v<Volume::Builder>);
-	static_assert(!std::is_constructible_v<Volume::Builder, spk::Vector3UInt>);
+	static_assert(!std::is_default_constructible_v<Volume::Builder>);
+	static_assert(std::is_constructible_v<Volume::Builder, spk::Vector3UInt>);
 	static_assert(!std::is_constructible_v<Volume::Builder, const Volume &>);
 	static_assert(!std::is_constructible_v<Volume::Builder, spk::Vector3UInt, const std::filesystem::path &, const Definition::Registry &>);
 	static_assert(std::is_default_constructible_v<Definition::Builder>);
@@ -377,8 +377,7 @@ namespace
 		registryBuilder.bind(shapes);
 		registryBuilder.load(file.path());
 		const Definition::Registry registry = registryBuilder.build();
-		Volume::Builder builder;
-		builder.setDimensions({2, 1, 1});
+		Volume::Builder builder({2, 1, 1});
 		builder.bind(registry);
 		builder.set({1, 0, 0}, 42);
 		const Volume volume = builder.build();

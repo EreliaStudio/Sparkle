@@ -60,18 +60,15 @@ namespace spk::Voxel
 		class Builder
 		{
 		private:
-			spk::Vector3UInt _dimensions{};
+			spk::Vector3UInt _dimensions;
 			std::vector<std::uint32_t> _cells;
 			Definition::Registry _registry;
 			bool _consumed = false;
 
 			void _ensureActive() const;
-			void _ensureInitialized() const;
 
 		public:
-			Builder() = default;
-
-			void setDimensions(spk::Vector3UInt dimensions);
+			explicit Builder(spk::Vector3UInt dimensions);
 			void load(const Volume &volume);
 			void bind(const Definition::Registry &registry);
 			void set(
