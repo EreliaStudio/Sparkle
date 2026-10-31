@@ -1,5 +1,6 @@
 #include "voxel/definition.hpp"
 
+#include <cmath>
 #include <utility>
 
 #include "exception.hpp"
@@ -10,6 +11,7 @@ namespace spk::Voxel
 	{
 		Shape shape;
 		SlotMapping slots;
+		OpacityMapping opacity;
 	};
 
 	Definition::Definition() :
@@ -17,7 +19,7 @@ namespace spk::Voxel
 	{
 	}
 
-	Definition::Definition(Shape shape, SlotMapping mapping)
+	Definition::Definition(Shape shape, SlotMapping mapping, OpacityMapping opacity)
 	{
 		if (mapping.size() != shape.slots().size())
 		{
@@ -39,9 +41,19 @@ namespace spk::Voxel
 			(void)shape.slot(key);
 		}
 
+		for (const auto &[key, value] : opacity)
+		{
+			(void)shape.slot(key);
+			if (!std::isfinite(value) || value < 0.0f || value > 1.0f)
+			{
+				throw spk::Exception("Voxel Definition opacity must be finite and in [0,1]");
+			}
+		}
+
 		auto data = std::make_shared<Data>();
 		data->shape = std::move(shape);
 		data->slots = std::move(mapping);
+		data->opacity = std::move(opacity);
 		_data = std::move(data);
 	}
 
@@ -59,6 +71,13 @@ namespace spk::Voxel
 	const Definition::SlotMapping &Definition::slots() const noexcept
 	{
 		return _data->slots;
+	}
+
+	float Definition::opacity(std::string_view geometricKey) const
+	{
+		(void)shape().slot(geometricKey);
+		const auto found = _data->opacity.find(std::string(geometricKey));
+		return found == _data->opacity.end() ? 1.0f : found->second;
 	}
 
 	const std::string &Definition::semanticSlot(std::string_view geometricKey) const
