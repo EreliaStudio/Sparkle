@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cmath>
 #include <future>
+#include <limits>
+#include <stdexcept>
 #include <vector>
 #include "voxel/occlusion/cache.hpp"
 
@@ -128,4 +130,93 @@ TEST(VoxelOcclusion, RejectInvalidTolerance)
  auto a=shape(1),b=shape(0,0,1,1,false);
  EXPECT_ANY_THROW(Algorithm::compute(a,{},b,{},Shape::Face::PositiveX,0));
  EXPECT_ANY_THROW(Algorithm::compute(a,{},b,{},Shape::Face::PositiveX,-1));
+}
+
+TEST(VoxelOcclusion, RepeatedClearAndGet)
+{
+ auto a=shape(1), b=shape(0,0,0.5f,1,false);
+ Cache cache;
+ auto k=key(a,b);
+ for (int i=0;i<100;++i) {
+  EXPECT_NEAR(surface(cache.get(k)),0.75f,1e-4f);
+  cache.clear();
+ }
+}
+TEST(VoxelOcclusion, CacheResultSurvivesClear)
+{
+ auto a=shape(1), b=shape(0,0,0.5f,1,false);
+ Cache cache;
+ auto saved=cache.get(key(a,b));
+ cache.clear();
+ EXPECT_NEAR(surface(saved),0.75f,1e-4f);
+}
+TEST(VoxelOcclusion, ConcurrentGetAndClear)
+{
+ auto a=shape(1), b=shape(0,0,0.5f,1,false);
+ Cache cache;
+ auto k=key(a,b);
+ std::vector<std::future<void>> jobs;
+ for (int worker=0;worker<8;++worker)
+  jobs.push_back(std::async(std::launch::async,[&,worker] {
+   for (int i=0;i<100;++i) {
+    if (worker==0) cache.clear();
+    else {
+     auto result=cache.get(k);
+     if (std::abs(surface(result)-0.75f)>1e-4f)
+      throw std::runtime_error("Incorrect concurrent occlusion result");
+    }
+   }
+  }));
+ for (auto &job:jobs) EXPECT_NO_THROW(job.get());
+}
+TEST(VoxelOcclusion, AllEightOrientationsAreDeterministic)
+{
+ auto a=shape(1), b=shape(0,0,0.5f,1,false);
+ Cache cache;
+ for (auto horizontal: {Shape::HorizontalOrientation::XPositive,
+                        Shape::HorizontalOrientation::ZPositive,
+                        Shape::HorizontalOrientation::XNegative,
+                        Shape::HorizontalOrientation::ZNegative})
+  for (auto vertical: {Shape::VerticalOrientation::YPositive,
+                      Shape::VerticalOrientation::YNegative}) {
+   auto k=key(a,b);
+   k.sourceOrientation={horizontal,vertical};
+   k.blockerOrientation={horizontal,vertical};
+   auto direct=Algorithm::compute(k.source,k.sourceOrientation,k.blocker,
+                                 k.blockerOrientation,k.direction,k.tolerance);
+   auto cached=cache.get(k);
+   EXPECT_NEAR(surface(direct),surface(cached),1e-5f);
+   EXPECT_NEAR(surface(cached),surface(cache.get(k)),1e-5f);
+  }
+}
+TEST(VoxelOcclusion, MultipleOverlappingBlockersDoNotIncreaseVisibleArea)
+{
+ Shape::Builder builder;
+ builder.addSlot("surface",1.0f);
+ builder.addPolygon("surface",face(0,0,0.5f,false));
+ builder.addPolygon("surface",face(0,0,0.5f,false));
+ auto blocker=builder.build();
+ auto source=shape(1);
+ auto result=Algorithm::compute(source,{},blocker,{},Shape::Face::PositiveX);
+ EXPECT_NEAR(surface(result),0.75f,1e-4f);
+}
+TEST(VoxelOcclusion, TransparentBlockerIsIgnored)
+{
+ auto source=shape(1), blocker=shape(0,0,1,0.5f,false);
+ EXPECT_NEAR(surface(Algorithm::compute(source,{},blocker,{},
+                   Shape::Face::PositiveX)),1.0f,1e-4f);
+}
+TEST(VoxelOcclusion, EmptySourceProducesNoFragments)
+{
+ Shape empty;
+ auto blocker=shape(0,0,1,1,false);
+ EXPECT_TRUE(Algorithm::compute(empty,{},blocker,{},Shape::Face::PositiveX).empty());
+}
+TEST(VoxelOcclusion, RejectNonFiniteTolerance)
+{
+ auto a=shape(1),b=shape(0,0,1,1,false);
+ EXPECT_ANY_THROW(Algorithm::compute(a,{},b,{},Shape::Face::PositiveX,
+                                    std::numeric_limits<float>::infinity()));
+ EXPECT_ANY_THROW(Algorithm::compute(a,{},b,{},Shape::Face::PositiveX,
+                                    std::numeric_limits<float>::quiet_NaN()));
 }
