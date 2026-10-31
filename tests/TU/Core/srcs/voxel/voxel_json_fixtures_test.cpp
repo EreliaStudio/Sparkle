@@ -206,7 +206,8 @@ namespace
 		for (const Fixture &fixture : Fixtures)
 		{
 			const Shape shape = fixtureShape(fixture.name);
-			const auto &originals = fixtureJSON(fixture.name).at("polygons").asArray();
+			const auto sourceJSON = fixtureJSON(fixture.name);
+			const auto &originals = sourceJSON.at("polygons").asArray();
 			for (unsigned flipped = 0; flipped < 2; ++flipped)
 			{
 				for (unsigned degrees = 0; degrees < 360; degrees += 90)
