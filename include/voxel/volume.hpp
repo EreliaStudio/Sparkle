@@ -24,8 +24,8 @@ namespace spk::Voxel
 		private:
 			friend struct VolumeTestAccess;
 			spk::Vector3UInt _dimensions;
-			std::vector<Definition> _definitions;
 			std::vector<std::uint32_t> _cells;
+			std::vector<Definition> _definitions;
 			bool _consumed = false;
 
 			void _ensureActive() const;

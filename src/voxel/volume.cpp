@@ -74,18 +74,18 @@ namespace spk::Voxel
 
 	Volume::Builder::Builder(spk::Vector3UInt dimensions) :
 		_dimensions(dimensions),
-		_definitions{Definition::air()},
 		_cells(checkedCellCount(dimensions), PackedCell::encode(
 			0,
 			Cell::HorizontalOrientation::XPositive,
-			Cell::VerticalOrientation::YPositive))
+			Cell::VerticalOrientation::YPositive)),
+		_definitions{Definition::air()}
 	{
 	}
 
 	Volume::Builder::Builder(const Volume &volume) :
 		_dimensions(volume._data->dimensions),
-		_definitions(volume._data->definitions),
-		_cells(volume._data->cells)
+		_cells(volume._data->cells),
+		_definitions(volume._data->definitions)
 	{
 	}
 
