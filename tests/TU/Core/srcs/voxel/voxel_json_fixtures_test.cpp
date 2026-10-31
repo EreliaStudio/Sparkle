@@ -135,7 +135,7 @@ namespace
 			Definition::SlotMapping mapping;
 			for (const auto &slot : shape.slots())
 			{
-				mapping.emplace(slot.name, fixture.name + std::string(".") + slot.name);
+				mapping.emplace(slot.name, Definition::Slot{fixture.name + std::string(".") + slot.name});
 			}
 			const Definition definition(shape, std::move(mapping));
 			for (const auto &cell : orientations(definition))
@@ -162,7 +162,7 @@ namespace
 				Definition::SlotMapping mapping;
 				for (const auto &slot : shape.slots())
 				{
-					mapping.emplace(slot.name, slot.name);
+					mapping.emplace(slot.name, Definition::Slot{slot.name});
 				}
 				return mapping;
 			}());

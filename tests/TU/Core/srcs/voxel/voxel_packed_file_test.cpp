@@ -29,7 +29,7 @@ namespace
 	{
 		Shape::Builder builder;
 		builder.addSlot("face");
-		return Definition(builder.build(), {{"face", std::move(semantic)}});
+		return Definition(builder.build(), {{"face", {std::move(semantic)}}});
 	}
 
 	Registry makeRegistry(std::initializer_list<std::pair<std::uint32_t, Definition>> entries)

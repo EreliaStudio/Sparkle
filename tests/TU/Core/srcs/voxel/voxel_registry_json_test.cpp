@@ -70,7 +70,7 @@ namespace
 	]})";
 	constexpr auto Definitions = R"({"elements":[
 		{"id":42,"data":{"shape":"cube","slots":{"face":"stone"}}},
-		{"id":7,"data":{"shape":"slab","slots":{"side":"glass"},"opacity":{"side":0.75}}}
+		{"id":7,"data":{"shape":"slab","slots":{"side":{"name":"glass","opacity":0.75}}}}
 	]})";
 
 	Shape::Registry shapeRegistry()
@@ -145,9 +145,9 @@ namespace
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
-		builder.setSlots({{"face", "rock"}});
+		builder.setSlots({{"face", {"rock"}}});
 		const Definition first = builder.build();
-		builder.setSlots({{"face", "glass"}});
+		builder.setSlots({{"face", {"glass"}}});
 		const Definition second = builder.build();
 		EXPECT_TRUE(first.shape() == shapes["cube"]);
 		EXPECT_TRUE(second.shape() == shapes["cube"]);
@@ -174,7 +174,7 @@ namespace
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
-		builder.setSlots({{"face", "original"}});
+		builder.setSlots({{"face", {"original"}}});
 		const auto invalid = spk::JSON::Value::fromString(
 			R"({"shape":"absent","slots":{"face":"bad"}})");
 		EXPECT_THROW(builder.addFromJSON(invalid), spk::Exception);
@@ -189,10 +189,9 @@ namespace
 			builder.bind(shapes);
 		}
 		builder.setShape("slab");
-		builder.setSlots({{"side", "transparent"}});
-		builder.setOpacity("side", 0.75f);
+		builder.setSlots({{"side", {"transparent", 0.75f}}});
 		const Definition definition = builder.build();
-		EXPECT_FLOAT_EQ(definition.opacity("side"), 0.75f);
+		EXPECT_FLOAT_EQ(definition.slot("side").opacity, 0.75f);
 	}
 
 	TEST(VoxelDefinitionBuilderTest, EmptyRegistryRejectsUnknownIDsAndBindingEnablesJSON)
@@ -215,7 +214,7 @@ namespace
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
-		builder.setSlots({{"face", "stone"}});
+		builder.setSlots({{"face", {"stone"}}});
 		const Definition original = builder.build();
 		builder.bind(Shape::Registry());
 		EXPECT_THROW((void)builder.build(), spk::Exception);
@@ -225,7 +224,7 @@ namespace
 		builder.bind(shapes);
 		EXPECT_THROW((void)builder.build(), spk::Exception);
 		builder.setShape("cube");
-		builder.setSlots({{"face", "stone"}});
+		builder.setSlots({{"face", {"stone"}}});
 		EXPECT_TRUE(builder.build().shape() == original.shape());
 	}
 
@@ -257,7 +256,7 @@ namespace
 		EXPECT_TRUE(registry[42].shape() == shapes["cube"]);
 		EXPECT_EQ(registry[42].semanticSlot("face"), "stone");
 		EXPECT_EQ(registry[7].semanticSlot("side"), "glass");
-		EXPECT_FLOAT_EQ(registry[7].opacity("side"), 0.75f);
+		EXPECT_FLOAT_EQ(registry[7].slot("side").opacity, 0.75f);
 		EXPECT_THROW((void)registry[10], spk::Exception);
 	}
 
@@ -324,7 +323,7 @@ namespace
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
-		builder.setSlots({{"face", "stone"}});
+		builder.setSlots({{"face", {"stone"}}});
 		const Definition stone = builder.build();
 		Definition::Registry::Builder builderRegistry;
 		builderRegistry.add(13, stone);
@@ -357,13 +356,13 @@ namespace
 		Definition::Builder definitionBuilder;
 		definitionBuilder.bind(shapes);
 		definitionBuilder.setShape("cube");
-		definitionBuilder.setSlots({{"face", "rock"}});
+		definitionBuilder.setSlots({{"face", {"rock"}}});
 		Definition::Registry::Builder builder;
 		builder.add(9, definitionBuilder.build());
 		const Definition::Registry first = builder.build();
 		const Definition::Registry copy = first;
 		EXPECT_EQ(&first[9], &copy[9]);
-		definitionBuilder.setSlots({{"face", "glass"}});
+		definitionBuilder.setSlots({{"face", {"glass"}}});
 		builder.add(20, definitionBuilder.build());
 		const Definition::Registry second = builder.build();
 		EXPECT_FALSE(first.contains(20));

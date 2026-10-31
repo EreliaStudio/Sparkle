@@ -96,7 +96,7 @@ namespace
 		builder.addPolygon("wall", square());
 		builder.addPolygon("glass", {vertex(0.2f, 0.1f, 0.2f), vertex(0.8f, 0.1f, 0.2f), vertex(0.5f, 0.7f, 0.2f)});
 		const Shape shape = builder.build();
-		const Definition definition(shape, {{"wall", "wall"}, {"glass", "glass"}}, {{"glass", 0.25f}});
+		const Definition definition(shape, {{"wall", {"wall"}}, {"glass", {"glass", 0.25f}}});
 		ASSERT_EQ(shape.instance().polygons().size(), 2u);
 		EXPECT_FLOAT_EQ(definition.opacity("wall"), 1.0f);
 		EXPECT_FLOAT_EQ(definition.opacity("glass"), 0.25f);
@@ -162,15 +162,15 @@ namespace
 		const Shape shape = makeSquare();
 		const Shape identical = makeSquare();
 		EXPECT_FALSE(shape == identical);
-		const Definition first(shape, {{"wall", "stone"}});
+		const Definition first(shape, {{"wall", {"stone"}}});
 		const Definition copied = first;
-		const Definition second(shape, {{"wall", "glass"}});
-		const Definition third(identical, {{"wall", "stone"}});
+		const Definition second(shape, {{"wall", {"glass"}}});
+		const Definition third(identical, {{"wall", {"stone"}}});
 		EXPECT_TRUE(first == copied);
 		EXPECT_FALSE(first == second);
 		EXPECT_FALSE(first == third);
 		EXPECT_TRUE(first.shape() == second.shape());
-		EXPECT_EQ(first.semanticSlot("wall"), "stone");
+		EXPECT_EQ(first.slot("wall").name, "stone");
 		EXPECT_EQ(second.semanticSlot("wall"), "glass");
 		EXPECT_EQ(first.shape().instance().polygons().size(), 1u);
 		EXPECT_THROW(first.semanticSlot("none"), spk::Exception);
@@ -180,21 +180,21 @@ namespace
 	{
 		const Shape shape = makeSquare();
 		EXPECT_THROW((Definition(shape, {})), spk::Exception);
-		EXPECT_THROW((Definition(shape, {{"missing", "x"}})), spk::Exception);
-		EXPECT_THROW((Definition(shape, {{"wall", ""}})), spk::Exception);
-		EXPECT_NO_THROW((Definition(shape, {{"wall", "stone"}})));
+		EXPECT_THROW((Definition(shape, {{"missing", {"x"}}})), spk::Exception);
+		EXPECT_THROW((Definition(shape, {{"wall", {""}}})), spk::Exception);
+		EXPECT_NO_THROW((Definition(shape, {{"wall", {"stone"}}})));
 	}
 
 	TEST(VoxelDefinitionTest, OpacityIsValidatedAndDefaultsToOpaque)
 	{
 		const Shape shape = makeSquare();
-		const Definition::SlotMapping slots{{"wall", "stone"}};
+		const Definition::SlotMapping slots{{"wall", {"stone"}}};
 		EXPECT_FLOAT_EQ(Definition(shape, slots).opacity("wall"), 1.0f);
-		EXPECT_FLOAT_EQ((Definition(shape, slots, {{"wall", 0.25f}})).opacity("wall"), 0.25f);
-		EXPECT_THROW((Definition(shape, slots, {{"wall", -0.1f}})), spk::Exception);
-		EXPECT_THROW((Definition(shape, slots, {{"wall", 1.1f}})), spk::Exception);
-		EXPECT_THROW((Definition(shape, slots, {{"wall", std::numeric_limits<float>::quiet_NaN()}})), spk::Exception);
-		EXPECT_THROW((Definition(shape, slots, {{"missing", 0.5f}})), spk::Exception);
+		EXPECT_FLOAT_EQ((Definition(shape, {{"wall", {"stone", 0.25f}}})).opacity("wall"), 0.25f);
+		EXPECT_THROW((Definition(shape, {{"wall", {"stone", -0.1f}}})), spk::Exception);
+		EXPECT_THROW((Definition(shape, {{"wall", {"stone", 1.1f}}})), spk::Exception);
+		EXPECT_THROW((Definition(shape, {{"wall", {"stone", std::numeric_limits<float>::quiet_NaN()}}})), spk::Exception);
+		EXPECT_THROW((Definition(shape, {{"missing", {"stone", 0.5f}}})), spk::Exception);
 	}
 
 	TEST(VoxelCellTest, DefaultAirIsValidAndDoesNotOcclude)
@@ -211,7 +211,7 @@ namespace
 
 	TEST(VoxelCellTest, AllEightOrientationPairsRetainDefinition)
 	{
-		const Definition definition(makeSquare(), {{"wall", "stone"}});
+		const Definition definition(makeSquare(), {{"wall", {"stone"}}});
 		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
 			const Cell cell = makeOrientedCell(definition, index);
@@ -337,8 +337,8 @@ namespace
 	TEST(VoxelShapeTest, SharedShapeCacheDoesNotDependOnDefinitionSemanticSlots)
 	{
 		const Shape shape = makeSquare();
-		const Definition stone(shape, {{"wall", "stone"}});
-		const Definition glass(shape, {{"wall", "glass"}});
+		const Definition stone(shape, {{"wall", {"stone"}}});
+		const Definition glass(shape, {{"wall", {"glass"}}});
 		EXPECT_FALSE(stone == glass);
 		EXPECT_TRUE(stone.shape() == glass.shape());
 		for (const auto &pair : Orientations)
@@ -519,7 +519,7 @@ namespace
 		EXPECT_FALSE(extended == repeated);
 		EXPECT_EQ(original.slots().size(), 1u);
 		EXPECT_EQ(extended.slots().size(), 2u);
-		EXPECT_FLOAT_EQ((Definition(original, {{"first", "first"}}, {{"first", 0.5f}})).opacity("first"), 0.5f);
+		EXPECT_FLOAT_EQ((Definition(original, {{"first", {"first", 0.5f}}})).opacity("first"), 0.5f);
 		for (std::size_t index = 0; index < Orientations.size(); ++index)
 		{
 			const Shape::Orientation orientation{Orientations[index].horizontal, Orientations[index].vertical};
@@ -575,7 +575,7 @@ namespace
 		const Shape shape = builder.build();
 		ASSERT_EQ(shape.instance().polygons().size(), 3u);
 		ASSERT_EQ(shape.slots().size(), 1u);
-		const Definition definition(shape, {{"sheet", "stone"}});
+		const Definition definition(shape, {{"sheet", {"stone"}}});
 		for (const auto &polygon : shape.instance().polygons())
 		{
 			EXPECT_EQ(polygon.slotKey, "sheet");

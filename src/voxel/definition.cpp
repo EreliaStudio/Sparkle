@@ -11,7 +11,6 @@ namespace spk::Voxel
 	{
 		Shape shape;
 		SlotMapping slots;
-		OpacityMapping opacity;
 	};
 
 	Definition::Definition() :
@@ -19,7 +18,7 @@ namespace spk::Voxel
 	{
 	}
 
-	Definition::Definition(Shape shape, SlotMapping mapping, OpacityMapping opacity)
+	Definition::Definition(Shape shape, SlotMapping mapping)
 	{
 		if (mapping.size() != shape.slots().size())
 		{
@@ -32,19 +31,14 @@ namespace spk::Voxel
 				throw spk::Exception("Voxel Definition has a missing Shape slot mapping");
 			}
 		}
-		for (const auto &[key, value] : mapping)
+		for (const auto &[key, slot] : mapping)
 		{
-			if (value.empty())
+			(void)shape.slot(key);
+			if (slot.name.empty())
 			{
 				throw spk::Exception("Voxel Definition semantic slot name cannot be empty");
 			}
-			(void)shape.slot(key);
-		}
-
-		for (const auto &[key, value] : opacity)
-		{
-			(void)shape.slot(key);
-			if (!std::isfinite(value) || value < 0.0f || value > 1.0f)
+			if (!std::isfinite(slot.opacity) || slot.opacity < 0.0f || slot.opacity > 1.0f)
 			{
 				throw spk::Exception("Voxel Definition opacity must be finite and in [0,1]");
 			}
@@ -53,7 +47,6 @@ namespace spk::Voxel
 		auto data = std::make_shared<Data>();
 		data->shape = std::move(shape);
 		data->slots = std::move(mapping);
-		data->opacity = std::move(opacity);
 		_data = std::move(data);
 	}
 
@@ -73,14 +66,7 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-	float Definition::opacity(std::string_view geometricKey) const
-	{
-		(void)shape().slot(geometricKey);
-		const auto found = _data->opacity.find(std::string(geometricKey));
-		return found == _data->opacity.end() ? 1.0f : found->second;
-	}
-
-	const std::string &Definition::semanticSlot(std::string_view geometricKey) const
+	const Definition::Slot &Definition::slot(std::string_view geometricKey) const
 	{
 		const auto found = _data->slots.find(std::string(geometricKey));
 		if (found == _data->slots.end())
@@ -88,6 +74,16 @@ namespace spk::Voxel
 			throw spk::Exception("Voxel Definition references an unmapped geometric slot");
 		}
 		return found->second;
+	}
+
+	float Definition::opacity(std::string_view geometricKey) const
+	{
+		return slot(geometricKey).opacity;
+	}
+
+	const std::string &Definition::semanticSlot(std::string_view geometricKey) const
+	{
+		return slot(geometricKey).name;
 	}
 
 	bool Definition::operator==(const Definition &other) const noexcept

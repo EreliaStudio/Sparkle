@@ -34,7 +34,7 @@ namespace
 		Shape::Builder builder;
 		builder.addSlot("surface");
 		builder.addPolygon("surface", face(x, low, high, positive));
-		return Definition(builder.build(), {{"surface", "surface"}}, {{"surface", opacity}});
+		return Definition(builder.build(), {{"surface", {"surface", opacity}}});
 	}
 
 	Cache::Key key(const Definition &a, const Definition &b)
@@ -255,7 +255,7 @@ TEST(VoxelOcclusion, MultipleOverlappingBlockersDoNotIncreaseVisibleArea)
 	builder.addSlot("surface");
 	builder.addPolygon("surface", face(0, 0, 0.5f, false));
 	builder.addPolygon("surface", face(0, 0, 0.5f, false));
-	auto blocker = Definition(builder.build(), {{"surface", "surface"}});
+	auto blocker = Definition(builder.build(), {{"surface", {"surface"}}});
 	auto source = shape(1);
 	auto result = Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX);
 	EXPECT_NEAR(surface(result), 0.75f, 1e-4f);

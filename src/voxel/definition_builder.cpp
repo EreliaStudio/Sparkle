@@ -1,6 +1,5 @@
 #include "voxel/definition.hpp"
 
-#include <cmath>
 #include <utility>
 
 #include "exception.hpp"
@@ -23,37 +22,28 @@ namespace spk::Voxel
 		_slots.swap(slots);
 	}
 
-	void Definition::Builder::setOpacity(std::string_view geometricKey, float opacity)
-	{
-		if (!std::isfinite(opacity) || opacity < 0.0f || opacity > 1.0f)
-		{
-			throw spk::Exception("Voxel Definition opacity must be finite and in [0,1]");
-		}
-		_opacity[std::string(geometricKey)] = opacity;
-	}
-
 	void Definition::Builder::addFromJSON(const spk::JSON::Value &value)
 	{
 		spk::JSON::Reader reader(value, "<definition>");
-		reader.forbidUnknown({"shape", "slots", "opacity"});
+		reader.forbidUnknown({"shape", "slots"});
 		Shape shape = _shapes.at(reader.require<std::string>("shape"));
 		SlotMapping slots;
-		for (const auto &[name, target] : reader.child("slots").value().asObject())
+		for (const auto &[key, value] : reader.child("slots").value().asObject())
 		{
-			slots.emplace(name, target.as<std::string>());
-		}
-		OpacityMapping opacity;
-		if (reader.value().contains("opacity"))
-		{
-			for (const auto &[name, value] : reader.child("opacity").value().asObject())
+			if (value.isString())
 			{
-				opacity.emplace(name, value.as<float>());
+				slots.emplace(key, Slot{value.as<std::string>()});
+				continue;
 			}
+			spk::JSON::Reader slotReader(value, reader.file(), reader.pathFor("slots") + "." + key);
+			slotReader.forbidUnknown({"name", "opacity"});
+			slots.emplace(key, Slot{
+				slotReader.require<std::string>("name"),
+				slotReader.optional<float>("opacity", 1.0f)});
 		}
-		(void)Definition(shape, slots, opacity);
+		(void)Definition(shape, slots);
 		_shape = std::move(shape);
 		_slots.swap(slots);
-		_opacity.swap(opacity);
 	}
 
 	Definition Definition::Builder::build() const
@@ -62,6 +52,6 @@ namespace spk::Voxel
 		{
 			throw spk::Exception("Voxel Definition Builder requires a Shape");
 		}
-		return Definition(*_shape, _slots, _opacity);
+		return Definition(*_shape, _slots);
 	}
 }
