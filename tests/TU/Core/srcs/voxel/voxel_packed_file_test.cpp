@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "exception.hpp"
-#include "voxel/definition_registry.hpp"
 #include "voxel/volume.hpp"
 
 namespace
@@ -22,7 +21,7 @@ namespace
 	using Cell = spk::Voxel::Cell;
 	using Shape = spk::Voxel::Shape;
 	using Definition = spk::Voxel::Definition;
-	using Registry = spk::Voxel::DefinitionRegistry;
+	using Registry = Definition::Registry;
 	using Packed = Volume::PackedCell;
 	using Position = spk::Vector3UInt;
 

@@ -1,13 +1,15 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "container/json/object.hpp"
+#include "container/json/catalog.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 
@@ -16,6 +18,8 @@ namespace spk::Voxel
 	class Shape
 	{
 	public:
+		class Registry;
+
 		struct Vertex
 		{
 			spk::Vector3 position{};
@@ -118,5 +122,15 @@ namespace spk::Voxel
 		[[nodiscard]] bool empty() const noexcept;
 		[[nodiscard]] bool operator==(const Shape &other) const noexcept;
 		[[nodiscard]] const Slot &slot(std::string_view name) const;
+	};
+
+	class Shape::Registry final : public spk::JSON::Catalog<Shape, std::string>
+	{
+	private:
+		[[nodiscard]] ID _parseKey(const spk::JSON::Reader &reader) const override;
+		[[nodiscard]] Shape _parseElement(const spk::JSON::Reader &reader) const override;
+
+	public:
+		void add(ID id, Shape shape);
 	};
 }

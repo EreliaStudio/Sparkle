@@ -89,6 +89,43 @@ Une `Definition` immuable associe une `Shape` à une correspondance **slot géom
 
 Sparkle fournit une **Definition Air prédéfinie**. Elle représente une vraie cellule d'air, sans surface occultante ni slot de matériau supplémentaire présumé. Elle est créée automatiquement dans les Volumes ; l'application n'a pas à la fabriquer pour initialiser une grille vide.
 
+#### Registres de Shapes et de Definitions (PR-02)
+
+`Shape::Registry` associe un **ID texte** (`std::string`) à une `Shape` immuable. `Definition::Registry` associe un **ID numérique non signé sur 29 bits** (`std::uint32_t`, 1 à 2^29 - 1) à une `Definition` immuable ; l'ID numérique **0 est Air**, accessible sans déclaration dans le JSON. Les deux registres héritent de `spk::JSON::Catalog<Element, ID>`, en exploitant son modèle de stockage, ses méthodes `load(file)`, `at`, `operator[]` et la convention `{"elements":[{"id":...,"data":...}]}`. Le type ID explicite est pris en charge par `Catalog` sans rompre les usages existants fondés sur `Element::ID`.
+
+La construction d'une Definition à partir du JSON est assurée par `Definition::Builder` **lié à un `Shape::Registry`**. Le JSON de Definition contient un champ `shape` avec l'ID texte d'une Shape déjà enregistrée et un objet `slots` associant les slots géométriques aux noms sémantiques. Le Builder récupère la Shape par identité (copie légère), valide l'intégralité de la correspondance, puis construit une nouvelle Definition immuable. Plusieurs Definitions réutilisant la même Shape partagent ainsi les instances orientées de cette Shape. Le registre de Definitions doit être lié à un registre de Shapes via son constructeur ou `bind(shapes)` avant le chargement JSON.
+
+Exemple de catalogue de Shapes :
+
+```json
+{
+  "elements": [
+    {
+      "id": "surface",
+      "data": {
+        "slots": { "face": 1.0 },
+        "polygons": [
+          { "slot": "face", "vertices": [[0,0,0], [1,0,0], [0,1,0]] }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Exemple de catalogue de Definitions utilisant les mêmes Shapes :
+
+```json
+{
+  "elements": [
+    { "id": 10, "data": { "shape": "surface", "slots": { "face": "stone" } } },
+    { "id": 20, "data": { "shape": "surface", "slots": { "face": "glass" } } }
+  ]
+}
+```
+
+La correspondance des deux identifiants est **intentionnellement distincte** : une Shape est nommée par chaîne, une Definition est référencée par ID numérique dans les volumes binaires. Les IDs externes restent remappés vers les indices compacts locaux du Volume.
+
 ### 2.3 `spk::Voxel::Cell` et orientations
 
 L'API publique représente une Cell **par valeur**, contenant sa Definition (copie légère) et une orientation discrète. Les orientations disponibles comprennent les quatre rotations de 90° autour de Y et une possibilité d'inversion verticale, soit **huit orientations**.
@@ -104,7 +141,7 @@ Un Volume représente une grille **dense et contiguë** de cellules, d'extension
 1. une **table locale de Definitions** partageant leurs blocs Data ;
 2. une grille compacte d'indices vers cette table, avec l'orientation de chaque cellule.
 
-**Décision A confirmée lors de la review de PR-02 :** chaque emplacement reste encodé sur **un entier non signé de 32 bits** comprenant **29 bits d'index local de Definition, 2 bits de rotation horizontale et 1 bit d'inversion verticale**. Le Volume ne stocke **pas** directement de `std::vector<Cell>`. L'encodage est regroupé dans `Volume::PackedCell` ; la lecture reconstitue une `Cell` publique complète par valeur. Les IDs externes d'un `DefinitionRegistry` utilisés lors du chargement d'un fichier packed sont convertis en indices propres au Volume ; ils ne constituent pas des indices universels.
+**Décision A confirmée lors de la review de PR-02 :** chaque emplacement reste encodé sur **un entier non signé de 32 bits** comprenant **29 bits d'index local de Definition, 2 bits de rotation horizontale et 1 bit d'inversion verticale**. Le Volume ne stocke **pas** directement de `std::vector<Cell>`. L'encodage est regroupé dans `Volume::PackedCell` ; la lecture reconstitue une `Cell` publique complète par valeur. Les IDs externes d'un `Definition::Registry` utilisés lors du chargement d'un fichier packed sont convertis en indices propres au Volume ; ils ne constituent pas des indices universels.
 
 L'index interne `0` est **toujours réservé à Air**. Une Cell d'air référence l'entrée `0`, jamais un sentinel d'absence.
 

@@ -98,7 +98,7 @@ namespace
 	DecodedCells readPackedFile(
 		const std::filesystem::path &filename,
 		std::size_t count,
-		const spk::Voxel::DefinitionRegistry &registry)
+		const spk::Voxel::Definition::Registry &registry)
 	{
 		validatePackedFileSize(filename, count);
 		std::ifstream input(filename, std::ios::binary);
@@ -167,7 +167,7 @@ namespace spk::Voxel
 	Volume::Builder::Builder(
 		spk::Vector3UInt dimensions,
 		const std::filesystem::path &filename,
-		const DefinitionRegistry &registry) :
+		const Definition::Registry &registry) :
 		Builder(dimensions)
 	{
 		bind(registry);
@@ -194,10 +194,10 @@ namespace spk::Voxel
 		return _definitions.size();
 	}
 
-	void Volume::Builder::bind(const DefinitionRegistry &registry)
+	void Volume::Builder::bind(const Definition::Registry &registry)
 	{
 		_ensureActive();
-		_registry = std::make_shared<const DefinitionRegistry>(registry);
+		_registry = std::make_shared<const Definition::Registry>(registry);
 	}
 
 	void Volume::Builder::set(spk::Vector3UInt position, Cell cell)
@@ -222,7 +222,7 @@ namespace spk::Voxel
 		_ensureActive();
 		if (!_registry)
 		{
-			throw spk::Exception("Voxel Volume Builder requires a bound DefinitionRegistry");
+			throw spk::Exception("Voxel Volume Builder requires a bound Definition::Registry");
 		}
 		set(position, Cell(_registry->at(definitionId), horizontal, vertical));
 	}
@@ -238,7 +238,7 @@ namespace spk::Voxel
 		_ensureActive();
 		if (!_registry)
 		{
-			throw spk::Exception("Voxel Volume Builder requires a bound DefinitionRegistry");
+			throw spk::Exception("Voxel Volume Builder requires a bound Definition::Registry");
 		}
 		auto decoded = readPackedFile(filename, _cells.size(), *_registry);
 		_cells.swap(decoded.cells);

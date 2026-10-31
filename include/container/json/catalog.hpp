@@ -12,12 +12,12 @@
 
 namespace spk::JSON
 {
-	template <typename TElement>
+	template <typename TElement, typename TID = typename TElement::ID>
 	class Catalog
 	{
 	public:
 		using Element = TElement;
-		using ID = typename Element::ID;
+		using ID = TID;
 
 	private:
 		std::unordered_map<ID, Element> _elements;
@@ -81,6 +81,11 @@ namespace spk::JSON
 				const std::string path = root.pathFor("elements") + "[" + std::to_string(index) + "]";
 				_parseAndInsert(Reader(array[index], file, path));
 			}
+		}
+
+		[[nodiscard]] std::size_t size() const noexcept
+		{
+			return _elements.size();
 		}
 
 		[[nodiscard]] const Element &at(const ID &id) const

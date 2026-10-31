@@ -33,14 +33,23 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Ajustements de review
 
-- `DefinitionRegistry::operator[](id) const` est un accès **en lecture seule** identique à `at(id)`, y compris pour Air (ID 0). Un ID absent lève `spk::Exception` et n'insère jamais Air implicitement. L'enregistrement reste effectué par `add(id, Definition)`.
+- `Definition::Registry::operator[](id) const` est un accès **en lecture seule** identique à `at(id)`, y compris pour Air (ID 0). Un ID absent lève `spk::Exception` et n'insère jamais Air implicitement. L'enregistrement reste effectué par `add(id, Definition)`.
 - L'encodage compact est porté par `spk::Voxel::Volume::PackedCell` : aucun namespace ou fichier `Detail` autonome.
 - **Décision A validée :** le stockage interne conserve une grille dense d'entiers non signés sur **32 bits par cellule** (29 bits pour l'index local de Definition, 2 bits pour l'orientation horizontale, 1 bit pour l'inversion verticale) et une table locale de Definitions ; **ne pas remplacer la grille par `std::vector<Cell>`**. `Volume::cell(position)` reconstruit une `Cell` indépendante et la retourne par valeur.
 - La structure privée `Volume::Data` est **définie intégralement dans `include/voxel/volume.hpp`**, sans forward declaration ni définition déportée dans le `.cpp`. `shared_ptr<const Data>` reste uniquement le mécanisme de propriété partagée d'un snapshot immuable et conserve les copies de Volume à coût constant.
 
+## Registres JSON et construction imbriquée (extension validée)
+
+- `Shape::Registry : spk::JSON::Catalog<Shape, std::string>` associe un ID texte à une Shape immuable. Le registre peut être alimenté par `add(id, shape)` ou `load(path)`, avec le format `elements` des catalogues Sparkle.
+- `Definition::Builder` reçoit une copie/snapshot d'un `Shape::Registry` via sa construction et construit des Definitions immuables par `setShape(shapeId)`, `setSlots(mapping)`, `build()` ou `addFromJSON(data)`. Son JSON `data` contient `{"shape":"shape-id","slots":{"local":"semantic"}}`, sans duplication de polygones.
+- `Definition::Registry : spk::JSON::Catalog<Definition, std::uint32_t>` associe un ID numérique à une Definition immuable et fournit `add`, `bind(shapes)`, `load(path)`, `at` et `operator[]`. L'ID 0 est implicitement réservé à Air et n'apparaît pas dans le catalogue JSON.
+- `spk::JSON::Catalog` admet désormais un paramètre de type ID facultatif, avec valeur par défaut `TElement::ID` pour préserver les catalogues existants. Les formats mono-élément et `elements` restent inchangés.
+- La réutilisation des Shapes conserve leur identité et les huit instances orientées mises en cache. Les registres et Builders lient des snapshots sûrs, non des pointeurs pendants.
+- Les deux catalogues JSON sont séparés : charger d'abord les Shapes, puis les Definitions en associant le premier registre au second.
+
 ## Extension demandée pendant PR-02 : fichier compact et collection nommée
 
-`DefinitionRegistry` est une collection **possédée par l'application**, non globale, associant des IDs entiers non signés (29 bits utiles) à des `Definition`. L'ID 0 est Air et ne peut pas être redéfini. Les autres IDs doivent être déclarés explicitement, uniques et valides. Le Builder peut copier une collection via `bind(registry)` ; toute modification ultérieure de la collection initiale n'affecte pas le Builder. `set(position, id, orientation...)` utilise cette collection.
+`Definition::Registry` est un catalogue **possédé par l'application**, non global, associant des IDs entiers non signés (29 bits utiles) à des `Definition`. L'ID 0 est Air et ne peut pas être redéfini. Les autres IDs doivent être déclarés explicitement, uniques et valides. Le Builder peut copier une collection via `bind(registry)` ; toute modification ultérieure de la collection initiale n'affecte pas le Builder. `set(position, id, orientation...)` utilise cette collection.
 
 Le constructeur `Volume::Builder(dimensions, filename, registry)` et `Builder::loadPacked(filename)` lisent un fichier **brut sans en-tête** de **4 octets par cellule**, en little-endian. Les dimensions sont fournies par l'appelant, pas devinées depuis le fichier. Chaque mot correspond à 2 bits de rotation horizontale, 1 bit d'inversion verticale, et 29 bits d'ID de Definition dans la collection fournie. Le parcours est X le plus rapide, puis Y, puis Z. Un fichier doit contenir exactement `x*y*z*4` octets ; une taille différente, un ID non défini ou une erreur de lecture rejette toute l'opération. Le constructeur échoue sans publier de Volume partiel ; `loadPacked` conserve le Builder complètement inchangé en cas d'échec. L'import convertit les IDs externes en **indices locaux dédupliqués par identité** ; il ne suppose jamais que l'ID externe est l'indice interne du Volume.
 
