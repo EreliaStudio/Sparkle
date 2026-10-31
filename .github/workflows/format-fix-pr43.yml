@@ -1,9 +1,8 @@
 name: Format PR 43 sources
 
 on:
-  push:
-    branches:
-      - impl/v0.1.4/03-occlusion-cache
+  pull_request:
+    types: [synchronize]
 
 permissions:
   contents: write
