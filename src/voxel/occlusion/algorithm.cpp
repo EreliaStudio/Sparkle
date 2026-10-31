@@ -105,20 +105,20 @@ std::vector<Polygon> subtract(const Polygon &source, const Polygon &blocker,
  return visible;
 }
 }
-Result Algorithm::compute(const Shape &source, Shape::Orientation sourceOrientation,
- const Shape &blocker, Shape::Orientation blockerOrientation,
+Result Algorithm::compute(const Definition &source, Shape::Orientation sourceOrientation,
+ const Definition &blocker, Shape::Orientation blockerOrientation,
  Shape::Face direction, float tolerance)
 {
  if (!std::isfinite(tolerance) || tolerance<=0)
   throw spk::Exception("Occlusion tolerance must be positive and finite");
  std::vector<Polygon> fragments;
  const auto translation=offset(direction);
- for (const auto &polygon:source.instance(sourceOrientation).polygons()) {
+ for (const auto &polygon:source.shape().instance(sourceOrientation).polygons()) {
   if (polygon.shell!=Shape::Shell::Outer || polygon.boundary!=direction) continue;
   std::vector<Polygon> current{polygon};
-  for (const auto &occluder:blocker.instance(blockerOrientation).polygons()) {
+  for (const auto &occluder:blocker.shape().instance(blockerOrientation).polygons()) {
    if (occluder.shell!=Shape::Shell::Outer || occluder.boundary!=opposite(direction)) continue;
-   if (blocker.slot(occluder.slotKey).opacity<1.0f) continue;
+   if (blocker.opacity(occluder.slotKey)<1.0f) continue;
    if (occluder.geometricNormal.dot(translation)>=0) continue;
    Polygon translated=occluder;
    for (auto &vertex:translated.vertices) vertex.position+=translation;
