@@ -116,7 +116,8 @@ namespace spk::Voxel::Occlusion
 				return output;
 			}
 			auto distance = [&](const Vertex &vertex) {
-				return sign * cross(a, b, project(vertex.position, face)) + tolerance;
+				const float distance = sign * cross(a, b, project(vertex.position, face));
+				return std::abs(distance) <= tolerance ? 0.0f : distance;
 			};
 			for (std::size_t i = 0; i < input.size(); ++i)
 			{
