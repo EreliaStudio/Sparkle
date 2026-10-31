@@ -493,34 +493,6 @@ TEST(VoxelMesherGeometry, ExternalOpaqueBoundaryRemovesOnlyItsOwnShadowFace)
 	}
 }
 
-TEST(VoxelMesherGeometry, EveryOcclusionFixturePreservesExactShadowVertexPayload)
-{
-	std::array<Shape, 4> shapes{fixture("cube"), fixture("slab"), fixture("slope"), fixture("stair")};
-	VoxelMesher mesher;
-	for (const auto &source : shapes)
-	{
-		for (const auto &blocker : shapes)
-		{
-			for (const auto sourceOrientation : Orientations)
-			{
-				for (const auto blockerOrientation : Orientations)
-				{
-					for (const Face face : Faces)
-					{
-						const auto volume = pair(
-							definition(source, "source_"),
-							sourceOrientation,
-							definition(blocker, "blocker_"),
-							blockerOrientation,
-							face);
-						expectShadowGeometryMatchesOpaque(mesher.bake(volume));
-					}
-				}
-			}
-		}
-	}
-}
-
 TEST(VoxelMesherTest, EmptyVolumeBuildsThreeEmptyMeshesAndNoSlots)
 {
 	Volume::Builder builder({3, 2, 1});
@@ -742,6 +714,7 @@ TEST(VoxelMesherFixtures, EveryShapePairOrientationAndNeighborDirectionMatchesIn
 						const float expected = sampledVisibleArea(shapes[s], sourceOrientation, shapes[b], blockerOrientation, face);
 						EXPECT_NEAR(generatedBoundaryArea(model, face), expected, 0.05f);
 						EXPECT_EQ(model.depthMesh().indexCount(), model.opaqueMesh().indexCount());
+						expectShadowGeometryMatchesOpaque(model);
 						++cases;
 					}
 				}
