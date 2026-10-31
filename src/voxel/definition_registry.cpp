@@ -36,6 +36,11 @@ namespace spk::Voxel
 		return at(id);
 	}
 
+	const Definition *Definition::Registry::tryGet(const ID &id) const noexcept
+	{
+		return id == 0 ? &Definition::air() : spk::JSON::Catalog<Definition, ID>::tryGet(id);
+	}
+
 	bool Definition::Registry::contains(const ID &id) const noexcept
 	{
 		return id == 0 || spk::JSON::Catalog<Definition, ID>::contains(id);

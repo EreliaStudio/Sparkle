@@ -46,6 +46,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - `spk::JSON::Catalog` admet désormais un paramètre de type ID facultatif, avec valeur par défaut `TElement::ID` pour préserver les catalogues existants. Les formats mono-élément et `elements` restent inchangés.
 - La réutilisation des Shapes conserve leur identité et les huit instances orientées mises en cache. Les registres et Builders lient des snapshots sûrs, non des pointeurs pendants.
 - Les deux catalogues JSON sont séparés : charger d'abord les Shapes, puis les Definitions en associant le premier registre au second.
+- Les accès `at(id)` / `operator[](id)` sur une entrée absente lancent `spk::Exception` en indiquant l'ID demandé lorsque son type permet son affichage. `tryGet(id)` renvoie `nullptr` si l'ID est absent. Pour `Definition::Registry`, l'ID réservé `0` est traité de façon cohérente par `at`, `operator[]`, `contains` et `tryGet` : ce dernier renvoie `&Definition::air()`.
 
 ## Extension demandée pendant PR-02 : fichier compact et collection nommée
 

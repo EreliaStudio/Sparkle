@@ -70,6 +70,7 @@ namespace spk::Voxel
 
 		[[nodiscard]] const Definition &at(const ID &id) const;
 		[[nodiscard]] const Definition &operator[](const ID &id) const;
+		[[nodiscard]] const Definition *tryGet(const ID &id) const noexcept;
 		[[nodiscard]] bool contains(const ID &id) const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 	};

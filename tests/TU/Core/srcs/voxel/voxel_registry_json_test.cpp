@@ -78,6 +78,21 @@ namespace
 		EXPECT_THROW((void)registry["missing"], spk::Exception);
 	}
 
+	TEST(VoxelShapeRegistryTest, UnknownIDReportsRequestedString)
+	{
+		const Shape::Registry registry = shapeRegistry();
+		EXPECT_FALSE(registry.contains("absent_shape"));
+		EXPECT_EQ(registry.tryGet("absent_shape"), nullptr);
+		try
+		{
+			(void)registry["absent_shape"];
+			FAIL() << "Unknown Shape ID must throw";
+		} catch (const spk::Exception &exception)
+		{
+			EXPECT_NE(std::string(exception.what()).find("absent_shape"), std::string::npos);
+		}
+	}
+
 	TEST(VoxelShapeRegistryTest, SupportsProgrammaticAddAndRejectsDuplicateIDs)
 	{
 		Shape::Registry registry;
@@ -168,6 +183,38 @@ namespace
 		EXPECT_EQ(registry[42].semanticSlot("face"), "stone");
 		EXPECT_EQ(registry[7].semanticSlot("side"), "glass");
 		EXPECT_THROW((void)registry[10], spk::Exception);
+	}
+
+	TEST(VoxelDefinitionRegistryTest, AirAccessIsConsistentAcrossEveryLookupMethod)
+	{
+		const Definition::Registry registry;
+		const Definition *air = &Definition::air();
+		EXPECT_TRUE(registry.contains(0));
+		EXPECT_EQ(registry.tryGet(0), air);
+		EXPECT_EQ(&registry.at(0), air);
+		EXPECT_EQ(&registry[0], air);
+		EXPECT_EQ(registry.size(), 1u);
+	}
+
+	TEST(VoxelDefinitionRegistryTest, UnknownAndRegisteredIDsMatchLookupContracts)
+	{
+		const Shape::Registry shapes = shapeRegistry();
+		const JSONFile file(Definitions);
+		Definition::Registry registry(shapes);
+		registry.load(file.path());
+		EXPECT_EQ(registry.tryGet(42), &registry.at(42));
+		EXPECT_EQ(registry.tryGet(7), &registry[7]);
+		EXPECT_FALSE(registry.contains(999));
+		EXPECT_EQ(registry.tryGet(999), nullptr);
+		try
+		{
+			(void)registry.at(999);
+			FAIL() << "Unknown Definition ID must throw";
+		} catch (const spk::Exception &exception)
+		{
+			EXPECT_NE(std::string(exception.what()).find("999"), std::string::npos);
+		}
+		EXPECT_THROW((void)registry[999], spk::Exception);
 	}
 
 	TEST(VoxelDefinitionRegistryTest, JSONRejectsUnboundShapesAndUnknownShapeKeys)

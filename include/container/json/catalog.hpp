@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -88,12 +89,23 @@ namespace spk::JSON
 			return _elements.size();
 		}
 
+		[[nodiscard]] static std::string _describeID(const ID &id)
+		{
+			if constexpr (requires(std::ostringstream &stream, const ID &value) { stream << value; })
+			{
+				std::ostringstream stream;
+				stream << id;
+				return stream.str();
+			}
+			return "<unprintable>";
+		}
+
 		[[nodiscard]] const Element &at(const ID &id) const
 		{
 			const auto found = _elements.find(id);
 			if (found == _elements.end())
 			{
-				throw spk::Exception("unknown JSON catalog ID");
+				throw spk::Exception("unknown JSON catalog ID: " + _describeID(id));
 			}
 			return found->second;
 		}
