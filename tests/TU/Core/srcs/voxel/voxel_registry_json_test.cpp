@@ -7,6 +7,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "exception.hpp"
@@ -18,6 +19,10 @@ namespace
 	using Shape = spk::Voxel::Shape;
 	using Definition = spk::Voxel::Definition;
 	using Volume = spk::Voxel::Volume;
+
+	static_assert(std::is_default_constructible_v<Definition::Builder>);
+	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Registry &>);
+	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Registry &, const spk::JSON::Value &>);
 
 	class JSONFile
 	{
@@ -129,7 +134,8 @@ namespace
 	TEST(VoxelDefinitionBuilderTest, UsesRegisteredShapeAndBuildsImmutableDefinitions)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Builder builder(shapes);
+		Definition::Builder builder;
+		builder.bind(shapes);
 		builder.setShape("cube");
 		builder.setSlots({{"face", "rock"}});
 		const Definition first = builder.build();
@@ -145,7 +151,8 @@ namespace
 	TEST(VoxelDefinitionBuilderTest, CannotBuildWithoutShapeOrWithMissingSlots)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Builder builder(shapes);
+		Definition::Builder builder;
+		builder.bind(shapes);
 		EXPECT_THROW((void)builder.build(), spk::Exception);
 		EXPECT_THROW(builder.setShape("missing"), spk::Exception);
 		builder.setShape("cube");
@@ -155,7 +162,8 @@ namespace
 	TEST(VoxelDefinitionBuilderTest, FailedJSONParseLeavesPreviousStateIntact)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Builder builder(shapes);
+		Definition::Builder builder;
+		builder.bind(shapes);
 		builder.setShape("cube");
 		builder.setSlots({{"face", "original"}});
 		const auto invalid = spk::JSON::Value::fromString(
@@ -166,11 +174,45 @@ namespace
 
 	TEST(VoxelDefinitionBuilderTest, RegistryBindingOutlivesOriginalRegistry)
 	{
-		Definition::Builder builder(shapeRegistry());
+		Definition::Builder builder;
+		{
+			const Shape::Registry shapes = shapeRegistry();
+			builder.bind(shapes);
+		}
 		builder.setShape("slab");
 		builder.setSlots({{"side", "transparent"}});
 		const Definition definition = builder.build();
 		EXPECT_FLOAT_EQ(definition.shape().slot("side").opacity, 0.75f);
+	}
+
+	TEST(VoxelDefinitionBuilderTest, UnboundShapeLookupsThrowAndBindingEnablesBuild)
+	{
+		Definition::Builder builder;
+		const auto json = spk::JSON::Value::fromString(
+			R"({"shape":"cube","slots":{"face":"stone"}})");
+		EXPECT_THROW(builder.setShape("cube"), spk::Exception);
+		EXPECT_THROW(builder.addFromJSON(json), spk::Exception);
+		EXPECT_THROW((void)builder.build(), spk::Exception);
+		const Shape::Registry shapes = shapeRegistry();
+		builder.bind(shapes);
+		builder.addFromJSON(json);
+		EXPECT_EQ(builder.build().semanticSlot("face"), "stone");
+	}
+
+	TEST(VoxelDefinitionBuilderTest, RebindingClearsPreviouslySelectedShape)
+	{
+		const Shape::Registry shapes = shapeRegistry();
+		Definition::Builder builder;
+		builder.bind(shapes);
+		builder.setShape("cube");
+		builder.setSlots({{"face", "stone"}});
+		const Definition original = builder.build();
+		builder.bind(Shape::Registry());
+		EXPECT_THROW((void)builder.build(), spk::Exception);
+		EXPECT_THROW(builder.setShape("cube"), spk::Exception);
+		builder.bind(shapes);
+		builder.setShape("cube");
+		EXPECT_TRUE(builder.build().shape() == original.shape());
 	}
 
 	TEST(VoxelDefinitionRegistryTest, LoadsNumericIDsThroughJSONCatalog)
@@ -245,7 +287,8 @@ namespace
 	TEST(VoxelDefinitionRegistryTest, ProgrammaticAddChecksBoundsAndAir)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Builder builder(shapes);
+		Definition::Builder builder;
+		builder.bind(shapes);
 		builder.setShape("cube");
 		builder.setSlots({{"face", "stone"}});
 		const Definition stone = builder.build();
@@ -277,7 +320,8 @@ namespace
 	TEST(VoxelDefinitionRegistryTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
 	{
 		const Shape::Registry shapes = shapeRegistry();
-		Definition::Builder definitionBuilder(shapes);
+		Definition::Builder definitionBuilder;
+		definitionBuilder.bind(shapes);
 		definitionBuilder.setShape("cube");
 		definitionBuilder.setSlots({{"face", "rock"}});
 		Definition::Registry::Builder builder;

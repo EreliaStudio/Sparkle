@@ -6,20 +6,19 @@
 
 namespace spk::Voxel
 {
-	Definition::Builder::Builder(const Shape::Registry &shapes) :
-		_shapes(shapes)
+	void Definition::Builder::bind(const Shape::Registry &shapes)
 	{
-	}
-
-	Definition::Builder::Builder(const Shape::Registry &shapes, const spk::JSON::Value &json) :
-		Builder(shapes)
-	{
-		addFromJSON(json);
+		_shapes = shapes;
+		_shape.reset();
 	}
 
 	void Definition::Builder::setShape(std::string_view id)
 	{
-		_shape = _shapes.at(std::string(id));
+		if (!_shapes)
+		{
+			throw spk::Exception("Voxel Definition Builder requires a bound Shape Registry");
+		}
+		_shape = _shapes->at(std::string(id));
 	}
 
 	void Definition::Builder::setSlots(SlotMapping slots)
@@ -29,9 +28,13 @@ namespace spk::Voxel
 
 	void Definition::Builder::addFromJSON(const spk::JSON::Value &value)
 	{
+		if (!_shapes)
+		{
+			throw spk::Exception("Voxel Definition Builder requires a bound Shape Registry");
+		}
 		spk::JSON::Reader reader(value, "<definition>");
 		reader.forbidUnknown({"shape", "slots"});
-		Shape shape = _shapes.at(reader.require<std::string>("shape"));
+		Shape shape = _shapes->at(reader.require<std::string>("shape"));
 		SlotMapping slots;
 		for (const auto &[name, target] : reader.child("slots").value().asObject())
 		{

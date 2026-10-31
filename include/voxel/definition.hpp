@@ -39,13 +39,13 @@ namespace spk::Voxel
 	class Definition::Builder
 	{
 	private:
-		Shape::Registry _shapes;
+		std::optional<Shape::Registry> _shapes;
 		std::optional<Shape> _shape;
 		SlotMapping _slots;
 
 	public:
-		explicit Builder(const Shape::Registry &shapes);
-		Builder(const Shape::Registry &shapes, const spk::JSON::Value &json);
+		Builder() = default;
+		void bind(const Shape::Registry &shapes);
 
 		void setShape(std::string_view id);
 		void setSlots(SlotMapping slots);
