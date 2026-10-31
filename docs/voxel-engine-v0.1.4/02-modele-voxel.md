@@ -104,6 +104,8 @@ Un Volume représente une grille **dense et contiguë** de cellules, d'extension
 1. une **table locale de Definitions** partageant leurs blocs Data ;
 2. une grille compacte d'indices vers cette table, avec l'orientation de chaque cellule.
 
+**Décision A confirmée lors de la review de PR-02 :** chaque emplacement reste encodé sur **un entier non signé de 32 bits** comprenant **29 bits d'index local de Definition, 2 bits de rotation horizontale et 1 bit d'inversion verticale**. Le Volume ne stocke **pas** directement de `std::vector<Cell>`. L'encodage est regroupé dans `Volume::PackedCell` ; la lecture reconstitue une `Cell` publique complète par valeur. Les IDs externes d'un `DefinitionRegistry` utilisés lors du chargement d'un fichier packed sont convertis en indices propres au Volume ; ils ne constituent pas des indices universels.
+
 L'index interne `0` est **toujours réservé à Air**. Une Cell d'air référence l'entrée `0`, jamais un sentinel d'absence.
 
 La table locale déduplique une Definition **par identité de `Definition::Data`**, pas par comparaison profonde de contenu. Deux copies d'une même Definition partagent donc un index ; deux Definitions indépendantes au contenu identique peuvent occuper deux entrées. La lecture publique `cell(position)` reconstitue une **Cell par valeur** et n'expose pas les indices ni une référence vers le stockage compact. Ne pas promettre un `span<const Cell>` vers la grille.
