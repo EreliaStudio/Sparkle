@@ -315,11 +315,11 @@ namespace spk::Voxel
 		throw spk::Exception("Voxel Shape references an unknown geometric slot");
 	}
 
-	void Shape::Builder::addSlot(std::string name, float opacity)
+	void Shape::Builder::addSlot(std::string name)
 	{
-		if (name.empty() || !std::isfinite(opacity) || opacity < 0.0f || opacity > 1.0f)
+		if (name.empty())
 		{
-			throw spk::Exception("Voxel Shape slot requires a name and opacity in [0,1]");
+			throw spk::Exception("Voxel Shape slot requires a name");
 		}
 		for (const Slot &slot : _slots)
 		{
@@ -328,7 +328,7 @@ namespace spk::Voxel
 				throw spk::Exception("Voxel Shape slot name already exists");
 			}
 		}
-		_slots.push_back(Slot{std::move(name), opacity});
+		_slots.push_back(Slot{std::move(name)});
 	}
 
 	void Shape::Builder::addPolygon(std::string slotKey, std::vector<Vertex> vertices)
@@ -375,9 +375,10 @@ namespace spk::Voxel
 		try
 		{
 			const auto &data = value.contains("data") ? value.at("data") : value;
-			for (const auto &[name, opacity] : data.at("slots").asObject())
+			for (const auto &[name, ignored] : data.at("slots").asObject())
 			{
-				pending.addSlot(name, opacity.as<float>());
+				(void)ignored;
+				pending.addSlot(name);
 			}
 			for (const auto &entry : data.at("polygons").asArray())
 			{
