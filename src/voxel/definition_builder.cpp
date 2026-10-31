@@ -21,7 +21,6 @@ namespace spk::Voxel
 	void Definition::Builder::setSlots(SlotMapping slots)
 	{
 		_slots.swap(slots);
-		_opacity.swap(opacity);
 	}
 
 	void Definition::Builder::setOpacity(std::string_view geometricKey, float opacity)
@@ -54,6 +53,7 @@ namespace spk::Voxel
 		(void)Definition(shape, slots, opacity);
 		_shape = std::move(shape);
 		_slots.swap(slots);
+		_opacity.swap(opacity);
 	}
 
 	Definition Definition::Builder::build() const
