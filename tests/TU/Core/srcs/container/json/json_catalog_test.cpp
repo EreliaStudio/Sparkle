@@ -103,6 +103,21 @@ TEST(JsonCatalog, LoadsMoveOnlyElementsAndExposesLookupApi)
 	EXPECT_THROW((void)catalog[99u], spk::Exception);
 }
 
+TEST(JsonCatalog, UnknownIDErrorIncludesRequestedValue)
+{
+	Catalog catalog;
+	EXPECT_EQ(catalog.tryGet(730u), nullptr);
+	try
+	{
+		(void)catalog.at(730u);
+		FAIL() << "Missing catalog entry must throw";
+	} catch (const spk::Exception &exception)
+	{
+		EXPECT_NE(std::string(exception.what()).find("730"), std::string::npos);
+	}
+	EXPECT_THROW((void)catalog[730u], spk::Exception);
+}
+
 TEST(JsonCatalog, LoadsDirectSingleElementRootThroughSameParser)
 {
 	const TemporaryJsonFile file(

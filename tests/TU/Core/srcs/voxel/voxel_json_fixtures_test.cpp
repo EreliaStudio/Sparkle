@@ -40,7 +40,8 @@ namespace
 
 	[[nodiscard]] Shape fixtureShape(const std::string &name)
 	{
-		Shape::Builder builder(fixtureJSON(name));
+		Shape::Builder builder;
+		builder.addFromJSON(fixtureJSON(name));
 		return builder.build();
 	}
 
@@ -223,7 +224,9 @@ namespace
 	{
 		const auto json = spk::JSON::Value::fromString(
 			R"({"slots":{"surface":0.75},"polygons":[{"slot":"surface","vertices":[{"position":[0,0,0],"uv":[0.25,0.75],"normal":[0,0,1]},{"position":[1,0,0],"uv":[1,0],"normal":[0,0,1]},{"position":[0,1,0],"uv":[0,1],"normal":[0,0,1]}]}]})");
-		const Shape shape = Shape::Builder(json).build();
+		Shape::Builder builder;
+		builder.addFromJSON(json);
+		const Shape shape = builder.build();
 		ASSERT_EQ(shape.instance().polygons().size(), 1u);
 		EXPECT_FLOAT_EQ(shape.slot("surface").opacity, 0.75f);
 		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].uv, spk::Vector2(0.25f, 0.75f));
@@ -252,6 +255,7 @@ namespace
 	{
 		const auto multiple = spk::JSON::Value::fromString(
 			R"({"elements":[{"id":"cube","data":{"polygons":[]}},{"id":"slab","data":{"polygons":[]}}]})");
-		EXPECT_THROW((void)Shape::Builder(multiple), spk::Exception);
+		Shape::Builder builder;
+		EXPECT_THROW(builder.addFromJSON(multiple), spk::Exception);
 	}
 }
