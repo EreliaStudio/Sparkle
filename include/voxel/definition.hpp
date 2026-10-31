@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -39,8 +40,7 @@ namespace spk::Voxel
 	{
 	private:
 		Shape::Registry _shapes;
-		Shape _shape;
-		bool _hasShape = false;
+		std::optional<Shape> _shape;
 		SlotMapping _slots;
 
 	public:
