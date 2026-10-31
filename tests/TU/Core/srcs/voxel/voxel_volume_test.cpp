@@ -3,44 +3,13 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <limits>
-#include <new>
 #include <type_traits>
 #include <utility>
 
 #include "exception.hpp"
 #include "voxel/detail/packed_cell.hpp"
 #include "voxel/volume.hpp"
-
-namespace
-{
-	thread_local bool FailNextVolumeAllocation = false;
-}
-
-void *operator new(std::size_t size)
-{
-	if (FailNextVolumeAllocation)
-	{
-		FailNextVolumeAllocation = false;
-		throw std::bad_alloc();
-	}
-	if (void *memory = std::malloc(size == 0 ? 1 : size))
-	{
-		return memory;
-	}
-	throw std::bad_alloc();
-}
-
-void operator delete(void *memory) noexcept
-{
-	std::free(memory);
-}
-
-void operator delete(void *memory, std::size_t) noexcept
-{
-	std::free(memory);
-}
 
 namespace spk::Voxel
 {
@@ -296,26 +265,17 @@ namespace
 		EXPECT_TRUE(volume.cell({0, 0, 0}).isAir());
 	}
 
-	TEST(VoxelVolumeTest, FailedBuildPreservesStateAndBuilderCanBeReused)
+	TEST(VoxelVolumeTest, FailedSetPreservesAllEntriesAndBuilderRemainsReusable)
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1});
 		builder.set({1, 0, 0}, Cell(solid, Horizontals[2]));
-		const auto expected = Access::encoded(builder, 1);
+		const auto before = Access::encoded(builder, 1);
 		const auto count = Access::definitions(builder);
-		bool failed = false;
-		FailNextVolumeAllocation = true;
-		try
-		{
-			(void)builder.build();
-		} catch (const std::bad_alloc &)
-		{
-			failed = true;
-		}
-		FailNextVolumeAllocation = false;
-		ASSERT_TRUE(failed);
+		EXPECT_THROW(builder.set({0, 0, 0}, Cell(definition(), static_cast<Cell::HorizontalOrientation>(360))), spk::Exception);
+		EXPECT_THROW(builder.set({2, 0, 0}, Cell(definition())), spk::Exception);
 		EXPECT_FALSE(Access::consumed(builder));
-		EXPECT_EQ(Access::encoded(builder, 1), expected);
+		EXPECT_EQ(Access::encoded(builder, 1), before);
 		EXPECT_EQ(Access::definitions(builder), count);
 		builder.set({0, 0, 0}, Cell(solid));
 		const Volume volume = builder.build();

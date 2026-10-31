@@ -75,6 +75,59 @@ namespace
 		}
 		return static_cast<std::uint32_t>(index);
 	}
+
+	struct DecodedCells
+	{
+		std::vector<std::uint32_t> cells;
+		std::vector<spk::Voxel::Definition> definitions;
+	};
+
+	void validatePackedFileSize(const std::filesystem::path &filename, std::size_t cells)
+	{
+		if (cells > std::numeric_limits<std::uintmax_t>::max() / 4)
+		{
+			throw spk::Exception("Voxel Volume packed file size overflows");
+		}
+		std::error_code error;
+		const auto size = std::filesystem::file_size(filename, error);
+		if (error || size != cells * 4)
+		{
+			throw spk::Exception("Voxel Volume packed file size does not match dimensions");
+		}
+	}
+
+	DecodedCells readPackedFile(
+		const std::filesystem::path &filename,
+		std::size_t count,
+		const spk::Voxel::DefinitionRegistry &registry)
+	{
+		validatePackedFileSize(filename, count);
+		std::ifstream input(filename, std::ios::binary);
+		if (!input)
+		{
+			throw spk::Exception("Could not open Voxel Volume packed file");
+		}
+		DecodedCells decoded{std::vector<std::uint32_t>(count), {spk::Voxel::Definition::air()}};
+		std::unordered_map<std::uint32_t, std::uint32_t> remapping;
+		for (auto &entry : decoded.cells)
+		{
+			const auto packed = readPackedWord(input);
+			const auto id = PackedCell::definitionIndex(packed);
+			auto found = remapping.find(id);
+			if (found == remapping.end())
+			{
+				const auto index = localDefinitionIndex(decoded.definitions, registry.at(id));
+				found = remapping.emplace(id, index).first;
+			}
+			entry = PackedCell::encode(found->second, PackedCell::horizontal(packed), PackedCell::vertical(packed));
+		}
+		if (input.peek() != std::char_traits<char>::eof())
+		{
+			throw spk::Exception("Voxel Volume packed file contains trailing bytes");
+		}
+		return decoded;
+	}
+
 }
 
 namespace spk::Voxel
@@ -195,47 +248,9 @@ namespace spk::Voxel
 		{
 			throw spk::Exception("Voxel Volume Builder requires a bound DefinitionRegistry");
 		}
-		if (_cells.size() > std::numeric_limits<std::uintmax_t>::max() / 4)
-		{
-			throw spk::Exception("Voxel Volume packed file size overflows");
-		}
-		std::error_code error;
-		const auto size = std::filesystem::file_size(filename, error);
-		if (error || size != _cells.size() * 4)
-		{
-			throw spk::Exception("Voxel Volume packed file size does not match dimensions");
-		}
-		std::ifstream input(filename, std::ios::binary);
-		if (!input)
-		{
-			throw spk::Exception("Could not open Voxel Volume packed file");
-		}
-		std::vector<std::uint32_t> pending(_cells.size());
-		std::vector<Definition> definitions{Definition::air()};
-		std::unordered_map<std::uint32_t, std::uint32_t> remapping;
-		for (auto &entry : pending)
-		{
-			const auto packed = readPackedWord(input);
-			const auto id = PackedCell::definitionIndex(packed);
-			const auto found = remapping.find(id);
-			std::uint32_t localIndex = 0;
-			if (found == remapping.end())
-			{
-				localIndex = localDefinitionIndex(definitions, _registry->at(id));
-				remapping.emplace(id, localIndex);
-			}
-			else
-			{
-				localIndex = found->second;
-			}
-			entry = PackedCell::encode(localIndex, PackedCell::horizontal(packed), PackedCell::vertical(packed));
-		}
-		if (input.peek() != std::char_traits<char>::eof())
-		{
-			throw spk::Exception("Voxel Volume packed file contains trailing bytes");
-		}
-		_cells.swap(pending);
-		_definitions.swap(definitions);
+		auto decoded = readPackedFile(filename, _cells.size(), *_registry);
+		_cells.swap(decoded.cells);
+		_definitions.swap(decoded.definitions);
 	}
 
 	Volume Volume::Builder::build()
