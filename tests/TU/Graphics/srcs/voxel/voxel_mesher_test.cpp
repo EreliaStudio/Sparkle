@@ -259,6 +259,7 @@ namespace
 	class ExternalMesher final : public VoxelMesher
 	{
 	public:
+		using State = OutsideCell::State;
 		OutsideCell state{};
 		std::optional<Face> onlyFace;
 
@@ -332,9 +333,9 @@ TEST(VoxelMesherTest, OutsideStatesDoNotAssumeUnknownIsOccluding)
 	ExternalMesher mesher;
 	const auto volume = single(definition(fixture("cube"), "source_"));
 	EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 36u);
-	mesher.state.state = OutsideCell::State::Unknown;
+	mesher.state.state = ExternalMesher::State::Unknown;
 	EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 36u);
-	mesher.state.state = OutsideCell::State::Occupied;
+	mesher.state.state = ExternalMesher::State::Occupied;
 	mesher.state.cell = Cell(definition(fixture("cube"), "outside_"));
 	EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 0u);
 	for (Face face : Faces)

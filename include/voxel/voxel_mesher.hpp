@@ -6,19 +6,6 @@
 
 namespace spk::Voxel
 {
-	struct OutsideCell
-	{
-		enum class State
-		{
-			Empty,
-			Occupied,
-			Unknown
-		};
-
-		State state = State::Empty;
-		Cell cell{};
-	};
-
 	class VoxelMesher
 	{
 	private:
@@ -26,6 +13,19 @@ namespace spk::Voxel
 		float _tolerance = 1.0e-5f;
 
 	protected:
+		struct OutsideCell
+		{
+			enum class State
+			{
+				Empty,
+				Occupied,
+				Unknown
+			};
+
+			State state = State::Empty;
+			Cell cell{};
+		};
+
 		[[nodiscard]] virtual OutsideCell outsideCell(
 			spk::Vector3UInt position,
 			Shape::Face direction) const;
