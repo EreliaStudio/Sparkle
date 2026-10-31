@@ -20,10 +20,10 @@ namespace spk::Voxel
 		std::uint32_t materialIndex;
 	};
 
-	class VoxelMesh final : public spk::Mesh<MeshVertex>
+	class Mesh final : public spk::Mesh<MeshVertex>
 	{
 	public:
-		class Builder final : public spk::Mesh<MeshVertex>::Builder<VoxelMesh>
+		class Builder final : public spk::Mesh<MeshVertex>::Builder<Mesh>
 		{
 		private:
 			void _setupAttributes(spk::VertexBuffer &buffer) override;
@@ -35,8 +35,8 @@ namespace spk::Voxel
 	private:
 		struct Data
 		{
-			VoxelMesh opaque;
-			VoxelMesh translucent;
+			Mesh opaque;
+			Mesh translucent;
 			spk::ShadowMap::Mesh depth;
 			std::vector<Definition::Slot> slots;
 		};
@@ -45,13 +45,13 @@ namespace spk::Voxel
 
 	public:
 		Model(
-			VoxelMesh opaque,
-			VoxelMesh translucent,
+			Mesh opaque,
+			Mesh translucent,
 			spk::ShadowMap::Mesh depth,
 			std::vector<Definition::Slot> slots);
 
-		[[nodiscard]] const VoxelMesh &opaqueMesh() const noexcept;
-		[[nodiscard]] const VoxelMesh &transparentMesh() const noexcept;
+		[[nodiscard]] const Mesh &opaqueMesh() const noexcept;
+		[[nodiscard]] const Mesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
 	};

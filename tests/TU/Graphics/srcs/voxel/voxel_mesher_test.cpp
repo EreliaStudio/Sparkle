@@ -96,13 +96,13 @@ namespace
 		return builder.build();
 	}
 
-	[[nodiscard]] std::vector<MeshVertex> vertices(const VoxelMesh &mesh)
+	[[nodiscard]] std::vector<MeshVertex> vertices(const Mesh &mesh)
 	{
 		const auto view = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		return {view.begin(), view.end()};
 	}
 
-	[[nodiscard]] std::vector<std::uint32_t> indices(const VoxelMesh &mesh)
+	[[nodiscard]] std::vector<std::uint32_t> indices(const Mesh &mesh)
 	{
 		const auto view = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		return {view.begin(), view.end()};
@@ -116,7 +116,7 @@ namespace
 			EXPECT_EQ(a.materialSlots()[i].name, b.materialSlots()[i].name);
 			EXPECT_FLOAT_EQ(a.materialSlots()[i].opacity, b.materialSlots()[i].opacity);
 		}
-		auto compare = [](const VoxelMesh &left, const VoxelMesh &right) {
+		auto compare = [](const Mesh &left, const Mesh &right) {
 			EXPECT_EQ(indices(left), indices(right));
 			const auto a = vertices(left);
 			const auto b = vertices(right);

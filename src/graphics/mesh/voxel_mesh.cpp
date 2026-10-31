@@ -4,7 +4,7 @@
 
 namespace spk::Voxel
 {
-	void VoxelMesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
+	void Mesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
 	{
 		using Type = spk::VertexBuffer::Attribute::Type;
 		buffer.addAttribute(0, Type::Float, 3);
@@ -14,20 +14,20 @@ namespace spk::Voxel
 	}
 
 	Model::Model(
-		VoxelMesh opaque,
-		VoxelMesh translucent,
+		Mesh opaque,
+		Mesh translucent,
 		spk::ShadowMap::Mesh depth,
 		std::vector<Definition::Slot> slots) :
 		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots)))
 	{
 	}
 
-	const VoxelMesh &Model::opaqueMesh() const noexcept
+	const Mesh &Model::opaqueMesh() const noexcept
 	{
 		return _data->opaque;
 	}
 
-	const VoxelMesh &Model::transparentMesh() const noexcept
+	const Mesh &Model::transparentMesh() const noexcept
 	{
 		return _data->translucent;
 	}

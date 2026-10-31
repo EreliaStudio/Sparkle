@@ -109,7 +109,7 @@ namespace spk::Voxel
 		}
 
 		void emit(
-			VoxelMesh::Builder &builder,
+			Mesh::Builder &builder,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -142,8 +142,8 @@ namespace spk::Voxel
 			const Definition &definition,
 			Position position,
 			const SlotIndices &indices,
-			VoxelMesh::Builder &opaque,
-			VoxelMesh::Builder &translucent,
+			Mesh::Builder &opaque,
+			Mesh::Builder &translucent,
 			float tolerance)
 		{
 			const auto &slot = definition.slot(polygon.slotKey);
@@ -224,8 +224,8 @@ namespace spk::Voxel
 	{
 		const auto slots = collectSlots(volume);
 		const auto indices = indexSlots(slots);
-		VoxelMesh::Builder opaque;
-		VoxelMesh::Builder translucent;
+		Mesh::Builder opaque;
+		Mesh::Builder translucent;
 		const auto dimensions = volume.dimensions();
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -281,7 +281,7 @@ namespace spk::Voxel
 				}
 			}
 		}
-		VoxelMesh opaqueMesh = std::move(opaque).build();
+		Mesh opaqueMesh = std::move(opaque).build();
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) {
 			return vertex.position;
 		});
