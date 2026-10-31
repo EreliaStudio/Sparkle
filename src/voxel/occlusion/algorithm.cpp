@@ -19,18 +19,18 @@ namespace spk::Voxel::Occlusion
 		{
 			switch (face)
 			{
-				case Face::NegativeX:
-					return {-1, 0, 0};
-				case Face::PositiveX:
-					return {1, 0, 0};
-				case Face::NegativeY:
-					return {0, -1, 0};
-				case Face::PositiveY:
-					return {0, 1, 0};
-				case Face::NegativeZ:
-					return {0, 0, -1};
-				case Face::PositiveZ:
-					return {0, 0, 1};
+			case Face::NegativeX:
+				return {-1, 0, 0};
+			case Face::PositiveX:
+				return {1, 0, 0};
+			case Face::NegativeY:
+				return {0, -1, 0};
+			case Face::PositiveY:
+				return {0, 1, 0};
+			case Face::NegativeZ:
+				return {0, 0, -1};
+			case Face::PositiveZ:
+				return {0, 0, 1};
 			}
 			throw spk::Exception("Invalid voxel face");
 		}
@@ -39,18 +39,18 @@ namespace spk::Voxel::Occlusion
 		{
 			switch (face)
 			{
-				case Face::NegativeX:
-					return Face::PositiveX;
-				case Face::PositiveX:
-					return Face::NegativeX;
-				case Face::NegativeY:
-					return Face::PositiveY;
-				case Face::PositiveY:
-					return Face::NegativeY;
-				case Face::NegativeZ:
-					return Face::PositiveZ;
-				case Face::PositiveZ:
-					return Face::NegativeZ;
+			case Face::NegativeX:
+				return Face::PositiveX;
+			case Face::PositiveX:
+				return Face::NegativeX;
+			case Face::NegativeY:
+				return Face::PositiveY;
+			case Face::PositiveY:
+				return Face::NegativeY;
+			case Face::NegativeZ:
+				return Face::PositiveZ;
+			case Face::PositiveZ:
+				return Face::NegativeZ;
 			}
 			throw spk::Exception("Invalid voxel face");
 		}
@@ -115,8 +115,7 @@ namespace spk::Voxel::Occlusion
 			{
 				return output;
 			}
-			auto distance = [&](const Vertex &vertex)
-			{
+			auto distance = [&](const Vertex &vertex) {
 				return sign * cross(a, b, project(vertex.position, face));
 			};
 			for (std::size_t i = 0; i < input.size(); ++i)
