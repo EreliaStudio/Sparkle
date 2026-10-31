@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <limits>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,8 +37,7 @@ namespace
 	[[nodiscard]] Shape fixture(const std::string &name)
 	{
 		Shape::Builder builder;
-		builder.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (name + ".json")));
+		builder.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (name + ".json")));
 		return builder.build();
 	}
 
@@ -255,10 +255,15 @@ namespace
 	{
 	public:
 		OutsideCell state{};
+		std::optional<Face> onlyFace;
 
 	protected:
-		[[nodiscard]] OutsideCell outsideCell(Position, Face) const override
+		[[nodiscard]] OutsideCell outsideCell(Position, Face face) const override
 		{
+			if (onlyFace && face != *onlyFace)
+			{
+				return {};
+			}
 			return state;
 		}
 	};
@@ -327,6 +332,12 @@ TEST(VoxelMesherTest, OutsideStatesDoNotAssumeUnknownIsOccluding)
 	mesher.state.state = OutsideCell::State::Occupied;
 	mesher.state.cell = Cell(definition(fixture("cube"), "outside_"));
 	EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 0u);
+	for (Face face : Faces)
+	{
+		mesher.onlyFace = face;
+		EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 30u);
+	}
+	mesher.onlyFace.reset();
 	mesher.state.cell = Cell();
 	EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 36u);
 }
@@ -469,4 +480,54 @@ TEST(VoxelMesherFixtures, EveryShapePairOrientationAndNeighborDirectionMatchesIn
 		}
 	}
 	EXPECT_EQ(cases, 4u * 4u * 8u * 8u * 6u);
+}
+
+TEST(VoxelMesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
+{
+	Shape::Builder sourceBuilder;
+	sourceBuilder.addSlot("face");
+	sourceBuilder.addPolygon("face", {
+		{{1, 0, 0}, {0, 0}},
+		{{1, 1, 0}, {0, 1}},
+		{{1, 1, 1}, {1, 1}},
+		{{1, 0, 1}, {1, 0}}});
+	Shape::Builder blockerBuilder;
+	blockerBuilder.addSlot("face");
+	blockerBuilder.addPolygon("face", {
+		{{0, 0, 0}},
+		{{0, 0, 0.5f}},
+		{{0, 1, 0.5f}},
+		{{0, 1, 0}}});
+	const auto volume = pair(
+		definition(sourceBuilder.build(), "source_"),
+		{},
+		definition(blockerBuilder.build(), "blocker_"),
+		{},
+		Face::PositiveX);
+	const Model model = VoxelMesher().bake(volume);
+	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
+	const auto view = model.opaqueMesh().layout().vertexBuffer().cast<MeshVertex>();
+	const auto triangles = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
+	std::size_t visibleSource = 0;
+	for (std::size_t i = 0; i < triangles.size(); i += 3)
+	{
+		const auto &a = view[triangles[i]];
+		const auto &b = view[triangles[i + 1]];
+		const auto &c = view[triangles[i + 2]];
+		const auto cross = (b.position - a.position).cross(c.position - a.position);
+		EXPECT_GT(cross.length(), 2.0e-10);
+		if (!model.materialSlots()[a.materialIndex].name.starts_with("source_"))
+		{
+			continue;
+		}
+		++visibleSource;
+		EXPECT_GT(cross.x, 0.0f);
+		for (const auto &vertex : {a, b, c})
+		{
+			EXPECT_EQ(vertex.normal, spk::Vector3(1, 0, 0));
+			EXPECT_NEAR(vertex.uv.x, vertex.position.z - 1.0f, 1.0e-5f);
+			EXPECT_NEAR(vertex.uv.y, vertex.position.y - 1.0f, 1.0e-5f);
+		}
+	}
+	EXPECT_GT(visibleSource, 0u);
 }

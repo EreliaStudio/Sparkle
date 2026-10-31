@@ -128,11 +128,7 @@ namespace spk::Voxel
 					continue;
 				}
 				auto add = [&](const Shape::Vertex &vertex) {
-					return builder.addVertex({
-						vertex.position + translation,
-						vertex.normal.value_or(polygon.geometricNormal),
-						vertex.uv,
-						materialIndex});
+					return builder.addVertex({vertex.position + translation, vertex.normal.value_or(polygon.geometricNormal), vertex.uv, materialIndex});
 				};
 				const auto first = add(a);
 				const auto second = add(b);
@@ -286,7 +282,9 @@ namespace spk::Voxel
 			}
 		}
 		VoxelMesh opaqueMesh = std::move(opaque).build();
-		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) { return vertex.position; });
+		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) {
+			return vertex.position;
+		});
 		return Model(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
 	}
 }
