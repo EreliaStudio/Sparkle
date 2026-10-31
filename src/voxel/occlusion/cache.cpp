@@ -17,8 +17,7 @@ namespace spk::Voxel::Occlusion
 
 	std::size_t Cache::Hash::operator()(const Key &key) const
 	{
-		auto combine = [](std::size_t &seed, std::size_t value)
-		{
+		auto combine = [](std::size_t &seed, std::size_t value) {
 			seed ^= value + 0x9e3779b9U + (seed << 6) + (seed >> 2);
 		};
 
