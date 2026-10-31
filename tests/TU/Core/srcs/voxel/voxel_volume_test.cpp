@@ -247,7 +247,6 @@ namespace
 		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
 	}
 
-
 	TEST(VoxelVolumeTest, PackedEncodingChecksCapacityAndInvalidOrientations)
 	{
 		const auto maximum = PackedCell::MaxDefinitionId;
