@@ -116,7 +116,7 @@ namespace spk::Voxel::Occlusion
 				return output;
 			}
 			auto distance = [&](const Vertex &vertex) {
-				return sign * cross(a, b, project(vertex.position, face));
+				return sign * cross(a, b, project(vertex.position, face)) + tolerance;
 			};
 			for (std::size_t i = 0; i < input.size(); ++i)
 			{
@@ -124,8 +124,8 @@ namespace spk::Voxel::Occlusion
 				const auto &q = input[(i + 1) % input.size()];
 				float dp = distance(p);
 				float dq = distance(q);
-				bool pin = inside ? dp >= -tolerance : dp <= tolerance;
-				bool qin = inside ? dq >= -tolerance : dq <= tolerance;
+				bool pin = inside ? dp >= 0.0f : dp < 0.0f;
+				bool qin = inside ? dq >= 0.0f : dq < 0.0f;
 				if (pin)
 				{
 					output.push_back(p);

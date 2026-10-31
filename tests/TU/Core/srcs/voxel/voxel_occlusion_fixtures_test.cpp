@@ -298,6 +298,25 @@ TEST(VoxelOcclusionFixtures, EveryOrderedPairAndOrientationMatchesIndependentCov
 	EXPECT_EQ(cases, 4u * 4u * 8u * 8u * 6u);
 }
 
+TEST(VoxelOcclusionFixtures, OpaqueCubeCompletelyCoversEveryFaceWithDifferentTriangulations)
+{
+	const auto cube = fixtures()[0].opaque;
+	for (const auto sourceOrientation : Orientations)
+	{
+		for (const auto blockerOrientation : Orientations)
+		{
+			for (const Face direction : Directions)
+			{
+				SCOPED_TRACE(::testing::Message() << "source " << static_cast<unsigned>(sourceOrientation.horizontal)
+										 << ", blocker " << static_cast<unsigned>(blockerOrientation.horizontal)
+										 << ", face " << static_cast<unsigned>(direction));
+				const auto key = makeKey(cube, cube, sourceOrientation, blockerOrientation, direction);
+				EXPECT_TRUE(Algorithm::compute(key.source, key.sourceOrientation, key.blocker, key.blockerOrientation, direction).empty());
+			}
+		}
+	}
+}
+
 TEST(VoxelOcclusionFixtures, EveryTranslucentBlockerLeavesSourceBoundaryVisible)
 {
 	const auto shapes = fixtures();
