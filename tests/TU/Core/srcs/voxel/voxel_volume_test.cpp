@@ -34,7 +34,7 @@ namespace
 	{
 		Shape::Builder builder;
 		builder.addSlot("surface");
-		return Definition(builder.build(), {{"surface", "stone"}});
+		return Definition(builder.build(), {{"surface", {"stone"}}});
 	}
 
 	Registry registry(std::initializer_list<std::pair<std::uint32_t, Definition>> entries)

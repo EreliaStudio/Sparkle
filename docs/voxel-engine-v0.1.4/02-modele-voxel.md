@@ -64,7 +64,7 @@ Chaque polygone :
 - possède au moins trois sommets, de positions flottantes dans le cube unité ; il est **plan et convexe**. Une forme globalement concave est représentée par plusieurs polygones ;
 - est **simple face**. Son ordre de sommets est CCW vu du côté avant, et sa normale géométrique est orientée par `(v1 - v0) × (v2 - v0)` pour des sommets initiaux non colinéaires ;
 - peut porter des UV arbitraires et des normales d'éclairage par sommet. La normale géométrique est utilisée par défaut pour l'éclairage, mais les normales personnalisées ne modifient jamais l'orientation géométrique ou l'occlusion ;
-- référence un **slot géométrique local** déclaré par son nom dans la Shape. Ce slot porte `opacity`, un flottant de `[0,1]`, de valeur `1.0` par défaut.
+- référence un **slot géométrique local** déclaré par son nom dans la Shape. Le slot géométrique ne porte pas d’opacité : celle-ci est définie par chaque `Definition::Slot` qui référence la Shape.
 
 Pour afficher une feuille ou une pancarte des deux côtés, l'application fournit **deux polygones explicites** de windings opposés. Il n'existe pas de propriété `doubleSided` ni de duplication implicite. Des polygones coplanaires de même winding peuvent se recouvrir, même totalement ; leur existence séparée est conservée. Une Shape de **zéro polygone** est valide.
 
@@ -85,7 +85,7 @@ Chaque `Shape::Data` détient **huit `Shape::Instance` immuables** (`std::array<
 
 ### 2.2 `spk::Voxel::Definition` : sens des slots
 
-Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → nom de slot sémantique** destiné au Model. Elle ne contient pas de `Material` et n'ajoute ni catégorie de rendu, ni règle d'occlusion indépendante à l'opacité déclarée dans la Shape.
+Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → `Definition::Slot`**, contenant un nom de slot sémantique destiné au Model et une opacité dans `[0,1]` (par défaut `1.0`). Elle ne contient pas de `Material` ; l'opacité est spécifique à chaque Definition et détermine l'occlusion.
 
 `Definition` utilise également des données immuables partagées (`shared_ptr<const Data>`) et conserve la durée de vie de sa Shape. Copier une Definition est léger. Une même Shape peut être réutilisée dans différentes Definitions pour produire des noms de slots sémantiques différents. Les huit `Shape::Instance` sont alors réellement communes à ces Definitions : le mapping sémantique est appliqué plus tard et ne modifie ni l'identité ni les polygones orientés de la Shape.
 
@@ -99,7 +99,7 @@ Leurs modifications sont exclusivement effectuées par `Shape::Registry::Builder
 
 Le stockage d'un registre publié est un `std::unordered_map<ID, Value>` immuable. Une copie du registre partage exactement son bloc `Data`, à coût constant. L'accès par ID est en moyenne en **O(1)**, sans imposer un tableau dense de taille `2^29` ni ajouter un `std::set` (O(log n)). Aucun cache supplémentaire pour le mesher n'est introduit avant mesure de performances.
 
-`Definition::Builder` est construit **sans paramètre**, puis reçoit un **`Shape::Registry` publié via `bind(const Shape::Registry&)`**, qu'il copie à coût constant. Aucun constructeur prenant un registre ou un registre avec JSON n'est exposé. La construction JSON s'effectue avec `addFromJSON(value)` après `bind`. Le Builder conserve un `Shape::Registry` vide par défaut et un `std::optional<Shape>` pour représenter la présence d'une Shape sélectionnée par `setShape(id)` ou `addFromJSON(value)`. Aucun booléen `_hasShape` n'est nécessaire. `build()` lève `spk::Exception` si aucune Shape n'a été sélectionnée. Une Shape géométriquement vide reste valide lorsqu'elle est déclarée et sélectionnée explicitement ; la Definition obtenue est distincte d'Air. Air est une Definition canonique accessible via `Definition::air()`, et non fabriquée implicitement par le Builder. `setShape(id)` et le chargement JSON lèvent `spk::Exception` si l'ID n'existe pas dans le registre courant. Une nouvelle liaison appelle `_shape.reset()` sans modifier les slots. Son JSON contient `shape` (l'ID texte d'une Shape existante) et `slots` (mapping des slots géométriques vers des noms sémantiques) : aucune copie de polygones n'est embarquée dans la Definition. `Definition::Registry::Builder` reçoit également le registre de Shapes afin de charger ces descriptions JSON. Toutes les Definitions associées à la même Shape partagent son identité et ses huit variantes orientées.
+`Definition::Builder` est construit **sans paramètre**, puis reçoit un **`Shape::Registry` publié via `bind(const Shape::Registry&)`**, qu'il copie à coût constant. Aucun constructeur prenant un registre ou un registre avec JSON n'est exposé. La construction JSON s'effectue avec `addFromJSON(value)` après `bind`. Le Builder conserve un `Shape::Registry` vide par défaut et un `std::optional<Shape>` pour représenter la présence d'une Shape sélectionnée par `setShape(id)` ou `addFromJSON(value)`. Aucun booléen `_hasShape` n'est nécessaire. `build()` lève `spk::Exception` si aucune Shape n'a été sélectionnée. Une Shape géométriquement vide reste valide lorsqu'elle est déclarée et sélectionnée explicitement ; la Definition obtenue est distincte d'Air. Air est une Definition canonique accessible via `Definition::air()`, et non fabriquée implicitement par le Builder. `setShape(id)` et le chargement JSON lèvent `spk::Exception` si l'ID n'existe pas dans le registre courant. Une nouvelle liaison appelle `_shape.reset()` sans modifier les slots. Son JSON contient `shape` (l'ID texte d'une Shape existante) et `slots` (mapping des slots géométriques vers des objets avec `name` et `opacity` facultatif, ou vers une chaîne raccourcie si l'opacité vaut `1.0`) : aucune copie de polygones n'est embarquée dans la Definition. `Definition::Registry::Builder` reçoit également le registre de Shapes afin de charger ces descriptions JSON. Toutes les Definitions associées à la même Shape partagent son identité et ses huit variantes orientées.
 
 Exemple de catalogue de Shapes :
 
@@ -125,7 +125,7 @@ Exemple de catalogue de Definitions utilisant les mêmes Shapes :
 {
   "elements": [
     { "id": 10, "data": { "shape": "surface", "slots": { "face": "stone" } } },
-    { "id": 20, "data": { "shape": "surface", "slots": { "face": "glass" } } }
+    { "id": 20, "data": { "shape": "surface", "slots": { "face": { "name": "glass", "opacity": 0.5 } } } }
   ]
 }
 ```

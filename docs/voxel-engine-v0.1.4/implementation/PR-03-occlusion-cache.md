@@ -20,7 +20,7 @@
 - [ ] Implémenter **une seule fois** le clipping/occlusion CPU directionnel A → B, réutilisable par PR-04 **avec et sans cache**.
 - [ ] Lire les géométries par `Shape::instance(orientation)` ; ne jamais recalculer les huit orientations déjà créées en PR-01.
 - [ ] Polygones occultants opaques, frontaux et sur la frontière pertinente ; couverture partielle, union géométrique, interpolation correcte des UV et normales.
-- [ ] `OcclusionCache` autonome : clé par identités des deux `Shape::Data`, orientations, direction, opacités géométriques et tolérance. `OcclusionResult` est immuable et conserve les fragments visibles de A et leurs slots locaux.
+- [ ] `OcclusionCache` autonome : clé par identités des deux `Definition` (contenant les opacités des slots), orientations, direction et tolérance. `OcclusionResult` est immuable et conserve les fragments visibles de A et leurs slots locaux.
 - [ ] `find/store/clear` ou API équivalente, `ProtectedData<Data>` privé, calcul géométrique hors verrou. Absence distincte d'un résultat valide vide.
 - [ ] Fournir le même calcul d'occlusion sans stockage dans le cache, directement réutilisable par le futur Mesher.
 

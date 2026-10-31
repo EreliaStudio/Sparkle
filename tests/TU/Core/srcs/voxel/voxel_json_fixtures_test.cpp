@@ -91,7 +91,7 @@ namespace
 			for (const auto &polygon : shape.instance().polygons())
 			{
 				ASSERT_GE(polygon.vertices.size(), 3u);
-				EXPECT_FLOAT_EQ(shape.slot(polygon.slotKey).opacity, 1.0f);
+				EXPECT_EQ(shape.slot(polygon.slotKey).name, polygon.slotKey);
 				const auto &vertices = polygon.vertices;
 				const auto origin = vertices[0].position;
 				const auto edgeA = vertices[1].position - origin;
@@ -135,7 +135,7 @@ namespace
 			Definition::SlotMapping mapping;
 			for (const auto &slot : shape.slots())
 			{
-				mapping.emplace(slot.name, fixture.name + std::string(".") + slot.name);
+				mapping.emplace(slot.name, Definition::Slot{fixture.name + std::string(".") + slot.name});
 			}
 			const Definition definition(shape, std::move(mapping));
 			for (const auto &cell : orientations(definition))
@@ -162,7 +162,7 @@ namespace
 				Definition::SlotMapping mapping;
 				for (const auto &slot : shape.slots())
 				{
-					mapping.emplace(slot.name, slot.name);
+					mapping.emplace(slot.name, Definition::Slot{slot.name});
 				}
 				return mapping;
 			}());
@@ -223,12 +223,12 @@ namespace
 	TEST(VoxelShapeFixtureTest, JSONLoaderPreservesExplicitUVAndLightingNormal)
 	{
 		const auto json = spk::JSON::Value::fromString(
-			R"({"slots":{"surface":0.75},"polygons":[{"slot":"surface","vertices":[{"position":[0,0,0],"uv":[0.25,0.75],"normal":[0,0,1]},{"position":[1,0,0],"uv":[1,0],"normal":[0,0,1]},{"position":[0,1,0],"uv":[0,1],"normal":[0,0,1]}]}]})");
+			R"({"slots":{"surface":null},"polygons":[{"slot":"surface","vertices":[{"position":[0,0,0],"uv":[0.25,0.75],"normal":[0,0,1]},{"position":[1,0,0],"uv":[1,0],"normal":[0,0,1]},{"position":[0,1,0],"uv":[0,1],"normal":[0,0,1]}]}]})");
 		Shape::Builder builder;
 		builder.addFromJSON(json);
 		const Shape shape = builder.build();
 		ASSERT_EQ(shape.instance().polygons().size(), 1u);
-		EXPECT_FLOAT_EQ(shape.slot("surface").opacity, 0.75f);
+		EXPECT_EQ(shape.slot("surface").name, "surface");
 		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].uv, spk::Vector2(0.25f, 0.75f));
 		EXPECT_EQ(shape.instance().polygons()[0].vertices[0].normal.value(), spk::Vector3(0, 0, 1));
 	}

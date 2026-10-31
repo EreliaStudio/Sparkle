@@ -18,7 +18,13 @@ namespace spk::Voxel
 		class Builder;
 		class Registry;
 
-		using SlotMapping = std::unordered_map<std::string, std::string>;
+		struct Slot
+		{
+			std::string name;
+			float opacity = 1.0f;
+		};
+
+		using SlotMapping = std::unordered_map<std::string, Slot>;
 
 	private:
 		struct Data;
@@ -31,6 +37,8 @@ namespace spk::Voxel
 		[[nodiscard]] static const Definition &air();
 		[[nodiscard]] const Shape &shape() const noexcept;
 		[[nodiscard]] const SlotMapping &slots() const noexcept;
+		[[nodiscard]] const Slot &slot(std::string_view geometricKey) const;
+		[[nodiscard]] float opacity(std::string_view geometricKey) const;
 		[[nodiscard]] const std::string &semanticSlot(std::string_view geometricKey) const;
 		[[nodiscard]] bool operator==(const Definition &other) const noexcept;
 		[[nodiscard]] bool isAir() const noexcept;

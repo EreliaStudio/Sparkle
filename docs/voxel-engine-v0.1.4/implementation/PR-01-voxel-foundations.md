@@ -18,7 +18,7 @@
 
 - [ ] Shape et Builder
 - [ ] polygones CCW plans convexes
-- [ ] slots géométriques opacity
+- [ ] slots géométriques (noms uniquement) ; opacité par `Definition::Slot`
 - [ ] outerShell et innerShell
 - [ ] Definition et correspondance de slots
 - [ ] Definition Air

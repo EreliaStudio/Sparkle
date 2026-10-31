@@ -1,5 +1,6 @@
 #include "voxel/definition.hpp"
 
+#include <cmath>
 #include <utility>
 
 #include "exception.hpp"
@@ -30,13 +31,17 @@ namespace spk::Voxel
 				throw spk::Exception("Voxel Definition has a missing Shape slot mapping");
 			}
 		}
-		for (const auto &[key, value] : mapping)
+		for (const auto &[key, slot] : mapping)
 		{
-			if (value.empty())
+			(void)shape.slot(key);
+			if (slot.name.empty())
 			{
 				throw spk::Exception("Voxel Definition semantic slot name cannot be empty");
 			}
-			(void)shape.slot(key);
+			if (!std::isfinite(slot.opacity) || slot.opacity < 0.0f || slot.opacity > 1.0f)
+			{
+				throw spk::Exception("Voxel Definition opacity must be finite and in [0,1]");
+			}
 		}
 
 		auto data = std::make_shared<Data>();
@@ -61,7 +66,7 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-	const std::string &Definition::semanticSlot(std::string_view geometricKey) const
+	const Definition::Slot &Definition::slot(std::string_view geometricKey) const
 	{
 		const auto found = _data->slots.find(std::string(geometricKey));
 		if (found == _data->slots.end())
@@ -69,6 +74,16 @@ namespace spk::Voxel
 			throw spk::Exception("Voxel Definition references an unmapped geometric slot");
 		}
 		return found->second;
+	}
+
+	float Definition::opacity(std::string_view geometricKey) const
+	{
+		return slot(geometricKey).opacity;
+	}
+
+	const std::string &Definition::semanticSlot(std::string_view geometricKey) const
+	{
+		return slot(geometricKey).name;
 	}
 
 	bool Definition::operator==(const Definition &other) const noexcept

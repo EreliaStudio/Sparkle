@@ -11,7 +11,7 @@ Each JSON file describes exactly one `spk::Voxel::Shape`. The fixtures are deriv
 
 ## Shape JSON format
 
-The root contains `id` (fixture metadata), `slots` (an object mapping geometric slot keys to opacity values in `[0,1]`), and `polygons` (an array). Each polygon has a `slot` key and a `vertices` array. Each vertex may be an XYZ position array or an object with `position`, optional `uv`, and optional `normal`.
+The root contains `id` (fixture metadata), `slots` (an object declaring geometric slot names; any legacy numeric values are ignored), and `polygons` (an array). Each polygon has a `slot` key and a `vertices` array. Each vertex may be an XYZ position array or an object with `position`, optional `uv`, and optional `normal`.
 
 The `Shape::Builder` also accepts the legacy `{"id": ..., "data": {"slots": ..., "polygons": ...}}` nesting. Historical XYZ-only vertices use zero UV coordinates and geometric lighting normals. The polygon winding remains exactly as authored; no two-sided faces are synthesized.
 
