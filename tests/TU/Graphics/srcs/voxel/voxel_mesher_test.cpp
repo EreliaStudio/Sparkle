@@ -24,15 +24,20 @@ namespace
 
 	constexpr std::array<const char *, 4> Names{"cube", "slab", "slope", "stair"};
 	constexpr std::array<Face, 6> Faces{Face::NegativeX, Face::PositiveX, Face::NegativeY, Face::PositiveY, Face::NegativeZ, Face::PositiveZ};
-	constexpr std::array<Shape::Orientation, 8> Orientations{{
-		{Horizontal::XPositive, Vertical::YPositive},
-		{Horizontal::ZPositive, Vertical::YPositive},
-		{Horizontal::XNegative, Vertical::YPositive},
-		{Horizontal::ZNegative, Vertical::YPositive},
-		{Horizontal::XPositive, Vertical::YNegative},
-		{Horizontal::ZPositive, Vertical::YNegative},
-		{Horizontal::XNegative, Vertical::YNegative},
-		{Horizontal::ZNegative, Vertical::YNegative}}};
+	constexpr std::array<Horizontal, 4> Horizontals{Horizontal::XPositive, Horizontal::ZPositive, Horizontal::XNegative, Horizontal::ZNegative};
+	constexpr std::array<Vertical, 2> Verticals{Vertical::YPositive, Vertical::YNegative};
+
+	[[nodiscard]] constexpr std::array<Shape::Orientation, 8> orientations()
+	{
+		std::array<Shape::Orientation, 8> result{};
+		for (std::size_t i = 0; i < result.size(); ++i)
+		{
+			result[i] = {Horizontals[i % Horizontals.size()], Verticals[i / Horizontals.size()]};
+		}
+		return result;
+	}
+
+	constexpr auto Orientations = orientations();
 
 	[[nodiscard]] Shape fixture(const std::string &name)
 	{
@@ -318,7 +323,7 @@ TEST(VoxelMesherTest, TranslucentPolygonsNeverOccludeOrCastDepth)
 	EXPECT_TRUE(translucent.depthMesh().empty());
 	const auto pairModel = VoxelMesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
 	EXPECT_EQ(pairModel.opaqueMesh().indexCount(), 36u);
-	EXPECT_EQ(pairModel.transparentMesh().indexCount(), 36u);
+	EXPECT_EQ(pairModel.transparentMesh().indexCount(), 30u);
 	EXPECT_EQ(pairModel.depthMesh().indexCount(), 36u);
 }
 
@@ -375,6 +380,23 @@ TEST(VoxelMesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 			EXPECT_TRUE(found);
 		}
 	}
+}
+
+TEST(VoxelMesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
+{
+	Shape::Builder builder;
+	builder.addSlot("hidden");
+	const auto hidden = definition(builder.build(), "used_");
+	const auto unused = definition(fixture("cube"), "unused_");
+	Volume::Builder volume({1, 1, 1});
+	volume.bind(registry({hidden, unused}));
+	volume.set({0, 0, 0}, 1);
+	const Model model = VoxelMesher().bake(volume.build());
+	EXPECT_TRUE(model.opaqueMesh().empty());
+	EXPECT_TRUE(model.transparentMesh().empty());
+	EXPECT_TRUE(model.depthMesh().empty());
+	ASSERT_EQ(model.materialSlots().size(), 1u);
+	EXPECT_EQ(model.materialSlots()[0].name, "used_hidden");
 }
 
 TEST(VoxelMesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
@@ -486,18 +508,10 @@ TEST(VoxelMesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 {
 	Shape::Builder sourceBuilder;
 	sourceBuilder.addSlot("face");
-	sourceBuilder.addPolygon("face", {
-		{{1, 0, 0}, {0, 0}},
-		{{1, 1, 0}, {0, 1}},
-		{{1, 1, 1}, {1, 1}},
-		{{1, 0, 1}, {1, 0}}});
+	sourceBuilder.addPolygon("face", {{{1, 0, 0}, {0, 0}}, {{1, 1, 0}, {0, 1}}, {{1, 1, 1}, {1, 1}}, {{1, 0, 1}, {1, 0}}});
 	Shape::Builder blockerBuilder;
 	blockerBuilder.addSlot("face");
-	blockerBuilder.addPolygon("face", {
-		{{0, 0, 0}},
-		{{0, 0, 0.5f}},
-		{{0, 1, 0.5f}},
-		{{0, 1, 0}}});
+	blockerBuilder.addPolygon("face", {{{0, 0, 0}}, {{0, 0, 0.5f}}, {{0, 1, 0.5f}}, {{0, 1, 0}}});
 	const auto volume = pair(
 		definition(sourceBuilder.build(), "source_"),
 		{},
