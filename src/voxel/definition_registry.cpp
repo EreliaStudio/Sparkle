@@ -78,12 +78,12 @@ namespace spk::Voxel
 
 	Definition::Registry::Builder::ID Definition::Registry::Builder::_parseKey(const spk::JSON::Reader &reader) const
 	{
-		const auto id = reader.require<ID>("id");
-		if (id == 0 || id > Volume::PackedCell::MaxDefinitionId)
-		{
-			throw spk::Exception("Voxel Definition Registry JSON ID must be nonzero and fit 29 bits");
-		}
-		return id;
+		return reader.require<ID>(
+			"id",
+			[](ID id) {
+				return id > 0 && id <= Volume::PackedCell::MaxDefinitionId;
+			},
+			"Voxel Definition Registry JSON ID must be nonzero and fit 29 bits");
 	}
 
 	Definition Definition::Registry::Builder::_parseElement(const spk::JSON::Reader &reader) const

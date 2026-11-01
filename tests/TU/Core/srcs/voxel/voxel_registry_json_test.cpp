@@ -128,6 +128,21 @@ namespace
 		EXPECT_TRUE(registry["single"].empty());
 	}
 
+	TEST(VoxelShapeRegistryTest, EmptyJSONIDReportsMemberPath)
+	{
+		const JSONFile file(R"({"id":"","data":{"slots":{},"polygons":[]}})");
+		Shape::Registry::Builder builder;
+		try
+		{
+			builder.load(file.path());
+			FAIL() << "Empty Shape ID must throw";
+		} catch (const spk::Exception &error)
+		{
+			EXPECT_NE(std::string(error.what()).find("$.id:"), std::string::npos);
+			EXPECT_NE(std::string(error.what()).find("nonempty ID"), std::string::npos);
+		}
+	}
+
 	TEST(VoxelShapeRegistryTest, RejectsDuplicateJSONEntries)
 	{
 		const JSONFile file(R"({"elements":[
@@ -312,7 +327,15 @@ namespace
 		builder.bind(shapes);
 		const JSONFile air(R"({"id":0,"data":{"shape":"cube","slots":{"face":"stone"}}})");
 		const JSONFile oversized(R"({"id":536870912,"data":{"shape":"cube","slots":{"face":"stone"}}})");
-		EXPECT_THROW(builder.load(air.path()), spk::Exception);
+		try
+		{
+			builder.load(air.path());
+			FAIL() << "Reserved Definition ID must throw";
+		} catch (const spk::Exception &error)
+		{
+			EXPECT_NE(std::string(error.what()).find("$.id:"), std::string::npos);
+			EXPECT_NE(std::string(error.what()).find("fit 29 bits"), std::string::npos);
+		}
 		EXPECT_THROW(builder.load(oversized.path()), spk::Exception);
 		EXPECT_EQ(builder.build().size(), 1u);
 	}
