@@ -11,14 +11,15 @@
 
 #include "container/json/object.hpp"
 #include "exception.hpp"
-#include "graphics/voxel_palette.hpp"
+#include "graphics/palette.hpp"
+#include "voxel/palette.hpp"
 #include "voxel/voxel_mesher.hpp"
 
 namespace
 {
 	using Model = spk::Voxel::Model;
 	using Definition = spk::Voxel::Definition;
-	using VoxelPalette = spk::VoxelPalette;
+	using VoxelPalette = spk::Voxel::Palette;
 	using Material = spk::Material;
 	using Texture = spk::Texture;
 	using MeshVertex = spk::Voxel::MeshVertex;
@@ -115,8 +116,8 @@ TEST(VoxelPaletteTest, BuildsCompletePaletteFromModel)
 	const Model source = model({{"stone", 1.0f}, {"glass", 0.3f}});
 	Texture atlas;
 	const auto result = palette(source, {{"stone", material(atlas)}, {"glass", material(atlas)}});
-	EXPECT_EQ(result.slots().size(), 2u);
-	EXPECT_FLOAT_EQ(result.find("glass")->opacity, 0.3f);
+	EXPECT_EQ(result.materials().materials().size(), 2u);
+	EXPECT_FLOAT_EQ(source.materialSlots()[1].opacity, 0.3f);
 	EXPECT_TRUE(source.isCompatible(result));
 }
 
@@ -175,8 +176,8 @@ TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
 	const auto second = material(atlas, {{0.5f, 0.0f}, {0.5f, 1.0f}});
 	const auto result = palette(source, {{"left", first}, {"right", second}});
 	EXPECT_TRUE(source.isCompatible(result));
-	EXPECT_EQ(result.find("left")->material.find("albedo")->texture.identifier(), result.find("right")->material.find("albedo")->texture.identifier());
-	EXPECT_NE(result.find("left")->material.find("albedo")->section, result.find("right")->material.find("albedo")->section);
+	EXPECT_EQ(result.find("left")->find("albedo")->texture.identifier(), result.find("right")->find("albedo")->texture.identifier());
+	EXPECT_NE(result.find("left")->find("albedo")->section, result.find("right")->find("albedo")->section);
 }
 
 TEST(VoxelPaletteTest, RejectsDistinctOpaqueAtlases)
@@ -223,16 +224,19 @@ TEST(VoxelPaletteTest, IgnoresAdditionalPaletteSlots)
 	EXPECT_FALSE(other.isCompatible(result));
 }
 
-TEST(VoxelPaletteTest, RejectsConflictingModelOpacitiesAtomically)
+TEST(VoxelPaletteTest, AcceptsSameSlotWithDifferentOpacitiesAcrossModels)
 {
 	Texture atlas;
-	const Model first = model({{"shared", 1.0f}});
-	const Model conflicting = model({{"extra", 0.2f}, {"shared", 0.4f}});
-	VoxelPalette::Builder builder(first);
-	EXPECT_THROW(builder.addModel(conflicting), spk::Exception);
+	const Model opaque = model({{"shared", 1.0f}});
+	const Model translucent = model({{"shared", 0.4f}, {"extra", 0.2f}});
+	VoxelPalette::Builder builder(opaque);
+	EXPECT_NO_THROW(builder.addModel(translucent));
 	builder.setMaterial("shared", material(atlas));
-	EXPECT_THROW(builder.setMaterial("extra", material(atlas)), spk::Exception);
-	EXPECT_EQ(builder.build().slots().size(), 1u);
+	builder.setMaterial("extra", material(atlas));
+	const auto result = builder.build();
+	EXPECT_TRUE(opaque.isCompatible(result));
+	EXPECT_TRUE(translucent.isCompatible(result));
+	EXPECT_EQ(result.materials().materials().size(), 2u);
 }
 
 TEST(VoxelPaletteTest, CombinesModelsWithSharedContracts)
@@ -246,7 +250,7 @@ TEST(VoxelPaletteTest, CombinesModelsWithSharedContracts)
 	builder.setMaterial("left", material(atlas));
 	builder.setMaterial("right", material(atlas));
 	const auto result = builder.build();
-	EXPECT_EQ(result.slots().size(), 3u);
+	EXPECT_EQ(result.materials().materials().size(), 3u);
 	EXPECT_TRUE(first.isCompatible(result));
 	EXPECT_TRUE(second.isCompatible(result));
 }
@@ -260,8 +264,8 @@ TEST(VoxelPaletteTest, BuildsVariantFromExistingPalette)
 	VoxelPalette::Builder builder(before);
 	builder.setMaterial("stone", material(replacement));
 	const auto after = builder.build();
-	EXPECT_EQ(before.find("stone")->material.find("albedo")->texture.identifier(), original.handle().identifier());
-	EXPECT_EQ(after.find("stone")->material.find("albedo")->texture.identifier(), replacement.handle().identifier());
+	EXPECT_EQ(before.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
+	EXPECT_EQ(after.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
 	EXPECT_TRUE(source.isCompatible(before));
 	EXPECT_TRUE(source.isCompatible(after));
 }
@@ -272,15 +276,15 @@ TEST(VoxelPaletteTest, CopiesShareImmutableData)
 	Texture atlas;
 	const auto original = palette(source, {{"stone", material(atlas)}});
 	const auto copy = original;
-	EXPECT_EQ(&original.slots(), &copy.slots());
+	EXPECT_EQ(&original.materials().materials(), &copy.materials().materials());
 	VoxelPalette::Builder builder(original);
-	builder.declareSlot("glass", 0.5f);
+	builder.addModel(model({{"glass", 0.5f}}));
 	builder.setMaterial("glass", material(atlas));
 	const auto expanded = builder.build();
-	EXPECT_EQ(original.slots().size(), 1u);
-	EXPECT_EQ(copy.slots().size(), 1u);
-	EXPECT_EQ(expanded.slots().size(), 2u);
-	EXPECT_NE(&expanded.slots(), &original.slots());
+	EXPECT_EQ(original.materials().materials().size(), 1u);
+	EXPECT_EQ(copy.materials().materials().size(), 1u);
+	EXPECT_EQ(expanded.materials().materials().size(), 2u);
+	EXPECT_NE(&expanded.materials().materials(), &original.materials().materials());
 }
 
 TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
@@ -328,24 +332,22 @@ TEST(VoxelPaletteTest, FailedSetAndBuildPreserveUsableBuilder)
 	VoxelPalette::Builder builder(source);
 	EXPECT_THROW(builder.setMaterial("missing", material(atlas)), spk::Exception);
 	EXPECT_THROW(builder.setMaterial("stone", Material{}), spk::Exception);
-	EXPECT_THROW(builder.declareSlot("", 1.0f), spk::Exception);
-	EXPECT_THROW(builder.declareSlot("invalid", std::numeric_limits<float>::infinity()), spk::Exception);
-	EXPECT_THROW(builder.declareSlot("stone", 0.4f), spk::Exception);
+	EXPECT_NO_THROW(builder.addModel(model({{"stone", 0.4f}})));
 	builder.setMaterial("stone", material(atlas));
 	EXPECT_THROW((void)builder.build(), spk::Exception);
 	builder.setMaterial("glass", material(atlas));
 	const auto result = builder.build();
-	EXPECT_EQ(result.slots().size(), 2u);
+	EXPECT_EQ(result.materials().materials().size(), 2u);
 	EXPECT_TRUE(source.isCompatible(result));
 }
 
-TEST(VoxelPaletteTest, MissingSlotAndOpacityMismatchAreIncompatible)
+TEST(VoxelPaletteTest, MissingSlotIsIncompatibleButOpacityMayDiffer)
 {
 	const Model source = model({{"stone", 1.0f}});
 	const Model other = model({{"stone", 0.3f}});
 	Texture atlas;
 	EXPECT_FALSE(source.isCompatible(VoxelPalette{}));
-	EXPECT_FALSE(source.isCompatible(palette(other, {{"stone", material(atlas)}})));
+	EXPECT_TRUE(source.isCompatible(palette(other, {{"stone", material(atlas)}})));
 }
 
 TEST(VoxelPaletteTest, EmptyModelAcceptsEmptyPalette)
@@ -353,5 +355,38 @@ TEST(VoxelPaletteTest, EmptyModelAcceptsEmptyPalette)
 	const Model source = model({});
 	const auto result = VoxelPalette::Builder(source).build();
 	EXPECT_TRUE(source.isCompatible(result));
-	EXPECT_TRUE(result.slots().empty());
+	EXPECT_TRUE(result.materials().materials().empty());
 }
+
+TEST(PaletteTest, GenericPaletteAcceptsMaterialsWithoutAlbedo)
+{
+	spk::Palette::Builder builder;
+	spk::Material::Builder materialBuilder;
+	Texture atlas;
+	materialBuilder.add("normal", atlas);
+	const auto normalOnly = materialBuilder.build();
+	builder.setMaterial("surface", normalOnly);
+	const auto palette = builder.build();
+	ASSERT_NE(palette.find("surface"), nullptr);
+	EXPECT_EQ(palette.find("surface")->find("albedo"), nullptr);
+	EXPECT_NE(palette.find("surface")->find("normal"), nullptr);
+	EXPECT_THROW(builder.setMaterial("   ", normalOnly), spk::Exception);
+}
+
+TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
+{
+	Texture original;
+	Texture replacement;
+	spk::Palette::Builder builder;
+	builder.setMaterial("stone", material(original));
+	const auto first = builder.build();
+	const auto copy = first;
+	spk::Palette::Builder variant(first);
+	variant.setMaterial("stone", material(replacement));
+	const auto second = variant.build();
+	EXPECT_EQ(&first.materials(), &copy.materials());
+	EXPECT_NE(&first.materials(), &second.materials());
+	EXPECT_EQ(first.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
+	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
+}
+
