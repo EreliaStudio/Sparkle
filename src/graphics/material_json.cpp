@@ -183,8 +183,7 @@ namespace spk
 			{
 				throw Exception(uv.pathFor("size") + ".y: invalid normalized height");
 			}
-			return {{static_cast<float>(anchor.x), static_cast<float>(anchor.y)},
-					{static_cast<float>(size.x), static_cast<float>(size.y)}};
+			return {Vector2(anchor), Vector2(size)};
 		}
 	}
 
