@@ -2,7 +2,7 @@
 
 [Sommaire de l'architecture](../voxel-engine-v0.1.4-specification.md)
 
-L'API publique recommandée est `spk::Assets` (alias de compatibilité de `spk::Assets`). Les factories spécialisées conservent leur contrat `spk::AssetFactory<T>`, et les usages existants de `spk::Assets` restent valides.
+L'API publique est `spk::Assets`, directement déclarée dans le namespace `spk`, avec des factories statiques spécialisées `spk::AssetFactory<T>`. Le namespace `spk::asset` et l'ancien type `Manager` ne font plus partie de cette API.
 
 ## 5. spk::Assets générique
 
