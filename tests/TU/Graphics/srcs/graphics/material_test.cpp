@@ -157,6 +157,7 @@ TEST(MaterialTest, ExplicitUVAndInvalidManualBindings)
 		builder.add("infinite", texture, {{0, 0}, {std::numeric_limits<float>::infinity(), 1}}),
 		spk::Exception);
 	EXPECT_EQ(builder.build().textures().size(), 1u);
+	EXPECT_NO_THROW(builder.add("edge", texture, {{0.2f, 0.3f}, {0.8f, 0.7f}}));
 }
 
 TEST(MaterialTest, JsonAndManualBindingsHaveSameTextureAndUV)
@@ -231,6 +232,8 @@ TEST(MaterialTest, ExplicitAndWholeUVWorkWithBothKindsOfSources)
 	plain["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
 	atlas["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
 	EXPECT_EQ(fromJSON(assets, plain).find("albedo")->section, fromJSON(assets, atlas).find("albedo")->section);
+	plain["textures"]["albedo"]["UV"] = explicitUV(0.2, 0.3, 0.8, 0.7);
+	EXPECT_NO_THROW((void)fromJSON(assets, plain));
 }
 
 TEST(MaterialTest, InvalidJSONStructureAndUnknownFieldsAreRejected)
