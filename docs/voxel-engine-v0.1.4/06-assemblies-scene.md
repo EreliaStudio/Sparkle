@@ -6,7 +6,7 @@
 
 ### 6.1 `spk::Voxel::Assembly`
 
-Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **contenant sa propre liaison à une `spk::Palette`**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.
+Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **liée à la palette commune de l’Assembly**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.
 
 Les opérations couvrent ajout, accès, transformation locale, changement de parent et retrait de parties, avec **refus des cycles**. L'insertion d'une autre Assembly est une **copie instantanée et une expansion de ses Parts dans cette unique hiérarchie** : aucune Part de type sous-Assembly, référence vivante, hiérarchie secondaire, Entity enfant ou propriété de l'Assembly d'origine n'est créée. La forme exacte des identifiants et des signatures reste une question technique d'API, non un choix d'une seconde hiérarchie.
 
@@ -76,7 +76,7 @@ sequenceDiagram
   J->>C: bind(instances, M_assemblyDest) si ombres voulues
   J->>V: demander nouvelle capture
   V->>D: lire poses cumulees dans une seule hierarchie
-  D-->>V: Models, Palettes et matrices figees
+  D-->>V: Models, palette commune et matrices figees
   Note over S,V: Les mutations ulterieures de la source sont independantes
 ```
 
