@@ -23,6 +23,8 @@
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
 - [x] `Model::isCompatible(const spk::Palette &)` vérifie uniquement les noms de slots ; le validateur de `spk::Voxel::Palette::Builder` impose immédiatement un atlas unique à chaque insertion.
 
+- [x] `Model::bind(spk::Palette)` vérifie la compatibilité, copie légèrement la palette et permet à chaque copie de Model de choisir sa propre apparence sans toucher aux meshes.
+
 ## Instructions techniques et intégration
 
 Laisser chaque `Model` vérifier les noms de slots nécessaires, même occultés ; créer et construire une palette avant tout Model, en autorisant des noms librement choisis. Ignorer les matériaux surnuméraires lors de la vérification des slots du Model ; imposer un même atlas `albedo` à tous les Materials de la palette, y compris les matériaux surnuméraires, au moment de chaque `setMaterial()`. Aucun SSBO ni mesh additionnel possédé par les palettes.
@@ -41,13 +43,14 @@ La palette générique sans validateur n'impose aucun rôle de texture. Le valid
 - [x] Rejet immédiat de deux atlas à `setMaterial()`, y compris pour un slot surnuméraire ; récupération du Builder après échec.
 - [x] Slot occulté manquant détecté par le Model.
 - [x] Changer de palette ne change aucun vertex.
+- [x] Liaison à un Model, remplacement indépendant sur deux copies, et maintien de la palette précédente après une erreur ; slot totalement occulté requis.
 - [x] Échec de `setMaterial()` sans mutation partielle.
 
 **Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
 
 ## Définition de terminé / critère de fusion
 
-Un Model peut recevoir une nouvelle palette sans régénérer ses meshes.
+Un Model peut recevoir une nouvelle palette avec `bind()` sans régénérer ses meshes, et `palette()` donne accès à sa liaison facultative. La géométrie reste immuable et partagée ; la liaison est propre à chaque copie de Model.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
