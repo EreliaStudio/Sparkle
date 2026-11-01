@@ -1,10 +1,5 @@
 #pragma once
 
-namespace spk::JSON
-{
-	class Value;
-}
-
 namespace spk::Asset
 {
 	class Manager;

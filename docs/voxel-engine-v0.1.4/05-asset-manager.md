@@ -36,7 +36,7 @@ La forme à un seul argument signifie **exactement un objet JSON vide**, obtenu 
 
 **Application au schéma `Material` multi-rôles (Q-ARCH-005 validée).** Le document `Material` du chapitre 04 est un objet `{ "textures": { "<role>": { "Texture": ..., "UV": ... } } }`. La spécialisation `Asset::Factory<spk::Material>` analyse le JSON, résout les textures via l'`Asset::Manager&` reçu et construit le Material avec un `Material::Builder` sans gestionnaire ni parsing JSON, sans registre de factories ni méthode `fromJSON()` universelle. Un chargement par `load<Material>(id, config)` possède **exactement la même identité de cache structurelle** que tout autre type d'asset ; l'ordre des clés `textures` ne distingue pas deux Materials. Des variations réelles de rôles, de sources, de grilles ou de sections UV sont conservées dans la configuration, donc participent à cette identité.
 
-**Résolution explicite de chaque rôle.** Pour `Texture: { "path": "fichier.png" }`, le constructeur de Material utilise `assets.load<Texture>("fichier.png", JSON::Value::object())`. La forme `{ "path": "atlas.png", "size": {"x":16,"y":16} }` fait appel à `assets.load<SpriteSheet>("atlas.png", { "size": ... })` ; le `size` désigne la **grille de sprites** et jamais une résolution en pixels. Ces formes fichier passent le chemin comme identifiant de factory, sans normalisation par l'Asset::Manager lui-même. Pour `Texture: { "asset": { "type": "Texture" | "SpriteSheet", "id": "...", "config": {...} } }`, le type est choisi **explicitement** puis `assets.load<T>(id, config)` est appelé avec le JSON de configuration intact. L'absence de `config` correspond à **un objet JSON vide**, pas à `Null`. Le code spécifique à `Asset::Factory<T>` choisit lui-même comment interpréter `id` et `config` ; le schéma de Material ne lui impose aucune convention de chemin en mode référence typée.
+**Résolution explicite de chaque rôle.** `Texture: {"path":"fichier.png"}` utilise `assets.load<Texture>("fichier.png", {"path":"fichier.png"})` ; `{"path":"atlas.png","size":{"x":16,"y":16}}` utilise `assets.load<SpriteSheet>("atlas.png", {"path":"atlas.png","size":...})`. Le chemin devient une propriété de configuration, et non un paramètre de construction extrait de l'identifiant. Avec `Texture.asset`, le type `Texture` ou `SpriteSheet`, l'ID logique et `config` sont passés à `assets.load<T>(id, config)` ; les factories graphiques exigent `config.path` (ainsi que `config.size` pour SpriteSheet). L'absence de `config` correspond à `{}`, qui reste une configuration **invalide** pour ces factories. L'Asset::Manager conserve plusieurs variantes d'un même ID si leur configuration, notamment le chemin, change.
 
 ```json
 {
@@ -45,15 +45,15 @@ La forme à un seul argument signifie **exactement un objet JSON vide**, obtenu 
       "Texture": {
         "asset": {
           "type": "SpriteSheet",
-          "id": "terrain.png",
-          "config": { "size": { "x": 16, "y": 16 } }
+          "id": "terrain-atlas",
+          "config": { "path": "terrain.png", "size": { "x": 16, "y": 16 } }
         }
       },
       "UV": { "sprite": { "x": 3, "y": 5 } }
     },
     "normal": {
       "Texture": {
-        "asset": { "type": "Texture", "id": "terrain_normal.png" }
+        "asset": { "type": "Texture", "id": "terrain-normal", "config": { "path": "terrain_normal.png" } }
       }
     }
   }

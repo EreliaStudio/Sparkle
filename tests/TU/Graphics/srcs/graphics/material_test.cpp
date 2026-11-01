@@ -20,6 +20,21 @@ namespace
 		return (std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png").string();
 	}
 
+	[[nodiscard]] Value textureConfig(const std::string &path = texturePath())
+	{
+		Value config = Value::object();
+		config["path"] = path;
+		return config;
+	}
+
+	[[nodiscard]] Value sheetConfig(unsigned int count = 16, const std::string &path = texturePath())
+	{
+		Value config = textureConfig(path);
+		config["size"]["x"] = count;
+		config["size"]["y"] = count;
+		return config;
+	}
+
 	[[nodiscard]] Value pathSource(bool sheet = false, unsigned int count = 16)
 	{
 		Value source = Value::object();
@@ -37,11 +52,7 @@ namespace
 		Value source = Value::object();
 		source["asset"]["type"] = sheet ? "SpriteSheet" : "Texture";
 		source["asset"]["id"] = texturePath();
-		if (sheet)
-		{
-			source["asset"]["config"]["size"]["x"] = count;
-			source["asset"]["config"]["size"]["y"] = count;
-		}
+		source["asset"]["config"] = sheet ? sheetConfig(count) : textureConfig();
 		return source;
 	}
 
@@ -160,9 +171,8 @@ TEST(MaterialTest, ExplicitUVAndInvalidManualBindings)
 TEST(MaterialTest, JsonAndManualBindingsHaveSameTextureAndUV)
 {
 	spk::Asset::Manager assets;
-	spk::Texture &texture = assets.load<spk::Texture>(texturePath());
-	spk::SpriteSheet &sheet = assets.load<spk::SpriteSheet>(
-		texturePath(), Value::fromString(R"({"size":{"x":16,"y":16}})"));
+	spk::Texture &texture = assets.load<spk::Texture>(texturePath(), textureConfig());
+	spk::SpriteSheet &sheet = assets.load<spk::SpriteSheet>(texturePath(), sheetConfig());
 
 	spk::Material::Builder manual;
 	manual.add("normal", texture);
@@ -196,8 +206,8 @@ TEST(MaterialTest, FileAndTypedSourcesResolveIdenticalTriples)
 TEST(MaterialTest, OneImageSupportsIndependentSpriteGrids)
 {
 	spk::Asset::Manager assets;
-	const Value sixteen = Value::fromString(R"({"size":{"x":16,"y":16}})");
-	const Value eight = Value::fromString(R"({"size":{"x":8,"y":8}})");
+	const Value sixteen = sheetConfig(16);
+	const Value eight = sheetConfig(8);
 	auto &sheet16 = assets.load<spk::SpriteSheet>(texturePath(), sixteen);
 	auto &sheet8 = assets.load<spk::SpriteSheet>(texturePath(), eight);
 	EXPECT_NE(&sheet16, &sheet8);
@@ -216,6 +226,60 @@ TEST(MaterialTest, OneImageSupportsIndependentSpriteGrids)
 	EXPECT_NE(material16.find("albedo")->texture.identifier(), material8.find("albedo")->texture.identifier());
 	EXPECT_EQ(material16.find("albedo")->section, sheet16.sprite({3, 5}));
 	EXPECT_EQ(material8.find("albedo")->section, sheet8.sprite({3, 5}));
+}
+
+TEST(MaterialTest, TextureAndSpriteSheetPathsAreIndependentOfLogicalAssetIDs)
+{
+	spk::Asset::Manager assets;
+	const std::string otherPath = (std::filesystem::path(texturePath()).parent_path() /
+								   "." / "default_iconset.png").string();
+	const Value first = textureConfig();
+	const Value second = textureConfig(otherPath);
+
+	const spk::Texture &firstTexture = assets.load<spk::Texture>("terrain", first);
+	const spk::Texture &secondTexture = assets.load<spk::Texture>("terrain", second);
+	EXPECT_NE(firstTexture.handle().identifier(), secondTexture.handle().identifier());
+	EXPECT_EQ(&assets.get<spk::Texture>("terrain"), &firstTexture);
+	assets.setDefault<spk::Texture>("terrain", second);
+	EXPECT_EQ(&assets.get<spk::Texture>("terrain"), &secondTexture);
+
+	const Value firstSheet = sheetConfig(16);
+	const Value secondSheet = sheetConfig(16, otherPath);
+	const spk::SpriteSheet &sheetA = assets.load<spk::SpriteSheet>("atlas", firstSheet);
+	const spk::SpriteSheet &sheetB = assets.load<spk::SpriteSheet>("atlas", secondSheet);
+	EXPECT_NE(sheetA.handle().identifier(), sheetB.handle().identifier());
+	EXPECT_EQ(&assets.get<spk::SpriteSheet>("atlas"), &sheetA);
+	assets.setDefault<spk::SpriteSheet>("atlas", secondSheet);
+	EXPECT_EQ(&assets.get<spk::SpriteSheet>("atlas"), &sheetB);
+
+	Value material = document(assetSource());
+	material["textures"]["albedo"]["Texture"]["asset"]["id"] = "terrain";
+	material["textures"]["albedo"]["Texture"]["asset"]["config"] = second;
+	EXPECT_EQ(fromJSON(assets, material).find("albedo")->texture.identifier(),
+			  secondTexture.handle().identifier());
+}
+
+TEST(MaterialTest, GraphicFactoriesRequirePathsInJSONConfigurations)
+{
+	spk::Asset::Manager assets;
+	EXPECT_THROW((void)assets.load<spk::Texture>("texture"), spk::Exception);
+	EXPECT_THROW((void)assets.load<spk::SpriteSheet>("sheet", sheetConfig(0)), spk::Exception);
+
+	Value config = textureConfig();
+	config["path"] = "";
+	EXPECT_THROW((void)assets.load<spk::Texture>("texture", config), spk::Exception);
+
+	config = textureConfig();
+	config["unexpected"] = true;
+	EXPECT_THROW((void)assets.load<spk::Texture>("texture", config), spk::Exception);
+
+	config = sheetConfig();
+	config["path"] = "";
+	EXPECT_THROW((void)assets.load<spk::SpriteSheet>("sheet", config), spk::Exception);
+
+	Value invalid = document(assetSource());
+	invalid["textures"]["albedo"]["Texture"]["asset"]["config"] = Value::object();
+	EXPECT_THROW((void)fromJSON(assets, invalid), spk::Exception);
 }
 
 TEST(MaterialTest, ExplicitAndWholeUVWorkWithBothKindsOfSources)

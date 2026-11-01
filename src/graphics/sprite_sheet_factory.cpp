@@ -28,26 +28,27 @@ namespace spk::Asset
 		}
 	}
 
-	spk::SpriteSheet Factory<spk::SpriteSheet>::create(Manager &, const std::string &id, const JSON::Value &config)
+	spk::SpriteSheet Factory<spk::SpriteSheet>::create(Manager &, const std::string &, const JSON::Value &config)
 	{
 		JSON::Reader reader(config, {}, "SpriteSheet.config");
-		reader.forbidUnknown({"size"});
+		reader.forbidUnknown({"path", "size"});
+		const std::string path = reader.require<std::string>("path");
+		if (path.empty())
+		{
+			throw spk::Exception(reader.pathFor("path") + ": expected non-empty path");
+		}
 		if (!reader.contains("size"))
 		{
 			throw spk::Exception(reader.pathFor("size") + ": missing sprite grid");
 		}
 		const JSON::Reader sizeReader(reader.value().at("size"), {}, reader.pathFor("size"));
 		const spk::Vector2UInt size = grid(sizeReader);
-		if (id.empty())
-		{
-			throw spk::Exception("SpriteSheet asset: path cannot be empty");
-		}
 		try
 		{
-			return spk::SpriteSheet::open(std::filesystem::path(id), size);
+			return spk::SpriteSheet::open(std::filesystem::path(path), size);
 		} catch (...)
 		{
-			throw spk::Exception("SpriteSheet asset: failed to load image '" + id + "'", std::current_exception());
+			throw spk::Exception("SpriteSheet asset: failed to load image '" + path + "'", std::current_exception());
 		}
 	}
 }
