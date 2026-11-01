@@ -6,6 +6,7 @@
 #include <exception>
 #include <string>
 
+#include "asset/manager.hpp"
 #include "container/json/reader.hpp"
 #include "exception.hpp"
 
@@ -79,8 +80,14 @@ namespace spk
 		void validateConfiguration(const std::string &type, const JSON::Value &config, const std::string &path)
 		{
 			Reader reader(config, {}, path);
-			reader.forbidUnknown(type == "Texture" ? std::initializer_list<std::string_view>{"path"} :
-												  std::initializer_list<std::string_view>{"path", "size"});
+			if (type == "Texture")
+			{
+				reader.forbidUnknown({"path"});
+			}
+			else
+			{
+				reader.forbidUnknown({"path", "size"});
+			}
 			(void)nonEmptyString(reader, "path");
 			if (type == "SpriteSheet")
 			{
