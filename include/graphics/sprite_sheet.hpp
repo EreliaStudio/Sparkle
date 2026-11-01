@@ -5,8 +5,10 @@
 #include <filesystem>
 #include <memory>
 #include <span>
+#include <string>
 #include <vector>
 
+#include "asset/factory.hpp"
 #include "graphics/image.hpp"
 
 namespace spk
@@ -46,5 +48,14 @@ namespace spk
 		[[nodiscard]] std::size_t spriteID(const Vector2UInt &coord) const;
 		[[nodiscard]] const Sprite &sprite(const Vector2UInt &coord) const;
 		[[nodiscard]] const Sprite &sprite(std::size_t spriteID) const;
+	};
+}
+
+namespace spk::Asset
+{
+	template <>
+	struct Factory<spk::SpriteSheet>
+	{
+		[[nodiscard]] static spk::SpriteSheet create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 }

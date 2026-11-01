@@ -90,6 +90,8 @@ Elle peut également demander un `spk::SpriteSheet`, en donnant une **grille de 
 }
 ```
 
+Les coordonnées de type `Vector2` acceptent indifféremment un tableau `[x, y]` ou un objet `{"x": ..., "y": ...}`, aussi bien pour `Texture.size`, `UV.sprite`, `UV.anchor` que `UV.size`. La sérialisation `Vector2::toJSON()` conserve la forme tableau.
+
 Ici, `Texture.size` signifie **16 sprites en largeur et 16 en hauteur**, **pas une résolution en pixels**. `SpriteSheet::sprite(Vector2UInt)` retourne une `Texture::Section` normalisée. Des UV explicites (`anchor`/`size`) restent utilisables **même avec un SpriteSheet**. La syntaxe `sprite` exige une grille valide et des coordonnées de sprite valides.
 
 Ces exemples représentent **un bloc de rôle** réutilisable dans le schéma normatif complet `{ "textures": { "nomDuRole": { "Texture": ..., "UV": ... } } }` de la section 4.2.1. Le chargement JSON et la construction manuelle aboutissent à la même représentation Material : rôle nommé, handle de texture (ou identité de source EngineView uniquement via C++) et `Texture::Section`.
@@ -129,12 +131,13 @@ Plusieurs Materials peuvent donc référencer le **même atlas** avec des rectan
 }
 ```
 
-**Deux modes de source exclusifs dans `"Texture"`.**
+**Source d'un rôle.** Le bloc `"Texture"` accepte uniquement `path`, `id` (facultatif) et `size` (facultatif). `path` est le chemin non vide du fichier à charger ; `id` est un nom logique indépendant du chemin, qui vaut `path` lorsqu'il est omis. **La présence de `size` choisit `SpriteSheet`, son absence choisit `Texture`.** Il n'existe pas de champ `type` ni de mode `asset` imbriqué.
 
-1. **Fichier (forme historique)** : `{ "path": "terrain.png" }` ou `{ "path": "terrain.png", "size": {"x":16,"y":16} }`. `path` est une chaîne non vide passée **telle quelle comme identifiant d'asset** à la factory par défaut concernée, laquelle interprète explicitement cet identifiant comme chemin ; l'AssetManager générique ne normalise pas les chemins. Sans `size`, résolution par `assets.load<spk::Texture>(path, JSON::Value::object())` ; avec `size`, résolution par `assets.load<spk::SpriteSheet>(path, { "size": ... })`. `size` est le **nombre de sprites dans chaque direction**, constitué de deux entiers strictement positifs, et non la résolution de l'image en pixels. Le `SpriteSheet` obtenu fournit sa texture et la conversion des cellules en `Texture::Section` ; aucun choix automatique de résolution n'intervient.
-2. **Référence d'asset typée** : `{ "asset": { "type": "Texture", "id": "terrain.png", "config": {} } }` ou `{ "asset": { "type": "SpriteSheet", "id": "terrain.png", "config": { "size": {"x":16,"y":16} } } }`. Les seuls `type` admis dans ce schéma Material sont `"Texture"` et `"SpriteSheet"`, car les éléments à lier doivent produire une texture. `id` est une chaîne non vide, et `config` est un **objet JSON explicite facultatif**, l'omission valant **`JSON::Value::object()`**, jamais `Null`. La résolution est exactement `assets.load<T>(id, config)` avec le type `T` choisi. La factory statique propre à `T` reste libre d'interpréter ce triplet et de charger des dépendances : le Material n'invente ni registre dynamique, ni recherche de chemin pour un identifiant arbitraire. La forme `asset` **n'admet pas** le champ voisin `size` : toutes les options spécifiques à la factory, y compris la grille d'un SpriteSheet, appartiennent à `config`.
+- Sans `size` : `assets.load<Texture>(id, {"path":path})`.
+- Avec `size` : `assets.load<SpriteSheet>(id, {"path":path,"size":size})` ; `size` est une grille d'entiers strictement positifs, pas une résolution en pixels.
+- Exemples : `{"path":"terrain.png"}` pour une Texture ; `{"id":"terrain","path":"terrain.png","size":[16,16]}` pour une grille nommée.
 
-Le mode fichier constitue seulement un raccourci **de résolution vers les mêmes chargements typés**. Il ne fusionne pas silencieusement des paramètres ni des configurations. `path` et `asset` ne doivent jamais coexister. Des identifiants, types ou JSON structurellement différents restent des clés de cache différentes selon le chapitre 05, même si des fichiers finissent par contenir les mêmes pixels. Un `Material` résolu conserve les **handles et UV** nécessaires, mais pas de pointeurs vers `AssetManager` ou `SpriteSheet`. La liaison `EngineView` relève **uniquement du Builder C++ explicite** et ne constitue jamais une source JSON ; aucune recherche de vue depuis `id`, `path` ou un champ `view` n'est permise.
+La configuration `path` est toujours transmise à la factory graphique ; celle-ci ne déduit jamais le chemin de l'ID. Le gestionnaire conserve son cache par triplet `(type,id,config)` : un même ID peut avoir plusieurs versions, y compris des chemins différents, sélectionnables avec `setDefault<T>`. Une fois construit, un Material ne retient que ses handles et sections UV, pas de pointeur vers l'AssetManager ni vers le SpriteSheet. La liaison `EngineView` reste une opération explicite du Builder C++ et non une source JSON.
 
 **Région UV.** `"UV"` est **facultatif**, son absence signifie `Texture::Section::whole`. Lorsqu'il est présent, c'est un objet prenant **une seule** de ces formes :
 
@@ -143,19 +146,19 @@ Le mode fichier constitue seulement un raccourci **de résolution vers les même
 
 `UV.sprite` ne se combine pas à `UV.anchor` ou `UV.size`; `UV: null`, objet UV vide, tableau, chaîne, composante manquante, `NaN`, infini ou dimension nulle/négative sont invalides. La validation du rectangle du Material est **distincte de l'avertissement non bloquant sur les UV locaux d'une Shape** situés hors `[0,1]` : ceux-ci ne sont jamais clampés lors du rendu. Un SpriteSheet sans champ `UV` désigne simplement sa texture entière.
 
-**Erreurs, doublons et atomicité.** Les objets JSON n'ont pas d'ordre sémantique. Le parseur existant `JSON::Value::fromString` / `loadFromFile` expose déjà `ParseOptions::rejectDuplicateKeys = true` par défaut : **ce mode est obligatoire** pour charger du texte de Material, afin de refuser les doublons de rôles et les doublons de champs à n'importe quel niveau. Un `JSON::Value` déjà construit est une map de clés uniques ; un doublon qui aurait été silencieusement éliminé par un parsing externe configuré permissif n'est **pas récupérable** après coup. Les constructions depuis `JSON::Value` valident les champs et les types présents, sans prétendre détecter un historique de doublons perdu. Toute erreur de schéma, type, clé, valeur, source non résolue ou coordonnée hors grille produit une `spk::Exception` descriptive avec **chemin logique précis** (par exemple `textures.albedo.Texture.size.x` ou `textures.normal.UV.sprite`), nom du rôle et cause de chargement lorsqu'elle existe. Un objet racine mal formé est rejeté avant publication, jamais corrigé par une valeur par défaut implicite autre que `UV` entier et `asset.config` objet vide.
+**Erreurs, doublons et atomicité.** Les objets JSON n'ont pas d'ordre sémantique. Le parseur existant `JSON::Value::fromString` / `loadFromFile` expose déjà `ParseOptions::rejectDuplicateKeys = true` par défaut : **ce mode est obligatoire** pour charger du texte de Material, afin de refuser les doublons de rôles et les doublons de champs à n'importe quel niveau. Un `JSON::Value` déjà construit est une map de clés uniques ; un doublon qui aurait été silencieusement éliminé par un parsing externe configuré permissif n'est **pas récupérable** après coup. Les constructions depuis `JSON::Value` valident les champs et les types présents, sans prétendre détecter un historique de doublons perdu. Toute erreur de schéma, type, clé, valeur, source non résolue ou coordonnée hors grille produit une `spk::Exception` descriptive avec **chemin logique précis** (par exemple `textures.albedo.Texture.size.x` ou `textures.normal.UV.sprite`), nom du rôle et cause de chargement lorsqu'elle existe. Un objet racine mal formé est rejeté avant publication ; seule l'absence de `UV` entraîne l'utilisation de la texture entière, et seule l'absence de `id` utilise le chemin comme identifiant.
 
-**Builder et équivalence sémantique.** Le `Material::Builder` offre une construction manuelle par rôle via une texture existante ou SpriteSheet, ainsi qu'une lecture du document JSON **avec un `AssetManager` explicitement lié**. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite, ou le code doit appeler une opération de remplacement nommée distinctement (signature finale à fixer sans changement de politique). La lecture du JSON prépare et valide **intégralement** les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé et un Builder réutilisé reste inchangé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'AssetManager.
+**Builder et équivalence sémantique.** Le `Material::Builder` assemble exclusivement des Textures ou SpriteSheets déjà disponibles : il ne connaît ni le JSON ni l'`Asset::Manager`. La spécialisation `Asset::Factory<spk::Material>` lit le document JSON, résout les dépendances avec le gestionnaire reçu, puis alimente un Builder local. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite. La factory valide les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'Asset::Manager.
 
 ```mermaid
 flowchart TD
   Root["JSON racine : textures par roles"] --> Parse["Parsing strict : cles dupliquees refusees"]
   Parse --> Role["Validation role et bloc Texture / UV"]
-  Role --> Type{"Source ?"}
-  Type -->|"path"| Path["Texture ou SpriteSheet selon size"]
-  Type -->|"asset"| Asset["asset.type + id + config"]
-  Path --> Load["AssetManager : load T id config"]
-  Asset --> Load
+  Role --> Type{"Texture.size present ?"}
+  Type -->|"oui"| Sheet["SpriteSheet : id + path + size"]
+  Type -->|"non"| Texture["Texture : id + path"]
+  Sheet --> Load["AssetManager : load T id config"]
+  Texture --> Load
   Load --> Region{"UV ?"}
   Region -->|"sprite"| Sprite["SpriteSheet.sprite(coord)"]
   Region -->|"anchor + size"| Explicit["Texture.Section normalisee"]
@@ -166,17 +169,17 @@ flowchart TD
   Build --> Material["Material final : handles + UV, sans gestionnaire"]
 ```
 
-### 4.3 `Material::Builder` et l'AssetManager
+### 4.3 `Material::Builder` et la factory JSON
 
-Le Builder peut fonctionner **sans AssetManager** lorsque le programme lui passe directement des Textures existantes. En revanche, un chargement JSON qui doit résoudre un chemin ou un asset requiert un AssetManager préalablement lié :
+Le Builder construit un Material uniquement depuis des ressources déjà résolues, sans liaison vers un gestionnaire ni logique JSON :
 
 ```cpp
 spk::Material::Builder builder;
-builder.bind(&assets);  // Liaison non propriétaire
-// Construction depuis un JSON de matériau.
+builder.add("albedo", texture);
+spk::Material material = builder.build();
 ```
 
-`void bind(spk::AssetManager*)` est la forme retenue. **`bind(nullptr)` provoque immédiatement une `spk::Exception`.** Une liaison à cible unique n'est pas implicitement remplacée sans détachement préalable, selon les conventions Sparkle. Le chargement de JSON se fait exclusivement avec ce gestionnaire explicitement lié : il résout `Texture.path` et les références `Texture.asset` par les factories statiques du type concerné, suivant la section 4.2.1. Le Material obtenu ne conserve aucune référence au gestionnaire. L'API de construction manuelle n'en a pas besoin dès lors que les Textures sont déjà résolues.
+La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `assets.load<spk::Material>(id, config)`. La factory reçoit l'`Asset::Manager&`, résout `Texture.path` et les références `Texture.asset`, puis remplit un Builder local. Ni le Builder ni le Material final ne conservent de référence vers l'Asset::Manager.
 
 ### 4.4 `spk::VoxelPalette` : association des slots aux matériaux
 

@@ -12,7 +12,7 @@
 #include "asset/factory.hpp"
 #include "container/json/object.hpp"
 
-namespace spk::asset
+namespace spk::Asset
 {
 	class Manager
 	{

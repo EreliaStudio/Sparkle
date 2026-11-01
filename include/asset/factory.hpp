@@ -1,6 +1,6 @@
 #pragma once
 
-namespace spk::asset
+namespace spk::Asset
 {
 	class Manager;
 

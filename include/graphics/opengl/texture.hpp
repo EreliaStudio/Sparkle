@@ -8,8 +8,10 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <string>
 #include <vector>
 
+#include "asset/factory.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
 #include "math/vector2.hpp"
 
@@ -208,5 +210,14 @@ namespace spk
 		[[nodiscard]] Resolution resolve(const Section &section, const Vector2UInt &available) const;
 
 		void saveAsPng(const std::filesystem::path &path) const;
+	};
+}
+
+namespace spk::Asset
+{
+	template <>
+	struct Factory<spk::Texture>
+	{
+		[[nodiscard]] static spk::Texture create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 }

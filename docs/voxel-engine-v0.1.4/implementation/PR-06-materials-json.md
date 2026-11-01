@@ -22,13 +22,13 @@
 - [ ] rôles nommés libres avec Texture::Handle + Texture::Section
 - [ ] SpriteSheet existant
 - [ ] racine JSON {textures:{...}}
-- [ ] sources path ou asset typé
+- [ ] source JSON avec path obligatoire, id facultatif et size déterminant Texture/SpriteSheet
 - [ ] UV whole, sprite ou anchor/size
 - [ ] factory Material.
 
 ## Instructions techniques et intégration
 
-Utiliser AssetManager explicite pour JSON; bind(nullptr) lève Exception; parser de texte refuse clés dupliquées; path+size charge SpriteSheet; rôle normal sans logique spéciale; un objet Material vide en rôles reste génériquement valide; sources EngineView non exposées dans JSON.
+La factory Material reçoit Asset::Manager& pour résoudre les textures du JSON ; Material::Builder n'a ni pointeur de gestionnaire ni bind()/load(JSON). Pour Texture et SpriteSheet, l'ID est un nom logique : le chemin de fichier vient obligatoirement du JSON de configuration (`config.path`). Le parser de texte refuse les clés dupliquées ; path+size charge SpriteSheet; rôle normal sans logique spéciale; un objet Material vide en rôles reste génériquement valide; sources EngineView non exposées dans JSON.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
@@ -37,7 +37,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] Builder manuel == JSON
 - [ ] deux grilles d'un atlas chargées indépendamment
 - [ ] UV sprite hors domaine refusée
-- [ ] path/asset équivalents même triplet
+- [ ] même triplet de chargement partagé avec ou sans id explicite équivalent
 - [ ] doublons textuels rejetés
 - [ ] rôle albedo absent accepté par Material mais pas par consommateur.
 

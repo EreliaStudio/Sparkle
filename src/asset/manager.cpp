@@ -5,7 +5,7 @@
 
 #include "exception.hpp"
 
-namespace spk::asset
+namespace spk::Asset
 {
 	Manager::Asset::~Asset() = default;
 
