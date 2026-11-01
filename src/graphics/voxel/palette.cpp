@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "voxel/model.hpp"
 
 namespace spk::Voxel
 {
@@ -22,55 +21,23 @@ namespace spk::Voxel
 		return _materials.find(name);
 	}
 
-	Palette::Builder::Builder(const Model &model)
-	{
-		addModel(model);
-	}
-
 	Palette::Builder::Builder(const Palette &palette) :
 		_materials(palette.materials())
 	{
-		for (const auto &[name, material] : palette.materials().materials())
-		{
-			(void)material;
-			_required.insert(name);
-		}
 	}
 
-	void Palette::Builder::addModel(const Model &model)
+	void Palette::Builder::setMaterial(std::string name, spk::Material material)
 	{
-		auto required = _required;
-		for (const auto &slot : model.materialSlots())
-		{
-			required.insert(slot.name);
-		}
-		_required.swap(required);
-	}
-
-	void Palette::Builder::setMaterial(std::string_view name, spk::Material material)
-	{
-		if (!_required.contains(name))
-		{
-			throw spk::Exception("Voxel Palette: undeclared slot '" + std::string(name) + "'");
-		}
 		const auto *albedo = material.find("albedo");
 		if (albedo == nullptr || !albedo->texture.valid())
 		{
-			throw spk::Exception("Voxel Palette: slot '" + std::string(name) + "' requires a valid albedo");
+			throw spk::Exception("Voxel Palette: slot '" + name + "' requires a valid albedo");
 		}
-		_materials.setMaterial(std::string(name), std::move(material));
+		_materials.setMaterial(std::move(name), std::move(material));
 	}
 
 	Palette Palette::Builder::build() const
 	{
-		const auto materials = _materials.build();
-		for (const auto &name : _required)
-		{
-			if (materials.find(name) == nullptr)
-			{
-				throw spk::Exception("Voxel Palette: missing Material for slot '" + name + "'");
-			}
-		}
-		return Palette(std::move(materials));
+		return Palette(_materials.build());
 	}
 }
