@@ -22,7 +22,9 @@ Pour un parent et un enfant, la transformation finale est :
 
 A_parent est le repère de repos du joint parent, R_joint sa rotation par View et A_child le point d'attache du Model enfant. La position du joint reste cohérente dans le repère parent. setTransform déplace le personnage entier ; visit fournit les Models, palettes et matrices aux futures captures de rendu.
 
-L'identification publique par nom est provisoire : un nom absent ou ambigu produit une exception. Le schéma d'identifiants/chemins d'occurrence sera discuté après implémentation des API, sans être figé ici.
+Les chemins d'Anchors sont représentés par le type `Model::AnchorPath` : `Model::AnchorPath{"leftShoulder", "elbow"}`. Les segments sont distincts ; aucun caractère, y compris `/`, n'est réservé comme séparateur. La recherche courte par nom est possible uniquement si le nom est unique dans toute la hiérarchie ; une ambiguïté déclenche une exception.
+
+`view.anchor(path)` fournit un `Model::View::AnchorHandle` lié à cette View, qui expose `setRotation`, `rotation`, `resetRotation` et `path`. Les opérations du handle échouent explicitement après destruction, déplacement ou réaffectation de sa View. Les accès aux palettes et rotations acceptent également des `AnchorPath`. Aucun registre d'identifiants globaux n'est nécessaire.
 
 ### 6.4 Model::Harmonizer
 

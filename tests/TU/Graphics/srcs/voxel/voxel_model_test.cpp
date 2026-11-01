@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <limits>
+#include <memory>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -338,4 +340,145 @@ TEST(VoxelModelHarmonizerTest, ReusesEqualMaterialsAcrossThreeModels)
 	ASSERT_NE(right, nullptr);
 	EXPECT_NE(materialIndex(result.model), materialIndex(*left));
 	EXPECT_EQ(materialIndex(*left), materialIndex(*right));
+}
+
+
+TEST(VoxelAnchorPathTest, NamedSegmentsDoNotTreatSlashAsSeparator)
+{
+	using Path = Model::AnchorPath;
+	const Path nested{"leftShoulder", "elbow"};
+	const Path literal{"leftShoulder/elbow"};
+	EXPECT_NE(nested, literal);
+	EXPECT_EQ(nested.size(), 2u);
+	EXPECT_EQ(literal.size(), 1u);
+	EXPECT_EQ(literal.segments().front(), "leftShoulder/elbow");
+	EXPECT_THROW((void)(Path{"leftShoulder", ""}), spk::Exception);
+}
+
+TEST(VoxelModelViewTest, TypedPathsResolveRepeatedAnchorNames)
+{
+	using Path = Model::AnchorPath;
+	Model torso;
+	Model arm;
+	arm.addAnchor("elbow");
+	torso.addAnchor("leftShoulder");
+	torso.addAnchor("rightShoulder");
+	torso.anchor("leftShoulder").bind(arm);
+	torso.anchor("rightShoulder").bind(arm);
+	Model::View view(torso);
+	const auto left = Path{"leftShoulder", "elbow"};
+	const auto right = Path{"rightShoulder", "elbow"};
+	const auto rotation = spk::Quaternion::fromEuler({0, 0, 45});
+	view.setAnchorRotation(left, rotation);
+	EXPECT_EQ(view.anchorRotation(left), rotation.normalized());
+	EXPECT_EQ(view.anchorRotation(right), spk::Quaternion::identity());
+	EXPECT_THROW(view.setAnchorRotation("elbow", rotation), spk::Exception);
+	EXPECT_THROW(view.setAnchorRotation(Path{"leftShoulder", "missing"}, rotation), spk::Exception);
+}
+
+TEST(VoxelModelViewTest, AnchorHandleAppliesRotationOnlyToOwningView)
+{
+	using Path = Model::AnchorPath;
+	Model torso;
+	torso.addAnchor("arm");
+	torso.anchor("arm").bind(Model{});
+	Model::View first(torso);
+	Model::View second(torso);
+	auto handle = first.anchor(Path{"arm"});
+	const auto rotation = spk::Quaternion::fromEuler({0, 0, 60});
+	EXPECT_EQ(handle.path(), (Path{"arm"}));
+	handle.setRotation(rotation);
+	EXPECT_EQ(handle.rotation(), rotation.normalized());
+	EXPECT_EQ(second.anchorRotation("arm"), spk::Quaternion::identity());
+	handle.resetRotation();
+	EXPECT_EQ(first.anchorRotation("arm"), spk::Quaternion::identity());
+}
+
+TEST(VoxelModelViewTest, ShortNameLookupRequiresUniqueness)
+{
+	Model torso;
+	Model arm;
+	arm.addAnchor("elbow");
+	torso.addAnchor("leftArm");
+	torso.anchor("leftArm").bind(arm);
+	Model::View single(torso);
+	EXPECT_NO_THROW((void)single.anchor("elbow"));
+	torso.addAnchor("rightArm");
+	torso.anchor("rightArm").bind(arm);
+	Model::View duplicate(torso);
+	EXPECT_THROW((void)duplicate.anchor("elbow"), spk::Exception);
+	EXPECT_NO_THROW((void)duplicate.anchor(Model::AnchorPath{"leftArm", "elbow"}));
+}
+
+TEST(VoxelModelViewTest, ExplicitPathPreservesSlashInAnAnchorName)
+{
+	using Path = Model::AnchorPath;
+	Model torso;
+	Model arm;
+	arm.addAnchor("elbow");
+	torso.addAnchor("leftArm");
+	torso.addAnchor("leftArm/elbow");
+	torso.anchor("leftArm").bind(arm);
+	Model::View view(torso);
+	const auto rotation = spk::Quaternion::fromEuler({0, 0, 33});
+	view.anchor(Path{"leftArm/elbow"}).setRotation(rotation);
+	EXPECT_EQ(view.anchorRotation(Path{"leftArm/elbow"}), rotation.normalized());
+	EXPECT_EQ(view.anchorRotation(Path{"leftArm", "elbow"}), spk::Quaternion::identity());
+}
+
+TEST(VoxelModelViewTest, TypedPathsApplyIndependentChildPalettes)
+{
+	using Path = Model::AnchorPath;
+	spk::Texture atlas;
+	Model arm = model("skin");
+	arm.addAnchor("elbow");
+	arm.anchor("elbow").bind(model("metal"));
+	Model torso;
+	torso.addAnchor("leftArm");
+	torso.addAnchor("rightArm");
+	torso.anchor("leftArm").bind(arm);
+	torso.anchor("rightArm").bind(arm);
+	Model::View view(torso);
+	const auto skin = palette(atlas, {"skin"});
+	const auto metal = palette(atlas, {"metal"});
+	view.setPalette(Path{"leftArm"}, skin);
+	view.setPalette(Path{"rightArm"}, skin);
+	view.setPalette(Path{"leftArm", "elbow"}, metal);
+	view.setPalette(Path{"rightArm", "elbow"}, metal);
+	ASSERT_NE(view.palette(Path{"leftArm", "elbow"}), nullptr);
+	EXPECT_EQ(&view.palette(Path{"leftArm", "elbow"})->materials(), &metal.materials());
+	EXPECT_TRUE(view.isRenderable());
+}
+
+TEST(VoxelModelViewTest, HandleFailsSafelyAfterViewDestructionAndMove)
+{
+	using Path = Model::AnchorPath;
+	Model source;
+	source.addAnchor("arm");
+	auto view = std::make_unique<Model::View>(source);
+	auto destroyed = view->anchor(Path{"arm"});
+	view.reset();
+	EXPECT_THROW((void)destroyed.rotation(), spk::Exception);
+	Model::View original(source);
+	auto movedHandle = original.anchor(Path{"arm"});
+	Model::View moved(std::move(original));
+	EXPECT_THROW((void)movedHandle.rotation(), spk::Exception);
+	EXPECT_NO_THROW((void)moved.anchor(Path{"arm"}));
+}
+
+TEST(VoxelModelViewTest, CopiedViewHasIndependentHandlesAndAssignmentInvalidatesThem)
+{
+	using Path = Model::AnchorPath;
+	Model source;
+	source.addAnchor("arm");
+	Model::View original(source);
+	auto originalHandle = original.anchor(Path{"arm"});
+	Model::View copy(original);
+	const auto rotation = spk::Quaternion::fromEuler({0, 0, 35});
+	copy.anchor(Path{"arm"}).setRotation(rotation);
+	EXPECT_EQ(originalHandle.rotation(), spk::Quaternion::identity());
+	auto oldCopyHandle = copy.anchor(Path{"arm"});
+	copy = original;
+	EXPECT_THROW((void)oldCopyHandle.rotation(), spk::Exception);
+	EXPECT_EQ(originalHandle.rotation(), spk::Quaternion::identity());
 }

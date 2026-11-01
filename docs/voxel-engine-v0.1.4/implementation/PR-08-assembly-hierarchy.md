@@ -10,15 +10,20 @@
 - Model : un Mesh, des Model::Anchor nommés et enfants facultatifs ; aucune Palette.
 - Model::View : palettes indépendantes ou propagation explicite, rotations de joints, matrice globale, visite pour futurs renderers.
 - Model::Harmonizer : reindexation des meshes et génération d'une Palette harmonisée et d'un MaterialLayout commun.
-- La stratégie définitive d'identifiants et chemins d'occurrence demeure volontairement ouverte ; les APIs provisoires rejettent les noms ambigus.
+- Model::AnchorPath : segments explicites de noms, sans caractère séparateur réservé ; recherches courtes uniquement si uniques.
+- Model::View::AnchorHandle : handle non propriétaire avec contrôle de validité après destruction, déplacement et réaffectation de la View.
 
 ## Contrats
 
 La géométrie, les noms/opacités des slots et leurs indices viennent exclusivement du Mesher. Un Anchor est un repère de repos rigide : le Model source est copié lors d'un bind. Pour les enfants M_child = M_parent * A_parent * R_joint * inverse(A_child), en préservant les points de pivot. Les rotations et palettes ne sont modifiables que dans la View. Une View non harmonisée supporte une palette par Model, y compris des atlas différents ; la sortie harmonisée exige un atlas commun. Les modèles harmonisés ne peuvent utiliser que des palettes au MaterialLayout identique.
 
+## Accès aux articulations
+
+`view.anchor(Model::AnchorPath{"leftShoulder", "elbow"})` retourne un handle permettant de modifier l'articulation de cette View sans modifier les autres instances. `Model::AnchorPath{"leftShoulder/elbow"}` est un chemin distinct composé d'un seul segment. Les identités sont déterministes dans la hiérarchie et ne nécessitent aucun ID numérique.
+
 ## Tests
 
-Géométrie, offsets, slots occultés, collisions, copies autonomes d'Anchors, rotations, propagations transactionnelles, palettes divergentes, harmonisation, invariance des sources et variants de palette.
+Géométrie, offsets, slots occultés, collisions, copies autonomes d'Anchors, rotations, propagations transactionnelles, palettes divergentes, harmonisation, invariance des sources et variants de palette. Vérification des chemins imbriqués, noms contenant `/`, noms courts ambigus, palettes par chemin et handles invalides après destruction ou déplacement de View.
 
 ## Hors périmètre
 

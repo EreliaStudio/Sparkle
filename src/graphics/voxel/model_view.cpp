@@ -43,6 +43,48 @@ namespace spk::Voxel
 		setPalette(std::move(palette));
 	}
 
+	Model::View::View(const View &other) :
+		_model(other._model),
+		_palettes(other._palettes),
+		_rotations(other._rotations),
+		_transform(other._transform)
+	{
+	}
+
+	Model::View::View(View &&other) :
+		_model(std::move(other._model)),
+		_palettes(std::move(other._palettes)),
+		_rotations(std::move(other._rotations)),
+		_transform(other._transform)
+	{
+		other._lifetime.reset();
+	}
+
+	Model::View &Model::View::operator=(const View &other)
+	{
+		if (this != &other)
+		{
+			View replacement(other);
+			*this = std::move(replacement);
+		}
+		return *this;
+	}
+
+	Model::View &Model::View::operator=(View &&other)
+	{
+		if (this != &other)
+		{
+			auto lifetime = std::make_shared<std::uint8_t>(0);
+			_model = std::move(other._model);
+			_palettes = std::move(other._palettes);
+			_rotations = std::move(other._rotations);
+			_transform = other._transform;
+			_lifetime.swap(lifetime);
+			other._lifetime.reset();
+		}
+		return *this;
+	}
+
 	const Model &Model::View::model() const noexcept
 	{
 		return _model;
@@ -52,6 +94,40 @@ namespace spk::Voxel
 	{
 		const auto found = _palettes.find({});
 		return found == _palettes.end() ? nullptr : &found->second;
+	}
+
+	const Model::Anchor &Model::View::_anchor(const Path &path) const
+	{
+		if (path.empty())
+		{
+			throw spk::Exception("Voxel View: empty AnchorPath");
+		}
+		const Model *node = &_model;
+		for (std::size_t index = 0; index < path.size(); ++index)
+		{
+			const auto &joint = node->anchor(path.segments()[index]);
+			if (index + 1 == path.size())
+			{
+				return joint;
+			}
+			node = joint.model();
+			if (!node)
+			{
+				throw spk::Exception("Voxel View: unbound intermediate Anchor");
+			}
+		}
+		throw spk::Exception("Voxel View: empty AnchorPath");
+	}
+
+	Model::View::AnchorHandle Model::View::anchor(const AnchorPath &path)
+	{
+		(void)_anchor(path);
+		return AnchorHandle(*this, path);
+	}
+
+	Model::View::AnchorHandle Model::View::anchor(std::string_view name)
+	{
+		return anchor(_findUnique(name));
 	}
 
 	Model::View::Path Model::View::_findUnique(std::string_view name) const
@@ -97,7 +173,12 @@ namespace spk::Voxel
 
 	const spk::Palette *Model::View::palette(std::string_view anchorName) const
 	{
-		const auto path = _findUnique(anchorName);
+		return palette(_findUnique(anchorName));
+	}
+
+	const spk::Palette *Model::View::palette(const AnchorPath &path) const
+	{
+		(void)_node(path);
 		const auto found = _palettes.find(path);
 		return found == _palettes.end() ? nullptr : &found->second;
 	}
@@ -141,15 +222,28 @@ namespace spk::Voxel
 		spk::Palette palette,
 		PalettePropagation propagation)
 	{
+		setPalette(_findUnique(anchorName), std::move(palette), propagation);
+	}
+
+	void Model::View::setPalette(
+		const AnchorPath &path,
+		spk::Palette palette,
+		PalettePropagation propagation)
+	{
 		(void)spk::Voxel::Palette::Builder(palette);
 		auto prepared = _palettes;
-		_applyPalette(_findUnique(anchorName), palette, propagation, prepared);
+		_applyPalette(path, palette, propagation, prepared);
 		_palettes.swap(prepared);
 	}
 
 	void Model::View::setAnchorRotation(std::string_view name, spk::Quaternion rotation)
 	{
-		const auto path = _findUnique(name);
+		setAnchorRotation(_findUnique(name), rotation);
+	}
+
+	void Model::View::setAnchorRotation(const AnchorPath &path, spk::Quaternion rotation)
+	{
+		(void)_anchor(path);
 		for (const float component : rotation.data)
 		{
 			if (!std::isfinite(component))
@@ -166,7 +260,13 @@ namespace spk::Voxel
 
 	spk::Quaternion Model::View::anchorRotation(std::string_view name) const
 	{
-		const auto found = _rotations.find(_findUnique(name));
+		return anchorRotation(_findUnique(name));
+	}
+
+	spk::Quaternion Model::View::anchorRotation(const AnchorPath &path) const
+	{
+		(void)_anchor(path);
+		const auto found = _rotations.find(path);
 		return found == _rotations.end() ? spk::Quaternion::identity() : found->second;
 	}
 
@@ -239,6 +339,41 @@ namespace spk::Voxel
 	{
 		Path path;
 		_visit(_model, path, _transform, callback);
+	}
+
+	Model::View::AnchorHandle::AnchorHandle(View &view, AnchorPath path) :
+		_view(&view),
+		_path(std::move(path)),
+		_lifetime(view._lifetime)
+	{
+	}
+
+	const Model::AnchorPath &Model::View::AnchorHandle::path() const noexcept
+	{
+		return _path;
+	}
+
+	void Model::View::AnchorHandle::setRotation(spk::Quaternion rotation)
+	{
+		if (_lifetime.expired())
+		{
+			throw spk::Exception("Voxel AnchorHandle: View lifetime expired");
+		}
+		_view->setAnchorRotation(_path, rotation);
+	}
+
+	spk::Quaternion Model::View::AnchorHandle::rotation() const
+	{
+		if (_lifetime.expired())
+		{
+			throw spk::Exception("Voxel AnchorHandle: View lifetime expired");
+		}
+		return _view->anchorRotation(_path);
+	}
+
+	void Model::View::AnchorHandle::resetRotation()
+	{
+		setRotation(spk::Quaternion::identity());
 	}
 
 	bool Model::View::isRenderable() const noexcept
