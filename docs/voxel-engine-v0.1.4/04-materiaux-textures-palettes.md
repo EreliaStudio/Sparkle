@@ -189,37 +189,40 @@ La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `
 
 ### 4.4 `spk::Palette` et `spk::Voxel::Palette`
 
-`spk::Palette` est une collection générique immuable de `spk::Material`, indexée par le nom du slot. Elle ne contient **ni opacité, ni SSBO**, et partage efficacement ses données entre copies. Son `Builder` permet de construire une palette et de remplacer les Materials par nom, sans exiger un rôle `albedo` : les matériaux génériques peuvent employer d'autres rôles.
+`spk::Palette` est une collection générique immuable de `spk::Material`, indexée par nom. Elle ne contient ni opacité, ni SSBO, ni état GPU propre. Son `Builder` accepte des Materials quels que soient leurs rôles de textures.
 
-`spk::Voxel::Palette` est une spécialisation légère **par composition**, qui conserve une `spk::Palette` générique et expose un `Builder` orienté voxel. Ce Builder rassemble les **noms** des slots déclarés dans un ou plusieurs `Voxel::Model`, refuse les Materials manquants et exige pour chaque slot un rôle `albedo` avec un `Texture::Handle` valide, même lorsque ses triangles ont été entièrement occultés. Il permet de créer une variante d'une palette voxel existante. Les noms supplémentaires restent permis si une palette est construite pour plusieurs Models.
+`spk::Voxel::Palette` est une adaptation immuable par composition qui peut être construite **sans Model préalable**. Son `Builder` ajoute ou remplace librement des Materials par nom de slot. **À chaque `setMaterial()`, il exige un rôle `albedo` et un `Texture::Handle` valide** ; il refuse un nom vide ou uniquement composé d'espaces. `build()` publie simplement la palette immuable sans vérifier de slots attendus. On peut créer une variante depuis une palette voxel existante.
 
-**L'opacité n'est stockée dans aucune des deux palettes, pas même dans leurs Builders.** Elle est définie par `Voxel::Definition`, puis conservée dans `Voxel::Model` pour classer les slots dans les passes opaque et translucide. Deux Models ayant le même nom de slot mais des opacités différentes peuvent partager une même `Voxel::Palette` ; ils vérifient chacun leur propre contrainte d'atlas dans `Model::isCompatible(palette)`.
+La complétude relève **exclusivement du Model**, via `Model::isCompatible(const Voxel::Palette&)`. Il vérifie que la palette contient chaque nom de slot du Model, y compris les slots intégralement occultés, puis vérifie qu'une même passe opaque ou translucide ne réclame pas plusieurs identités de source `albedo`. Les Materials supplémentaires sont ignorés pour ce Model. Une palette incomplète pour un Model peut être construite normalement puis être jugée incompatible par ce dernier ; elle n'est pas incomplète dans l'absolu.
 
-**API depuis la PR-07 :**
+**Aucune palette ne contient d'opacité.** `Voxel::Definition` fixe l'opacité et `Voxel::Model` la conserve pour déterminer les passes. Deux Models peuvent partager une même palette malgré des opacités différentes pour un slot de même nom. Aucun rebake ni division automatique des meshes n'est effectué.
+
+**Exemple d'API PR-07 — palette construite avant le Model :**
 
 ```cpp
 spk::Palette::Builder generic;
 generic.setMaterial("normalOnly", normalMaterial);
 const spk::Palette genericPalette = generic.build();
 
-spk::Voxel::Palette::Builder builder(model);
-builder.addModel(otherModel); // Union des noms, sans opacité
+spk::Voxel::Palette::Builder builder;
 builder.setMaterial("stone", stoneMaterial);
 builder.setMaterial("glass", glassMaterial);
-// Affecter de même chaque autre nom requis par les deux Models.
 const spk::Voxel::Palette palette = builder.build();
 
+// Création du Model indépendante de la palette (mesher).
+const spk::Voxel::Model model = mesher.bake(volume);
 if (!model.isCompatible(palette))
 {
     throw spk::Exception("Palette incompatible avec le Model");
 }
 
+// Variante immuable sans changement de la géométrie.
 spk::Voxel::Palette::Builder variant(palette);
 variant.setMaterial("stone", replacementMaterial);
 const spk::Voxel::Palette alternate = variant.build();
 ```
 
-Le Builder voxel exige des slots explicitement déclarés par les Models et refuse l'affectation d'un slot inconnu. `setMaterial()` vérifie immédiatement la présence d'un rôle `albedo` valide ; `build()` vérifie uniquement que chaque slot déclaré possède un Material, sans revalider son `albedo`. Aucun contenu partiel n'est publié si un Material requis manque. L'ajout d'un Model est transactionnel. Une `Voxel::Palette` complète peut néanmoins être incompatible avec un Model donné si deux slots de la même passe y utilisent des identités d'atlas différentes. `Model::isCompatible()` renvoie alors `false` ; l'association de rendu et ses diagnostics font partie des PR suivantes. La gestion des Assemblies est traitée en PR-08.
+La validation de `albedo` n'est pas répétée dans `build()`. La création d'une association de rendu et ses diagnostics relèvent des PR suivantes ; l'intégration des Assemblies est traitée en PR-08.
 
 **Identité d'atlas des sources de vue (Q-ARCH-003 validée).** La vérification de compatibilité utilise une **identité logique immuable de la source `albedo`**, jamais son handle GPU résolu. Deux types d'identités sont incompatibles entre eux : `Static(Texture::Handle)` (identité du `GPUResource::State` effectivement capturé, sans considérer une génération/pixels ultérieurs comme un nouvel atlas tant que le State reste le même) et `EngineView(identité de vie de la vue)`. La seconde identité est propre à **l'incarnation concrète** de la vue dans son `RenderingEngine`, et non à son nom textuel : supprimer puis recréer `"monitor"` ne rétablit aucune identité ou liaison antérieure. Un simple identifiant de vue stable attribué par son moteur suffit, sans registre global ni possession nouvelle. La source de vue reste non propriétaire et le développeur doit cesser de l'utiliser avant destruction.
 
