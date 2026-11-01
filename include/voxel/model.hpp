@@ -10,6 +10,11 @@
 #include "math/vector3.hpp"
 #include "voxel/definition.hpp"
 
+namespace spk
+{
+	class VoxelPalette;
+}
+
 namespace spk::Voxel
 {
 	struct MeshVertex
@@ -54,5 +59,6 @@ namespace spk::Voxel
 		[[nodiscard]] const Mesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
+		[[nodiscard]] bool isCompatible(const spk::VoxelPalette &palette) const noexcept;
 	};
 }
