@@ -20,14 +20,17 @@ classDiagram
     +grille de sprites
   }
   class Palette {
-    +Builder
     +association slot -> Material
     -Data immutable partagé
   }
+  class PaletteBuilder {
+    +setMaterial
+    +Validator optionnel
+    +build Palette
+  }
   class VoxelPaletteBuilder {
-    +Builder
-    +slots requis
     +validation albedo
+    +validation atlas unique
   }
   class Model {
     +slots sémantiques triés
@@ -37,7 +40,7 @@ classDiagram
   Texture <|-- SpriteSheet
   Material --> Texture : Handle statique
   Material ..> EngineView : source empruntée (API à finaliser)
-  VoxelPaletteBuilder --> Palette : construction contrôlée
+  VoxelPaletteBuilder --|> PaletteBuilder : hérite Builder
   Palette --> Material : valeurs immuables
   Model ..> Palette : compatibilité des slots
 ```
