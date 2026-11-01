@@ -46,15 +46,17 @@ namespace spk::Voxel
 
 	void Model::bind(spk::Palette palette)
 	{
-		if (!isCompatible(palette))
+		std::string missing;
+		for (const auto &slot : materialSlots())
 		{
-			for (const auto &slot : materialSlots())
+			if (palette.find(slot.name) == nullptr)
 			{
-				if (palette.find(slot.name) == nullptr)
-				{
-					throw spk::Exception("Voxel Model: palette is missing material slot '" + slot.name + "'");
-				}
+				missing += (missing.empty() ? "" : ", ") + std::string("'") + slot.name + "'";
 			}
+		}
+		if (!missing.empty())
+		{
+			throw spk::Exception("Voxel Model: palette is missing material slots: " + missing);
 		}
 		_palette = std::move(palette);
 	}
