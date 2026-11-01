@@ -43,4 +43,3 @@ namespace spk
 		[[nodiscard]] const Binding *find(std::string_view role) const noexcept;
 	};
 }
-
