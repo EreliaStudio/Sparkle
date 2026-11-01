@@ -12,7 +12,7 @@
 
 #include "container/json/object.hpp"
 #include "exception.hpp"
-#include "voxel/voxel_mesher.hpp"
+#include "voxel/mesher.hpp"
 
 namespace
 {
@@ -96,13 +96,13 @@ namespace
 		return builder.build();
 	}
 
-	[[nodiscard]] std::vector<MeshVertex> vertices(const Mesh &mesh)
+	[[nodiscard]] std::vector<MeshVertex> vertices(const SurfaceMesh &mesh)
 	{
 		const auto view = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		return {view.begin(), view.end()};
 	}
 
-	[[nodiscard]] std::vector<std::uint32_t> indices(const Mesh &mesh)
+	[[nodiscard]] std::vector<std::uint32_t> indices(const SurfaceMesh &mesh)
 	{
 		const auto view = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		return {view.begin(), view.end()};
@@ -116,7 +116,7 @@ namespace
 			EXPECT_EQ(a.materialSlots()[i].name, b.materialSlots()[i].name);
 			EXPECT_FLOAT_EQ(a.materialSlots()[i].opacity, b.materialSlots()[i].opacity);
 		}
-		auto compare = [](const Mesh &left, const Mesh &right) {
+		auto compare = [](const SurfaceMesh &left, const SurfaceMesh &right) {
 			EXPECT_EQ(indices(left), indices(right));
 			const auto a = vertices(left);
 			const auto b = vertices(right);
@@ -289,7 +289,7 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] float visualArea(const Mesh &mesh)
+	[[nodiscard]] float visualArea(const SurfaceMesh &mesh)
 	{
 		const auto vertex = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
@@ -304,7 +304,7 @@ namespace
 		return result;
 	}
 
-	void expectValidTriangles(const Model &model, const Mesh &mesh, float opacity)
+	void expectValidTriangles(const Model &model, const SurfaceMesh &mesh, float opacity)
 	{
 		const auto vertex = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
@@ -341,7 +341,7 @@ namespace
 		}
 	}
 
-	class ExternalMesher final : public VoxelMesher
+	class ExternalMesher final : public Mesher
 	{
 	public:
 		using State = OutsideCell::State;
@@ -360,7 +360,7 @@ namespace
 	};
 }
 
-TEST(VoxelMesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrientation)
+TEST(MesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrientation)
 {
 	constexpr std::array<float, 4> ExpectedAreas{6.0f, 4.0f, 3.0f + 1.41421356f, 5.5f};
 	constexpr std::array<std::size_t, 4> ExpectedIndices{36u, 36u, 24u, 60u};
@@ -370,7 +370,7 @@ TEST(VoxelMesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrien
 		for (const auto orientation : Orientations)
 		{
 			SCOPED_TRACE(::testing::Message() << Names[i] << " orientation " << static_cast<unsigned>(orientation.horizontal) << "/" << static_cast<unsigned>(orientation.vertical));
-			const Model model = VoxelMesher().bake(single(definition(shape, "stone_"), orientation));
+			const Model model = Mesher().bake(single(definition(shape, "stone_"), orientation));
 			EXPECT_EQ(model.opaqueMesh().indexCount(), ExpectedIndices[i]);
 			EXPECT_TRUE(model.transparentMesh().empty());
 			EXPECT_EQ(model.depthMesh().indexCount(), ExpectedIndices[i]);
@@ -381,13 +381,13 @@ TEST(VoxelMesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrien
 	}
 }
 
-TEST(VoxelMesherGeometry, AdjacentCubesHaveNoInternalShadowFacesInAnyDirection)
+TEST(MesherGeometry, AdjacentCubesHaveNoInternalShadowFacesInAnyDirection)
 {
 	const Shape cube = fixture("cube");
 	for (const Face face : Faces)
 	{
 		SCOPED_TRACE(static_cast<unsigned>(face));
-		const Model model = VoxelMesher().bake(pair(definition(cube, "source_"), {}, definition(cube, "other_"), {}, face));
+		const Model model = Mesher().bake(pair(definition(cube, "source_"), {}, definition(cube, "other_"), {}, face));
 		EXPECT_EQ(model.opaqueMesh().indexCount(), 60u);
 		EXPECT_EQ(model.depthMesh().indexCount(), 60u);
 		EXPECT_NEAR(shadowArea(model), 10.0f, 1.0e-5f);
@@ -397,37 +397,37 @@ TEST(VoxelMesherGeometry, AdjacentCubesHaveNoInternalShadowFacesInAnyDirection)
 	}
 }
 
-TEST(VoxelMesherGeometry, AirGapPreservesBothIndependentCubeShadowSurfaces)
+TEST(MesherGeometry, AirGapPreservesBothIndependentCubeShadowSurfaces)
 {
 	const auto stone = definition(fixture("cube"), "stone_");
 	Volume::Builder builder({3, 1, 1});
 	builder.bind(registry({stone}));
 	builder.set({0, 0, 0}, 1);
 	builder.set({2, 0, 0}, 1);
-	const Model model = VoxelMesher().bake(builder.build());
+	const Model model = Mesher().bake(builder.build());
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 72u);
 	EXPECT_NEAR(shadowArea(model), 12.0f, 1.0e-5f);
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(VoxelMesherGeometry, HalfHeightSlabClipsCubeShadowBoundary)
+TEST(MesherGeometry, HalfHeightSlabClipsCubeShadowBoundary)
 {
 	const auto cube = definition(fixture("cube"), "source_");
 	const auto slab = definition(fixture("slab"), "blocker_");
-	const Model model = VoxelMesher().bake(pair(cube, {}, slab, {}, Face::PositiveX));
+	const Model model = Mesher().bake(pair(cube, {}, slab, {}, Face::PositiveX));
 	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
 	EXPECT_NEAR(shadowArea(model), 9.0f, 1.0e-5f);
 	expectValidTriangles(model, model.opaqueMesh(), 1.0f);
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(VoxelMesherGeometry, MixedMaterialOpacityCastsOnlyOpaqueFaces)
+TEST(MesherGeometry, MixedMaterialOpacityCastsOnlyOpaqueFaces)
 {
 	Definition::SlotMapping mapping;
 	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
 	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
 	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});
-	const Model model = VoxelMesher().bake(single(Definition(fixture("cube"), std::move(mapping))));
+	const Model model = Mesher().bake(single(Definition(fixture("cube"), std::move(mapping))));
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 12u);
 	EXPECT_EQ(model.transparentMesh().indexCount(), 24u);
 	EXPECT_EQ(model.depthMesh().indexCount(), 12u);
@@ -438,12 +438,12 @@ TEST(VoxelMesherGeometry, MixedMaterialOpacityCastsOnlyOpaqueFaces)
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(VoxelMesherGeometry, TransparentNeighborDoesNotOccludeOpaqueShadow)
+TEST(MesherGeometry, TransparentNeighborDoesNotOccludeOpaqueShadow)
 {
 	const Shape cube = fixture("cube");
 	const auto stone = definition(cube, "stone_");
 	const auto glass = definition(cube, "glass_", 0.5f);
-	const Model model = VoxelMesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
+	const Model model = Mesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 36u);
 	EXPECT_EQ(model.transparentMesh().indexCount(), 30u);
 	EXPECT_NEAR(shadowArea(model), 6.0f, 1.0e-5f);
@@ -453,10 +453,10 @@ TEST(VoxelMesherGeometry, TransparentNeighborDoesNotOccludeOpaqueShadow)
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(VoxelMesherGeometry, TransparentNeighborsRetainInternalFacesWithoutShadows)
+TEST(MesherGeometry, TransparentNeighborsRetainInternalFacesWithoutShadows)
 {
 	const auto glass = definition(fixture("cube"), "glass_", 0.5f);
-	const Model model = VoxelMesher().bake(pair(glass, {}, glass, {}, Face::PositiveX));
+	const Model model = Mesher().bake(pair(glass, {}, glass, {}, Face::PositiveX));
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
 	EXPECT_EQ(model.transparentMesh().indexCount(), 72u);
@@ -465,9 +465,9 @@ TEST(VoxelMesherGeometry, TransparentNeighborsRetainInternalFacesWithoutShadows)
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(VoxelMesherGeometry, CompletelyTransparentGeometryProducesNoShadow)
+TEST(MesherGeometry, CompletelyTransparentGeometryProducesNoShadow)
 {
-	const Model model = VoxelMesher().bake(single(definition(fixture("stair"), "invisible_", 0.0f)));
+	const Model model = Mesher().bake(single(definition(fixture("stair"), "invisible_", 0.0f)));
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
 	EXPECT_EQ(model.transparentMesh().indexCount(), 60u);
@@ -475,7 +475,7 @@ TEST(VoxelMesherGeometry, CompletelyTransparentGeometryProducesNoShadow)
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(VoxelMesherGeometry, ExternalOpaqueBoundaryRemovesOnlyItsOwnShadowFace)
+TEST(MesherGeometry, ExternalOpaqueBoundaryRemovesOnlyItsOwnShadowFace)
 {
 	ExternalMesher mesher;
 	mesher.state.state = ExternalMesher::State::Occupied;
@@ -492,10 +492,10 @@ TEST(VoxelMesherGeometry, ExternalOpaqueBoundaryRemovesOnlyItsOwnShadowFace)
 	}
 }
 
-TEST(VoxelMesherTest, EmptyVolumeBuildsThreeEmptyMeshesAndNoSlots)
+TEST(MesherTest, EmptyVolumeBuildsThreeEmptyMeshesAndNoSlots)
 {
 	Volume::Builder builder({3, 2, 1});
-	const auto model = VoxelMesher().bake(builder.build());
+	const auto model = Mesher().bake(builder.build());
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.transparentMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
@@ -503,9 +503,9 @@ TEST(VoxelMesherTest, EmptyVolumeBuildsThreeEmptyMeshesAndNoSlots)
 	EXPECT_NO_THROW((void)model.opaqueMesh().layout());
 }
 
-TEST(VoxelMesherTest, CubeHasTwelveTrianglesAndMatchingDepthGeometryWithoutOpenGLContext)
+TEST(MesherTest, CubeHasTwelveTrianglesAndMatchingDepthGeometryWithoutOpenGLContext)
 {
-	const auto model = VoxelMesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto model = Mesher().bake(single(definition(fixture("cube"), "stone_")));
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 36u);
 	EXPECT_EQ(model.opaqueMesh().vertexCount(), 36u);
 	EXPECT_TRUE(model.transparentMesh().empty());
@@ -520,32 +520,32 @@ TEST(VoxelMesherTest, CubeHasTwelveTrianglesAndMatchingDepthGeometryWithoutOpenG
 	EXPECT_EQ(model.depthMesh().layout().indexBuffer().cast<std::uint32_t>().size(), 36u);
 }
 
-TEST(VoxelMesherTest, AdjacentOpaqueCubesCullBothSharedFaces)
+TEST(MesherTest, AdjacentOpaqueCubesCullBothSharedFaces)
 {
 	const Shape cube = fixture("cube");
 	const auto volume = pair(definition(cube, "source_"), {}, definition(cube, "blocker_"), {}, Face::PositiveX);
-	const auto model = VoxelMesher().bake(volume);
+	const auto model = Mesher().bake(volume);
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 60u);
 	EXPECT_EQ(model.depthMesh().indexCount(), 60u);
 	EXPECT_EQ(generatedBoundaryArea(model, Face::PositiveX), 0.0f);
 }
 
-TEST(VoxelMesherTest, TranslucentPolygonsNeverOccludeOrCastDepth)
+TEST(MesherTest, TranslucentPolygonsNeverOccludeOrCastDepth)
 {
 	const Shape cube = fixture("cube");
 	const auto glass = definition(cube, "glass_", 0.5f);
 	const auto stone = definition(cube, "stone_");
-	const auto translucent = VoxelMesher().bake(single(glass));
+	const auto translucent = Mesher().bake(single(glass));
 	EXPECT_TRUE(translucent.opaqueMesh().empty());
 	EXPECT_EQ(translucent.transparentMesh().indexCount(), 36u);
 	EXPECT_TRUE(translucent.depthMesh().empty());
-	const auto pairModel = VoxelMesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
+	const auto pairModel = Mesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
 	EXPECT_EQ(pairModel.opaqueMesh().indexCount(), 36u);
 	EXPECT_EQ(pairModel.transparentMesh().indexCount(), 30u);
 	EXPECT_EQ(pairModel.depthMesh().indexCount(), 36u);
 }
 
-TEST(VoxelMesherTest, OutsideStatesDoNotAssumeUnknownIsOccluding)
+TEST(MesherTest, OutsideStatesDoNotAssumeUnknownIsOccluding)
 {
 	ExternalMesher mesher;
 	const auto volume = single(definition(fixture("cube"), "source_"));
@@ -565,7 +565,7 @@ TEST(VoxelMesherTest, OutsideStatesDoNotAssumeUnknownIsOccluding)
 	EXPECT_EQ(mesher.bake(volume).opaqueMesh().indexCount(), 36u);
 }
 
-TEST(VoxelMesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
+TEST(MesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 {
 	for (const auto *name : {"slab", "slope", "stair"})
 	{
@@ -581,7 +581,7 @@ TEST(VoxelMesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 				builder.set(neighbor(face), 2);
 			}
 			const Volume sealed = builder.build();
-			const Model closed = VoxelMesher().bake(sealed);
+			const Model closed = Mesher().bake(sealed);
 			for (const auto &vertex : vertices(closed.opaqueMesh()))
 			{
 				EXPECT_FALSE(closed.materialSlots()[vertex.materialIndex].name.starts_with("source_"));
@@ -589,7 +589,7 @@ TEST(VoxelMesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 			Volume::Builder opening(sealed.dimensions());
 			opening.load(sealed);
 			opening.erase(neighbor(Face::PositiveX));
-			const auto open = VoxelMesher().bake(opening.build());
+			const auto open = Mesher().bake(opening.build());
 			bool found = false;
 			for (const auto &vertex : vertices(open.opaqueMesh()))
 			{
@@ -600,7 +600,7 @@ TEST(VoxelMesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 	}
 }
 
-TEST(VoxelMesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
+TEST(MesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
 {
 	Shape::Builder builder;
 	builder.addSlot("hidden");
@@ -609,7 +609,7 @@ TEST(VoxelMesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
 	Volume::Builder volume({1, 1, 1});
 	volume.bind(registry({hidden, unused}));
 	volume.set({0, 0, 0}, 1);
-	const Model model = VoxelMesher().bake(volume.build());
+	const Model model = Mesher().bake(volume.build());
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.transparentMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
@@ -617,12 +617,12 @@ TEST(VoxelMesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
 	EXPECT_EQ(model.materialSlots()[0].name, "used_hidden");
 }
 
-TEST(VoxelMesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
+TEST(MesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
 {
 	const Shape cube = fixture("cube");
 	const auto stone = definition(cube, "z_");
 	const auto other = definition(cube, "a_");
-	const Model model = VoxelMesher().bake(pair(stone, {}, other, {}, Face::PositiveX));
+	const Model model = Mesher().bake(pair(stone, {}, other, {}, Face::PositiveX));
 	ASSERT_EQ(model.materialSlots().size(), 6u);
 	for (std::size_t i = 1; i < model.materialSlots().size(); ++i)
 	{
@@ -640,32 +640,32 @@ TEST(VoxelMesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
 		slot.opacity = 0.5f;
 	}
 	const Definition second(cube, same);
-	EXPECT_EQ(VoxelMesher().bake(pair(first, {}, first, {}, Face::PositiveX)).materialSlots().size(), 1u);
-	EXPECT_THROW((void)VoxelMesher().bake(pair(first, {}, second, {}, Face::PositiveX)), spk::Exception);
+	EXPECT_EQ(Mesher().bake(pair(first, {}, first, {}, Face::PositiveX)).materialSlots().size(), 1u);
+	EXPECT_THROW((void)Mesher().bake(pair(first, {}, second, {}, Face::PositiveX)), spk::Exception);
 }
 
-TEST(VoxelMesherTest, CacheBindingAndDeterminismPreserveFullMeshPayload)
+TEST(MesherTest, CacheBindingAndDeterminismPreserveFullMeshPayload)
 {
 	const Shape source = fixture("stair");
 	const Shape blocker = fixture("slope");
 	const auto volume = pair(definition(source, "source_"), Orientations[5], definition(blocker, "blocker_"), Orientations[3], Face::NegativeY);
-	VoxelMesher mesher;
+	Mesher mesher;
 	const auto baseline = mesher.bake(volume);
 	expectEqual(baseline, mesher.bake(volume));
 	Occlusion::Cache cache;
 	mesher.bind(&cache);
 	expectEqual(baseline, mesher.bake(volume));
 	expectEqual(baseline, mesher.bake(volume));
-	VoxelMesher another;
+	Mesher another;
 	another.bind(&cache);
 	expectEqual(baseline, another.bake(volume));
 	mesher.bind(nullptr);
 	expectEqual(baseline, mesher.bake(volume));
 }
 
-TEST(VoxelMesherTest, InvalidToleranceDoesNotChangeExistingConfiguration)
+TEST(MesherTest, InvalidToleranceDoesNotChangeExistingConfiguration)
 {
-	VoxelMesher mesher;
+	Mesher mesher;
 	for (float invalid : {0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
 	{
 		EXPECT_THROW(mesher.setTolerance(invalid), spk::Exception);
@@ -675,10 +675,10 @@ TEST(VoxelMesherTest, InvalidToleranceDoesNotChangeExistingConfiguration)
 	EXPECT_FLOAT_EQ(mesher.tolerance(), 2.0e-5f);
 }
 
-TEST(VoxelMesherTest, ModelsSharePublishedImmutableMeshData)
+TEST(MesherTest, ModelsSharePublishedImmutableMeshData)
 {
 	const auto volume = single(definition(fixture("cube"), "source_"));
-	VoxelMesher mesher;
+	Mesher mesher;
 	const Model first = mesher.bake(volume);
 	const Model copy = first;
 	EXPECT_EQ(&first.opaqueMesh().layout(), &copy.opaqueMesh().layout());
@@ -687,11 +687,11 @@ TEST(VoxelMesherTest, ModelsSharePublishedImmutableMeshData)
 	expectEqual(first, other);
 }
 
-TEST(VoxelMesherFixtures, EveryShapePairOrientationAndNeighborDirectionMatchesIndependentCoverage)
+TEST(MesherFixtures, EveryShapePairOrientationAndNeighborDirectionMatchesIndependentCoverage)
 {
 	std::array<Shape, 4> shapes{fixture("cube"), fixture("slab"), fixture("slope"), fixture("stair")};
 	std::size_t cases = 0;
-	VoxelMesher mesher;
+	Mesher mesher;
 	for (std::size_t s = 0; s < shapes.size(); ++s)
 	{
 		for (std::size_t b = 0; b < shapes.size(); ++b)
@@ -723,7 +723,7 @@ TEST(VoxelMesherFixtures, EveryShapePairOrientationAndNeighborDirectionMatchesIn
 	EXPECT_EQ(cases, 4u * 4u * 8u * 8u * 6u);
 }
 
-TEST(VoxelMesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
+TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 {
 	Shape::Builder sourceBuilder;
 	sourceBuilder.addSlot("face");
@@ -737,7 +737,7 @@ TEST(VoxelMesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 		definition(blockerBuilder.build(), "blocker_"),
 		{},
 		Face::PositiveX);
-	const Model model = VoxelMesher().bake(volume);
+	const Model model = Mesher().bake(volume);
 	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
 	const auto view = model.opaqueMesh().layout().vertexBuffer().cast<MeshVertex>();
 	const auto triangles = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -763,4 +763,137 @@ TEST(VoxelMesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 		}
 	}
 	EXPECT_GT(visibleSource, 0u);
+}
+
+TEST(MesherMaterialOffset, DefaultOffsetPreservesExistingIndices)
+{
+	const auto volume = single(definition(fixture("cube"), "stone_"));
+	const auto original = Mesher().bake(volume);
+	const auto explicitZero = Mesher().bake(volume, 0);
+	EXPECT_EQ(original.materialIndexOffset(), 0u);
+	expectEqual(original, explicitZero);
+	for (const auto &vertex : vertices(original.opaqueMesh()))
+	{
+		EXPECT_EQ(original.materialSlot(vertex.materialIndex).name, original.materialSlots()[vertex.materialIndex].name);
+	}
+}
+
+TEST(MesherMaterialOffset, BakeOffsetsOpaqueAndTransparentIndicesAndPreservesGeometry)
+{
+	Definition::SlotMapping mapping;
+	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
+	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
+	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});
+	const auto volume = single(Definition(fixture("cube"), std::move(mapping)));
+	const Model original = Mesher().bake(volume);
+	const Model shifted = Mesher().bake(volume, 27);
+	EXPECT_EQ(shifted.materialIndexOffset(), 27u);
+	EXPECT_EQ(shifted.materialSlots().size(), original.materialSlots().size());
+	auto compare = [](const SurfaceMesh &first, const SurfaceMesh &second) {
+		const auto before = vertices(first);
+		const auto after = vertices(second);
+		ASSERT_EQ(before.size(), after.size());
+		EXPECT_EQ(indices(first), indices(second));
+		for (std::size_t i = 0; i < before.size(); ++i)
+		{
+			EXPECT_EQ(after[i].materialIndex, before[i].materialIndex + 27u);
+			EXPECT_EQ(after[i].position, before[i].position);
+			EXPECT_EQ(after[i].normal, before[i].normal);
+			EXPECT_EQ(after[i].uv, before[i].uv);
+		}
+	};
+	compare(original.opaqueMesh(), shifted.opaqueMesh());
+	compare(original.transparentMesh(), shifted.transparentMesh());
+	expectShadowGeometryMatchesOpaque(shifted);
+	for (const auto &vertex : vertices(shifted.transparentMesh()))
+	{
+		EXPECT_FLOAT_EQ(shifted.materialSlot(vertex.materialIndex).opacity, 0.25f);
+	}
+	EXPECT_THROW((void)shifted.materialSlot(26), spk::Exception);
+	EXPECT_THROW((void)shifted.materialSlot(27 + static_cast<std::uint32_t>(shifted.materialSlots().size())), spk::Exception);
+}
+
+TEST(MesherMaterialOffset, ExistingModelCanBeShiftedWithoutChangingSource)
+{
+	const auto source = Mesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto original = vertices(source.opaqueMesh());
+	const auto first = Mesher::offsetMaterialIndices(source, 9);
+	const auto second = Mesher::offsetMaterialIndices(first, 7);
+	EXPECT_EQ(first.materialIndexOffset(), 9u);
+	EXPECT_EQ(second.materialIndexOffset(), 16u);
+	const auto shifted = vertices(second.opaqueMesh());
+	ASSERT_EQ(original.size(), shifted.size());
+	for (std::size_t i = 0; i < original.size(); ++i)
+	{
+		EXPECT_EQ(shifted[i].materialIndex, original[i].materialIndex + 16u);
+		EXPECT_EQ(vertices(source.opaqueMesh())[i].materialIndex, original[i].materialIndex);
+	}
+	EXPECT_EQ(indices(second.opaqueMesh()), indices(source.opaqueMesh()));
+	EXPECT_EQ(second.depthMesh().indexCount(), source.depthMesh().indexCount());
+	expectShadowGeometryMatchesOpaque(second);
+}
+
+TEST(MesherMaterialOffset, ExistingVisualMeshCanBeShiftedIndependently)
+{
+	const auto model = Mesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto shifted = Mesher::offsetMaterialIndices(model.opaqueMesh(), 11);
+	const auto before = vertices(model.opaqueMesh());
+	const auto after = vertices(shifted);
+	EXPECT_EQ(indices(model.opaqueMesh()), indices(shifted));
+	ASSERT_EQ(before.size(), after.size());
+	for (std::size_t i = 0; i < before.size(); ++i)
+	{
+		EXPECT_EQ(after[i].materialIndex, before[i].materialIndex + 11u);
+		EXPECT_EQ(after[i].position, before[i].position);
+		EXPECT_EQ(after[i].normal, before[i].normal);
+		EXPECT_EQ(after[i].uv, before[i].uv);
+	}
+}
+
+TEST(MesherMaterialOffset, EmptyGeometryStillTracksOffsetAndSlots)
+{
+	const Model source({}, {}, {}, {{"hidden", 1.0f}, {"unseen", 0.4f}});
+	const auto shifted = Mesher::offsetMaterialIndices(source, 42);
+	EXPECT_EQ(shifted.materialIndexOffset(), 42u);
+	EXPECT_EQ(shifted.materialSlot(42).name, "hidden");
+	EXPECT_EQ(shifted.materialSlot(43).name, "unseen");
+	EXPECT_TRUE(shifted.opaqueMesh().empty());
+	EXPECT_TRUE(shifted.transparentMesh().empty());
+	EXPECT_THROW((void)Mesher::offsetMaterialIndices(source, std::numeric_limits<std::uint32_t>::max()), spk::Exception);
+}
+
+TEST(MesherMaterialOffset, SlotCountOverflowIsRejectedDuringBake)
+{
+	const auto volume = single(definition(fixture("cube"), "stone_"));
+	const auto original = Mesher().bake(volume);
+	ASSERT_GT(original.materialSlots().size(), 1u);
+	EXPECT_THROW((void)Mesher().bake(volume, std::numeric_limits<std::uint32_t>::max()), spk::Exception);
+	const auto valid = Mesher().bake(volume, std::numeric_limits<std::uint32_t>::max() - static_cast<std::uint32_t>(original.materialSlots().size() - 1));
+	for (const auto &vertex : vertices(valid.opaqueMesh()))
+	{
+		EXPECT_EQ(valid.materialSlot(vertex.materialIndex).name, original.materialSlots()[vertex.materialIndex - valid.materialIndexOffset()].name);
+	}
+}
+
+TEST(MesherMaterialOffset, MeshVertexOverflowIsRejectedBeforeReturningResult)
+{
+	SurfaceMesh::Builder builder;
+	const MeshVertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, std::numeric_limits<std::uint32_t>::max()};
+	const auto a = builder.addVertex(vertex);
+	const auto b = builder.addVertex(vertex);
+	const auto c = builder.addVertex(vertex);
+	builder.addTriangle(a, b, c);
+	const auto source = std::move(builder).build();
+	EXPECT_THROW((void)Mesher::offsetMaterialIndices(source, 1), spk::Exception);
+	EXPECT_EQ(vertices(source)[0].materialIndex, std::numeric_limits<std::uint32_t>::max());
+}
+
+TEST(MesherMaterialOffset, ZeroOffsetSharesExistingGeometry)
+{
+	const auto source = Mesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto unchanged = Mesher::offsetMaterialIndices(source, 0);
+	EXPECT_EQ(&unchanged.opaqueMesh(), &source.opaqueMesh());
+	EXPECT_EQ(&unchanged.depthMesh(), &source.depthMesh());
+	EXPECT_EQ(unchanged.materialIndexOffset(), 0u);
+	EXPECT_EQ(&source.opaqueMesh().layout(), &Mesher::offsetMaterialIndices(source.opaqueMesh(), 0).layout());
 }

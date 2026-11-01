@@ -8,14 +8,14 @@
 
 Les huit `Shape::Instance` (quatre rotations horizontales × inversion verticale) sont créées et conservées dans `Shape::Data` lors de `Shape::Builder::build()`, conformément au §2. Le Mesher et l'algorithme d'occlusion consultent **les mêmes instances const** via `Shape::instance(orientation)`. Positions, normales, UV, winding, frontières et classifications y sont déjà finalisés. Aucun `ShapeTransformationCache` séparé n'existe et ni l'occlusion ni le Mesher ne réorientent les polygones. Chaque instance conserve exclusivement ses triangles précomputés via `triangles()`. L'occlusion les utilise comme sources et comme occultants du clipping, pour respecter l'interpolation affine des UV, et le Mesher les utilise directement lorsqu'aucun clipping n'est nécessaire. Le Builder accepte toujours des polygones convexes, mais aucune copie n'est conservée dans l'instance publiée.
 
-### 3.1 `spk::Voxel::VoxelMesher`
+### 3.1 `spk::Voxel::Mesher`
 
 Le Mesher transforme un `Volume` immuable en un **nouveau `Model` à géométrie immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
 
-Son travail est indépendant des matériaux concrets et des pixels de texture. Le `VoxelMesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
+Son travail est indépendant des matériaux concrets et des pixels de texture. Le `Mesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
 
 ```cpp
-spk::Voxel::VoxelMesher mesher;
+spk::Voxel::Mesher mesher;
 auto uncachedModel = mesher.bake(volume); // Occlusion recalculée
 
 spk::Voxel::OcclusionCache occlusion;
@@ -86,7 +86,7 @@ Les `outerShell` continuent à être traités par clipping directionnel indépen
 
 ### 3.5 `spk::Voxel::OcclusionCache`
 
-Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et GPU, et **facultative pour le VoxelMesher**. Plusieurs Meshers peuvent partager une même instance. Il n'a aucun binding de transformation et n'a pas de `ShapeTransformationCache` interne : les deux chemins d'occlusion (avec et sans cache) consomment directement `Shape::instance(orientation)`. En cas d'absence d'entrée, le cache utilise le même calcul CPU directionnel que le Mesher non caché, puis peut mémoriser le résultat.
+Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et GPU, et **facultative pour le Mesher**. Plusieurs Meshers peuvent partager une même instance. Il n'a aucun binding de transformation et n'a pas de `ShapeTransformationCache` interne : les deux chemins d'occlusion (avec et sans cache) consomment directement `Shape::instance(orientation)`. En cas d'absence d'entrée, le cache utilise le même calcul CPU directionnel que le Mesher non caché, puis peut mémoriser le résultat.
 
 Une entrée représente **une requête directionnelle A → B** : quels fragments de l'`outerShell` de A restent visibles après occultation par B ? Le sens **B → A** constitue une autre requête, une autre clé et éventuellement un autre résultat. Une valeur valide contenant zéro fragment signifie **occlusion totale**, tandis que l'absence d'entrée est représentée par `std::nullopt`.
 
@@ -104,28 +104,6 @@ Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`Occlus
 
 Un cache partagé peut être interrogé simultanément ; sa **destruction** ou le changement de liaison facultative du Mesher pendant un bake actif ne sont pas rendus sûrs par la seule synchronisation de `find/store/clear`.
 
-### 3.6 `spk::Voxel::Model` : géométrie immuable, palette liée par instance
+### 3.6 Voxel::Mesh et Voxel::Model
 
-Le Model contient ou conserve de manière sûre les données issues du Volume, **deux meshes visuels immuables** (opaque et translucide, éventuellement vides), **un `ShadowMap::Mesh` de profondeur immuable** (éventuellement vide) et la table complète des slots sémantiques déclarés par les Definitions effectivement utilisées. Le mesh d'ombre reprend les triangles opaques résultant du bake, leurs positions, indices et winding, sans UV, normales ni références de palette ; il ne représente pas nécessairement une enveloppe fermée. **Les triangles d'ombre sont entièrement opaques géométriquement** : une texture albedo trouée ou à alpha nul n'y découpe aucun fragment. Pour obtenir une silhouette ajourée, l'application doit fournir et lier explicitement un mesh d'ombre dont les triangles dessinent les ouvertures. Le mesher ne déduit pas une géométrie cutout depuis les textures ni ne reconstruit le mesh d'ombre lorsque seule la palette change.
-
-Chaque polygone d'opacité **égale à 1** alimente le mesh opaque, et tout polygone d'opacité **inférieure à 1** alimente le mesh translucide. Il n'existe pas de catégorie `cutout` distincte. La texture ne modifie pas cette classification.
-
-Tous les slots sémantiques **référencés par les Definitions des cellules du Volume** sont conservés, même si leurs triangles sont totalement occultés ou si leur Shape est vide. Une Definition qui reste dans une table interne mais n'est référencée par aucune Cell n'ajoute pas ses slots au Model.
-
-Deux déclarations de slot portant le **même nom et la même opacité** sont fusionnées. Si elles portent le **même nom et des opacités différentes**, `bake()` échoue avec une `spk::Exception` descriptive ; aucune promotion implicite de catégories n'est tentée. Une fois fusionnés, les slots sont triés par **ordre lexicographique déterministe de leurs noms**, indépendamment de l'ordre de visite des cellules ou du culling.
-
-Le sommet voxel comporte au minimum :
-
-```cpp
-struct MeshVertex
-{
-    spk::Vector3 position;
-    spk::Vector3 normal;
-    spk::Vector2 uv;
-    std::uint32_t materialIndex; // Index dans la table triée du Model
-};
-```
-
-Les meshes visuels et d'ombre réutilisent **l'infrastructure `spk::Mesh<TVertex>` existante** et ses buffers/layouts GPU ; pas de nouveau framework de maillage. `materialIndex` n'est jamais réattribué selon les seuls triangles visibles. Remplacer une palette ou déplacer un Assembly ne change pas les meshes du Model.
-
-**Liaison d'apparence (PR-07).** Le Model né du bake n'a initialement aucune palette liée. Son `isCompatible(const spk::Palette&)` vérifie que tous les noms de slots sont fournis, indépendamment des triangles visibles. `bind(spk::Palette)` effectue cette validation et conserve une copie légère de la palette, ou lève `spk::Exception` en préservant la liaison précédente si un slot est manquant. `palette()` renvoie un pointeur const ou `nullptr` si rien n'est lié. Les données géométriques restent partagées via `shared_ptr<const Data>` ; chaque copie de Model possède sa propre association de palette, modifiable sans rebake. La validation d'atlas unique et de rôle `albedo` reste dans `spk::Voxel::Palette::Builder::setMaterial()`, jamais dans le mesher ni dans la compatibilité du Model.
+Le Mesher fournit un Voxel::Mesh immuable contenant deux SurfaceMesh visuels, un ShadowMap::Mesh et la liste déterministe des slots de matériaux (nom et opacité), y compris ceux totalement occultés. Un offset peut être appliqué durant bake(volume, offset) ou ultérieurement via Mesher::offsetMaterialIndices. Un Voxel::Model possède ce Mesh et des Anchors sans palette. L'instance Model::View porte les palettes et les rotations. Le Harmonizer permet facultativement de réindexer une copie et de fournir une palette commune. Voir [chapitre 06](06-assemblies-scene.md).

@@ -1,10 +1,10 @@
-# PR-14 — AssemblyRenderingComponent et instancing articulé
+# PR-14 — Model::View et instancing articulé
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
 > **Branche source :** `impl/v0.1.4/14-assembly-render`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Afficher plusieurs Parts d'Assembly sans rémailler.
+**Objectif :** Afficher les Models articulés d'une Model::View sans rémailler.
 
 **Prérequis :** [PR-08](PR-08-assembly-hierarchy.md), [PR-13](PR-13-voxel-render-first.md)
 
@@ -19,8 +19,8 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] AssemblyRenderingComponent non propriétaire
-- [ ] capture des Parts et de leurs matrices
+- [ ] ModelViewRenderingComponent non propriétaire
+- [ ] capture des Anchors et de leurs matrices
 - [ ] M_entityWorld * M_assembly * M_partAccumulate
 - [ ] regroupement de buckets compatibles dans VoxelRenderingSystem.
 
@@ -35,15 +35,15 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] Golden bras/torse articulé
 - [ ] transformation parent + enfant non commutatives
 - [ ] reparentage
-- [ ] deux Parts même mesh à transforms différents
-- [ ] palette différente implique bucket distinct
+- [ ] deux Anchors même mesh à transforms différents
+- [ ] palettes différentes impliquent des buckets distincts
 - [ ] anciennes captures inchangées.
 
 **Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
 
 ## Définition de terminé / critère de fusion
 
-Une scène d'Assembly animée reste stable et instanciée.
+Une scène d'Model::View animée reste stable et instanciée.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.

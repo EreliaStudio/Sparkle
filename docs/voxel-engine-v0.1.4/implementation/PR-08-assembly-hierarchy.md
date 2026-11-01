@@ -1,59 +1,34 @@
-# PR-08 — Voxel::Assembly par copie et expansion
+# PR-08 — Voxel::Mesh, Model::Anchor, Model::View et Harmonizer
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
->
-> **Branche source :** `impl/v0.1.4/08-assembly-hierarchy`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> PR GitHub Draft #49 ; branche impl/v0.1.4/08-assembly-hierarchy, cible V0.1.4. Ne pas fusionner sans validation.
 
-**Objectif :** Composer une hiérarchie de Parts animables sans Entity par Part.
+## Périmètre
 
-**Prérequis :** [PR-07](PR-07-voxel-palette.md)
+- SurfaceMesh : mesh de vertices individuel, nommé autrement que le nouveau Voxel::Mesh.
+- Mesh : ensemble immuable des meshes opaque, translucide, depth et slots sémantiques avec offset.
+- Mesher : bake(Volume, materialIndexOffset=0) retourne Mesh, et offsetMaterialIndices transforme une copie d'une ressource existante.
+- Model : un Mesh, des Model::Anchor nommés et enfants facultatifs ; aucune Palette.
+- Model::View : palettes indépendantes ou propagation explicite, rotations de joints, matrice globale, visite pour futurs renderers.
+- Model::Harmonizer : reindexation des meshes et génération d'une Palette harmonisée et d'un MaterialLayout commun.
+- Model::AnchorPath : segments explicites de noms, sans caractère séparateur réservé ; recherches courtes uniquement si uniques.
+- Model::View::AnchorHandle : handle non propriétaire avec contrôle de validité après destruction, déplacement et réaffectation de la View.
 
-## Spécifications normatives
+## Contrats
 
-- [06-assemblies-scene.md](../06-assemblies-scene.md)
-- [10-contrats-et-validation.md](../10-contrats-et-validation.md)
-- [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
-- [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
+La géométrie, les noms/opacités des slots et leurs indices viennent exclusivement du Mesher. Un Anchor est un repère de repos rigide : le Model source est copié lors d'un bind. Pour les enfants M_child = M_parent * A_parent * R_joint * inverse(A_child), en préservant les points de pivot. Les rotations et palettes ne sont modifiables que dans la View. Une View non harmonisée supporte une palette par Model, y compris des atlas différents ; la sortie harmonisée exige un atlas commun. Les modèles harmonisés ne peuvent utiliser que des palettes au MaterialLayout identique.
 
-## Périmètre exact à réaliser
+## Accès aux articulations
 
-- [ ] Assembly, PartID, transform locales et relations parentales
-- [ ] add/remove/reparent
-- [ ] insertion par copie et expansion avec ancrage
-- [ ] partage des Models/Palettes
-- [ ] VersionedTrait indépendant.
+`view.anchor(Model::AnchorPath{"leftShoulder", "elbow"})` retourne un handle permettant de modifier l'articulation de cette View sans modifier les autres instances. `Model::AnchorPath{"leftShoulder/elbow"}` est un chemin distinct composé d'un seul segment. Les identités sont déterministes dans la hiérarchie et ne nécessitent aucun ID numérique.
 
-## Instructions techniques et intégration
+## Tests
 
-PartID monotones non réutilisés; réaffecter IDs uniquement à la copie importée; refuser cycles et auto-insertion; source jamais liée vivante; opération d'insertion garantie forte; calcul de pose locale cumulé, aucune propagation de ShadowMode.
-
-Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
-
-## Tests obligatoires
-
-- [ ] Source avec plusieurs racines ou vide
-- [ ] insertion deux fois IDs différents
-- [ ] reparentage garde ID
-- [ ] suppression sous-arbre
-- [ ] matrices non commutatives
-- [ ] source détruite n'affecte pas destination
-- [ ] erreur avant commit et version inchangée.
-
-**Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
-
-## Définition de terminé / critère de fusion
-
-Une Assembly articulée modifiable et copiable indépendamment.
-
-- [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
-- [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
-- [ ] La PR présente le périmètre, les tests réellement exécutés et les résultats, les screenshots/diffs si graphiques, et les limitations éventuelles.
-- [ ] Aucune fusion sans validation du propriétaire.
+Géométrie, offsets, slots occultés, collisions, copies autonomes d'Anchors, rotations, propagations transactionnelles, palettes divergentes, harmonisation, invariance des sources et variants de palette. Vérification des chemins imbriqués, noms contenant `/`, noms courts ambigus, palettes par chemin et handles invalides après destruction ou déplacement de View.
 
 ## Hors périmètre
 
-Binding automatique des ombres, Engine Entity pour chaque membre.
+Rendu OpenGL / VoxelRenderingSystem, animations avancées, décision sur identifiants/chemins.
 
-## Consigne de passation
+## Validation
 
-Confier **uniquement PR-08** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+CI Graphics/Core et clang-format requise avant validation humaine ; PR maintenue en Draft.

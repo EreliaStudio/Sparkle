@@ -4,6 +4,8 @@
 
 ## 4. Matériaux, textures et palettes
 
+> IMPORTANT — Révision PR-08 : Model ne contient aucune palette ; seul Model::View gère les palettes individuelles. Le Mesher fournit un Voxel::Mesh ; Harmonizer fournit un MaterialLayout et une palette commune. Les exemples historiques Model::bind et Assembly::bind présents ci-dessous sont obsolètes, remplacés par le [chapitre 06](06-assemblies-scene.md).
+
 ```mermaid
 classDiagram
   direction LR
@@ -283,3 +285,9 @@ L'alpha des pixels n'a **jamais** d'incidence sur la décision de culling effect
 **WBOIT — alpha et poids (Q-TECH-003).** Pour les triangles déclarés translucides, le shader calcule `alphaFinal` ci-dessus, puis un **poids indépendant de l'alpha** à partir de `gl_FragCoord.z` selon le contrat fixe du [§7.8](09-pipeline-gpu-transparence.md). Ce poids modifie uniquement leur accumulation et non la classification géométrique, les UV, l'albedo ou les ombres. La composition n'applique exposition/Reinhard qu'après mélange avec l'opaque.
 
 **Ombres (option A validée pour V0.1.4).** L'alpha de `albedo` ne participe pas non plus au rendu des shadow maps : un triangle du `ShadowMap::Mesh` explicite ou issu du bake est considéré **plein**, même si son matériau visuel utilise `discard` pour certains pixels transparents. Les UV, textures et palettes ne sont jamais transmis au shader de profondeur des ombres. Les découpes d'ombre doivent être **géométriques** et fournies par le jeu au caster ; modifier seulement `albedo`, son alpha ou la palette ne demande aucune reconstruction de la carte d'ombres tant que la géométrie d'ombre, ses transformations et ses paramètres restent inchangés. Les récepteurs translucides peuvent toujours recevoir des ombres conformément au pipeline Forward/WBOIT.
+
+**Assemblies (PR-08).** Une Part de `spk::Voxel::Assembly` ne contient pas de champ Palette séparé : elle conserve une copie légère de `spk::Voxel::Model` avec sa palette éventuellement liée par `Model::bind(spk::Palette)`. Les Parts partagent au besoin les meshes, mais leurs Models sont tous rebondis sur la palette commune reconstruite par l’Assembly. `spk::Voxel::Palette` reste uniquement un namespace pour le Builder spécialisé.
+
+**Fusion pour `Voxel::Assembly` (révision PR-08).** Toutes les occurrences de Models dans une Assembly utilisent une seule palette fusionnée, exposée par `Assembly::palette()`. Les Materials de slots distincts se réunissent si leur atlas albedo est commun ; un nom de slot répété est dédupliqué uniquement si le Material est identique (rôles, identités de textures et sections UV). Une différence d'atlas ou une collision de Material lève `spk::Exception`. Les Models doivent arriver avec une palette déjà liée. Le résultat fusionné est partagé par toutes les copies internes de Model, sans rebake ni fusion physique des atlas. L'Assembly recalcule la palette à la suppression ou au remplacement pour éviter les entrées orphelines.
+
+**Palette contrôlée par Assembly (PR-08).** `Assembly::bind(spk::Palette)` permet de choisir ou remplacer l'apparence de l'ensemble de l'Assembly et rebind en une transaction tous les Models internes, dont l'accès via `part(id)` est const. Une palette compatible conserve l'identité de ses Materials/atlas partagés dans tous les Models. L'Assembly ne crée pas de variation de palette par Part. Après une liaison explicite, l'ajout, le remplacement ou la suppression d'une Part ne change pas implicitement l'apparence globale ; tout nouveau Model doit simplement être compatible avec la palette courante, même s'il n'avait lui-même aucune palette. La fusion automatique ne concerne que l'assemblage initial avant toute liaison explicite.

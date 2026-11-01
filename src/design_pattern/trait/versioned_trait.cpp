@@ -11,6 +11,12 @@ namespace spk
 
 	VersionedTrait::~VersionedTrait() = default;
 
+	void VersionedTrait::resetAfterCopy() noexcept
+	{
+		_versionProvider.invalidate();
+		_version = 1;
+	}
+
 	void VersionedTrait::invalidate()
 	{
 		++_version;

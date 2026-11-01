@@ -1,4 +1,4 @@
-#include "voxel/voxel_mesher.hpp"
+#include "voxel/mesher.hpp"
 
 #include <algorithm>
 #include <array>
@@ -109,7 +109,7 @@ namespace spk::Voxel
 		}
 
 		void emit(
-			Mesh::Builder &builder,
+			SurfaceMesh::Builder &builder,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -142,8 +142,8 @@ namespace spk::Voxel
 			const Definition &definition,
 			Position position,
 			const SlotIndices &indices,
-			Mesh::Builder &opaque,
-			Mesh::Builder &translucent,
+			SurfaceMesh::Builder &opaque,
+			SurfaceMesh::Builder &translucent,
 			float tolerance)
 		{
 			const auto &slot = definition.slot(polygon.slotKey);
@@ -181,51 +181,115 @@ namespace spk::Voxel
 			return result;
 		}
 
-		[[nodiscard]] SlotIndices indexSlots(const std::vector<Definition::Slot> &slots)
+		[[nodiscard]] SlotIndices indexSlots(const std::vector<Definition::Slot> &slots, std::uint32_t offset)
 		{
 			SlotIndices result;
 			for (std::size_t i = 0; i < slots.size(); ++i)
 			{
-				if (i > std::numeric_limits<std::uint32_t>::max())
+				if (i > std::numeric_limits<std::uint32_t>::max() - offset)
 				{
-					throw spk::Exception("Voxel Model material slot index overflow");
+					throw spk::Exception("Voxel Mesher: material index offset overflow");
 				}
-				result.emplace(slots[i].name, static_cast<std::uint32_t>(i));
+				result.emplace(slots[i].name, static_cast<std::uint32_t>(i) + offset);
 			}
 			return result;
 		}
 	}
 
-	VoxelMesher::OutsideCell VoxelMesher::outsideCell(Position, Face) const
+	MeshVertex shiftedVertex(MeshVertex vertex, std::uint32_t offset)
+	{
+		if (vertex.materialIndex > std::numeric_limits<std::uint32_t>::max() - offset)
+		{
+			throw spk::Exception("Voxel Mesher: material index offset overflow");
+		}
+		vertex.materialIndex += offset;
+		return vertex;
+	}
+
+	SurfaceMesh Mesher::offsetMaterialIndices(const SurfaceMesh &source, std::uint32_t offset)
+	{
+		if (offset == 0 || source.vertexCount() == 0)
+		{
+			return source;
+		}
+		const auto vertices = source.layout().vertexBuffer().cast<MeshVertex>();
+		const auto indices = source.layout().indexBuffer().cast<std::uint32_t>();
+		SurfaceMesh::Builder builder;
+		builder.reserve(vertices.size(), indices.size());
+		for (const auto &vertex : vertices)
+		{
+			(void)builder.addVertex(shiftedVertex(vertex, offset));
+		}
+		for (const auto index : indices)
+		{
+			builder.addIndex(index);
+		}
+		return std::move(builder).build();
+	}
+
+	Mesh Mesher::offsetMaterialIndices(const Mesh &mesh, std::uint32_t offset)
+	{
+		if (offset == 0)
+		{
+			return mesh;
+		}
+		if (mesh.materialIndexOffset() > std::numeric_limits<std::uint32_t>::max() - offset)
+		{
+			throw spk::Exception("Voxel Mesher: material index offset overflow");
+		}
+		const auto next = mesh.materialIndexOffset() + offset;
+		if (!mesh.materialSlots().empty() &&
+			mesh.materialSlots().size() - 1 > std::numeric_limits<std::uint32_t>::max() - next)
+		{
+			throw spk::Exception("Voxel Mesher: material index offset overflow");
+		}
+		return Mesh(
+			offsetMaterialIndices(mesh.opaqueMesh(), offset),
+			offsetMaterialIndices(mesh.transparentMesh(), offset),
+			mesh.depthMesh(),
+			mesh.materialSlots(),
+			next);
+	}
+
+	Model Mesher::offsetMaterialIndices(const Model &model, std::uint32_t offset)
+	{
+		if (offset == 0)
+		{
+			return model;
+		}
+		return model.withMesh(offsetMaterialIndices(model.mesh(), offset));
+	}
+
+	Mesher::OutsideCell Mesher::outsideCell(Position, Face) const
 	{
 		return {};
 	}
 
-	void VoxelMesher::bind(Occlusion::Cache *cache) noexcept
+	void Mesher::bind(Occlusion::Cache *cache) noexcept
 	{
 		_cache = cache;
 	}
 
-	void VoxelMesher::setTolerance(float tolerance)
+	void Mesher::setTolerance(float tolerance)
 	{
 		if (!std::isfinite(tolerance) || tolerance <= 0.0f)
 		{
-			throw spk::Exception("VoxelMesher tolerance must be positive and finite");
+			throw spk::Exception("Mesher tolerance must be positive and finite");
 		}
 		_tolerance = tolerance;
 	}
 
-	float VoxelMesher::tolerance() const noexcept
+	float Mesher::tolerance() const noexcept
 	{
 		return _tolerance;
 	}
 
-	Model VoxelMesher::bake(const Volume &volume) const
+	Mesh Mesher::bake(const Volume &volume, std::uint32_t materialIndexOffset) const
 	{
 		const auto slots = collectSlots(volume);
-		const auto indices = indexSlots(slots);
-		Mesh::Builder opaque;
-		Mesh::Builder translucent;
+		const auto indices = indexSlots(slots, materialIndexOffset);
+		SurfaceMesh::Builder opaque;
+		SurfaceMesh::Builder translucent;
 		const auto dimensions = volume.dimensions();
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -281,10 +345,10 @@ namespace spk::Voxel
 				}
 			}
 		}
-		Mesh opaqueMesh = std::move(opaque).build();
+		SurfaceMesh opaqueMesh = std::move(opaque).build();
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) {
 			return vertex.position;
 		});
-		return Model(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
+		return Mesh(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots, materialIndexOffset);
 	}
 }

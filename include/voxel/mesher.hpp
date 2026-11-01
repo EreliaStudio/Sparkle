@@ -1,12 +1,14 @@
 #pragma once
 
+#include <cstdint>
+
 #include "voxel/model.hpp"
 #include "voxel/occlusion/cache.hpp"
 #include "voxel/volume.hpp"
 
 namespace spk::Voxel
 {
-	class VoxelMesher
+	class Mesher
 	{
 	private:
 		Occlusion::Cache *_cache = nullptr;
@@ -31,11 +33,14 @@ namespace spk::Voxel
 			Shape::Face direction) const;
 
 	public:
-		virtual ~VoxelMesher() = default;
+		virtual ~Mesher() = default;
 
 		void bind(Occlusion::Cache *cache) noexcept;
 		void setTolerance(float tolerance);
 		[[nodiscard]] float tolerance() const noexcept;
-		[[nodiscard]] Model bake(const Volume &volume) const;
+		[[nodiscard]] Mesh bake(const Volume &volume, std::uint32_t materialIndexOffset = 0) const;
+		[[nodiscard]] static SurfaceMesh offsetMaterialIndices(const SurfaceMesh &mesh, std::uint32_t offset);
+		[[nodiscard]] static Mesh offsetMaterialIndices(const Mesh &mesh, std::uint32_t offset);
+		[[nodiscard]] static Model offsetMaterialIndices(const Model &model, std::uint32_t offset);
 	};
 }
