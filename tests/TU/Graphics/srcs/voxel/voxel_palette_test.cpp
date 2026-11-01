@@ -517,8 +517,11 @@ TEST(VoxelPaletteTest, ModelBindReportsEveryMissingMaterialSlot)
 {
 	Texture atlas;
 	auto source = model({{"alpha", 1.0f}, {"beta", 0.5f}, {"gamma", 1.0f}});
-	const auto complete = palette({
-		{"alpha", material(atlas)}, {"beta", material(atlas)}, {"gamma", material(atlas)}});
+	VoxelBuilder builder;
+	builder.setMaterial("alpha", material(atlas));
+	builder.setMaterial("beta", material(atlas));
+	builder.setMaterial("gamma", material(atlas));
+	const auto complete = builder.build();
 	const auto incomplete = palette({{"beta", material(atlas)}});
 	source.bind(complete);
 
@@ -526,8 +529,7 @@ TEST(VoxelPaletteTest, ModelBindReportsEveryMissingMaterialSlot)
 	{
 		source.bind(incomplete);
 		FAIL() << "Expected missing material slots to be rejected";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_EQ(error.message(), "Voxel Model: palette is missing material slots: 'alpha', 'gamma'");
 	}
