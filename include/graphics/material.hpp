@@ -5,18 +5,13 @@
 #include <string>
 #include <string_view>
 
-#include "asset/factory.hpp"
+#include "asset/manager.hpp"
 #include "container/json/object.hpp"
 #include "graphics/sprite_sheet.hpp"
 
 namespace spk::JSON
 {
 	class Reader;
-}
-
-namespace spk::asset
-{
-	class Manager;
 }
 
 namespace spk
@@ -36,12 +31,12 @@ namespace spk
 		{
 		private:
 			Textures _textures;
-			asset::Manager *_assets = nullptr;
+			Assets *_assets = nullptr;
 
 			[[nodiscard]] Binding _readRole(const JSON::Reader &reader) const;
 
 		public:
-			void bind(asset::Manager *assets);
+			void bind(Assets *assets);
 			void add(const std::string &role, const Texture &texture, Texture::Section section = Texture::Section::whole);
 			void add(const std::string &role, const SpriteSheet &sheet, const Vector2UInt &sprite);
 			void load(const JSON::Value &description);
