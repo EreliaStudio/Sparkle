@@ -52,8 +52,7 @@ namespace
 	[[nodiscard]] spk::Voxel::Shape cube()
 	{
 		spk::Voxel::Shape::Builder builder;
-		builder.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+		builder.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
 		return builder.build();
 	}
 
@@ -139,7 +138,9 @@ TEST(VoxelPaletteTest, RequiresMaterialForFullyOccludedSlot)
 	const auto slot = std::find_if(
 		source.materialSlots().begin(),
 		source.materialSlots().end(),
-		[](const auto &entry) { return entry.name == "hidden"; });
+		[](const auto &entry) {
+			return entry.name == "hidden";
+		});
 	ASSERT_NE(slot, source.materialSlots().end());
 	const auto hiddenIndex = static_cast<std::uint32_t>(slot - source.materialSlots().begin());
 	for (const auto &vertex : vertices(source.opaqueMesh()))
@@ -174,10 +175,8 @@ TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
 	const auto second = material(atlas, {{0.5f, 0.0f}, {0.5f, 1.0f}});
 	const auto result = palette(source, {{"left", first}, {"right", second}});
 	EXPECT_TRUE(source.isCompatible(result));
-	EXPECT_EQ(result.find("left")->material.find("albedo")->texture.identifier(),
-			  result.find("right")->material.find("albedo")->texture.identifier());
-	EXPECT_NE(result.find("left")->material.find("albedo")->section,
-			  result.find("right")->material.find("albedo")->section);
+	EXPECT_EQ(result.find("left")->material.find("albedo")->texture.identifier(), result.find("right")->material.find("albedo")->texture.identifier());
+	EXPECT_NE(result.find("left")->material.find("albedo")->section, result.find("right")->material.find("albedo")->section);
 }
 
 TEST(VoxelPaletteTest, RejectsDistinctOpaqueAtlases)
@@ -290,7 +289,12 @@ TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
 	ASSERT_FALSE(source.opaqueMesh().empty());
 	const auto beforeVertices = vertices(source.opaqueMesh());
 	const auto beforeIndices = indices(source.opaqueMesh());
-	const auto beforeDepthIndices = indices(source.opaqueMesh());
+	const auto depthVerticesView = source.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
+	const auto depthIndicesView = source.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+	const std::vector<spk::Vector3> beforeDepthVertices{depthVerticesView.begin(), depthVerticesView.end()};
+	const std::vector<std::uint32_t> beforeDepthIndices{depthIndicesView.begin(), depthIndicesView.end()};
+	const auto beforeTransparentVertices = vertices(source.transparentMesh());
+	const auto beforeTransparentIndices = indices(source.transparentMesh());
 	const auto &originalMesh = source.opaqueMesh();
 	Texture first;
 	Texture second;
@@ -309,7 +313,12 @@ TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
 		EXPECT_EQ(afterVertices[i].uv, beforeVertices[i].uv);
 		EXPECT_EQ(afterVertices[i].materialIndex, beforeVertices[i].materialIndex);
 	}
-	EXPECT_EQ(indices(source.opaqueMesh()), beforeDepthIndices);
+	EXPECT_EQ(indices(source.transparentMesh()), beforeTransparentIndices);
+	EXPECT_EQ(vertices(source.transparentMesh()).size(), beforeTransparentVertices.size());
+	const auto depthVerticesAfter = source.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
+	const auto depthIndicesAfter = source.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+	EXPECT_EQ((std::vector<spk::Vector3>{depthVerticesAfter.begin(), depthVerticesAfter.end()}), beforeDepthVertices);
+	EXPECT_EQ((std::vector<std::uint32_t>{depthIndicesAfter.begin(), depthIndicesAfter.end()}), beforeDepthIndices);
 }
 
 TEST(VoxelPaletteTest, FailedSetAndBuildPreserveUsableBuilder)
