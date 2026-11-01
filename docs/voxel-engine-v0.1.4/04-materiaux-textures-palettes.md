@@ -24,7 +24,7 @@ classDiagram
     +association slot -> Material
     -Data immutable partagé
   }
-  class VoxelPalette {
+  class VoxelPaletteBuilder {
     +Builder
     +slots requis
     +validation albedo
@@ -37,9 +37,9 @@ classDiagram
   Texture <|-- SpriteSheet
   Material --> Texture : Handle statique
   Material ..> EngineView : source empruntée (API à finaliser)
-  VoxelPalette --> Palette : collection générique immuable
+  VoxelPaletteBuilder --> Palette : construction contrôlée
   Palette --> Material : valeurs immuables
-  Model ..> VoxelPalette : association validée
+  Model ..> Palette : compatibilité des slots
 ```
 
 ### 4.1 `spk::Material` : ressource générique
