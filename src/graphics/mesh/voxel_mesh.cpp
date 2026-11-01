@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "graphics/voxel_palette.hpp"
+#include "voxel/palette.hpp"
 
 #include <utility>
 
@@ -66,19 +66,19 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-	bool Model::isCompatible(const spk::VoxelPalette &palette) const noexcept
+	bool Model::isCompatible(const Palette &palette) const noexcept
 	{
 		std::optional<spk::GPUResource::Identifier> opaqueAtlas;
 		std::optional<spk::GPUResource::Identifier> translucentAtlas;
 		for (const auto &slot : materialSlots())
 		{
 			const auto *entry = palette.find(slot.name);
-			if (entry == nullptr || entry->opacity != slot.opacity)
+			if (entry == nullptr)
 			{
 				return false;
 			}
 			auto &atlas = slot.opacity == 1.0f ? opaqueAtlas : translucentAtlas;
-			if (!sameAlbedo(atlas, entry->material))
+			if (!sameAlbedo(atlas, *entry))
 			{
 				return false;
 			}
