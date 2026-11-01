@@ -14,7 +14,7 @@
 | `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
 | `Material` | Valeur immuable : handles statiques ou source EngineView empruntée | Aucune propriété d'une EngineView ; handles GPU capturés par les snapshots |
 | `spk::Palette` | Collection immuable générique de Materials nommés | Aucun contrat voxel ni ressource GPU propre |
-| `spk::Palette` | Valeur immuable, validation du rôle albedo à l'ajout ; construction indépendante de tout Model | Aucune opacité, aucune vérification de complétude au build, aucun SSBO ni ressource GPU propre |
+| `spk::Voxel::PaletteBuilder` | Builder du `spk::Palette` générique avec validateur voxel (`albedo` présent, atlas unique) | Aucune palette dérivée ; ne connaît ni les Models ni leur opacité |
 | `Asset::Manager` | Possède les objets `T` du cache | `load<T>()` retourne `T&` emprunté ; `clear()` invalide |
 | `Assembly` | Possède une seule hiérarchie mutable ; insertion de sous-Assembly par copie/expansion des Parts | Nouveaux PartID et ancrage local, partage Models/Palettes immuables, aucune sous-Assembly vivante ; composants emprunteurs |
 | `Engine` | Moteur logique dans `sparkle::core` | Ne possède ni EngineView ni RenderSnapshot |
