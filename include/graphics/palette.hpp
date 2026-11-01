@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -16,12 +17,16 @@ namespace spk
 
 		class Builder
 		{
+		public:
+			using Validator = std::function<void(std::string_view, const Material &, const Materials &)>;
+
 		private:
 			Materials _materials;
+			Validator _validator;
 
 		public:
-			Builder() = default;
-			explicit Builder(const Palette &palette);
+			explicit Builder(Validator validator = {});
+			explicit Builder(const Palette &palette, Validator validator = {});
 
 			void setMaterial(std::string name, Material material);
 			[[nodiscard]] Palette build() const;
