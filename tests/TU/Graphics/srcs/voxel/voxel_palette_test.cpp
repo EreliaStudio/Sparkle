@@ -525,8 +525,9 @@ TEST(VoxelPaletteTest, ModelCopiesCanBindDifferentPalettesWhileSharingGeometry)
 	EXPECT_EQ(&source.depthMesh(), &variant.depthMesh());
 	ASSERT_NE(source.palette(), nullptr);
 	ASSERT_NE(variant.palette(), nullptr);
-	EXPECT_NE(source.palette()->find("stone")->find("albedo")->texture.identifier(),
-		variant.palette()->find("stone")->find("albedo")->texture.identifier());
+	const auto originalAtlas = source.palette()->find("stone")->find("albedo")->texture.identifier();
+	const auto variantAtlas = variant.palette()->find("stone")->find("albedo")->texture.identifier();
+	EXPECT_NE(originalAtlas, variantAtlas);
 }
 
 TEST(VoxelPaletteTest, ModelBindingDoesNotMutateBakedMeshes)
