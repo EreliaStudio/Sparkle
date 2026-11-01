@@ -22,8 +22,7 @@ namespace spk::Voxel
 		spk::ShadowMap::Mesh depth,
 		std::vector<Definition::Slot> slots,
 		std::uint32_t materialIndexOffset) :
-		_data(std::make_shared<const Data>(
-			std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), materialIndexOffset))
+		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), materialIndexOffset))
 	{
 		if (!_data->slots.empty() &&
 			_data->slots.size() - 1 > std::numeric_limits<std::uint32_t>::max() - materialIndexOffset)

@@ -765,7 +765,6 @@ TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 	EXPECT_GT(visibleSource, 0u);
 }
 
-
 TEST(MesherMaterialOffset, DefaultOffsetPreservesExistingIndices)
 {
 	const auto volume = single(definition(fixture("cube"), "stone_"));

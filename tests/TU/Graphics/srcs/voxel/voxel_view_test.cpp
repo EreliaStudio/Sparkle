@@ -299,8 +299,9 @@ TEST(VoxelViewTest, ModelGeometryAndPaletteAreIndependentAcrossViews)
 	View left(geometry, palette(first, {"stone"}));
 	View right(geometry, palette(second, {"stone"}));
 	EXPECT_EQ(&left.part(left.roots()[0]).models[0].opaqueMesh(), &right.part(right.roots()[0]).models[0].opaqueMesh());
-	EXPECT_NE(left.palette()->find("stone")->find("albedo")->texture.identifier(),
-		right.palette()->find("stone")->find("albedo")->texture.identifier());
+	const auto leftAtlas = left.palette()->find("stone")->find("albedo")->texture.identifier();
+	const auto rightAtlas = right.palette()->find("stone")->find("albedo")->texture.identifier();
+	EXPECT_NE(leftAtlas, rightAtlas);
 }
 
 TEST(VoxelViewTest, ReparentPreservesLocalTransformAndRejectsCycles)
@@ -325,8 +326,8 @@ TEST(VoxelViewTest, TransformsAccumulateInParentFirstOrder)
 	const auto root = view.addPart("root", {}, {}, Matrix::translation(10, 0, 0));
 	const auto arm = view.addPart("arm", root, {}, Matrix::rotation(0, 0, 90));
 	const auto hand = view.addPart("hand", arm, {}, Matrix::scale(2, 3, 4));
-	expectMatrix(view.accumulatedTransform(hand),
-		Matrix::translation(10, 0, 0) * Matrix::rotation(0, 0, 90) * Matrix::scale(2, 3, 4));
+	const auto expected = Matrix::translation(10, 0, 0) * Matrix::rotation(0, 0, 90) * Matrix::scale(2, 3, 4);
+	expectMatrix(view.accumulatedTransform(hand), expected);
 }
 
 TEST(VoxelViewTest, MutationsRequireExplicitInvalidation)
@@ -471,8 +472,9 @@ TEST(VoxelViewTest, CopyCreatesIndependentHierarchyPaletteAndVersion)
 	copy.bind(palette(second, {"stone"}));
 	copy.setName(root, "changed");
 	EXPECT_EQ(original.part(root).name, "model");
-	EXPECT_NE(copy.palette()->find("stone")->find("albedo")->texture.identifier(),
-		original.palette()->find("stone")->find("albedo")->texture.identifier());
+	const auto copyAtlas = copy.palette()->find("stone")->find("albedo")->texture.identifier();
+	const auto originalAtlas = original.palette()->find("stone")->find("albedo")->texture.identifier();
+	EXPECT_NE(copyAtlas, originalAtlas);
 }
 
 TEST(VoxelViewTest, CopyAssignmentResetsVersionAndSubscriptions)
