@@ -44,7 +44,6 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-
 	void Model::bind(spk::Palette palette)
 	{
 		if (!isCompatible(palette))
