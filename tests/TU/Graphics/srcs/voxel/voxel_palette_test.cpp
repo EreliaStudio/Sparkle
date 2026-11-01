@@ -113,7 +113,7 @@ TEST(VoxelPaletteTest, BuildsPaletteBeforeModelExists)
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
 	const Model source = model({{"stone", 1.0f}, {"glass", 0.3f}});
-	EXPECT_EQ(result.materials().materials().size(), 2u);
+	EXPECT_EQ(result.materials().size(), 2u);
 	EXPECT_FLOAT_EQ(source.materialSlots()[1].opacity, 0.3f);
 	EXPECT_TRUE(source.isCompatible(result));
 }
@@ -123,7 +123,7 @@ TEST(VoxelPaletteTest, ModelDetectsMissingRequiredMaterial)
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}});
 	const Model source = model({{"stone", 1.0f}, {"glass", 0.3f}});
-	EXPECT_EQ(result.materials().materials().size(), 1u);
+	EXPECT_EQ(result.materials().size(), 1u);
 	EXPECT_FALSE(source.isCompatible(result));
 	EXPECT_TRUE(source.isCompatible(
 		palette({{"stone", material(atlas)}, {"glass", material(atlas)}})));
@@ -160,7 +160,7 @@ TEST(VoxelPaletteTest, RejectsMaterialWithoutAlbedoAtSetTime)
 	VoxelPalette::Builder builder;
 	EXPECT_THROW(builder.setMaterial("stone", materialBuilder.build()), spk::Exception);
 	EXPECT_THROW(builder.setMaterial("stone", Material{}), spk::Exception);
-	EXPECT_TRUE(builder.build().materials().materials().empty());
+	EXPECT_TRUE(builder.build().materials().empty());
 }
 
 TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
@@ -182,8 +182,8 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutModel)
 	ASSERT_NE(first.handle().identifier(), second.handle().identifier());
 	VoxelPalette::Builder builder;
 	builder.setMaterial("left", material(first));
-	builder.setMaterial("right", material(second));
-	EXPECT_THROW((void)builder.build(), spk::Exception);
+	EXPECT_THROW(builder.setMaterial("right", material(second)), spk::Exception);
+	EXPECT_EQ(builder.build().materials().size(), 1u);
 }
 
 TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfModelOpacity)
@@ -193,8 +193,8 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfModelOpacity)
 	const Model source = model({{"a", 0.2f}, {"b", 0.7f}});
 	VoxelPalette::Builder builder;
 	builder.setMaterial("a", material(first));
-	builder.setMaterial("b", material(second));
-	EXPECT_THROW((void)builder.build(), spk::Exception);
+	EXPECT_THROW(builder.setMaterial("b", material(second)), spk::Exception);
+	EXPECT_FALSE(source.isCompatible(builder.build()));
 }
 
 TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
@@ -204,8 +204,8 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
 	const Model source = model({{"solid", 1.0f}, {"glass", 0.5f}});
 	VoxelPalette::Builder builder;
 	builder.setMaterial("solid", material(opaque));
-	builder.setMaterial("glass", material(translucent));
-	EXPECT_THROW((void)builder.build(), spk::Exception);
+	EXPECT_THROW(builder.setMaterial("glass", material(translucent)), spk::Exception);
+	EXPECT_FALSE(source.isCompatible(builder.build()));
 }
 
 TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByModel)
@@ -218,32 +218,34 @@ TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByModel)
 	EXPECT_FALSE(other.isCompatible(result));
 }
 
-TEST(VoxelPaletteTest, BuildFailureDoesNotChangePreviousPalette)
+TEST(VoxelPaletteTest, FailedSetKeepsPreviousPaletteAndBuilder)
 {
 	Texture first;
 	Texture second;
 	VoxelPalette::Builder builder;
 	builder.setMaterial("stone", material(first));
 	const auto original = builder.build();
-	builder.setMaterial("glass", material(second));
-	EXPECT_THROW((void)builder.build(), spk::Exception);
-	EXPECT_EQ(original.materials().materials().size(), 1u);
-	EXPECT_EQ(original.find("stone")->find("albedo")->texture.identifier(), first.handle().identifier());
+	EXPECT_THROW(builder.setMaterial("glass", material(second)), spk::Exception);
+	EXPECT_EQ(original.materials().size(), 1u);
+	EXPECT_EQ(builder.build().materials().size(), 1u);
 	builder.setMaterial("glass", material(first));
 	const auto repaired = builder.build();
-	EXPECT_EQ(repaired.materials().materials().size(), 2u);
+	EXPECT_EQ(repaired.materials().size(), 2u);
 }
 
-TEST(VoxelPaletteTest, ReplacingOnlyMaterialCanChangeAtlas)
+TEST(VoxelPaletteTest, ReplacingMaterialKeepsAtlasContract)
 {
 	Texture first;
 	Texture second;
 	VoxelPalette::Builder builder;
 	builder.setMaterial("stone", material(first));
 	const auto original = builder.build();
-	builder.setMaterial("stone", material(second));
-	const auto replacement = builder.build();
-	EXPECT_NE(original.find("stone")->find("albedo")->texture.identifier(), replacement.find("stone")->find("albedo")->texture.identifier());
+	EXPECT_THROW(builder.setMaterial("stone", material(second)), spk::Exception);
+	VoxelPalette::Builder variant(original);
+	variant.setMaterial("stone", material(first, {{0.5f, 0.0f}, {0.5f, 1.0f}}));
+	const auto replacement = variant.build();
+	EXPECT_EQ(original.find("stone")->find("albedo")->texture.identifier(), replacement.find("stone")->find("albedo")->texture.identifier());
+	EXPECT_NE(original.find("stone")->find("albedo")->section, replacement.find("stone")->find("albedo")->section);
 }
 
 TEST(VoxelPaletteTest, DifferentTexturesAreAllowedInGenericPalette)
@@ -256,6 +258,30 @@ TEST(VoxelPaletteTest, DifferentTexturesAreAllowedInGenericPalette)
 	EXPECT_EQ(builder.build().materials().size(), 2u);
 }
 
+TEST(VoxelPaletteTest, BuilderFromExistingPalettePreservesAtlasIdentity)
+{
+	Texture first;
+	Texture second;
+	const auto initial = palette({{"stone", material(first)}});
+	VoxelPalette::Builder variant(initial);
+	EXPECT_THROW(variant.setMaterial("glass", material(second)), spk::Exception);
+	variant.setMaterial("glass", material(first));
+	const auto modified = variant.build();
+	EXPECT_EQ(modified.materials().size(), 2u);
+	EXPECT_EQ(initial.materials().size(), 1u);
+}
+
+TEST(VoxelPaletteTest, EmptyBuilderAllowsEitherFirstAtlas)
+{
+	Texture first;
+	Texture second;
+	VoxelPalette::Builder builder;
+	EXPECT_TRUE(builder.build().materials().empty());
+	builder.setMaterial("stone", material(second));
+	EXPECT_THROW(builder.setMaterial("glass", material(first)), spk::Exception);
+	EXPECT_EQ(builder.build().find("stone")->find("albedo")->texture.identifier(), second.handle().identifier());
+}
+
 TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
 {
 	Texture atlas;
@@ -264,7 +290,7 @@ TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
 	const Model translucent = model({{"shared", 0.4f}, {"extra", 0.2f}});
 	EXPECT_TRUE(opaque.isCompatible(result));
 	EXPECT_TRUE(translucent.isCompatible(result));
-	EXPECT_EQ(result.materials().materials().size(), 2u);
+	EXPECT_EQ(result.materials().size(), 2u);
 }
 
 TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralModels)
@@ -276,7 +302,7 @@ TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralModels)
 		{"right", material(atlas)}});
 	const Model first = model({{"shared", 1.0f}, {"left", 0.5f}});
 	const Model second = model({{"shared", 1.0f}, {"right", 0.6f}});
-	EXPECT_EQ(result.materials().materials().size(), 3u);
+	EXPECT_EQ(result.materials().size(), 3u);
 	EXPECT_TRUE(first.isCompatible(result));
 	EXPECT_TRUE(second.isCompatible(result));
 }
@@ -301,14 +327,14 @@ TEST(VoxelPaletteTest, CopiesShareImmutableData)
 	Texture atlas;
 	const auto original = palette({{"stone", material(atlas)}});
 	const auto copy = original;
-	EXPECT_EQ(&original.materials().materials(), &copy.materials().materials());
+	EXPECT_EQ(&original.materials(), &copy.materials());
 	VoxelPalette::Builder builder(original);
 	builder.setMaterial("glass", material(atlas));
 	const auto expanded = builder.build();
-	EXPECT_EQ(original.materials().materials().size(), 1u);
-	EXPECT_EQ(copy.materials().materials().size(), 1u);
-	EXPECT_EQ(expanded.materials().materials().size(), 2u);
-	EXPECT_NE(&expanded.materials().materials(), &original.materials().materials());
+	EXPECT_EQ(original.materials().size(), 1u);
+	EXPECT_EQ(copy.materials().size(), 1u);
+	EXPECT_EQ(expanded.materials().size(), 2u);
+	EXPECT_NE(&expanded.materials(), &original.materials());
 }
 
 TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
@@ -357,11 +383,11 @@ TEST(VoxelPaletteTest, FailedSetPreservesUsableBuilder)
 	EXPECT_THROW(builder.setMaterial("glass", Material{}), spk::Exception);
 	EXPECT_THROW(builder.setMaterial("stone", Material{}), spk::Exception);
 	EXPECT_THROW(builder.setMaterial("", material(atlas)), spk::Exception);
-	EXPECT_EQ(builder.build().materials().materials().size(), 1u);
+	EXPECT_EQ(builder.build().materials().size(), 1u);
 	builder.setMaterial("glass", material(atlas));
 	const Model source = model({{"stone", 1.0f}, {"glass", 0.5f}});
 	const auto result = builder.build();
-	EXPECT_EQ(result.materials().materials().size(), 2u);
+	EXPECT_EQ(result.materials().size(), 2u);
 	EXPECT_TRUE(source.isCompatible(result));
 }
 
@@ -379,7 +405,7 @@ TEST(VoxelPaletteTest, EmptyModelAcceptsEmptyPalette)
 	const auto result = VoxelPalette::Builder().build();
 	const Model source = model({});
 	EXPECT_TRUE(source.isCompatible(result));
-	EXPECT_TRUE(result.materials().materials().empty());
+	EXPECT_TRUE(result.materials().empty());
 }
 
 TEST(VoxelPaletteTest, CanAddMoreSlotsAfterBuild)
