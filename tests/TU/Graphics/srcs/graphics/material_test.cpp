@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <limits>
+#include <stdexcept>
 #include <string>
 
 #include "asset/manager.hpp"
@@ -319,11 +320,11 @@ TEST(MaterialTest, ParserRejectsDuplicateRoleAndNestedKeys)
 {
 	EXPECT_THROW(
 		(void)Value::fromString(R"({"textures":{"albedo":{},"albedo":{}}})"),
-		spk::Exception);
+		std::runtime_error);
 	EXPECT_THROW(
 		(void)Value::fromString(R"({"textures":{"albedo":{"Texture":{"path":"a","path":"b"}}}})"),
-		spk::Exception);
-	EXPECT_THROW((void)Value::fromString(R"({"textures":)"), spk::Exception);
+		std::runtime_error);
+	EXPECT_THROW((void)Value::fromString(R"({"textures":)"), std::runtime_error);
 }
 
 TEST(MaterialTest, FailedLoadDoesNotChangeExistingBuilder)
