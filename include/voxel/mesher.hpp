@@ -6,7 +6,7 @@
 
 namespace spk::Voxel
 {
-	class VoxelMesher
+	class Mesher
 	{
 	private:
 		Occlusion::Cache *_cache = nullptr;
@@ -31,7 +31,7 @@ namespace spk::Voxel
 			Shape::Face direction) const;
 
 	public:
-		virtual ~VoxelMesher() = default;
+		virtual ~Mesher() = default;
 
 		void bind(Occlusion::Cache *cache) noexcept;
 		void setTolerance(float tolerance);

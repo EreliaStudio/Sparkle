@@ -1,4 +1,4 @@
-#include "voxel/voxel_mesher.hpp"
+#include "voxel/mesher.hpp"
 
 #include <algorithm>
 #include <array>
@@ -196,31 +196,31 @@ namespace spk::Voxel
 		}
 	}
 
-	VoxelMesher::OutsideCell VoxelMesher::outsideCell(Position, Face) const
+	Mesher::OutsideCell Mesher::outsideCell(Position, Face) const
 	{
 		return {};
 	}
 
-	void VoxelMesher::bind(Occlusion::Cache *cache) noexcept
+	void Mesher::bind(Occlusion::Cache *cache) noexcept
 	{
 		_cache = cache;
 	}
 
-	void VoxelMesher::setTolerance(float tolerance)
+	void Mesher::setTolerance(float tolerance)
 	{
 		if (!std::isfinite(tolerance) || tolerance <= 0.0f)
 		{
-			throw spk::Exception("VoxelMesher tolerance must be positive and finite");
+			throw spk::Exception("Mesher tolerance must be positive and finite");
 		}
 		_tolerance = tolerance;
 	}
 
-	float VoxelMesher::tolerance() const noexcept
+	float Mesher::tolerance() const noexcept
 	{
 		return _tolerance;
 	}
 
-	Model VoxelMesher::bake(const Volume &volume) const
+	Model Mesher::bake(const Volume &volume) const
 	{
 		const auto slots = collectSlots(volume);
 		const auto indices = indexSlots(slots);

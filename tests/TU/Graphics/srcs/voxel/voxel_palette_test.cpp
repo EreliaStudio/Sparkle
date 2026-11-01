@@ -13,7 +13,8 @@
 #include "exception.hpp"
 #include "graphics/palette.hpp"
 #include "voxel/palette.hpp"
-#include "voxel/voxel_mesher.hpp"
+#include "voxel/view.hpp"
+#include "voxel/mesher.hpp"
 
 namespace
 {
@@ -75,7 +76,7 @@ namespace
 		spk::Voxel::Volume::Builder volume({1, 1, 1});
 		volume.bind(definitions.build());
 		volume.set({0, 0, 0}, 1);
-		return spk::Voxel::VoxelMesher().bake(volume.build());
+		return spk::Voxel::Mesher().bake(volume.build());
 	}
 
 	[[nodiscard]] Model bakedOccludedCube()
@@ -96,7 +97,7 @@ namespace
 				}
 			}
 		}
-		return spk::Voxel::VoxelMesher().bake(volume.build());
+		return spk::Voxel::Mesher().bake(volume.build());
 	}
 
 	[[nodiscard]] std::vector<MeshVertex> vertices(const spk::Voxel::Mesh &mesh)
@@ -488,82 +489,76 @@ TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
 	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
 }
 
-TEST(VoxelPaletteTest, ModelStartsWithoutPaletteAndCanBindCompatiblePalette)
+TEST(VoxelPaletteTest, ViewBindsGeometryWithoutModifyingModel)
 {
 	Texture atlas;
-	auto source = model({{"stone", 1.0f}});
-	EXPECT_EQ(source.palette(), nullptr);
+	const auto geometry = model({{"stone", 1.0f}});
 	const auto appearance = palette({{"stone", material(atlas)}});
-	source.bind(appearance);
-	ASSERT_NE(source.palette(), nullptr);
-	EXPECT_EQ(&source.palette()->materials(), &appearance.materials());
+	spk::Voxel::View view(geometry, appearance);
+	ASSERT_NE(view.palette(), nullptr);
+	EXPECT_EQ(&view.palette()->materials(), &appearance.materials());
+	ASSERT_EQ(view.size(), 1u);
+	EXPECT_EQ(&view.part(view.roots().front()).models[0].opaqueMesh(), &geometry.opaqueMesh());
 }
 
-TEST(VoxelPaletteTest, ModelBindRejectsMissingRequiredSlotWithoutChangingBinding)
+TEST(VoxelPaletteTest, ViewBindRejectsMissingRequiredSlotsWithoutMutation)
 {
 	Texture atlas;
-	auto source = model({{"stone", 1.0f}, {"glass", 0.5f}});
+	const auto source = model({{"stone", 1.0f}, {"glass", 0.5f}});
+	spk::Voxel::View view(source);
 	const auto complete = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
 	const auto missing = palette({{"stone", material(atlas)}});
-	EXPECT_THROW(source.bind(missing), spk::Exception);
-	EXPECT_EQ(source.palette(), nullptr);
-	source.bind(complete);
-	EXPECT_THROW(source.bind(missing), spk::Exception);
-	ASSERT_NE(source.palette(), nullptr);
-	EXPECT_EQ(&source.palette()->materials(), &complete.materials());
+	EXPECT_THROW(view.bind(missing), spk::Exception);
+	EXPECT_EQ(view.palette(), nullptr);
+	view.bind(complete);
+	EXPECT_THROW(view.bind(missing), spk::Exception);
+	ASSERT_NE(view.palette(), nullptr);
+	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
 }
 
-TEST(VoxelPaletteTest, ModelBindReportsEveryMissingMaterialSlot)
+TEST(VoxelPaletteTest, ViewBindReportsEveryMissingMaterialSlot)
 {
 	Texture atlas;
-	auto source = model({{"alpha", 1.0f}, {"beta", 0.5f}, {"gamma", 1.0f}});
-	VoxelBuilder builder;
-	builder.setMaterial("alpha", material(atlas));
-	builder.setMaterial("beta", material(atlas));
-	builder.setMaterial("gamma", material(atlas));
-	const auto complete = builder.build();
+	const auto source = model({{"alpha", 1.0f}, {"beta", 0.5f}, {"gamma", 1.0f}});
+	spk::Voxel::View view(source);
 	const auto incomplete = palette({{"beta", material(atlas)}});
-	source.bind(complete);
-
 	try
 	{
-		source.bind(incomplete);
+		view.bind(incomplete);
 		FAIL() << "Expected missing material slots to be rejected";
 	} catch (const spk::Exception &error)
 	{
-		EXPECT_EQ(error.message(), "Voxel Model: palette is missing material slots: 'alpha', 'gamma'");
+		EXPECT_EQ(error.message(), "Voxel View: palette is missing material slots: 'alpha', 'gamma'");
 	}
-	ASSERT_NE(source.palette(), nullptr);
-	EXPECT_EQ(&source.palette()->materials(), &complete.materials());
+	EXPECT_EQ(view.palette(), nullptr);
 }
 
-TEST(VoxelPaletteTest, ModelCopiesCanBindDifferentPalettesWhileSharingGeometry)
+TEST(VoxelPaletteTest, SameModelCanAppearInTwoViewsWithDifferentPalettes)
 {
 	Texture first;
 	Texture second;
-	auto source = bakedSingleCube();
-	source.bind(palette({{"stone", material(first)}}));
-	auto variant = source;
-	variant.bind(palette({{"stone", material(second)}}));
-	EXPECT_EQ(&source.opaqueMesh(), &variant.opaqueMesh());
-	EXPECT_EQ(&source.depthMesh(), &variant.depthMesh());
-	ASSERT_NE(source.palette(), nullptr);
+	const auto source = bakedSingleCube();
+	spk::Voxel::View original(source, palette({{"stone", material(first)}}));
+	spk::Voxel::View variant(source, palette({{"stone", material(second)}}));
+	EXPECT_EQ(&original.part(original.roots()[0]).models[0].opaqueMesh(), &variant.part(variant.roots()[0]).models[0].opaqueMesh());
+	EXPECT_EQ(&original.part(original.roots()[0]).models[0].depthMesh(), &variant.part(variant.roots()[0]).models[0].depthMesh());
+	ASSERT_NE(original.palette(), nullptr);
 	ASSERT_NE(variant.palette(), nullptr);
-	const auto originalAtlas = source.palette()->find("stone")->find("albedo")->texture.identifier();
-	const auto variantAtlas = variant.palette()->find("stone")->find("albedo")->texture.identifier();
-	EXPECT_NE(originalAtlas, variantAtlas);
+	EXPECT_NE(
+		original.palette()->find("stone")->find("albedo")->texture.identifier(),
+		variant.palette()->find("stone")->find("albedo")->texture.identifier());
 }
 
-TEST(VoxelPaletteTest, ModelBindingDoesNotMutateBakedMeshes)
+TEST(VoxelPaletteTest, ChangingViewPaletteNeverMutatesBakedGeometry)
 {
 	Texture first;
 	Texture second;
-	auto source = bakedSingleCube();
+	const auto source = bakedSingleCube();
 	const auto before = vertices(source.opaqueMesh());
 	const auto beforeIndices = indices(source.opaqueMesh());
-	source.bind(palette({{"stone", material(first)}}));
-	source.bind(palette({{"stone", material(second)}}));
-	const auto after = vertices(source.opaqueMesh());
+	spk::Voxel::View view(source, palette({{"stone", material(first)}}));
+	view.bind(palette({{"stone", material(second)}}));
+	const auto after = vertices(view.part(view.roots()[0]).models[0].opaqueMesh());
 	ASSERT_EQ(before.size(), after.size());
 	for (std::size_t i = 0; i < before.size(); ++i)
 	{
@@ -575,11 +570,12 @@ TEST(VoxelPaletteTest, ModelBindingDoesNotMutateBakedMeshes)
 	EXPECT_EQ(indices(source.opaqueMesh()), beforeIndices);
 }
 
-TEST(VoxelPaletteTest, ModelBindRequiresFullyOccludedSlots)
+TEST(VoxelPaletteTest, ViewBindingRequiresFullyOccludedSlots)
 {
 	Texture atlas;
-	auto source = bakedOccludedCube();
-	EXPECT_THROW(source.bind(palette({{"outside", material(atlas)}})), spk::Exception);
-	source.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
-	EXPECT_NE(source.palette(), nullptr);
+	const auto source = bakedOccludedCube();
+	spk::Voxel::View view(source);
+	EXPECT_THROW(view.bind(palette({{"outside", material(atlas)}})), spk::Exception);
+	view.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
+	EXPECT_NE(view.palette(), nullptr);
 }

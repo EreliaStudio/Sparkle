@@ -1,4 +1,4 @@
-# PR-04 — VoxelMesher, clipping et Model
+# PR-04 — Mesher, clipping et Model
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
@@ -18,7 +18,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] `VoxelMesher` : bake synchrone complet d'un Volume, **sans obligation de fournir un `OcclusionCache`**.
+- [ ] `Mesher` : bake synchrone complet d'un Volume, **sans obligation de fournir un `OcclusionCache`**.
 - [ ] Sans cache lié : recalculer les occlusions par le clipping CPU commun de PR-03 ; avec cache : consulter/mémoriser les résultats. Les résultats des deux chemins doivent être identiques.
 - [ ] Obtenir la géométrie orientée uniquement via `Shape::instance(orientation)`, sans rotation ou flip à la volée et sans cache de transformation supplémentaire.
 - [ ] Voisinage extérieur `Empty`, `Occupied`, `Unknown` ; visibilité directionnelle et règle globale des `innerShell`.
@@ -29,7 +29,7 @@
 
 ## Contrat du cache facultatif
 
-Une instance de `VoxelMesher` sans `OcclusionCache` fonctionne normalement. Le cache externe peut être emprunté et partagé entre plusieurs Meshers, mais il n'est jamais créé implicitement. La suppression de la liaison rétablit le mode sans cache ; sa durée de vie pendant le bake relève de l'appelant. **Ne pas dupliquer l'algorithme de clipping**, déjà livré par PR-03.
+Une instance de `Mesher` sans `OcclusionCache` fonctionne normalement. Le cache externe peut être emprunté et partagé entre plusieurs Meshers, mais il n'est jamais créé implicitement. La suppression de la liaison rétablit le mode sans cache ; sa durée de vie pendant le bake relève de l'appelant. **Ne pas dupliquer l'algorithme de clipping**, déjà livré par PR-03.
 
 ## Tests obligatoires
 
@@ -47,3 +47,5 @@ Une instance de `VoxelMesher` sans `OcclusionCache` fonctionne normalement. Le c
 Premier Model voxel vérifiable numériquement avec ou sans cache d'occlusion. Déclarer les tests réellement exécutés, corriger les violations de contrat et obtenir la validation du propriétaire avant fusion.
 
 **Hors périmètre :** rendu GPU, greedy meshing, rebake incrémental, cache de transformation externe et toute PR ultérieure.
+
+**Renommage PR-08 :** `spk::Voxel::Mesher` remplace l'ancienne classe `VoxelMesher`, sans alias. Le bake retourne toujours un Model géométrique immuable, sans palette.

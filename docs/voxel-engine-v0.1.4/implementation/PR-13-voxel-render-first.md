@@ -4,7 +4,7 @@
 >
 > **Branche source :** `impl/v0.1.4/13-voxel-render-first`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Dessiner un Model voxel texturé dans sa première EngineView.
+**Objectif :** Dessiner une Voxel::View texturée dans sa première EngineView (y compris la View ne contenant qu'un Model).
 
 **Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-07](PR-07-voxel-palette.md), [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md)
 
@@ -20,7 +20,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] ModelRenderingComponent empruntant Model/Palette
+- [ ] ViewRenderingComponent empruntant une Voxel::View (un ou plusieurs Models, palette unique)
 - [ ] VoxelRenderingSystem
 - [ ] filtrage Registry/layers
 - [ ] mesh opaque et atlas
@@ -61,3 +61,5 @@ WBOIT, lumières, ShadowMap, gestion persistante offset d'instance.
 ## Consigne de passation
 
 Confier **uniquement PR-13** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+**Adaptation PR-08.** Le premier rendu utilise `Voxel::View` et son `ViewRenderingComponent` emprunteur ; `Voxel::Model` reste sans palette. Pour chaque Model d'une Part, la capture fournit `View::materialIndices(partID,modelIndex)` afin de résoudre les indices locaux vers la palette commune. Éviter un nouveau `ModelRenderingComponent` distinct : une View simple utilise le même chemin que la composée. PR-14 complétera la capture de l'arbre articulé.

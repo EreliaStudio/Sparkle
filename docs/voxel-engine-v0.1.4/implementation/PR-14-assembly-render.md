@@ -1,12 +1,12 @@
-# PR-14 — AssemblyRenderingComponent et instancing articulé
+# PR-14 — ViewRenderingComponent et instancing articulé
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
-> **Branche source :** `impl/v0.1.4/14-assembly-render`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche source :** `impl/v0.1.4/14-view-render`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Afficher plusieurs Parts d'Assembly sans rémailler.
+**Objectif :** Afficher plusieurs Parts d'View sans rémailler.
 
-**Prérequis :** [PR-08](PR-08-assembly-hierarchy.md), [PR-13](PR-13-voxel-render-first.md)
+**Prérequis :** [PR-08](PR-08-view-hierarchy.md), [PR-13](PR-13-voxel-render-first.md)
 
 ## Spécifications normatives
 
@@ -19,9 +19,9 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] AssemblyRenderingComponent non propriétaire
+- [ ] ViewRenderingComponent non propriétaire
 - [ ] capture des Parts et de leurs matrices
-- [ ] M_entityWorld * M_assembly * M_partAccumulate
+- [ ] M_entityWorld * M_view * M_partAccumulate
 - [ ] regroupement de buckets compatibles dans VoxelRenderingSystem.
 
 ## Instructions techniques et intégration
@@ -43,7 +43,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Définition de terminé / critère de fusion
 
-Une scène d'Assembly animée reste stable et instanciée.
+Une scène d'View animée reste stable et instanciée.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
@@ -57,3 +57,5 @@ rebake sur animation, ombres liées automatiquement.
 ## Consigne de passation
 
 Confier **uniquement PR-14** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+**Adaptation PR-08.** Chaque Part peut porter plusieurs Models, tous avec la même transformation accumulée. `View::materialIndices(partID,modelIndex)` distingue les index locaux de chacun ; une seule palette View s'applique aux occurrences. PR-13 prend déjà en charge la View simple et le même composant emprunteur ; cette PR étend sa capture à la hiérarchie et à l'instancing multi-Part, sans second composant.

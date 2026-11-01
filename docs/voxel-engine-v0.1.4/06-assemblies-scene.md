@@ -1,164 +1,65 @@
-# Sparkle V0.1.4 — Assembly, composants et scène
+# Sparkle V0.1.4 — Voxel::View, composants et scène
 
-[Sommaire de l'architecture](../voxel-engine-v0.1.4-specification.md)
+[Sommaire](../voxel-engine-v0.1.4-specification.md)
 
-## 6. Assembly, composants et scène
+## 6. View, modèles et scène
 
-### 6.1 `spk::Voxel::Assembly`
+### 6.1 Séparation entre Model et View
 
-Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **liée à la palette commune de l’Assembly**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.
+`spk::Voxel::Model` est une ressource immuable de géométrie produite par `spk::Voxel::Mesher::bake(Volume)`. Il contient un mesh opaque, un mesh translucide, un mesh de profondeur et les slots de matériaux nécessaires, avec leurs opacités. **Le Model ne contient ni palette ni transformation.** Les copies de Model partagent ses meshes via une donnée immuable.
 
-Les opérations couvrent ajout, accès, transformation locale, changement de parent et retrait de parties, avec **refus des cycles**. L'insertion d'une autre Assembly est une **copie instantanée et une expansion de ses Parts dans cette unique hiérarchie** : aucune Part de type sous-Assembly, référence vivante, hiérarchie secondaire, Entity enfant ou propriété de l'Assembly d'origine n'est créée. La forme exacte des identifiants et des signatures reste une question technique d'API, non un choix d'une seconde hiérarchie.
+`spk::Voxel::View` est l'unique objet voxel porteur d'une apparence et d'une hiérarchie animable. Elle remplace l'ancien concept `Model::View` et l'ancien `Voxel::Assembly`. Une View avec une seule Part et un seul Model n'est pas un type spécial : c'est exactement la même classe que pour un personnage composé.
 
-```mermaid
-flowchart TD
-  Root["Assembly : personnage"] --> Torso["Part : torso / Model (palette liée)"]
-  Torso --> Arm["Part : arm / Model (palette liée)"]
-  Arm --> Hand["Point d'attache : hand"]
-  Hand --> Mount["Part d'ancrage : epee (copie)"]
-  Mount --> Blade["Part importee : lame"]
-  Mount --> Guard["Part importee : garde"]
-  Mount --> Grip["Part importee : poignee"]
-  Torso --> Head["Part : head / Model (palette liée)"]
-```
+### 6.2 Parts et animation
 
-L'Assembly possède une **palette commune**, accessible par `assembly.palette()`. Chaque Part conserve un `Model` copié légèrement, mais tous ces Models sont **liés à la même `spk::Palette` fusionnée**. Par défaut, un Model fourni à `addPart` ou `setModel` doit déjà avoir une palette liée par `Model::bind()` ; l'Assembly fusionne les entrées fournies, puis rebind tous ses Models sur le résultat. Une fois une palette explicitement liée avec `Assembly::bind(spk::Palette)`, cette palette devient la seule autorité d'apparence et de nouveaux Models peuvent être ajoutés sans palette individuelle s'ils sont compatibles. Les meshes restent partagés, sans rebake.
+Une `View::Part` contient un `PartID` monotone, un nom, un parent facultatif, une transformation locale `spk::Matrix4x4` et **`std::vector<Model> models`**. Une Part peut porter zéro Model (point d'attache), un ou plusieurs Models. Les Models d'une même Part partagent sa pose. `View::part(id)` retourne seulement `const Part&` ; aucune modification directe de Models ou de palettes n'est possible.
 
-Les transformations locales sont indépendantes de `spk::Transform3D`, qui est déjà un Component3D. Une copie d'Assembly est **autonome pour sa hiérarchie et ses transformations**, tout en réutilisant les données immuables des Models et Palettes. L'Assembly copié démarre avec son **propre VersionedTrait, à version 1**, et non une copie des abonnés ou du compteur de version source. Les évolutions générales de `VersionedTrait` doivent rester compatibles avec cette propriété.
+Les modifications passent par `addPart(name,parent,models,transform)`, `addModel(id,model)`, `setModel(id,index,model)`, `removeModel(id,index)`, `setName`, `setLocalTransform`, `setParent` et `removePart`. La hiérarchie peut avoir plusieurs racines ; les cycles sont refusés. La suppression d'une Part retire également ses descendants. `roots()`, `children()`, `partIDs()` et `accumulatedTransform()` sont les accès de lecture.
 
-**Q-ARCH-004 — Composition validée : insertion par copie et expansion.** Une insertion d'Assembly dans une autre est **une opération structurelle ponctuelle** de l'Assembly destination. Elle lit la hiérarchie et les poses de l'Assembly source à cet instant, puis crée **de nouvelles Parts directement dans l'arbre de la destination**. Les noms, poses locales, liens parent-enfant, Models et leurs contributions à la palette fusionnée sont recopiés par valeur ; les valeurs immuables des Models et Palettes continuent à partager leurs blocs internes. L'Assembly source n'est ni déplacée, ni possédée, ni liée à la destination : une modification ou destruction ultérieure de la source n'a **aucun effet** sur la copie déjà insérée, et réciproquement. Une Assembly copiée normalement (constructeur de copie) conserve son contrat indépendant, sa version initiale 1 et ses propres Parts.
+### 6.3 Palette unique
 
+`View::palette()` retourne `nullptr` si aucune palette n'a été liée. `View::bind(spk::Palette)` vérifie le contrat de palette voxel : chaque Material possède un albedo valide et tous les albedos partagent un atlas unique. Elle vérifie ensuite la présence de tous les slots requis par **tous les Models** de toutes les Parts, y compris les slots occultés. En cas d'incomplétude, `spk::Exception` décrit les noms manquants et la liaison précédente reste intacte.
 
-**Fusion des palettes (PR-08, révision).** La méthode `Assembly::palette() const` expose une unique `spk::Palette` fusionnée, immuable. Lors d'un `addPart`, `setModel`, `removePart` ou `insertAssembly`, la fusion est recalculée à partir des palettes **à l'entrée des Models** conservées en interne comme provenance par Part. La provenance ne sert pas de seconde palette active : les `Model` stockés sont tous rebondis sur **la même instance immuable de palette fusionnée**. Supprimer une Part retire sa contribution et les slots inutilisés ; un Model sans palette liée est refusé. Les Parts sans Model et les Assemblies vides sont acceptées, et leur palette fusionnée est vide.
+Une View sans palette est **constructible mais pas prête pour le rendu**. On peut y ajouter librement des Models. Une fois la palette liée, l'ajout ou le remplacement de Models et l'insertion d'une autre View exigent que chaque Model soit compatible avec cette palette. Les opérations incompatibles échouent sans modifier la View. Supprimer une Part ou un Model ne modifie jamais la palette. **Aucune fusion automatique de palettes n'existe.** Une View ne possède qu'une seule palette et aucune Part n'en possède.
 
-La fusion exige l'unicité des noms de slot et un **atlas albedo unique** conformément à `spk::Voxel::Palette::Builder`. Un slot homonyme est réutilisé s'il désigne un `Material` identique (mêmes rôles, identités de textures et sections UV) ; sinon, `spk::Exception` est levée. Les noms distincts mais associés à des atlas albedo différents sont également refusés. Il n'y a **aucune fusion physique de textures**, aucune création d'atlas, aucune modification de géométrie ni remappage d'UV. Toute préparation de nouvelle palette et rebind s'effectue dans une copie provisoire, ensuite publiée atomiquement en cas de succès. Les PartID et la version restent inchangés sur échec ; toute invalidation visuelle reste explicite.
-
-**Autorité de palette et animation (PR-08).** La palette de chaque `Model` situé **dans** l'Assembly n'est pas une propriété modifiable individuellement : `part(id)` ne fournit qu'une `const Part&`, et son `std::optional<Model>` est donc également en lecture seule. Le changement d'apparence passe exclusivement par `Assembly::bind(spk::Palette)`, avec un contrôle de compatibilité sur **tous** les Models. Aucun `Model::bind()` interne n'est directement accessible au développeur. `setModel(id, model)` remplace le Model entier d'une Part comme opération structurelle, mais ne permet pas de personnaliser sa palette séparément. Les opérations d'animation ne modifient que les transformations des Parts ; elles ne modifient ni les meshes ni les matériaux.
-
-**Comportement après liaison explicite.** Une fois `assembly.bind(palette)` appelé, cette palette reste en vigueur après `addPart`, `setModel`, `removePart` et `insertAssembly` : les Models entrants sont liés à cette même palette, indépendamment de leur éventuelle palette originale. Un Model sans palette liée peut alors être ajouté si ses slots sont couverts. Toute opération qui introduit un Model aux slots absents est refusée atomiquement, plutôt que de modifier silencieusement la palette choisie. Le modèle initial de fusion automatique, basé sur les palettes des Models entrants, n'est conservé que **tant qu'aucune palette n'a été explicitement liée à l'Assembly**. Un appel explicite ne change pas la version : `invalidate()` reste sous le contrôle du jeu.
-
-**Exemple de changement d'apparence global :**
+### 6.4 Exemples
 
 ```cpp
-spk::Voxel::Assembly character;
+spk::Voxel::Mesher mesher;
+spk::Voxel::Model swordModel = mesher.bake(swordVolume);
+spk::Voxel::View sword(swordModel, swordPalette); // Une Part, un Model.
+
+spk::Voxel::View character;
+auto torso = character.addPart("torso", {}, {torsoModel, armorModel});
+auto arm = character.addPart("arm", torso, {armModel, shoulderArmorModel});
+auto hand = character.addPart("hand", arm); // Point d'attache vide.
 character.bind(characterPalette);
-const auto torso = character.addPart("torso", {}, torsoModel);
-const auto arm = character.addPart("arm", torso, armModel);
-character.setLocalTransform(arm, spk::Matrix4x4::rotation(0, 0, 45));
-character.bind(alternateCharacterPalette); // Rebind simultané de tous les Models.
+
+character.setLocalTransform(arm, armRotation);
+auto result = character.insertView(hand, sword, insertionTransform);
 character.invalidate();
 ```
 
-Les deux palettes sont des `spk::Palette` validées pour les voxels, possédant tous les slots nécessaires aux Models ; les Parts n'exposent aucune méthode pour changer leur palette.
-**Point d'ancrage et racines.** L'opération reçoit un **parent de destination** (ou la racine logique de destination, sans parent), une **matrice locale d'insertion** et la source. Elle crée dans la destination **une Part d'ancrage ordinaire sans Model**, portant cette matrice et rattachée au parent choisi. Chaque Part racine de l'Assembly source est recopiée comme enfant direct de cet ancrage, avec sa transform locale **inchangée** ; les descendants retrouvent le même parentage relatif après remappage des identifiants. L'ancrage est une Part normale pouvant être animée, déplacée, reparentée ou retirée : il n'ajoute aucun type spécial ni moteur hiérarchique supplémentaire. Cette règle fonctionne pour une source comportant plusieurs racines ou aucune Part (un ancrage vide reste un point d'attache valide). La matrice globale éventuellement fournie par le jeu pour afficher l'Assembly source **n'est pas incorporée implicitement** à l'insertion : le développeur choisit la matrice locale d'ancrage.
+L'insertion ci-dessus n'utilise **que la palette de `character`**, jamais celle de `sword`, qui reste autonome. Tous les Models de la Part `arm` utilisent la même matrice cumulée.
 
-**Identifiants et contrat de résultat.** Chaque Part nouvellement insérée, **ancrage inclus**, reçoit un **nouvel identifiant stable et unique dans la destination** ; les identifiants de la source ne sont jamais utilisés directement comme identifiants des nouvelles Parts. L'opération retourne **l'identifiant de l'ancrage** et une **correspondance source `PartID` vers nouvelle `PartID`** pour que le jeu puisse animer les copies obtenues. Les identifiants de Parts déjà présentes dans la destination ne changent pas. Les IDs supprimés ne sont pas réattribués pendant la durée de vie de cette Assembly ; épuisement ou débordement de l'espace d'IDs déclenche `spk::Exception`. Les noms de Parts peuvent être identiques : seul le `PartID` sert à établir l'identité et les liens parentaux. L'ordre de parcours de la source pour créer les nouvelles Parts doit être **déterministe** (parents avant enfants et ordre de frères conservé). La forme C++ de ce résultat et des paramètres reste indicative ; le contrat sur les identifiants, leurs remappages et leur ordre est normatif.
+### 6.5 Insertion par copie et expansion
 
-**Opération atomique et contrôle des erreurs.** La destination valide son parent, l'intégrité de l'arbre source, les matrices locales et la disponibilité d'assez d'identifiants **avant tout changement visible**. Les nouvelles Parts et la correspondance d'identifiants sont préparées dans un état provisoire, puis insérées **en une seule transaction logique** : une erreur de validation ou de préparation ne modifie ni l'arbre, ni l'ordre des Parts, ni les IDs réservables, ni la version de la destination. Un parent inconnu, une matrice invalide, une source invalide ou une tentative d'insérer **l'Assembly destination elle-même comme source** est refusé par `spk::Exception` explicite. Cette dernière interdiction évite un comportement ambigu d'auto-expansion ; elle ne requiert aucun détecteur de cycles entre Assemblies puisque aucune référence inter-Assembly n'est conservée.
+`insertView(parent, source, attachmentTransform, anchorName)` crée une Part d'ancrage sans Model sous le parent de destination. Toutes les racines de la View source sont recopiées sous cet ancrage ; le parcours est déterministe, parents avant enfants. Chaque Part importée reçoit un PartID neuf. Le résultat `{anchor, partIDs}` fournit l'ancrage et la correspondance de tous les PartIDs source vers destination.
 
-**Reparentage et retrait.** Après insertion, les Parts importées et leur ancrage se comportent **exactement comme toute autre Part de la destination**. Changer un parent doit refuser d'attacher une Part à elle-même ou à l'un de ses descendants, sans mutation partielle. Une demande de retrait d'une Part **retire explicitement tout son sous-arbre** : retirer l'ancrage supprime donc l'intégralité de l'importation, sans restaurer ni modifier l'Assembly source et sans réaffecter les identifiants des Parts restantes. Une modification de l'arbre de la destination n'a jamais d'effet rétroactif sur un snapshot visuel ou une collection de `ShadowMap::MeshInstance` déjà capturés.
+L'insertion copie les Models et matrices, **pas la palette source**. Elle refuse l'auto-insertion, les parents inconnus, les transforms non finis, les cycles ou hiérarchies sources invalides, les IDs épuisés et les Models incompatibles avec une palette déjà liée à la destination. La destination prépare un nouvel arbre, puis le publie atomiquement en cas de succès. Une View source vide produit seulement l'ancrage ; plusieurs racines restent prises en charge. Les Parts importées ne sont jamais liées vivantes à la View source.
 
-**Compositions matricielles.** La pose monde d'un Model importé reste celle de la **seule hiérarchie de destination** :
-`M_world = M_entityWorld * M_assemblyDest * M_ancestorsDest * M_insertionAnchor * M_sourceRoot * ... * M_sourcePart`.
-Les matrices `M_sourceRoot ...` sont les matrices **locales recopiées** depuis la source ; `M_assemblyDest` est l'unique matrice commune relative à l'Entity. Il n'existe **aucune deuxième application de la pose d'Assembly source**, d'`EntityWorld` ou de la matrice d'ancrage. Le dessin visible parcourt cette hiérarchie développée et calcule les matrices cumulées à chaque nouvelle capture de RenderSnapshot, selon le contrat du chapitre 07. Les Parts sans Model apportent seulement leur transformation à leurs descendants.
+### 6.6 Versions, ombres et composants de rendu
 
-**Animation, invalidation et ombres.** Le jeu peut animer les Parts copiées **indépendamment** de leur source. L'opération ne crée ni `ShadowMap::Contributor` ni `ShadowMode`, et ne transmet pas d'invalidation d'ombres automatiquement ; le jeu prépare explicitement les `MeshInstance` de toutes les Parts voulues, importées incluses, dans le repère de la **destination**, puis appelle `bind(collection, assemblyMatrixDest)`. Lors d'une modification de pose ou structure, le jeu conserve la responsabilité établie d'appeler `Assembly::invalidate()` pour le chemin visuel et de renouveler le `bind()` s'il veut mettre à jour la projection d'ombres. Il n'existe pas de propagation depuis l'Assembly source ni de `bind()` implicite. Tout `RenderSnapshot` déjà construit conserve les anciennes poses et les handles immuables de ses ressources.
+La copie et l'affectation d'une View reconstruisent un `VersionedTrait` indépendant en version 1, sans abonnements copiés. Les mutations ordinaires et les changements de palette n'appellent **pas** automatiquement `invalidate()` ; le jeu le déclenche lorsque nécessaire. Les anciennes captures restent indépendantes.
 
-**Exemple conceptuel (signatures non figées) :**
+Pour chaque occurrence de Model d'une Part, le rendu calcule `M_world = M_entityWorld * M_view * M_parent1 * ... * M_part`. Aucun transform de View source n'est appliqué deux fois à une copie insérée. Les ombres s'appuient sur les meshes de profondeur existants et une capture explicite de leurs matrices ; aucun Contributor ou ShadowMode implicite.
 
-```cpp
-// Personnage et épée sont deux Assembly sans propriété commune.
-auto result = personnage.insertAssembly(mainPartID, epee, M_insertion);
-PartID lameDansPersonnage = result.partIDs.at(lameDansEpee);
-personnage.setLocalTransform(lameDansPersonnage, nouvellePose);
-// L'épée originale n'est pas modifiée.
-personnage.invalidate(); // Demande explicite de changement visuel.
-// Si des ombres sont voulues, le jeu reconstruit puis rebind ses MeshInstance.
-```
+Le futur `ViewRenderingComponent` emprunte une `spk::Voxel::View`, sans la posséder. Il remplace les deux concepts de composants `ModelRenderingComponent` et `AssemblyRenderingComponent`. Les layers sont gérés par le composant graphique suivant les conventions existantes. Le système de rendu capture les Models, transformations et la palette avant tout dessin GPU.
 
-```mermaid
-sequenceDiagram
-  participant J as Jeu
-  participant S as Assembly source
-  participant D as Assembly destination
-  participant V as VoxelRenderingSystem
-  participant C as ShadowMap Contributor
-  J->>D: insertAssembly(parentID, source, M_insertion)
-  D->>S: lire la hierarchie et les transforms source
-  D->>D: valider, creer ancrage, remapper tous les PartID
-  D->>D: commit atomique des Parts developpees
-  D-->>J: ancrage et correspondance PartID
-  J->>D: animer une Part importee
-  J->>D: invalidate() explicite
-  J->>C: bind(instances, M_assemblyDest) si ombres voulues
-  J->>V: demander nouvelle capture
-  V->>D: lire poses cumulees dans une seule hierarchie
-  D-->>V: Models, palette commune et matrices figees
-  Note over S,V: Les mutations ulterieures de la source sont independantes
-```
+### 6.7 Indices de matériaux entre Models
 
-L'animation demeure **externe** à la bibliothèque voxel : un système de jeu peut modifier les transforms des parties, puis appeler `invalidate()` sur l'Assembly. Le rendu ne s'appuie toutefois sur **aucun cache de version** pour ses occurrences : il recalcule les transformations visibles à chaque RenderSnapshot.
+`Model::materialSlots()` représente une table locale au Model, triée lexicographiquement. Les `materialIndex` des sommets des meshes opaque et translucide réutilisent **la même table locale**. Les Models distincts peuvent donc utiliser un même index pour des noms différents.
 
-**Adaptation des Assemblies aux ombres (A1, clos, complément matrice commune).** Aucun `ShadowMap::Contributor` n'est créé par `Assembly` ou par son composant de rendu. Le jeu construit explicitement une collection de `ShadowMap::MeshInstance`, avec pour chaque Part éligible son mesh de profondeur immuable et la matrice **locale cumulée par rapport au repère de l'Assembly** (composition des ancêtres de la Part, sans y incorporer une seconde fois la pose de l'Assembly). Il soumet **`bind(collection, assemblyMatrix)`**, où `assemblyMatrix` est la transformation de l'Assembly **destination** (pour une insertion, après expansion des Parts) **dans le repère de l'Entity3D** porteuse du Contributor. Cette matrice commune s'applique à toutes les instances, puis chaque matrice locale de Part ; pour les positions, `M_world = M_entityWorld * M_assembly * M_partAccumulated`. Toute évolution de la pose des Parts **ou de la matrice commune d'Assembly** demande un nouveau `bind(collection, assemblyMatrix)` ; `Assembly::invalidate()` ne notifie pas automatiquement les ombres. Les matrices changent sans rebake de Model ni fusion de meshes. Une évolution de `Transform3D` de l'Entity est indépendante et ne demande pas de nouveau bind. Le jeu doit choisir un repère cohérent : **ne jamais fournir une matrice monde d'Assembly déjà multipliée par `M_entityWorld`**, sinon le déplacement de l'Entity serait appliqué deux fois.
+`View::materialIndices(partID, modelIndex)` résout cette table locale vers les indices de la palette commune (ordre déterministe de `spk::Palette::Materials`, lexicographique par nom). Elle nécessite une palette liée et renvoie un `std::vector<uint32_t>` : `remap[materialIndex]` fournit l'index de Material commun à la View. L'indice local porté par le sommet n'est jamais réécrit. La table sera fournie au futur pipeline GPU, par Model ou par bucket, sans rebake ni modification de géométrie. Une nouvelle palette peut modifier cette correspondance ; elle est alors recalculée pour la capture suivante.
 
-### Exemple C++ — personnage articulé et épée importée (API PR-08)
-
-Les Models reçus sont issus du mesher. Chaque Model lie sa propre palette avant son association à une Part ; les copies de Model continuent à partager les meshes immuables.
-
-```cpp
-#include "voxel/assembly.hpp"
-#include "voxel/palette.hpp"
-
-void composeCharacter(
-    spk::Voxel::Model torsoModel,
-    spk::Voxel::Model armModel,
-    spk::Voxel::Model bladeModel,
-    const spk::Palette &skinPalette,
-    const spk::Palette &metalPalette)
-{
-    torsoModel.bind(skinPalette);
-    armModel.bind(skinPalette);
-    bladeModel.bind(metalPalette); // Atlas albedo identique à skinPalette.
-
-    spk::Voxel::Assembly sword;
-    const auto blade = sword.addPart("blade", {}, bladeModel);
-    (void)sword.addPart("guard", blade);
-
-    spk::Voxel::Assembly character;
-    const auto torso = character.addPart("torso", {}, torsoModel);
-    const auto arm = character.addPart("rightArm", torso, armModel);
-    const auto hand = character.addPart(
-        "rightHand", arm, {}, spk::Matrix4x4::translation(1, 0, 0));
-
-    character.setLocalTransform(arm, spk::Matrix4x4::rotation(0, 0, 45));
-    const auto inserted = character.insertAssembly(
-        hand, sword, spk::Matrix4x4::translation(0, 0, 1), "swordMount");
-    const auto copiedBlade = inserted.partIDs.at(blade);
-    character.setLocalTransform(
-        copiedBlade, spk::Matrix4x4::scale(1, 1, 1.5f));
-
-    const spk::Palette &commonPalette = character.palette();
-    const auto bladePose = character.accumulatedTransform(copiedBlade);
-    const auto childIDs = character.children(inserted.anchor);
-    (void)commonPalette;
-    (void)bladePose;
-    (void)childIDs;
-    character.invalidate();
-}
-```
-
-`part(id)` renvoie une **référence const** : identifiants et parentage ne peuvent être modifiés directement. `setParent(id, parent)` conserve la transformation locale ; `removePart(id)` supprime le sous-arbre. `roots()`, `children(id)` et `partIDs()` fournissent des identifiants à parcourir ; `partIDs()` est ordonné en profondeur, parents avant enfants, avec frères dans l'ordre de création (identifiants croissants). `accumulatedTransform(id)` rend `M_root * ... * M_local`, sans transformation d'Entity.
-
-`insertAssembly(parent, source, transform, anchorName)` renvoie un `InsertResult {anchor, partIDs}` et garantit une transaction atomique, **fusion de palette comprise**. Un parent `std::nullopt` crée une racine. Une source vide crée uniquement l'ancrage. Les Parts stockent `std::optional<spk::Voxel::Model>` ; chaque Model est rebondi sur la palette commune de l’Assembly.
-
-Le constructeur et l'affectation par copie de l'Assembly recréent un état `VersionedTrait` indépendant à version 1, sans transfert des abonnements. Lors d'une affectation, les abonnements précédemment attachés à la destination sont résiliés. Les modifications ordinaires de Parts n'invalident pas automatiquement la version ; l'appel à `invalidate()` reste explicite.
-### 6.2 `ModelRenderingComponent` et `AssemblyRenderingComponent`
-
-Les deux composants sont des **composants de données** liés à une Entity3D et exposés au système de rendu par les mécanismes de Registry du moteur. Ils ne génèrent jamais eux-mêmes de `RenderCommand`.
-
-- `ModelRenderingComponent` emprunte un `Model` portant sa palette liée, sans transférer sa propriété ;
-- `AssemblyRenderingComponent` emprunte une `Assembly`, sans la posséder. **Les layers individuels utilisés par le filtrage de `VoxelRenderingSystem` sont portés par ce composant graphique**, et non par l'Entity3D propriétaire ; l'API concrète des layers reprend le contrat générique des Contributors graphiques et du helper `CaptureContext::isLayerCompatible(...)`.
-
-Leurs méthodes de liaison (`bind` / `unbind`, signatures à finaliser) utilisent des **pointeurs non propriétaires**, conformément aux usages Sparkle. Le programme doit conserver les objets liés en vie jusqu'à leur détachement et pendant tout accès nécessaire à la préparation d'un snapshot. Une liaison à cible unique n'est pas implicitement remplacée.
-
-Les composants actifs sont trouvés **par Engine**, au moyen de `spk::Registry<T, Engine*>` ou de l'inscription typée réellement disponible. L'héritage Registry des composants spécialisés est à adapter à l'API existante et ne doit pas être inventé indépendamment de sa construction/contexte.
+L'opacité par slot demeure dans `Definition::Slot {name, opacity}` : un simple `vector<string>` la ferait disparaître, alors qu'elle sert à la classification opaque/translucide et au facteur `alphaTexture × slotOpacity`.

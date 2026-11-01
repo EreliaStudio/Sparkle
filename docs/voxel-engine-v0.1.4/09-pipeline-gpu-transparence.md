@@ -266,3 +266,5 @@ sequenceDiagram
 L'éclairage Forward classique avec sélection Top-N globale par vue, les ombres génériques et WBOIT font partie du pipeline V0.1.4. Les deux passes visuelles consomment la même sélection de lumières du Channel. `ShadowMap::RenderingSystem` produit et publie les cartes complètes, et `Lighting::System` les acquiert à l'exécution sur la surface appropriée.
 
 L'infrastructure 3D non voxel peut conserver ses mécanismes existants, y compris ses usages spécifiques du cutout ; ce document ne change pas son contrat général.
+
+**Révision PR-08 :** `Voxel::View` unifie le rendu d'un Model seul et d'une hiérarchie à Parts multi-Models. La capture doit fournir le remappage des `materialIndex` locaux par Model, vers la palette View partagée ; le remapping n'est pas intégré aux vertices immuables.
