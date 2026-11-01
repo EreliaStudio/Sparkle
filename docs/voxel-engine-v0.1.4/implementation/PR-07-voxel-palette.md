@@ -1,4 +1,4 @@
-# PR-07 — Palette générique, Voxel::Palette et compatibilité des Models
+# PR-07 — Palette générique et validateur voxel, compatibilité des Models
 
 > **PR GitHub Draft #48** : implémentation sur `impl/v0.1.4/07-voxel-palette`, cible `V0.1.4` ; ne pas fusionner sans validation.
 >
@@ -19,9 +19,9 @@
 ## Périmètre exact à réaliser
 
 - [x] `spk::Palette` immuable : collection générique de Materials nommés.
-- [x] `spk::Voxel::Palette` : wrapper immuable, Builder **sans Model**, ou depuis une palette voxel existante.
+- [x] `spk::Palette` : unique valeur de palette, Builder générique avec validateur optionnel ; `spk::Voxel::PaletteBuilder` fournit les règles voxel.
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
-- [x] `Model::isCompatible(const Voxel::Palette &)` vérifie les slots ; `Voxel::Palette::Builder::build()` impose un atlas `albedo` unique dans toute la palette.
+- [x] `Model::isCompatible(const spk::Palette &)` vérifie les slots ; `spk::Voxel::PaletteBuilder::build()` impose un atlas `albedo` unique dans toute la palette.
 
 ## Instructions techniques et intégration
 
@@ -31,7 +31,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Révision architecturale validée pendant la PR
 
-La palette générique n'impose aucun rôle de texture. Seule la palette voxel exige `albedo` pour **chaque Material ajouté**, lors de `setMaterial()` ; son `build()` n'impose aucune complétude. Le contrôle global d'atlas appartient à `Voxel::Palette::Builder::build()` ; la complétude appartient exclusivement à `Model::isCompatible(palette)` ; la classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
+La palette générique sans validateur n'impose aucun rôle de texture. Le validateur installé par `spk::Voxel::PaletteBuilder` exige `albedo` pour chaque Material ajouté ; `build()` n'impose aucune complétude. Le contrôle global d'atlas appartient à `spk::Voxel::PaletteBuilder::build()` ; la complétude appartient exclusivement à `Model::isCompatible(palette)` ; la classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
 
 ## Tests obligatoires
 
