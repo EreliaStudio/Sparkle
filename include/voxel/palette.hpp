@@ -2,13 +2,13 @@
 
 #include <optional>
 #include <string>
-#include <string_view>
+#include <utility>
 
 #include "graphics/palette.hpp"
 
 namespace spk::Voxel
 {
-	class Palette final
+	class Palette final : public spk::Palette
 	{
 	public:
 		class Builder final : public spk::Palette::Builder
@@ -25,14 +25,9 @@ namespace spk::Voxel
 		};
 
 	private:
-		spk::Palette _materials;
-
-		explicit Palette(spk::Palette materials);
+		explicit Palette(spk::Palette palette);
 
 	public:
 		Palette() = default;
-
-		[[nodiscard]] const spk::Palette &materials() const noexcept;
-		[[nodiscard]] const spk::Material *find(std::string_view name) const noexcept;
 	};
 }
