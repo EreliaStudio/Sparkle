@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "asset/graphics_factories.hpp"
 #include "asset/manager.hpp"
 #include "container/json/object.hpp"
 #include "exception.hpp"
