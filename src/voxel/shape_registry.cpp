@@ -63,12 +63,10 @@ namespace spk::Voxel
 
 	Shape::Registry::Builder::ID Shape::Registry::Builder::_parseKey(const spk::JSON::Reader &reader) const
 	{
-		const auto id = reader.require<std::string>("id");
-		if (id.empty())
-		{
-			throw spk::Exception("Voxel Shape Registry requires a nonempty ID");
-		}
-		return id;
+		return reader.require<std::string>(
+			"id",
+			[](const std::string &id) { return !id.empty(); },
+			"Voxel Shape Registry requires a nonempty ID");
 	}
 
 	Shape Shape::Registry::Builder::_parseElement(const spk::JSON::Reader &reader) const
