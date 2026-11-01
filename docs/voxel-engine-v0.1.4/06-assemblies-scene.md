@@ -6,13 +6,13 @@
 
 ### 6.1 `spk::Voxel::Assembly`
 
-Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **avec sa propre association à une `spk::Palette`**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.
+Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **contenant sa propre liaison à une `spk::Palette`**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.
 
 Les opérations couvrent ajout, accès, transformation locale, changement de parent et retrait de parties, avec **refus des cycles**. L'insertion d'une autre Assembly est une **copie instantanée et une expansion de ses Parts dans cette unique hiérarchie** : aucune Part de type sous-Assembly, référence vivante, hiérarchie secondaire, Entity enfant ou propriété de l'Assembly d'origine n'est créée. La forme exacte des identifiants et des signatures reste une question technique d'API, non un choix d'une seconde hiérarchie.
 
 ```mermaid
 flowchart TD
-  Root["Assembly : personnage"] --> Torso["Part : torso / Model + Palette"]
+  Root["Assembly : personnage"] --> Torso["Part : torso / Model (palette liée)"]
   Torso --> Arm["Part : arm / Model + Palette"]
   Arm --> Hand["Point d'attache : hand"]
   Hand --> Mount["Part d'ancrage : epee (copie)"]
@@ -21,6 +21,8 @@ flowchart TD
   Mount --> Grip["Part importee : poignee"]
   Torso --> Head["Part : head / Model + Palette"]
 ```
+
+Chaque Part peut conserver une copie du Model pour pouvoir choisir une palette différente tout en partageant les meshes, sans référence supplémentaire à une palette externe. Les signatures exactes des composants et des Parts relèvent de la PR-08.
 
 Les transformations locales sont indépendantes de `spk::Transform3D`, qui est déjà un Component3D. Une copie d'Assembly est **autonome pour sa hiérarchie et ses transformations**, tout en réutilisant les données immuables des Models et Palettes. L'Assembly copié démarre avec son **propre VersionedTrait, à version 1**, et non une copie des abonnés ou du compteur de version source. Les évolutions générales de `VersionedTrait` doivent rester compatibles avec cette propriété.
 
@@ -81,7 +83,7 @@ L'animation demeure **externe** à la bibliothèque voxel : un système de jeu p
 
 Les deux composants sont des **composants de données** liés à une Entity3D et exposés au système de rendu par les mécanismes de Registry du moteur. Ils ne génèrent jamais eux-mêmes de `RenderCommand`.
 
-- `ModelRenderingComponent` emprunte un `Model` et une `spk::Palette` compatibles, sans transférer leur propriété ;
+- `ModelRenderingComponent` emprunte un `Model` portant sa palette liée, sans transférer sa propriété ;
 - `AssemblyRenderingComponent` emprunte une `Assembly`, sans la posséder. **Les layers individuels utilisés par le filtrage de `VoxelRenderingSystem` sont portés par ce composant graphique**, et non par l'Entity3D propriétaire ; l'API concrète des layers reprend le contrat générique des Contributors graphiques et du helper `CaptureContext::isLayerCompatible(...)`.
 
 Leurs méthodes de liaison (`bind` / `unbind`, signatures à finaliser) utilisent des **pointeurs non propriétaires**, conformément aux usages Sparkle. Le programme doit conserver les objets liés en vie jusqu'à leur détachement et pendant tout accès nécessaire à la préparation d'un snapshot. Une liaison à cible unique n'est pas implicitement remplacée.
