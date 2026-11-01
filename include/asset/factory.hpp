@@ -1,9 +1,9 @@
 #pragma once
 
-namespace spk::asset
+namespace spk
 {
-	class Manager;
+	class Assets;
 
 	template <typename TType>
-	struct Factory;
+	struct AssetFactory;
 }

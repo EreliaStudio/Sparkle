@@ -88,7 +88,7 @@ namespace spk
 			(void)grid(reader.child("size"), false);
 		}
 
-		[[nodiscard]] ResolvedTexture resolveTexture(asset::Manager &assets, const Reader &description)
+		[[nodiscard]] ResolvedTexture resolveTexture(Assets &assets, const Reader &description)
 		{
 			description.forbidUnknown({"path", "size", "asset"});
 			const bool path = description.contains("path");
@@ -221,9 +221,9 @@ namespace spk
 	}
 }
 
-namespace spk::asset
+namespace spk
 {
-	spk::Texture Factory<spk::Texture>::create(Manager &, const std::string &id, const JSON::Value &config)
+	spk::Texture AssetFactory<spk::Texture>::create(Assets &, const std::string &id, const JSON::Value &config)
 	{
 		JSON::Reader reader(config, {}, "Texture.config");
 		reader.forbidUnknown({});
@@ -240,7 +240,7 @@ namespace spk::asset
 		}
 	}
 
-	spk::SpriteSheet Factory<spk::SpriteSheet>::create(Manager &, const std::string &id, const JSON::Value &config)
+	spk::SpriteSheet AssetFactory<spk::SpriteSheet>::create(Assets &, const std::string &id, const JSON::Value &config)
 	{
 		JSON::Reader reader(config, {}, "SpriteSheet.config");
 		reader.forbidUnknown({"size"});
@@ -258,7 +258,7 @@ namespace spk::asset
 		}
 	}
 
-	spk::Material Factory<spk::Material>::create(Manager &assets, const std::string &, const JSON::Value &config)
+	spk::Material AssetFactory<spk::Material>::create(Assets &assets, const std::string &, const JSON::Value &config)
 	{
 		spk::Material::Builder builder;
 		builder.bind(&assets);

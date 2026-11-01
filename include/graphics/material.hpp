@@ -56,23 +56,23 @@ namespace spk
 	};
 }
 
-namespace spk::asset
+namespace spk
 {
 	template <>
-	struct Factory<spk::Texture>
+	struct AssetFactory<spk::Texture>
 	{
-		[[nodiscard]] static spk::Texture create(Manager &assets, const std::string &id, const JSON::Value &config);
+		[[nodiscard]] static spk::Texture create(Assets &assets, const std::string &id, const JSON::Value &config);
 	};
 
 	template <>
-	struct Factory<spk::SpriteSheet>
+	struct AssetFactory<spk::SpriteSheet>
 	{
-		[[nodiscard]] static spk::SpriteSheet create(Manager &assets, const std::string &id, const JSON::Value &config);
+		[[nodiscard]] static spk::SpriteSheet create(Assets &assets, const std::string &id, const JSON::Value &config);
 	};
 
 	template <>
-	struct Factory<spk::Material>
+	struct AssetFactory<spk::Material>
 	{
-		[[nodiscard]] static spk::Material create(Manager &assets, const std::string &id, const JSON::Value &config);
+		[[nodiscard]] static spk::Material create(Assets &assets, const std::string &id, const JSON::Value &config);
 	};
 }

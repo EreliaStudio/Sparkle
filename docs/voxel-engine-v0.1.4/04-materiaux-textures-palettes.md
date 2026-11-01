@@ -40,7 +40,7 @@ classDiagram
 
 `spk::Material` est un **type générique Sparkle**, sans spécialisation `VoxelMaterial`. Il est construit via `Material::Builder`, puis devient **immuable**. Il peut associer zéro, une ou plusieurs textures à des **noms de rôles libres** (`albedo`, ou tout autre nom choisi par le programme). Seul le système voxel donne une signification au rôle `albedo`. Le Builder générique ne valide pas les conventions propres aux voxels.
 
-Chaque liaison à une texture conserve un **`spk::Texture::Handle`** obtenu depuis la `const spk::Texture&` fournie lors du binding, ainsi qu'une région UV normalisée (`Texture::Section`, exprimable en `anchor` et `size`). Le Material conserve le **handle de l'état exact choisi** et non un pointeur brut vers l'objet Texture, une copie complète de Texture ou un pointeur vers l'AssetManager.
+Chaque liaison à une texture conserve un **`spk::Texture::Handle`** obtenu depuis la `const spk::Texture&` fournie lors du binding, ainsi qu'une région UV normalisée (`Texture::Section`, exprimable en `anchor` et `size`). Le Material conserve le **handle de l'état exact choisi** et non un pointeur brut vers l'objet Texture, une copie complète de Texture ou un pointeur vers l'Assets.
 
 Un handle conserve l'état GPU partagé de la Texture après destruction du wrapper Texture initial. Il ne conserve toutefois **ni la grille du SpriteSheet, ni à lui seul son ensemble de résolutions**. Le Material final n'a pas besoin de la grille : la conversion d'un sprite en `Texture::Section` est réalisée **avant** sa construction.
 
@@ -131,10 +131,10 @@ Plusieurs Materials peuvent donc référencer le **même atlas** avec des rectan
 
 **Deux modes de source exclusifs dans `"Texture"`.**
 
-1. **Fichier (forme historique)** : `{ "path": "terrain.png" }` ou `{ "path": "terrain.png", "size": {"x":16,"y":16} }`. `path` est une chaîne non vide passée **telle quelle comme identifiant d'asset** à la factory par défaut concernée, laquelle interprète explicitement cet identifiant comme chemin ; l'AssetManager générique ne normalise pas les chemins. Sans `size`, résolution par `assets.load<spk::Texture>(path, JSON::Value::object())` ; avec `size`, résolution par `assets.load<spk::SpriteSheet>(path, { "size": ... })`. `size` est le **nombre de sprites dans chaque direction**, constitué de deux entiers strictement positifs, et non la résolution de l'image en pixels. Le `SpriteSheet` obtenu fournit sa texture et la conversion des cellules en `Texture::Section` ; aucun choix automatique de résolution n'intervient.
+1. **Fichier (forme historique)** : `{ "path": "terrain.png" }` ou `{ "path": "terrain.png", "size": {"x":16,"y":16} }`. `path` est une chaîne non vide passée **telle quelle comme identifiant d'asset** à la factory par défaut concernée, laquelle interprète explicitement cet identifiant comme chemin ; l'Assets générique ne normalise pas les chemins. Sans `size`, résolution par `assets.load<spk::Texture>(path, JSON::Value::object())` ; avec `size`, résolution par `assets.load<spk::SpriteSheet>(path, { "size": ... })`. `size` est le **nombre de sprites dans chaque direction**, constitué de deux entiers strictement positifs, et non la résolution de l'image en pixels. Le `SpriteSheet` obtenu fournit sa texture et la conversion des cellules en `Texture::Section` ; aucun choix automatique de résolution n'intervient.
 2. **Référence d'asset typée** : `{ "asset": { "type": "Texture", "id": "terrain.png", "config": {} } }` ou `{ "asset": { "type": "SpriteSheet", "id": "terrain.png", "config": { "size": {"x":16,"y":16} } } }`. Les seuls `type` admis dans ce schéma Material sont `"Texture"` et `"SpriteSheet"`, car les éléments à lier doivent produire une texture. `id` est une chaîne non vide, et `config` est un **objet JSON explicite facultatif**, l'omission valant **`JSON::Value::object()`**, jamais `Null`. La résolution est exactement `assets.load<T>(id, config)` avec le type `T` choisi. La factory statique propre à `T` reste libre d'interpréter ce triplet et de charger des dépendances : le Material n'invente ni registre dynamique, ni recherche de chemin pour un identifiant arbitraire. La forme `asset` **n'admet pas** le champ voisin `size` : toutes les options spécifiques à la factory, y compris la grille d'un SpriteSheet, appartiennent à `config`.
 
-Le mode fichier constitue seulement un raccourci **de résolution vers les mêmes chargements typés**. Il ne fusionne pas silencieusement des paramètres ni des configurations. `path` et `asset` ne doivent jamais coexister. Des identifiants, types ou JSON structurellement différents restent des clés de cache différentes selon le chapitre 05, même si des fichiers finissent par contenir les mêmes pixels. Un `Material` résolu conserve les **handles et UV** nécessaires, mais pas de pointeurs vers `AssetManager` ou `SpriteSheet`. La liaison `EngineView` relève **uniquement du Builder C++ explicite** et ne constitue jamais une source JSON ; aucune recherche de vue depuis `id`, `path` ou un champ `view` n'est permise.
+Le mode fichier constitue seulement un raccourci **de résolution vers les mêmes chargements typés**. Il ne fusionne pas silencieusement des paramètres ni des configurations. `path` et `asset` ne doivent jamais coexister. Des identifiants, types ou JSON structurellement différents restent des clés de cache différentes selon le chapitre 05, même si des fichiers finissent par contenir les mêmes pixels. Un `Material` résolu conserve les **handles et UV** nécessaires, mais pas de pointeurs vers `Assets` ou `SpriteSheet`. La liaison `EngineView` relève **uniquement du Builder C++ explicite** et ne constitue jamais une source JSON ; aucune recherche de vue depuis `id`, `path` ou un champ `view` n'est permise.
 
 **Région UV.** `"UV"` est **facultatif**, son absence signifie `Texture::Section::whole`. Lorsqu'il est présent, c'est un objet prenant **une seule** de ces formes :
 
@@ -145,7 +145,7 @@ Le mode fichier constitue seulement un raccourci **de résolution vers les même
 
 **Erreurs, doublons et atomicité.** Les objets JSON n'ont pas d'ordre sémantique. Le parseur existant `JSON::Value::fromString` / `loadFromFile` expose déjà `ParseOptions::rejectDuplicateKeys = true` par défaut : **ce mode est obligatoire** pour charger du texte de Material, afin de refuser les doublons de rôles et les doublons de champs à n'importe quel niveau. Un `JSON::Value` déjà construit est une map de clés uniques ; un doublon qui aurait été silencieusement éliminé par un parsing externe configuré permissif n'est **pas récupérable** après coup. Les constructions depuis `JSON::Value` valident les champs et les types présents, sans prétendre détecter un historique de doublons perdu. Toute erreur de schéma, type, clé, valeur, source non résolue ou coordonnée hors grille produit une `spk::Exception` descriptive avec **chemin logique précis** (par exemple `textures.albedo.Texture.size.x` ou `textures.normal.UV.sprite`), nom du rôle et cause de chargement lorsqu'elle existe. Un objet racine mal formé est rejeté avant publication, jamais corrigé par une valeur par défaut implicite autre que `UV` entier et `asset.config` objet vide.
 
-**Builder et équivalence sémantique.** Le `Material::Builder` offre une construction manuelle par rôle via une texture existante ou SpriteSheet, ainsi qu'une lecture du document JSON **avec un `AssetManager` explicitement lié**. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite, ou le code doit appeler une opération de remplacement nommée distinctement (signature finale à fixer sans changement de politique). La lecture du JSON prépare et valide **intégralement** les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé et un Builder réutilisé reste inchangé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'AssetManager.
+**Builder et équivalence sémantique.** Le `Material::Builder` offre une construction manuelle par rôle via une texture existante ou SpriteSheet, ainsi qu'une lecture du document JSON **avec un `Assets` explicitement lié**. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite, ou le code doit appeler une opération de remplacement nommée distinctement (signature finale à fixer sans changement de politique). La lecture du JSON prépare et valide **intégralement** les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé et un Builder réutilisé reste inchangé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'Assets.
 
 ```mermaid
 flowchart TD
@@ -154,7 +154,7 @@ flowchart TD
   Role --> Type{"Source ?"}
   Type -->|"path"| Path["Texture ou SpriteSheet selon size"]
   Type -->|"asset"| Asset["asset.type + id + config"]
-  Path --> Load["AssetManager : load T id config"]
+  Path --> Load["Assets : load T id config"]
   Asset --> Load
   Load --> Region{"UV ?"}
   Region -->|"sprite"| Sprite["SpriteSheet.sprite(coord)"]
@@ -166,9 +166,9 @@ flowchart TD
   Build --> Material["Material final : handles + UV, sans gestionnaire"]
 ```
 
-### 4.3 `Material::Builder` et l'AssetManager
+### 4.3 `Material::Builder` et l'Assets
 
-Le Builder peut fonctionner **sans AssetManager** lorsque le programme lui passe directement des Textures existantes. En revanche, un chargement JSON qui doit résoudre un chemin ou un asset requiert un AssetManager préalablement lié :
+Le Builder peut fonctionner **sans Assets** lorsque le programme lui passe directement des Textures existantes. En revanche, un chargement JSON qui doit résoudre un chemin ou un asset requiert un Assets préalablement lié :
 
 ```cpp
 spk::Material::Builder builder;
@@ -176,7 +176,7 @@ builder.bind(&assets);  // Liaison non propriétaire
 // Construction depuis un JSON de matériau.
 ```
 
-`void bind(spk::AssetManager*)` est la forme retenue. **`bind(nullptr)` provoque immédiatement une `spk::Exception`.** Une liaison à cible unique n'est pas implicitement remplacée sans détachement préalable, selon les conventions Sparkle. Le chargement de JSON se fait exclusivement avec ce gestionnaire explicitement lié : il résout `Texture.path` et les références `Texture.asset` par les factories statiques du type concerné, suivant la section 4.2.1. Le Material obtenu ne conserve aucune référence au gestionnaire. L'API de construction manuelle n'en a pas besoin dès lors que les Textures sont déjà résolues.
+`void bind(spk::Assets*)` est la forme retenue. **`bind(nullptr)` provoque immédiatement une `spk::Exception`.** Une liaison à cible unique n'est pas implicitement remplacée sans détachement préalable, selon les conventions Sparkle. Le chargement de JSON se fait exclusivement avec ce gestionnaire explicitement lié : il résout `Texture.path` et les références `Texture.asset` par les factories statiques du type concerné, suivant la section 4.2.1. Le Material obtenu ne conserve aucune référence au gestionnaire. L'API de construction manuelle n'en a pas besoin dès lors que les Textures sont déjà résolues.
 
 ### 4.4 `spk::VoxelPalette` : association des slots aux matériaux
 

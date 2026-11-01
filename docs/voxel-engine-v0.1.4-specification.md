@@ -14,7 +14,7 @@ Ce fichier est le **sommaire normatif** des dix fichiers thématiques de Sparkle
 | 2 | [Modèle de données voxel](voxel-engine-v0.1.4/02-modele-voxel.md) |
 | 3 | [Meshing, visibilité et occlusion](voxel-engine-v0.1.4/03-meshing-occlusion.md) |
 | 4 | [Matériaux, textures et palettes](voxel-engine-v0.1.4/04-materiaux-textures-palettes.md) |
-| 5 | [AssetManager générique](voxel-engine-v0.1.4/05-asset-manager.md) |
+| 5 | [Assets générique](voxel-engine-v0.1.4/05-asset-manager.md) |
 | 6 | [Assembly, composants et scène](voxel-engine-v0.1.4/06-assemblies-scene.md) |
 | 7.1–7.2 | [RenderingEngine, EngineView et passes](voxel-engine-v0.1.4/07-vues-et-passes.md) |
 | 7.3–7.4 | [Lumières et ombres](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) |

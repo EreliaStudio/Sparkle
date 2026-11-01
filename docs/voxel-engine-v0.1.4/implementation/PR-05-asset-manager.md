@@ -1,4 +1,4 @@
-# PR-05 — asset::Manager et asset::Factory typés
+# PR-05 — spk::Assets et spk::AssetFactory typés
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
@@ -17,8 +17,8 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] asset::Manager::load<T>
-- [ ] asset::Factory<T> statique
+- [ ] spk::Assets::load<T>
+- [ ] spk::AssetFactory<T> statique
 - [ ] clé type C++, id et JSON structurel
 - [ ] config omise = objet JSON vide
 - [ ] construction directe de T non déplaçable
