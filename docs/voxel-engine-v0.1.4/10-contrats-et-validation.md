@@ -8,7 +8,8 @@
 
 | Ressource | Propriétaire / représentation | Relation vers les utilisateurs |
 |---|---|---|
-| `Shape`, `Definition`, `Volume`, `Model` | Données immuables, copies légères et partage interne | Réutilisables indépendamment du Builder d'origine |
+| `Shape`, `Definition`, `Volume` | Données immuables, copies légères et partage interne | Réutilisables indépendamment du Builder d'origine |
+| `Voxel::Model` | Géométrie et slots immuables partagés ; liaison facultative d'une `spk::Palette` par copie de Model | `isCompatible()` vérifie les slots ; `bind()` refuse les manques sans altérer la liaison existante ni les meshes |
 | `Shape::Instance` | Huit variantes géométriques immuables possédées par le `Shape::Data` partagé | Accès const par `Shape::instance(orientation)` ; aucune liaison externe |
 | `OcclusionCache` | Propriété de l'application ; table protégée | Liaison facultative et non propriétaire au Mesher ; absence = calcul direct |
 | `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
@@ -105,6 +106,7 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Assets, Materials, Palettes et Assemblies**
 
+- Un Model sort du mesher sans palette. `Model::bind(spk::Palette)` doit accepter une palette compatible, la conserver par copie légère et refuser une palette incomplète même si le slot manquant est occulté. La copie d'un Model partage sa géométrie, mais son prochain `bind()` ne change pas la palette de la copie source. Une erreur ne retire ni ne remplace la palette déjà liée.
 - Une `spk::Palette` générique accepte les Materials sans `albedo` ; `spk::Voxel::Palette::Builder` exige `albedo` uniquement lors de l'ajout d'un Material. Ce Builder ne connaît aucun Model ni complétude ; son validateur compare les atlas à chaque ajout et son `build()` est le `build()` générique. Chaque `Model` vérifie via `isCompatible` seulement la présence de ses slots, y compris totalement occultés. Aucune palette n'enregistre l'opacité. Deux Models peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Model restent rejetés par le Mesher.
 
 - Deux `Asset::Manager::load<T>(id, config)` avec type, identifiant et JSON structurel identiques retournent la même référence, indépendamment de l'ordre textuel des clés JSON ; une configuration 16×16 et une 8×8 donnent deux assets distincts. L'absence de configuration équivaut à un **objet JSON vide**, et non à `Null`.
