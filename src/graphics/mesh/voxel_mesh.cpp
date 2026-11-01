@@ -1,33 +1,11 @@
 #include "voxel/model.hpp"
 
-#include <optional>
+#include <utility>
 
 #include "voxel/palette.hpp"
 
-#include <utility>
-
 namespace spk::Voxel
 {
-	namespace
-	{
-		[[nodiscard]] bool sameAlbedo(
-			std::optional<spk::GPUResource::Identifier> &atlas,
-			const spk::Material &material) noexcept
-		{
-			const auto *albedo = material.find("albedo");
-			if (albedo == nullptr || !albedo->texture.valid())
-			{
-				return false;
-			}
-			const auto identity = albedo->texture.identifier();
-			if (!atlas)
-			{
-				atlas = identity;
-			}
-			return *atlas == identity;
-		}
-	}
-
 	void Mesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
 	{
 		using Type = spk::VertexBuffer::Attribute::Type;
@@ -68,17 +46,9 @@ namespace spk::Voxel
 
 	bool Model::isCompatible(const Palette &palette) const noexcept
 	{
-		std::optional<spk::GPUResource::Identifier> opaqueAtlas;
-		std::optional<spk::GPUResource::Identifier> translucentAtlas;
 		for (const auto &slot : materialSlots())
 		{
-			const auto *entry = palette.find(slot.name);
-			if (entry == nullptr)
-			{
-				return false;
-			}
-			auto &atlas = slot.opacity == 1.0f ? opaqueAtlas : translucentAtlas;
-			if (!sameAlbedo(atlas, *entry))
+			if (palette.find(slot.name) == nullptr)
 			{
 				return false;
 			}
