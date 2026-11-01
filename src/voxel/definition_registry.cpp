@@ -80,7 +80,9 @@ namespace spk::Voxel
 	{
 		return reader.require<ID>(
 			"id",
-			[](ID id) { return id > 0 && id <= Volume::PackedCell::MaxDefinitionId; },
+			[](ID id) {
+				return id > 0 && id <= Volume::PackedCell::MaxDefinitionId;
+			},
 			"Voxel Definition Registry JSON ID must be nonzero and fit 29 bits");
 	}
 

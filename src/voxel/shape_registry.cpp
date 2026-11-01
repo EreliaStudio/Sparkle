@@ -65,7 +65,9 @@ namespace spk::Voxel
 	{
 		return reader.require<std::string>(
 			"id",
-			[](const std::string &id) { return !id.empty(); },
+			[](const std::string &id) {
+				return !id.empty();
+			},
 			"Voxel Shape Registry requires a nonempty ID");
 	}
 

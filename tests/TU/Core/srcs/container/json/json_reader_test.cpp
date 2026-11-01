@@ -340,7 +340,6 @@ TEST(JSONReaderTest, UnknownKeyIsRejected)
 	}
 }
 
-
 TEST(JSONReaderTest, RequirePredicateAcceptsValidScalarsAndCustomTypes)
 {
 	const spk::JSON::Value document = makeDocument();
@@ -348,7 +347,9 @@ TEST(JSONReaderTest, RequirePredicateAcceptsValidScalarsAndCustomTypes)
 
 	const std::string name = reader.require<std::string>(
 		"name",
-		[](const std::string &value) { return !value.empty(); },
+		[](const std::string &value) {
+			return !value.empty();
+		},
 		"must not be empty");
 	EXPECT_EQ(name, "Sparkle");
 
@@ -356,14 +357,18 @@ TEST(JSONReaderTest, RequirePredicateAcceptsValidScalarsAndCustomTypes)
 	EXPECT_EQ(
 		reader.require<int>(
 			"count",
-			[maximum](int value) { return value > 0 && value <= maximum; },
+			[maximum](int value) {
+				return value > 0 && value <= maximum;
+			},
 			"outside accepted range"),
 		4);
 
 	EXPECT_EQ(
 		reader.require<json_reader_test::FreePoint>(
 			"freePoint",
-			[](const auto &point) { return point.x > 0 && point.y > 0; },
+			[](const auto &point) {
+				return point.x > 0 && point.y > 0;
+			},
 			"coordinates must be positive"),
 		(json_reader_test::FreePoint{5, 6}));
 }
@@ -376,14 +381,18 @@ TEST(JSONReaderTest, RequirePredicateAcceptsSequencesAndFixedArrays)
 	EXPECT_EQ(
 		reader.require<std::vector<int>>(
 			"numbers",
-			[](const auto &numbers) { return numbers.size() == 3 && numbers.front() > 0; },
+			[](const auto &numbers) {
+				return numbers.size() == 3 && numbers.front() > 0;
+			},
 			"expected three positive integers"),
 		(std::vector<int>{1, 2, 3}));
 
 	EXPECT_EQ(
 		(reader.require<std::array<int, 2>>(
 			"fixed",
-			[](const auto &coordinates) { return coordinates[0] < coordinates[1]; },
+			[](const auto &coordinates) {
+				return coordinates[0] < coordinates[1];
+			},
 			"invalid coordinate order")),
 		(std::array<int, 2>{8, 9}));
 }
@@ -397,7 +406,9 @@ TEST(JSONReaderTest, RequirePredicateFailureIncludesFilePathAndMessage)
 	{
 		(void)reader.require<int>(
 			"count",
-			[](int value) { return value > 10; },
+			[](int value) {
+				return value > 10;
+			},
 			"must be greater than 10");
 		FAIL() << "Predicate failure should throw";
 	} catch (const spk::Exception &error)
@@ -431,7 +442,9 @@ TEST(JSONReaderTest, RequirePredicateDoesNotMaskPredicateExceptions)
 	EXPECT_THROW(
 		(void)reader.require<int>(
 			"count",
-			[](int) -> bool { throw std::runtime_error("predicate failure"); },
+			[](int) -> bool {
+				throw std::runtime_error("predicate failure");
+			},
 			"invalid count"),
 		std::runtime_error);
 }
