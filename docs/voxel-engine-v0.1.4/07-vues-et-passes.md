@@ -395,7 +395,8 @@ Lors de la construction d'un snapshot, Sparkle sélectionne sa source selon l'é
 
 ```mermaid
 flowchart LR
-  Model["Model + Voxel::Palette"] --> Atlas["Valider identité albedo unique par mesh/passe"]
+  Palette["Voxel::Palette::Builder::build"] --> Atlas["Valider un atlas albedo pour tous les Materials"]
+  Model["Model::isCompatible"] --> Slots["Vérifier tous les slots requis"]
   Atlas --> Capture["Capture CPU : résoudre handle logique et politique de vue"]
   Capture --> Earlier{"Producteur dans ce snapshot ?"}
   Earlier -->|"Oui : exécuté avant"| GPU["Exécution GPU : pixels produits sur cette surface ?"]
