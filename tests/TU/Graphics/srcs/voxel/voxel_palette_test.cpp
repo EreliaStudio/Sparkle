@@ -201,7 +201,7 @@ TEST(VoxelPaletteTest, AllowsDifferentAtlasPerPass)
 	Texture opaque;
 	Texture translucent;
 	EXPECT_NE(opaque.handle().identifier(), translucent.handle().identifier());
-	EXPECT_TRUE(source.isCompatible(palette( {{"solid", material(opaque)}, {"glass", material(translucent)}})));
+	EXPECT_TRUE(source.isCompatible(palette({{"solid", material(opaque)}, {"glass", material(translucent)}})));
 }
 
 TEST(VoxelPaletteTest, IgnoresAdditionalPaletteSlots)
