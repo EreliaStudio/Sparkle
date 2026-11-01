@@ -29,9 +29,22 @@ namespace spk
 		return found == _materials->end() ? nullptr : &found->second;
 	}
 
-	Palette::Builder::Builder(const Palette &palette) :
-		_materials(palette.materials())
+	Palette::Builder::Builder(Validator validator) :
+		_validator(std::move(validator))
 	{
+	}
+
+	Palette::Builder::Builder(const Palette &palette, Validator validator) :
+		_materials(palette.materials()),
+		_validator(std::move(validator))
+	{
+		if (_validator)
+		{
+			for (const auto &[name, material] : _materials)
+			{
+				_validator(name, material, _materials);
+			}
+		}
 	}
 
 	void Palette::Builder::setMaterial(std::string name, Material material)
@@ -42,6 +55,10 @@ namespace spk
 		if (blank)
 		{
 			throw Exception("Palette: material slot name cannot be empty or whitespace");
+		}
+		if (_validator)
+		{
+			_validator(name, material, _materials);
 		}
 		_materials.insert_or_assign(std::move(name), std::move(material));
 	}
