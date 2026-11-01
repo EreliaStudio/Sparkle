@@ -9,7 +9,7 @@
 
 namespace spk
 {
-	class Palette final
+	class Palette
 	{
 	public:
 		using Materials = std::map<std::string, Material, std::less<>>;
