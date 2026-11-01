@@ -13,7 +13,8 @@
 | `OcclusionCache` | Propriété de l'application ; table protégée | Liaison facultative et non propriétaire au Mesher ; absence = calcul direct |
 | `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
 | `Material` | Valeur immuable : handles statiques ou source EngineView empruntée | Aucune propriété d'une EngineView ; handles GPU capturés par les snapshots |
-| `VoxelPalette` | Valeur immuable, association de Materials | Aucune ressource GPU propre à la palette |
+| `spk::Palette` | Collection immuable générique de Materials nommés | Aucun contrat voxel ni ressource GPU propre |
+| `spk::Voxel::Palette` | Valeur immuable, contrôle de complétude et du rôle albedo | Ne stocke pas d'opacité ; aucun SSBO ni ressource GPU propre |
 | `Asset::Manager` | Possède les objets `T` du cache | `load<T>()` retourne `T&` emprunté ; `clear()` invalide |
 | `Assembly` | Possède une seule hiérarchie mutable ; insertion de sous-Assembly par copie/expansion des Parts | Nouveaux PartID et ancrage local, partage Models/Palettes immuables, aucune sous-Assembly vivante ; composants emprunteurs |
 | `Engine` | Moteur logique dans `sparkle::core` | Ne possède ni EngineView ni RenderSnapshot |
@@ -42,7 +43,7 @@
 
 Les opérations publiques invalides, les incompatibilités de slots, les violations des invariants géométriques, les cycles d'assets et les appels de liaison interdits déclenchent des **`spk::Exception` descriptives**. Les opérations de Builder garantissant un état inchangé après échec doivent préserver cette propriété même lors d'une exception technique ; ne pas transformer systématiquement les exceptions d'allocation en `spk::Exception` si cela détruit leur cause.
 
-Aucune Shape, Volume, Model, VoxelPalette ou entrée Asset::Manager **partiellement construite** ne doit être publiée. Les avertissements d'UV hors `[0,1]` sont, au contraire, **non bloquants** et émis au niveau de la géométrie source, sans répétition par pixel ou par frame.
+Aucune Shape, Volume, Model, spk::Palette, spk::Voxel::Palette ou entrée Asset::Manager **partiellement construite** ne doit être publiée. Les avertissements d'UV hors `[0,1]` sont, au contraire, **non bloquants** et émis au niveau de la géométrie source, sans répétition par pixel ou par frame.
 
 ### 8.3 Niveau de précision des exemples
 
@@ -80,7 +81,7 @@ Cet inventaire résume les types et adaptations décrits dans les sections préc
 | `spk::GPUResource` / `GPUResourceCollection` / `Window::Surface` | Instances par surface, handles immuables, récupération sur le bon contexte et notification de destruction | §7.3–7.4, §8.1 |
 | `spk::Voxel::Shape`, `Definition`, `Cell`, `Volume` | Géométrie, slots et volume dense immuables | §2 |
 | `spk::Voxel::VoxelMesher`, `OcclusionCache`, `Model` | Bake complet, clipping/occlusion déterministes, deux meshes visuels au maximum et un mesh de profondeur distinct | §3 |
-| `spk::Material`, `SpriteSheet`, `VoxelPalette` | Association matériaux/slots et sources JSON structurées par rôles, références Asset::Manager typées, UV, identité logique d'atlas statique ou EngineView, validation déterministe | §4, §5, §7.1 |
+| `spk::Material`, `SpriteSheet`, `spk::Palette`, `spk::Voxel::Palette` | Association matériaux/slots et sources JSON structurées par rôles, références Asset::Manager typées, UV, identité logique d'atlas statique ou EngineView, validation déterministe | §4, §5, §7.1 |
 | `spk::Asset::Manager` / `Asset::Factory<T>` | Identités de chargement, factories, cycle de vie et détection de cycles | §5 |
 | `spk::Voxel::Assembly`, `ModelRenderingComponent`, `AssemblyRenderingComponent` | Hiérarchie unique ; insertion par expansion de Parts avec ancrage/remappage, animation autonome, liaison graphique, layers et transforms capturées | §6 |
 | `VoxelRenderingSystem`, SSBO et `DrawVoxelBucketCommand` (**nom indicatif**) | Buckets instanciés, rendu voxel opaque et WBOIT ; **bindings SSBO fixés par pipeline, réactivation explicite de tous les buffers consommés avant chaque draw**, sans indices globalement réservés ; jamais de commandes de shadow maps | §7.5–7.8 |
@@ -103,6 +104,8 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 - Vérifier que chaque Model garde jusqu'à deux meshes visuels, un mesh d'ombre de positions/indices et **tous** ses slots déclarés par les Definitions utilisées, même totalement occultés. Rejeter les collisions de noms avec opacités distinctes ; conserver un ordre lexicographique stable des indices. Rechanger de Palette ne provoque pas de rebake.
 
 **Assets, Materials, Palettes et Assemblies**
+
+- Une `spk::Palette` générique accepte les Materials sans `albedo` ; seule `spk::Voxel::Palette` exige `albedo` pour les slots déclarés. Aucune palette n'enregistre l'opacité. Deux Models peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Model restent rejetés par le Mesher.
 
 - Deux `Asset::Manager::load<T>(id, config)` avec type, identifiant et JSON structurel identiques retournent la même référence, indépendamment de l'ordre textuel des clés JSON ; une configuration 16×16 et une 8×8 donnent deux assets distincts. L'absence de configuration équivaut à un **objet JSON vide**, et non à `Null`.
 - `spk::Asset::Manager::get<T>(id)` ne construit jamais d'asset. Il retourne la version par défaut du type et de l'identifiant, lève `spk::Exception` si aucune n'est chargée, et refuse une identité détruite par `clear()`. Le premier chargement réussi par type/id définit automatiquement la version par défaut ; `load<T>(id, config, true)` ou `setDefault<T>(id, config)` permet de la changer (sans nouvelle construction pour une variante existante). Un échec de factory ou de sélection ne modifie pas la version par défaut.
