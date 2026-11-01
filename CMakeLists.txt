@@ -21,6 +21,7 @@ set(SPARKLE_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
 file(GLOB_RECURSE SPARKLE_CORE_SOURCES
     CONFIGURE_DEPENDS
+    "${SPARKLE_SOURCE_DIR}/asset/*.cpp"
     "${SPARKLE_SOURCE_DIR}/container/*.cpp"
     "${SPARKLE_SOURCE_DIR}/design_pattern/*.cpp"
     "${SPARKLE_SOURCE_DIR}/diagnostics/*.cpp"
