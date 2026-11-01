@@ -18,7 +18,8 @@ namespace spk::Voxel
 		_parts(other._parts),
 		_paletteInputs(other._paletteInputs),
 		_palette(other._palette),
-		_nextID(other._nextID)
+		_nextID(other._nextID),
+		_paletteExplicitlyBound(other._paletteExplicitlyBound)
 	{
 		invalidate();
 	}
@@ -31,6 +32,7 @@ namespace spk::Voxel
 			auto inputs = other._paletteInputs;
 			auto palette = other._palette;
 			_commit(replacement, inputs, std::move(palette), other._nextID);
+			_paletteExplicitlyBound = other._paletteExplicitlyBound;
 			resetAfterCopy();
 		}
 		return *this;
@@ -39,6 +41,17 @@ namespace spk::Voxel
 	const spk::Palette &Assembly::palette() const noexcept
 	{
 		return _palette;
+	}
+
+	void Assembly::bind(spk::Palette palette)
+	{
+		(void)spk::Voxel::Palette::Builder(palette);
+		auto prepared = _parts;
+		_bindModels(prepared, palette);
+		_parts.swap(prepared);
+		_palette = std::move(palette);
+		_paletteInputs.clear();
+		_paletteExplicitlyBound = true;
 	}
 
 	std::size_t Assembly::size() const noexcept
@@ -112,10 +125,26 @@ namespace spk::Voxel
 		return true;
 	}
 
+	void Assembly::_bindModels(std::map<PartID, Part> &parts, const spk::Palette &palette)
+	{
+		for (auto &[id, part] : parts)
+		{
+			if (part.model.has_value())
+			{
+				part.model->bind(palette);
+			}
+		}
+	}
+
 	spk::Palette Assembly::_mergePalette(
 		std::map<PartID, Part> &parts,
 		const std::map<PartID, spk::Palette> &inputs)
 	{
+		if (_paletteExplicitlyBound)
+		{
+			_bindModels(parts, _palette);
+			return _palette;
+		}
 		spk::Voxel::Palette::Builder builder;
 		spk::Palette::Materials seen;
 		for (const auto &[id, source] : inputs)
@@ -136,13 +165,7 @@ namespace spk::Voxel
 			}
 		}
 		auto merged = builder.build();
-		for (auto &[id, part] : parts)
-		{
-			if (part.model.has_value())
-			{
-				part.model->bind(merged);
-			}
-		}
+		_bindModels(parts, merged);
 		return merged;
 	}
 
@@ -231,7 +254,7 @@ namespace spk::Voxel
 			(void)part(*parent);
 		}
 		_validateTransform(localTransform);
-		if (model.has_value() && model->palette() == nullptr)
+		if (model.has_value() && model->palette() == nullptr && !_paletteExplicitlyBound)
 		{
 			throw spk::Exception("Voxel Assembly: Model must have a bound palette");
 		}
@@ -240,7 +263,7 @@ namespace spk::Voxel
 		auto prepared = _parts;
 		auto inputs = _paletteInputs;
 		prepared.emplace(id, Part{id, std::move(name), parent, localTransform, std::move(model)});
-		if (prepared.at(id).model.has_value())
+		if (prepared.at(id).model.has_value() && !_paletteExplicitlyBound)
 		{
 			inputs.emplace(id, *prepared.at(id).model->palette());
 		}
@@ -257,20 +280,17 @@ namespace spk::Voxel
 	void Assembly::setModel(PartID id, std::optional<Model> model)
 	{
 		(void)part(id);
-		if (model.has_value() && model->palette() == nullptr)
+		if (model.has_value() && model->palette() == nullptr && !_paletteExplicitlyBound)
 		{
 			throw spk::Exception("Voxel Assembly: Model must have a bound palette");
 		}
 		auto prepared = _parts;
 		auto inputs = _paletteInputs;
 		prepared.at(id).model = std::move(model);
-		if (prepared.at(id).model.has_value())
+		inputs.erase(id);
+		if (prepared.at(id).model.has_value() && !_paletteExplicitlyBound)
 		{
-			inputs.insert_or_assign(id, *prepared.at(id).model->palette());
-		}
-		else
-		{
-			inputs.erase(id);
+			inputs.emplace(id, *prepared.at(id).model->palette());
 		}
 		auto merged = _mergePalette(prepared, inputs);
 		_commit(prepared, inputs, std::move(merged), _nextID);
@@ -360,9 +380,9 @@ namespace spk::Voxel
 			const PartID newID = _allocate(next);
 			const PartID newParent = part.parent.has_value() ? result.partIDs.at(*part.parent) : result.anchor;
 			prepared.emplace(newID, Part{newID, part.name, newParent, part.localTransform, part.model});
-			if (part.model.has_value())
+			if (part.model.has_value() && !_paletteExplicitlyBound)
 			{
-				inputs.emplace(newID, source._paletteInputs.at(id));
+				inputs.emplace(newID, source._paletteExplicitlyBound ? source._palette : source._paletteInputs.at(id));
 			}
 			result.partIDs.emplace(id, newID);
 		}

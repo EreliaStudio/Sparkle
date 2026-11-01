@@ -64,7 +64,7 @@ Confier **uniquement PR-08** à l'IA. Les détails locaux (signatures C++, choix
 - `Assembly::Part` : `id`, `name`, `parent`, `localTransform`, `std::optional<Model> model` (Model rebondi sur la palette globale commune).
 - `addPart(name, parent = nullopt, model = nullopt, transform = identity())`, `part(id) const`, `size()`, `empty()`, `contains(id)`.
 - `setName`, `setModel`, `setLocalTransform`, `setParent`, `removePart`.
-- `roots()`, `children(id)`, `partIDs()`, `accumulatedTransform(id)` et `palette() const` (palette commune fusionnée).
+- `roots()`, `children(id)`, `partIDs()`, `accumulatedTransform(id)`, `palette() const` et `bind(spk::Palette)` (seule API de changement de palette des Models déjà dans l'Assembly).
 - `insertAssembly(parent, source, anchorTransform = identity(), anchorName = "attachment")` renvoie `{anchor, partIDs}`.
 
 Implémentation dans `include/voxel/assembly.hpp` et `src/graphics/voxel/assembly.cpp` ; tests `tests/TU/Graphics/srcs/voxel/voxel_assembly_test.cpp`. L'Assembly appartient à la bibliothèque graphique, à côté du Model, mais ne contient aucune opération GPU. La copie repart à version 1 sans recopier les abonnements. Les modifications des Parts ne modifient pas automatiquement la version.
@@ -74,3 +74,9 @@ Voir l'exemple de composition dans [06-assemblies-scene.md](../06-assemblies-sce
 ### Révision : palette commune par Assembly
 
 Une Assembly fusionne les Materials nommés des palettes **déjà liées** des Models ajoutés. Toutes les copies internes de Model sont ensuite liées à la même `spk::Palette` résultante. Un même nom de slot ne peut pas désigner deux Materials différents (identité des textures et sections UV) ; tous les albedos doivent désigner un seul atlas. Les Models sans palette préalable sont refusés. Les ajouts, suppressions, remplacements de Models et insertions recalculent la fusion à partir d'entrées d'origine internes, puis publient la nouvelle structure et sa palette atomiquement. Les anciennes palettes ne sont pas des palettes actives indépendantes par Part. La suppression d'un Model retire sa contribution. Pas de réassemblage d'atlas, pas d'ajustement UV et aucune allocation GPU.
+
+### Révision : accès aux Models en lecture seule et liaison globale explicite
+
+`part(id)` retourne `const Assembly::Part&`. Il est impossible d'appeler `bind()` sur le Model de cette Part. `Assembly::bind(spk::Palette)` valide la palette voxel et sa complétude pour chaque Model, rebind toutes les copies internes sur la même palette, puis publie atomiquement l'ensemble. Un échec ne change ni Models, ni palette commune, ni identifiants, ni version. Les transformations restent indépendantes.
+
+La première construction peut fusionner automatiquement les palettes des Models déjà liés (comportement de compatibilité). Après un appel explicite à `assembly.bind(...)`, la palette choisie ne doit **plus être recalculée** à partir des palettes individuelles lors de modifications structurelles. Un Model non lié peut être ajouté après ce bind, si la palette commune couvre ses slots. Une Part à laquelle on associe un Model incompatible est rejetée sans effet. Les transformations restent animables par `setLocalTransform()` et `setParent()` ; les Models restent accessibles en lecture seule.

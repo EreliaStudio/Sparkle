@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -32,6 +33,9 @@ namespace
 	using Assembly = spk::Voxel::Assembly;
 	using PartID = spk::Voxel::PartID;
 	using Matrix = spk::Matrix4x4;
+
+	static_assert(std::is_same_v<decltype(std::declval<Assembly &>().part(PartID{})), const Assembly::Part &>);
+	static_assert(std::is_same_v<decltype(*std::declval<const Assembly::Part &>().model), const spk::Voxel::Model &>);
 
 	[[nodiscard]] spk::Palette palette(const spk::Texture &texture, std::string slot = "stone")
 	{
@@ -655,4 +659,166 @@ TEST(VoxelAssemblyTest, CopiedAssemblyKeepsIndependentMergedPalette)
 	EXPECT_EQ(original.palette().find("arm"), nullptr);
 	EXPECT_EQ(&copy.part(armID).model->palette()->materials(), &copy.palette().materials());
 	EXPECT_EQ(&original.part(id).model->palette()->materials(), &original.palette().materials());
+}
+
+TEST(VoxelAssemblyTest, BindingAssemblyPaletteChangesEveryModelButNotGeometry)
+{
+	spk::Texture initialAtlas;
+	spk::Texture replacementAtlas;
+	auto torso = model("torso");
+	auto arm = model("arm");
+	torso.bind(palette(initialAtlas, "torso"));
+	arm.bind(palette(initialAtlas, "arm"));
+	Assembly assembly;
+	const auto torsoID = assembly.addPart("torso", {}, torso);
+	const auto armID = assembly.addPart("arm", torsoID, arm);
+	const auto *torsoGeometry = &torso.opaqueMesh();
+	const auto *armGeometry = &arm.opaqueMesh();
+	const auto version = assembly.version();
+
+	spk::Material::Builder material;
+	material.add("albedo", replacementAtlas);
+	spk::Voxel::Palette::Builder builder;
+	builder.setMaterial("torso", material.build());
+	builder.setMaterial("arm", material.build());
+	const auto replacement = builder.build();
+	assembly.bind(replacement);
+
+	EXPECT_EQ(&assembly.palette().materials(), &replacement.materials());
+	ASSERT_NE(assembly.part(torsoID).model->palette(), nullptr);
+	ASSERT_NE(assembly.part(armID).model->palette(), nullptr);
+	EXPECT_EQ(&assembly.part(torsoID).model->palette()->materials(), &replacement.materials());
+	EXPECT_EQ(&assembly.part(armID).model->palette()->materials(), &replacement.materials());
+	EXPECT_EQ(&assembly.part(torsoID).model->opaqueMesh(), torsoGeometry);
+	EXPECT_EQ(&assembly.part(armID).model->opaqueMesh(), armGeometry);
+	EXPECT_EQ(assembly.version(), version);
+	EXPECT_EQ(torso.palette()->find("torso")->find("albedo")->texture.identifier(), initialAtlas.handle().identifier());
+	EXPECT_EQ(arm.palette()->find("arm")->find("albedo")->texture.identifier(), initialAtlas.handle().identifier());
+}
+
+TEST(VoxelAssemblyTest, BindingIncompletePaletteDoesNotChangeAnyPart)
+{
+	spk::Texture atlas;
+	Assembly assembly;
+	const auto torsoID = assembly.addPart("torso", {}, model("torso"));
+	const auto armID = assembly.addPart("arm", torsoID, model("arm"));
+	const auto version = assembly.version();
+	const auto *previousMaterials = &assembly.palette().materials();
+	const auto previousIDs = assembly.partIDs();
+	const auto missingArm = palette(atlas, "torso");
+	EXPECT_THROW(assembly.bind(missingArm), spk::Exception);
+	EXPECT_EQ(assembly.version(), version);
+	EXPECT_EQ(assembly.partIDs(), previousIDs);
+	EXPECT_EQ(&assembly.palette().materials(), previousMaterials);
+	EXPECT_EQ(&assembly.part(torsoID).model->palette()->materials(), previousMaterials);
+	EXPECT_EQ(&assembly.part(armID).model->palette()->materials(), previousMaterials);
+}
+
+TEST(VoxelAssemblyTest, BindingRejectsGenericPaletteWithSeveralAlbedoAtlases)
+{
+	spk::Texture first;
+	spk::Texture second;
+	spk::Material::Builder firstMaterial;
+	firstMaterial.add("albedo", first);
+	spk::Material::Builder secondMaterial;
+	secondMaterial.add("albedo", second);
+	spk::Palette::Builder generic;
+	generic.setMaterial("torso", firstMaterial.build());
+	generic.setMaterial("arm", secondMaterial.build());
+	Assembly assembly;
+	const auto version = assembly.version();
+	EXPECT_THROW(assembly.bind(generic.build()), spk::Exception);
+	EXPECT_EQ(assembly.version(), version);
+	EXPECT_TRUE(assembly.palette().materials().empty());
+}
+
+TEST(VoxelAssemblyTest, ExplicitPaletteAllowsInitiallyUnboundModels)
+{
+	spk::Texture atlas;
+	Assembly assembly;
+	auto unbound = spk::Voxel::Model({}, {}, {}, {{"stone", 1.0f}});
+	ASSERT_EQ(unbound.palette(), nullptr);
+	assembly.bind(palette(atlas));
+	const auto id = assembly.addPart("stone", {}, unbound);
+	ASSERT_NE(assembly.part(id).model->palette(), nullptr);
+	EXPECT_EQ(&assembly.part(id).model->palette()->materials(), &assembly.palette().materials());
+	EXPECT_EQ(unbound.palette(), nullptr);
+}
+
+TEST(VoxelAssemblyTest, ExplicitPalettePreservedDuringStructuralMutations)
+{
+	spk::Texture sourceAtlas;
+	spk::Texture chosenAtlas;
+	auto torsoModel = model("stone");
+	torsoModel.bind(palette(sourceAtlas));
+	Assembly assembly;
+	const auto torso = assembly.addPart("torso", {}, torsoModel);
+	const auto chosen = palette(chosenAtlas);
+	assembly.bind(chosen);
+
+	auto alternativeModel = model("stone");
+	alternativeModel.bind(palette(sourceAtlas));
+	const auto arm = assembly.addPart("arm", torso, alternativeModel);
+	EXPECT_EQ(&assembly.part(arm).model->palette()->materials(), &chosen.materials());
+	assembly.setModel(arm, spk::Voxel::Model({}, {}, {}, {{"stone", 1.0f}}));
+	EXPECT_EQ(&assembly.part(arm).model->palette()->materials(), &chosen.materials());
+
+	Assembly sword;
+	(void)sword.addPart("blade", {}, alternativeModel);
+	const auto inserted = assembly.insertAssembly(arm, sword);
+	EXPECT_EQ(&assembly.part(inserted.partIDs.begin()->second).model->palette()->materials(), &chosen.materials());
+	assembly.removePart(arm);
+	EXPECT_EQ(&assembly.palette().materials(), &chosen.materials());
+	EXPECT_EQ(&assembly.part(torso).model->palette()->materials(), &chosen.materials());
+}
+
+TEST(VoxelAssemblyTest, ExplicitPaletteRejectsMissingSlotAfterModelReplacement)
+{
+	spk::Texture atlas;
+	Assembly assembly;
+	const auto id = assembly.addPart("root");
+	const auto chosen = palette(atlas);
+	assembly.bind(chosen);
+	const auto version = assembly.version();
+	const auto different = model("other");
+	EXPECT_THROW(assembly.setModel(id, different), spk::Exception);
+	EXPECT_EQ(assembly.version(), version);
+	EXPECT_FALSE(assembly.part(id).model.has_value());
+	EXPECT_EQ(&assembly.palette().materials(), &chosen.materials());
+}
+
+TEST(VoxelAssemblyTest, ExplicitPaletteRemainsIndependentWhenCopied)
+{
+	spk::Texture initial;
+	spk::Texture updated;
+	auto initialModel = model();
+	initialModel.bind(palette(initial));
+	Assembly original;
+	const auto id = original.addPart("root", {}, initialModel);
+	original.bind(palette(updated));
+	Assembly copy(original);
+	const auto version = original.version();
+	copy.bind(palette(initial));
+	EXPECT_EQ(copy.version(), 1u);
+	EXPECT_EQ(original.version(), version);
+	EXPECT_EQ(&original.part(id).model->palette()->materials(), &original.palette().materials());
+	EXPECT_EQ(&copy.part(id).model->palette()->materials(), &copy.palette().materials());
+	EXPECT_NE(original.palette().find("stone")->find("albedo")->texture.identifier(), copy.palette().find("stone")->find("albedo")->texture.identifier());
+}
+
+TEST(VoxelAssemblyTest, InsertionAfterExplicitBindingUsesSourceAssemblyPalette)
+{
+	spk::Texture initial;
+	spk::Texture selected;
+	auto originalModel = model();
+	originalModel.bind(palette(initial));
+	Assembly source;
+	const auto sourceID = source.addPart("blade", {}, originalModel);
+	source.bind(palette(selected));
+
+	Assembly destination;
+	const auto result = destination.insertAssembly(std::nullopt, source);
+	const auto insertedID = result.partIDs.at(sourceID);
+	EXPECT_EQ(&destination.part(insertedID).model->palette()->materials(), &destination.palette().materials());
+	EXPECT_EQ(destination.palette().find("stone")->find("albedo")->texture.identifier(), selected.handle().identifier());
 }
