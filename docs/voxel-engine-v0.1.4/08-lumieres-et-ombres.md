@@ -808,7 +808,7 @@ flowchart TD
     Model --> Opaque["Mesh opaque"]
     Model --> Translucent["Mesh translucide"]
     Model --> ShadowDepth["ShadowMap::Mesh : positions + indices"]
-    Material["Material : textures nommees et UV"] --> Palette["VoxelPalette : materials par slot"]
+    Material["Material : textures nommees et UV"] --> Palette["Voxel::Palette : materials par slot"]
     Model --> Assembly["Assembly : parties et transforms locales"]
     Palette --> Assembly
     Model --> ModelComp["ModelRenderingComponent : references empruntees"]
