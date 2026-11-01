@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "geometry/mesh.hpp"
-#include "graphics/palette.hpp"
 #include "geometry/shadow_mesh.hpp"
+#include "graphics/palette.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 #include "voxel/definition.hpp"

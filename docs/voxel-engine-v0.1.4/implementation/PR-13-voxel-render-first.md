@@ -4,7 +4,7 @@
 >
 > **Branche source :** `impl/v0.1.4/13-voxel-render-first`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Dessiner un Model voxel texturé dans sa première EngineView.
+**Objectif :** Dessiner une Model::View voxel texturée dans sa première EngineView.
 
 **Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-07](PR-07-voxel-palette.md), [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md)
 
@@ -20,7 +20,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] ModelRenderingComponent empruntant Model/Palette
+- [ ] ModelRenderingComponent empruntant Model::View et les palettes de ses occurrences
 - [ ] VoxelRenderingSystem
 - [ ] filtrage Registry/layers
 - [ ] mesh opaque et atlas

@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "exception.hpp"
-#include "voxel/model.hpp"
 #include "voxel/mesher.hpp"
+#include "voxel/model.hpp"
 #include "voxel/palette.hpp"
 
 namespace
@@ -118,8 +118,9 @@ TEST(VoxelModelTest, CopiesDoNotShareMutableHierarchy)
 	torso.anchor("leftArm").bind(model("skin"));
 	Model copy = torso;
 	ASSERT_NE(copy.anchor("leftArm").model(), nullptr);
-	EXPECT_EQ(&copy.anchor("leftArm").model()->opaqueMesh().layout(),
-		&torso.anchor("leftArm").model()->opaqueMesh().layout());
+	const auto &copyMesh = copy.anchor("leftArm").model()->opaqueMesh().layout();
+	const auto &originalMesh = torso.anchor("leftArm").model()->opaqueMesh().layout();
+	EXPECT_EQ(&copyMesh, &originalMesh);
 	copy.anchor("leftArm").model()->addAnchor("elbow");
 	EXPECT_FALSE(torso.anchor("leftArm").model()->hasAnchor("elbow"));
 	EXPECT_TRUE(copy.anchor("leftArm").model()->hasAnchor("elbow"));
@@ -164,8 +165,9 @@ TEST(VoxelModelViewTest, TwoViewsShareMeshesAndHaveIndependentAppearances)
 	Model::View red(source, palette(first, {"stone"}));
 	Model::View blue(source, palette(second, {"stone"}));
 	EXPECT_EQ(&red.model().opaqueMesh().layout(), &blue.model().opaqueMesh().layout());
-	EXPECT_NE(red.palette()->find("stone")->find("albedo")->texture.identifier(),
-		blue.palette()->find("stone")->find("albedo")->texture.identifier());
+	const auto redAtlas = red.palette()->find("stone")->find("albedo")->texture.identifier();
+	const auto blueAtlas = blue.palette()->find("stone")->find("albedo")->texture.identifier();
+	EXPECT_NE(redAtlas, blueAtlas);
 }
 
 TEST(VoxelModelViewTest, ChildJointRotationKeepsAttachmentAligned)

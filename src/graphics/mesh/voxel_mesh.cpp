@@ -29,13 +29,7 @@ namespace spk::Voxel
 		std::vector<Definition::Slot> slots,
 		std::uint32_t materialIndexOffset,
 		bool harmonized) :
-		_data(std::make_shared<const Data>(
-			std::move(opaque),
-			std::move(translucent),
-			std::move(depth),
-			std::move(slots),
-			materialIndexOffset,
-			harmonized))
+		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), materialIndexOffset, harmonized))
 	{
 		if (!_data->slots.empty() &&
 			_data->slots.size() - 1 > std::numeric_limits<std::uint32_t>::max() - materialIndexOffset)

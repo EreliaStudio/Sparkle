@@ -13,8 +13,8 @@
 #include "exception.hpp"
 #include "graphics/palette.hpp"
 #include "voxel/mesher.hpp"
-#include "voxel/palette.hpp"
 #include "voxel/model.hpp"
+#include "voxel/palette.hpp"
 
 namespace
 {
