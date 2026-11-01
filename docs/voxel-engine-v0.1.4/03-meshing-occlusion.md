@@ -10,7 +10,7 @@ Les huit `Shape::Instance` (quatre rotations horizontales × inversion verticale
 
 ### 3.1 `spk::Voxel::VoxelMesher`
 
-Le Mesher transforme un `Volume` immuable en un **nouveau `Model` immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
+Le Mesher transforme un `Volume` immuable en un **nouveau `Model` à géométrie immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
 
 Son travail est indépendant des matériaux concrets et des pixels de texture. Le `VoxelMesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
 
@@ -104,7 +104,7 @@ Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`Occlus
 
 Un cache partagé peut être interrogé simultanément ; sa **destruction** ou le changement de liaison facultative du Mesher pendant un bake actif ne sont pas rendus sûrs par la seule synchronisation de `find/store/clear`.
 
-### 3.6 `spk::Voxel::Model` : résultat immuable
+### 3.6 `spk::Voxel::Model` : géométrie immuable, palette liée par instance
 
 Le Model contient ou conserve de manière sûre les données issues du Volume, **deux meshes visuels immuables** (opaque et translucide, éventuellement vides), **un `ShadowMap::Mesh` de profondeur immuable** (éventuellement vide) et la table complète des slots sémantiques déclarés par les Definitions effectivement utilisées. Le mesh d'ombre reprend les triangles opaques résultant du bake, leurs positions, indices et winding, sans UV, normales ni références de palette ; il ne représente pas nécessairement une enveloppe fermée. **Les triangles d'ombre sont entièrement opaques géométriquement** : une texture albedo trouée ou à alpha nul n'y découpe aucun fragment. Pour obtenir une silhouette ajourée, l'application doit fournir et lier explicitement un mesh d'ombre dont les triangles dessinent les ouvertures. Le mesher ne déduit pas une géométrie cutout depuis les textures ni ne reconstruit le mesh d'ombre lorsque seule la palette change.
 
@@ -127,3 +127,5 @@ struct MeshVertex
 ```
 
 Les meshes visuels et d'ombre réutilisent **l'infrastructure `spk::Mesh<TVertex>` existante** et ses buffers/layouts GPU ; pas de nouveau framework de maillage. `materialIndex` n'est jamais réattribué selon les seuls triangles visibles. Remplacer une palette ou déplacer un Assembly ne change pas les meshes du Model.
+
+**Liaison d'apparence (PR-07).** Le Model né du bake n'a initialement aucune palette liée. Son `isCompatible(const spk::Palette&)` vérifie que tous les noms de slots sont fournis, indépendamment des triangles visibles. `bind(spk::Palette)` effectue cette validation et conserve une copie légère de la palette, ou lève `spk::Exception` en préservant la liaison précédente si un slot est manquant. `palette()` renvoie un pointeur const ou `nullptr` si rien n'est lié. Les données géométriques restent partagées via `shared_ptr<const Data>` ; chaque copie de Model possède sa propre association de palette, modifiable sans rebake. La validation d'atlas unique et de rôle `albedo` reste dans `spk::Voxel::Palette::Builder::setMaterial()`, jamais dans le mesher ni dans la compatibilité du Model.
