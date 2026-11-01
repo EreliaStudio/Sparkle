@@ -1,6 +1,5 @@
 #pragma once
 
-#include <set>
 #include <string>
 #include <string_view>
 
@@ -8,24 +7,19 @@
 
 namespace spk::Voxel
 {
-	class Model;
-
 	class Palette final
 	{
 	public:
 		class Builder
 		{
 		private:
-			std::set<std::string, std::less<>> _required;
 			spk::Palette::Builder _materials;
 
 		public:
 			Builder() = default;
-			explicit Builder(const Model &model);
 			explicit Builder(const Palette &palette);
 
-			void addModel(const Model &model);
-			void setMaterial(std::string_view name, spk::Material material);
+			void setMaterial(std::string name, spk::Material material);
 			[[nodiscard]] Palette build() const;
 		};
 
