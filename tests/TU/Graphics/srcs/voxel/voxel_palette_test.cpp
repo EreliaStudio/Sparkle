@@ -5,24 +5,27 @@
 #include <filesystem>
 #include <initializer_list>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "container/json/object.hpp"
 #include "exception.hpp"
 #include "graphics/palette.hpp"
-#include "voxel/palette_builder.hpp"
+#include "voxel/palette.hpp"
 #include "voxel/voxel_mesher.hpp"
 
 namespace
 {
 	using Model = spk::Voxel::Model;
 	using Definition = spk::Voxel::Definition;
-	using VoxelBuilder = spk::Voxel::PaletteBuilder;
+	using VoxelBuilder = spk::Voxel::Palette::Builder;
 	using Palette = spk::Palette;
 	using Material = spk::Material;
 	using Texture = spk::Texture;
 	using MeshVertex = spk::Voxel::MeshVertex;
+
+	static_assert(std::is_same_v<decltype(std::declval<VoxelBuilder>().build()), spk::Palette>);
 
 	[[nodiscard]] Model model(std::initializer_list<Definition::Slot> slots)
 	{
