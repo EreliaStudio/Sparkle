@@ -34,6 +34,8 @@ namespace spk::Voxel
 		};
 
 	private:
+		friend struct AssemblyTestAccess;
+
 		std::map<PartID, Part> _parts;
 		PartID _nextID = 1;
 
@@ -55,7 +57,6 @@ namespace spk::Voxel
 		Assembly(const Assembly &other);
 		Assembly(Assembly &&other) noexcept = default;
 		Assembly &operator=(const Assembly &other);
-		Assembly &operator=(Assembly &&other) = delete;
 
 		[[nodiscard]] std::size_t size() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;

@@ -16,6 +16,17 @@
 #include "voxel/assembly.hpp"
 #include "voxel/palette.hpp"
 
+namespace spk::Voxel
+{
+	struct AssemblyTestAccess
+	{
+		static void setNextID(Assembly &assembly, PartID next)
+		{
+			assembly._nextID = next;
+		}
+	};
+}
+
 namespace
 {
 	using Assembly = spk::Voxel::Assembly;
@@ -407,4 +418,53 @@ TEST(VoxelAssemblyTest, InsertionIsAnExplicitVisualInvalidationBoundary)
 	destination.invalidate();
 	EXPECT_EQ(notifications, 1);
 	EXPECT_EQ(destination.version(), version + 1);
+}
+
+TEST(VoxelAssemblyTest, LastPartIDCanBeUsedExactlyOnce)
+{
+	Assembly assembly;
+	const auto first = assembly.addPart("first");
+	const auto maximum = std::numeric_limits<PartID>::max();
+	spk::Voxel::AssemblyTestAccess::setNextID(assembly, maximum);
+	EXPECT_EQ(assembly.addPart("last"), maximum);
+	const auto version = assembly.version();
+	EXPECT_THROW((void)assembly.addPart("overflow"), spk::Exception);
+	EXPECT_EQ(assembly.size(), 2u);
+	EXPECT_EQ(assembly.version(), version);
+	EXPECT_TRUE(assembly.contains(first));
+	EXPECT_TRUE(assembly.contains(maximum));
+}
+
+TEST(VoxelAssemblyTest, InsertionIDExhaustionIsAtomic)
+{
+	Assembly source;
+	const auto blade = source.addPart("blade");
+	Assembly destination;
+	const auto first = destination.addPart("hand");
+	const auto maximum = std::numeric_limits<PartID>::max();
+	spk::Voxel::AssemblyTestAccess::setNextID(destination, maximum);
+	const auto before = destination.version();
+	EXPECT_THROW((void)destination.insertAssembly(first, source), spk::Exception);
+	EXPECT_EQ(destination.size(), 1u);
+	EXPECT_TRUE(destination.contains(first));
+	EXPECT_EQ(destination.version(), before);
+	EXPECT_EQ(destination.addPart("next"), maximum);
+	EXPECT_FALSE(destination.contains(blade + 1));
+}
+
+TEST(VoxelAssemblyTest, SelfAssignmentKeepsExistingSubscriptions)
+{
+	Assembly assembly;
+	const auto id = assembly.addPart("root");
+	const auto before = assembly.version();
+	int calls = 0;
+	auto contract = assembly.subscribeToVersionEdition([&](auto *) {
+		++calls;
+	});
+	assembly = assembly;
+	EXPECT_EQ(assembly.version(), before);
+	EXPECT_TRUE(contract.isValid());
+	EXPECT_TRUE(assembly.contains(id));
+	assembly.invalidate();
+	EXPECT_EQ(calls, 1);
 }
