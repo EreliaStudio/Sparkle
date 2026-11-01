@@ -51,7 +51,11 @@ namespace spk::Voxel
 		{
 			if (palette.find(slot.name) == nullptr)
 			{
-				missing += (missing.empty() ? "" : ", ") + std::string("'") + slot.name + "'";
+				if (!missing.empty())
+				{
+					missing += ", ";
+				}
+				missing += "'" + slot.name + "'";
 			}
 		}
 		if (!missing.empty())
