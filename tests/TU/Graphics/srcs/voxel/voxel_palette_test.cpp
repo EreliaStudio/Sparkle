@@ -389,4 +389,3 @@ TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
 	EXPECT_EQ(first.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
 	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
 }
-
