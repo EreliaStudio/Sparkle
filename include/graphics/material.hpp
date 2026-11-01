@@ -6,13 +6,8 @@
 #include <string_view>
 
 #include "asset/manager.hpp"
-#include "container/json/object.hpp"
+#include "container/json/reader.hpp"
 #include "graphics/sprite_sheet.hpp"
-
-namespace spk::JSON
-{
-	class Reader;
-}
 
 namespace spk
 {
@@ -56,23 +51,3 @@ namespace spk
 	};
 }
 
-namespace spk
-{
-	template <>
-	struct AssetFactory<spk::Texture>
-	{
-		[[nodiscard]] static spk::Texture create(Assets &assets, const std::string &id, const JSON::Value &config);
-	};
-
-	template <>
-	struct AssetFactory<spk::SpriteSheet>
-	{
-		[[nodiscard]] static spk::SpriteSheet create(Assets &assets, const std::string &id, const JSON::Value &config);
-	};
-
-	template <>
-	struct AssetFactory<spk::Material>
-	{
-		[[nodiscard]] static spk::Material create(Assets &assets, const std::string &id, const JSON::Value &config);
-	};
-}
