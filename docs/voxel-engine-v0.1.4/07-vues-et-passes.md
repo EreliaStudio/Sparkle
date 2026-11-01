@@ -676,5 +676,3 @@ flowchart TD
 
 
 **Contraintes de construction et de réentrance.** L'encodage des clés de délégation respecte l'ordre explicite des vues puis leur ordre de création, sans attribuer de priorité numérique cachée aux vues non ordonnées. La transition `EngineWidget`/fenêtre intervient avant toute commande UI ultérieure. Les `RenderCommand` existantes, y compris celles utilisant des UBO, doivent être réentrantes entre plusieurs `RenderContext` ; le `Profiler` doit décrire correctement l'exécution de sous-snapshots imbriqués. Une construction incomplète conserve le snapshot précédemment publié. Les bornes numériques des clés et les derniers cas limites de WBOIT ainsi que les layouts et bindings internes encore à préciser figurent dans le document complémentaire.
-
-**Révision PR-08 :** ne pas confondre `spk::EngineView` (caméra et passes graphiques) avec `spk::Voxel::View` (palette commune et hiérarchie de Models). La première capture la seconde par composant emprunteur ; elles sont indépendantes.

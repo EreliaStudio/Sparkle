@@ -23,7 +23,7 @@
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
 - [x] `Model::isCompatible(const spk::Palette &)` vérifie uniquement les noms de slots ; le validateur de `spk::Voxel::Palette::Builder` impose immédiatement un atlas unique à chaque insertion.
 
-- [x] **Révisé en PR-08 :** `Model::bind` et `Model::palette` sont retirés ; une seule `Voxel::View::bind(palette)` associe l'apparence à un ou plusieurs Models immuables.
+- [x] `Model::bind(spk::Palette)` vérifie la compatibilité, copie légèrement la palette et permet à chaque copie de Model de choisir sa propre apparence sans toucher aux meshes.
 
 ## Instructions techniques et intégration
 
@@ -64,5 +64,3 @@ Assembly, dessin GL, regroupement automatique de meshes multi-atlas.
 ## Consigne de passation
 
 Confier **uniquement PR-07** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
-
-**Révision post-PR-07 (PR-08).** Le code de Model a été simplifié : suppression de `Model::bind()`/`Model::palette()`. La liaison facultative, les erreurs de slots manquants et les variantes indépendantes sont désormais le contrat de `Voxel::View`, sans changement des règles du Builder voxel ni de `Model::isCompatible()`. Les tests historiques de liaison Model sont migrés aux Views.

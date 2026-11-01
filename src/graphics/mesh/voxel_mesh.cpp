@@ -2,6 +2,7 @@
 
 #include <utility>
 
+
 namespace spk::Voxel
 {
 	void Mesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)

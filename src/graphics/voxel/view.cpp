@@ -112,7 +112,7 @@ namespace spk::Voxel
 		return result;
 	}
 
-	std::size_t View::size() const noexcept
+		std::size_t View::size() const noexcept
 	{
 		return _parts.size();
 	}

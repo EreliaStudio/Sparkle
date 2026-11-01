@@ -12,9 +12,9 @@
 #include "container/json/object.hpp"
 #include "exception.hpp"
 #include "graphics/palette.hpp"
-#include "voxel/mesher.hpp"
 #include "voxel/palette.hpp"
 #include "voxel/view.hpp"
+#include "voxel/mesher.hpp"
 
 namespace
 {
