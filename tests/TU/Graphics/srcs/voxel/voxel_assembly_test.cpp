@@ -199,7 +199,8 @@ TEST(VoxelAssemblyTest, CopyConstructionAndAssignmentHaveIndependentVersionAndNo
 	original.invalidate();
 	original.invalidate();
 	int sourceEvents = 0;
-	auto sourceContract = original.subscribeToVersionEdition([&](auto *) {
+	auto sourceContract = original.subscribeToVersionEdition(
+		[&](auto *) {
 			++sourceEvents;
 		});
 	Assembly copy(original);
