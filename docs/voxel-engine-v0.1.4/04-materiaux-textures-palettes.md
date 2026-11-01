@@ -19,10 +19,15 @@ classDiagram
     +sprite(coord) TextureSection
     +grille de sprites
   }
-  class VoxelPalette {
+  class Palette {
     +Builder
     +association slot -> Material
     -Data immutable partagé
+  }
+  class VoxelPalette {
+    +Builder
+    +slots requis
+    +validation albedo
   }
   class Model {
     +slots sémantiques triés
