@@ -13,13 +13,13 @@ Les opérations couvrent ajout, accès, transformation locale, changement de par
 ```mermaid
 flowchart TD
   Root["Assembly : personnage"] --> Torso["Part : torso / Model (palette liée)"]
-  Torso --> Arm["Part : arm / Model + Palette"]
+  Torso --> Arm["Part : arm / Model (palette liée)"]
   Arm --> Hand["Point d'attache : hand"]
   Hand --> Mount["Part d'ancrage : epee (copie)"]
   Mount --> Blade["Part importee : lame"]
   Mount --> Guard["Part importee : garde"]
   Mount --> Grip["Part importee : poignee"]
-  Torso --> Head["Part : head / Model + Palette"]
+  Torso --> Head["Part : head / Model (palette liée)"]
 ```
 
 Chaque Part peut conserver une copie du Model pour pouvoir choisir une palette différente tout en partageant les meshes, sans référence supplémentaire à une palette externe. Les signatures exactes des composants et des Parts relèvent de la PR-08.
@@ -48,7 +48,7 @@ Les matrices `M_sourceRoot ...` sont les matrices **locales recopiées** depuis 
 // Personnage et épée sont deux Assembly sans propriété commune.
 auto result = personnage.insertAssembly(mainPartID, epee, M_insertion);
 PartID lameDansPersonnage = result.partIDs.at(lameDansEpee);
-personnage.part(lameDansPersonnage).setLocalTransform(nouvellePose);
+personnage.setLocalTransform(lameDansPersonnage, nouvellePose);
 // L'épée originale n'est pas modifiée.
 personnage.invalidate(); // Demande explicite de changement visuel.
 // Si des ombres sont voulues, le jeu reconstruit puis rebind ses MeshInstance.
@@ -79,6 +79,55 @@ L'animation demeure **externe** à la bibliothèque voxel : un système de jeu p
 
 **Adaptation des Assemblies aux ombres (A1, clos, complément matrice commune).** Aucun `ShadowMap::Contributor` n'est créé par `Assembly` ou par son composant de rendu. Le jeu construit explicitement une collection de `ShadowMap::MeshInstance`, avec pour chaque Part éligible son mesh de profondeur immuable et la matrice **locale cumulée par rapport au repère de l'Assembly** (composition des ancêtres de la Part, sans y incorporer une seconde fois la pose de l'Assembly). Il soumet **`bind(collection, assemblyMatrix)`**, où `assemblyMatrix` est la transformation de l'Assembly **destination** (pour une insertion, après expansion des Parts) **dans le repère de l'Entity3D** porteuse du Contributor. Cette matrice commune s'applique à toutes les instances, puis chaque matrice locale de Part ; pour les positions, `M_world = M_entityWorld * M_assembly * M_partAccumulated`. Toute évolution de la pose des Parts **ou de la matrice commune d'Assembly** demande un nouveau `bind(collection, assemblyMatrix)` ; `Assembly::invalidate()` ne notifie pas automatiquement les ombres. Les matrices changent sans rebake de Model ni fusion de meshes. Une évolution de `Transform3D` de l'Entity est indépendante et ne demande pas de nouveau bind. Le jeu doit choisir un repère cohérent : **ne jamais fournir une matrice monde d'Assembly déjà multipliée par `M_entityWorld`**, sinon le déplacement de l'Entity serait appliqué deux fois.
 
+### Exemple C++ — personnage articulé et épée importée (API PR-08)
+
+Les Models reçus sont issus du mesher. Chaque Model lie sa propre palette avant son association à une Part ; les copies de Model continuent à partager les meshes immuables.
+
+```cpp
+#include "voxel/assembly.hpp"
+#include "voxel/palette.hpp"
+
+void composeCharacter(
+    spk::Voxel::Model torsoModel,
+    spk::Voxel::Model armModel,
+    spk::Voxel::Model bladeModel,
+    const spk::Palette &skinPalette,
+    const spk::Palette &metalPalette)
+{
+    torsoModel.bind(skinPalette);
+    armModel.bind(skinPalette);
+    bladeModel.bind(metalPalette);
+
+    spk::Voxel::Assembly sword;
+    const auto blade = sword.addPart("blade", {}, bladeModel);
+    (void)sword.addPart("guard", blade);
+
+    spk::Voxel::Assembly character;
+    const auto torso = character.addPart("torso", {}, torsoModel);
+    const auto arm = character.addPart("rightArm", torso, armModel);
+    const auto hand = character.addPart(
+        "rightHand", arm, {}, spk::Matrix4x4::translation(1, 0, 0));
+
+    character.setLocalTransform(arm, spk::Matrix4x4::rotation(0, 0, 45));
+    const auto inserted = character.insertAssembly(
+        hand, sword, spk::Matrix4x4::translation(0, 0, 1), "swordMount");
+    const auto copiedBlade = inserted.partIDs.at(blade);
+    character.setLocalTransform(
+        copiedBlade, spk::Matrix4x4::scale(1, 1, 1.5f));
+
+    const auto bladePose = character.accumulatedTransform(copiedBlade);
+    const auto childIDs = character.children(inserted.anchor);
+    (void)bladePose;
+    (void)childIDs;
+    character.invalidate();
+}
+```
+
+`part(id)` renvoie une **référence const** : identifiants et parentage ne peuvent être modifiés directement. `setParent(id, parent)` conserve la transformation locale ; `removePart(id)` supprime le sous-arbre. `roots()`, `children(id)` et `partIDs()` fournissent des identifiants à parcourir ; `partIDs()` est ordonné en profondeur, parents avant enfants, avec frères dans l'ordre de création (identifiants croissants). `accumulatedTransform(id)` rend `M_root * ... * M_local`, sans transformation d'Entity.
+
+`insertAssembly(parent, source, transform, anchorName)` renvoie un `InsertResult {anchor, partIDs}` et garantit une transaction atomique. Un parent `std::nullopt` crée une racine. Une source vide crée uniquement l'ancrage. Les Parts stockent `std::optional<spk::Voxel::Model>`, dont la palette liée est propre à la copie du Model. Aucune palette parallèle n'est stockée.
+
+Le constructeur et l'affectation par copie de l'Assembly recréent un état `VersionedTrait` indépendant à version 1, sans transfert des abonnements. Lors d'une affectation, les abonnements précédemment attachés à la destination sont résiliés. Les modifications ordinaires de Parts n'invalident pas automatiquement la version ; l'appel à `invalidate()` reste explicite.
 ### 6.2 `ModelRenderingComponent` et `AssemblyRenderingComponent`
 
 Les deux composants sont des **composants de données** liés à une Entity3D et exposés au système de rendu par les mécanismes de Registry du moteur. Ils ne génèrent jamais eux-mêmes de `RenderCommand`.

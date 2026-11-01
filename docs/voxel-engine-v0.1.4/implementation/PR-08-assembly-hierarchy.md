@@ -17,11 +17,11 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] Assembly, PartID, transform locales et relations parentales
-- [ ] add/remove/reparent
-- [ ] insertion par copie et expansion avec ancrage
-- [ ] partage des Models/Palettes
-- [ ] VersionedTrait indépendant.
+- [x] Assembly, PartID, transformations locales et relations parentales
+- [x] add/remove/reparent
+- [x] insertion par copie et expansion avec ancrage
+- [x] partage des Models/Palettes
+- [x] VersionedTrait indépendant.
 
 ## Instructions techniques et intégration
 
@@ -57,3 +57,16 @@ Binding automatique des ombres, Engine Entity pour chaque membre.
 ## Consigne de passation
 
 Confier **uniquement PR-08** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+## API retenue pour PR-08
+
+- `spk::Voxel::PartID` : entier 64 bits monotone, attribué à partir de 1 et jamais réattribué.
+- `Assembly::Part` : `id`, `name`, `parent`, `localTransform`, `std::optional<Model> model` (palette déjà liée dans le Model).
+- `addPart(name, parent = nullopt, model = nullopt, transform = identity())`, `part(id) const`, `size()`, `empty()`, `contains(id)`.
+- `setName`, `setModel`, `setLocalTransform`, `setParent`, `removePart`.
+- `roots()`, `children(id)`, `partIDs()` et `accumulatedTransform(id)`.
+- `insertAssembly(parent, source, anchorTransform = identity(), anchorName = "attachment")` renvoie `{anchor, partIDs}`.
+
+Implémentation dans `include/voxel/assembly.hpp` et `src/graphics/voxel/assembly.cpp` ; tests `tests/TU/Graphics/srcs/voxel/voxel_assembly_test.cpp`. L'Assembly appartient à la bibliothèque graphique, à côté du Model, mais ne contient aucune opération GPU. La copie repart à version 1 sans recopier les abonnements. Les modifications des Parts ne modifient pas automatiquement la version.
+
+Voir l'exemple de composition dans [06-assemblies-scene.md](../06-assemblies-scene.md).
