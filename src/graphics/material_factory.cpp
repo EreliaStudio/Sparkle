@@ -134,8 +134,7 @@ namespace spk
 			}
 			return {Vector2(anchor), Vector2(size)};
 		}
-		void addLoadedRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role,
-						   const Reader &entry, const std::string &type, const std::string &id, const JSON::Value &config)
+		void addLoadedRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry, const std::string &type, const std::string &id, const JSON::Value &config)
 		{
 			if (type == "SpriteSheet")
 			{
@@ -149,8 +148,7 @@ namespace spk
 			}
 		}
 
-		void addPathRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role,
-						 const Reader &entry, const Reader &source)
+		void addPathRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry, const Reader &source)
 		{
 			const std::string path = nonEmptyString(source, "path");
 			JSON::Value config = JSON::Value::object();
@@ -164,8 +162,7 @@ namespace spk
 			addLoadedRole(builder, assets, role, entry, sheet ? "SpriteSheet" : "Texture", path, config);
 		}
 
-		void addAssetRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role,
-						  const Reader &entry, const Reader &source)
+		void addAssetRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry, const Reader &source)
 		{
 			const Reader asset = source.child("asset");
 			asset.forbidUnknown({"type", "id", "config"});

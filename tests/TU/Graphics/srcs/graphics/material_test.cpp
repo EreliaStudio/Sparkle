@@ -231,8 +231,7 @@ TEST(MaterialTest, OneImageSupportsIndependentSpriteGrids)
 TEST(MaterialTest, TextureAndSpriteSheetPathsAreIndependentOfLogicalAssetIDs)
 {
 	spk::Asset::Manager assets;
-	const std::string otherPath = (std::filesystem::path(texturePath()).parent_path() /
-								   "." / "default_iconset.png").string();
+	const std::string otherPath = (std::filesystem::path(texturePath()).parent_path() / "." / "default_iconset.png").string();
 	const Value first = textureConfig();
 	const Value second = textureConfig(otherPath);
 
@@ -255,8 +254,7 @@ TEST(MaterialTest, TextureAndSpriteSheetPathsAreIndependentOfLogicalAssetIDs)
 	Value material = document(assetSource());
 	material["textures"]["albedo"]["Texture"]["asset"]["id"] = "terrain";
 	material["textures"]["albedo"]["Texture"]["asset"]["config"] = second;
-	EXPECT_EQ(fromJSON(assets, material).find("albedo")->texture.identifier(),
-			  secondTexture.handle().identifier());
+	EXPECT_EQ(fromJSON(assets, material).find("albedo")->texture.identifier(), secondTexture.handle().identifier());
 }
 
 TEST(MaterialTest, GraphicFactoriesRequirePathsInJSONConfigurations)
