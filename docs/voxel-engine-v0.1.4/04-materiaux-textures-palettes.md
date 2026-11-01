@@ -131,12 +131,13 @@ Plusieurs Materials peuvent donc référencer le **même atlas** avec des rectan
 }
 ```
 
-**Deux modes de source exclusifs dans `"Texture"`.**
+**Source d'un rôle.** Le bloc `"Texture"` accepte uniquement `path`, `id` (facultatif) et `size` (facultatif). `path` est le chemin non vide du fichier à charger ; `id` est un nom logique indépendant du chemin, qui vaut `path` lorsqu'il est omis. **La présence de `size` choisit `SpriteSheet`, son absence choisit `Texture`.** Il n'existe pas de champ `type` ni de mode `asset` imbriqué.
 
-1. **Fichier (raccourci)** : `{ "path": "terrain.png" }` ou `{ "path": "terrain.png", "size": {"x":16,"y":16} }`. La factory de Material transmet **le chemin dans le JSON de configuration**. Sans `size`, le raccourci résout `assets.load<spk::Texture>(path, {"path":path})` ; avec `size`, `assets.load<spk::SpriteSheet>(path, {"path":path,"size":...})`. Le chemin est utilisé comme identifiant logique uniquement dans ce raccourci, pour compatibilité ; `Asset::Factory<Texture>` et `Asset::Factory<SpriteSheet>` lisent toujours le chemin depuis `config.path`, jamais depuis `id`. `size` compte les sprites par axe, pas les pixels. Le SpriteSheet fournit sa texture et ses `Texture::Section` normalisées.
-2. **Référence d'asset typée** : `{ "asset": { "type": "Texture", "id": "terrain-albedo", "config": {"path":"terrain.png"} } }` ou `{ "asset": { "type": "SpriteSheet", "id": "terrain-atlas", "config": {"path":"terrain.png","size":{"x":16,"y":16}} } }`. Les seuls types admis sont `Texture` et `SpriteSheet`. `id` est un **nom logique non vide**, indépendant du chemin. `config` reste un objet facultatif au niveau du schéma Material, mais les factories graphiques exigent `config.path` non vide ; son omission (`{}`) ou `null` provoque donc une erreur pour ces types. `assets.load<T>(id, config)` conserve l'identité de cache `(type,id,config)`, autorisant plusieurs versions du même ID avec des chemins différents. Le champ `size` des SpriteSheets se trouve uniquement dans `config` en mode asset typé, jamais à côté de `asset`.
+- Sans `size` : `assets.load<Texture>(id, {"path":path})`.
+- Avec `size` : `assets.load<SpriteSheet>(id, {"path":path,"size":size})` ; `size` est une grille d'entiers strictement positifs, pas une résolution en pixels.
+- Exemples : `{"path":"terrain.png"}` pour une Texture ; `{"id":"terrain","path":"terrain.png","size":[16,16]}` pour une grille nommée.
 
-Le mode fichier est un raccourci vers les mêmes chargements typés. Les modes `path` et `asset` ne coexistent jamais. Un raccourci et une référence explicite partagent la même dépendance uniquement si leurs **triplets complets** `(type,id,config)` sont identiques ; un ID logique différent crée un asset distinct même à chemin identique. Plusieurs valeurs de `config.path` peuvent coexister sous un seul ID logique, et `get<T>(id)` continue de retourner la version par défaut. Un `Material` résolu conserve les **handles et UV** nécessaires, mais pas de pointeurs vers `AssetManager` ou `SpriteSheet`. La liaison `EngineView` relève **uniquement du Builder C++ explicite** et ne constitue jamais une source JSON ; aucune recherche de vue depuis `id`, `path` ou un champ `view` n'est permise.
+La configuration `path` est toujours transmise à la factory graphique ; celle-ci ne déduit jamais le chemin de l'ID. Le gestionnaire conserve son cache par triplet `(type,id,config)` : un même ID peut avoir plusieurs versions, y compris des chemins différents, sélectionnables avec `setDefault<T>`. Une fois construit, un Material ne retient que ses handles et sections UV, pas de pointeur vers l'AssetManager ni vers le SpriteSheet. La liaison `EngineView` reste une opération explicite du Builder C++ et non une source JSON.
 
 **Région UV.** `"UV"` est **facultatif**, son absence signifie `Texture::Section::whole`. Lorsqu'il est présent, c'est un objet prenant **une seule** de ces formes :
 
@@ -145,7 +146,7 @@ Le mode fichier est un raccourci vers les mêmes chargements typés. Les modes `
 
 `UV.sprite` ne se combine pas à `UV.anchor` ou `UV.size`; `UV: null`, objet UV vide, tableau, chaîne, composante manquante, `NaN`, infini ou dimension nulle/négative sont invalides. La validation du rectangle du Material est **distincte de l'avertissement non bloquant sur les UV locaux d'une Shape** situés hors `[0,1]` : ceux-ci ne sont jamais clampés lors du rendu. Un SpriteSheet sans champ `UV` désigne simplement sa texture entière.
 
-**Erreurs, doublons et atomicité.** Les objets JSON n'ont pas d'ordre sémantique. Le parseur existant `JSON::Value::fromString` / `loadFromFile` expose déjà `ParseOptions::rejectDuplicateKeys = true` par défaut : **ce mode est obligatoire** pour charger du texte de Material, afin de refuser les doublons de rôles et les doublons de champs à n'importe quel niveau. Un `JSON::Value` déjà construit est une map de clés uniques ; un doublon qui aurait été silencieusement éliminé par un parsing externe configuré permissif n'est **pas récupérable** après coup. Les constructions depuis `JSON::Value` valident les champs et les types présents, sans prétendre détecter un historique de doublons perdu. Toute erreur de schéma, type, clé, valeur, source non résolue ou coordonnée hors grille produit une `spk::Exception` descriptive avec **chemin logique précis** (par exemple `textures.albedo.Texture.size.x` ou `textures.normal.UV.sprite`), nom du rôle et cause de chargement lorsqu'elle existe. Un objet racine mal formé est rejeté avant publication, jamais corrigé par une valeur par défaut implicite autre que `UV` entier et `asset.config` objet vide.
+**Erreurs, doublons et atomicité.** Les objets JSON n'ont pas d'ordre sémantique. Le parseur existant `JSON::Value::fromString` / `loadFromFile` expose déjà `ParseOptions::rejectDuplicateKeys = true` par défaut : **ce mode est obligatoire** pour charger du texte de Material, afin de refuser les doublons de rôles et les doublons de champs à n'importe quel niveau. Un `JSON::Value` déjà construit est une map de clés uniques ; un doublon qui aurait été silencieusement éliminé par un parsing externe configuré permissif n'est **pas récupérable** après coup. Les constructions depuis `JSON::Value` valident les champs et les types présents, sans prétendre détecter un historique de doublons perdu. Toute erreur de schéma, type, clé, valeur, source non résolue ou coordonnée hors grille produit une `spk::Exception` descriptive avec **chemin logique précis** (par exemple `textures.albedo.Texture.size.x` ou `textures.normal.UV.sprite`), nom du rôle et cause de chargement lorsqu'elle existe. Un objet racine mal formé est rejeté avant publication ; seule l'absence de `UV` entraîne l'utilisation de la texture entière, et seule l'absence de `id` utilise le chemin comme identifiant.
 
 **Builder et équivalence sémantique.** Le `Material::Builder` assemble exclusivement des Textures ou SpriteSheets déjà disponibles : il ne connaît ni le JSON ni l'`Asset::Manager`. La spécialisation `Asset::Factory<spk::Material>` lit le document JSON, résout les dépendances avec le gestionnaire reçu, puis alimente un Builder local. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite. La factory valide les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'Asset::Manager.
 
@@ -153,11 +154,11 @@ Le mode fichier est un raccourci vers les mêmes chargements typés. Les modes `
 flowchart TD
   Root["JSON racine : textures par roles"] --> Parse["Parsing strict : cles dupliquees refusees"]
   Parse --> Role["Validation role et bloc Texture / UV"]
-  Role --> Type{"Source ?"}
-  Type -->|"path"| Path["Texture ou SpriteSheet selon size"]
-  Type -->|"asset"| Asset["asset.type + id + config"]
-  Path --> Load["AssetManager : load T id config"]
-  Asset --> Load
+  Role --> Type{"Texture.size present ?"}
+  Type -->|"oui"| Sheet["SpriteSheet : id + path + size"]
+  Type -->|"non"| Texture["Texture : id + path"]
+  Sheet --> Load["AssetManager : load T id config"]
+  Texture --> Load
   Load --> Region{"UV ?"}
   Region -->|"sprite"| Sprite["SpriteSheet.sprite(coord)"]
   Region -->|"anchor + size"| Explicit["Texture.Section normalisee"]

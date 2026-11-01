@@ -77,24 +77,6 @@ namespace spk
 			return value;
 		}
 
-		void validateConfiguration(const std::string &type, const JSON::Value &config, const std::string &path)
-		{
-			Reader reader(config, {}, path);
-			if (type == "Texture")
-			{
-				reader.forbidUnknown({"path"});
-			}
-			else
-			{
-				reader.forbidUnknown({"path", "size"});
-			}
-			(void)nonEmptyString(reader, "path");
-			if (type == "SpriteSheet")
-			{
-				(void)grid(vectorMember(reader, "size"), false);
-			}
-		}
-
 		[[nodiscard]] Texture::Section readSection(const Reader &role, const SpriteSheet *sheet)
 		{
 			if (!role.contains("UV"))
@@ -134,69 +116,27 @@ namespace spk
 			}
 			return {Vector2(anchor), Vector2(size)};
 		}
-		void addLoadedRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry, const std::string &type, const std::string &id, const JSON::Value &config)
-		{
-			if (type == "SpriteSheet")
-			{
-				const SpriteSheet &sheet = assets.load<SpriteSheet>(id, config);
-				builder.add(role, sheet, readSection(entry, &sheet));
-			}
-			else
-			{
-				const Texture &texture = assets.load<Texture>(id, config);
-				builder.add(role, texture, readSection(entry, nullptr));
-			}
-		}
-
-		void addPathRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry, const Reader &source)
-		{
-			const std::string path = nonEmptyString(source, "path");
-			JSON::Value config = JSON::Value::object();
-			config["path"] = path;
-			const bool sheet = source.contains("size");
-			if (sheet)
-			{
-				(void)grid(vectorMember(source, "size"), false);
-				config["size"] = source.value().at("size");
-			}
-			addLoadedRole(builder, assets, role, entry, sheet ? "SpriteSheet" : "Texture", path, config);
-		}
-
-		void addAssetRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry, const Reader &source)
-		{
-			const Reader asset = source.child("asset");
-			asset.forbidUnknown({"type", "id", "config"});
-			const std::string type = nonEmptyString(asset, "type");
-			const std::string id = nonEmptyString(asset, "id");
-			if (type != "Texture" && type != "SpriteSheet")
-			{
-				throw Exception(asset.pathFor("type") + ": expected Texture or SpriteSheet");
-			}
-			const JSON::Value config = asset.contains("config") ? asset.value().at("config") : JSON::Value::object();
-			validateConfiguration(type, config, asset.pathFor("config"));
-			addLoadedRole(builder, assets, role, entry, type, id, config);
-		}
-
 		void addRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry)
 		{
 			entry.forbidUnknown({"Texture", "UV"});
 			const Reader source = entry.child("Texture");
-			source.forbidUnknown({"path", "size", "asset"});
-			const bool hasPath = source.contains("path");
-			if (hasPath == source.contains("asset"))
-			{
-				throw Exception(source.path() + ": exactly one of path or asset is required");
-			}
-			if (hasPath)
-			{
-				addPathRole(builder, assets, role, entry, source);
-				return;
-			}
+			source.forbidUnknown({"id", "path", "size"});
+
+			const std::string path = nonEmptyString(source, "path");
+			const std::string id = source.contains("id") ? nonEmptyString(source, "id") : path;
+			JSON::Value config = JSON::Value::object();
+			config["path"] = path;
+
 			if (source.contains("size"))
 			{
-				throw Exception(source.pathFor("size") + ": size is not allowed with asset");
+				config["size"] = source.value().at("size");
+				const SpriteSheet &sheet = assets.load<SpriteSheet>(id, config);
+				builder.add(role, sheet, readSection(entry, &sheet));
+				return;
 			}
-			addAssetRole(builder, assets, role, entry, source);
+
+			const Texture &texture = assets.load<Texture>(id, config);
+			builder.add(role, texture, readSection(entry, nullptr));
 		}
 
 		[[nodiscard]] Material readMaterial(Asset::Manager &assets, const JSON::Value &description)

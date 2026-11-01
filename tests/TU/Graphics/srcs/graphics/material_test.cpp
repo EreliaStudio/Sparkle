@@ -47,12 +47,10 @@ namespace
 		return source;
 	}
 
-	[[nodiscard]] Value assetSource(bool sheet = false, unsigned int count = 16)
+	[[nodiscard]] Value namedSource(bool sheet = false, unsigned int count = 16)
 	{
-		Value source = Value::object();
-		source["asset"]["type"] = sheet ? "SpriteSheet" : "Texture";
-		source["asset"]["id"] = texturePath();
-		source["asset"]["config"] = sheet ? sheetConfig(count) : textureConfig();
+		Value source = pathSource(sheet, count);
+		source["id"] = texturePath();
 		return source;
 	}
 
@@ -189,16 +187,16 @@ TEST(MaterialTest, JsonAndManualBindingsHaveSameTextureAndUV)
 	EXPECT_EQ(parsed.textures().size(), 2u);
 }
 
-TEST(MaterialTest, FileAndTypedSourcesResolveIdenticalTriples)
+TEST(MaterialTest, NamedAndUnnamedSourcesResolveIdenticalTriples)
 {
 	spk::Asset::Manager assets;
 	const spk::Material plainPath = fromJSON(assets, document(pathSource()));
-	const spk::Material plainAsset = fromJSON(assets, document(assetSource()));
+	const spk::Material plainAsset = fromJSON(assets, document(namedSource()));
 	expectSameBinding(plainPath, plainAsset, "albedo");
 
 	Value atlasPath = document(pathSource(true));
 	atlasPath["textures"]["albedo"]["UV"] = spriteUV(3, 5);
-	Value atlasAsset = document(assetSource(true));
+	Value atlasAsset = document(namedSource(true));
 	atlasAsset["textures"]["albedo"]["UV"] = spriteUV(3, 5);
 	expectSameBinding(fromJSON(assets, atlasPath), fromJSON(assets, atlasAsset), "albedo");
 }
@@ -251,9 +249,9 @@ TEST(MaterialTest, TextureAndSpriteSheetPathsAreIndependentOfLogicalAssetIDs)
 	assets.setDefault<spk::SpriteSheet>("atlas", secondSheet);
 	EXPECT_EQ(&assets.get<spk::SpriteSheet>("atlas"), &sheetB);
 
-	Value material = document(assetSource());
-	material["textures"]["albedo"]["Texture"]["asset"]["id"] = "terrain";
-	material["textures"]["albedo"]["Texture"]["asset"]["config"] = second;
+	Value material = document(namedSource());
+	material["textures"]["albedo"]["Texture"]["id"] = "terrain";
+	material["textures"]["albedo"]["Texture"]["path"] = otherPath;
 	EXPECT_EQ(fromJSON(assets, material).find("albedo")->texture.identifier(), secondTexture.handle().identifier());
 }
 
@@ -275,8 +273,8 @@ TEST(MaterialTest, GraphicFactoriesRequirePathsInJSONConfigurations)
 	config["path"] = "";
 	EXPECT_THROW((void)assets.load<spk::SpriteSheet>("sheet", config), spk::Exception);
 
-	Value invalid = document(assetSource());
-	invalid["textures"]["albedo"]["Texture"]["asset"]["config"] = Value::object();
+	Value invalid = document(namedSource());
+	invalid["textures"]["albedo"]["Texture"] = Value::fromString(R"({"id":"terrain"})");
 	EXPECT_THROW((void)fromJSON(assets, invalid), spk::Exception);
 }
 
@@ -341,18 +339,17 @@ TEST(MaterialTest, InvalidJSONStructureAndUnknownFieldsAreRejected)
 	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
 }
 
-TEST(MaterialTest, InvalidAssetSourceAndConfigurationsAreRejected)
+TEST(MaterialTest, InvalidMaterialTextureSourcesAreRejected)
 {
 	spk::Asset::Manager assets;
-	Value bad = document(assetSource());
+	Value bad = document(namedSource());
+	bad["textures"]["albedo"]["Texture"]["id"] = "";
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(namedSource());
+	bad["textures"]["albedo"]["Texture"]["asset"] = Value::object();
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(namedSource());
 	bad["textures"]["albedo"]["Texture"]["size"]["x"] = 16;
-	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
-
-	bad = document(assetSource());
-	bad["textures"]["albedo"]["Texture"]["asset"]["type"] = "EngineView";
-	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
-	bad = document(assetSource());
-	bad["textures"]["albedo"]["Texture"]["asset"]["config"] = nullptr;
 	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
 	bad = document(pathSource(true));
 	bad["textures"]["albedo"]["Texture"]["size"]["x"] = 0;
@@ -362,6 +359,9 @@ TEST(MaterialTest, InvalidAssetSourceAndConfigurationsAreRejected)
 	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
 	bad = document(pathSource());
 	bad["textures"]["albedo"]["Texture"]["path"] = "";
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["Texture"]["path"] = 12;
 	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
 }
 

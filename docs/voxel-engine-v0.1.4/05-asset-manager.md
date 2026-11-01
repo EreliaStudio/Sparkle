@@ -36,31 +36,27 @@ La forme à un seul argument signifie **exactement un objet JSON vide**, obtenu 
 
 **Application au schéma `Material` multi-rôles (Q-ARCH-005 validée).** Le document `Material` du chapitre 04 est un objet `{ "textures": { "<role>": { "Texture": ..., "UV": ... } } }`. La spécialisation `Asset::Factory<spk::Material>` analyse le JSON, résout les textures via l'`Asset::Manager&` reçu et construit le Material avec un `Material::Builder` sans gestionnaire ni parsing JSON, sans registre de factories ni méthode `fromJSON()` universelle. Un chargement par `load<Material>(id, config)` possède **exactement la même identité de cache structurelle** que tout autre type d'asset ; l'ordre des clés `textures` ne distingue pas deux Materials. Des variations réelles de rôles, de sources, de grilles ou de sections UV sont conservées dans la configuration, donc participent à cette identité.
 
-**Résolution explicite de chaque rôle.** `Texture: {"path":"fichier.png"}` utilise `assets.load<Texture>("fichier.png", {"path":"fichier.png"})` ; `{"path":"atlas.png","size":{"x":16,"y":16}}` utilise `assets.load<SpriteSheet>("atlas.png", {"path":"atlas.png","size":...})`. Le chemin devient une propriété de configuration, et non un paramètre de construction extrait de l'identifiant. Avec `Texture.asset`, le type `Texture` ou `SpriteSheet`, l'ID logique et `config` sont passés à `assets.load<T>(id, config)` ; les factories graphiques exigent `config.path` (ainsi que `config.size` pour SpriteSheet). L'absence de `config` correspond à `{}`, qui reste une configuration **invalide** pour ces factories. L'Asset::Manager conserve plusieurs variantes d'un même ID si leur configuration, notamment le chemin, change.
+**Résolution d'une texture dans Material.** Chaque bloc `"Texture"` comporte `path` obligatoire et `id` et `size` facultatifs. L'identifiant vaut `id` lorsqu'il est fourni, sinon `path`. Si `size` est présent, le Material appelle `assets.load<SpriteSheet>(id, {"path":path,"size":size})` ; sinon `assets.load<Texture>(id, {"path":path})`. Il n'y a pas de seconde syntaxe `asset/type/config` dans le JSON de Material. Les factories de Texture et SpriteSheet lisent `config.path`, pas l'ID. Les valeurs `[x,y]` et `{"x":x,"y":y}` sont toutes deux acceptées pour `size`.
 
 ```json
 {
   "textures": {
     "albedo": {
       "Texture": {
-        "asset": {
-          "type": "SpriteSheet",
-          "id": "terrain-atlas",
-          "config": { "path": "terrain.png", "size": { "x": 16, "y": 16 } }
-        }
+        "id": "terrain-atlas",
+        "path": "terrain.png",
+        "size": [16, 16]
       },
-      "UV": { "sprite": { "x": 3, "y": 5 } }
+      "UV": { "sprite": [3, 5] }
     },
     "normal": {
-      "Texture": {
-        "asset": { "type": "Texture", "id": "terrain-normal", "config": { "path": "terrain_normal.png" } }
-      }
+      "Texture": { "id": "terrain-normal", "path": "terrain_normal.png" }
     }
   }
 }
 ```
 
-Les deux formes `path + size` et `asset + type + id + config` qui aboutissent au **même triplet de dépendance** utilisent la même instance de `SpriteSheet` ou `Texture`. Deux configurations différentes (par exemple grille 16×16 et 8×8) créent des dépendances distinctes même si elles portent le même identifiant ; aucun rôle ne reconfigure une instance déjà chargée. La résolution d'un rôle ne change pas les règles de possession : après création, le Material conserve un `Texture::Handle` et une `Texture::Section`, sans emprunt au SpriteSheet ou à l'Asset::Manager. Un `Asset::Manager::clear()` invalide les références à ses assets, **mais n'invalide pas rétroactivement les handles** déjà conservés par les Materials.
+Le même triplet `(type,id,config)` partage la même instance, quel que soit l'ordre textuel des clés JSON. Des variantes du même ID mais de chemins ou grilles différents coexistent dans le cache. Après chargement, Material conserve un `Texture::Handle` et une `Texture::Section`, sans dépendre de la durée de vie du SpriteSheet ou de l'AssetManager. Un `clear()` invalide les emprunts aux assets mais pas les handles déjà conservés par les Materials.
 
 **Validation et échecs de chargement.** Le texte de fichier Material est lu avec `JSON::ParseOptions::rejectDuplicateKeys = true` (valeur déjà par défaut) ; `JSON::Value` conserve ensuite les objets sous forme de map et ne mémorise pas les doublons rejetés par le parseur. L'intégralité du schéma et de ses rôles est validée, avec `spk::Exception` contextualisée par le chemin `textures.<role>...`, avant de publier le Material. Une erreur sur le dernier rôle ne doit pas publier le Material partiel ; les dépendances déjà construites avec succès peuvent rester dans le cache, conformément au contrat général d'échec des factories. En cas d'erreur de dépendance ou de cycle direct/indirect, la cause native est conservée dans l'exception descriptive et la pile de détection de cycles est nettoyée.
 

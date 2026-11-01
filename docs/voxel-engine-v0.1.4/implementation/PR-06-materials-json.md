@@ -22,7 +22,7 @@
 - [ ] rôles nommés libres avec Texture::Handle + Texture::Section
 - [ ] SpriteSheet existant
 - [ ] racine JSON {textures:{...}}
-- [ ] sources path ou asset typé
+- [ ] source JSON avec path obligatoire, id facultatif et size déterminant Texture/SpriteSheet
 - [ ] UV whole, sprite ou anchor/size
 - [ ] factory Material.
 
@@ -37,7 +37,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 - [ ] Builder manuel == JSON
 - [ ] deux grilles d'un atlas chargées indépendamment
 - [ ] UV sprite hors domaine refusée
-- [ ] path/asset équivalents même triplet
+- [ ] même triplet de chargement partagé avec ou sans id explicite équivalent
 - [ ] doublons textuels rejetés
 - [ ] rôle albedo absent accepté par Material mais pas par consommateur.
 
