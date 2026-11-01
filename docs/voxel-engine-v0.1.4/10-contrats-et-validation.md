@@ -4,6 +4,8 @@
 
 ## 8. Garanties transversales et frontières des interfaces
 
+> Révision prioritaire PR-08 : Voxel::Mesh porte les surfaces, le shadow mesh, les slots et offset ; Voxel::Model porte UN Mesh et des Anchors, sans palette ; Model::View porte les palettes et les poses ; Model::Harmonizer produit un Model harmonisé, sa palette commune et son MaterialLayout. Les anciennes règles sur Assembly, Voxel::View et Model::bind sont supersédées par le [chapitre 06](06-assemblies-scene.md).
+
 ### 8.1 Propriété des données
 
 | Ressource | Propriétaire / représentation | Relation vers les utilisateurs |

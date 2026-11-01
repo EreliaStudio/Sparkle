@@ -17,6 +17,7 @@
 namespace
 {
 	using namespace spk::Voxel;
+	using Mesh = spk::Voxel::SurfaceMesh;
 	using Face = Shape::Face;
 	using Position = spk::Vector3UInt;
 	using Horizontal = Shape::HorizontalOrientation;

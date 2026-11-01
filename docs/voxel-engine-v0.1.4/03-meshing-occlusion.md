@@ -86,7 +86,7 @@ Les `outerShell` continuent à être traités par clipping directionnel indépen
 
 ### 3.5 `spk::Voxel::OcclusionCache`
 
-Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et GPU, et **facultative pour le VoxelMesher**. Plusieurs Meshers peuvent partager une même instance. Il n'a aucun binding de transformation et n'a pas de `ShapeTransformationCache` interne : les deux chemins d'occlusion (avec et sans cache) consomment directement `Shape::instance(orientation)`. En cas d'absence d'entrée, le cache utilise le même calcul CPU directionnel que le Mesher non caché, puis peut mémoriser le résultat.
+Le cache est une ressource CPU autonome, indépendante des Meshers, palettes et GPU, et **facultative pour le Mesher**. Plusieurs Meshers peuvent partager une même instance. Il n'a aucun binding de transformation et n'a pas de `ShapeTransformationCache` interne : les deux chemins d'occlusion (avec et sans cache) consomment directement `Shape::instance(orientation)`. En cas d'absence d'entrée, le cache utilise le même calcul CPU directionnel que le Mesher non caché, puis peut mémoriser le résultat.
 
 Une entrée représente **une requête directionnelle A → B** : quels fragments de l'`outerShell` de A restent visibles après occultation par B ? Le sens **B → A** constitue une autre requête, une autre clé et éventuellement un autre résultat. Une valeur valide contenant zéro fragment signifie **occlusion totale**, tandis que l'absence d'entrée est représentée par `std::nullopt`.
 
@@ -104,43 +104,6 @@ Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`Occlus
 
 Un cache partagé peut être interrogé simultanément ; sa **destruction** ou le changement de liaison facultative du Mesher pendant un bake actif ne sont pas rendus sûrs par la seule synchronisation de `find/store/clear`.
 
-### 3.6 `spk::Voxel::Model` : géométrie immuable, palette liée par instance
+### 3.6 Voxel::Mesh et Voxel::Model
 
-Le Model contient ou conserve de manière sûre les données issues du Volume, **deux meshes visuels immuables** (opaque et translucide, éventuellement vides), **un `ShadowMap::Mesh` de profondeur immuable** (éventuellement vide) et la table complète des slots sémantiques déclarés par les Definitions effectivement utilisées. Le mesh d'ombre reprend les triangles opaques résultant du bake, leurs positions, indices et winding, sans UV, normales ni références de palette ; il ne représente pas nécessairement une enveloppe fermée. **Les triangles d'ombre sont entièrement opaques géométriquement** : une texture albedo trouée ou à alpha nul n'y découpe aucun fragment. Pour obtenir une silhouette ajourée, l'application doit fournir et lier explicitement un mesh d'ombre dont les triangles dessinent les ouvertures. Le mesher ne déduit pas une géométrie cutout depuis les textures ni ne reconstruit le mesh d'ombre lorsque seule la palette change.
-
-Chaque polygone d'opacité **égale à 1** alimente le mesh opaque, et tout polygone d'opacité **inférieure à 1** alimente le mesh translucide. Il n'existe pas de catégorie `cutout` distincte. La texture ne modifie pas cette classification.
-
-Tous les slots sémantiques **référencés par les Definitions des cellules du Volume** sont conservés, même si leurs triangles sont totalement occultés ou si leur Shape est vide. Une Definition qui reste dans une table interne mais n'est référencée par aucune Cell n'ajoute pas ses slots au Model.
-
-Deux déclarations de slot portant le **même nom et la même opacité** sont fusionnées. Si elles portent le **même nom et des opacités différentes**, `bake()` échoue avec une `spk::Exception` descriptive ; aucune promotion implicite de catégories n'est tentée. Une fois fusionnés, les slots sont triés par **ordre lexicographique déterministe de leurs noms**, indépendamment de l'ordre de visite des cellules ou du culling.
-
-Le sommet voxel comporte au minimum :
-
-```cpp
-struct MeshVertex
-{
-    spk::Vector3 position;
-    spk::Vector3 normal;
-    spk::Vector2 uv;
-    std::uint32_t materialIndex; // Index dans la table triée du Model
-};
-```
-
-Les meshes visuels et d'ombre réutilisent **l'infrastructure `spk::Mesh<TVertex>` existante** et ses buffers/layouts GPU ; pas de nouveau framework de maillage. `materialIndex` n'est jamais réattribué selon les seuls triangles visibles. Remplacer une palette ou déplacer un Assembly ne change pas les meshes du Model.
-
-**Liaison d'apparence (PR-07).** Le Model né du bake n'a initialement aucune palette liée. Son `isCompatible(const spk::Palette&)` vérifie que tous les noms de slots sont fournis, indépendamment des triangles visibles. `bind(spk::Palette)` effectue cette validation et conserve une copie légère de la palette, ou lève `spk::Exception` en préservant la liaison précédente si un slot est manquant. `palette()` renvoie un pointeur const ou `nullptr` si rien n'est lié. Les données géométriques restent partagées via `shared_ptr<const Data>` ; chaque copie de Model possède sa propre association de palette, modifiable sans rebake. La validation d'atlas unique et de rôle `albedo` reste dans `spk::Voxel::Palette::Builder::setMaterial()`, jamais dans le mesher ni dans la compatibilité du Model.
-
-**Réutilisation dans PR-08.** `Assembly::Part::model` contient un `std::optional<Model>` par valeur. Les données du Model restent partagées et aucun re-bake ni changement de mesh n’est nécessaire pour animer une Part. `Assembly::setModel` remplace uniquement l’occurrence et sa palette déjà liée.
-
-**Palette commune des Assemblies (révision PR-08).** Les Models peuvent rester indépendants et lier des palettes différentes hors Assembly, mais chaque `Assembly` fusionne les palettes de ses Models dans un `spk::Palette` unique et rebinde les copies internes sur cette palette. La géométrie et les indices de slots restent immuables. La fusion ne modifie jamais les UV des meshes et exige donc un atlas albedo compatible.
-
-**Animation et apparence Assembly (PR-08).** Les matrices des Parts peuvent être animées indépendamment, mais les Models contenus sont accessibles seulement par référence const. La liaison des matériaux pour une Assembly est changée exclusivement par `Assembly::bind(spk::Palette)`, sans rebake ni mutation des meshes. Les Models individuels hors Assembly conservent leur API de liaison habituelle.
-
-
-### Décalage optionnel des indices de matériaux (API Mesher)
-
-`spk::Voxel::Mesher::bake(volume, materialIndexOffset)` accepte un offset `std::uint32_t` (0 par défaut). Le Mesher ajoute cet offset à l'indice local de chaque vertex opaque et translucide. Il conserve les slots sémantiques locaux, leur ordre et leur opacité dans le `Model`, lequel expose `materialIndexOffset()` et `materialSlot(index)` pour résoudre un indice de vertex décalé. Les faces, indices de triangles, normales, UV et le mesh de profondeur ne changent pas.
-
-`Mesher::offsetMaterialIndices(existingModel, offset)` retourne une nouvelle copie de Model avec des indices encore décalés (offset **additionnel**, cumulatif) et le même mesh de profondeur partagé. `Mesher::offsetMaterialIndices(existingMesh, offset)` fonctionne également sur un mesh visuel déjà construit ; l'appelant conserve la responsabilité de mettre à jour la table de slots lorsqu'il ne passe que le mesh isolé. Un offset nul réutilise les ressources existantes. Les dépassements de `uint32_t` sont rejetés avant publication du résultat, y compris lorsque les slots d'un Model ne produisent aucun triangle visible.
-
-Ce mécanisme facilite une future harmonisation par blocs d'indices disjoints, sans effectuer la fusion des palettes dans le Mesher. **Un offset seul ne rend pas les palettes compatibles** : une table globale d'indices et de matériaux reste nécessaire pour les combiner.
+Le Mesher fournit un Voxel::Mesh immuable contenant deux SurfaceMesh visuels, un ShadowMap::Mesh et la liste déterministe des slots de matériaux (nom et opacité), y compris ceux totalement occultés. Un offset peut être appliqué durant bake(volume, offset) ou ultérieurement via Mesher::offsetMaterialIndices. Un Voxel::Model possède ce Mesh et des Anchors sans palette. L'instance Model::View porte les palettes et les rotations. Le Harmonizer permet facultativement de réindexer une copie et de fournir une palette commune. Voir [chapitre 06](06-assemblies-scene.md).

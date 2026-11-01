@@ -1,82 +1,29 @@
-# PR-08 — Voxel::Assembly par copie et expansion
+# PR-08 — Voxel::Mesh, Model::Anchor, Model::View et Harmonizer
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
->
-> **Branche source :** `impl/v0.1.4/08-assembly-hierarchy`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> PR GitHub Draft #49 ; branche impl/v0.1.4/08-assembly-hierarchy, cible V0.1.4. Ne pas fusionner sans validation.
 
-**Objectif :** Composer une hiérarchie de Parts animables sans Entity par Part.
+## Périmètre
 
-**Prérequis :** [PR-07](PR-07-voxel-palette.md)
+- SurfaceMesh : mesh de vertices individuel, nommé autrement que le nouveau Voxel::Mesh.
+- Mesh : ensemble immuable des meshes opaque, translucide, depth et slots sémantiques avec offset.
+- Mesher : bake(Volume, materialIndexOffset=0) retourne Mesh, et offsetMaterialIndices transforme une copie d'une ressource existante.
+- Model : un Mesh, des Model::Anchor nommés et enfants facultatifs ; aucune Palette.
+- Model::View : palettes indépendantes ou propagation explicite, rotations de joints, matrice globale, visite pour futurs renderers.
+- Model::Harmonizer : reindexation des meshes et génération d'une Palette harmonisée et d'un MaterialLayout commun.
+- La stratégie définitive d'identifiants et chemins d'occurrence demeure volontairement ouverte ; les APIs provisoires rejettent les noms ambigus.
 
-## Spécifications normatives
+## Contrats
 
-- [06-assemblies-scene.md](../06-assemblies-scene.md)
-- [10-contrats-et-validation.md](../10-contrats-et-validation.md)
-- [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
-- [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
+La géométrie, les noms/opacités des slots et leurs indices viennent exclusivement du Mesher. Un Anchor est un repère de repos rigide : le Model source est copié lors d'un bind. Pour les enfants M_child = M_parent * A_parent * R_joint * inverse(A_child), en préservant les points de pivot. Les rotations et palettes ne sont modifiables que dans la View. Une View non harmonisée supporte une palette par Model, y compris des atlas différents ; la sortie harmonisée exige un atlas commun. Les modèles harmonisés ne peuvent utiliser que des palettes au MaterialLayout identique.
 
-## Périmètre exact à réaliser
+## Tests
 
-- [x] Assembly, PartID, transformations locales et relations parentales
-- [x] add/remove/reparent
-- [x] insertion par copie et expansion avec ancrage
-- [x] partage des Models et palette fusionnée commune
-- [x] VersionedTrait indépendant.
-
-## Instructions techniques et intégration
-
-PartID monotones non réutilisés; réaffecter IDs uniquement à la copie importée; refuser cycles et auto-insertion; source jamais liée vivante; opération d'insertion garantie forte; calcul de pose locale cumulé, aucune propagation de ShadowMode.
-
-Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
-
-## Tests obligatoires
-
-- [ ] Source avec plusieurs racines ou vide
-- [ ] insertion deux fois IDs différents
-- [ ] reparentage garde ID
-- [ ] suppression sous-arbre
-- [ ] matrices non commutatives
-- [ ] source détruite n'affecte pas destination
-- [ ] erreur avant commit et version inchangée.
-
-**Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
-
-## Définition de terminé / critère de fusion
-
-Une Assembly articulée modifiable et copiable indépendamment.
-
-- [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
-- [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
-- [ ] La PR présente le périmètre, les tests réellement exécutés et les résultats, les screenshots/diffs si graphiques, et les limitations éventuelles.
-- [ ] Aucune fusion sans validation du propriétaire.
+Géométrie, offsets, slots occultés, collisions, copies autonomes d'Anchors, rotations, propagations transactionnelles, palettes divergentes, harmonisation, invariance des sources et variants de palette.
 
 ## Hors périmètre
 
-Binding automatique des ombres, Engine Entity pour chaque membre.
+Rendu OpenGL / VoxelRenderingSystem, animations avancées, décision sur identifiants/chemins.
 
-## Consigne de passation
+## Validation
 
-Confier **uniquement PR-08** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
-
-## API retenue pour PR-08
-
-- `spk::Voxel::PartID` : entier 64 bits monotone, attribué à partir de 1 et jamais réattribué.
-- `Assembly::Part` : `id`, `name`, `parent`, `localTransform`, `std::optional<Model> model` (Model rebondi sur la palette globale commune).
-- `addPart(name, parent = nullopt, model = nullopt, transform = identity())`, `part(id) const`, `size()`, `empty()`, `contains(id)`.
-- `setName`, `setModel`, `setLocalTransform`, `setParent`, `removePart`.
-- `roots()`, `children(id)`, `partIDs()`, `accumulatedTransform(id)`, `palette() const` et `bind(spk::Palette)` (seule API de changement de palette des Models déjà dans l'Assembly).
-- `insertAssembly(parent, source, anchorTransform = identity(), anchorName = "attachment")` renvoie `{anchor, partIDs}`.
-
-Implémentation dans `include/voxel/assembly.hpp` et `src/graphics/voxel/assembly.cpp` ; tests `tests/TU/Graphics/srcs/voxel/voxel_assembly_test.cpp`. L'Assembly appartient à la bibliothèque graphique, à côté du Model, mais ne contient aucune opération GPU. La copie repart à version 1 sans recopier les abonnements. Les modifications des Parts ne modifient pas automatiquement la version.
-
-Voir l'exemple de composition dans [06-assemblies-scene.md](../06-assemblies-scene.md).
-
-### Révision : palette commune par Assembly
-
-Une Assembly fusionne les Materials nommés des palettes **déjà liées** des Models ajoutés. Toutes les copies internes de Model sont ensuite liées à la même `spk::Palette` résultante. Un même nom de slot ne peut pas désigner deux Materials différents (identité des textures et sections UV) ; tous les albedos doivent désigner un seul atlas. Les Models sans palette préalable sont refusés. Les ajouts, suppressions, remplacements de Models et insertions recalculent la fusion à partir d'entrées d'origine internes, puis publient la nouvelle structure et sa palette atomiquement. Les anciennes palettes ne sont pas des palettes actives indépendantes par Part. La suppression d'un Model retire sa contribution. Pas de réassemblage d'atlas, pas d'ajustement UV et aucune allocation GPU.
-
-### Révision : accès aux Models en lecture seule et liaison globale explicite
-
-`part(id)` retourne `const Assembly::Part&`. Il est impossible d'appeler `bind()` sur le Model de cette Part. `Assembly::bind(spk::Palette)` valide la palette voxel et sa complétude pour chaque Model, rebind toutes les copies internes sur la même palette, puis publie atomiquement l'ensemble. Un échec ne change ni Models, ni palette commune, ni identifiants, ni version. Les transformations restent indépendantes.
-
-La première construction peut fusionner automatiquement les palettes des Models déjà liés (comportement de compatibilité). Après un appel explicite à `assembly.bind(...)`, la palette choisie ne doit **plus être recalculée** à partir des palettes individuelles lors de modifications structurelles. Un Model non lié peut être ajouté après ce bind, si la palette commune couvre ses slots. Une Part à laquelle on associe un Model incompatible est rejetée sans effet. Les transformations restent animables par `setLocalTransform()` et `setParent()` ; les Models restent accessibles en lecture seule.
+CI Graphics/Core et clang-format requise avant validation humaine ; PR maintenue en Draft.
