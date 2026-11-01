@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "exception.hpp"
+
 namespace spk::Voxel
 {
 	void Mesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
@@ -40,5 +42,43 @@ namespace spk::Voxel
 	const std::vector<Definition::Slot> &Model::materialSlots() const noexcept
 	{
 		return _data->slots;
+	}
+
+	void Model::bind(spk::Palette palette)
+	{
+		std::string missing;
+		for (const auto &slot : materialSlots())
+		{
+			if (palette.find(slot.name) == nullptr)
+			{
+				if (!missing.empty())
+				{
+					missing += ", ";
+				}
+				missing += "'" + slot.name + "'";
+			}
+		}
+		if (!missing.empty())
+		{
+			throw spk::Exception("Voxel Model: palette is missing material slots: " + missing);
+		}
+		_palette = std::move(palette);
+	}
+
+	const spk::Palette *Model::palette() const noexcept
+	{
+		return _palette ? &*_palette : nullptr;
+	}
+
+	bool Model::isCompatible(const spk::Palette &palette) const noexcept
+	{
+		for (const auto &slot : materialSlots())
+		{
+			if (palette.find(slot.name) == nullptr)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 }

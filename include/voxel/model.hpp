@@ -2,10 +2,12 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "geometry/mesh.hpp"
 #include "geometry/shadow_mesh.hpp"
+#include "graphics/palette.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 #include "voxel/definition.hpp"
@@ -42,6 +44,7 @@ namespace spk::Voxel
 		};
 
 		std::shared_ptr<const Data> _data;
+		std::optional<spk::Palette> _palette;
 
 	public:
 		Model(
@@ -54,5 +57,8 @@ namespace spk::Voxel
 		[[nodiscard]] const Mesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
+		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
+		void bind(spk::Palette palette);
+		[[nodiscard]] const spk::Palette *palette() const noexcept;
 	};
 }

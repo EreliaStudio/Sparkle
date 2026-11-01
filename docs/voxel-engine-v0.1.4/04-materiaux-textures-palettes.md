@@ -19,10 +19,18 @@ classDiagram
     +sprite(coord) TextureSection
     +grille de sprites
   }
-  class VoxelPalette {
-    +Builder
+  class Palette {
     +association slot -> Material
     -Data immutable partagé
+  }
+  class PaletteBuilder {
+    +setMaterial
+    +Validator optionnel
+    +build Palette
+  }
+  class VoxelPaletteBuilder {
+    +validation albedo
+    +validation atlas unique
   }
   class Model {
     +slots sémantiques triés
@@ -32,8 +40,9 @@ classDiagram
   Texture <|-- SpriteSheet
   Material --> Texture : Handle statique
   Material ..> EngineView : source empruntée (API à finaliser)
-  VoxelPalette --> Material : valeurs immuables
-  Model ..> VoxelPalette : association validée
+  VoxelPaletteBuilder --|> PaletteBuilder : hérite Builder
+  Palette --> Material : valeurs immuables
+  Model ..> Palette : compatibilité des slots
 ```
 
 ### 4.1 `spk::Material` : ressource générique
@@ -106,7 +115,7 @@ Plusieurs Materials peuvent donc référencer le **même atlas** avec des rectan
 
 ### 4.2.1 Schéma JSON normatif du Material multi-rôles (Q-ARCH-005 validée)
 
-**Racine et rôles.** Un document `spk::Material` est un **objet JSON contenant exactement la propriété `"textures"`**, elle-même un **objet** dont chaque clé est un **nom de rôle libre** et chaque valeur un bloc source de texture `{ "Texture": ..., "UV": ... }`. Le nom `"albedo"` n'a aucun traitement spécial dans le Material générique ; seule `VoxelPalette` le rend obligatoire pour les slots voxel. `"textures": {}` construit un Material générique sans textures, mais ce Material ne satisfait pas le contrat `albedo` d'un slot voxel. Les rôles sont des chaînes **non vides et non composées uniquement d'espaces**, sensibles à la casse et conservées textuellement (pas de `trim`, alias, normalisation de casse ni ordre signifiant). Tout champ inconnu au niveau racine, au niveau d'un bloc de rôle et au niveau d'une description `Texture` ou `UV` est rejeté, sans interprétation silencieuse.
+**Racine et rôles.** Un document `spk::Material` est un **objet JSON contenant exactement la propriété `"textures"`**, elle-même un **objet** dont chaque clé est un **nom de rôle libre** et chaque valeur un bloc source de texture `{ "Texture": ..., "UV": ... }`. Le nom `"albedo"` n'a aucun traitement spécial dans le Material générique ; seul le validateur du `spk::Voxel::Palette::Builder` le rend obligatoire pour les slots voxel. `"textures": {}` construit un Material générique sans textures, mais ce Material ne satisfait pas le contrat `albedo` d'un slot voxel. Les rôles sont des chaînes **non vides et non composées uniquement d'espaces**, sensibles à la casse et conservées textuellement (pas de `trim`, alias, normalisation de casse ni ordre signifiant). Tout champ inconnu au niveau racine, au niveau d'un bloc de rôle et au niveau d'une description `Texture` ou `UV` est rejeté, sans interprétation silencieuse.
 
 **Exemple complet — source fichier, SpriteSheet et rôle supplémentaire :**
 
@@ -181,19 +190,52 @@ spk::Material material = builder.build();
 
 La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `assets.load<spk::Material>(id, config)`. La factory reçoit l'`Asset::Manager&`, résout `Texture.path` et les références `Texture.asset`, puis remplit un Builder local. Ni le Builder ni le Material final ne conservent de référence vers l'Asset::Manager.
 
-### 4.4 `spk::VoxelPalette` : association des slots aux matériaux
+### 4.4 `spk::Palette` et validation optionnelle du Builder
 
-Une `VoxelPalette` associe des **noms de slots sémantiques et leurs contrats d'opacité** à des valeurs `spk::Material`. C'est une valeur immuable, à copies légères partageant un bloc de données internes ; elle ne contient **aucun SSBO** et n'hérite d'aucun objet GPU.
+`spk::Palette` est une collection générique **immuable** de `spk::Material` indexés par nom ; elle ne conserve ni opacité, ni Model, ni SSBO. Son `Builder` permet de créer une palette avant toute géométrie, à partir de rien ou d'une palette existante.
 
-Son Builder mutable peut être initialisé à partir d'un Model, de plusieurs Models, d'un Assembly (union de leurs besoins) ou d'une palette existante pour en créer une variante. Les collisions de **même nom avec des opacités différentes** entre sources sont rejetées explicitement. Construire une nouvelle palette n'altère pas l'ancienne, ses Materials ou les snapshots existants.
+Le `spk::Palette::Builder` accepte facultativement une fonction de validation (`Validator`), absente par défaut. Celle-ci reçoit **le nom du slot, le Material proposé et les Materials déjà présents**. Le Builder l'appelle avant toute insertion/remplacement ; une exception laisse sa collection inchangée. Le troisième argument permet de contrôler une contrainte relative aux autres Materials, notamment l'unicité de l'atlas, **sans stocker d'état annexe susceptible de diverger**. Quand une palette existante sert de source à un Builder avec validation, tous ses Materials sont vérifiés dès la construction de ce Builder.
 
-**Chaque slot déclaré** doit recevoir un Material compatible, **même s'il n'a aucun triangle visible**. Le Builder valide que chaque Material affecté possède au moins la texture nommée exactement **`albedo`**, avec exception descriptive sur absence. Le système voxel ne requiert, n'examine ni n'utilise d'autres noms de textures dans cette version. La présence d'autres rôles sur un Material reste autorisée.
+`spk::Voxel::Palette::Builder` est la spécialisation légère, dérivée de `spk::Palette::Builder`. **`spk::Voxel::Palette` est un namespace, pas un type de palette distinct.** Les règles voxel sont : chaque Material doit posséder un rôle `albedo` valide et tous les Materials doivent référencer **un seul atlas `albedo`**, quelles que soient les passes opaque/translucide et les sections UV. Ces règles sont vérifiées **à chaque `setMaterial()`** ; une erreur produit `spk::Exception` immédiatement, sans modifier le Builder. `build()` est la méthode **héritée** de `spk::Palette::Builder`, sans vérification additionnelle, et renvoie simplement un `spk::Palette`.
 
-Un Model peut être associé à une palette contenant **plus de slots** que lui. L'association est compatible seulement si tous ses noms et opacités requis sont présents. `Model::isCompatible(palette)` est la forme d'API envisagée pour vérifier ce contrat, y compris la limite d'atlas par passe décrite ci-dessous. La palette n'est pas obligée d'être identique au Model, et une même palette peut servir à plusieurs Models.
+**L'opacité n'est stockée dans aucune palette.** `Voxel::Definition` la définit et `Voxel::Model` la conserve pour le classement des triangles. La **complétude** appartient à `Voxel::Model::isCompatible(const spk::Palette&)` et est imposée par `Voxel::Model::bind(spk::Palette)` : elle vérifie la présence de chaque nom de slot requis par le Model, y compris entièrement occulté, et ignore les slots supplémentaires. Elle n'examine ni les UV, ni l'opacité, ni les atlas. Une palette créée avec le Builder **générique sans validateur** n'a pas de garantie d'atlas unique : c'est au développeur d'employer le Builder de validation voxel avant de la fournir au rendu voxel.
+
+**Exemple de l'API PR-07 :**
+
+```cpp
+spk::Palette::Builder generic;
+generic.setMaterial("normalOnly", normalMaterial);
+const spk::Palette genericPalette = generic.build();
+
+// Préparation de l'apparence avant la géométrie.
+spk::Voxel::Palette::Builder builder;
+builder.setMaterial("stone", stoneMaterial);
+builder.setMaterial("glass", glassMaterial); // Même atlas albedo.
+const spk::Palette palette = builder.build();
+
+// Le Model est créé ensuite, et son bind refuse les slots manquants.
+spk::Voxel::Model model = mesher.bake(volume);
+if (!model.isCompatible(palette))
+{
+    throw spk::Exception("Palette incompatible avec le Model");
+}
+model.bind(palette);
+
+// Variante immuable : le Builder vérifie aussi la palette source.
+spk::Voxel::Palette::Builder variant(palette);
+variant.setMaterial("stone", replacementMaterial);
+const spk::Palette alternate = variant.build();
+auto alternateModel = model; // Mêmes meshes immuables, association indépendante.
+alternateModel.bind(alternate);
+```
+
+Les Materials peuvent choisir des régions UV différentes du même atlas. Un remplacement de l'unique Material peut changer l'atlas ; si d'autres Materials existent, tous doivent rester compatibles avec le remplacement. Plusieurs atlas nécessitent plusieurs palettes distinctes : aucun remaillage ou split de meshes n'est introduit. Le Model conserve sa palette liée par copie légère (`shared_ptr<const Data>` interne à la palette). Seul son choix d'apparence est mutable ; ses meshes et sa table de slots restent immuables et partagés entre copies de Model. `model.palette()` renvoie un pointeur const, ou `nullptr` avant le premier `bind()`. Les Assemblies et composants qui exploiteront cette association arrivent dans les PR suivantes.
 
 **Identité d'atlas des sources de vue (Q-ARCH-003 validée).** La vérification de compatibilité utilise une **identité logique immuable de la source `albedo`**, jamais son handle GPU résolu. Deux types d'identités sont incompatibles entre eux : `Static(Texture::Handle)` (identité du `GPUResource::State` effectivement capturé, sans considérer une génération/pixels ultérieurs comme un nouvel atlas tant que le State reste le même) et `EngineView(identité de vie de la vue)`. La seconde identité est propre à **l'incarnation concrète** de la vue dans son `RenderingEngine`, et non à son nom textuel : supprimer puis recréer `"monitor"` ne rétablit aucune identité ou liaison antérieure. Un simple identifiant de vue stable attribué par son moteur suffit, sans registre global ni possession nouvelle. La source de vue reste non propriétaire et le développeur doit cesser de l'utiliser avant destruction.
 
-**Validation de la paire Model/Palette.** Pour **chaque mesh/passe indépendamment**, tous les slots requis, **y compris les slots totalement occultés**, doivent présenter la **même identité `albedo`** ; s'il existe plusieurs identités, `Model::isCompatible(palette)` indique l'incompatibilité et la création d'une association destinée au rendu est refusée par `spk::Exception` descriptive, avant publication d'un snapshot. Deux Materials provenant de **la même EngineView vivante** sont admis, avec des régions UV différentes. Une source statique et une source de vue sont toujours incompatibles au sein du même mesh/passe, **même si `DefaultTexture` pointe provisoirement sur ce même State statique**. Deux EngineView distinctes sont toujours incompatibles, même si elles produisent des pixels identiques ou emploient le même fallback. Deux textures statiques distinctes sont incompatibles dans la même passe ; opaques et translucides peuvent utiliser des identités différentes. Les slots supplémentaires de la palette qui ne sont pas requis par ce Model n'interviennent pas dans cette vérification. Aucun split automatique de mesh, atlas de regroupement, copie inter-surfaces ni re-bake n'est introduit.
+**Validation de la palette destinée aux voxels.** À chaque `spk::Voxel::Palette::Builder::setMaterial()`, le Material proposé est comparé aux Materials déjà présents pour garantir une seule identité logique d'atlas `albedo`. Deux Materials avec des UV différents sur le même atlas sont autorisés. Deux textures distinctes, deux EngineView distinctes, ou une source statique et une source de vue sont incompatibles, indépendamment de l'opacité future de leurs slots. Le Builder rejette cette incohérence par `spk::Exception` sans publier de palette partielle. La création et la copie de palettes restent indépendantes du Model.
+
+**Validation et liaison Model/Palette.** `Model::isCompatible(palette)` examine uniquement la présence des noms de slots requis par le Model, y compris entièrement occultés. `model.bind(palette)` applique cette même règle, lance une `spk::Exception` listant **tous** les noms de slots absents si elle échoue, et conserve alors l'ancienne association. Lorsqu'elle réussit, elle conserve une copie légère de `spk::Palette` dans cette instance de Model. Les autres copies du même Model peuvent lier d'autres palettes sans mutation des données géométriques partagées. Le Model n'inspecte pas les textures, les atlas ou les UV des Materials ; le Builder voxel est responsable de la garantie d'atlas, et le Builder générique n'impose aucune règle. Des Materials supplémentaires peuvent être présents et sont ignorés pour la complétude du Model.
 
 **Contrat de capture Q-ARCH-008.** Pour un rôle de Material lié à une EngineView active, le handle résolu est celui de sa **sortie finale tone-mappée** ; jamais un attachment opaque `RGBA16F`, une accumulation WBOIT ou une texture pré-tone mapping. En politique `KeepLastFrame`, réutiliser l'ancienne sortie finale produite sur cette version et surface. En `DefaultTexture`, le fallback explicitement fourni conserve son contrat ordinaire sans obligation de provenir d'une EngineView.
 
@@ -201,20 +243,19 @@ Un Model peut être associé à une palette contenant **plus de slots** que lui.
 
 **Dépendances entre vues sans ordonnancement automatique.** Une source de vue utilisée par le dessin d'une autre vue doit avoir sa sortie disponible au moment effectif de l'échantillonnage. Si les deux vues **sont rendues dans le même snapshot moteur**, une référence à une vue qui n'a pas encore exécuté sa composition (même vue, vue suivante ou dépendance cyclique) est refusée dès la capture avec `spk::Exception` : le développeur doit fournir un ordre explicite compatible. Cela se vérifie par l'ordre des sous-snapshots existant, sans nouveau graphe ou ordonnanceur des Materials. Si la vue source **n'est pas rendue dans ce snapshot** (caméra détachée avec `KeepLastFrame` ou `DefaultTexture`, ou contenu produit auparavant dans un autre rendu), les règles de disponibilité par surface du chapitre 07 s'appliquent, sans production implicite ni copie. Lors de l'exécution, toute tentative d'échantillonner le **même attachment** en cours d'écriture est interdite ; Sparkle ne suppose jamais que les pixels indéfinis ou une boucle de rétroaction sont exploitables. Les dépendances impossibles et erreurs de texture non produite sont décrites sans masquer une scène mal configurée.
 
-**Contrainte des atlas :** pour chaque association **Model + VoxelPalette**, les Materials des slots **opaques** requis par ce Model doivent tous référencer **une seule identité logique de source `albedo` au maximum**, statique (`Texture::Handle`/State) ou `EngineView` ; la même règle s'applique, indépendamment, aux slots **translucides**. Cette vérification concerne **tous les slots déclarés par le Model, même sans triangles émis**, pas l'intégralité des slots supplémentaires de la palette. Les passes opaque et translucide peuvent utiliser le même atlas ou deux atlas différents.
-
-Une palette peut donc contenir arbitrairement plusieurs atlas pour répondre aux besoins de divers Models ; elle n'est pas rejetée globalement pour cette raison. C'est une **association** qui est refusée explicitement lorsqu'elle demanderait deux atlas différents dans une même passe. Aucun remaillage silencieux ni découpage des meshes en sous-meshes par texture n'est prévu.
-
+**Contrainte d'atlas unique (construction voxel) :** une `spk::Palette` créée par `spk::Voxel::Palette::Builder` est liée à **une seule identité logique `albedo`** au maximum. La contrainte est globale à tous ses Materials ; elle ne dépend ni du Model, ni de la classification opaque/translucide, ni du fait que les triangles d'un slot soient visibles. Une palette vide est valide. Les mêmes Materials peuvent être réutilisés dans les passes opaque et WBOIT, avec des UV différents. Plusieurs atlas exigent plusieurs palettes distinctes : aucun remaillage implicite, aucune fusion d'atlas ni découpe de meshes n'est prévue.
 
 ```mermaid
 flowchart TD
   Role["Material albedo : source immutable"] --> Static["Texture Handle : identité de State"]
   Role --> View["EngineView : identité de vie de la vue"]
-  Static --> Check["Model + Palette : une identité par mesh/passe"]
+  Static --> Check["spk::Voxel::Palette::Builder::setMaterial : une identité globale"]
   View --> Check
-  Check --> Compatible{"Toutes les identités identiques ?"}
-  Compatible -->|Non| Error["Incompatibilité : refuser association/rendu"]
-  Compatible -->|Oui| Capture["Capture CPU : sélectionner version de sortie ou fallback"]
+  Check --> Compatible{"Tous les atlas identiques ?"}
+  Compatible -->|Non| Error["Exception : insertion refusée"]
+  Compatible -->|Oui| Slots["Model::isCompatible : tous les slots requis présents ?"]
+  Slots -->|Non| Error
+  Slots -->|Oui| Capture["Capture CPU : sélectionner version de sortie ou fallback"]
   Capture --> Order["Ordre explicite des vues : source produite avant consommation"]
   Order --> Surface["Execute sur Window Surface : vérifier pixels disponibles"]
   Surface --> Draw["Draw opaque ou WBOIT avec handles capturés"]
