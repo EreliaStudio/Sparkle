@@ -59,6 +59,35 @@ namespace spk::Voxel
 		}
 	}
 
+	std::uint32_t Model::Harmonizer::_materialIndex(
+		const Definition::Slot &slot,
+		const spk::Material &material,
+		Context &context)
+	{
+		std::size_t index = 0;
+		for (; index < context.names.size(); ++index)
+		{
+			if (context.origins[index] == slot.name && sameMaterial(context.materials[index], material))
+			{
+				break;
+			}
+		}
+		if (index == context.names.size())
+		{
+			const bool conflict = std::find(context.names.begin(), context.names.end(), slot.name) != context.names.end();
+			auto name = conflict ? availableName(slot.name, context.reservedNames) : slot.name;
+			context.reservedNames.push_back(name);
+			context.names.push_back(std::move(name));
+			context.origins.push_back(slot.name);
+			context.materials.push_back(material);
+		}
+		if (index > std::numeric_limits<std::uint32_t>::max())
+		{
+			throw spk::Exception("Voxel Harmonizer: too many materials");
+		}
+		return static_cast<std::uint32_t>(index);
+	}
+
 	void Model::Harmonizer::_collect(
 		const View &view,
 		const Model &model,
@@ -73,29 +102,7 @@ namespace spk::Voxel
 		auto &mapping = context.remappings[path];
 		for (const auto &slot : model.materialSlots())
 		{
-			const auto *material = it->second.find(slot.name);
-			std::size_t index = 0;
-			for (; index < context.names.size(); ++index)
-			{
-				if (context.origins[index] == slot.name && sameMaterial(context.materials[index], *material))
-				{
-					break;
-				}
-			}
-			if (index == context.names.size())
-			{
-				const bool conflict = std::find(context.names.begin(), context.names.end(), slot.name) != context.names.end();
-				auto name = conflict ? availableName(slot.name, context.reservedNames) : slot.name;
-				context.reservedNames.push_back(name);
-				context.names.push_back(std::move(name));
-				context.origins.push_back(slot.name);
-				context.materials.push_back(*material);
-			}
-			if (index > std::numeric_limits<std::uint32_t>::max())
-			{
-				throw spk::Exception("Voxel Harmonizer: too many materials");
-			}
-			mapping.push_back(static_cast<std::uint32_t>(index));
+			mapping.push_back(_materialIndex(slot, *it->second.find(slot.name), context));
 		}
 		for (const auto &[name, anchor] : model.anchors())
 		{
@@ -133,12 +140,8 @@ namespace spk::Voxel
 		}
 	}
 
-	Model::Harmonizer::Result Model::Harmonizer::process(const View &view) const
+	void Model::Harmonizer::_normalize(Context &context)
 	{
-		Context context;
-		reserveNames(view.model(), context.reservedNames);
-		Path path;
-		_collect(view, view.model(), path, context);
 		std::vector<std::size_t> order(context.names.size());
 		std::iota(order.begin(), order.end(), 0);
 		std::sort(order.begin(), order.end(), [&](auto a, auto b) {
@@ -162,13 +165,28 @@ namespace spk::Voxel
 				index = oldToNew[index];
 			}
 		}
+	}
+
+	spk::Palette Model::Harmonizer::_buildPalette(const Context &context)
+	{
 		spk::Voxel::Palette::Builder builder;
 		for (std::size_t i = 0; i < context.names.size(); ++i)
 		{
 			builder.setMaterial(context.names[i], context.materials[i]);
 		}
+		return builder.build();
+	}
+
+	Model::Harmonizer::Result Model::Harmonizer::process(const View &view) const
+	{
+		Context context;
+		reserveNames(view.model(), context.reservedNames);
+		Path path;
+		_collect(view, view.model(), path, context);
+		_normalize(context);
+		const auto palette = _buildPalette(context);
 		Model copy = view.model();
 		_rewrite(copy, path, context);
-		return {std::move(copy), builder.build(), MaterialLayout(std::move(context.names))};
+		return {std::move(copy), palette, MaterialLayout(std::move(context.names))};
 	}
 }

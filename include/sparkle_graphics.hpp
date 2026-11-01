@@ -107,5 +107,7 @@
 #include "ui/widget/toggle_switch.hpp"
 #include "ui/widget/tooltip.hpp"
 #include "ui/widget/workspace.hpp"
+#include "voxel/material_layout.hpp"
+#include "voxel/mesh.hpp"
+#include "voxel/mesher.hpp"
 #include "voxel/model.hpp"
-#include "voxel/voxel_mesher.hpp"

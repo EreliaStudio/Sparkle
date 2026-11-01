@@ -309,3 +309,33 @@ TEST(VoxelMaterialLayoutTest, RequiresSortedUniqueNames)
 	spk::Voxel::MaterialLayout layout({"cloth", "skin"});
 	EXPECT_EQ(layout.names().size(), 2u);
 }
+
+TEST(VoxelModelHarmonizerTest, ReusesEqualMaterialsAcrossThreeModels)
+{
+	spk::Texture atlas;
+	spk::Material::Builder firstMaterial;
+	spk::Material::Builder secondMaterial;
+	firstMaterial.add("albedo", atlas, {{0, 0}, {0.5f, 1}});
+	secondMaterial.add("albedo", atlas, {{0.5f, 0}, {0.5f, 1}});
+	spk::Voxel::Palette::Builder firstPalette;
+	spk::Voxel::Palette::Builder secondPalette;
+	firstPalette.setMaterial("cloth", firstMaterial.build());
+	secondPalette.setMaterial("cloth", secondMaterial.build());
+	Model torso = model("cloth");
+	torso.addAnchor("leftArm");
+	torso.addAnchor("rightArm");
+	torso.anchor("leftArm").bind(model("cloth"));
+	torso.anchor("rightArm").bind(model("cloth"));
+	Model::View view(torso);
+	view.setPalette(firstPalette.build(), spk::Voxel::PalettePropagation::Self);
+	view.setPalette("leftArm", secondPalette.build());
+	view.setPalette("rightArm", secondPalette.build());
+	const auto result = Model::Harmonizer().process(view);
+	ASSERT_EQ(result.materialLayout.names().size(), 2u);
+	const auto left = result.model.anchor("leftArm").model();
+	const auto right = result.model.anchor("rightArm").model();
+	ASSERT_NE(left, nullptr);
+	ASSERT_NE(right, nullptr);
+	EXPECT_NE(materialIndex(result.model), materialIndex(*left));
+	EXPECT_EQ(materialIndex(*left), materialIndex(*right));
+}

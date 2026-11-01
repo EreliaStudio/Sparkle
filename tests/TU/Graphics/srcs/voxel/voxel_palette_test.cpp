@@ -106,7 +106,7 @@ namespace
 		return {values.begin(), values.end()};
 	}
 
-	[[nodiscard]] std::vector<std::uint32_t> indices(const spk::Voxel::Mesh &mesh)
+	[[nodiscard]] std::vector<std::uint32_t> indices(const spk::Voxel::SurfaceMesh &mesh)
 	{
 		const auto values = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		return {values.begin(), values.end()};

@@ -9,9 +9,8 @@ namespace spk::Voxel
 {
 	namespace
 	{
-		void validateAnchor(const spk::Matrix4x4 &transform)
+		void validateFinite(const spk::Matrix4x4 &transform)
 		{
-			constexpr float tolerance = 1.0e-4f;
 			for (std::size_t c = 0; c < 4; ++c)
 			{
 				for (std::size_t r = 0; r < 4; ++r)
@@ -22,6 +21,11 @@ namespace spk::Voxel
 					}
 				}
 			}
+		}
+
+		void validateBasis(const spk::Matrix4x4 &transform)
+		{
+			constexpr float tolerance = 1.0e-4f;
 			for (std::size_t c = 0; c < 3; ++c)
 			{
 				for (std::size_t d = 0; d < 3; ++d)
@@ -45,6 +49,12 @@ namespace spk::Voxel
 			{
 				throw spk::Exception("Voxel Anchor: invalid homogeneous transform");
 			}
+		}
+
+		void validateAnchor(const spk::Matrix4x4 &transform)
+		{
+			validateFinite(transform);
+			validateBasis(transform);
 		}
 	}
 

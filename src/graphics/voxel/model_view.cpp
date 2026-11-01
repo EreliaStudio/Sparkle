@@ -190,6 +190,24 @@ namespace spk::Voxel
 		return _transform;
 	}
 
+	spk::Matrix4x4 Model::View::_childTransform(
+		const Model::Anchor &anchor,
+		const Path &path,
+		spk::Matrix4x4 parent) const
+	{
+		auto child = parent * anchor.transform();
+		const auto rotation = _rotations.find(path);
+		if (rotation != _rotations.end())
+		{
+			child = child * spk::Matrix4x4::rotation(rotation->second);
+		}
+		if (anchor.attachment())
+		{
+			child = child * inverseAnchor(anchor.model()->anchor(*anchor.attachment()).transform());
+		}
+		return child;
+	}
+
 	void Model::View::_visit(
 		const Model &model,
 		Path &path,
@@ -210,16 +228,7 @@ namespace spk::Voxel
 				continue;
 			}
 			path.push_back(name);
-			auto child = transform * anchor.transform();
-			const auto rotation = _rotations.find(path);
-			if (rotation != _rotations.end())
-			{
-				child = child * spk::Matrix4x4::rotation(rotation->second);
-			}
-			if (anchor.attachment())
-			{
-				child = child * inverseAnchor(anchor.model()->anchor(*anchor.attachment()).transform());
-			}
+			const auto child = _childTransform(anchor, path, transform);
 			_visit(*anchor.model(), path, child, callback);
 			path.pop_back();
 		}

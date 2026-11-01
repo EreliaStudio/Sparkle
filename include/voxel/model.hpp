@@ -101,6 +101,10 @@ namespace spk::Voxel
 			const spk::Palette &palette,
 			PalettePropagation propagation,
 			std::map<Path, spk::Palette> &prepared) const;
+		[[nodiscard]] spk::Matrix4x4 _childTransform(
+			const Model::Anchor &anchor,
+			const Path &path,
+			spk::Matrix4x4 parent) const;
 		void _visit(
 			const Model &model,
 			Path &path,
@@ -149,6 +153,12 @@ namespace spk::Voxel
 			std::vector<std::string> reservedNames;
 		};
 
+		[[nodiscard]] static std::uint32_t _materialIndex(
+			const Definition::Slot &slot,
+			const spk::Material &material,
+			Context &context);
+		static void _normalize(Context &context);
+		[[nodiscard]] static spk::Palette _buildPalette(const Context &context);
 		static void _collect(
 			const View &view,
 			const Model &model,
