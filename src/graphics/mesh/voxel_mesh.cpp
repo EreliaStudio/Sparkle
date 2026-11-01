@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "voxel/palette.hpp"
+#include "graphics/palette.hpp"
 
 namespace spk::Voxel
 {
@@ -44,7 +44,7 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-	bool Model::isCompatible(const Palette &palette) const noexcept
+	bool Model::isCompatible(const spk::Palette &palette) const noexcept
 	{
 		for (const auto &slot : materialSlots())
 		{
