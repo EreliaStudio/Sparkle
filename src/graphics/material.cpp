@@ -27,8 +27,8 @@ namespace spk
 			return within(section.anchor.x) && within(section.anchor.y) &&
 				   within(section.size.x) && within(section.size.y) &&
 				   section.size.x > 0.0f && section.size.y > 0.0f &&
-				   double(section.anchor.x) + section.size.x <= 1.0 &&
-				   double(section.anchor.y) + section.size.y <= 1.0;
+				   section.anchor.x + section.size.x <= 1.0f &&
+				   section.anchor.y + section.size.y <= 1.0f;
 		}
 	}
 
