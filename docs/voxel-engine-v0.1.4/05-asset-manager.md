@@ -2,6 +2,8 @@
 
 [Sommaire de l'architecture](../voxel-engine-v0.1.4-specification.md)
 
+L'API publique recommandée est `spk::Assets` (alias de compatibilité de `spk::asset::Manager`). Les factories spécialisées conservent leur contrat `spk::asset::Factory<T>`, et les usages existants de `spk::asset::Manager` restent valides.
+
 ## 5. asset::Manager générique
 
 Le gestionnaire d'assets appartient à Sparkle, indépendamment de l'API voxel. Il gère la création et la possession d'objets de types variés, sans leur imposer de méthode `fromJSON()` ou `toJSON()` universelle.
@@ -9,7 +11,7 @@ Le gestionnaire d'assets appartient à Sparkle, indépendamment de l'API voxel. 
 ### 5.1 API de chargement et identité de cache
 
 ```cpp
-spk::asset::Manager assets;
+spk::Assets assets;
 
 auto& first = assets.load<spk::SpriteSheet>("terrain", config16);
 auto& same  = assets.load<spk::SpriteSheet>("terrain", config16);
@@ -69,7 +71,7 @@ Les deux formes `path + size` et `asset + type + id + config` qui aboutissent au
 Chaque couple **(type C++ T, identifiant)** possède une version par défaut parmi ses configurations chargées. Le premier `load<T>(id, config)` réussi choisit automatiquement cette version, même lorsque le paramètre `makeDefault` vaut `false`. Les variantes chargées ensuite ne remplacent pas le défaut, sauf demande explicite.
 
 ```cpp
-spk::asset::Manager assets;
+spk::Assets assets;
 auto &sixteen = assets.load<MyAsset>("terrain", config16);
 auto &eight = assets.load<MyAsset>("terrain", config8);
 auto &current = assets.get<MyAsset>("terrain"); // sixteen
