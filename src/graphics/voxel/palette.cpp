@@ -1,5 +1,6 @@
 #include "voxel/palette.hpp"
 
+#include <optional>
 #include <utility>
 
 #include "exception.hpp"
@@ -38,6 +39,17 @@ namespace spk::Voxel
 
 	Palette Palette::Builder::build() const
 	{
-		return Palette(_materials.build());
+		spk::Palette materials = _materials.build();
+		std::optional<spk::GPUResource::Identifier> atlas;
+		for (const auto &[name, material] : materials.materials())
+		{
+			const auto identity = material.find("albedo")->texture.identifier();
+			if (atlas && *atlas != identity)
+			{
+				throw spk::Exception("Voxel Palette: slot '" + name + "' uses a different albedo atlas");
+			}
+			atlas = identity;
+		}
+		return Palette(std::move(materials));
 	}
 }
