@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -14,6 +15,7 @@ namespace spk::Voxel
 		{
 		private:
 			spk::Palette::Builder _materials;
+			std::optional<spk::GPUResource::Identifier> _atlas;
 
 		public:
 			Builder() = default;
