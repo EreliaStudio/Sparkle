@@ -38,14 +38,18 @@ namespace spk
 			reader.forbidUnknown({"x", "y"});
 			const unsigned int x = reader.require<unsigned int>("x");
 			const unsigned int y = reader.require<unsigned int>("y");
-			if (!allowZero && (x == 0 || y == 0))
+			if (!allowZero && x == 0)
 			{
-				throw Exception(reader.path() + ": grid dimensions must be positive");
+				throw Exception(reader.pathFor("x") + ": expected positive integer");
+			}
+			if (!allowZero && y == 0)
+			{
+				throw Exception(reader.pathFor("y") + ": expected positive integer");
 			}
 			return {x, y};
 		}
 
-		[[nodiscard]] Vector2 normalizedPoint(const Reader &reader)
+		[[nodiscard]] TVector2<double> normalizedPoint(const Reader &reader)
 		{
 			reader.forbidUnknown({"x", "y"});
 			const auto component = [&](const std::string &key) {
@@ -59,11 +63,15 @@ namespace spk
 				{
 					throw Exception(reader.pathFor(key) + ": expected finite number in [0, 1]");
 				}
-				return static_cast<float>(number);
+				return number;
 			};
-			if (!reader.contains("x") || !reader.contains("y"))
+			if (!reader.contains("x"))
 			{
-				throw Exception(reader.path() + ": expected both x and y");
+				throw Exception(reader.pathFor("x") + ": missing coordinate");
+			}
+			if (!reader.contains("y"))
+			{
+				throw Exception(reader.pathFor("y") + ": missing coordinate");
 			}
 			return {component("x"), component("y")};
 		}
@@ -165,14 +173,18 @@ namespace spk
 			{
 				throw Exception(uv.path() + ": expected anchor and size, or sprite");
 			}
-			const Vector2 anchor = normalizedPoint(uv.child("anchor"));
-			const Vector2 size = normalizedPoint(uv.child("size"));
-			if (size.x <= 0.0f || size.y <= 0.0f ||
-				double(anchor.x) + size.x > 1.0 || double(anchor.y) + size.y > 1.0)
+			const TVector2<double> anchor = normalizedPoint(uv.child("anchor"));
+			const TVector2<double> size = normalizedPoint(uv.child("size"));
+			if (size.x <= 0.0 || static_cast<float>(size.x) <= 0.0f || anchor.x + size.x > 1.0)
 			{
-				throw Exception(uv.path() + ": invalid normalized rectangle");
+				throw Exception(uv.pathFor("size") + ".x: invalid normalized width");
 			}
-			return {anchor, size};
+			if (size.y <= 0.0 || static_cast<float>(size.y) <= 0.0f || anchor.y + size.y > 1.0)
+			{
+				throw Exception(uv.pathFor("size") + ".y: invalid normalized height");
+			}
+			return {{static_cast<float>(anchor.x), static_cast<float>(anchor.y)},
+					{static_cast<float>(size.x), static_cast<float>(size.y)}};
 		}
 	}
 
