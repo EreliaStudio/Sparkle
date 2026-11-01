@@ -175,44 +175,85 @@ TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
 	EXPECT_NE(result.find("left")->find("albedo")->section, result.find("right")->find("albedo")->section);
 }
 
-TEST(VoxelPaletteTest, RejectsDistinctOpaqueAtlases)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutModel)
 {
-	const Model source = model({{"left", 1.0f}, {"right", 1.0f}});
 	Texture first;
 	Texture second;
 	ASSERT_NE(first.handle().identifier(), second.handle().identifier());
-	const auto result = palette({{"left", material(first)}, {"right", material(second)}});
-	EXPECT_FALSE(source.isCompatible(result));
+	VoxelPalette::Builder builder;
+	builder.setMaterial("left", material(first));
+	builder.setMaterial("right", material(second));
+	EXPECT_THROW((void)builder.build(), spk::Exception);
 }
 
-TEST(VoxelPaletteTest, RejectsDistinctTranslucentAtlases)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfModelOpacity)
 {
+	Texture first;
+	Texture second;
 	const Model source = model({{"a", 0.2f}, {"b", 0.7f}});
-	Texture first;
-	Texture second;
-	ASSERT_NE(first.handle().identifier(), second.handle().identifier());
-	EXPECT_FALSE(source.isCompatible(
-		palette({{"a", material(first)}, {"b", material(second)}})));
+	VoxelPalette::Builder builder;
+	builder.setMaterial("a", material(first));
+	builder.setMaterial("b", material(second));
+	EXPECT_THROW((void)builder.build(), spk::Exception);
 }
 
-TEST(VoxelPaletteTest, AllowsDifferentAtlasPerPass)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
 {
-	const Model source = model({{"solid", 1.0f}, {"glass", 0.5f}});
 	Texture opaque;
 	Texture translucent;
-	EXPECT_NE(opaque.handle().identifier(), translucent.handle().identifier());
-	EXPECT_TRUE(source.isCompatible(palette({{"solid", material(opaque)}, {"glass", material(translucent)}})));
+	const Model source = model({{"solid", 1.0f}, {"glass", 0.5f}});
+	VoxelPalette::Builder builder;
+	builder.setMaterial("solid", material(opaque));
+	builder.setMaterial("glass", material(translucent));
+	EXPECT_THROW((void)builder.build(), spk::Exception);
 }
 
-TEST(VoxelPaletteTest, IgnoresAdditionalPaletteSlots)
+TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByModel)
 {
 	const Model first = model({{"stone", 1.0f}});
-	const Model other = model({{"stone", 1.0f}, {"glass", 1.0f}});
+	const Model other = model({{"stone", 1.0f}, {"glass", 1.0f}, {"missing", 1.0f}});
 	Texture atlas;
-	Texture otherAtlas;
-	const auto result = palette({{"stone", material(atlas)}, {"glass", material(otherAtlas)}});
+	const auto result = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
 	EXPECT_TRUE(first.isCompatible(result));
 	EXPECT_FALSE(other.isCompatible(result));
+}
+
+TEST(VoxelPaletteTest, BuildFailureDoesNotChangePreviousPalette)
+{
+	Texture first;
+	Texture second;
+	VoxelPalette::Builder builder;
+	builder.setMaterial("stone", material(first));
+	const auto original = builder.build();
+	builder.setMaterial("glass", material(second));
+	EXPECT_THROW((void)builder.build(), spk::Exception);
+	EXPECT_EQ(original.materials().materials().size(), 1u);
+	EXPECT_EQ(original.find("stone")->find("albedo")->texture.identifier(), first.handle().identifier());
+	builder.setMaterial("glass", material(first));
+	const auto repaired = builder.build();
+	EXPECT_EQ(repaired.materials().materials().size(), 2u);
+}
+
+TEST(VoxelPaletteTest, ReplacingOnlyMaterialCanChangeAtlas)
+{
+	Texture first;
+	Texture second;
+	VoxelPalette::Builder builder;
+	builder.setMaterial("stone", material(first));
+	const auto original = builder.build();
+	builder.setMaterial("stone", material(second));
+	const auto replacement = builder.build();
+	EXPECT_NE(original.find("stone")->find("albedo")->texture.identifier(), replacement.find("stone")->find("albedo")->texture.identifier());
+}
+
+TEST(VoxelPaletteTest, DifferentTexturesAreAllowedInGenericPalette)
+{
+	Texture first;
+	Texture second;
+	spk::Palette::Builder builder;
+	builder.setMaterial("stone", material(first));
+	builder.setMaterial("glass", material(second));
+	EXPECT_EQ(builder.build().materials().size(), 2u);
 }
 
 TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
