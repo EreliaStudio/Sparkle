@@ -193,7 +193,7 @@ La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `
 
 Le `spk::Palette::Builder` accepte facultativement une fonction de validation (`Validator`), absente par défaut. Celle-ci reçoit **le nom du slot, le Material proposé et les Materials déjà présents**. Le Builder l'appelle avant toute insertion/remplacement ; une exception laisse sa collection inchangée. Le troisième argument permet de contrôler une contrainte relative aux autres Materials, notamment l'unicité de l'atlas, **sans stocker d'état annexe susceptible de diverger**. Quand une palette existante sert de source à un Builder avec validation, tous ses Materials sont vérifiés dès la construction de ce Builder.
 
-`spk::Voxel::PaletteBuilder` est uniquement un Builder préconfiguré, dérivé de `spk::Palette::Builder`. **Il n'existe pas de type `spk::Palette`.** Les règles voxel sont : chaque Material doit posséder un rôle `albedo` valide et tous les Materials doivent référencer **un seul atlas `albedo`**, quelles que soient les passes opaque/translucide et les sections UV. Ces règles sont vérifiées **à chaque `setMaterial()`** ; une erreur produit `spk::Exception` immédiatement, sans modifier le Builder. `build()` est la méthode **héritée** de `spk::Palette::Builder`, sans vérification additionnelle, et renvoie simplement un `spk::Palette`.
+`spk::Voxel::PaletteBuilder` est uniquement un Builder préconfiguré, dérivé de `spk::Palette::Builder`. **Il n'existe pas de type `spk::Voxel::Palette`.** Les règles voxel sont : chaque Material doit posséder un rôle `albedo` valide et tous les Materials doivent référencer **un seul atlas `albedo`**, quelles que soient les passes opaque/translucide et les sections UV. Ces règles sont vérifiées **à chaque `setMaterial()`** ; une erreur produit `spk::Exception` immédiatement, sans modifier le Builder. `build()` est la méthode **héritée** de `spk::Palette::Builder`, sans vérification additionnelle, et renvoie simplement un `spk::Palette`.
 
 **L'opacité n'est stockée dans aucune palette.** `Voxel::Definition` la définit et `Voxel::Model` la conserve pour le classement des triangles. La **complétude** appartient exclusivement à `Voxel::Model::isCompatible(const spk::Palette&)` : elle vérifie la présence de chaque nom de slot requis par le Model, y compris entièrement occulté, et ignore les slots supplémentaires. Elle n'examine ni les UV, ni l'opacité, ni les atlas. Une palette créée avec le Builder **générique sans validateur** n'a pas de garantie d'atlas unique : c'est au développeur d'employer le Builder de validation voxel avant de la fournir au rendu voxel.
 
@@ -243,7 +243,7 @@ Les Materials peuvent choisir des régions UV différentes du même atlas. Un re
 flowchart TD
   Role["Material albedo : source immutable"] --> Static["Texture Handle : identité de State"]
   Role --> View["EngineView : identité de vie de la vue"]
-  Static --> Check["spk::Voxel::PaletteBuilder::build : une identité globale"]
+  Static --> Check["spk::Voxel::PaletteBuilder::setMaterial : une identité globale"]
   View --> Check
   Check --> Compatible{"Tous les atlas identiques ?"}
   Compatible -->|Non| Error["Exception : insertion refusée"]
