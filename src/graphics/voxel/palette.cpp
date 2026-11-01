@@ -66,11 +66,9 @@ namespace spk::Voxel
 		const auto materials = _materials.build();
 		for (const auto &name : _required)
 		{
-			const auto *material = materials.find(name);
-			if (material == nullptr || material->find("albedo") == nullptr ||
-				!material->find("albedo")->texture.valid())
+			if (materials.find(name) == nullptr)
 			{
-				throw spk::Exception("Voxel Palette: missing valid albedo Material for slot '" + name + "'");
+				throw spk::Exception("Voxel Palette: missing Material for slot '" + name + "'");
 			}
 		}
 		return Palette(std::move(materials));
