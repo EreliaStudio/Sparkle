@@ -1,5 +1,7 @@
 #pragma once
 
+#include "asset/factory.hpp"
+#include "asset/manager.hpp"
 #include "concept.hpp"
 #include "container/byte_stream.hpp"
 #include "container/cached_data.hpp"
@@ -86,3 +88,6 @@
 #include "type/alignment.hpp"
 #include "type/orientation.hpp"
 #include "type/uuid.hpp"
+#include "voxel/cell.hpp"
+#include "voxel/definition.hpp"
+#include "voxel/shape.hpp"

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -12,12 +13,12 @@
 
 namespace spk::JSON
 {
-	template <typename TElement>
+	template <typename TElement, typename TID = typename TElement::ID>
 	class Catalog
 	{
 	public:
 		using Element = TElement;
-		using ID = typename Element::ID;
+		using ID = TID;
 
 	private:
 		std::unordered_map<ID, Element> _elements;
@@ -46,6 +47,11 @@ namespace spk::JSON
 
 		[[nodiscard]] virtual ID _parseKey(const Reader &reader) const = 0;
 		[[nodiscard]] virtual Element _parseElement(const Reader &reader) const = 0;
+
+		[[nodiscard]] const std::unordered_map<ID, Element> &_entries() const noexcept
+		{
+			return _elements;
+		}
 
 		void _insert(ID id, Element element)
 		{
@@ -83,12 +89,28 @@ namespace spk::JSON
 			}
 		}
 
+		[[nodiscard]] std::size_t size() const noexcept
+		{
+			return _elements.size();
+		}
+
+		[[nodiscard]] static std::string _describeID(const ID &id)
+		{
+			if constexpr (requires(std::ostringstream &stream, const ID &value) { stream << value; })
+			{
+				std::ostringstream stream;
+				stream << id;
+				return stream.str();
+			}
+			return "<unprintable>";
+		}
+
 		[[nodiscard]] const Element &at(const ID &id) const
 		{
 			const auto found = _elements.find(id);
 			if (found == _elements.end())
 			{
-				throw spk::Exception("unknown JSON catalog ID");
+				throw spk::Exception("unknown JSON catalog ID: " + _describeID(id));
 			}
 			return found->second;
 		}

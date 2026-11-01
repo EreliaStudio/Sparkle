@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <stdexcept>
 
 #include "math/vector3.hpp"
 
@@ -32,7 +33,7 @@ namespace spk
 		{
 		}
 
-		explicit TVector4(const JSON::Value &value) noexcept
+		explicit TVector4(const JSON::Value &value)
 		{
 			*this = fromJSON(value);
 		}
@@ -159,19 +160,27 @@ namespace spk
 
 		[[nodiscard]] static TVector4 fromJSON(const JSON::Value &value)
 		{
-			const auto &array = value.asArray();
-
-			if (array.size() != 4)
+			if (value.isObject())
 			{
-				throw std::runtime_error(
-					"Expected 4 elements for TVector4");
+				const auto &object = value.asObject();
+				if (object.size() != 4 || !object.contains("x") || !object.contains("y") || !object.contains("z") ||
+					!object.contains("w"))
+				{
+					throw std::runtime_error("Expected x, y, z and w components for TVector4");
+				}
+				return {
+					object.at("x").as<TType>(),
+					object.at("y").as<TType>(),
+					object.at("z").as<TType>(),
+					object.at("w").as<TType>()};
 			}
 
-			return {
-				array[0].as<TType>(),
-				array[1].as<TType>(),
-				array[2].as<TType>(),
-				array[3].as<TType>()};
+			const auto &array = value.asArray();
+			if (array.size() != 4)
+			{
+				throw std::runtime_error("Expected 4 elements for TVector4");
+			}
+			return {array[0].as<TType>(), array[1].as<TType>(), array[2].as<TType>(), array[3].as<TType>()};
 		}
 	};
 

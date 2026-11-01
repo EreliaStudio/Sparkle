@@ -1,0 +1,496 @@
+#include <gtest/gtest.h>
+
+#include <filesystem>
+#include <limits>
+#include <stdexcept>
+#include <string>
+
+#include "asset/manager.hpp"
+#include "container/json/object.hpp"
+#include "exception.hpp"
+#include "graphics/image.hpp"
+#include "graphics/material.hpp"
+
+namespace
+{
+	using Value = spk::JSON::Value;
+
+	[[nodiscard]] std::string texturePath()
+	{
+		return (std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png").string();
+	}
+
+	[[nodiscard]] Value textureConfig(const std::string &path = texturePath())
+	{
+		Value config = Value::object();
+		config["path"] = path;
+		return config;
+	}
+
+	[[nodiscard]] Value sheetConfig(unsigned int count = 16, const std::string &path = texturePath())
+	{
+		Value config = textureConfig(path);
+		config["size"]["x"] = count;
+		config["size"]["y"] = count;
+		return config;
+	}
+
+	[[nodiscard]] Value pathSource(bool sheet = false, unsigned int count = 16)
+	{
+		Value source = Value::object();
+		source["path"] = texturePath();
+		if (sheet)
+		{
+			source["size"]["x"] = count;
+			source["size"]["y"] = count;
+		}
+		return source;
+	}
+
+	[[nodiscard]] Value namedSource(bool sheet = false, unsigned int count = 16)
+	{
+		Value source = pathSource(sheet, count);
+		source["id"] = texturePath();
+		return source;
+	}
+
+	[[nodiscard]] Value document(const Value &source)
+	{
+		Value result = Value::object();
+		result["textures"] = Value::object();
+		result["textures"]["albedo"]["Texture"] = source;
+		return result;
+	}
+
+	[[nodiscard]] Value spriteUV(unsigned int x, unsigned int y)
+	{
+		Value result = Value::object();
+		result["sprite"]["x"] = x;
+		result["sprite"]["y"] = y;
+		return result;
+	}
+
+	[[nodiscard]] Value explicitUV(double x, double y, double width, double height)
+	{
+		Value result = Value::object();
+		result["anchor"]["x"] = x;
+		result["anchor"]["y"] = y;
+		result["size"]["x"] = width;
+		result["size"]["y"] = height;
+		return result;
+	}
+
+	[[nodiscard]] spk::Material fromJSON(spk::Asset::Manager &assets, const Value &json)
+	{
+		return spk::Asset::Factory<spk::Material>::create(assets, "material", json);
+	}
+
+	void expectSameBinding(const spk::Material &left, const spk::Material &right, const std::string &role)
+	{
+		ASSERT_NE(left.find(role), nullptr);
+		ASSERT_NE(right.find(role), nullptr);
+		EXPECT_EQ(left.find(role)->texture.identifier(), right.find(role)->texture.identifier());
+		EXPECT_EQ(left.find(role)->section, right.find(role)->section);
+	}
+}
+
+TEST(MaterialTest, EmptyMaterialAndFreeNamedRoles)
+{
+	spk::Material empty;
+	EXPECT_TRUE(empty.textures().empty());
+	EXPECT_EQ(empty.find("albedo"), nullptr);
+
+	spk::Texture texture;
+	spk::Material::Builder builder;
+	builder.add("normal", texture);
+	builder.add("Normal", texture);
+	const spk::Material material = builder.build();
+	EXPECT_EQ(material.textures().size(), 2u);
+	EXPECT_EQ(material.find("albedo"), nullptr);
+	EXPECT_EQ(material.find("normal")->section, spk::Texture::Section::whole);
+	EXPECT_EQ(material.find("Normal")->texture.identifier(), texture.handle().identifier());
+}
+
+TEST(MaterialTest, SnapshotAndCopiesRemainImmutable)
+{
+	spk::Texture texture;
+	spk::Material::Builder builder;
+	builder.add("albedo", texture);
+	const spk::Material before = builder.build();
+	const spk::Material copy = before;
+	builder.add("normal", texture);
+	const spk::Material after = builder.build();
+
+	EXPECT_EQ(before.find("normal"), nullptr);
+	EXPECT_EQ(copy.find("normal"), nullptr);
+	ASSERT_NE(after.find("normal"), nullptr);
+	EXPECT_EQ(copy.find("albedo")->texture.identifier(), before.find("albedo")->texture.identifier());
+}
+
+TEST(MaterialTest, SharedHandlesSurviveTextureWrappers)
+{
+	spk::Material first;
+	spk::Material second;
+	spk::Texture::Handle retained;
+	{
+		spk::Image texture;
+		retained = texture.handle();
+		spk::Material::Builder left;
+		spk::Material::Builder right;
+		left.add("albedo", texture);
+		right.add("normal", texture);
+		first = left.build();
+		second = right.build();
+	}
+	EXPECT_TRUE(retained.valid());
+	EXPECT_EQ(first.find("albedo")->texture.identifier(), retained.identifier());
+	EXPECT_EQ(second.find("normal")->texture.identifier(), retained.identifier());
+}
+
+TEST(MaterialTest, ExplicitUVAndInvalidManualBindings)
+{
+	spk::Texture texture;
+	spk::Material::Builder builder;
+	const spk::Texture::Section region({0.25f, 0.5f}, {0.125f, 0.25f});
+	builder.add("albedo", texture, region);
+	EXPECT_EQ(builder.build().find("albedo")->section, region);
+	EXPECT_THROW(builder.add("albedo", texture), spk::Exception);
+	EXPECT_THROW(builder.add("", texture), spk::Exception);
+	EXPECT_THROW(builder.add(" \t", texture), spk::Exception);
+	EXPECT_THROW(builder.add("zero", texture, {{0, 0}, {0, 1}}), spk::Exception);
+	EXPECT_THROW(builder.add("overflow", texture, {{0.9f, 0}, {0.2f, 1}}), spk::Exception);
+	EXPECT_THROW(
+		builder.add("infinite", texture, {{0, 0}, {std::numeric_limits<float>::infinity(), 1}}),
+		spk::Exception);
+	EXPECT_EQ(builder.build().textures().size(), 1u);
+	EXPECT_NO_THROW(builder.add("edge", texture, {{0.2f, 0.3f}, {0.8f, 0.7f}}));
+}
+
+TEST(MaterialTest, JsonAndManualBindingsHaveSameTextureAndUV)
+{
+	spk::Asset::Manager assets;
+	spk::Texture &texture = assets.load<spk::Texture>(texturePath(), textureConfig());
+	spk::SpriteSheet &sheet = assets.load<spk::SpriteSheet>(texturePath(), sheetConfig());
+
+	spk::Material::Builder manual;
+	manual.add("normal", texture);
+	manual.add("albedo", sheet, {3, 5});
+
+	Value json = document(pathSource(true));
+	json["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	json["textures"]["normal"]["Texture"] = pathSource();
+
+	const spk::Material parsed = fromJSON(assets, json);
+	const spk::Material expected = manual.build();
+	expectSameBinding(parsed, expected, "albedo");
+	expectSameBinding(parsed, expected, "normal");
+	EXPECT_EQ(parsed.textures().size(), 2u);
+}
+
+TEST(MaterialTest, NamedAndUnnamedSourcesResolveIdenticalTriples)
+{
+	spk::Asset::Manager assets;
+	const spk::Material plainPath = fromJSON(assets, document(pathSource()));
+	const spk::Material plainAsset = fromJSON(assets, document(namedSource()));
+	expectSameBinding(plainPath, plainAsset, "albedo");
+
+	Value atlasPath = document(pathSource(true));
+	atlasPath["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	Value atlasAsset = document(namedSource(true));
+	atlasAsset["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	expectSameBinding(fromJSON(assets, atlasPath), fromJSON(assets, atlasAsset), "albedo");
+}
+
+TEST(MaterialTest, OneImageSupportsIndependentSpriteGrids)
+{
+	spk::Asset::Manager assets;
+	const Value sixteen = sheetConfig(16);
+	const Value eight = sheetConfig(8);
+	auto &sheet16 = assets.load<spk::SpriteSheet>(texturePath(), sixteen);
+	auto &sheet8 = assets.load<spk::SpriteSheet>(texturePath(), eight);
+	EXPECT_NE(&sheet16, &sheet8);
+	EXPECT_EQ(sheet16.nbSprite(), (spk::Vector2UInt{16, 16}));
+	EXPECT_EQ(sheet8.nbSprite(), (spk::Vector2UInt{8, 8}));
+	EXPECT_EQ(&assets.get<spk::SpriteSheet>(texturePath()), &sheet16);
+	assets.setDefault<spk::SpriteSheet>(texturePath(), eight);
+	EXPECT_EQ(&assets.get<spk::SpriteSheet>(texturePath()), &sheet8);
+
+	Value json16 = document(pathSource(true, 16));
+	Value json8 = document(pathSource(true, 8));
+	json16["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	json8["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	const spk::Material material16 = fromJSON(assets, json16);
+	const spk::Material material8 = fromJSON(assets, json8);
+	EXPECT_NE(material16.find("albedo")->texture.identifier(), material8.find("albedo")->texture.identifier());
+	EXPECT_EQ(material16.find("albedo")->section, sheet16.sprite({3, 5}));
+	EXPECT_EQ(material8.find("albedo")->section, sheet8.sprite({3, 5}));
+}
+
+TEST(MaterialTest, TextureAndSpriteSheetPathsAreIndependentOfLogicalAssetIDs)
+{
+	spk::Asset::Manager assets;
+	const std::string otherPath = (std::filesystem::path(texturePath()).parent_path() / "." / "default_iconset.png").string();
+	const Value first = textureConfig();
+	const Value second = textureConfig(otherPath);
+
+	const spk::Texture &firstTexture = assets.load<spk::Texture>("terrain", first);
+	const spk::Texture &secondTexture = assets.load<spk::Texture>("terrain", second);
+	EXPECT_NE(firstTexture.handle().identifier(), secondTexture.handle().identifier());
+	EXPECT_EQ(&assets.get<spk::Texture>("terrain"), &firstTexture);
+	assets.setDefault<spk::Texture>("terrain", second);
+	EXPECT_EQ(&assets.get<spk::Texture>("terrain"), &secondTexture);
+
+	const Value firstSheet = sheetConfig(16);
+	const Value secondSheet = sheetConfig(16, otherPath);
+	const spk::SpriteSheet &sheetA = assets.load<spk::SpriteSheet>("atlas", firstSheet);
+	const spk::SpriteSheet &sheetB = assets.load<spk::SpriteSheet>("atlas", secondSheet);
+	EXPECT_NE(sheetA.handle().identifier(), sheetB.handle().identifier());
+	EXPECT_EQ(&assets.get<spk::SpriteSheet>("atlas"), &sheetA);
+	assets.setDefault<spk::SpriteSheet>("atlas", secondSheet);
+	EXPECT_EQ(&assets.get<spk::SpriteSheet>("atlas"), &sheetB);
+
+	Value material = document(namedSource());
+	material["textures"]["albedo"]["Texture"]["id"] = "terrain";
+	material["textures"]["albedo"]["Texture"]["path"] = otherPath;
+	EXPECT_EQ(fromJSON(assets, material).find("albedo")->texture.identifier(), secondTexture.handle().identifier());
+}
+
+TEST(MaterialTest, GraphicFactoriesRequirePathsInJSONConfigurations)
+{
+	spk::Asset::Manager assets;
+	EXPECT_THROW((void)assets.load<spk::Texture>("texture"), spk::Exception);
+	EXPECT_THROW((void)assets.load<spk::SpriteSheet>("sheet", sheetConfig(0)), spk::Exception);
+
+	Value config = textureConfig();
+	config["path"] = "";
+	EXPECT_THROW((void)assets.load<spk::Texture>("texture", config), spk::Exception);
+
+	config = textureConfig();
+	config["unexpected"] = true;
+	EXPECT_THROW((void)assets.load<spk::Texture>("texture", config), spk::Exception);
+
+	config = sheetConfig();
+	config["path"] = "";
+	EXPECT_THROW((void)assets.load<spk::SpriteSheet>("sheet", config), spk::Exception);
+
+	Value invalid = document(namedSource());
+	invalid["textures"]["albedo"]["Texture"] = Value::fromString(R"({"id":"terrain"})");
+	EXPECT_THROW((void)fromJSON(assets, invalid), spk::Exception);
+}
+
+TEST(MaterialTest, ExplicitAndWholeUVWorkWithBothKindsOfSources)
+{
+	spk::Asset::Manager assets;
+	Value plain = document(pathSource());
+	Value atlas = document(pathSource(true));
+	EXPECT_EQ(fromJSON(assets, plain).find("albedo")->section, spk::Texture::Section::whole);
+	EXPECT_EQ(fromJSON(assets, atlas).find("albedo")->section, spk::Texture::Section::whole);
+
+	plain["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
+	atlas["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
+	EXPECT_EQ(fromJSON(assets, plain).find("albedo")->section, fromJSON(assets, atlas).find("albedo")->section);
+	plain["textures"]["albedo"]["UV"] = explicitUV(0.2, 0.3, 0.8, 0.7);
+	EXPECT_NO_THROW((void)fromJSON(assets, plain));
+}
+
+TEST(MaterialTest, JsonVectorsSupportArraysAndNamedCoordinates)
+{
+	spk::Asset::Manager assets;
+
+	Value named = document(pathSource(true));
+	named["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	Value array = document(pathSource(true));
+	array["textures"]["albedo"]["Texture"]["size"] = Value::fromString("[16,16]");
+	array["textures"]["albedo"]["UV"] = Value::fromString(R"({"sprite":[3,5]})");
+	const spk::Material namedSheet = fromJSON(assets, named);
+	const spk::Material arraySheet = fromJSON(assets, array);
+	EXPECT_EQ(namedSheet.find("albedo")->section, arraySheet.find("albedo")->section);
+	EXPECT_NE(namedSheet.find("albedo")->texture.identifier(), arraySheet.find("albedo")->texture.identifier());
+
+	named = document(pathSource());
+	named["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
+	array = document(pathSource());
+	array["textures"]["albedo"]["UV"] = Value::fromString(R"({"anchor":[0.25,0.5],"size":[0.25,0.25]})");
+	expectSameBinding(fromJSON(assets, named), fromJSON(assets, array), "albedo");
+
+	array["textures"]["albedo"]["UV"]["anchor"] = Value::fromString("[0.25]");
+	EXPECT_THROW(fromJSON(assets, array), spk::Exception);
+}
+
+TEST(MaterialTest, InvalidJSONStructureAndUnknownFieldsAreRejected)
+{
+	spk::Asset::Manager assets;
+	const Value empty = Value::fromString(R"({"textures":{}})");
+	EXPECT_TRUE(fromJSON(assets, empty).textures().empty());
+	EXPECT_THROW(fromJSON(assets, Value{}), spk::Exception);
+	EXPECT_THROW(fromJSON(assets, Value::object()), spk::Exception);
+	EXPECT_THROW(fromJSON(assets, Value::fromString(R"({"textures":[]})")), spk::Exception);
+	EXPECT_THROW(fromJSON(assets, Value::fromString(R"({"textures":{},"extra":1})")), spk::Exception);
+	EXPECT_THROW(fromJSON(assets, Value::fromString(R"({"textures":{" ":{"Texture":{"path":"x"}}}})")), spk::Exception);
+
+	Value bad = document(pathSource());
+	bad["textures"]["albedo"]["unexpected"] = true;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["Texture"]["unknown"] = true;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["Texture"]["asset"]["type"] = "Texture";
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+}
+
+TEST(MaterialTest, InvalidMaterialTextureSourcesAreRejected)
+{
+	spk::Asset::Manager assets;
+	Value bad = document(namedSource());
+	bad["textures"]["albedo"]["Texture"]["id"] = "";
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(namedSource());
+	bad["textures"]["albedo"]["Texture"]["asset"] = Value::object();
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(namedSource());
+	bad["textures"]["albedo"]["Texture"]["size"]["x"] = 16;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource(true));
+	bad["textures"]["albedo"]["Texture"]["size"]["x"] = 0;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource(true));
+	bad["textures"]["albedo"]["Texture"]["size"]["x"] = 1.5;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["Texture"]["path"] = "";
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["Texture"]["path"] = 12;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+}
+
+TEST(MaterialTest, PredicateValidationPreservesMaterialFieldPaths)
+{
+	spk::Asset::Manager assets;
+	Value invalid = document(pathSource(true));
+	invalid["textures"]["albedo"]["Texture"]["size"]["x"] = 0;
+	try
+	{
+		(void)fromJSON(assets, invalid);
+		FAIL() << "Invalid grid must be rejected";
+	} catch (const spk::Exception &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("textures.albedo.Texture.size"), std::string::npos);
+	}
+
+	invalid = document(pathSource());
+	invalid["textures"]["albedo"]["UV"] = explicitUV(-0.1, 0.0, 0.5, 0.5);
+	try
+	{
+		(void)fromJSON(assets, invalid);
+		FAIL() << "Invalid UV coordinates must be rejected";
+	} catch (const spk::Exception &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("textures.albedo.UV.anchor"), std::string::npos);
+	}
+}
+
+TEST(MaterialTest, InvalidUVAndSpriteCoordinatesAreRejectedWithPaths)
+{
+	spk::Asset::Manager assets;
+	Value bad = document(pathSource(true));
+	bad["textures"]["albedo"]["UV"] = spriteUV(16, 5);
+	try
+	{
+		(void)fromJSON(assets, bad);
+		FAIL() << "Out-of-grid sprite was accepted";
+	} catch (const spk::Exception &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("textures.albedo.UV.sprite"), std::string::npos);
+	}
+
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["UV"] = spriteUV(0, 0);
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource(true));
+	bad["textures"]["albedo"]["UV"] = spriteUV(0, 0);
+	bad["textures"]["albedo"]["UV"]["anchor"]["x"] = 0.0;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad = document(pathSource());
+	bad["textures"]["albedo"]["UV"] = Value::object();
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad["textures"]["albedo"]["UV"] = nullptr;
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad["textures"]["albedo"]["UV"] = explicitUV(0, 0, 0, 1);
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad["textures"]["albedo"]["UV"] = explicitUV(0.8, 0, 0.4, 1);
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad["textures"]["albedo"]["UV"] = explicitUV(-0.1, 0, 0.5, 1);
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+	bad["textures"]["albedo"]["UV"] = explicitUV(0, 0, 0.5, 0.5);
+	bad["textures"]["albedo"]["UV"]["size"]["x"] = "wrong";
+	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
+}
+
+TEST(MaterialTest, ParserRejectsDuplicateRoleAndNestedKeys)
+{
+	EXPECT_THROW(
+		(void)Value::fromString(R"({"textures":{"albedo":{},"albedo":{}}})"),
+		std::runtime_error);
+	EXPECT_THROW(
+		(void)Value::fromString(R"({"textures":{"albedo":{"Texture":{"path":"a","path":"b"}}}})"),
+		std::runtime_error);
+	EXPECT_THROW((void)Value::fromString(R"({"textures":)"), std::runtime_error);
+}
+
+TEST(MaterialTest, FailedFactoryLoadDoesNotPublishIncompleteMaterial)
+{
+	spk::Asset::Manager assets;
+	Value invalid = document(pathSource());
+	invalid["textures"]["zInvalid"]["Texture"] = pathSource(true);
+	invalid["textures"]["zInvalid"]["UV"] = spriteUV(16, 0);
+
+	EXPECT_THROW((void)assets.load<spk::Material>("terrain", invalid), spk::Exception);
+	EXPECT_THROW((void)assets.get<spk::Material>("terrain"), spk::Exception);
+	EXPECT_NO_THROW((void)assets.get<spk::Texture>(texturePath()));
+
+	const Value valid = document(pathSource());
+	const spk::Material &material = assets.load<spk::Material>("terrain", valid);
+	ASSERT_NE(material.find("albedo"), nullptr);
+	EXPECT_EQ(material.find("zInvalid"), nullptr);
+	EXPECT_EQ(&assets.get<spk::Material>("terrain"), &material);
+	EXPECT_EQ(material.textures().size(), 1u);
+}
+
+TEST(MaterialTest, BuilderRequiresNoAssetManagerOrJSON)
+{
+	spk::Material::Builder builder;
+	spk::Texture texture;
+	builder.add("albedo", texture);
+	const spk::Material first = builder.build();
+	builder.add("normal", texture);
+	const spk::Material second = builder.build();
+
+	EXPECT_EQ(first.find("normal"), nullptr);
+	ASSERT_NE(second.find("normal"), nullptr);
+	EXPECT_EQ(second.find("normal")->texture.identifier(), texture.handle().identifier());
+}
+
+TEST(MaterialTest, CachedMaterialKeepsHandleAfterManagerClear)
+{
+	spk::Asset::Manager assets;
+	Value configuration = document(pathSource());
+	spk::Material retained = assets.load<spk::Material>("terrain", configuration);
+	const auto identity = retained.find("albedo")->texture.identifier();
+	EXPECT_EQ(&assets.get<spk::Material>("terrain"), &assets.load<spk::Material>("terrain", configuration));
+	assets.clear();
+	EXPECT_EQ(retained.find("albedo")->texture.identifier(), identity);
+	EXPECT_TRUE(retained.find("albedo")->texture.valid());
+	EXPECT_THROW(assets.get<spk::Material>("terrain"), spk::Exception);
+}
+
+TEST(MaterialTest, CPUConstructionRequiresNoActiveOpenGLContext)
+{
+	spk::Asset::Manager assets;
+	spk::Texture texture;
+	spk::Material::Builder builder;
+	builder.add("albedo", texture);
+	EXPECT_TRUE(builder.build().find("albedo")->texture.valid());
+	EXPECT_TRUE(fromJSON(assets, document(pathSource())).find("albedo")->texture.valid());
+}

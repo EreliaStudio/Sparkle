@@ -17,6 +17,7 @@
 #include "design_pattern/trait/updatable_by_device_trait.hpp"
 #include "geometry/color_mesh_2d.hpp"
 #include "geometry/mesh.hpp"
+#include "geometry/shadow_mesh.hpp"
 #include "geometry/texture_mesh_2d.hpp"
 #include "geometry/texture_mesh_3d.hpp"
 #include "graphics/color.hpp"
@@ -106,3 +107,5 @@
 #include "ui/widget/toggle_switch.hpp"
 #include "ui/widget/tooltip.hpp"
 #include "ui/widget/workspace.hpp"
+#include "voxel/model.hpp"
+#include "voxel/voxel_mesher.hpp"

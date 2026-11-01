@@ -164,6 +164,31 @@ namespace
 		EXPECT_EQ(value, spk::Vector2(1.5f, -2.25f));
 	}
 
+	TEST(Vector2Test, FromJSONAcceptsNamedCoordinates)
+	{
+		const spk::JSON::Value json = spk::JSON::Value::fromString(R"({"y":-2.25,"x":1.5})");
+
+		EXPECT_EQ(spk::Vector2::fromJSON(json), spk::Vector2(1.5f, -2.25f));
+		EXPECT_EQ(spk::Vector2(json), spk::Vector2(1.5f, -2.25f));
+		EXPECT_EQ(json.as<spk::Vector2>(), spk::Vector2(1.5f, -2.25f));
+		EXPECT_EQ(
+			spk::Vector2UInt::fromJSON(spk::JSON::Value::fromString(R"({"x":3,"y":5})")),
+			(spk::Vector2UInt{3, 5}));
+	}
+
+	TEST(Vector2Test, FromJSONRejectsMalformedCoordinates)
+	{
+		using spk::JSON::Value;
+
+		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString("[1]")), std::runtime_error);
+		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString("[1,2,3]")), std::runtime_error);
+		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString(R"({"x":1})")), std::runtime_error);
+		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
+		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString(R"({"x":"bad","y":2})")), std::runtime_error);
+		EXPECT_THROW(spk::Vector2UInt::fromJSON(Value::fromString(R"({"x":-1,"y":2})")), std::runtime_error);
+		EXPECT_THROW(spk::Vector2(Value::fromString(R"({"x":1})")), std::runtime_error);
+	}
+
 	TEST(Vector2Test, ConstructorFromJSONDeserializesComponentsFromArray)
 	{
 		spk::JSON::Value json = spk::JSON::Value::array();

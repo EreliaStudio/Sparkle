@@ -1,0 +1,64 @@
+#pragma once
+
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include "geometry/mesh.hpp"
+#include "geometry/shadow_mesh.hpp"
+#include "graphics/palette.hpp"
+#include "math/vector2.hpp"
+#include "math/vector3.hpp"
+#include "voxel/definition.hpp"
+
+namespace spk::Voxel
+{
+	struct MeshVertex
+	{
+		spk::Vector3 position;
+		spk::Vector3 normal;
+		spk::Vector2 uv;
+		std::uint32_t materialIndex;
+	};
+
+	class Mesh final : public spk::Mesh<MeshVertex>
+	{
+	public:
+		class Builder final : public spk::Mesh<MeshVertex>::Builder<Mesh>
+		{
+		private:
+			void _setupAttributes(spk::VertexBuffer &buffer) override;
+		};
+	};
+
+	class Model final
+	{
+	private:
+		struct Data
+		{
+			Mesh opaque;
+			Mesh translucent;
+			spk::ShadowMap::Mesh depth;
+			std::vector<Definition::Slot> slots;
+		};
+
+		std::shared_ptr<const Data> _data;
+		std::optional<spk::Palette> _palette;
+
+	public:
+		Model(
+			Mesh opaque,
+			Mesh translucent,
+			spk::ShadowMap::Mesh depth,
+			std::vector<Definition::Slot> slots);
+
+		[[nodiscard]] const Mesh &opaqueMesh() const noexcept;
+		[[nodiscard]] const Mesh &transparentMesh() const noexcept;
+		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
+		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
+		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
+		void bind(spk::Palette palette);
+		[[nodiscard]] const spk::Palette *palette() const noexcept;
+	};
+}
