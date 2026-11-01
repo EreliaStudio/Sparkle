@@ -14,7 +14,7 @@
 | `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
 | `Material` | Valeur immuable : handles statiques ou source EngineView empruntée | Aucune propriété d'une EngineView ; handles GPU capturés par les snapshots |
 | `spk::Palette` | Collection immuable générique de Materials nommés | Aucun contrat voxel ni ressource GPU propre |
-| `spk::Voxel::Palette` | Valeur immuable, contrôle de complétude et du rôle albedo | Ne stocke pas d'opacité ; aucun SSBO ni ressource GPU propre |
+| `spk::Voxel::Palette` | Valeur immuable, validation du rôle albedo à l'ajout ; construction indépendante de tout Model | Aucune opacité, aucune vérification de complétude au build, aucun SSBO ni ressource GPU propre |
 | `Asset::Manager` | Possède les objets `T` du cache | `load<T>()` retourne `T&` emprunté ; `clear()` invalide |
 | `Assembly` | Possède une seule hiérarchie mutable ; insertion de sous-Assembly par copie/expansion des Parts | Nouveaux PartID et ancrage local, partage Models/Palettes immuables, aucune sous-Assembly vivante ; composants emprunteurs |
 | `Engine` | Moteur logique dans `sparkle::core` | Ne possède ni EngineView ni RenderSnapshot |
@@ -105,7 +105,7 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Assets, Materials, Palettes et Assemblies**
 
-- Une `spk::Palette` générique accepte les Materials sans `albedo` ; seule `spk::Voxel::Palette` exige `albedo` pour les slots déclarés. Aucune palette n'enregistre l'opacité. Deux Models peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Model restent rejetés par le Mesher.
+- Une `spk::Palette` générique accepte les Materials sans `albedo` ; `spk::Voxel::Palette` exige `albedo` uniquement lors de l'ajout d'un Material. Son Builder ne connaît aucun Model et ne vérifie aucune complétude. Chaque `Model` vérifie via `isCompatible` la présence de ses slots, y compris totalement occultés, et les contraintes d'atlas par passe. Aucune palette n'enregistre l'opacité. Deux Models peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Model restent rejetés par le Mesher.
 
 - Deux `Asset::Manager::load<T>(id, config)` avec type, identifiant et JSON structurel identiques retournent la même référence, indépendamment de l'ordre textuel des clés JSON ; une configuration 16×16 et une 8×8 donnent deux assets distincts. L'absence de configuration équivaut à un **objet JSON vide**, et non à `Null`.
 - `spk::Asset::Manager::get<T>(id)` ne construit jamais d'asset. Il retourne la version par défaut du type et de l'identifiant, lève `spk::Exception` si aucune n'est chargée, et refuse une identité détruite par `clear()`. Le premier chargement réussi par type/id définit automatiquement la version par défaut ; `load<T>(id, config, true)` ou `setDefault<T>(id, config)` permet de la changer (sans nouvelle construction pour une variante existante). Un échec de factory ou de sélection ne modifie pas la version par défaut.
