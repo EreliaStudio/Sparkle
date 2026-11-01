@@ -11,10 +11,9 @@ namespace spk::Voxel
 	class Palette final
 	{
 	public:
-		class Builder
+		class Builder final : public spk::Palette::Builder
 		{
 		private:
-			spk::Palette::Builder _materials;
 			std::optional<spk::GPUResource::Identifier> _atlas;
 
 		public:
