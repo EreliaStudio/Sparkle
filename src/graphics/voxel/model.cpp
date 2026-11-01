@@ -182,14 +182,7 @@ namespace spk::Voxel
 
 	bool Model::isCompatible(const spk::Palette &palette) const noexcept
 	{
-		for (const auto &slot : materialSlots())
-		{
-			if (!palette.find(slot.name))
-			{
-				return false;
-			}
-		}
-		return true;
+		return mesh().accepts(palette);
 	}
 
 	void Model::addAnchor(std::string name, spk::Matrix4x4 transform)

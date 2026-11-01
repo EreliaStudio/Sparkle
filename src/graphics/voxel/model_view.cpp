@@ -239,8 +239,7 @@ namespace spk::Voxel
 			visit([](const Model &, const spk::Palette &, const spk::Matrix4x4 &) {
 			});
 			return true;
-		}
-		catch (...)
+		} catch (...)
 		{
 			return false;
 		}

@@ -77,7 +77,7 @@ namespace spk::Voxel
 			std::size_t index = 0;
 			for (; index < context.names.size(); ++index)
 			{
-				if (context.names[index] == slot.name && sameMaterial(context.materials[index], *material))
+				if (context.origins[index] == slot.name && sameMaterial(context.materials[index], *material))
 				{
 					break;
 				}
@@ -88,6 +88,7 @@ namespace spk::Voxel
 				auto name = conflict ? availableName(slot.name, context.reservedNames) : slot.name;
 				context.reservedNames.push_back(name);
 				context.names.push_back(std::move(name));
+				context.origins.push_back(slot.name);
 				context.materials.push_back(*material);
 			}
 			if (index > std::numeric_limits<std::uint32_t>::max())

@@ -17,7 +17,6 @@
 namespace
 {
 	using namespace spk::Voxel;
-	using Mesh = spk::Voxel::SurfaceMesh;
 	using Face = Shape::Face;
 	using Position = spk::Vector3UInt;
 	using Horizontal = Shape::HorizontalOrientation;
@@ -97,13 +96,13 @@ namespace
 		return builder.build();
 	}
 
-	[[nodiscard]] std::vector<MeshVertex> vertices(const Mesh &mesh)
+	[[nodiscard]] std::vector<MeshVertex> vertices(const SurfaceMesh &mesh)
 	{
 		const auto view = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		return {view.begin(), view.end()};
 	}
 
-	[[nodiscard]] std::vector<std::uint32_t> indices(const Mesh &mesh)
+	[[nodiscard]] std::vector<std::uint32_t> indices(const SurfaceMesh &mesh)
 	{
 		const auto view = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		return {view.begin(), view.end()};
@@ -117,7 +116,7 @@ namespace
 			EXPECT_EQ(a.materialSlots()[i].name, b.materialSlots()[i].name);
 			EXPECT_FLOAT_EQ(a.materialSlots()[i].opacity, b.materialSlots()[i].opacity);
 		}
-		auto compare = [](const Mesh &left, const Mesh &right) {
+		auto compare = [](const SurfaceMesh &left, const SurfaceMesh &right) {
 			EXPECT_EQ(indices(left), indices(right));
 			const auto a = vertices(left);
 			const auto b = vertices(right);
@@ -290,7 +289,7 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] float visualArea(const Mesh &mesh)
+	[[nodiscard]] float visualArea(const SurfaceMesh &mesh)
 	{
 		const auto vertex = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
@@ -305,7 +304,7 @@ namespace
 		return result;
 	}
 
-	void expectValidTriangles(const Model &model, const Mesh &mesh, float opacity)
+	void expectValidTriangles(const Model &model, const SurfaceMesh &mesh, float opacity)
 	{
 		const auto vertex = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
@@ -790,7 +789,7 @@ TEST(MesherMaterialOffset, BakeOffsetsOpaqueAndTransparentIndicesAndPreservesGeo
 	const Model shifted = Mesher().bake(volume, 27);
 	EXPECT_EQ(shifted.materialIndexOffset(), 27u);
 	EXPECT_EQ(shifted.materialSlots().size(), original.materialSlots().size());
-	auto compare = [](const Mesh &first, const Mesh &second) {
+	auto compare = [](const SurfaceMesh &first, const SurfaceMesh &second) {
 		const auto before = vertices(first);
 		const auto after = vertices(second);
 		ASSERT_EQ(before.size(), after.size());
@@ -878,7 +877,7 @@ TEST(MesherMaterialOffset, SlotCountOverflowIsRejectedDuringBake)
 
 TEST(MesherMaterialOffset, MeshVertexOverflowIsRejectedBeforeReturningResult)
 {
-	Mesh::Builder builder;
+	SurfaceMesh::Builder builder;
 	const MeshVertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, std::numeric_limits<std::uint32_t>::max()};
 	const auto a = builder.addVertex(vertex);
 	const auto b = builder.addVertex(vertex);

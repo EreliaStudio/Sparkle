@@ -144,6 +144,7 @@ namespace spk::Voxel
 		{
 			std::vector<std::string> names;
 			std::vector<spk::Material> materials;
+			std::vector<std::string> origins;
 			std::map<Path, std::vector<std::uint32_t>> remappings;
 			std::vector<std::string> reservedNames;
 		};
