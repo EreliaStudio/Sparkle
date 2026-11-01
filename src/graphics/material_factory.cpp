@@ -70,9 +70,7 @@ namespace spk
 				return !value.empty();
 			};
 			const std::string path = source.require<std::string>("path", nonEmpty, "expected non-empty string");
-			const std::string id = source.contains("id")
-				? source.require<std::string>("id", nonEmpty, "expected non-empty string")
-				: path;
+			const std::string id = source.contains("id") ? source.require<std::string>("id", nonEmpty, "expected non-empty string") : path;
 			JSON::Value config = JSON::Value::object();
 			config["path"] = path;
 
