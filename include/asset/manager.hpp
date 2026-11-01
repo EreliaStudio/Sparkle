@@ -143,7 +143,3 @@ namespace spk
 	};
 }
 
-namespace spk
-{
-	using Assets = asset::Assets;
-}
