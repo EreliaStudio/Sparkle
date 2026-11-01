@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
-#include <utility>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "exception.hpp"
@@ -341,7 +341,6 @@ TEST(VoxelModelHarmonizerTest, ReusesEqualMaterialsAcrossThreeModels)
 	EXPECT_NE(materialIndex(result.model), materialIndex(*left));
 	EXPECT_EQ(materialIndex(*left), materialIndex(*right));
 }
-
 
 TEST(VoxelAnchorPathTest, NamedSegmentsDoNotTreatSlashAsSeparator)
 {
