@@ -513,6 +513,28 @@ TEST(VoxelPaletteTest, ModelBindRejectsMissingRequiredSlotWithoutChangingBinding
 	EXPECT_EQ(&source.palette()->materials(), &complete.materials());
 }
 
+TEST(VoxelPaletteTest, ModelBindReportsEveryMissingMaterialSlot)
+{
+	Texture atlas;
+	auto source = model({{"alpha", 1.0f}, {"beta", 0.5f}, {"gamma", 1.0f}});
+	const auto complete = palette({
+		{"alpha", material(atlas)}, {"beta", material(atlas)}, {"gamma", material(atlas)}});
+	const auto incomplete = palette({{"beta", material(atlas)}});
+	source.bind(complete);
+
+	try
+	{
+		source.bind(incomplete);
+		FAIL() << "Expected missing material slots to be rejected";
+	}
+	catch (const spk::Exception &error)
+	{
+		EXPECT_EQ(error.message(), "Voxel Model: palette is missing material slots: 'alpha', 'gamma'");
+	}
+	ASSERT_NE(source.palette(), nullptr);
+	EXPECT_EQ(&source.palette()->materials(), &complete.materials());
+}
+
 TEST(VoxelPaletteTest, ModelCopiesCanBindDifferentPalettesWhileSharingGeometry)
 {
 	Texture first;
