@@ -6,27 +6,17 @@
 
 namespace spk::Voxel
 {
-	Palette::Palette(spk::Palette materials) :
-		_materials(std::move(materials))
+	Palette::Palette(spk::Palette palette) :
+		spk::Palette(std::move(palette))
 	{
-	}
-
-	const spk::Palette &Palette::materials() const noexcept
-	{
-		return _materials;
-	}
-
-	const spk::Material *Palette::find(std::string_view name) const noexcept
-	{
-		return _materials.find(name);
 	}
 
 	Palette::Builder::Builder(const Palette &palette) :
-		_materials(palette.materials())
+		spk::Palette::Builder(palette)
 	{
-		if (!palette.materials().materials().empty())
+		if (!palette.materials().empty())
 		{
-			_atlas = palette.materials().materials().begin()->second.find("albedo")->texture.identifier();
+			_atlas = palette.materials().begin()->second.find("albedo")->texture.identifier();
 		}
 	}
 
@@ -42,12 +32,12 @@ namespace spk::Voxel
 		{
 			throw spk::Exception("Voxel Palette: slot '" + name + "' uses a different albedo atlas");
 		}
-		_materials.setMaterial(std::move(name), std::move(material));
+		spk::Palette::Builder::setMaterial(std::move(name), std::move(material));
 		_atlas = identity;
 	}
 
 	Palette Palette::Builder::build() const
 	{
-		return Palette(_materials.build());
+		return Palette(spk::Palette::Builder::build());
 	}
 }
