@@ -147,7 +147,7 @@ Le mode fichier constitue seulement un raccourci **de résolution vers les même
 
 **Erreurs, doublons et atomicité.** Les objets JSON n'ont pas d'ordre sémantique. Le parseur existant `JSON::Value::fromString` / `loadFromFile` expose déjà `ParseOptions::rejectDuplicateKeys = true` par défaut : **ce mode est obligatoire** pour charger du texte de Material, afin de refuser les doublons de rôles et les doublons de champs à n'importe quel niveau. Un `JSON::Value` déjà construit est une map de clés uniques ; un doublon qui aurait été silencieusement éliminé par un parsing externe configuré permissif n'est **pas récupérable** après coup. Les constructions depuis `JSON::Value` valident les champs et les types présents, sans prétendre détecter un historique de doublons perdu. Toute erreur de schéma, type, clé, valeur, source non résolue ou coordonnée hors grille produit une `spk::Exception` descriptive avec **chemin logique précis** (par exemple `textures.albedo.Texture.size.x` ou `textures.normal.UV.sprite`), nom du rôle et cause de chargement lorsqu'elle existe. Un objet racine mal formé est rejeté avant publication, jamais corrigé par une valeur par défaut implicite autre que `UV` entier et `asset.config` objet vide.
 
-**Builder et équivalence sémantique.** Le `Material::Builder` offre une construction manuelle par rôle via une texture existante ou SpriteSheet, ainsi qu'une lecture du document JSON **avec un `AssetManager` explicitement lié**. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite, ou le code doit appeler une opération de remplacement nommée distinctement (signature finale à fixer sans changement de politique). La lecture du JSON prépare et valide **intégralement** les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé et un Builder réutilisé reste inchangé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'AssetManager.
+**Builder et équivalence sémantique.** Le `Material::Builder` assemble exclusivement des Textures ou SpriteSheets déjà disponibles : il ne connaît ni le JSON ni l'`Asset::Manager`. La spécialisation `Asset::Factory<spk::Material>` lit le document JSON, résout les dépendances avec le gestionnaire reçu, puis alimente un Builder local. Une séquence qui utilise les **mêmes textures résolues et les mêmes `Texture::Section`** produit des Materials sémantiquement identiques (mêmes rôles, handles/identités de sources et UV), indépendamment de l'ordre des propriétés JSON. À rôles identiques, le Builder n'accepte pas qu'une seconde déclaration **remplace silencieusement** la première : la duplication est une erreur explicite. La factory valide les bindings avant de publier le Material ; en cas d'exception, aucun Material partiellement construit n'est exposé. Les assets dépendants chargés avec succès restent dans le cache en cas d'échec ultérieur, selon le contrat non transactionnel d'Asset::Manager.
 
 ```mermaid
 flowchart TD
@@ -168,17 +168,17 @@ flowchart TD
   Build --> Material["Material final : handles + UV, sans gestionnaire"]
 ```
 
-### 4.3 `Material::Builder` et l'AssetManager
+### 4.3 `Material::Builder` et la factory JSON
 
-Le Builder peut fonctionner **sans AssetManager** lorsque le programme lui passe directement des Textures existantes. En revanche, un chargement JSON qui doit résoudre un chemin ou un asset requiert un AssetManager préalablement lié :
+Le Builder construit un Material uniquement depuis des ressources déjà résolues, sans liaison vers un gestionnaire ni logique JSON :
 
 ```cpp
 spk::Material::Builder builder;
-builder.bind(&assets);  // Liaison non propriétaire
-// Construction depuis un JSON de matériau.
+builder.add("albedo", texture);
+spk::Material material = builder.build();
 ```
 
-`void bind(spk::AssetManager*)` est la forme retenue. **`bind(nullptr)` provoque immédiatement une `spk::Exception`.** Une liaison à cible unique n'est pas implicitement remplacée sans détachement préalable, selon les conventions Sparkle. Le chargement de JSON se fait exclusivement avec ce gestionnaire explicitement lié : il résout `Texture.path` et les références `Texture.asset` par les factories statiques du type concerné, suivant la section 4.2.1. Le Material obtenu ne conserve aucune référence au gestionnaire. L'API de construction manuelle n'en a pas besoin dès lors que les Textures sont déjà résolues.
+La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `assets.load<spk::Material>(id, config)`. La factory reçoit l'`Asset::Manager&`, résout `Texture.path` et les références `Texture.asset`, puis remplit un Builder local. Ni le Builder ni le Material final ne conservent de référence vers l'Asset::Manager.
 
 ### 4.4 `spk::VoxelPalette` : association des slots aux matériaux
 

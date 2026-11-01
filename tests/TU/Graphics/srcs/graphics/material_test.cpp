@@ -74,10 +74,7 @@ namespace
 
 	[[nodiscard]] spk::Material fromJSON(spk::Asset::Manager &assets, const Value &json)
 	{
-		spk::Material::Builder builder;
-		builder.bind(&assets);
-		builder.load(json);
-		return builder.build();
+		return spk::Asset::Factory<spk::Material>::create(assets, "material", json);
 	}
 
 	void expectSameBinding(const spk::Material &left, const spk::Material &right, const std::string &role)
@@ -246,7 +243,10 @@ TEST(MaterialTest, JsonVectorsSupportArraysAndNamedCoordinates)
 	Value array = document(pathSource(true));
 	array["textures"]["albedo"]["Texture"]["size"] = Value::fromString("[16,16]");
 	array["textures"]["albedo"]["UV"] = Value::fromString(R"({"sprite":[3,5]})");
-	expectSameBinding(fromJSON(assets, named), fromJSON(assets, array), "albedo");
+	const spk::Material namedSheet = fromJSON(assets, named);
+	const spk::Material arraySheet = fromJSON(assets, array);
+	EXPECT_EQ(namedSheet.find("albedo")->section, arraySheet.find("albedo")->section);
+	EXPECT_NE(namedSheet.find("albedo")->texture.identifier(), arraySheet.find("albedo")->texture.identifier());
 
 	named = document(pathSource());
 	named["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
@@ -352,39 +352,37 @@ TEST(MaterialTest, ParserRejectsDuplicateRoleAndNestedKeys)
 	EXPECT_THROW((void)Value::fromString(R"({"textures":)"), std::runtime_error);
 }
 
-TEST(MaterialTest, FailedLoadDoesNotChangeExistingBuilder)
+TEST(MaterialTest, FailedFactoryLoadDoesNotPublishIncompleteMaterial)
 {
 	spk::Asset::Manager assets;
-	spk::Texture existing;
-	spk::Material::Builder builder;
-	builder.bind(&assets);
-	builder.add("existing", existing);
-	Value documentWithFailure = document(pathSource());
-	documentWithFailure["textures"]["zInvalid"]["Texture"] = pathSource(true);
-	documentWithFailure["textures"]["zInvalid"]["UV"] = spriteUV(16, 0);
+	Value invalid = document(pathSource());
+	invalid["textures"]["zInvalid"]["Texture"] = pathSource(true);
+	invalid["textures"]["zInvalid"]["UV"] = spriteUV(16, 0);
 
-	EXPECT_THROW(builder.load(documentWithFailure), spk::Exception);
-	const spk::Material after = builder.build();
-	EXPECT_EQ(after.textures().size(), 1u);
-	EXPECT_EQ(after.find("albedo"), nullptr);
-	ASSERT_NE(after.find("existing"), nullptr);
-	EXPECT_EQ(after.find("existing")->texture.identifier(), existing.handle().identifier());
-	EXPECT_NO_THROW(builder.load(document(pathSource())));
-	EXPECT_EQ(builder.build().textures().size(), 2u);
-	EXPECT_THROW(builder.load(document(pathSource())), spk::Exception);
-	EXPECT_EQ(builder.build().textures().size(), 2u);
+	EXPECT_THROW((void)assets.load<spk::Material>("terrain", invalid), spk::Exception);
+	EXPECT_THROW((void)assets.get<spk::Material>("terrain"), spk::Exception);
+	EXPECT_NO_THROW((void)assets.get<spk::Texture>(texturePath()));
+
+	const Value valid = document(pathSource());
+	const spk::Material &material = assets.load<spk::Material>("terrain", valid);
+	ASSERT_NE(material.find("albedo"), nullptr);
+	EXPECT_EQ(material.find("zInvalid"), nullptr);
+	EXPECT_EQ(&assets.get<spk::Material>("terrain"), &material);
+	EXPECT_EQ(material.textures().size(), 1u);
 }
 
-TEST(MaterialTest, BindingRequiresExplicitValidManager)
+TEST(MaterialTest, BuilderRequiresNoAssetManagerOrJSON)
 {
 	spk::Material::Builder builder;
-	EXPECT_THROW(builder.bind(nullptr), spk::Exception);
-	EXPECT_THROW(builder.load(Value::fromString(R"({"textures":{}})")), spk::Exception);
-	spk::Asset::Manager one;
-	spk::Asset::Manager two;
-	builder.bind(&one);
-	EXPECT_THROW(builder.bind(&two), spk::Exception);
-	EXPECT_NO_THROW(builder.load(Value::fromString(R"({"textures":{}})")));
+	spk::Texture texture;
+	builder.add("albedo", texture);
+	const spk::Material first = builder.build();
+	builder.add("normal", texture);
+	const spk::Material second = builder.build();
+
+	EXPECT_EQ(first.find("normal"), nullptr);
+	ASSERT_NE(second.find("normal"), nullptr);
+	EXPECT_EQ(second.find("normal")->texture.identifier(), texture.handle().identifier());
 }
 
 TEST(MaterialTest, CachedMaterialKeepsHandleAfterManagerClear)

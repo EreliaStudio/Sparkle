@@ -5,8 +5,6 @@
 #include <string>
 #include <string_view>
 
-#include "asset/manager.hpp"
-#include "container/json/reader.hpp"
 #include "graphics/sprite_sheet.hpp"
 
 namespace spk
@@ -26,15 +24,10 @@ namespace spk
 		{
 		private:
 			Textures _textures;
-			Asset::Manager *_assets = nullptr;
-
-			[[nodiscard]] Binding _readRole(const JSON::Reader &reader) const;
 
 		public:
-			void bind(Asset::Manager *assets);
 			void add(const std::string &role, const Texture &texture, Texture::Section section = Texture::Section::whole);
 			void add(const std::string &role, const SpriteSheet &sheet, const Vector2UInt &sprite);
-			void load(const JSON::Value &description);
 			[[nodiscard]] Material build() const;
 		};
 

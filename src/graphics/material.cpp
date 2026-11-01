@@ -53,19 +53,6 @@ namespace spk
 		return found == _textures->end() ? nullptr : &found->second;
 	}
 
-	void Material::Builder::bind(Asset::Manager *assets)
-	{
-		if (assets == nullptr)
-		{
-			throw Exception("Material::Builder.bind: asset manager cannot be null");
-		}
-		if (_assets != nullptr && _assets != assets)
-		{
-			throw Exception("Material::Builder.bind: already bound to another asset manager");
-		}
-		_assets = assets;
-	}
-
 	void Material::Builder::add(const std::string &role, const Texture &texture, Texture::Section section)
 	{
 		if (!validRole(role))

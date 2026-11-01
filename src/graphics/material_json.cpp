@@ -187,38 +187,33 @@ namespace spk
 		}
 	}
 
-	Material::Binding Material::Builder::_readRole(const JSON::Reader &reader) const
-	{
-		reader.forbidUnknown({"Texture", "UV"});
-		const ResolvedTexture resolved = resolveTexture(*_assets, reader.child("Texture"));
-		return Binding{resolved.texture->handle(), readSection(reader, resolved.sheet)};
-	}
+		namespace
+		{
+			void appendRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry)
+			{
+				entry.forbidUnknown({"Texture", "UV"});
+				const ResolvedTexture resolved = resolveTexture(assets, entry.child("Texture"));
+				builder.add(role, *resolved.texture, readSection(entry, resolved.sheet));
+			}
 
-	void Material::Builder::load(const JSON::Value &description)
-	{
-		if (_assets == nullptr)
-		{
-			throw Exception("Material::Builder.load: bind an asset manager first");
-		}
-		const Reader root(description, {}, "material");
-		root.forbidUnknown({"textures"});
-		const Reader textures = root.child("textures");
-		Textures next = _textures;
-		for (const auto &[role, value] : textures.value().asObject())
-		{
-			if (role.empty() || role.find_first_not_of(" \t\n\r\f\v") == std::string::npos)
+			[[nodiscard]] Material readMaterial(Asset::Manager &assets, const JSON::Value &description)
 			{
-				throw Exception(textures.pathFor(role) + ": invalid role name");
+				const Reader root(description, {}, "material");
+				root.forbidUnknown({"textures"});
+				const Reader textures = root.child("textures");
+				Material::Builder builder;
+				for (const auto &[role, value] : textures.value().asObject())
+				{
+					if (role.empty() || role.find_first_not_of(" \t\n\r\f\v") == std::string::npos)
+					{
+						throw Exception(textures.pathFor(role) + ": invalid role name");
+					}
+					appendRole(builder, assets, role, Reader(value, {}, textures.pathFor(role)));
+				}
+				return builder.build();
 			}
-			if (next.contains(role))
-			{
-				throw Exception(textures.pathFor(role) + ": duplicate role");
-			}
-			const Reader entry(value, {}, textures.pathFor(role));
-			next.emplace(role, _readRole(entry));
 		}
-		_textures.swap(next);
-	}
+
 }
 
 namespace spk::Asset
@@ -260,9 +255,6 @@ namespace spk::Asset
 
 	spk::Material Factory<spk::Material>::create(Manager &assets, const std::string &, const JSON::Value &config)
 	{
-		spk::Material::Builder builder;
-		builder.bind(&assets);
-		builder.load(config);
-		return builder.build();
+		return spk::readMaterial(assets, config);
 	}
 }
