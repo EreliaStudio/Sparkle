@@ -297,10 +297,7 @@ TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
 TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralModels)
 {
 	Texture atlas;
-	const auto result = palette({
-		{"shared", material(atlas)},
-		{"left", material(atlas)},
-		{"right", material(atlas)}});
+	const auto result = palette({{"shared", material(atlas)}, {"left", material(atlas)}, {"right", material(atlas)}});
 	const Model first = model({{"shared", 1.0f}, {"left", 0.5f}});
 	const Model second = model({{"shared", 1.0f}, {"right", 0.6f}});
 	EXPECT_EQ(result.materials().size(), 3u);
