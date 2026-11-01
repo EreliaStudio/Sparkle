@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 
 #include "exception.hpp"
 
