@@ -185,35 +185,26 @@ namespace spk
 			}
 			return {Vector2(anchor), Vector2(size)};
 		}
-	}
-
-		namespace
+		[[nodiscard]] Material readMaterial(Asset::Manager &assets, const JSON::Value &description)
 		{
-			void appendRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry)
+			const Reader root(description, {}, "material");
+			root.forbidUnknown({"textures"});
+			const Reader textures = root.child("textures");
+			Material::Builder builder;
+			for (const auto &[role, value] : textures.value().asObject())
 			{
+				if (role.empty() || role.find_first_not_of(" \t\n\r\f\v") == std::string::npos)
+				{
+					throw Exception(textures.pathFor(role) + ": invalid role name");
+				}
+				const Reader entry(value, {}, textures.pathFor(role));
 				entry.forbidUnknown({"Texture", "UV"});
 				const ResolvedTexture resolved = resolveTexture(assets, entry.child("Texture"));
 				builder.add(role, *resolved.texture, readSection(entry, resolved.sheet));
 			}
-
-			[[nodiscard]] Material readMaterial(Asset::Manager &assets, const JSON::Value &description)
-			{
-				const Reader root(description, {}, "material");
-				root.forbidUnknown({"textures"});
-				const Reader textures = root.child("textures");
-				Material::Builder builder;
-				for (const auto &[role, value] : textures.value().asObject())
-				{
-					if (role.empty() || role.find_first_not_of(" \t\n\r\f\v") == std::string::npos)
-					{
-						throw Exception(textures.pathFor(role) + ": invalid role name");
-					}
-					appendRole(builder, assets, role, Reader(value, {}, textures.pathFor(role)));
-				}
-				return builder.build();
-			}
+			return builder.build();
 		}
-
+	}
 }
 
 namespace spk::Asset
