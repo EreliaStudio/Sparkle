@@ -142,3 +142,8 @@ namespace spk::asset
 		void clear();
 	};
 }
+
+namespace spk
+{
+	using Assets = asset::Manager;
+}
