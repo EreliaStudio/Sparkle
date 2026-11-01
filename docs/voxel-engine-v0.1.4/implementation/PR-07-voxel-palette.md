@@ -19,9 +19,9 @@
 ## Périmètre exact à réaliser
 
 - [x] `spk::Palette` immuable : collection générique de Materials nommés.
-- [x] `spk::Palette` : unique valeur de palette, Builder générique avec validateur optionnel ; `spk::Voxel::PaletteBuilder` fournit les règles voxel.
+- [x] `spk::Palette` : unique valeur de palette, Builder générique avec validateur optionnel ; `spk::Voxel::Palette::Builder` fournit les règles voxel.
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
-- [x] `Model::isCompatible(const spk::Palette &)` vérifie uniquement les noms de slots ; le validateur de `spk::Voxel::PaletteBuilder` impose immédiatement un atlas unique à chaque insertion.
+- [x] `Model::isCompatible(const spk::Palette &)` vérifie uniquement les noms de slots ; le validateur de `spk::Voxel::Palette::Builder` impose immédiatement un atlas unique à chaque insertion.
 
 ## Instructions techniques et intégration
 
@@ -31,7 +31,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Révision architecturale validée pendant la PR
 
-La palette générique sans validateur n'impose aucun rôle de texture. Le validateur installé par `spk::Voxel::PaletteBuilder` exige `albedo` pour chaque Material ajouté ; `build()` n'impose aucune complétude. Le contrôle global d'atlas appartient au validateur de `spk::Voxel::PaletteBuilder`, exécuté à chaque `setMaterial()` ; `build()` est celui du Builder générique ; la complétude appartient exclusivement à `Model::isCompatible(palette)` ; la classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
+La palette générique sans validateur n'impose aucun rôle de texture. Le validateur installé par `spk::Voxel::Palette::Builder` exige `albedo` pour chaque Material ajouté ; `build()` n'impose aucune complétude. Le contrôle de l'atlas unique appartient au validateur de `spk::Voxel::Palette::Builder`, exécuté à chaque `setMaterial()` ; `build()` est celui du Builder générique ; la complétude appartient exclusivement à `Model::isCompatible(palette)` ; la classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
 
 ## Tests obligatoires
 
