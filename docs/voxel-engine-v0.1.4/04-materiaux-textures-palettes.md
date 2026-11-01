@@ -185,11 +185,34 @@ La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `
 
 Une `VoxelPalette` associe des **noms de slots sémantiques et leurs contrats d'opacité** à des valeurs `spk::Material`. C'est une valeur immuable, à copies légères partageant un bloc de données internes ; elle ne contient **aucun SSBO** et n'hérite d'aucun objet GPU.
 
-Son Builder mutable peut être initialisé à partir d'un Model, de plusieurs Models, d'un Assembly (union de leurs besoins) ou d'une palette existante pour en créer une variante. Les collisions de **même nom avec des opacités différentes** entre sources sont rejetées explicitement. Construire une nouvelle palette n'altère pas l'ancienne, ses Materials ou les snapshots existants.
+Son Builder mutable peut être initialisé à partir d'un Model, enrichi par `addModel()` pour réunir plusieurs Models, ou initialisé à partir d'une palette existante pour en créer une variante. L'intégration directe des Assemblies sera traitée en PR-08, sans introduire de dépendance vers celles-ci dans la PR-07. Les collisions de **même nom avec des opacités différentes** entre sources sont rejetées explicitement. Construire une nouvelle palette n'altère pas l'ancienne, ses Materials ou les snapshots existants.
 
 **Chaque slot déclaré** doit recevoir un Material compatible, **même s'il n'a aucun triangle visible**. Le Builder valide que chaque Material affecté possède au moins la texture nommée exactement **`albedo`**, avec exception descriptive sur absence. Le système voxel ne requiert, n'examine ni n'utilise d'autres noms de textures dans cette version. La présence d'autres rôles sur un Material reste autorisée.
 
 Un Model peut être associé à une palette contenant **plus de slots** que lui. L'association est compatible seulement si tous ses noms et opacités requis sont présents. `Model::isCompatible(palette)` est la forme d'API envisagée pour vérifier ce contrat, y compris la limite d'atlas par passe décrite ci-dessous. La palette n'est pas obligée d'être identique au Model, et une même palette peut servir à plusieurs Models.
+
+**API disponible depuis la PR-07 :**
+
+```cpp
+spk::VoxelPalette::Builder builder(model);
+builder.addModel(otherModel); // Fusion des contrats, collision d'opacité refusée
+builder.setMaterial("stone", stoneMaterial); // spk::Material avec rôle "albedo"
+builder.setMaterial("glass", glassMaterial);
+// Affecter de même tous les autres slots requis par les deux Models.
+const spk::VoxelPalette palette = builder.build();
+
+if (!model.isCompatible(palette))
+{
+    throw spk::Exception("Palette incompatible avec le Model");
+}
+
+// Variante immuable : n'altère pas palette.
+spk::VoxelPalette::Builder variant(palette);
+variant.setMaterial("stone", replacementMaterial);
+const spk::VoxelPalette alternate = variant.build();
+```
+
+`build()` refuse tout slot sans Material/`albedo` valide ; `setMaterial()` refuse les noms de slots inconnus. L'ajout d'un Model est transactionnel : un conflit d'opacité ne modifie pas le Builder. Une palette peut être valide indépendamment d'un Model donné mais incompatible avec celui-ci, notamment en cas de plusieurs atlas dans sa passe ; `Model::isCompatible()` retourne alors `false` sans modifier le Model ni la palette. L'association de rendu validante relève des PR de rendu suivantes.
 
 **Identité d'atlas des sources de vue (Q-ARCH-003 validée).** La vérification de compatibilité utilise une **identité logique immuable de la source `albedo`**, jamais son handle GPU résolu. Deux types d'identités sont incompatibles entre eux : `Static(Texture::Handle)` (identité du `GPUResource::State` effectivement capturé, sans considérer une génération/pixels ultérieurs comme un nouvel atlas tant que le State reste le même) et `EngineView(identité de vie de la vue)`. La seconde identité est propre à **l'incarnation concrète** de la vue dans son `RenderingEngine`, et non à son nom textuel : supprimer puis recréer `"monitor"` ne rétablit aucune identité ou liaison antérieure. Un simple identifiant de vue stable attribué par son moteur suffit, sans registre global ni possession nouvelle. La source de vue reste non propriétaire et le développeur doit cesser de l'utiliser avant destruction.
 
