@@ -50,7 +50,7 @@ La palette générique sans validateur n'impose aucun rôle de texture. Le valid
 
 ## Définition de terminé / critère de fusion
 
-Un Model peut recevoir une nouvelle palette avec `bind()` sans régénérer ses meshes, et `palette()` donne accès à sa liaison facultative. La géométrie reste immuable et partagée ; la liaison est propre à chaque copie de Model.
+Un Model peut recevoir une nouvelle palette avec `bind()` sans régénérer ses meshes, et `palette()` donne accès à sa liaison facultative. En cas d'incomplétude, l'exception énumère **tous** les noms de slots manquants, dans l'ordre déterministe des slots du Model. La géométrie reste immuable et partagée ; la liaison est propre à chaque copie de Model.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
