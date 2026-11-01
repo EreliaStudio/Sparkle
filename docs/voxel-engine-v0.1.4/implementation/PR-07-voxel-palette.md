@@ -21,24 +21,24 @@
 - [x] `spk::Palette` immuable : collection générique de Materials nommés.
 - [x] `spk::Voxel::Palette` : wrapper immuable, Builder **sans Model**, ou depuis une palette voxel existante.
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
-- [x] `Model::isCompatible(const Voxel::Palette &)` et identité `albedo` unique par passe du Model.
+- [x] `Model::isCompatible(const Voxel::Palette &)` vérifie les slots ; `Voxel::Palette::Builder::build()` impose un atlas `albedo` unique dans toute la palette.
 
 ## Instructions techniques et intégration
 
-Laisser chaque `Model` vérifier les noms de slots nécessaires, même occultés ; créer et construire une palette avant tout Model, en autorisant des noms librement choisis. Ignorer les matériaux surnuméraires lors de la compatibilité avec un Model ; vérifier les identités `albedo` indépendamment dans ses passes opaque et translucide. Aucun SSBO ni mesh additionnel possédé par les palettes.
+Laisser chaque `Model` vérifier les noms de slots nécessaires, même occultés ; créer et construire une palette avant tout Model, en autorisant des noms librement choisis. Ignorer les matériaux surnuméraires lors de la vérification des slots du Model ; imposer un même atlas `albedo` à tous les Materials de la palette, y compris les matériaux surnuméraires, au moment de son `build()`. Aucun SSBO ni mesh additionnel possédé par les palettes.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
 ## Révision architecturale validée pendant la PR
 
-La palette générique n'impose aucun rôle de texture. Seule la palette voxel exige `albedo` pour **chaque Material ajouté**, lors de `setMaterial()` ; son `build()` n'impose aucune complétude. La complétude et la compatibilité des atlas sont contrôlées exclusivement par `Model::isCompatible(palette)` ; la classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
+La palette générique n'impose aucun rôle de texture. Seule la palette voxel exige `albedo` pour **chaque Material ajouté**, lors de `setMaterial()` ; son `build()` n'impose aucune complétude. Le contrôle global d'atlas appartient à `Voxel::Palette::Builder::build()` ; la complétude appartient exclusivement à `Model::isCompatible(palette)` ; la classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
 
 ## Tests obligatoires
 
 - [x] Palette construite avant tout Model, puis contrôlée par celui-ci.
 - [x] Compatibilité modèle/palette et Materials surnuméraires.
-- [x] Atlas différents entre opaque et translucide.
-- [x] Deux atlas dans une même passe refusés.
+- [x] Un seul atlas `albedo` pour toute la palette, y compris entre les slots opaques et translucides.
+- [x] Rejet de deux atlas au build, même lorsqu'un slot est surnuméraire ; récupération du Builder après échec.
 - [x] Slot occulté manquant détecté par le Model.
 - [x] Changer de palette ne change aucun vertex.
 - [x] Échec de `setMaterial()` sans mutation partielle.
