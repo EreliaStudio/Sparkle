@@ -99,11 +99,17 @@ volumeBuilder.bind(definitions);
 volumeBuilder.set({2, 4, 1}, 1);
 spk::Voxel::Volume volume = volumeBuilder.build();
 
+spk::Material material = makeMaterial(texture);
+spk::Voxel::Palette::Builder paletteBuilder;
+paletteBuilder.setMaterial("stone", material);
+const spk::Voxel::Palette palette = paletteBuilder.build();
+
 spk::Voxel::VoxelMesher mesher;
 spk::Voxel::Model model = mesher.bake(volume);
-
-spk::Material material = makeMaterial(texture);
-spk::Voxel::Palette palette = makePalette(model, material);
+if (!model.isCompatible(palette))
+{
+    throw spk::Exception("Palette incompatible avec le Model");
+}
 
 spk::Voxel::Assembly character;
 auto torso = character.addPart("torso", model, palette);
