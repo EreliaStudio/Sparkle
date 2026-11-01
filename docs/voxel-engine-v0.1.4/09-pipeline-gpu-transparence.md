@@ -22,9 +22,9 @@ Chaque commande conserve le **handle du SSBO propre à son snapshot** : un snaps
 
 **Périmètre.** Le même principe de préparation explicite s'applique aux shaders Forward consommant instances, matériaux et données lumineuses ; la déclaration concrète de leurs blocs, layouts `std430` et indices **au sein** de chaque pipeline est à finaliser dans le reste de Q-TECH-006. Les passes qui ne consomment pas de tels blocs (notamment Skybox unlit et shaders d'ombres depth-only) n'activent **aucun SSBO de lumières par défaut**. L'activation n'impose aucun nouveau type de `RenderCommand` ; `DrawVoxelBucketCommand` et les commandes existantes réutilisent `GPUResource::Handle::activate(RenderContext&)`. Les conventions pour UBO et samplers restent celles de leurs abstractions propres ; cette décision ne réserve aucun binding dans leurs espaces d'indices distincts.
 
-### 7.6 SSBO des matériaux par couple `Model`/`VoxelPalette`
+### 7.6 SSBO des matériaux par couple `Model`/`Voxel::Palette`
 
-La palette publique ne contient **aucun état GPU mutable**. Pour chaque couple `Model`/`VoxelPalette` réellement employé par le snapshot, le rendu construit un SSBO de matériaux **dans l'ordre des slots sémantiques du Model**.
+La palette publique ne contient **aucun état GPU mutable**. Pour chaque couple `Model`/`Voxel::Palette` réellement employé par le snapshot, le rendu construit un SSBO de matériaux **dans l'ordre des slots sémantiques du Model**.
 
 La correspondance entre les **noms de slots** du Model et ceux de la palette est résolue **sur CPU**. Le shader peut ensuite accéder directement à son matériau par `MeshVertex::materialIndex`, **sans table d'indirection GPU**. Les slots supplémentaires de la palette n'ont pas à être encodés dans le SSBO adapté au Model. Les slots du Model sans triangles visibles restent pris en compte dans l'ordre et la validation du couple.
 
