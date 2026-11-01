@@ -28,7 +28,7 @@
 
 ## Instructions techniques et intégration
 
-Utiliser Assets explicite pour JSON; bind(nullptr) lève Exception; parser de texte refuse clés dupliquées; path+size charge SpriteSheet; rôle normal sans logique spéciale; un objet Material vide en rôles reste génériquement valide; sources EngineView non exposées dans JSON.
+Utiliser AssetManager explicite pour JSON; bind(nullptr) lève Exception; parser de texte refuse clés dupliquées; path+size charge SpriteSheet; rôle normal sans logique spéciale; un objet Material vide en rôles reste génériquement valide; sources EngineView non exposées dans JSON.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 

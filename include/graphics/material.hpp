@@ -26,12 +26,12 @@ namespace spk
 		{
 		private:
 			Textures _textures;
-			Assets *_assets = nullptr;
+			Asset::Manager *_assets = nullptr;
 
 			[[nodiscard]] Binding _readRole(const JSON::Reader &reader) const;
 
 		public:
-			void bind(Assets *assets);
+			void bind(Asset::Manager *assets);
 			void add(const std::string &role, const Texture &texture, Texture::Section section = Texture::Section::whole);
 			void add(const std::string &role, const SpriteSheet &sheet, const Vector2UInt &sprite);
 			void load(const JSON::Value &description);

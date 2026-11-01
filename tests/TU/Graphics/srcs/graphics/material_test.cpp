@@ -72,7 +72,7 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] spk::Material fromJSON(spk::Assets &assets, const Value &json)
+	[[nodiscard]] spk::Material fromJSON(spk::Asset::Manager &assets, const Value &json)
 	{
 		spk::Material::Builder builder;
 		builder.bind(&assets);
@@ -163,7 +163,7 @@ TEST(MaterialTest, ExplicitUVAndInvalidManualBindings)
 
 TEST(MaterialTest, JsonAndManualBindingsHaveSameTextureAndUV)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	spk::Texture &texture = assets.load<spk::Texture>(texturePath());
 	spk::SpriteSheet &sheet = assets.load<spk::SpriteSheet>(
 		texturePath(), Value::fromString(R"({"size":{"x":16,"y":16}})"));
@@ -185,7 +185,7 @@ TEST(MaterialTest, JsonAndManualBindingsHaveSameTextureAndUV)
 
 TEST(MaterialTest, FileAndTypedSourcesResolveIdenticalTriples)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const spk::Material plainPath = fromJSON(assets, document(pathSource()));
 	const spk::Material plainAsset = fromJSON(assets, document(assetSource()));
 	expectSameBinding(plainPath, plainAsset, "albedo");
@@ -199,7 +199,7 @@ TEST(MaterialTest, FileAndTypedSourcesResolveIdenticalTriples)
 
 TEST(MaterialTest, OneImageSupportsIndependentSpriteGrids)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const Value sixteen = Value::fromString(R"({"size":{"x":16,"y":16}})");
 	const Value eight = Value::fromString(R"({"size":{"x":8,"y":8}})");
 	auto &sheet16 = assets.load<spk::SpriteSheet>(texturePath(), sixteen);
@@ -224,7 +224,7 @@ TEST(MaterialTest, OneImageSupportsIndependentSpriteGrids)
 
 TEST(MaterialTest, ExplicitAndWholeUVWorkWithBothKindsOfSources)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	Value plain = document(pathSource());
 	Value atlas = document(pathSource(true));
 	EXPECT_EQ(fromJSON(assets, plain).find("albedo")->section, spk::Texture::Section::whole);
@@ -239,7 +239,7 @@ TEST(MaterialTest, ExplicitAndWholeUVWorkWithBothKindsOfSources)
 
 TEST(MaterialTest, InvalidJSONStructureAndUnknownFieldsAreRejected)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const Value empty = Value::fromString(R"({"textures":{}})");
 	EXPECT_TRUE(fromJSON(assets, empty).textures().empty());
 	EXPECT_THROW(fromJSON(assets, Value{}), spk::Exception);
@@ -261,7 +261,7 @@ TEST(MaterialTest, InvalidJSONStructureAndUnknownFieldsAreRejected)
 
 TEST(MaterialTest, InvalidAssetSourceAndConfigurationsAreRejected)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	Value bad = document(assetSource());
 	bad["textures"]["albedo"]["Texture"]["size"]["x"] = 16;
 	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
@@ -285,7 +285,7 @@ TEST(MaterialTest, InvalidAssetSourceAndConfigurationsAreRejected)
 
 TEST(MaterialTest, InvalidUVAndSpriteCoordinatesAreRejectedWithPaths)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	Value bad = document(pathSource(true));
 	bad["textures"]["albedo"]["UV"] = spriteUV(16, 5);
 	try
@@ -333,7 +333,7 @@ TEST(MaterialTest, ParserRejectsDuplicateRoleAndNestedKeys)
 
 TEST(MaterialTest, FailedLoadDoesNotChangeExistingBuilder)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	spk::Texture existing;
 	spk::Material::Builder builder;
 	builder.bind(&assets);
@@ -359,8 +359,8 @@ TEST(MaterialTest, BindingRequiresExplicitValidManager)
 	spk::Material::Builder builder;
 	EXPECT_THROW(builder.bind(nullptr), spk::Exception);
 	EXPECT_THROW(builder.load(Value::fromString(R"({"textures":{}})")), spk::Exception);
-	spk::Assets one;
-	spk::Assets two;
+	spk::Asset::Manager one;
+	spk::Asset::Manager two;
 	builder.bind(&one);
 	EXPECT_THROW(builder.bind(&two), spk::Exception);
 	EXPECT_NO_THROW(builder.load(Value::fromString(R"({"textures":{}})")));
@@ -368,7 +368,7 @@ TEST(MaterialTest, BindingRequiresExplicitValidManager)
 
 TEST(MaterialTest, CachedMaterialKeepsHandleAfterManagerClear)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	Value configuration = document(pathSource());
 	spk::Material retained = assets.load<spk::Material>("terrain", configuration);
 	const auto identity = retained.find("albedo")->texture.identifier();
@@ -381,7 +381,7 @@ TEST(MaterialTest, CachedMaterialKeepsHandleAfterManagerClear)
 
 TEST(MaterialTest, CPUConstructionRequiresNoActiveOpenGLContext)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	spk::Texture texture;
 	spk::Material::Builder builder;
 	builder.add("albedo", texture);

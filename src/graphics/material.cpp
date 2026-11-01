@@ -53,7 +53,7 @@ namespace spk
 		return found == _textures->end() ? nullptr : &found->second;
 	}
 
-	void Material::Builder::bind(Assets *assets)
+	void Material::Builder::bind(Asset::Manager *assets)
 	{
 		if (assets == nullptr)
 		{

@@ -5,30 +5,30 @@
 
 #include "exception.hpp"
 
-namespace spk
+namespace spk::Asset
 {
-	Assets::Asset::~Asset() = default;
+	Manager::Asset::~Asset() = default;
 
-	Assets::ActiveLoad::ActiveLoad(std::vector<Identity> &active, const Identity &identity) :
+	Manager::ActiveLoad::ActiveLoad(std::vector<Identity> &active, const Identity &identity) :
 		_active(active)
 	{
 		_active.push_back(identity);
 	}
 
-	Assets::ActiveLoad::~ActiveLoad()
+	Manager::ActiveLoad::~ActiveLoad()
 	{
 		_active.pop_back();
 	}
 
-	Assets::~Assets() = default;
+	Manager::~Manager() = default;
 
-	std::string Assets::_describe(const Identity &identity)
+	std::string Manager::_describe(const Identity &identity)
 	{
 		return std::string(identity.type.name()) + " '" + identity.id + "' " +
 			   identity.config.toString({.pretty = false});
 	}
 
-	std::string Assets::_describeCycle(const Identity &identity) const
+	std::string Manager::_describeCycle(const Identity &identity) const
 	{
 		std::string description = "Asset dependency cycle: ";
 		const auto first = std::find(_active.begin(), _active.end(), identity);
@@ -41,7 +41,7 @@ namespace spk
 		return description + _describe(identity);
 	}
 
-	Assets::Asset *Assets::_find(const Identity &identity) const
+	Manager::Asset *Manager::_find(const Identity &identity) const
 	{
 		const auto type = _assets.find(identity.type);
 		if (type == _assets.end())
@@ -65,7 +65,7 @@ namespace spk
 		return nullptr;
 	}
 
-	Assets::Asset *Assets::_getDefault(std::type_index type, const std::string &id) const
+	Manager::Asset *Manager::_getDefault(std::type_index type, const std::string &id) const
 	{
 		const auto family = _assets.find(type);
 		if (family == _assets.end() || !family->second.contains(id))
@@ -84,7 +84,7 @@ namespace spk
 		throw spk::Exception("No default asset: " + std::string(type.name()) + " '" + id + "'");
 	}
 
-	void Assets::_setDefault(const Identity &identity)
+	void Manager::_setDefault(const Identity &identity)
 	{
 		const auto family = _assets.find(identity.type);
 		if (family == _assets.end() || !family->second.contains(identity.id))
@@ -108,7 +108,7 @@ namespace spk
 		target->isDefault = true;
 	}
 
-	void Assets::_checkCycle(const Identity &identity) const
+	void Manager::_checkCycle(const Identity &identity) const
 	{
 		if (std::find(_active.begin(), _active.end(), identity) != _active.end())
 		{
@@ -116,7 +116,7 @@ namespace spk
 		}
 	}
 
-	void Assets::_publish(Identity identity, std::unique_ptr<Asset> asset, bool makeDefault)
+	void Manager::_publish(Identity identity, std::unique_ptr<Asset> asset, bool makeDefault)
 	{
 		Entries &entries = _assets[identity.type][identity.id];
 		entries.push_back(Entry{std::move(identity.config), std::move(asset)});
@@ -130,7 +130,7 @@ namespace spk
 		}
 	}
 
-	void Assets::clear()
+	void Manager::clear()
 	{
 		_assets.clear();
 	}

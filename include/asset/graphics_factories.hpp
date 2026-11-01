@@ -7,23 +7,23 @@
 #include "container/json/object.hpp"
 #include "graphics/material.hpp"
 
-namespace spk
+namespace spk::Asset
 {
 	template <>
-	struct AssetFactory<Texture>
+	struct Factory<Texture>
 	{
-		[[nodiscard]] static Texture create(Assets &assets, const std::string &id, const JSON::Value &config);
+		[[nodiscard]] static Texture create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 
 	template <>
-	struct AssetFactory<SpriteSheet>
+	struct Factory<SpriteSheet>
 	{
-		[[nodiscard]] static SpriteSheet create(Assets &assets, const std::string &id, const JSON::Value &config);
+		[[nodiscard]] static SpriteSheet create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 
 	template <>
-	struct AssetFactory<Material>
+	struct Factory<Material>
 	{
-		[[nodiscard]] static Material create(Assets &assets, const std::string &id, const JSON::Value &config);
+		[[nodiscard]] static Material create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 }

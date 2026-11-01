@@ -106,48 +106,48 @@ namespace asset_manager_test
 	};
 }
 
-namespace spk
+namespace spk::Asset
 {
 	template <>
-	struct AssetFactory<asset_manager_test::Tracked>
+	struct Factory<asset_manager_test::Tracked>
 	{
-		static asset_manager_test::Tracked create(Assets &, const std::string &id, const JSON::Value &config)
+		static asset_manager_test::Tracked create(Manager &, const std::string &id, const JSON::Value &config)
 		{
 			return asset_manager_test::Tracked(id, config);
 		}
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::Other>
+	struct Factory<asset_manager_test::Other>
 	{
-		static asset_manager_test::Other create(Assets &, const std::string &id, const JSON::Value &)
+		static asset_manager_test::Other create(Manager &, const std::string &id, const JSON::Value &)
 		{
 			return asset_manager_test::Other{id};
 		}
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::Immovable>
+	struct Factory<asset_manager_test::Immovable>
 	{
-		static asset_manager_test::Immovable create(Assets &, const std::string &, const JSON::Value &config)
+		static asset_manager_test::Immovable create(Manager &, const std::string &, const JSON::Value &config)
 		{
 			return asset_manager_test::Immovable(config.at("value").as<int>());
 		}
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::Dependency>
+	struct Factory<asset_manager_test::Dependency>
 	{
-		static asset_manager_test::Dependency create(Assets &, const std::string &id, const JSON::Value &)
+		static asset_manager_test::Dependency create(Manager &, const std::string &id, const JSON::Value &)
 		{
 			return asset_manager_test::Dependency(id);
 		}
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::Parent>
+	struct Factory<asset_manager_test::Parent>
 	{
-		static asset_manager_test::Parent create(Assets &assets, const std::string &, const JSON::Value &config)
+		static asset_manager_test::Parent create(Manager &assets, const std::string &, const JSON::Value &config)
 		{
 			auto &dependency = assets.load<asset_manager_test::Dependency>("shared", config);
 			if (asset_manager_test::Parent::fail)
@@ -159,9 +159,9 @@ namespace spk
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::Recursive>
+	struct Factory<asset_manager_test::Recursive>
 	{
-		static asset_manager_test::Recursive create(Assets &assets, const std::string &id, const JSON::Value &config)
+		static asset_manager_test::Recursive create(Manager &assets, const std::string &id, const JSON::Value &config)
 		{
 			if (id == "direct")
 			{
@@ -187,9 +187,9 @@ namespace spk
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::Flaky>
+	struct Factory<asset_manager_test::Flaky>
 	{
-		static asset_manager_test::Flaky create(Assets &, const std::string &, const JSON::Value &)
+		static asset_manager_test::Flaky create(Manager &, const std::string &, const JSON::Value &)
 		{
 			const int attempt = ++asset_manager_test::Flaky::attempts;
 			if (asset_manager_test::Flaky::failNext)
@@ -202,9 +202,9 @@ namespace spk
 	};
 
 	template <>
-	struct AssetFactory<asset_manager_test::ConstructorFailure>
+	struct Factory<asset_manager_test::ConstructorFailure>
 	{
-		static asset_manager_test::ConstructorFailure create(Assets &, const std::string &, const JSON::Value &)
+		static asset_manager_test::ConstructorFailure create(Manager &, const std::string &, const JSON::Value &)
 		{
 			return asset_manager_test::ConstructorFailure();
 		}
@@ -231,7 +231,7 @@ namespace
 TEST(AssetManagerTest, RepeatedIdentityReusesOneInstanceAndFactoryCall)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const auto config = grid(16, 16);
 
 	auto &first = assets.load<asset_manager_test::Tracked>("terrain", config);
@@ -248,7 +248,7 @@ TEST(AssetManagerTest, RepeatedIdentityReusesOneInstanceAndFactoryCall)
 TEST(AssetManagerTest, DistinctGridConfigurationsHaveDistinctIdentities)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 
 	auto &sixteen = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	auto &eight = assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8));
@@ -262,7 +262,7 @@ TEST(AssetManagerTest, DistinctGridConfigurationsHaveDistinctIdentities)
 TEST(AssetManagerTest, JsonObjectPropertyOrderDoesNotChangeIdentity)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const auto firstConfig = spk::JSON::Value::fromString(R"({"grid":{"x":16,"y":8},"role":"albedo"})");
 	const auto secondConfig = spk::JSON::Value::fromString(R"({"role":"albedo","grid":{"y":8,"x":16}})");
 
@@ -275,7 +275,7 @@ TEST(AssetManagerTest, JsonObjectPropertyOrderDoesNotChangeIdentity)
 TEST(AssetManagerTest, DefaultConfigurationIsEmptyObjectRatherThanNull)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &defaultAsset = assets.load<asset_manager_test::Tracked>("id");
 	auto &explicitObject = assets.load<asset_manager_test::Tracked>("id", spk::JSON::Value::object());
 	auto &nullAsset = assets.load<asset_manager_test::Tracked>("id", spk::JSON::Value{});
@@ -289,7 +289,7 @@ TEST(AssetManagerTest, DefaultConfigurationIsEmptyObjectRatherThanNull)
 
 TEST(AssetManagerTest, DifferentCppTypesShareIdentifierWithoutSharingAsset)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("shared", grid(16, 16));
 	auto &second = assets.load<asset_manager_test::Other>("shared", grid(16, 16));
 
@@ -303,7 +303,7 @@ TEST(AssetManagerTest, NonMovableNonCopyableAssetIsConstructedInPlace)
 	static_assert(!std::is_copy_constructible_v<asset_manager_test::Immovable>);
 	static_assert(!std::is_move_constructible_v<asset_manager_test::Immovable>);
 
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const auto config = spk::JSON::Value::fromString(R"({"value":42})");
 
 	auto &first = assets.load<asset_manager_test::Immovable>("immovable", config);
@@ -315,7 +315,7 @@ TEST(AssetManagerTest, NonMovableNonCopyableAssetIsConstructedInPlace)
 
 TEST(AssetManagerTest, FurtherInsertionsPreserveExistingAddresses)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("first");
 	auto &second = assets.load<asset_manager_test::Tracked>("second");
 	const auto *firstAddress = &first;
@@ -335,7 +335,7 @@ TEST(AssetManagerTest, NestedDependenciesAreReusedAcrossParents)
 {
 	asset_manager_test::Dependency::constructions = 0;
 	asset_manager_test::Parent::fail = false;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const auto config = grid(16, 16);
 
 	auto &first = assets.load<asset_manager_test::Parent>("parent-a", config);
@@ -349,7 +349,7 @@ TEST(AssetManagerTest, NestedDependenciesAreReusedAcrossParents)
 
 TEST(AssetManagerTest, DirectCycleProducesDescriptiveSparkleException)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	try
 	{
 		(void)assets.load<asset_manager_test::Recursive>("direct");
@@ -364,7 +364,7 @@ TEST(AssetManagerTest, DirectCycleProducesDescriptiveSparkleException)
 
 TEST(AssetManagerTest, IndirectCycleReportsDependencyChain)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	try
 	{
 		(void)assets.load<asset_manager_test::Recursive>("A");
@@ -379,7 +379,7 @@ TEST(AssetManagerTest, IndirectCycleReportsDependencyChain)
 
 TEST(AssetManagerTest, SameIdentifierWithDifferentActiveConfigurationsIsNotACycle)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &parent = assets.load<asset_manager_test::Recursive>(
 		"recursive", spk::JSON::Value::fromString(R"({"depth":4})"));
 	auto &child = assets.load<asset_manager_test::Recursive>(
@@ -394,7 +394,7 @@ TEST(AssetManagerTest, FactoryFailureCanRetryWithoutPublishingIncompleteAsset)
 {
 	asset_manager_test::Flaky::attempts = 0;
 	asset_manager_test::Flaky::failNext = true;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 
 	EXPECT_THROW((void)assets.load<asset_manager_test::Flaky>("unstable"), std::runtime_error);
 	auto &successful = assets.load<asset_manager_test::Flaky>("unstable");
@@ -409,7 +409,7 @@ TEST(AssetManagerTest, PreviouslyLoadedDependenciesSurviveFailedParent)
 {
 	asset_manager_test::Dependency::constructions = 0;
 	asset_manager_test::Parent::fail = true;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	const auto config = grid(8, 8);
 
 	EXPECT_THROW((void)assets.load<asset_manager_test::Parent>("parent", config), std::runtime_error);
@@ -427,7 +427,7 @@ TEST(AssetManagerTest, ConstructorExceptionDoesNotPublishAsset)
 	asset_manager_test::ConstructorFailure::constructions = 0;
 	asset_manager_test::ConstructorFailure::destructions = 0;
 	asset_manager_test::ConstructorFailure::fail = true;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 
 	EXPECT_THROW((void)assets.load<asset_manager_test::ConstructorFailure>("constructor"), std::runtime_error);
 	asset_manager_test::ConstructorFailure::fail = false;
@@ -442,7 +442,7 @@ TEST(AssetManagerTest, ConstructorExceptionDoesNotPublishAsset)
 
 TEST(AssetManagerTest, FailedCycleClearsActiveStackForSubsequentLoads)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	EXPECT_THROW((void)assets.load<asset_manager_test::Recursive>("A"), spk::Exception);
 	auto &safe = assets.load<asset_manager_test::Recursive>("safe");
 	EXPECT_EQ(safe.depth, 0);
@@ -453,7 +453,7 @@ TEST(AssetManagerTest, ClearDestroysOwnedAssetsAndPermitsReuse)
 {
 	asset_manager_test::Tracked::constructions = 0;
 	asset_manager_test::Tracked::destructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	(void)assets.load<asset_manager_test::Tracked>("first");
 	(void)assets.load<asset_manager_test::Tracked>("second");
 
@@ -470,7 +470,7 @@ TEST(AssetManagerTest, ClearDestroysOwnedAssetsAndPermitsReuse)
 TEST(AssetManagerTest, StoredIdentityDoesNotBorrowConfigurationArgument)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto config = grid(16, 16);
 	auto &original = assets.load<asset_manager_test::Tracked>("terrain", config);
 	config["size"]["x"] = 8;
@@ -483,7 +483,7 @@ TEST(AssetManagerTest, StoredIdentityDoesNotBorrowConfigurationArgument)
 TEST(AssetManagerTest, ArrayOrderAndJsonTypesRemainDistinct)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("value", spk::JSON::Value::fromString("[1,2]"));
 	auto &second = assets.load<asset_manager_test::Tracked>("value", spk::JSON::Value::fromString("[2,1]"));
 	auto &integer = assets.load<asset_manager_test::Tracked>("number", spk::JSON::Value(1));
@@ -496,7 +496,7 @@ TEST(AssetManagerTest, ArrayOrderAndJsonTypesRemainDistinct)
 
 TEST(AssetManagerTest, IdentifierIsNotNormalizedAsAPath)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Other>("atlas/../terrain.png");
 	auto &second = assets.load<asset_manager_test::Other>("terrain.png");
 	EXPECT_NE(&first, &second);
@@ -505,7 +505,7 @@ TEST(AssetManagerTest, IdentifierIsNotNormalizedAsAPath)
 TEST(AssetManagerTest, GetReturnsPreviouslyLoadedAssetByNameWithoutFactoryCall)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &created = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 
 	EXPECT_EQ(&assets.get<asset_manager_test::Tracked>("terrain"), &created);
@@ -514,7 +514,7 @@ TEST(AssetManagerTest, GetReturnsPreviouslyLoadedAssetByNameWithoutFactoryCall)
 
 TEST(AssetManagerTest, GetThrowsForUnknownNameOrType)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	(void)assets.load<asset_manager_test::Tracked>("terrain");
 
 	EXPECT_THROW((void)assets.get<asset_manager_test::Tracked>("missing"), spk::Exception);
@@ -523,7 +523,7 @@ TEST(AssetManagerTest, GetThrowsForUnknownNameOrType)
 
 TEST(AssetManagerTest, GetSelectsFirstLoadedConfigurationByDefault)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8));
 	auto &other = assets.load<asset_manager_test::Other>("terrain");
@@ -534,7 +534,7 @@ TEST(AssetManagerTest, GetSelectsFirstLoadedConfigurationByDefault)
 
 TEST(AssetManagerTest, GetAfterClearCannotReturnAnExpiredAsset)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	(void)assets.load<asset_manager_test::Tracked>("terrain");
 	assets.clear();
 
@@ -545,7 +545,7 @@ TEST(AssetManagerTest, GetAfterClearCannotReturnAnExpiredAsset)
 
 TEST(AssetManagerTest, LoadCanSelectNewConfigurationAsDefault)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	auto &second = assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
 
@@ -556,7 +556,7 @@ TEST(AssetManagerTest, LoadCanSelectNewConfigurationAsDefault)
 TEST(AssetManagerTest, ReloadingAnExistingConfigurationCanSelectItAsDefault)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
 
@@ -568,7 +568,7 @@ TEST(AssetManagerTest, ReloadingAnExistingConfigurationCanSelectItAsDefault)
 TEST(AssetManagerTest, SetDefaultSwitchesAmongAlreadyLoadedConfigurations)
 {
 	asset_manager_test::Tracked::constructions = 0;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	auto &second = assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8));
 
@@ -581,7 +581,7 @@ TEST(AssetManagerTest, SetDefaultSwitchesAmongAlreadyLoadedConfigurations)
 
 TEST(AssetManagerTest, SetDefaultRejectsMissingConfigurationWithoutChangingDefault)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	EXPECT_THROW(assets.setDefault<asset_manager_test::Tracked>("terrain", grid(8, 8)), spk::Exception);
 	EXPECT_THROW(assets.setDefault<asset_manager_test::Tracked>("unknown", grid(16, 16)), spk::Exception);
@@ -592,7 +592,7 @@ TEST(AssetManagerTest, SetDefaultRejectsMissingConfigurationWithoutChangingDefau
 TEST(AssetManagerTest, FailedFactoryCannotChangeExistingDefault)
 {
 	asset_manager_test::Flaky::failNext = false;
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &first = assets.load<asset_manager_test::Flaky>("unstable");
 	asset_manager_test::Flaky::failNext = true;
 
@@ -604,7 +604,7 @@ TEST(AssetManagerTest, FailedFactoryCannotChangeExistingDefault)
 
 TEST(AssetManagerTest, DefaultIsTrackedIndependentlyForEachTypeAndName)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	auto &terrain = assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	auto &other = assets.load<asset_manager_test::Other>("terrain");
 	auto &water = assets.load<asset_manager_test::Tracked>("water");
@@ -617,7 +617,7 @@ TEST(AssetManagerTest, DefaultIsTrackedIndependentlyForEachTypeAndName)
 
 TEST(AssetManagerTest, SetDefaultWithoutConfigSelectsExplicitEmptyObject)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	(void)assets.load<asset_manager_test::Tracked>("terrain", spk::JSON::Value{});
 	auto &emptyObject = assets.load<asset_manager_test::Tracked>("terrain");
 
@@ -627,7 +627,7 @@ TEST(AssetManagerTest, SetDefaultWithoutConfigSelectsExplicitEmptyObject)
 
 TEST(AssetManagerTest, ClearResetsDefaultSelection)
 {
-	spk::Assets assets;
+	spk::Asset::Manager assets;
 	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(16, 16));
 	(void)assets.load<asset_manager_test::Tracked>("terrain", grid(8, 8), true);
 	assets.clear();
