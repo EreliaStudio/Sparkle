@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "graphics/palette.hpp"
+#include "exception.hpp"
 
 namespace spk::Voxel
 {
@@ -42,6 +42,27 @@ namespace spk::Voxel
 	const std::vector<Definition::Slot> &Model::materialSlots() const noexcept
 	{
 		return _data->slots;
+	}
+
+
+	void Model::bind(spk::Palette palette)
+	{
+		if (!isCompatible(palette))
+		{
+			for (const auto &slot : materialSlots())
+			{
+				if (palette.find(slot.name) == nullptr)
+				{
+					throw spk::Exception("Voxel Model: palette is missing material slot '" + slot.name + "'");
+				}
+			}
+		}
+		_palette = std::move(palette);
+	}
+
+	const spk::Palette *Model::palette() const noexcept
+	{
+		return _palette ? &*_palette : nullptr;
 	}
 
 	bool Model::isCompatible(const spk::Palette &palette) const noexcept
