@@ -242,8 +242,11 @@ namespace spk::Voxel
 	}
 
 	void Assembly::_stageImportedParts(
-		std::map<PartID, Part> &prepared, PartID &next, const Assembly &source,
-		const std::vector<PartID> &order, InsertResult &result)
+		std::map<PartID, Part> &prepared,
+		PartID &next,
+		const Assembly &source,
+		const std::vector<PartID> &order,
+		InsertResult &result)
 	{
 		for (const PartID id : order)
 		{

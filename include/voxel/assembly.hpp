@@ -44,8 +44,11 @@ namespace spk::Voxel
 		[[nodiscard]] std::vector<PartID> _validatedInsertOrder(
 			std::optional<PartID> parent, const Assembly &source, const spk::Matrix4x4 &transform) const;
 		static void _stageImportedParts(
-			std::map<PartID, Part> &prepared, PartID &next, const Assembly &source,
-			const std::vector<PartID> &order, InsertResult &result);
+			std::map<PartID, Part> &prepared,
+			PartID &next,
+			const Assembly &source,
+			const std::vector<PartID> &order,
+			InsertResult &result);
 
 	public:
 		Assembly();

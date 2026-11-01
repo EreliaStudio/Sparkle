@@ -199,7 +199,9 @@ TEST(VoxelAssemblyTest, CopyConstructionAndAssignmentHaveIndependentVersionAndNo
 	original.invalidate();
 	original.invalidate();
 	int sourceEvents = 0;
-	auto sourceContract = original.subscribeToVersionEdition([&](auto *) { ++sourceEvents; });
+	auto sourceContract = original.subscribeToVersionEdition([&](auto *) {
+			++sourceEvents;
+		});
 	Assembly copy(original);
 	EXPECT_EQ(copy.version(), 1u);
 	copy.setName(torso, "copy torso");
@@ -207,7 +209,8 @@ TEST(VoxelAssemblyTest, CopyConstructionAndAssignmentHaveIndependentVersionAndNo
 	EXPECT_EQ(original.part(torso).name, "torso");
 	EXPECT_EQ(sourceEvents, 0);
 	Assembly assigned;
-	auto oldContract = assigned.subscribeToVersionEdition([](auto *) {});
+	auto oldContract = assigned.subscribeToVersionEdition([](auto *) {
+	});
 	assigned = original;
 	EXPECT_EQ(assigned.version(), 1u);
 	EXPECT_FALSE(oldContract.isValid());
@@ -392,7 +395,9 @@ TEST(VoxelAssemblyTest, InsertionIsAnExplicitVisualInvalidationBoundary)
 	(void)source.addPart("blade");
 	Assembly destination;
 	int notifications = 0;
-	auto contract = destination.subscribeToVersionEdition([&](auto *) { ++notifications; });
+	auto contract = destination.subscribeToVersionEdition([&](auto *) {
+		++notifications;
+	});
 	const auto version = destination.version();
 	const auto result = destination.insertAssembly(std::nullopt, source);
 	destination.setLocalTransform(result.anchor, Matrix::translation(1, 2, 3));
