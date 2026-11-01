@@ -365,6 +365,32 @@ TEST(MaterialTest, InvalidMaterialTextureSourcesAreRejected)
 	EXPECT_THROW(fromJSON(assets, bad), spk::Exception);
 }
 
+TEST(MaterialTest, PredicateValidationPreservesMaterialFieldPaths)
+{
+	spk::Asset::Manager assets;
+	Value invalid = document(pathSource(true));
+	invalid["textures"]["albedo"]["Texture"]["size"]["x"] = 0;
+	try
+	{
+		(void)fromJSON(assets, invalid);
+		FAIL() << "Invalid grid must be rejected";
+	} catch (const spk::Exception &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("textures.albedo.Texture.size"), std::string::npos);
+	}
+
+	invalid = document(pathSource());
+	invalid["textures"]["albedo"]["UV"] = explicitUV(-0.1, 0.0, 0.5, 0.5);
+	try
+	{
+		(void)fromJSON(assets, invalid);
+		FAIL() << "Invalid UV coordinates must be rejected";
+	} catch (const spk::Exception &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("textures.albedo.UV.anchor"), std::string::npos);
+	}
+}
+
 TEST(MaterialTest, InvalidUVAndSpriteCoordinatesAreRejectedWithPaths)
 {
 	spk::Asset::Manager assets;

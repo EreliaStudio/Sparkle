@@ -13,11 +13,12 @@ namespace spk::Asset
 	{
 		JSON::Reader reader(config, {}, "Texture.config");
 		reader.forbidUnknown({"path"});
-		const std::string path = reader.require<std::string>("path");
-		if (path.empty())
-		{
-			throw spk::Exception(reader.pathFor("path") + ": expected non-empty path");
-		}
+		const std::string path = reader.require<std::string>(
+			"path",
+			[](const std::string &value) {
+				return !value.empty();
+			},
+			"expected non-empty path");
 		try
 		{
 			return spk::Image::open(std::filesystem::path(path));

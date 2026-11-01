@@ -3,7 +3,6 @@
 #include "graphics/sprite_sheet.hpp"
 
 #include <cmath>
-#include <exception>
 #include <string>
 
 #include "asset/manager.hpp"
@@ -15,67 +14,6 @@ namespace spk
 	namespace
 	{
 		using Reader = JSON::Reader;
-
-		[[nodiscard]] std::string nonEmptyString(const Reader &reader, const std::string &key)
-		{
-			const std::string value = reader.require<std::string>(key);
-			if (value.empty())
-			{
-				throw Exception(reader.pathFor(key) + ": expected non-empty string");
-			}
-			return value;
-		}
-
-		[[nodiscard]] Reader vectorMember(const Reader &reader, const std::string &key)
-		{
-			if (!reader.contains(key))
-			{
-				throw Exception(reader.pathFor(key) + ": missing coordinates");
-			}
-			return Reader(reader.value().at(key), {}, reader.pathFor(key));
-		}
-
-		[[nodiscard]] Vector2UInt grid(const Reader &reader, bool allowZero)
-		{
-			Vector2UInt value;
-			try
-			{
-				value = reader.value().as<Vector2UInt>();
-			} catch (...)
-			{
-				throw Exception(reader.path() + ": expected two unsigned coordinates", std::current_exception());
-			}
-			if (!allowZero && value.x == 0)
-			{
-				throw Exception(reader.pathFor("x") + ": expected positive integer");
-			}
-			if (!allowZero && value.y == 0)
-			{
-				throw Exception(reader.pathFor("y") + ": expected positive integer");
-			}
-			return value;
-		}
-
-		[[nodiscard]] TVector2<double> normalizedPoint(const Reader &reader)
-		{
-			TVector2<double> value;
-			try
-			{
-				value = reader.value().as<TVector2<double>>();
-			} catch (...)
-			{
-				throw Exception(reader.path() + ": expected two numeric coordinates", std::current_exception());
-			}
-			if (!std::isfinite(value.x) || value.x < 0.0 || value.x > 1.0)
-			{
-				throw Exception(reader.pathFor("x") + ": expected finite number in [0, 1]");
-			}
-			if (!std::isfinite(value.y) || value.y < 0.0 || value.y > 1.0)
-			{
-				throw Exception(reader.pathFor("y") + ": expected finite number in [0, 1]");
-			}
-			return value;
-		}
 
 		[[nodiscard]] Texture::Section readSection(const Reader &role, const SpriteSheet *sheet)
 		{
@@ -91,21 +29,26 @@ namespace spk
 				{
 					throw Exception(uv.pathFor("sprite") + ": requires only a SpriteSheet source");
 				}
-				const Vector2UInt coord = grid(vectorMember(uv, "sprite"), true);
-				try
-				{
-					return sheet->sprite(coord);
-				} catch (...)
-				{
-					throw Exception(uv.pathFor("sprite") + ": coordinates out of grid", std::current_exception());
-				}
+				const Vector2UInt coord = uv.require<Vector2UInt>(
+					"sprite",
+					[sheet](const Vector2UInt &value) {
+						return value.x < sheet->nbSprite().x && value.y < sheet->nbSprite().y;
+					},
+					"coordinates out of grid");
+				return sheet->sprite(coord);
 			}
-			if (!uv.contains("anchor") || !uv.contains("size"))
-			{
-				throw Exception(uv.path() + ": expected anchor and size, or sprite");
-			}
-			const TVector2<double> anchor = normalizedPoint(vectorMember(uv, "anchor"));
-			const TVector2<double> size = normalizedPoint(vectorMember(uv, "size"));
+			const auto normalized = [](const TVector2<double> &value) {
+				return std::isfinite(value.x) && std::isfinite(value.y) && value.x >= 0.0 && value.x <= 1.0 &&
+					   value.y >= 0.0 && value.y <= 1.0;
+			};
+			const TVector2<double> anchor = uv.require<TVector2<double>>(
+				"anchor",
+				normalized,
+				"expected finite coordinates in [0, 1]");
+			const TVector2<double> size = uv.require<TVector2<double>>(
+				"size",
+				normalized,
+				"expected finite coordinates in [0, 1]");
 			if (size.x <= 0.0 || static_cast<float>(size.x) <= 0.0f || anchor.x + size.x > 1.0)
 			{
 				throw Exception(uv.pathFor("size") + ".x: invalid normalized width");
@@ -116,19 +59,31 @@ namespace spk
 			}
 			return {Vector2(anchor), Vector2(size)};
 		}
+
 		void addRole(Material::Builder &builder, Asset::Manager &assets, const std::string &role, const Reader &entry)
 		{
 			entry.forbidUnknown({"Texture", "UV"});
 			const Reader source = entry.child("Texture");
 			source.forbidUnknown({"id", "path", "size"});
 
-			const std::string path = nonEmptyString(source, "path");
-			const std::string id = source.contains("id") ? nonEmptyString(source, "id") : path;
+			const auto nonEmpty = [](const std::string &value) {
+				return !value.empty();
+			};
+			const std::string path = source.require<std::string>("path", nonEmpty, "expected non-empty string");
+			const std::string id = source.contains("id")
+				? source.require<std::string>("id", nonEmpty, "expected non-empty string")
+				: path;
 			JSON::Value config = JSON::Value::object();
 			config["path"] = path;
 
 			if (source.contains("size"))
 			{
+				(void)source.require<Vector2UInt>(
+					"size",
+					[](const Vector2UInt &value) {
+						return value.x > 0 && value.y > 0;
+					},
+					"expected positive grid dimensions");
 				config["size"] = source.value().at("size");
 				const SpriteSheet &sheet = assets.load<SpriteSheet>(id, config);
 				builder.add(role, sheet, readSection(entry, &sheet));
