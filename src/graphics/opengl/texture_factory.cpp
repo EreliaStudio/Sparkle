@@ -1,4 +1,4 @@
-#include "asset/texture_factory.hpp"
+#include "graphics/opengl/texture.hpp"
 
 #include <exception>
 #include <filesystem>

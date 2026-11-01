@@ -33,7 +33,6 @@ file(GLOB_RECURSE SPARKLE_CORE_SOURCES
     "${SPARKLE_SOURCE_DIR}/type/*.cpp"
     "${SPARKLE_SOURCE_DIR}/voxel/*.cpp"
 )
-list(FILTER SPARKLE_CORE_SOURCES EXCLUDE REGEX "/asset/(material|sprite_sheet|texture)_factory\\.cpp$")
 list(APPEND SPARKLE_CORE_SOURCES
     "${SPARKLE_SOURCE_DIR}/exception.cpp"
     "${SPARKLE_SOURCE_DIR}/file_utils.cpp"
@@ -76,12 +75,6 @@ if(SPARKLE_BUILD_GRAPHICS)
         "${SPARKLE_SOURCE_DIR}/input/*.cpp"
         "${SPARKLE_SOURCE_DIR}/rendering/*.cpp"
         "${SPARKLE_SOURCE_DIR}/ui/*.cpp"
-    )
-
-    list(APPEND SPARKLE_GRAPHICS_SOURCES
-        "${SPARKLE_SOURCE_DIR}/asset/material_factory.cpp"
-        "${SPARKLE_SOURCE_DIR}/asset/sprite_sheet_factory.cpp"
-        "${SPARKLE_SOURCE_DIR}/asset/texture_factory.cpp"
     )
 
     add_library(sparkle STATIC ${SPARKLE_GRAPHICS_SOURCES})

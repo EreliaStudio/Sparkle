@@ -5,9 +5,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "asset/material_factory.hpp"
-#include "asset/sprite_sheet_factory.hpp"
-#include "asset/texture_factory.hpp"
 #include "asset/manager.hpp"
 #include "container/json/object.hpp"
 #include "exception.hpp"

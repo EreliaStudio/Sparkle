@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 
+#include "asset/factory.hpp"
 #include "graphics/sprite_sheet.hpp"
 
 namespace spk
@@ -41,5 +42,14 @@ namespace spk
 
 		[[nodiscard]] const Textures &textures() const noexcept;
 		[[nodiscard]] const Binding *find(std::string_view role) const noexcept;
+	};
+}
+
+namespace spk::Asset
+{
+	template <>
+	struct Factory<spk::Material>
+	{
+		[[nodiscard]] static spk::Material create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 }

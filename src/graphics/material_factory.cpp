@@ -1,6 +1,6 @@
-#include "asset/material_factory.hpp"
-#include "asset/sprite_sheet_factory.hpp"
-#include "asset/texture_factory.hpp"
+#include "graphics/material.hpp"
+#include "graphics/opengl/texture.hpp"
+#include "graphics/sprite_sheet.hpp"
 
 #include <cmath>
 #include <exception>

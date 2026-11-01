@@ -1,4 +1,4 @@
-#include "asset/sprite_sheet_factory.hpp"
+#include "graphics/sprite_sheet.hpp"
 
 #include <exception>
 #include <filesystem>
