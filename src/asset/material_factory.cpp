@@ -1,14 +1,9 @@
 #include "asset/graphics_factories.hpp"
-#include "graphics/material.hpp"
 
 #include <cmath>
-#include <cstdint>
 #include <exception>
-#include <filesystem>
 #include <string>
-#include <utility>
 
-#include "asset/manager.hpp"
 #include "container/json/reader.hpp"
 #include "exception.hpp"
 
@@ -32,6 +27,15 @@ namespace spk
 				throw Exception(reader.pathFor(key) + ": expected non-empty string");
 			}
 			return value;
+		}
+
+		[[nodiscard]] Reader vectorMember(const Reader &reader, const std::string &key)
+		{
+			if (!reader.contains(key))
+			{
+				throw Exception(reader.pathFor(key) + ": missing coordinates");
+			}
+			return Reader(reader.value().at(key), {}, reader.pathFor(key));
 		}
 
 		[[nodiscard]] Vector2UInt grid(const Reader &reader, bool allowZero)
@@ -85,7 +89,7 @@ namespace spk
 				return;
 			}
 			reader.forbidUnknown({"size"});
-			(void)grid(reader.child("size"), false);
+			(void)grid(vectorMember(reader, "size"), false);
 		}
 
 		[[nodiscard]] ResolvedTexture resolveTexture(Asset::Manager &assets, const Reader &description)
@@ -107,7 +111,7 @@ namespace spk
 				type = description.contains("size") ? "SpriteSheet" : "Texture";
 				if (type == "SpriteSheet")
 				{
-					(void)grid(description.child("size"), false);
+					(void)grid(vectorMember(description, "size"), false);
 					config["size"] = description.value().at("size");
 				}
 			}
@@ -160,7 +164,7 @@ namespace spk
 				{
 					throw Exception(uv.pathFor("sprite") + ": requires only a SpriteSheet source");
 				}
-				const Vector2UInt coord = grid(uv.child("sprite"), true);
+				const Vector2UInt coord = grid(vectorMember(uv, "sprite"), true);
 				try
 				{
 					return sheet->sprite(coord);
@@ -173,8 +177,8 @@ namespace spk
 			{
 				throw Exception(uv.path() + ": expected anchor and size, or sprite");
 			}
-			const TVector2<double> anchor = normalizedPoint(uv.child("anchor"));
-			const TVector2<double> size = normalizedPoint(uv.child("size"));
+			const TVector2<double> anchor = normalizedPoint(vectorMember(uv, "anchor"));
+			const TVector2<double> size = normalizedPoint(vectorMember(uv, "size"));
 			if (size.x <= 0.0 || static_cast<float>(size.x) <= 0.0f || anchor.x + size.x > 1.0)
 			{
 				throw Exception(uv.pathFor("size") + ".x: invalid normalized width");
@@ -209,41 +213,6 @@ namespace spk
 
 namespace spk::Asset
 {
-	spk::Texture Factory<spk::Texture>::create(Manager &, const std::string &id, const JSON::Value &config)
-	{
-		JSON::Reader reader(config, {}, "Texture.config");
-		reader.forbidUnknown({});
-		if (id.empty())
-		{
-			throw spk::Exception("Texture asset: path cannot be empty");
-		}
-		try
-		{
-			return spk::Image::open(std::filesystem::path(id));
-		} catch (...)
-		{
-			throw spk::Exception("Texture asset: failed to load image '" + id + "'", std::current_exception());
-		}
-	}
-
-	spk::SpriteSheet Factory<spk::SpriteSheet>::create(Manager &, const std::string &id, const JSON::Value &config)
-	{
-		JSON::Reader reader(config, {}, "SpriteSheet.config");
-		reader.forbidUnknown({"size"});
-		const spk::Vector2UInt size = spk::grid(reader.child("size"), false);
-		if (id.empty())
-		{
-			throw spk::Exception("SpriteSheet asset: path cannot be empty");
-		}
-		try
-		{
-			return spk::SpriteSheet::open(std::filesystem::path(id), size);
-		} catch (...)
-		{
-			throw spk::Exception("SpriteSheet asset: failed to load image '" + id + "'", std::current_exception());
-		}
-	}
-
 	spk::Material Factory<spk::Material>::create(Manager &assets, const std::string &, const JSON::Value &config)
 	{
 		return spk::readMaterial(assets, config);
