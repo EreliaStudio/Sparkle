@@ -487,3 +487,74 @@ TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
 	EXPECT_EQ(first.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
 	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
 }
+
+TEST(VoxelPaletteTest, ModelStartsWithoutPaletteAndCanBindCompatiblePalette)
+{
+	Texture atlas;
+	auto source = model({{"stone", 1.0f}});
+	EXPECT_EQ(source.palette(), nullptr);
+	const auto appearance = palette({{"stone", material(atlas)}});
+	source.bind(appearance);
+	ASSERT_NE(source.palette(), nullptr);
+	EXPECT_EQ(&source.palette()->materials(), &appearance.materials());
+}
+
+TEST(VoxelPaletteTest, ModelBindRejectsMissingRequiredSlotWithoutChangingBinding)
+{
+	Texture atlas;
+	auto source = model({{"stone", 1.0f}, {"glass", 0.5f}});
+	const auto complete = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
+	const auto missing = palette({{"stone", material(atlas)}});
+	EXPECT_THROW(source.bind(missing), spk::Exception);
+	EXPECT_EQ(source.palette(), nullptr);
+	source.bind(complete);
+	EXPECT_THROW(source.bind(missing), spk::Exception);
+	ASSERT_NE(source.palette(), nullptr);
+	EXPECT_EQ(&source.palette()->materials(), &complete.materials());
+}
+
+TEST(VoxelPaletteTest, ModelCopiesCanBindDifferentPalettesWhileSharingGeometry)
+{
+	Texture first;
+	Texture second;
+	auto source = bakedSingleCube();
+	source.bind(palette({{"stone", material(first)}}));
+	auto variant = source;
+	variant.bind(palette({{"stone", material(second)}}));
+	EXPECT_EQ(&source.opaqueMesh(), &variant.opaqueMesh());
+	EXPECT_EQ(&source.depthMesh(), &variant.depthMesh());
+	ASSERT_NE(source.palette(), nullptr);
+	ASSERT_NE(variant.palette(), nullptr);
+	EXPECT_NE(source.palette()->find("stone")->find("albedo")->texture.identifier(),
+		variant.palette()->find("stone")->find("albedo")->texture.identifier());
+}
+
+TEST(VoxelPaletteTest, ModelBindingDoesNotMutateBakedMeshes)
+{
+	Texture first;
+	Texture second;
+	auto source = bakedSingleCube();
+	const auto before = vertices(source.opaqueMesh());
+	const auto beforeIndices = indices(source.opaqueMesh());
+	source.bind(palette({{"stone", material(first)}}));
+	source.bind(palette({{"stone", material(second)}}));
+	const auto after = vertices(source.opaqueMesh());
+	ASSERT_EQ(before.size(), after.size());
+	for (std::size_t i = 0; i < before.size(); ++i)
+	{
+		EXPECT_EQ(before[i].position, after[i].position);
+		EXPECT_EQ(before[i].normal, after[i].normal);
+		EXPECT_EQ(before[i].uv, after[i].uv);
+		EXPECT_EQ(before[i].materialIndex, after[i].materialIndex);
+	}
+	EXPECT_EQ(indices(source.opaqueMesh()), beforeIndices);
+}
+
+TEST(VoxelPaletteTest, ModelBindRequiresFullyOccludedSlots)
+{
+	Texture atlas;
+	auto source = bakedOccludedCube();
+	EXPECT_THROW(source.bind(palette({{"outside", material(atlas)}})), spk::Exception);
+	source.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
+	EXPECT_NE(source.palette(), nullptr);
+}
