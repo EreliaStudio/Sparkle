@@ -1,6 +1,6 @@
-# PR-07 — VoxelPalette et compatibilité des Models
+# PR-07 — Palette générique, Voxel::Palette et compatibilité des Models
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **PR GitHub Draft #48** : implémentation sur `impl/v0.1.4/07-voxel-palette`, cible `V0.1.4` ; ne pas fusionner sans validation.
 >
 > **Branche source :** `impl/v0.1.4/07-voxel-palette`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
@@ -18,16 +18,20 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] VoxelPalette immuable, Builder depuis un ou plusieurs Models ou palette
-- [ ] slot nom et opacité
-- [ ] Model::isCompatible
-- [ ] identité albedo unique par mesh et passe.
+- [x] `spk::Palette` immuable : collection générique de Materials nommés.
+- [x] `spk::Voxel::Palette` : wrapper immuable et Builder depuis un ou plusieurs Models ou une palette voxel existante.
+- [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
+- [x] `Model::isCompatible(const Voxel::Palette &)` et identité `albedo` unique par passe du Model.
 
 ## Instructions techniques et intégration
 
-Inclure tous les slots déclarés même occultés; fusionner opacités identiques, refuser collisions; ignorer slots de palette surnuméraires; séparer identité albedo des parties opaque et translucide; aucun SSBO possédé par Palette.
+Inclure tous les noms de slots déclarés même occultés ; accepter les mêmes noms avec des opacités différentes entre Models, sans les recopier dans les palettes. Ignorer les matériaux surnuméraires lors de la compatibilité avec un Model ; vérifier les identités `albedo` indépendamment dans ses passes opaque et translucide. Aucun SSBO ni mesh additionnel possédé par les palettes.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
+
+## Révision architecturale validée pendant la PR
+
+La palette générique n'impose aucun rôle de texture. Seule la palette voxel exige `albedo` pour les slots des Models déclarés. La classification opaque/translucide repose exclusivement sur le Model ; une paire de Models peut partager une palette malgré des opacités distinctes pour un nom commun. Les conflits d'opacité **à l'intérieur d'un Model** restent refusés au bake par le Mesher, inchangé.
 
 ## Tests obligatoires
 
