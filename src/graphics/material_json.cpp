@@ -1,3 +1,4 @@
+#include "asset/graphics_factories.hpp"
 #include "graphics/material.hpp"
 
 #include <cmath>
