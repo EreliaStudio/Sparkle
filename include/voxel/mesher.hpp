@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "voxel/model.hpp"
 #include "voxel/occlusion/cache.hpp"
 #include "voxel/volume.hpp"
@@ -36,6 +38,8 @@ namespace spk::Voxel
 		void bind(Occlusion::Cache *cache) noexcept;
 		void setTolerance(float tolerance);
 		[[nodiscard]] float tolerance() const noexcept;
-		[[nodiscard]] Model bake(const Volume &volume) const;
+		[[nodiscard]] Model bake(const Volume &volume, std::uint32_t materialIndexOffset = 0) const;
+		[[nodiscard]] static Mesh offsetMaterialIndices(const Mesh &mesh, std::uint32_t offset);
+		[[nodiscard]] static Model offsetMaterialIndices(const Model &model, std::uint32_t offset);
 	};
 }

@@ -181,19 +181,74 @@ namespace spk::Voxel
 			return result;
 		}
 
-		[[nodiscard]] SlotIndices indexSlots(const std::vector<Definition::Slot> &slots)
+		[[nodiscard]] SlotIndices indexSlots(const std::vector<Definition::Slot> &slots, std::uint32_t offset)
 		{
 			SlotIndices result;
 			for (std::size_t i = 0; i < slots.size(); ++i)
 			{
-				if (i > std::numeric_limits<std::uint32_t>::max())
+				if (i > std::numeric_limits<std::uint32_t>::max() - offset)
 				{
-					throw spk::Exception("Voxel Model material slot index overflow");
+					throw spk::Exception("Voxel Mesher: material index offset overflow");
 				}
-				result.emplace(slots[i].name, static_cast<std::uint32_t>(i));
+				result.emplace(slots[i].name, static_cast<std::uint32_t>(i) + offset);
 			}
 			return result;
 		}
+	}
+
+	MeshVertex shiftedVertex(MeshVertex vertex, std::uint32_t offset)
+	{
+		if (vertex.materialIndex > std::numeric_limits<std::uint32_t>::max() - offset)
+		{
+			throw spk::Exception("Voxel Mesher: material index offset overflow");
+		}
+		vertex.materialIndex += offset;
+		return vertex;
+	}
+
+	Mesh Mesher::offsetMaterialIndices(const Mesh &source, std::uint32_t offset)
+	{
+		if (offset == 0 || source.vertexCount() == 0)
+		{
+			return source;
+		}
+		const auto vertices = source.layout().vertexBuffer().cast<MeshVertex>();
+		const auto indices = source.layout().indexBuffer().cast<std::uint32_t>();
+		Mesh::Builder builder;
+		builder.reserve(vertices.size(), indices.size());
+		for (const auto &vertex : vertices)
+		{
+			(void)builder.addVertex(shiftedVertex(vertex, offset));
+		}
+		for (const auto index : indices)
+		{
+			builder.addIndex(index);
+		}
+		return std::move(builder).build();
+	}
+
+	Model Mesher::offsetMaterialIndices(const Model &model, std::uint32_t offset)
+	{
+		if (offset == 0)
+		{
+			return model;
+		}
+		if (model.materialIndexOffset() > std::numeric_limits<std::uint32_t>::max() - offset)
+		{
+			throw spk::Exception("Voxel Mesher: material index offset overflow");
+		}
+		const auto newOffset = model.materialIndexOffset() + offset;
+		if (!model.materialSlots().empty() &&
+			model.materialSlots().size() - 1 > std::numeric_limits<std::uint32_t>::max() - newOffset)
+		{
+			throw spk::Exception("Voxel Mesher: material index offset overflow");
+		}
+		return Model(
+			offsetMaterialIndices(model.opaqueMesh(), offset),
+			offsetMaterialIndices(model.transparentMesh(), offset),
+			model.depthMesh(),
+			model.materialSlots(),
+			newOffset);
 	}
 
 	Mesher::OutsideCell Mesher::outsideCell(Position, Face) const
@@ -220,10 +275,10 @@ namespace spk::Voxel
 		return _tolerance;
 	}
 
-	Model Mesher::bake(const Volume &volume) const
+	Model Mesher::bake(const Volume &volume, std::uint32_t materialIndexOffset) const
 	{
 		const auto slots = collectSlots(volume);
-		const auto indices = indexSlots(slots);
+		const auto indices = indexSlots(slots, materialIndexOffset);
 		Mesh::Builder opaque;
 		Mesh::Builder translucent;
 		const auto dimensions = volume.dimensions();
@@ -285,6 +340,6 @@ namespace spk::Voxel
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) {
 			return vertex.position;
 		});
-		return Model(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
+		return Model(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots, materialIndexOffset);
 	}
 }

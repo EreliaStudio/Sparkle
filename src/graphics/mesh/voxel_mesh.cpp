@@ -1,7 +1,9 @@
 #include "voxel/model.hpp"
 
+#include <limits>
 #include <utility>
 
+#include "exception.hpp"
 
 namespace spk::Voxel
 {
@@ -18,9 +20,16 @@ namespace spk::Voxel
 		Mesh opaque,
 		Mesh translucent,
 		spk::ShadowMap::Mesh depth,
-		std::vector<Definition::Slot> slots) :
-		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots)))
+		std::vector<Definition::Slot> slots,
+		std::uint32_t materialIndexOffset) :
+		_data(std::make_shared<const Data>(
+			std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), materialIndexOffset))
 	{
+		if (!_data->slots.empty() &&
+			_data->slots.size() - 1 > std::numeric_limits<std::uint32_t>::max() - materialIndexOffset)
+		{
+			throw spk::Exception("Voxel Model: material index offset overflow");
+		}
 	}
 
 	const Mesh &Model::opaqueMesh() const noexcept
@@ -41,6 +50,20 @@ namespace spk::Voxel
 	const std::vector<Definition::Slot> &Model::materialSlots() const noexcept
 	{
 		return _data->slots;
+	}
+
+	std::uint32_t Model::materialIndexOffset() const noexcept
+	{
+		return _data->materialIndexOffset;
+	}
+
+	const Definition::Slot &Model::materialSlot(std::uint32_t index) const
+	{
+		if (index < materialIndexOffset() || index - materialIndexOffset() >= materialSlots().size())
+		{
+			throw spk::Exception("Voxel Model: material index out of range");
+		}
+		return materialSlots()[index - materialIndexOffset()];
 	}
 
 	bool Model::isCompatible(const spk::Palette &palette) const noexcept

@@ -8,14 +8,14 @@
 
 Les huit `Shape::Instance` (quatre rotations horizontales × inversion verticale) sont créées et conservées dans `Shape::Data` lors de `Shape::Builder::build()`, conformément au §2. Le Mesher et l'algorithme d'occlusion consultent **les mêmes instances const** via `Shape::instance(orientation)`. Positions, normales, UV, winding, frontières et classifications y sont déjà finalisés. Aucun `ShapeTransformationCache` séparé n'existe et ni l'occlusion ni le Mesher ne réorientent les polygones. Chaque instance conserve exclusivement ses triangles précomputés via `triangles()`. L'occlusion les utilise comme sources et comme occultants du clipping, pour respecter l'interpolation affine des UV, et le Mesher les utilise directement lorsqu'aucun clipping n'est nécessaire. Le Builder accepte toujours des polygones convexes, mais aucune copie n'est conservée dans l'instance publiée.
 
-### 3.1 `spk::Voxel::VoxelMesher`
+### 3.1 `spk::Voxel::Mesher`
 
 Le Mesher transforme un `Volume` immuable en un **nouveau `Model` à géométrie immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
 
-Son travail est indépendant des matériaux concrets et des pixels de texture. Le `VoxelMesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
+Son travail est indépendant des matériaux concrets et des pixels de texture. Le `Mesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
 
 ```cpp
-spk::Voxel::VoxelMesher mesher;
+spk::Voxel::Mesher mesher;
 auto uncachedModel = mesher.bake(volume); // Occlusion recalculée
 
 spk::Voxel::OcclusionCache occlusion;
@@ -135,3 +135,12 @@ Les meshes visuels et d'ombre réutilisent **l'infrastructure `spk::Mesh<TVertex
 **Palette commune des Assemblies (révision PR-08).** Les Models peuvent rester indépendants et lier des palettes différentes hors Assembly, mais chaque `Assembly` fusionne les palettes de ses Models dans un `spk::Palette` unique et rebinde les copies internes sur cette palette. La géométrie et les indices de slots restent immuables. La fusion ne modifie jamais les UV des meshes et exige donc un atlas albedo compatible.
 
 **Animation et apparence Assembly (PR-08).** Les matrices des Parts peuvent être animées indépendamment, mais les Models contenus sont accessibles seulement par référence const. La liaison des matériaux pour une Assembly est changée exclusivement par `Assembly::bind(spk::Palette)`, sans rebake ni mutation des meshes. Les Models individuels hors Assembly conservent leur API de liaison habituelle.
+
+
+### Décalage optionnel des indices de matériaux (API Mesher)
+
+`spk::Voxel::Mesher::bake(volume, materialIndexOffset)` accepte un offset `std::uint32_t` (0 par défaut). Le Mesher ajoute cet offset à l'indice local de chaque vertex opaque et translucide. Il conserve les slots sémantiques locaux, leur ordre et leur opacité dans le `Model`, lequel expose `materialIndexOffset()` et `materialSlot(index)` pour résoudre un indice de vertex décalé. Les faces, indices de triangles, normales, UV et le mesh de profondeur ne changent pas.
+
+`Mesher::offsetMaterialIndices(existingModel, offset)` retourne une nouvelle copie de Model avec des indices encore décalés (offset **additionnel**, cumulatif) et le même mesh de profondeur partagé. `Mesher::offsetMaterialIndices(existingMesh, offset)` fonctionne également sur un mesh visuel déjà construit ; l'appelant conserve la responsabilité de mettre à jour la table de slots lorsqu'il ne passe que le mesh isolé. Un offset nul réutilise les ressources existantes. Les dépassements de `uint32_t` sont rejetés avant publication du résultat, y compris lorsque les slots d'un Model ne produisent aucun triangle visible.
+
+Ce mécanisme facilite une future harmonisation par blocs d'indices disjoints, sans effectuer la fusion des palettes dans le Mesher. **Un offset seul ne rend pas les palettes compatibles** : une table globale d'indices et de matériaux reste nécessaire pour les combiner.

@@ -764,3 +764,137 @@ TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 	}
 	EXPECT_GT(visibleSource, 0u);
 }
+
+
+TEST(MesherMaterialOffset, DefaultOffsetPreservesExistingIndices)
+{
+	const auto volume = single(definition(fixture("cube"), "stone_"));
+	const auto original = Mesher().bake(volume);
+	const auto explicitZero = Mesher().bake(volume, 0);
+	EXPECT_EQ(original.materialIndexOffset(), 0u);
+	expectEqual(original, explicitZero);
+	for (const auto &vertex : vertices(original.opaqueMesh()))
+	{
+		EXPECT_EQ(original.materialSlot(vertex.materialIndex).name, original.materialSlots()[vertex.materialIndex].name);
+	}
+}
+
+TEST(MesherMaterialOffset, BakeOffsetsOpaqueAndTransparentIndicesAndPreservesGeometry)
+{
+	Definition::SlotMapping mapping;
+	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
+	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
+	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});
+	const auto volume = single(Definition(fixture("cube"), std::move(mapping)));
+	const Model original = Mesher().bake(volume);
+	const Model shifted = Mesher().bake(volume, 27);
+	EXPECT_EQ(shifted.materialIndexOffset(), 27u);
+	EXPECT_EQ(shifted.materialSlots().size(), original.materialSlots().size());
+	auto compare = [](const Mesh &first, const Mesh &second) {
+		const auto before = vertices(first);
+		const auto after = vertices(second);
+		ASSERT_EQ(before.size(), after.size());
+		EXPECT_EQ(indices(first), indices(second));
+		for (std::size_t i = 0; i < before.size(); ++i)
+		{
+			EXPECT_EQ(after[i].materialIndex, before[i].materialIndex + 27u);
+			EXPECT_EQ(after[i].position, before[i].position);
+			EXPECT_EQ(after[i].normal, before[i].normal);
+			EXPECT_EQ(after[i].uv, before[i].uv);
+		}
+	};
+	compare(original.opaqueMesh(), shifted.opaqueMesh());
+	compare(original.transparentMesh(), shifted.transparentMesh());
+	expectShadowGeometryMatchesOpaque(shifted);
+	for (const auto &vertex : vertices(shifted.transparentMesh()))
+	{
+		EXPECT_FLOAT_EQ(shifted.materialSlot(vertex.materialIndex).opacity, 0.25f);
+	}
+	EXPECT_THROW((void)shifted.materialSlot(26), spk::Exception);
+	EXPECT_THROW((void)shifted.materialSlot(27 + static_cast<std::uint32_t>(shifted.materialSlots().size())), spk::Exception);
+}
+
+TEST(MesherMaterialOffset, ExistingModelCanBeShiftedWithoutChangingSource)
+{
+	const auto source = Mesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto original = vertices(source.opaqueMesh());
+	const auto first = Mesher::offsetMaterialIndices(source, 9);
+	const auto second = Mesher::offsetMaterialIndices(first, 7);
+	EXPECT_EQ(first.materialIndexOffset(), 9u);
+	EXPECT_EQ(second.materialIndexOffset(), 16u);
+	const auto shifted = vertices(second.opaqueMesh());
+	ASSERT_EQ(original.size(), shifted.size());
+	for (std::size_t i = 0; i < original.size(); ++i)
+	{
+		EXPECT_EQ(shifted[i].materialIndex, original[i].materialIndex + 16u);
+		EXPECT_EQ(vertices(source.opaqueMesh())[i].materialIndex, original[i].materialIndex);
+	}
+	EXPECT_EQ(indices(second.opaqueMesh()), indices(source.opaqueMesh()));
+	EXPECT_EQ(second.depthMesh().indexCount(), source.depthMesh().indexCount());
+	expectShadowGeometryMatchesOpaque(second);
+}
+
+TEST(MesherMaterialOffset, ExistingVisualMeshCanBeShiftedIndependently)
+{
+	const auto model = Mesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto shifted = Mesher::offsetMaterialIndices(model.opaqueMesh(), 11);
+	const auto before = vertices(model.opaqueMesh());
+	const auto after = vertices(shifted);
+	EXPECT_EQ(indices(model.opaqueMesh()), indices(shifted));
+	ASSERT_EQ(before.size(), after.size());
+	for (std::size_t i = 0; i < before.size(); ++i)
+	{
+		EXPECT_EQ(after[i].materialIndex, before[i].materialIndex + 11u);
+		EXPECT_EQ(after[i].position, before[i].position);
+		EXPECT_EQ(after[i].normal, before[i].normal);
+		EXPECT_EQ(after[i].uv, before[i].uv);
+	}
+}
+
+TEST(MesherMaterialOffset, EmptyGeometryStillTracksOffsetAndSlots)
+{
+	const Model source({}, {}, {}, {{"hidden", 1.0f}, {"unseen", 0.4f}});
+	const auto shifted = Mesher::offsetMaterialIndices(source, 42);
+	EXPECT_EQ(shifted.materialIndexOffset(), 42u);
+	EXPECT_EQ(shifted.materialSlot(42).name, "hidden");
+	EXPECT_EQ(shifted.materialSlot(43).name, "unseen");
+	EXPECT_TRUE(shifted.opaqueMesh().empty());
+	EXPECT_TRUE(shifted.transparentMesh().empty());
+	EXPECT_THROW((void)Mesher::offsetMaterialIndices(source, std::numeric_limits<std::uint32_t>::max()), spk::Exception);
+}
+
+TEST(MesherMaterialOffset, SlotCountOverflowIsRejectedDuringBake)
+{
+	const auto volume = single(definition(fixture("cube"), "stone_"));
+	const auto original = Mesher().bake(volume);
+	ASSERT_GT(original.materialSlots().size(), 1u);
+	EXPECT_THROW((void)Mesher().bake(volume, std::numeric_limits<std::uint32_t>::max()), spk::Exception);
+	const auto valid = Mesher().bake(volume, std::numeric_limits<std::uint32_t>::max() - static_cast<std::uint32_t>(original.materialSlots().size() - 1));
+	for (const auto &vertex : vertices(valid.opaqueMesh()))
+	{
+		EXPECT_EQ(valid.materialSlot(vertex.materialIndex).name, original.materialSlots()[vertex.materialIndex - valid.materialIndexOffset()].name);
+	}
+}
+
+TEST(MesherMaterialOffset, MeshVertexOverflowIsRejectedBeforeReturningResult)
+{
+	Mesh::Builder builder;
+	const MeshVertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, std::numeric_limits<std::uint32_t>::max()};
+	const auto a = builder.addVertex(vertex);
+	const auto b = builder.addVertex(vertex);
+	const auto c = builder.addVertex(vertex);
+	builder.addTriangle(a, b, c);
+	const auto source = std::move(builder).build();
+	EXPECT_THROW((void)Mesher::offsetMaterialIndices(source, 1), spk::Exception);
+	EXPECT_EQ(vertices(source)[0].materialIndex, std::numeric_limits<std::uint32_t>::max());
+}
+
+TEST(MesherMaterialOffset, ZeroOffsetSharesExistingGeometry)
+{
+	const auto source = Mesher().bake(single(definition(fixture("cube"), "stone_")));
+	const auto unchanged = Mesher::offsetMaterialIndices(source, 0);
+	EXPECT_EQ(&unchanged.opaqueMesh(), &source.opaqueMesh());
+	EXPECT_EQ(&unchanged.depthMesh(), &source.depthMesh());
+	EXPECT_EQ(unchanged.materialIndexOffset(), 0u);
+	EXPECT_EQ(&source.opaqueMesh().layout(), &Mesher::offsetMaterialIndices(source.opaqueMesh(), 0).layout());
+}
