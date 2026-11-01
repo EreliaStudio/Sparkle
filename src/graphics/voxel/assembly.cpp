@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "exception.hpp"
+#include "voxel/palette.hpp"
 
 namespace spk::Voxel
 {
@@ -15,6 +16,8 @@ namespace spk::Voxel
 
 	Assembly::Assembly(const Assembly &other) :
 		_parts(other._parts),
+		_paletteInputs(other._paletteInputs),
+		_palette(other._palette),
 		_nextID(other._nextID)
 	{
 		invalidate();
@@ -25,11 +28,17 @@ namespace spk::Voxel
 		if (this != &other)
 		{
 			auto replacement = other._parts;
-			_parts.swap(replacement);
-			_nextID = other._nextID;
+			auto inputs = other._paletteInputs;
+			auto palette = other._palette;
+			_commit(replacement, inputs, std::move(palette), other._nextID);
 			resetAfterCopy();
 		}
 		return *this;
+	}
+
+	const spk::Palette &Assembly::palette() const noexcept
+	{
+		return _palette;
 	}
 
 	std::size_t Assembly::size() const noexcept
@@ -83,6 +92,70 @@ namespace spk::Voxel
 				}
 			}
 		}
+	}
+
+	bool Assembly::_sameMaterial(const spk::Material &left, const spk::Material &right)
+	{
+		if (left.textures().size() != right.textures().size())
+		{
+			return false;
+		}
+		for (const auto &[name, binding] : left.textures())
+		{
+			const auto *other = right.find(name);
+			if (other == nullptr || binding.texture.identifier() != other->texture.identifier() ||
+				binding.section != other->section)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	spk::Palette Assembly::_mergePalette(
+		std::map<PartID, Part> &parts,
+		const std::map<PartID, spk::Palette> &inputs)
+	{
+		spk::Voxel::Palette::Builder builder;
+		spk::Palette::Materials seen;
+		for (const auto &[id, source] : inputs)
+		{
+			for (const auto &[name, material] : source.materials())
+			{
+				const auto existing = seen.find(name);
+				if (existing != seen.end())
+				{
+					if (!_sameMaterial(existing->second, material))
+					{
+						throw spk::Exception("Voxel Assembly: conflicting material slot '" + name + "'");
+					}
+					continue;
+				}
+				builder.setMaterial(name, material);
+				seen.emplace(name, material);
+			}
+		}
+		auto merged = builder.build();
+		for (auto &[id, part] : parts)
+		{
+			if (part.model.has_value())
+			{
+				part.model->bind(merged);
+			}
+		}
+		return merged;
+	}
+
+	void Assembly::_commit(
+		std::map<PartID, Part> &parts,
+		std::map<PartID, spk::Palette> &inputs,
+		spk::Palette palette,
+		PartID next) noexcept
+	{
+		_parts.swap(parts);
+		_paletteInputs.swap(inputs);
+		_palette = std::move(palette);
+		_nextID = next;
 	}
 
 	std::vector<PartID> Assembly::roots() const
@@ -158,10 +231,21 @@ namespace spk::Voxel
 			(void)part(*parent);
 		}
 		_validateTransform(localTransform);
+		if (model.has_value() && model->palette() == nullptr)
+		{
+			throw spk::Exception("Voxel Assembly: Model must have a bound palette");
+		}
 		PartID next = _nextID;
 		const PartID id = _allocate(next);
-		_parts.emplace(id, Part{id, std::move(name), parent, localTransform, std::move(model)});
-		_nextID = next;
+		auto prepared = _parts;
+		auto inputs = _paletteInputs;
+		prepared.emplace(id, Part{id, std::move(name), parent, localTransform, std::move(model)});
+		if (prepared.at(id).model.has_value())
+		{
+			inputs.emplace(id, *prepared.at(id).model->palette());
+		}
+		auto merged = _mergePalette(prepared, inputs);
+		_commit(prepared, inputs, std::move(merged), next);
 		return id;
 	}
 
@@ -172,7 +256,24 @@ namespace spk::Voxel
 
 	void Assembly::setModel(PartID id, std::optional<Model> model)
 	{
-		_editablePart(id).model.swap(model);
+		(void)part(id);
+		if (model.has_value() && model->palette() == nullptr)
+		{
+			throw spk::Exception("Voxel Assembly: Model must have a bound palette");
+		}
+		auto prepared = _parts;
+		auto inputs = _paletteInputs;
+		prepared.at(id).model = std::move(model);
+		if (prepared.at(id).model.has_value())
+		{
+			inputs.insert_or_assign(id, *prepared.at(id).model->palette());
+		}
+		else
+		{
+			inputs.erase(id);
+		}
+		auto merged = _mergePalette(prepared, inputs);
+		_commit(prepared, inputs, std::move(merged), _nextID);
 	}
 
 	void Assembly::setLocalTransform(PartID id, spk::Matrix4x4 transform)
@@ -199,9 +300,8 @@ namespace spk::Voxel
 	{
 		(void)part(id);
 		std::vector<PartID> removed;
-		for (const auto &entry : _parts)
+		for (const auto &[candidate, current] : _parts)
 		{
-			const PartID candidate = entry.first;
 			for (auto cursor = std::optional<PartID>(candidate); cursor.has_value(); cursor = part(*cursor).parent)
 			{
 				if (*cursor == id)
@@ -211,10 +311,15 @@ namespace spk::Voxel
 				}
 			}
 		}
+		auto prepared = _parts;
+		auto inputs = _paletteInputs;
 		for (const PartID candidate : removed)
 		{
-			_parts.erase(candidate);
+			prepared.erase(candidate);
+			inputs.erase(candidate);
 		}
+		auto merged = _mergePalette(prepared, inputs);
+		_commit(prepared, inputs, std::move(merged), _nextID);
 	}
 
 	std::vector<PartID> Assembly::_validatedInsertOrder(
@@ -243,6 +348,7 @@ namespace spk::Voxel
 
 	void Assembly::_stageImportedParts(
 		std::map<PartID, Part> &prepared,
+		std::map<PartID, spk::Palette> &inputs,
 		PartID &next,
 		const Assembly &source,
 		const std::vector<PartID> &order,
@@ -254,6 +360,10 @@ namespace spk::Voxel
 			const PartID newID = _allocate(next);
 			const PartID newParent = part.parent.has_value() ? result.partIDs.at(*part.parent) : result.anchor;
 			prepared.emplace(newID, Part{newID, part.name, newParent, part.localTransform, part.model});
+			if (part.model.has_value())
+			{
+				inputs.emplace(newID, source._paletteInputs.at(id));
+			}
 			result.partIDs.emplace(id, newID);
 		}
 	}
@@ -266,12 +376,13 @@ namespace spk::Voxel
 	{
 		const auto order = _validatedInsertOrder(parent, source, attachmentTransform);
 		auto prepared = _parts;
+		auto inputs = _paletteInputs;
 		PartID next = _nextID;
 		InsertResult result{_allocate(next), {}};
 		prepared.emplace(result.anchor, Part{result.anchor, std::move(anchorName), parent, attachmentTransform, std::nullopt});
-		_stageImportedParts(prepared, next, source, order, result);
-		_parts.swap(prepared);
-		_nextID = next;
+		_stageImportedParts(prepared, inputs, next, source, order, result);
+		auto merged = _mergePalette(prepared, inputs);
+		_commit(prepared, inputs, std::move(merged), next);
 		return result;
 	}
 }

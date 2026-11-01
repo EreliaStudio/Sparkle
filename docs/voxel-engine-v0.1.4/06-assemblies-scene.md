@@ -22,11 +22,16 @@ flowchart TD
   Torso --> Head["Part : head / Model (palette liée)"]
 ```
 
-Chaque Part peut conserver une copie du Model pour pouvoir choisir une palette différente tout en partageant les meshes, sans référence supplémentaire à une palette externe. Les signatures exactes des composants et des Parts relèvent de la PR-08.
+L'Assembly possède une **palette commune**, accessible par `assembly.palette()`. Chaque Part conserve un `Model` copié légèrement, mais tous ces Models sont **liés à la même `spk::Palette` fusionnée**. Un Model fourni à `addPart` ou `setModel` doit déjà avoir une palette liée par `Model::bind()`. L'Assembly fusionne les entrées des palettes fournies et rebind les Models conservés vers le résultat. Les meshes restent partagés, sans rebake.
 
 Les transformations locales sont indépendantes de `spk::Transform3D`, qui est déjà un Component3D. Une copie d'Assembly est **autonome pour sa hiérarchie et ses transformations**, tout en réutilisant les données immuables des Models et Palettes. L'Assembly copié démarre avec son **propre VersionedTrait, à version 1**, et non une copie des abonnés ou du compteur de version source. Les évolutions générales de `VersionedTrait` doivent rester compatibles avec cette propriété.
 
-**Q-ARCH-004 — Composition validée : insertion par copie et expansion.** Une insertion d'Assembly dans une autre est **une opération structurelle ponctuelle** de l'Assembly destination. Elle lit la hiérarchie et les poses de l'Assembly source à cet instant, puis crée **de nouvelles Parts directement dans l'arbre de la destination**. Les noms, poses locales, liens parent-enfant et associations `Model + spk::Palette` sont recopiés par valeur ; les valeurs immuables des Models et Palettes continuent à partager leurs blocs internes. L'Assembly source n'est ni déplacée, ni possédée, ni liée à la destination : une modification ou destruction ultérieure de la source n'a **aucun effet** sur la copie déjà insérée, et réciproquement. Une Assembly copiée normalement (constructeur de copie) conserve son contrat indépendant, sa version initiale 1 et ses propres Parts.
+**Q-ARCH-004 — Composition validée : insertion par copie et expansion.** Une insertion d'Assembly dans une autre est **une opération structurelle ponctuelle** de l'Assembly destination. Elle lit la hiérarchie et les poses de l'Assembly source à cet instant, puis crée **de nouvelles Parts directement dans l'arbre de la destination**. Les noms, poses locales, liens parent-enfant, Models et leurs contributions à la palette fusionnée sont recopiés par valeur ; les valeurs immuables des Models et Palettes continuent à partager leurs blocs internes. L'Assembly source n'est ni déplacée, ni possédée, ni liée à la destination : une modification ou destruction ultérieure de la source n'a **aucun effet** sur la copie déjà insérée, et réciproquement. Une Assembly copiée normalement (constructeur de copie) conserve son contrat indépendant, sa version initiale 1 et ses propres Parts.
+
+
+**Fusion des palettes (PR-08, révision).** La méthode `Assembly::palette() const` expose une unique `spk::Palette` fusionnée, immuable. Lors d'un `addPart`, `setModel`, `removePart` ou `insertAssembly`, la fusion est recalculée à partir des palettes **à l'entrée des Models** conservées en interne comme provenance par Part. La provenance ne sert pas de seconde palette active : les `Model` stockés sont tous rebondis sur **la même instance immuable de palette fusionnée**. Supprimer une Part retire sa contribution et les slots inutilisés ; un Model sans palette liée est refusé. Les Parts sans Model et les Assemblies vides sont acceptées, et leur palette fusionnée est vide.
+
+La fusion exige l'unicité des noms de slot et un **atlas albedo unique** conformément à `spk::Voxel::Palette::Builder`. Un slot homonyme est réutilisé s'il désigne un `Material` identique (mêmes rôles, identités de textures et sections UV) ; sinon, `spk::Exception` est levée. Les noms distincts mais associés à des atlas albedo différents sont également refusés. Il n'y a **aucune fusion physique de textures**, aucune création d'atlas, aucune modification de géométrie ni remappage d'UV. Toute préparation de nouvelle palette et rebind s'effectue dans une copie provisoire, ensuite publiée atomiquement en cas de succès. Les PartID et la version restent inchangés sur échec ; toute invalidation visuelle reste explicite.
 
 **Point d'ancrage et racines.** L'opération reçoit un **parent de destination** (ou la racine logique de destination, sans parent), une **matrice locale d'insertion** et la source. Elle crée dans la destination **une Part d'ancrage ordinaire sans Model**, portant cette matrice et rattachée au parent choisi. Chaque Part racine de l'Assembly source est recopiée comme enfant direct de cet ancrage, avec sa transform locale **inchangée** ; les descendants retrouvent le même parentage relatif après remappage des identifiants. L'ancrage est une Part normale pouvant être animée, déplacée, reparentée ou retirée : il n'ajoute aucun type spécial ni moteur hiérarchique supplémentaire. Cette règle fonctionne pour une source comportant plusieurs racines ou aucune Part (un ancrage vide reste un point d'attache valide). La matrice globale éventuellement fournie par le jeu pour afficher l'Assembly source **n'est pas incorporée implicitement** à l'insertion : le développeur choisit la matrice locale d'ancrage.
 
@@ -96,7 +101,7 @@ void composeCharacter(
 {
     torsoModel.bind(skinPalette);
     armModel.bind(skinPalette);
-    bladeModel.bind(metalPalette);
+    bladeModel.bind(metalPalette); // Atlas albedo identique à skinPalette.
 
     spk::Voxel::Assembly sword;
     const auto blade = sword.addPart("blade", {}, bladeModel);
@@ -115,8 +120,10 @@ void composeCharacter(
     character.setLocalTransform(
         copiedBlade, spk::Matrix4x4::scale(1, 1, 1.5f));
 
+    const spk::Palette &commonPalette = character.palette();
     const auto bladePose = character.accumulatedTransform(copiedBlade);
     const auto childIDs = character.children(inserted.anchor);
+    (void)commonPalette;
     (void)bladePose;
     (void)childIDs;
     character.invalidate();
@@ -125,7 +132,7 @@ void composeCharacter(
 
 `part(id)` renvoie une **référence const** : identifiants et parentage ne peuvent être modifiés directement. `setParent(id, parent)` conserve la transformation locale ; `removePart(id)` supprime le sous-arbre. `roots()`, `children(id)` et `partIDs()` fournissent des identifiants à parcourir ; `partIDs()` est ordonné en profondeur, parents avant enfants, avec frères dans l'ordre de création (identifiants croissants). `accumulatedTransform(id)` rend `M_root * ... * M_local`, sans transformation d'Entity.
 
-`insertAssembly(parent, source, transform, anchorName)` renvoie un `InsertResult {anchor, partIDs}` et garantit une transaction atomique. Un parent `std::nullopt` crée une racine. Une source vide crée uniquement l'ancrage. Les Parts stockent `std::optional<spk::Voxel::Model>`, dont la palette liée est propre à la copie du Model. Aucune palette parallèle n'est stockée.
+`insertAssembly(parent, source, transform, anchorName)` renvoie un `InsertResult {anchor, partIDs}` et garantit une transaction atomique, **fusion de palette comprise**. Un parent `std::nullopt` crée une racine. Une source vide crée uniquement l'ancrage. Les Parts stockent `std::optional<spk::Voxel::Model>` ; chaque Model est rebondi sur la palette commune de l’Assembly.
 
 Le constructeur et l'affectation par copie de l'Assembly recréent un état `VersionedTrait` indépendant à version 1, sans transfert des abonnements. Lors d'une affectation, les abonnements précédemment attachés à la destination sont résiliés. Les modifications ordinaires de Parts n'invalident pas automatiquement la version ; l'appel à `invalidate()` reste explicite.
 ### 6.2 `ModelRenderingComponent` et `AssemblyRenderingComponent`

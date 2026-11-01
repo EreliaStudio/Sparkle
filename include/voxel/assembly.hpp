@@ -37,16 +37,28 @@ namespace spk::Voxel
 		friend struct AssemblyTestAccess;
 
 		std::map<PartID, Part> _parts;
+		std::map<PartID, spk::Palette> _paletteInputs;
+		spk::Palette _palette;
 		PartID _nextID = 1;
 
 		[[nodiscard]] Part &_editablePart(PartID id);
 		[[nodiscard]] static PartID _allocate(PartID &next);
 		static void _validateTransform(const spk::Matrix4x4 &transform);
 		void _appendSubtree(PartID id, std::vector<PartID> &result) const;
+		[[nodiscard]] static bool _sameMaterial(const spk::Material &left, const spk::Material &right);
+		[[nodiscard]] static spk::Palette _mergePalette(
+			std::map<PartID, Part> &parts,
+			const std::map<PartID, spk::Palette> &inputs);
+		void _commit(
+			std::map<PartID, Part> &parts,
+			std::map<PartID, spk::Palette> &inputs,
+			spk::Palette palette,
+			PartID next) noexcept;
 		[[nodiscard]] std::vector<PartID> _validatedInsertOrder(
 			std::optional<PartID> parent, const Assembly &source, const spk::Matrix4x4 &transform) const;
 		static void _stageImportedParts(
 			std::map<PartID, Part> &prepared,
+			std::map<PartID, spk::Palette> &inputs,
 			PartID &next,
 			const Assembly &source,
 			const std::vector<PartID> &order,
@@ -58,6 +70,7 @@ namespace spk::Voxel
 		Assembly(Assembly &&other) noexcept = default;
 		Assembly &operator=(const Assembly &other);
 
+		[[nodiscard]] const spk::Palette &palette() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
 		[[nodiscard]] bool contains(PartID id) const noexcept;

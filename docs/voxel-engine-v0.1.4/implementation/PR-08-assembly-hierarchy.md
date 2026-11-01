@@ -20,7 +20,7 @@
 - [x] Assembly, PartID, transformations locales et relations parentales
 - [x] add/remove/reparent
 - [x] insertion par copie et expansion avec ancrage
-- [x] partage des Models/Palettes
+- [x] partage des Models et palette fusionnée commune
 - [x] VersionedTrait indépendant.
 
 ## Instructions techniques et intégration
@@ -61,12 +61,16 @@ Confier **uniquement PR-08** à l'IA. Les détails locaux (signatures C++, choix
 ## API retenue pour PR-08
 
 - `spk::Voxel::PartID` : entier 64 bits monotone, attribué à partir de 1 et jamais réattribué.
-- `Assembly::Part` : `id`, `name`, `parent`, `localTransform`, `std::optional<Model> model` (palette déjà liée dans le Model).
+- `Assembly::Part` : `id`, `name`, `parent`, `localTransform`, `std::optional<Model> model` (Model rebondi sur la palette globale commune).
 - `addPart(name, parent = nullopt, model = nullopt, transform = identity())`, `part(id) const`, `size()`, `empty()`, `contains(id)`.
 - `setName`, `setModel`, `setLocalTransform`, `setParent`, `removePart`.
-- `roots()`, `children(id)`, `partIDs()` et `accumulatedTransform(id)`.
+- `roots()`, `children(id)`, `partIDs()`, `accumulatedTransform(id)` et `palette() const` (palette commune fusionnée).
 - `insertAssembly(parent, source, anchorTransform = identity(), anchorName = "attachment")` renvoie `{anchor, partIDs}`.
 
 Implémentation dans `include/voxel/assembly.hpp` et `src/graphics/voxel/assembly.cpp` ; tests `tests/TU/Graphics/srcs/voxel/voxel_assembly_test.cpp`. L'Assembly appartient à la bibliothèque graphique, à côté du Model, mais ne contient aucune opération GPU. La copie repart à version 1 sans recopier les abonnements. Les modifications des Parts ne modifient pas automatiquement la version.
 
 Voir l'exemple de composition dans [06-assemblies-scene.md](../06-assemblies-scene.md).
+
+### Révision : palette commune par Assembly
+
+Une Assembly fusionne les Materials nommés des palettes **déjà liées** des Models ajoutés. Toutes les copies internes de Model sont ensuite liées à la même `spk::Palette` résultante. Un même nom de slot ne peut pas désigner deux Materials différents (identité des textures et sections UV) ; tous les albedos doivent désigner un seul atlas. Les Models sans palette préalable sont refusés. Les ajouts, suppressions, remplacements de Models et insertions recalculent la fusion à partir d'entrées d'origine internes, puis publient la nouvelle structure et sa palette atomiquement. Les anciennes palettes ne sont pas des palettes actives indépendantes par Part. La suppression d'un Model retire sa contribution. Pas de réassemblage d'atlas, pas d'ajustement UV et aucune allocation GPU.
