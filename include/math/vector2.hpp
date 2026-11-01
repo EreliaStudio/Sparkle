@@ -36,7 +36,7 @@ namespace spk
 		{
 		}
 
-		explicit TVector2(const JSON::Value &value) noexcept
+		explicit TVector2(const JSON::Value &value)
 		{
 			*this = fromJSON(value);
 		}
@@ -156,17 +156,22 @@ namespace spk
 
 		[[nodiscard]] static TVector2 fromJSON(const JSON::Value &value)
 		{
-			const auto &array = value.asArray();
-
-			if (array.size() != 2)
+			if (value.isObject())
 			{
-				throw std::runtime_error(
-					"Expected 2 elements for TVector2");
+				const auto &object = value.asObject();
+				if (object.size() != 2 || !object.contains("x") || !object.contains("y"))
+				{
+					throw std::runtime_error("Expected x and y components for TVector2");
+				}
+				return {object.at("x").as<TType>(), object.at("y").as<TType>()};
 			}
 
-			return {
-				array[0].as<TType>(),
-				array[1].as<TType>()};
+			const auto &array = value.asArray();
+			if (array.size() != 2)
+			{
+				throw std::runtime_error("Expected 2 elements for TVector2");
+			}
+			return {array[0].as<TType>(), array[1].as<TType>()};
 		}
 	};
 

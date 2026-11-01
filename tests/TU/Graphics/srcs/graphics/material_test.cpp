@@ -237,6 +237,27 @@ TEST(MaterialTest, ExplicitAndWholeUVWorkWithBothKindsOfSources)
 	EXPECT_NO_THROW((void)fromJSON(assets, plain));
 }
 
+TEST(MaterialTest, JsonVectorsSupportArraysAndNamedCoordinates)
+{
+	spk::Asset::Manager assets;
+
+	Value named = document(pathSource(true));
+	named["textures"]["albedo"]["UV"] = spriteUV(3, 5);
+	Value array = document(pathSource(true));
+	array["textures"]["albedo"]["Texture"]["size"] = Value::fromString("[16,16]");
+	array["textures"]["albedo"]["UV"] = Value::fromString(R"({"sprite":[3,5]})");
+	expectSameBinding(fromJSON(assets, named), fromJSON(assets, array), "albedo");
+
+	named = document(pathSource());
+	named["textures"]["albedo"]["UV"] = explicitUV(0.25, 0.5, 0.25, 0.25);
+	array = document(pathSource());
+	array["textures"]["albedo"]["UV"] = Value::fromString(R"({"anchor":[0.25,0.5],"size":[0.25,0.25]})");
+	expectSameBinding(fromJSON(assets, named), fromJSON(assets, array), "albedo");
+
+	array["textures"]["albedo"]["UV"]["anchor"] = Value::fromString("[0.25]");
+	EXPECT_THROW(fromJSON(assets, array), spk::Exception);
+}
+
 TEST(MaterialTest, InvalidJSONStructureAndUnknownFieldsAreRejected)
 {
 	spk::Asset::Manager assets;

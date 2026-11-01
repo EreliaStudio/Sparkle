@@ -90,6 +90,8 @@ Elle peut également demander un `spk::SpriteSheet`, en donnant une **grille de 
 }
 ```
 
+Les coordonnées de type `Vector2` acceptent indifféremment un tableau `[x, y]` ou un objet `{"x": ..., "y": ...}`, aussi bien pour `Texture.size`, `UV.sprite`, `UV.anchor` que `UV.size`. La sérialisation `Vector2::toJSON()` conserve la forme tableau.
+
 Ici, `Texture.size` signifie **16 sprites en largeur et 16 en hauteur**, **pas une résolution en pixels**. `SpriteSheet::sprite(Vector2UInt)` retourne une `Texture::Section` normalisée. Des UV explicites (`anchor`/`size`) restent utilisables **même avec un SpriteSheet**. La syntaxe `sprite` exige une grille valide et des coordonnées de sprite valides.
 
 Ces exemples représentent **un bloc de rôle** réutilisable dans le schéma normatif complet `{ "textures": { "nomDuRole": { "Texture": ..., "UV": ... } } }` de la section 4.2.1. Le chargement JSON et la construction manuelle aboutissent à la même représentation Material : rôle nommé, handle de texture (ou identité de source EngineView uniquement via C++) et `Texture::Section`.

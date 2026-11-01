@@ -36,45 +36,44 @@ namespace spk
 
 		[[nodiscard]] Vector2UInt grid(const Reader &reader, bool allowZero)
 		{
-			reader.forbidUnknown({"x", "y"});
-			const unsigned int x = reader.require<unsigned int>("x");
-			const unsigned int y = reader.require<unsigned int>("y");
-			if (!allowZero && x == 0)
+			Vector2UInt value;
+			try
+			{
+				value = reader.value().as<Vector2UInt>();
+			} catch (...)
+			{
+				throw Exception(reader.path() + ": expected two unsigned coordinates", std::current_exception());
+			}
+			if (!allowZero && value.x == 0)
 			{
 				throw Exception(reader.pathFor("x") + ": expected positive integer");
 			}
-			if (!allowZero && y == 0)
+			if (!allowZero && value.y == 0)
 			{
 				throw Exception(reader.pathFor("y") + ": expected positive integer");
 			}
-			return {x, y};
+			return value;
 		}
 
 		[[nodiscard]] TVector2<double> normalizedPoint(const Reader &reader)
 		{
-			reader.forbidUnknown({"x", "y"});
-			const auto component = [&](const std::string &key) {
-				const JSON::Value &value = reader.value().at(key);
-				if (!value.isNumber())
-				{
-					throw Exception(reader.pathFor(key) + ": expected number");
-				}
-				const double number = reader.require<double>(key);
-				if (!std::isfinite(number) || number < 0.0 || number > 1.0)
-				{
-					throw Exception(reader.pathFor(key) + ": expected finite number in [0, 1]");
-				}
-				return number;
-			};
-			if (!reader.contains("x"))
+			TVector2<double> value;
+			try
 			{
-				throw Exception(reader.pathFor("x") + ": missing coordinate");
-			}
-			if (!reader.contains("y"))
+				value = reader.value().as<TVector2<double>>();
+			} catch (...)
 			{
-				throw Exception(reader.pathFor("y") + ": missing coordinate");
+				throw Exception(reader.path() + ": expected two numeric coordinates", std::current_exception());
 			}
-			return {component("x"), component("y")};
+			if (!std::isfinite(value.x) || value.x < 0.0 || value.x > 1.0)
+			{
+				throw Exception(reader.pathFor("x") + ": expected finite number in [0, 1]");
+			}
+			if (!std::isfinite(value.y) || value.y < 0.0 || value.y > 1.0)
+			{
+				throw Exception(reader.pathFor("y") + ": expected finite number in [0, 1]");
+			}
+			return value;
 		}
 
 		void validateConfiguration(const std::string &type, const JSON::Value &config, const std::string &path)
