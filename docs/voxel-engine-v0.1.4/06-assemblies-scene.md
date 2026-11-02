@@ -12,7 +12,7 @@ Le Mesher produit un `spk::Voxel::Geometry` immuable et partageable. Il contient
 
 Un `Model` contient une `Geometry` et des Anchors nommés dans des données partagées `std::shared_ptr<const Data>`. Il ne propose aucun setter. `Model::Builder` possède les opérations `setGeometry`, `addAnchor`, `removeAnchor`, `setAnchorTransform`, `attach`, `detach`, `harmonize`, `build`. Une construction terminée ne modifie jamais un Model publié.
 
-Chaque Anchor possède un repère rigide et éventuellement un Model enfant immuable partagé. Le nom dans le parent est obligatoire et unique. L'argument `attachment` de `Builder::attach(name, child, attachment)` désigne un Anchor du Model enfant ; sa valeur par défaut `Anchor::NoAttachmentPoint = ""` signifie que l'origine du Model enfant sert de pivot.
+Chaque Anchor possède un repère rigide et un `std::optional<Model>` pour son enfant : `std::nullopt` signifie qu'aucun Model n'est attaché. `Model{}` est un Model valide à géométrie vide, pas une valeur sentinelle. Quand un enfant est présent, sa copie ne duplique que son `shared_ptr<const Data>` et maintient ses données immuables en vie, sans transfert de propriété ni dépendance à l'Asset Manager. `Builder::attach(name, child, attachment)` copie légèrement le Model fourni, et `detach(name)` rétablit `std::nullopt`. `Anchor::model()` renvoie `nullptr` lorsqu'il n'y a pas d'enfant. Le nom dans le parent est obligatoire et unique. L'argument `attachment` de `Builder::attach` désigne un Anchor du Model enfant ; `Anchor::NoAttachmentPoint = ""` signifie que l'origine du Model enfant sert de pivot.
 
 ### 6.3 Model::View
 
@@ -26,7 +26,7 @@ Les chemins d'Anchors utilisent `Model::Anchor::Path = std::vector<std::string>`
 
 L'appel explicite à `harmonize()` précède `build()`. Le Builder parcourt la hiérarchie et collecte les slots par nom et opacité. Un nom existant avec la même opacité réutilise l'indice global ; une opacité contradictoire provoque une exception. Les slots globaux sont triés de façon déterministe et chaque `Geometry`, y compris celles des enfants, est réindexée sans altérer les positions, UV, normales, triangles ou mesh de profondeur.
 
-L'harmonisation n'inspecte aucune palette ni Material concret : elle est strictement structurelle. Les Models enfants sont reconstruits en valeurs immuables ; les Models sources restent inchangés. Les Views de ce Model peuvent utiliser des palettes différentes : chaque palette doit contenir tous les noms de slots requis. Aucun champ `harmonized` n'est conservé et un nouvel appel à `harmonize()` recalcule et reconstruit systématiquement les géométries, même déjà harmonisées. Le `Model::Harmonizer` indépendant a été supprimé.
+L'harmonisation n'inspecte aucune palette ni Material concret : elle est strictement structurelle. Les Models enfants reconstruits sont conservés en `std::optional<Model>` par valeur dans les Anchors. Les anciennes géométries sources restent inchangées et les données des enfants harmonisés vivent aussi longtemps que leurs Models parents. Les Views de ce Model peuvent utiliser des palettes différentes : chaque palette doit contenir tous les noms de slots requis. Aucun champ `harmonized` n'est conservé et un nouvel appel à `harmonize()` recalcule et reconstruit systématiquement les géométries, même déjà harmonisées. Le `Model::Harmonizer` indépendant a été supprimé.
 
 `View::isRenderable()` retourne `false` uniquement lorsque la hiérarchie manque de palettes compatibles, sans intercepter les erreurs inattendues (par exemple une allocation impossible).
 

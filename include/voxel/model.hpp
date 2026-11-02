@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,25 +26,7 @@ namespace spk::Voxel
 
 		class Builder;
 
-		class Anchor final
-		{
-			friend class Builder;
-
-		public:
-			using Path = std::vector<std::string>;
-			static constexpr const char *NoAttachmentPoint = "";
-
-		private:
-			spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
-			std::shared_ptr<const Model> _model;
-			std::string _attachment;
-
-		public:
-			explicit Anchor(spk::Matrix4x4 transform = spk::Matrix4x4::identity());
-			[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
-			[[nodiscard]] const Model *model() const noexcept;
-			[[nodiscard]] const std::string &attachment() const noexcept;
-		};
+		class Anchor;
 
 		class View;
 
@@ -68,6 +51,26 @@ namespace spk::Voxel
 		[[nodiscard]] bool hasAnchor(std::string_view name) const noexcept;
 		[[nodiscard]] const Anchor &anchor(std::string_view name) const;
 		[[nodiscard]] const std::map<std::string, Anchor, std::less<>> &anchors() const noexcept;
+	};
+
+	class Model::Anchor final
+	{
+		friend class Builder;
+
+	public:
+		using Path = std::vector<std::string>;
+		static constexpr const char *NoAttachmentPoint = "";
+
+	private:
+		spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
+		std::optional<Model> _model;
+		std::string _attachment;
+
+	public:
+		explicit Anchor(spk::Matrix4x4 transform = spk::Matrix4x4::identity());
+		[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
+		[[nodiscard]] const Model *model() const noexcept;
+		[[nodiscard]] const std::string &attachment() const noexcept;
 	};
 
 	class Model::Builder final

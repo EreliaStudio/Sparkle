@@ -60,6 +60,39 @@ namespace
 	}
 }
 
+TEST(VoxelModelTest, AnchorDistinguishesDetachedFromAttachedEmptyModel)
+{
+	Model::Builder builder;
+	builder.addAnchor("hand");
+	EXPECT_EQ(builder.build().anchor("hand").model(), nullptr);
+	builder.attach("hand", Model{});
+	const Model attached = builder.build();
+	ASSERT_NE(attached.anchor("hand").model(), nullptr);
+	EXPECT_TRUE(attached.anchor("hand").model()->materialSlots().empty());
+	builder.detach("hand");
+	EXPECT_EQ(builder.build().anchor("hand").model(), nullptr);
+	EXPECT_NE(attached.anchor("hand").model(), nullptr);
+}
+
+TEST(VoxelModelTest, AttachedModelRetainsDataAfterSourceDestruction)
+{
+	Model::Builder builder;
+	builder.addAnchor("arm");
+	{
+		Model source = model("skin");
+		builder.attach("arm", source);
+	}
+	const Model torso = builder.build();
+	ASSERT_NE(torso.anchor("arm").model(), nullptr);
+	EXPECT_EQ(torso.anchor("arm").model()->materialSlot(0).name, "skin");
+	Model::Builder harmonized(torso);
+	harmonized.harmonize();
+	const Model result = harmonized.build();
+	ASSERT_NE(result.anchor("arm").model(), nullptr);
+	EXPECT_EQ(result.anchor("arm").model()->materialSlot(0).name, "skin");
+	EXPECT_NE(torso.anchor("arm").model(), nullptr);
+}
+
 TEST(VoxelModelTest, MeshCarriesGeometryAndMaterialSlots)
 {
 	const auto source = model("cloth");

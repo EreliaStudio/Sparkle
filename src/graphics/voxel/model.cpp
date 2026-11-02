@@ -77,7 +77,7 @@ namespace spk::Voxel
 
 	const Model *Model::Anchor::model() const noexcept
 	{
-		return _model.get();
+		return _model ? &*_model : nullptr;
 	}
 
 	const std::string &Model::Anchor::attachment() const noexcept
@@ -205,8 +205,7 @@ namespace spk::Voxel
 		{
 			throw spk::Exception("Voxel Anchor: attachment does not exist: " + attachment);
 		}
-		auto child = std::make_shared<const Model>(model);
-		found->second._model = std::move(child);
+		found->second._model = model;
 		found->second._attachment = std::move(attachment);
 	}
 
