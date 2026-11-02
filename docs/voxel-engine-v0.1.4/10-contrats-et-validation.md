@@ -110,7 +110,10 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Assets, Materials, Palettes et Assemblies**
 
-- Un `Voxel::Geometry` sort du Mesher sans palette. `Model::View::bind(spk::Palette)` valide l'atlas et les slots de tous les Models concernés, et conserve une copie légère par occurrence. Une erreur de liaison ne remplace pas les palettes existantes. Deux Views peuvent partager les mêmes Meshes et utiliser des palettes et rotations distinctes.
+- **Chargement transactionnel des Collections JSON :** charger un fichier contenant des entrées valides puis une entrée invalide ou dupliquée ne modifie pas les Collections déjà présentes ni les entrées publiables du Builder. Tester aussi le support des éléments non copiables et la stabilité des références existantes.
+
+
+- Un `Voxel::Geometry` sort du Mesher sans palette. `Model::View::bind(spk::Palette)` valide l'atlas et les slots du Model sélectionné par défaut (`PalettePropagation::Self`) ; `Recursive` doit être demandé explicitement pour ses descendants. Le bind conserve une copie légère par occurrence. Une erreur de liaison ne remplace pas les palettes existantes. `isRenderable()` renvoie `false` pour les palettes requises absentes ou incompatibles, sans intercepter les erreurs inattendues. Deux Views peuvent partager les mêmes Meshes et utiliser des palettes et rotations distinctes.
 - Une `spk::Palette` générique accepte les Materials sans `albedo` ; `spk::Voxel::Palette::Builder` exige `albedo` uniquement lors de l'ajout d'un Material. Ce Builder ne connaît aucun Model ni complétude ; son validateur compare les atlas à chaque ajout et son `build()` est le `build()` générique. Chaque `Model` vérifie via `isCompatible` seulement la présence de ses slots, y compris totalement occultés. Aucune palette n'enregistre l'opacité. Deux Models peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Model restent rejetés par le Mesher.
 
 - Deux `Asset::Manager::load<T>(id, config)` avec type, identifiant et JSON structurel identiques retournent la même référence, indépendamment de l'ordre textuel des clés JSON ; une configuration 16×16 et une 8×8 donnent deux assets distincts. L'absence de configuration équivaut à un **objet JSON vide**, et non à `Null`.

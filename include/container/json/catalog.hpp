@@ -21,14 +21,15 @@ namespace spk::JSON
 		using ID = TID;
 
 	private:
-		std::unordered_map<ID, Element> _elements;
+		using Entries = std::unordered_map<ID, Element>;
+		Entries _elements;
 
-		void _parseAndInsert(const Reader &elementReader)
+		void _parseAndInsert(const Reader &elementReader, Entries &pending)
 		{
 			elementReader.forbidUnknown({"id", "data"});
 
 			ID id = _parseKey(elementReader);
-			if (contains(id))
+			if (contains(id) || pending.contains(id))
 			{
 				spk::JSON::throwAt(
 					elementReader.file(),
@@ -38,7 +39,29 @@ namespace spk::JSON
 
 			const Reader dataReader = elementReader.child("data");
 			Element element = _parseElement(dataReader);
-			_elements.emplace(std::move(id), std::move(element));
+			pending.emplace(std::move(id), std::move(element));
+		}
+
+		void _load(const Reader &root, Entries &pending)
+		{
+			if (!root.contains("elements"))
+			{
+				_parseAndInsert(root, pending);
+				return;
+			}
+
+			root.forbidUnknown({"elements"});
+			const Value &elements = root.value().at("elements");
+			if (!elements.isArray())
+			{
+				spk::JSON::throwAt(root.file(), root.pathFor("elements"), "expected an array");
+			}
+			const auto &array = elements.asArray();
+			for (std::size_t index = 0; index < array.size(); ++index)
+			{
+				const std::string path = root.pathFor("elements") + "[" + std::to_string(index) + "]";
+				_parseAndInsert(Reader(array[index], root.file(), path), pending);
+			}
 		}
 
 	protected:
@@ -67,26 +90,10 @@ namespace spk::JSON
 		{
 			const Value document = Loader::parseFile(file);
 			const Reader root(document, file);
-
-			if (!root.contains("elements"))
-			{
-				_parseAndInsert(root);
-				return;
-			}
-
-			root.forbidUnknown({"elements"});
-			const Value &elements = root.value().at("elements");
-			if (!elements.isArray())
-			{
-				spk::JSON::throwAt(file, root.pathFor("elements"), "expected an array");
-			}
-
-			const auto &array = elements.asArray();
-			for (std::size_t index = 0; index < array.size(); ++index)
-			{
-				const std::string path = root.pathFor("elements") + "[" + std::to_string(index) + "]";
-				_parseAndInsert(Reader(array[index], file, path));
-			}
+			Entries pending;
+			_load(root, pending);
+			_elements.reserve(_elements.size() + pending.size());
+			_elements.merge(pending);
 		}
 
 		[[nodiscard]] std::size_t size() const noexcept

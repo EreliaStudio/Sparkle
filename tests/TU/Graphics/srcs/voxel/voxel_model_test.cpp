@@ -150,6 +150,27 @@ TEST(VoxelModelViewTest, IndependentPalettesForEachModel)
 	EXPECT_NE(&view.palette()->materials(), &view.palette("leftArm")->materials());
 }
 
+TEST(VoxelModelViewTest, DefaultPaletteBindingOnlyChangesSelectedModel)
+{
+	spk::Texture atlas;
+	Model::Builder builder(model("cloth"));
+	builder.addAnchor("arm");
+	builder.attach("arm", model("skin"));
+	Model::View view(builder.build());
+	const auto shared = palette(atlas, {"cloth", "skin"});
+	view.bind(shared);
+	ASSERT_NE(view.palette(), nullptr);
+	EXPECT_EQ(view.palette("arm"), nullptr);
+	EXPECT_FALSE(view.isRenderable());
+	const auto childPalette = palette(atlas, {"skin"});
+	view.bind("arm", childPalette);
+	EXPECT_TRUE(view.isRenderable());
+	const auto rootPalette = palette(atlas, {"cloth"});
+	view.bind(rootPalette);
+	EXPECT_EQ(&view.palette()->materials(), &rootPalette.materials());
+	EXPECT_EQ(&view.palette("arm")->materials(), &childPalette.materials());
+}
+
 TEST(VoxelModelViewTest, RecursivePaletteBindingIsAtomic)
 {
 	spk::Texture atlas;
@@ -158,9 +179,9 @@ TEST(VoxelModelViewTest, RecursivePaletteBindingIsAtomic)
 	torsoBuilder.attach("leftArm", model("skin"));
 	Model::View view(torsoBuilder.build());
 	const auto complete = palette(atlas, {"cloth", "skin"});
-	view.bind(complete);
+	view.bind(complete, Model::PalettePropagation::Recursive);
 	EXPECT_TRUE(view.isRenderable());
-	EXPECT_THROW(view.bind(palette(atlas, {"cloth"})), spk::Exception);
+	EXPECT_THROW(view.bind(palette(atlas, {"cloth"}), Model::PalettePropagation::Recursive), spk::Exception);
 	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
 	EXPECT_EQ(&view.palette("leftArm")->materials(), &complete.materials());
 }
@@ -242,7 +263,8 @@ TEST(VoxelModelBuilderTest, HarmonizeCombinesSlotsAndPreservesSources)
 	EXPECT_EQ(materialIndex(before), 5u);
 	EXPECT_EQ(materialIndex(*before.anchor("arm").model()), 0u);
 	spk::Texture atlas;
-	Model::View view(result, palette(atlas, {"cloth", "skin"}));
+	Model::View view(result);
+	view.bind(palette(atlas, {"cloth", "skin"}), Model::PalettePropagation::Recursive);
 	EXPECT_TRUE(view.isRenderable());
 }
 

@@ -10,6 +10,34 @@ namespace spk::Voxel
 {
 	namespace
 	{
+		[[nodiscard]] bool hasRequiredPalettes(
+			const Model &model,
+			Model::Anchor::Path &path,
+			const std::map<Model::Anchor::Path, spk::Palette> &palettes)
+		{
+			const auto found = palettes.find(path);
+			if (!model.materialSlots().empty() &&
+				(found == palettes.end() || !model.isCompatible(found->second)))
+			{
+				return false;
+			}
+			for (const auto &[name, anchor] : model.anchors())
+			{
+				if (!anchor.model())
+				{
+					continue;
+				}
+				path.push_back(name);
+				const bool ready = hasRequiredPalettes(*anchor.model(), path, palettes);
+				path.pop_back();
+				if (!ready)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
 		[[nodiscard]] spk::Matrix4x4 inverseAnchor(const spk::Matrix4x4 &matrix)
 		{
 			auto result = spk::Matrix4x4::identity();
@@ -190,7 +218,7 @@ namespace spk::Voxel
 		std::map<Path, spk::Palette> &prepared) const
 	{
 		const Model &node = _node(path);
-		if (!node.mesh().isCompatible(palette))
+		if (!node.geometry().isCompatible(palette))
 		{
 			throw spk::Exception("Voxel View: palette is missing required material slots");
 		}
@@ -376,16 +404,9 @@ namespace spk::Voxel
 		setRotation(spk::Quaternion::identity());
 	}
 
-	bool Model::View::isRenderable() const noexcept
+	bool Model::View::isRenderable() const
 	{
-		try
-		{
-			visit([](const Model &, const spk::Palette &, const spk::Matrix4x4 &) {
-			});
-			return true;
-		} catch (...)
-		{
-			return false;
-		}
+		Anchor::Path path;
+		return hasRequiredPalettes(_model, path, _palettes);
 	}
 }

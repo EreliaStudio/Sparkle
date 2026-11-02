@@ -151,7 +151,22 @@ namespace
 		]})");
 		Shape::Collection::Builder builder;
 		EXPECT_THROW(builder.load(file.path()), spk::Exception);
-		EXPECT_EQ(builder.build().size(), 1u);
+		EXPECT_EQ(builder.build().size(), 0u);
+	}
+
+	TEST(VoxelShapeCollectionTest, InvalidBatchDoesNotAddEarlierShapes)
+	{
+		Shape::Collection::Builder builder;
+		builder.add("existing", Shape::Builder{}.build());
+		const JSONFile invalid(R"({"elements":[
+			{"id":"valid","data":{"slots":{},"polygons":[]}},
+			{"id":"invalid","data":{"slots":{},"polygons":[{"slot":"missing","vertices":[]}]}}
+		]})");
+		EXPECT_THROW(builder.load(invalid.path()), spk::Exception);
+		const auto result = builder.build();
+		EXPECT_EQ(result.size(), 1u);
+		EXPECT_TRUE(result.contains("existing"));
+		EXPECT_FALSE(result.contains("valid"));
 	}
 
 	TEST(VoxelDefinitionBuilderTest, UsesRegisteredShapeAndBuildsImmutableDefinitions)
@@ -256,6 +271,24 @@ namespace
 		EXPECT_TRUE(result.shape().empty());
 		EXPECT_TRUE(result.slots().empty());
 		EXPECT_FALSE(result.isAir());
+	}
+
+	TEST(VoxelDefinitionCollectionTest, InvalidBatchPreservesEarlierDefinitions)
+	{
+		Definition::Collection::Builder builder;
+		builder.bind(shapeCollection());
+		const JSONFile original(
+			R"({"id":42,"data":{"shape":"cube","slots":{"face":"stone"}}})");
+		builder.load(original.path());
+		const JSONFile invalid(R"({"elements":[
+			{"id":43,"data":{"shape":"cube","slots":{"face":"dirt"}}},
+			{"id":44,"data":{"shape":"unknown","slots":{"face":"glass"}}}
+		]})");
+		EXPECT_THROW(builder.load(invalid.path()), spk::Exception);
+		const auto result = builder.build();
+		EXPECT_EQ(result.size(), 2u);
+		EXPECT_EQ(result.at(42).semanticSlot("face"), "stone");
+		EXPECT_FALSE(result.contains(43));
 	}
 
 	TEST(VoxelDefinitionCollectionTest, LoadsNumericIDsThroughJSONCatalog)

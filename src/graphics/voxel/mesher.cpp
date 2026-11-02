@@ -342,7 +342,7 @@ namespace spk::Voxel
 			}
 		}
 		Geometry::SurfaceMesh opaqueMesh = std::move(opaque).build();
-		auto depth = spk::ShadowMap::Geometry::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
+		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
 		});
 		return Geometry(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots, materialIndexOffset);

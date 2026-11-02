@@ -137,7 +137,7 @@ namespace spk::Voxel
 		[[nodiscard]] const spk::Palette *palette() const noexcept;
 		[[nodiscard]] const spk::Palette *palette(std::string_view anchorName) const;
 		[[nodiscard]] const spk::Palette *palette(const Anchor::Path &path) const;
-		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Recursive);
+		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
 		void bind(
 			std::string_view anchorName,
 			spk::Palette palette,
@@ -152,7 +152,7 @@ namespace spk::Voxel
 		[[nodiscard]] spk::Quaternion anchorRotation(const Anchor::Path &path) const;
 		void setTransform(spk::Matrix4x4 transform);
 		[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
-		[[nodiscard]] bool isRenderable() const noexcept;
+		[[nodiscard]] bool isRenderable() const;
 		void visit(const std::function<void(const Model &, const spk::Palette &, const spk::Matrix4x4 &)> &callback) const;
 	};
 
