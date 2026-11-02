@@ -18,7 +18,6 @@ namespace spk
 		Version _version = 0;
 		VersionProvider _versionProvider;
 
-
 	public:
 		VersionedTrait() = default;
 		VersionedTrait(const VersionedTrait &) = delete;

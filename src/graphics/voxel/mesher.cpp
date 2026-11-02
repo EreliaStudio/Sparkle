@@ -251,7 +251,6 @@ namespace spk::Voxel
 			next);
 	}
 
-
 	Mesher::OutsideCell Mesher::outsideCell(Position, Face) const
 	{
 		return {};
