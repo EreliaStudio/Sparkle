@@ -109,4 +109,4 @@
 #include "ui/widget/workspace.hpp"
 #include "voxel/geometry.hpp"
 #include "voxel/mesher.hpp"
-#include "voxel/model.hpp"
+#include "voxel/model_view.hpp"

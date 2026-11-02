@@ -108,7 +108,7 @@ namespace
 		return {view.begin(), view.end()};
 	}
 
-	void expectEqual(const Model &a, const Model &b)
+	void expectEqual(const Geometry &a, const Geometry &b)
 	{
 		ASSERT_EQ(a.materialSlots().size(), b.materialSlots().size());
 		for (std::size_t i = 0; i < a.materialSlots().size(); ++i)
@@ -229,7 +229,7 @@ namespace
 		return visible / (resolution * resolution);
 	}
 
-	[[nodiscard]] float generatedBoundaryArea(const Model &model, Face face)
+	[[nodiscard]] float generatedBoundaryArea(const Geometry &model, Face face)
 	{
 		const auto verticesView = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto indexView = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -256,7 +256,7 @@ namespace
 		return area;
 	}
 
-	void expectShadowGeometryMatchesOpaque(const Model &model)
+	void expectShadowGeometryMatchesOpaque(const Geometry &model)
 	{
 		const auto visualVertices = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto visualIndices = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -274,7 +274,7 @@ namespace
 		}
 	}
 
-	[[nodiscard]] float shadowArea(const Model &model)
+	[[nodiscard]] float shadowArea(const Geometry &model)
 	{
 		const auto vertex = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
 		const auto index = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -304,7 +304,7 @@ namespace
 		return result;
 	}
 
-	void expectValidTriangles(const Model &model, const Geometry::SurfaceMesh &mesh, float opacity)
+	void expectValidTriangles(const Geometry &model, const Geometry::SurfaceMesh &mesh, float opacity)
 	{
 		const auto vertex = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
@@ -325,7 +325,7 @@ namespace
 		}
 	}
 
-	void expectNoShadowTrianglesOnPlane(const Model &model, Face face)
+	void expectNoShadowTrianglesOnPlane(const Geometry &model, Face face)
 	{
 		const auto vertex = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
 		const auto index = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -370,7 +370,7 @@ TEST(MesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrientatio
 		for (const auto orientation : Orientations)
 		{
 			SCOPED_TRACE(::testing::Message() << Names[i] << " orientation " << static_cast<unsigned>(orientation.horizontal) << "/" << static_cast<unsigned>(orientation.vertical));
-			const Model model = Mesher().bake(single(definition(shape, "stone_"), orientation));
+			const Geometry model = Mesher().bake(single(definition(shape, "stone_"), orientation));
 			EXPECT_EQ(model.opaqueMesh().indexCount(), ExpectedIndices[i]);
 			EXPECT_TRUE(model.transparentMesh().empty());
 			EXPECT_EQ(model.depthMesh().indexCount(), ExpectedIndices[i]);
@@ -387,7 +387,7 @@ TEST(MesherGeometry, AdjacentCubesHaveNoInternalShadowFacesInAnyDirection)
 	for (const Face face : Faces)
 	{
 		SCOPED_TRACE(static_cast<unsigned>(face));
-		const Model model = Mesher().bake(pair(definition(cube, "source_"), {}, definition(cube, "other_"), {}, face));
+		const Geometry model = Mesher().bake(pair(definition(cube, "source_"), {}, definition(cube, "other_"), {}, face));
 		EXPECT_EQ(model.opaqueMesh().indexCount(), 60u);
 		EXPECT_EQ(model.depthMesh().indexCount(), 60u);
 		EXPECT_NEAR(shadowArea(model), 10.0f, 1.0e-5f);
@@ -404,7 +404,7 @@ TEST(MesherGeometry, AirGapPreservesBothIndependentCubeShadowSurfaces)
 	builder.bind(collection({stone}));
 	builder.set({0, 0, 0}, 1);
 	builder.set({2, 0, 0}, 1);
-	const Model model = Mesher().bake(builder.build());
+	const Geometry model = Mesher().bake(builder.build());
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 72u);
 	EXPECT_NEAR(shadowArea(model), 12.0f, 1.0e-5f);
 	expectShadowGeometryMatchesOpaque(model);
@@ -414,7 +414,7 @@ TEST(MesherGeometry, HalfHeightSlabClipsCubeShadowBoundary)
 {
 	const auto cube = definition(fixture("cube"), "source_");
 	const auto slab = definition(fixture("slab"), "blocker_");
-	const Model model = Mesher().bake(pair(cube, {}, slab, {}, Face::PositiveX));
+	const Geometry model = Mesher().bake(pair(cube, {}, slab, {}, Face::PositiveX));
 	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
 	EXPECT_NEAR(shadowArea(model), 9.0f, 1.0e-5f);
 	expectValidTriangles(model, model.opaqueMesh(), 1.0f);
@@ -427,7 +427,7 @@ TEST(MesherGeometry, MixedMaterialOpacityCastsOnlyOpaqueFaces)
 	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
 	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
 	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});
-	const Model model = Mesher().bake(single(Definition(fixture("cube"), std::move(mapping))));
+	const Geometry model = Mesher().bake(single(Definition(fixture("cube"), std::move(mapping))));
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 12u);
 	EXPECT_EQ(model.transparentMesh().indexCount(), 24u);
 	EXPECT_EQ(model.depthMesh().indexCount(), 12u);
@@ -443,7 +443,7 @@ TEST(MesherGeometry, TransparentNeighborDoesNotOccludeOpaqueShadow)
 	const Shape cube = fixture("cube");
 	const auto stone = definition(cube, "stone_");
 	const auto glass = definition(cube, "glass_", 0.5f);
-	const Model model = Mesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
+	const Geometry model = Mesher().bake(pair(stone, {}, glass, {}, Face::PositiveX));
 	EXPECT_EQ(model.opaqueMesh().indexCount(), 36u);
 	EXPECT_EQ(model.transparentMesh().indexCount(), 30u);
 	EXPECT_NEAR(shadowArea(model), 6.0f, 1.0e-5f);
@@ -456,7 +456,7 @@ TEST(MesherGeometry, TransparentNeighborDoesNotOccludeOpaqueShadow)
 TEST(MesherGeometry, TransparentNeighborsRetainInternalFacesWithoutShadows)
 {
 	const auto glass = definition(fixture("cube"), "glass_", 0.5f);
-	const Model model = Mesher().bake(pair(glass, {}, glass, {}, Face::PositiveX));
+	const Geometry model = Mesher().bake(pair(glass, {}, glass, {}, Face::PositiveX));
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
 	EXPECT_EQ(model.transparentMesh().indexCount(), 72u);
@@ -467,7 +467,7 @@ TEST(MesherGeometry, TransparentNeighborsRetainInternalFacesWithoutShadows)
 
 TEST(MesherGeometry, CompletelyTransparentGeometryProducesNoShadow)
 {
-	const Model model = Mesher().bake(single(definition(fixture("stair"), "invisible_", 0.0f)));
+	const Geometry model = Mesher().bake(single(definition(fixture("stair"), "invisible_", 0.0f)));
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
 	EXPECT_EQ(model.transparentMesh().indexCount(), 60u);
@@ -485,7 +485,7 @@ TEST(MesherGeometry, ExternalOpaqueBoundaryRemovesOnlyItsOwnShadowFace)
 	{
 		SCOPED_TRACE(static_cast<unsigned>(face));
 		mesher.onlyFace = face;
-		const Model model = mesher.bake(source);
+		const Geometry model = mesher.bake(source);
 		EXPECT_EQ(model.depthMesh().indexCount(), 30u);
 		EXPECT_NEAR(shadowArea(model), 5.0f, 1.0e-5f);
 		expectShadowGeometryMatchesOpaque(model);
@@ -581,7 +581,7 @@ TEST(MesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 				builder.set(neighbor(face), 2);
 			}
 			const Volume sealed = builder.build();
-			const Model closed = Mesher().bake(sealed);
+			const Geometry closed = Mesher().bake(sealed);
 			for (const auto &vertex : vertices(closed.opaqueMesh()))
 			{
 				EXPECT_FALSE(closed.materialSlots()[vertex.materialIndex].name.starts_with("source_"));
@@ -609,7 +609,7 @@ TEST(MesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
 	Volume::Builder volume({1, 1, 1});
 	volume.bind(collection({hidden, unused}));
 	volume.set({0, 0, 0}, 1);
-	const Model model = Mesher().bake(volume.build());
+	const Geometry model = Mesher().bake(volume.build());
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.transparentMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
@@ -622,7 +622,7 @@ TEST(MesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
 	const Shape cube = fixture("cube");
 	const auto stone = definition(cube, "z_");
 	const auto other = definition(cube, "a_");
-	const Model model = Mesher().bake(pair(stone, {}, other, {}, Face::PositiveX));
+	const Geometry model = Mesher().bake(pair(stone, {}, other, {}, Face::PositiveX));
 	ASSERT_EQ(model.materialSlots().size(), 6u);
 	for (std::size_t i = 1; i < model.materialSlots().size(); ++i)
 	{
@@ -679,8 +679,8 @@ TEST(MesherTest, ModelsSharePublishedImmutableMeshData)
 {
 	const auto volume = single(definition(fixture("cube"), "source_"));
 	Mesher mesher;
-	const Model first = mesher.bake(volume);
-	const Model copy = first;
+	const Geometry first = mesher.bake(volume);
+	const Geometry copy = first;
 	EXPECT_EQ(&first.opaqueMesh().layout(), &copy.opaqueMesh().layout());
 	const auto other = mesher.bake(volume);
 	EXPECT_NE(&first.opaqueMesh().layout(), &other.opaqueMesh().layout());
@@ -709,7 +709,7 @@ TEST(MesherFixtures, EveryShapePairOrientationAndNeighborDirectionMatchesIndepen
 							definition(shapes[b], "blocker_"),
 							blockerOrientation,
 							face);
-						const Model model = mesher.bake(volume);
+						const Geometry model = mesher.bake(volume);
 						const float expected = sampledVisibleArea(shapes[s], sourceOrientation, shapes[b], blockerOrientation, face);
 						EXPECT_NEAR(generatedBoundaryArea(model, face), expected, 0.05f);
 						EXPECT_EQ(model.depthMesh().indexCount(), model.opaqueMesh().indexCount());
@@ -737,7 +737,7 @@ TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 		definition(blockerBuilder.build(), "blocker_"),
 		{},
 		Face::PositiveX);
-	const Model model = Mesher().bake(volume);
+	const Geometry model = Mesher().bake(volume);
 	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
 	const auto view = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 	const auto triangles = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -787,7 +787,7 @@ TEST(MesherMaterialIndices, BakeUsesLocalIndicesForOpaqueAndTranslucentGeometry)
 		ASSERT_LT(vertex.materialIndex, geometry.materialSlots().size());
 		EXPECT_EQ(geometry.materialSlot(vertex.materialIndex).name, "glass");
 	}
-	expectShadowGeometryMatchesOpaque(Model(geometry));
+	expectShadowGeometryMatchesOpaque(Geometry(geometry));
 	EXPECT_THROW((void)geometry.materialSlot(3), spk::Exception);
 }
 
