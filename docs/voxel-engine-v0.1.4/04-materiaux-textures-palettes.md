@@ -4,7 +4,7 @@
 
 ## 4. Matériaux, textures et palettes
 
-> IMPORTANT — Révision PR-08 : Model ne contient aucune palette ; seul Model::View gère les palettes individuelles. Le Mesher fournit un Voxel::Mesh ; Harmonizer fournit un MaterialLayout et une palette commune. Les exemples historiques Model::bind et Assembly::bind présents ci-dessous sont obsolètes, remplacés par le [chapitre 06](06-assemblies-scene.md).
+> IMPORTANT — Révision PR-08 : Model est immuable et ne contient aucune palette ; Model::View gère les palettes par occurrence. Le Mesher fournit un Voxel::Mesh ; Model::Builder::harmonize() unifie les slots sémantiques sans matériaux concrets. Les anciens exemples Model::bind et Assembly::bind sont obsolètes ; voir le [chapitre 06](06-assemblies-scene.md).
 
 ```mermaid
 classDiagram

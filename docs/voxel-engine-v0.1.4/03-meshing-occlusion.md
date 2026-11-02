@@ -106,4 +106,4 @@ Un cache partagé peut être interrogé simultanément ; sa **destruction** ou l
 
 ### 3.6 Voxel::Mesh et Voxel::Model
 
-Le Mesher fournit un Voxel::Mesh immuable contenant deux SurfaceMesh visuels, un ShadowMap::Mesh et la liste déterministe des slots de matériaux (nom et opacité), y compris ceux totalement occultés. Un offset peut être appliqué durant bake(volume, offset) ou ultérieurement via Mesher::offsetMaterialIndices. Un Voxel::Model possède ce Mesh et des Anchors sans palette. L'instance Model::View porte les palettes et les rotations. Le Harmonizer permet facultativement de réindexer une copie et de fournir une palette commune. Voir [chapitre 06](06-assemblies-scene.md).
+Le Mesher fournit un `Voxel::Mesh` immuable contenant deux `Mesh::SurfaceMesh`, un ShadowMap::Mesh et les slots sémantiques, y compris ceux occultés. Le `Model::Builder` crée les hiérarchies immuables et `harmonize()` réindexe les slots par nom et opacité, sans palette. Les `Model::View` possèdent palettes et rotations. Voir [chapitre 06](06-assemblies-scene.md).

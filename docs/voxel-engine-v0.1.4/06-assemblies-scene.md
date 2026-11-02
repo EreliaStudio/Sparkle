@@ -6,32 +6,28 @@
 
 ### 6.1 Voxel::Mesh
 
-Le Mesher fournit un Voxel::Mesh contenant les deux SurfaceMesh opaque et translucide, le ShadowMap::Mesh de profondeur, les noms et opacités des slots et un offset de materialIndex. La géométrie est immuable, partageable et indépendante des palettes. L'ancien mesh élémentaire Voxel::Mesh est renommé Voxel::SurfaceMesh.
+Le Mesher produit un `spk::Voxel::Mesh` immuable et partageable. Il contient deux `Mesh::SurfaceMesh` (opaque et translucide), un `ShadowMap::Mesh`, et ses slots sémantiques (nom, opacité, offset). Chaque vertex est un `Mesh::Vertex`. La géométrie ne contient aucune palette.
 
-### 6.2 Voxel::Model et Model::Anchor
+### 6.2 Model immutable, Model::Builder et Anchors
 
-Un Model possède UN Voxel::Mesh et une collection d'Anchors nommés ; aucune palette. Les slots sémantiques viennent du Mesher, pas d'un setMaterialSlot manuel. Chaque Anchor possède une matrice de repos rigide, un Model enfant facultatif et éventuellement le nom d'un Anchor du Model enfant pour aligner les pivots. addAnchor, removeAnchor, anchor, Anchor::bind(model, attachment) et Anchor::unbind construisent une hiérarchie. Les enfants sont copiés structurellement et conservent le partage des Meshes immuables.
+Un `Model` contient un Mesh et des Anchors nommés dans des données partagées `std::shared_ptr<const Data>`. Il ne propose aucun setter. `Model::Builder` possède les opérations `setMesh`, `addAnchor`, `removeAnchor`, `setAnchorTransform`, `bind`, `unbind`, `harmonize`, `build`. Une construction terminée ne modifie jamais un Model publié.
+
+Chaque Anchor possède un repère rigide et éventuellement un Model enfant immuable partagé. Le nom dans le parent est obligatoire et unique. L'argument `attachment` de `Builder::bind(name, child, attachment)` désigne un Anchor du Model enfant ; sa valeur par défaut `Anchor::NoAttachmentPoint = ""` signifie que l'origine du Model enfant sert de pivot.
 
 ### 6.3 Model::View
 
-Chaque View représente une instance indépendante d'une hiérarchie. Elle gère les palettes par occurrence, et les rotations des Anchors (pas leurs translations animables). setPalette(palette, Self|Recursive) applique une palette au Model racine seul ou récursivement ; setPalette(anchorName, palette, ...) cible un enfant. Les palettes sont validées de façon transactionnelle. Les Views peuvent avoir autant de palettes indépendantes que de Models.
+Une View représente une instance indépendante, avec ses propres palettes, rotations de joints et transformation globale. Les palettes sont validées transactionnellement et peuvent être propres à chaque Model tant que l'harmonisation n'est pas demandée.
 
-Pour un parent et un enfant, la transformation finale est :
+La transformation d'un enfant est `M_child = M_parent * A_parent * R_joint * inverse(A_child)` si un point d'attache enfant est spécifié ; sinon, la dernière opération d'inversion est absente.
 
-    M_child = M_parent * A_parent * R_joint * inverse(A_child)
+Les chemins d'Anchors utilisent `Model::Anchor::Path = std::vector<std::string>`, avec des segments explicites, sans décodage de `/`. La recherche courte par nom est acceptée seulement lorsqu'elle est non ambiguë. `View::AnchorHandle` est attaché à sa View et devient invalide lors de sa destruction, de son déplacement ou de son remplacement.
 
-A_parent est le repère de repos du joint parent, R_joint sa rotation par View et A_child le point d'attache du Model enfant. La position du joint reste cohérente dans le repère parent. setTransform déplace le personnage entier ; visit fournit les Models, palettes et matrices aux futures captures de rendu.
+### 6.4 Model::Builder::harmonize()
 
-Les chemins d'Anchors sont un simple alias `Model::Anchor::Path = std::vector<std::string>` : `Model::Anchor::Path{"leftShoulder", "elbow"}`. Les segments sont distincts ; aucun caractère, y compris `/`, n'est réservé comme séparateur. La recherche courte par nom est possible uniquement si le nom est unique dans toute la hiérarchie ; une ambiguïté déclenche une exception.
+L'appel explicite à `harmonize()` précède `build()`. Le Builder parcourt la hiérarchie et collecte les slots par nom et opacité. Un nom existant avec la même opacité réutilise l'indice global ; une opacité contradictoire provoque une exception. Les slots globaux sont triés de façon déterministe et chaque Mesh, y compris celui des enfants, est réindexé sans altérer les positions, UV, normales, triangles ou mesh de profondeur.
 
-`view.anchor(path)` fournit un `Model::View::AnchorHandle` lié à cette View, qui expose `setRotation`, `rotation`, `resetRotation` et `path`. Les opérations du handle échouent explicitement après destruction, déplacement ou réaffectation de sa View. Les accès aux palettes et rotations acceptent également des `Anchor::Path`. Aucun registre d'identifiants globaux n'est nécessaire.
-
-### 6.4 Model::Harmonizer
-
-Harmonizer::process(view) parcourt chaque Model et sa palette, crée des indices de matériaux communs, puis fournit un Model copié avec Meshes réindexés, une palette commune portant les Materials d'origine, et un MaterialLayout ordonné. Les noms de slots réutilisés avec des Materials différents sont distingués sans perte. L'atlas commun est vérifié : les palettes sources peuvent être indépendantes, mais la sortie harmonisée ne peut référencer plusieurs atlas albedo.
-
-Les UV, positions, normales, indices de triangles, mesh de profondeur et hiérarchie d'Anchors sont préservés. Les nouvelles palettes harmonisées doivent conserver exactement le MaterialLayout, sans insertion de noms supplémentaires qui décalerait les indices. Plusieurs Views peuvent partager ce Model harmonisé, avec des palettes et des animations différentes sans nouveau bake.
+L'harmonisation n'inspecte aucune palette ni Material concret : elle est strictement structurelle. Les Models enfants sont reconstruits en valeurs immuables ; les Models sources restent inchangés. Les Views de ce Model harmonisé peuvent utiliser des palettes différentes, mais chacune doit fournir exactement les clés du layout commun dans l'ordre attendu. Le `Model::Harmonizer` indépendant a été supprimé.
 
 ### 6.5 Frontière du rendu
 
-La PR-08 définit le modèle CPU, la visite de la géométrie et les transformations d'articulation. Le VoxelRenderingSystem, les GPU buffers et les passes RenderCommand restent prévus dans les PR de rendu ultérieures.
+La PR-08 définit les Models CPU, les poses et la visite des occurrences. Les GPU buffers, la capture et les passes de rendu seront implémentés dans les PR dédiées.

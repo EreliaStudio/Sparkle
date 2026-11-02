@@ -4,7 +4,6 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,71 +24,75 @@ namespace spk::Voxel
 			Recursive
 		};
 
-		class Anchor
+		class Builder;
+
+		class Anchor final
 		{
+			friend class Builder;
+
 		public:
 			using Path = std::vector<std::string>;
+			static constexpr const char *NoAttachmentPoint = "";
 
 		private:
 			spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
-			std::unique_ptr<Model> _model;
-			std::optional<std::string> _attachment;
+			std::shared_ptr<const Model> _model;
+			std::string _attachment;
 
 		public:
 			explicit Anchor(spk::Matrix4x4 transform = spk::Matrix4x4::identity());
-			Anchor(const Anchor &other);
-			Anchor(Anchor &&other) noexcept;
-			Anchor &operator=(const Anchor &other);
-			Anchor &operator=(Anchor &&other) noexcept;
-			~Anchor();
-
 			[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
-			void setTransform(spk::Matrix4x4 transform);
-			void bind(const Model &model, std::optional<std::string> attachment = std::nullopt);
-			void unbind() noexcept;
-			[[nodiscard]] Model *model() noexcept;
 			[[nodiscard]] const Model *model() const noexcept;
-			[[nodiscard]] const std::optional<std::string> &attachment() const noexcept;
+			[[nodiscard]] const std::string &attachment() const noexcept;
 		};
 
 		class View;
-		class Harmonizer;
 
 	private:
-		spk::Voxel::Mesh _mesh;
-		std::map<std::string, Anchor, std::less<>> _anchors;
+		struct Data;
+		std::shared_ptr<const Data> _data;
+
+		explicit Model(std::shared_ptr<const Data> data) noexcept;
 
 	public:
-		Model() = default;
+		Model();
 		Model(spk::Voxel::Mesh mesh);
-		Model(
-			SurfaceMesh opaque,
-			SurfaceMesh translucent,
-			spk::ShadowMap::Mesh depth,
-			std::vector<Definition::Slot> slots,
-			std::uint32_t materialIndexOffset = 0);
 
 		[[nodiscard]] const spk::Voxel::Mesh &mesh() const noexcept;
-		[[nodiscard]] Model withMesh(spk::Voxel::Mesh mesh) const;
-		[[nodiscard]] const SurfaceMesh &opaqueMesh() const noexcept;
-		[[nodiscard]] const SurfaceMesh &transparentMesh() const noexcept;
+		[[nodiscard]] const spk::Voxel::Mesh::SurfaceMesh &opaqueMesh() const noexcept;
+		[[nodiscard]] const spk::Voxel::Mesh::SurfaceMesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
 		[[nodiscard]] std::uint32_t materialIndexOffset() const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
 
-		void addAnchor(std::string name, spk::Matrix4x4 transform = spk::Matrix4x4::identity());
-		void removeAnchor(std::string_view name);
 		[[nodiscard]] bool hasAnchor(std::string_view name) const noexcept;
-		[[nodiscard]] Anchor &anchor(std::string_view name);
 		[[nodiscard]] const Anchor &anchor(std::string_view name) const;
 		[[nodiscard]] const std::map<std::string, Anchor, std::less<>> &anchors() const noexcept;
 	};
 
+	class Model::Builder final
+	{
+	private:
+		spk::Voxel::Mesh _mesh;
+		std::map<std::string, Anchor, std::less<>> _anchors;
+
+	public:
+		Builder() = default;
+		explicit Builder(const Model &source);
+		void setMesh(spk::Voxel::Mesh mesh);
+		void addAnchor(std::string name, spk::Matrix4x4 transform = spk::Matrix4x4::identity());
+		void removeAnchor(std::string_view name);
+		void setAnchorTransform(std::string_view name, spk::Matrix4x4 transform);
+		void bind(std::string_view name, const Model &model, std::string attachment = Anchor::NoAttachmentPoint);
+		void unbind(std::string_view name);
+		void harmonize();
+		[[nodiscard]] Model build() const;
+	};
+
 	class Model::View final
 	{
-		friend class Model::Harmonizer;
 		using Path = Anchor::Path;
 
 	public:
@@ -169,47 +172,5 @@ namespace spk::Voxel
 		void setRotation(spk::Quaternion rotation);
 		[[nodiscard]] spk::Quaternion rotation() const;
 		void resetRotation();
-	};
-
-	class Model::Harmonizer final
-	{
-	public:
-		struct Result
-		{
-			Model model;
-			spk::Palette palette;
-			spk::Voxel::MaterialLayout materialLayout;
-		};
-
-	private:
-		using Path = View::Path;
-
-		struct Context
-		{
-			std::vector<std::string> names;
-			std::vector<spk::Material> materials;
-			std::vector<std::string> origins;
-			std::map<Path, std::vector<std::uint32_t>> remappings;
-			std::vector<std::string> reservedNames;
-		};
-
-		[[nodiscard]] static std::uint32_t _materialIndex(
-			const Definition::Slot &slot,
-			const spk::Material &material,
-			Context &context);
-		static void _normalize(Context &context);
-		[[nodiscard]] static spk::Palette _buildPalette(const Context &context);
-		static void _collect(
-			const View &view,
-			const Model &model,
-			Path &path,
-			Context &context);
-		static void _rewrite(
-			Model &model,
-			Path &path,
-			const Context &context);
-
-	public:
-		[[nodiscard]] Result process(const View &view) const;
 	};
 }

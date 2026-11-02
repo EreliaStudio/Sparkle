@@ -8,7 +8,7 @@
 
 namespace spk::Voxel
 {
-	void SurfaceMesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
+	void Mesh::SurfaceMesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
 	{
 		using Type = spk::VertexBuffer::Attribute::Type;
 		buffer.addAttribute(0, Type::Float, 3);
@@ -23,8 +23,8 @@ namespace spk::Voxel
 	}
 
 	Mesh::Mesh(
-		SurfaceMesh opaque,
-		SurfaceMesh translucent,
+		Mesh::SurfaceMesh opaque,
+		Mesh::SurfaceMesh translucent,
 		spk::ShadowMap::Mesh depth,
 		std::vector<Definition::Slot> slots,
 		std::uint32_t materialIndexOffset,
@@ -38,12 +38,12 @@ namespace spk::Voxel
 		}
 	}
 
-	const SurfaceMesh &Mesh::opaqueMesh() const noexcept
+	const Mesh::SurfaceMesh &Mesh::opaqueMesh() const noexcept
 	{
 		return _data->opaque;
 	}
 
-	const SurfaceMesh &Mesh::transparentMesh() const noexcept
+	const Mesh::SurfaceMesh &Mesh::transparentMesh() const noexcept
 	{
 		return _data->translucent;
 	}

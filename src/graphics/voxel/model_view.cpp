@@ -301,9 +301,9 @@ namespace spk::Voxel
 		{
 			child = child * spk::Matrix4x4::rotation(rotation->second);
 		}
-		if (anchor.attachment())
+		if (!anchor.attachment().empty())
 		{
-			child = child * inverseAnchor(anchor.model()->anchor(*anchor.attachment()).transform());
+			child = child * inverseAnchor(anchor.model()->anchor(anchor.attachment()).transform());
 		}
 		return child;
 	}

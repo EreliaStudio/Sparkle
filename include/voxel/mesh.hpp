@@ -13,26 +13,27 @@
 
 namespace spk::Voxel
 {
-	struct MeshVertex
-	{
-		spk::Vector3 position;
-		spk::Vector3 normal;
-		spk::Vector2 uv;
-		std::uint32_t materialIndex;
-	};
-
-	class SurfaceMesh final : public spk::Mesh<MeshVertex>
-	{
-	public:
-		class Builder final : public spk::Mesh<MeshVertex>::Builder<SurfaceMesh>
-		{
-		private:
-			void _setupAttributes(spk::VertexBuffer &buffer) override;
-		};
-	};
-
 	class Mesh final
 	{
+	public:
+		struct Vertex
+		{
+			spk::Vector3 position;
+			spk::Vector3 normal;
+			spk::Vector2 uv;
+			std::uint32_t materialIndex;
+		};
+
+		class SurfaceMesh final : public spk::Mesh<Vertex>
+		{
+		public:
+			class Builder final : public spk::Mesh<Vertex>::Builder<SurfaceMesh>
+			{
+			private:
+				void _setupAttributes(spk::VertexBuffer &buffer) override;
+			};
+		};
+
 	private:
 		struct Data
 		{

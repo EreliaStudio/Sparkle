@@ -109,7 +109,7 @@ namespace spk::Voxel
 		}
 
 		void emit(
-			SurfaceMesh::Builder &builder,
+			Mesh::SurfaceMesh::Builder &builder,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -142,8 +142,8 @@ namespace spk::Voxel
 			const Definition &definition,
 			Position position,
 			const SlotIndices &indices,
-			SurfaceMesh::Builder &opaque,
-			SurfaceMesh::Builder &translucent,
+			Mesh::SurfaceMesh::Builder &opaque,
+			Mesh::SurfaceMesh::Builder &translucent,
 			float tolerance)
 		{
 			const auto &slot = definition.slot(polygon.slotKey);
@@ -181,7 +181,7 @@ namespace spk::Voxel
 			return result;
 		}
 
-		MeshVertex shiftedVertex(MeshVertex vertex, std::uint32_t offset)
+		Mesh::Vertex shiftedVertex(Mesh::Vertex vertex, std::uint32_t offset)
 		{
 			if (vertex.materialIndex > std::numeric_limits<std::uint32_t>::max() - offset)
 			{
@@ -206,15 +206,15 @@ namespace spk::Voxel
 		}
 	}
 
-	SurfaceMesh Mesher::offsetMaterialIndices(const SurfaceMesh &source, std::uint32_t offset)
+	Mesh::SurfaceMesh Mesher::offsetMaterialIndices(const Mesh::SurfaceMesh &source, std::uint32_t offset)
 	{
 		if (offset == 0 || source.vertexCount() == 0)
 		{
 			return source;
 		}
-		const auto vertices = source.layout().vertexBuffer().cast<MeshVertex>();
+		const auto vertices = source.layout().vertexBuffer().cast<Mesh::Vertex>();
 		const auto indices = source.layout().indexBuffer().cast<std::uint32_t>();
-		SurfaceMesh::Builder builder;
+		Mesh::SurfaceMesh::Builder builder;
 		builder.reserve(vertices.size(), indices.size());
 		for (const auto &vertex : vertices)
 		{
@@ -251,14 +251,6 @@ namespace spk::Voxel
 			next);
 	}
 
-	Model Mesher::offsetMaterialIndices(const Model &model, std::uint32_t offset)
-	{
-		if (offset == 0)
-		{
-			return model;
-		}
-		return model.withMesh(offsetMaterialIndices(model.mesh(), offset));
-	}
 
 	Mesher::OutsideCell Mesher::outsideCell(Position, Face) const
 	{
@@ -288,8 +280,8 @@ namespace spk::Voxel
 	{
 		const auto slots = collectSlots(volume);
 		const auto indices = indexSlots(slots, materialIndexOffset);
-		SurfaceMesh::Builder opaque;
-		SurfaceMesh::Builder translucent;
+		Mesh::SurfaceMesh::Builder opaque;
+		Mesh::SurfaceMesh::Builder translucent;
 		const auto dimensions = volume.dimensions();
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -345,8 +337,8 @@ namespace spk::Voxel
 				}
 			}
 		}
-		SurfaceMesh opaqueMesh = std::move(opaque).build();
-		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) {
+		Mesh::SurfaceMesh opaqueMesh = std::move(opaque).build();
+		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Mesh::Vertex &vertex) {
 			return vertex.position;
 		});
 		return Mesh(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots, materialIndexOffset);

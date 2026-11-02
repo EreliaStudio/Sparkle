@@ -24,13 +24,13 @@ namespace
 	using Palette = spk::Palette;
 	using Material = spk::Material;
 	using Texture = spk::Texture;
-	using MeshVertex = spk::Voxel::MeshVertex;
+	using MeshVertex = spk::Voxel::Mesh::Vertex;
 
 	static_assert(std::is_same_v<decltype(std::declval<VoxelBuilder>().build()), spk::Palette>);
 
 	[[nodiscard]] Model model(std::initializer_list<Definition::Slot> slots)
 	{
-		return Model({}, {}, {}, std::vector<Definition::Slot>(slots));
+		return Model(spk::Voxel::Mesh({}, {}, {}, std::vector<Definition::Slot>(slots)));
 	}
 
 	[[nodiscard]] Material material(
@@ -100,13 +100,13 @@ namespace
 		return spk::Voxel::Mesher().bake(volume.build());
 	}
 
-	[[nodiscard]] std::vector<MeshVertex> vertices(const spk::Voxel::SurfaceMesh &mesh)
+	[[nodiscard]] std::vector<MeshVertex> vertices(const spk::Voxel::Mesh::SurfaceMesh &mesh)
 	{
 		const auto values = mesh.layout().vertexBuffer().cast<MeshVertex>();
 		return {values.begin(), values.end()};
 	}
 
-	[[nodiscard]] std::vector<std::uint32_t> indices(const spk::Voxel::SurfaceMesh &mesh)
+	[[nodiscard]] std::vector<std::uint32_t> indices(const spk::Voxel::Mesh::SurfaceMesh &mesh)
 	{
 		const auto values = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		return {values.begin(), values.end()};

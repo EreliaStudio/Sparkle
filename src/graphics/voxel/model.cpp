@@ -58,69 +58,21 @@ namespace spk::Voxel
 		}
 	}
 
+	struct Model::Data
+	{
+		spk::Voxel::Mesh mesh;
+		std::map<std::string, Anchor, std::less<>> anchors;
+	};
+
 	Model::Anchor::Anchor(spk::Matrix4x4 transform) :
 		_transform(transform)
 	{
 		validateAnchor(transform);
 	}
 
-	Model::Anchor::Anchor(const Anchor &other) :
-		_transform(other._transform),
-		_attachment(other._attachment)
-	{
-		if (other._model)
-		{
-			_model = std::make_unique<Model>(*other._model);
-		}
-	}
-
-	Model::Anchor::Anchor(Anchor &&other) noexcept = default;
-
-	Model::Anchor &Model::Anchor::operator=(const Anchor &other)
-	{
-		if (this != &other)
-		{
-			Anchor copy(other);
-			*this = std::move(copy);
-		}
-		return *this;
-	}
-
-	Model::Anchor &Model::Anchor::operator=(Anchor &&other) noexcept = default;
-
-	Model::Anchor::~Anchor() = default;
-
 	const spk::Matrix4x4 &Model::Anchor::transform() const noexcept
 	{
 		return _transform;
-	}
-
-	void Model::Anchor::setTransform(spk::Matrix4x4 transform)
-	{
-		validateAnchor(transform);
-		_transform = transform;
-	}
-
-	void Model::Anchor::bind(const Model &model, std::optional<std::string> attachment)
-	{
-		if (attachment && !model.hasAnchor(*attachment))
-		{
-			throw spk::Exception("Voxel Anchor: attachment does not exist: " + *attachment);
-		}
-		auto copy = std::make_unique<Model>(model);
-		_attachment.swap(attachment);
-		_model.swap(copy);
-	}
-
-	void Model::Anchor::unbind() noexcept
-	{
-		_model.reset();
-		_attachment.reset();
-	}
-
-	Model *Model::Anchor::model() noexcept
-	{
-		return _model.get();
 	}
 
 	const Model *Model::Anchor::model() const noexcept
@@ -128,44 +80,37 @@ namespace spk::Voxel
 		return _model.get();
 	}
 
-	const std::optional<std::string> &Model::Anchor::attachment() const noexcept
+	const std::string &Model::Anchor::attachment() const noexcept
 	{
 		return _attachment;
 	}
 
-	Model::Model(spk::Voxel::Mesh mesh) :
-		_mesh(std::move(mesh))
+	Model::Model(std::shared_ptr<const Data> data) noexcept :
+		_data(std::move(data))
 	{
 	}
 
-	Model::Model(
-		SurfaceMesh opaque,
-		SurfaceMesh translucent,
-		spk::ShadowMap::Mesh depth,
-		std::vector<Definition::Slot> slots,
-		std::uint32_t materialIndexOffset) :
-		Model(Mesh(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), materialIndexOffset))
+	Model::Model() :
+		_data(std::make_shared<const Data>())
+	{
+	}
+
+	Model::Model(spk::Voxel::Mesh mesh) :
+		_data(std::make_shared<const Data>(Data{std::move(mesh), {}}))
 	{
 	}
 
 	const spk::Voxel::Mesh &Model::mesh() const noexcept
 	{
-		return _mesh;
+		return _data->mesh;
 	}
 
-	Model Model::withMesh(spk::Voxel::Mesh mesh) const
-	{
-		Model copy(*this);
-		copy._mesh = std::move(mesh);
-		return copy;
-	}
-
-	const SurfaceMesh &Model::opaqueMesh() const noexcept
+	const spk::Voxel::Mesh::SurfaceMesh &Model::opaqueMesh() const noexcept
 	{
 		return mesh().opaqueMesh();
 	}
 
-	const SurfaceMesh &Model::transparentMesh() const noexcept
+	const spk::Voxel::Mesh::SurfaceMesh &Model::transparentMesh() const noexcept
 	{
 		return mesh().transparentMesh();
 	}
@@ -195,37 +140,15 @@ namespace spk::Voxel
 		return mesh().accepts(palette);
 	}
 
-	void Model::addAnchor(std::string name, spk::Matrix4x4 transform)
-	{
-		if (name.empty() || hasAnchor(name))
-		{
-			throw spk::Exception("Voxel Model: duplicate or empty anchor: " + name);
-		}
-		_anchors.emplace(std::move(name), Anchor(transform));
-	}
-
-	void Model::removeAnchor(std::string_view name)
-	{
-		if (_anchors.erase(std::string(name)) == 0)
-		{
-			throw spk::Exception("Voxel Model: missing anchor: " + std::string(name));
-		}
-	}
-
 	bool Model::hasAnchor(std::string_view name) const noexcept
 	{
-		return _anchors.find(name) != _anchors.end();
-	}
-
-	Model::Anchor &Model::anchor(std::string_view name)
-	{
-		return const_cast<Anchor &>(std::as_const(*this).anchor(name));
+		return _data->anchors.find(name) != _data->anchors.end();
 	}
 
 	const Model::Anchor &Model::anchor(std::string_view name) const
 	{
-		const auto found = _anchors.find(name);
-		if (found == _anchors.end())
+		const auto found = _data->anchors.find(name);
+		if (found == _data->anchors.end())
 		{
 			throw spk::Exception("Voxel Model: missing anchor: " + std::string(name));
 		}
@@ -234,6 +157,77 @@ namespace spk::Voxel
 
 	const std::map<std::string, Model::Anchor, std::less<>> &Model::anchors() const noexcept
 	{
-		return _anchors;
+		return _data->anchors;
+	}
+
+	Model::Builder::Builder(const Model &source) :
+		_mesh(source.mesh()),
+		_anchors(source.anchors())
+	{
+	}
+
+	void Model::Builder::setMesh(spk::Voxel::Mesh mesh)
+	{
+		_mesh = std::move(mesh);
+	}
+
+	void Model::Builder::addAnchor(std::string name, spk::Matrix4x4 transform)
+	{
+		if (name.empty() || _anchors.contains(name))
+		{
+			throw spk::Exception("Voxel Model: duplicate or empty anchor: " + name);
+		}
+		_anchors.emplace(std::move(name), Anchor(transform));
+	}
+
+	void Model::Builder::removeAnchor(std::string_view name)
+	{
+		if (_anchors.erase(std::string(name)) == 0)
+		{
+			throw spk::Exception("Voxel Model: missing anchor: " + std::string(name));
+		}
+	}
+
+	void Model::Builder::setAnchorTransform(std::string_view name, spk::Matrix4x4 transform)
+	{
+		validateAnchor(transform);
+		auto found = _anchors.find(name);
+		if (found == _anchors.end())
+		{
+			throw spk::Exception("Voxel Model: missing anchor: " + std::string(name));
+		}
+		found->second._transform = transform;
+	}
+
+	void Model::Builder::bind(std::string_view name, const Model &model, std::string attachment)
+	{
+		auto found = _anchors.find(name);
+		if (found == _anchors.end())
+		{
+			throw spk::Exception("Voxel Model: missing anchor: " + std::string(name));
+		}
+		if (!attachment.empty() && !model.hasAnchor(attachment))
+		{
+			throw spk::Exception("Voxel Anchor: attachment does not exist: " + attachment);
+		}
+		auto child = std::make_shared<const Model>(model);
+		found->second._model = std::move(child);
+		found->second._attachment = std::move(attachment);
+	}
+
+	void Model::Builder::unbind(std::string_view name)
+	{
+		auto found = _anchors.find(name);
+		if (found == _anchors.end())
+		{
+			throw spk::Exception("Voxel Model: missing anchor: " + std::string(name));
+		}
+		found->second._model.reset();
+		found->second._attachment.clear();
+	}
+
+	Model Model::Builder::build() const
+	{
+		return Model(std::make_shared<const Data>(Data{_mesh, _anchors}));
 	}
 }
