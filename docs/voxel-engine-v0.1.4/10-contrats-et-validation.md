@@ -4,14 +4,14 @@
 
 ## 8. Garanties transversales et frontières des interfaces
 
-> Révision PR-08 : `Voxel::Mesh` porte surfaces, profondeur et slots ; `Model` est immutable, `Model::Builder::attach/detach` configure les Anchors, `harmonize()` unifie leurs indices, et `Model::View::bind` lie les palettes par occurrence. Les anciens contrats `Model::bind`, `Model::Harmonizer` et `Assembly` ne font pas partie de cette API ; se référer au [chapitre 06](06-assemblies-scene.md).
+> Révision PR-08 : `Voxel::Geometry` porte surfaces, profondeur et slots ; `Model` est immutable, `Model::Builder::attach/detach` configure les Anchors, `harmonize()` unifie leurs indices, et `Model::View::bind` lie les palettes par occurrence. Les anciens contrats `Model::bind`, `Model::Harmonizer` et `Assembly` ne font pas partie de cette API ; se référer au [chapitre 06](06-assemblies-scene.md).
 
 ### 8.1 Propriété des données
 
 | Ressource | Propriétaire / représentation | Relation vers les utilisateurs |
 |---|---|---|
 | `Shape`, `Definition`, `Volume` | Données immuables, copies légères et partage interne | Réutilisables indépendamment du Builder d'origine |
-| `Voxel::Mesh` / `Voxel::Model` | Géométrie immuable partagée ; `Model::Builder` publie la hiérarchie | `isCompatible()` vérifie les slots ; `Model::Builder::attach/detach` compose les enfants sans modifier un modèle publié |
+| `Voxel::Geometry` / `Voxel::Model` | Géométrie immuable partagée ; `Model::Builder` publie la hiérarchie | `isCompatible()` vérifie les slots ; `Model::Builder::attach/detach` compose les enfants sans modifier un modèle publié |
 | `Shape::Instance` | Huit variantes géométriques immuables possédées par le `Shape::Data` partagé | Accès const par `Shape::instance(orientation)` ; aucune liaison externe |
 | `OcclusionCache` | Propriété de l'application ; table protégée | Liaison facultative et non propriétaire au Mesher ; absence = calcul direct |
 | `OcclusionResult` | Valeur immuable à données partagées | Survit à `OcclusionCache::clear()` si une copie existe |
@@ -106,11 +106,11 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 - **Ombres purement géométriques (option A validée) :** générer un modèle voxel dont un polygone de slot d'opacité `1` porte une albedo contenant des trous alpha, puis une albedo opaque différente, sans modifier les triangles. Vérifier que le `ShadowMap::Mesh` produit et l'ombre projetée sont **identiques** (triangle plein, même profondeur), bien que l'affichage du modèle puisse écarter les pixels transparents. Le rendu shadow map ne lit ni UV, ni matériau, ni texture ni alpha et ne fait aucun test/discard par alpha. Un polygone de slot d'opacité `< 1` reste absent du mesh d'ombre. Fournir ensuite explicitement un mesh d'ombre géométriquement ajouré via `ShadowMap::Contributor::bind()` et vérifier que seuls ses triangles projettent, sans cutout implicite. Changer uniquement albedo ou palette ne reconstruit pas une shadow map valide ; remplacer la géométrie par `bind()` invalide selon `ShadowMode`.
 - Vérifier que chaque Model garde jusqu'à deux meshes visuels, un mesh d'ombre de positions/indices et **tous** ses slots déclarés par les Definitions utilisées, même totalement occultés. Rejeter les collisions de noms avec opacités distinctes ; conserver un ordre lexicographique stable des indices. Rechanger de Palette ne provoque pas de rebake.
 
-**Contrat d'API PR-08 (mis à jour).** `Mesher::bake` produit `Voxel::Mesh`. `Model` est immutable et ne possède aucune palette. `Model::Builder` configure `setMesh`, `addAnchor`, `removeAnchor`, `setAnchorTransform`, `attach`, `detach`, `harmonize` et `build`. Les Anchors peuvent rester vides. Les palettes, rotations et transformations par occurrence appartiennent à `Model::View`, avec `bind` pour l'association des palettes. `Shape::Collection` et `Definition::Collection` remplacent les anciens Registry.
+**Contrat d'API PR-08 (mis à jour).** `Mesher::bake` produit `Voxel::Geometry`. `Model` est immutable et ne possède aucune palette. `Model::Builder` configure `setMesh`, `addAnchor`, `removeAnchor`, `setAnchorTransform`, `attach`, `detach`, `harmonize` et `build`. Les Anchors peuvent rester vides. Les palettes, rotations et transformations par occurrence appartiennent à `Model::View`, avec `bind` pour l'association des palettes. `Shape::Collection` et `Definition::Collection` remplacent les anciens Registry.
 
 **Assets, Materials, Palettes et Assemblies**
 
-- Un `Voxel::Mesh` sort du Mesher sans palette. `Model::View::bind(spk::Palette)` valide l'atlas et les slots de tous les Models concernés, et conserve une copie légère par occurrence. Une erreur de liaison ne remplace pas les palettes existantes. Deux Views peuvent partager les mêmes Meshes et utiliser des palettes et rotations distinctes.
+- Un `Voxel::Geometry` sort du Mesher sans palette. `Model::View::bind(spk::Palette)` valide l'atlas et les slots de tous les Models concernés, et conserve une copie légère par occurrence. Une erreur de liaison ne remplace pas les palettes existantes. Deux Views peuvent partager les mêmes Meshes et utiliser des palettes et rotations distinctes.
 - Une `spk::Palette` générique accepte les Materials sans `albedo` ; `spk::Voxel::Palette::Builder` exige `albedo` uniquement lors de l'ajout d'un Material. Ce Builder ne connaît aucun Model ni complétude ; son validateur compare les atlas à chaque ajout et son `build()` est le `build()` générique. Chaque `Model` vérifie via `isCompatible` seulement la présence de ses slots, y compris totalement occultés. Aucune palette n'enregistre l'opacité. Deux Models peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Model restent rejetés par le Mesher.
 
 - Deux `Asset::Manager::load<T>(id, config)` avec type, identifiant et JSON structurel identiques retournent la même référence, indépendamment de l'ordre textuel des clés JSON ; une configuration 16×16 et une 8×8 donnent deux assets distincts. L'absence de configuration équivaut à un **objet JSON vide**, et non à `Null`.

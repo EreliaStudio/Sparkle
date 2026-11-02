@@ -39,8 +39,8 @@ namespace spk::Voxel
 		void detachCache() noexcept;
 		void setTolerance(float tolerance);
 		[[nodiscard]] float tolerance() const noexcept;
-		[[nodiscard]] Mesh bake(const Volume &volume, std::uint32_t materialIndexOffset = 0) const;
-		[[nodiscard]] static Mesh::SurfaceMesh offsetMaterialIndices(const Mesh::SurfaceMesh &mesh, std::uint32_t offset);
-		[[nodiscard]] static Mesh offsetMaterialIndices(const Mesh &mesh, std::uint32_t offset);
+		[[nodiscard]] Geometry bake(const Volume &volume, std::uint32_t materialIndexOffset = 0) const;
+		[[nodiscard]] static Geometry::SurfaceMesh offsetMaterialIndices(const Geometry::SurfaceMesh &mesh, std::uint32_t offset);
+		[[nodiscard]] static Geometry offsetMaterialIndices(const Geometry &mesh, std::uint32_t offset);
 	};
 }

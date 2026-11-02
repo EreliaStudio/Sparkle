@@ -60,7 +60,7 @@ namespace spk::Voxel
 
 	struct Model::Data
 	{
-		spk::Voxel::Mesh mesh;
+		spk::Voxel::Geometry geometry;
 		std::map<std::string, Anchor, std::less<>> anchors;
 	};
 
@@ -95,49 +95,49 @@ namespace spk::Voxel
 	{
 	}
 
-	Model::Model(spk::Voxel::Mesh mesh) :
-		_data(std::make_shared<const Data>(Data{std::move(mesh), {}}))
+	Model::Model(spk::Voxel::Geometry geometry) :
+		_data(std::make_shared<const Data>(Data{std::move(geometry), {}}))
 	{
 	}
 
-	const spk::Voxel::Mesh &Model::mesh() const noexcept
+	const spk::Voxel::Geometry &Model::geometry() const noexcept
 	{
-		return _data->mesh;
+		return _data->geometry;
 	}
 
-	const spk::Voxel::Mesh::SurfaceMesh &Model::opaqueMesh() const noexcept
+	const spk::Voxel::Geometry::SurfaceMesh &Model::opaqueMesh() const noexcept
 	{
-		return mesh().opaqueMesh();
+		return geometry().opaqueMesh();
 	}
 
-	const spk::Voxel::Mesh::SurfaceMesh &Model::transparentMesh() const noexcept
+	const spk::Voxel::Geometry::SurfaceMesh &Model::transparentMesh() const noexcept
 	{
-		return mesh().transparentMesh();
+		return geometry().transparentMesh();
 	}
 
 	const spk::ShadowMap::Mesh &Model::depthMesh() const noexcept
 	{
-		return mesh().depthMesh();
+		return geometry().depthMesh();
 	}
 
 	const std::vector<Definition::Slot> &Model::materialSlots() const noexcept
 	{
-		return mesh().materialSlots();
+		return geometry().materialSlots();
 	}
 
 	std::uint32_t Model::materialIndexOffset() const noexcept
 	{
-		return mesh().materialIndexOffset();
+		return geometry().materialIndexOffset();
 	}
 
 	const Definition::Slot &Model::materialSlot(std::uint32_t index) const
 	{
-		return mesh().materialSlot(index);
+		return geometry().materialSlot(index);
 	}
 
 	bool Model::isCompatible(const spk::Palette &palette) const noexcept
 	{
-		return mesh().isCompatible(palette);
+		return geometry().isCompatible(palette);
 	}
 
 	bool Model::hasAnchor(std::string_view name) const noexcept
@@ -161,14 +161,14 @@ namespace spk::Voxel
 	}
 
 	Model::Builder::Builder(const Model &source) :
-		_mesh(source.mesh()),
+		_geometry(source.geometry()),
 		_anchors(source.anchors())
 	{
 	}
 
-	void Model::Builder::setMesh(spk::Voxel::Mesh mesh)
+	void Model::Builder::setGeometry(spk::Voxel::Geometry geometry)
 	{
-		_mesh = std::move(mesh);
+		_geometry = std::move(geometry);
 	}
 
 	void Model::Builder::addAnchor(std::string name, spk::Matrix4x4 transform)
@@ -228,6 +228,6 @@ namespace spk::Voxel
 
 	Model Model::Builder::build() const
 	{
-		return Model(std::make_shared<const Data>(Data{_mesh, _anchors}));
+		return Model(std::make_shared<const Data>(Data{_geometry, _anchors}));
 	}
 }

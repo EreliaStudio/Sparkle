@@ -200,7 +200,7 @@ Le `spk::Palette::Builder` accepte facultativement une fonction de validation (`
 
 `spk::Voxel::Palette::Builder` est la spécialisation légère, dérivée de `spk::Palette::Builder`. **`spk::Voxel::Palette` est un namespace, pas un type de palette distinct.** Les règles voxel sont : chaque Material doit posséder un rôle `albedo` valide et tous les Materials doivent référencer **un seul atlas `albedo`**, quelles que soient les passes opaque/translucide et les sections UV. Ces règles sont vérifiées **à chaque `setMaterial()`** ; une erreur produit `spk::Exception` immédiatement, sans modifier le Builder. `build()` est la méthode **héritée** de `spk::Palette::Builder`, sans vérification additionnelle, et renvoie simplement un `spk::Palette`.
 
-**L'opacité n'est stockée dans aucune palette.** `Voxel::Definition` la définit et `Voxel::Mesh` la conserve dans ses slots. `Model::isCompatible(palette)` et `Mesh::isCompatible(palette)` vérifient la compatibilité ; `Model::View::bind(palette)` effectue la validation au moment de l'association d'une palette. Un Mesh harmonisé exige exactement les noms de slots et leur ordre dans la palette ; un Mesh non harmonisé exige la présence de ses noms de slots, mais accepte des matériaux supplémentaires.
+**L'opacité n'est stockée dans aucune palette.** `Voxel::Definition` la définit et `Voxel::Geometry` la conserve dans ses slots. `Model::isCompatible(palette)` et `Mesh::isCompatible(palette)` vérifient la compatibilité ; `Model::View::bind(palette)` effectue la validation au moment de l'association d'une palette. Un Mesh harmonisé exige exactement les noms de slots et leur ordre dans la palette ; un Mesh non harmonisé exige la présence de ses noms de slots, mais accepte des matériaux supplémentaires.
 
 **Exemple de liaison de palette à une instance :**
 
@@ -210,7 +210,7 @@ builder.setMaterial("stone", stoneMaterial);
 builder.setMaterial("glass", glassMaterial); // Même atlas albedo.
 const spk::Palette palette = builder.build();
 
-spk::Voxel::Mesh mesh = mesher.bake(volume);
+spk::Voxel::Geometry mesh = mesher.bake(volume);
 spk::Voxel::Model model(mesh);
 spk::Voxel::Model::View view(model);
 view.bind(palette);

@@ -32,22 +32,22 @@ namespace spk::Voxel
 			}
 		}
 
-		[[nodiscard]] Mesh::SurfaceMesh remapSurface(
-			const Mesh::SurfaceMesh &source,
-			const Mesh &mesh,
+		[[nodiscard]] Geometry::SurfaceMesh remapSurface(
+			const Geometry::SurfaceMesh &source,
+			const Geometry &geometry,
 			const Indices &indices)
 		{
 			if (source.vertexCount() == 0)
 			{
 				return source;
 			}
-			const auto vertices = source.layout().vertexBuffer().cast<Mesh::Vertex>();
+			const auto vertices = source.layout().vertexBuffer().cast<Geometry::Vertex>();
 			const auto triangles = source.layout().indexBuffer().cast<std::uint32_t>();
-			Mesh::SurfaceMesh::Builder builder;
+			Geometry::SurfaceMesh::Builder builder;
 			builder.reserve(vertices.size(), triangles.size());
 			for (auto vertex : vertices)
 			{
-				vertex.materialIndex = indices.at(mesh.materialSlot(vertex.materialIndex).name);
+				vertex.materialIndex = indices.at(geometry.materialSlot(vertex.materialIndex).name);
 				(void)builder.addVertex(vertex);
 			}
 			for (const auto index : triangles)
@@ -57,15 +57,15 @@ namespace spk::Voxel
 			return std::move(builder).build();
 		}
 
-		[[nodiscard]] Mesh remapMesh(
-			const Mesh &mesh,
+		[[nodiscard]] Geometry remapGeometry(
+			const Geometry &geometry,
 			const std::vector<Definition::Slot> &slots,
 			const Indices &indices)
 		{
-			return Mesh(
-				remapSurface(mesh.opaqueMesh(), mesh, indices),
-				remapSurface(mesh.transparentMesh(), mesh, indices),
-				mesh.depthMesh(),
+			return Geometry(
+				remapSurface(geometry.opaqueMesh(), geometry, indices),
+				remapSurface(geometry.transparentMesh(), geometry, indices),
+				geometry.depthMesh(),
 				slots,
 				0,
 				true);
@@ -77,7 +77,7 @@ namespace spk::Voxel
 			const Indices &indices)
 		{
 			Model::Builder result;
-			result.setMesh(remapMesh(source.mesh(), slots, indices));
+			result.setGeometry(remapGeometry(source.geometry(), slots, indices));
 			for (const auto &[name, anchor] : source.anchors())
 			{
 				result.addAnchor(name, anchor.transform());

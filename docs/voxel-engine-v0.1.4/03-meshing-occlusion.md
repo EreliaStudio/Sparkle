@@ -104,6 +104,6 @@ Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`Occlus
 
 Un cache partagé peut être interrogé simultanément ; sa **destruction** ou le changement de liaison facultative du Mesher pendant un bake actif ne sont pas rendus sûrs par la seule synchronisation de `find/store/clear`.
 
-### 3.6 Voxel::Mesh et Voxel::Model
+### 3.6 Voxel::Geometry et Voxel::Model
 
-Le Mesher fournit un `Voxel::Mesh` immuable contenant deux `Mesh::SurfaceMesh`, un ShadowMap::Mesh et les slots sémantiques, y compris ceux occultés. Le `Model::Builder` crée les hiérarchies immuables et `harmonize()` réindexe les slots par nom et opacité, sans palette. Les `Model::View` possèdent palettes et rotations. Voir [chapitre 06](06-assemblies-scene.md).
+Le Mesher fournit un `Voxel::Geometry` immuable contenant deux `Geometry::SurfaceMesh`, un ShadowMap::Mesh et les slots sémantiques, y compris ceux occultés. Le `Model::Builder` crée les hiérarchies immuables et `harmonize()` réindexe les slots par nom et opacité, sans palette. Les `Model::View` possèdent palettes et rotations. Voir [chapitre 06](06-assemblies-scene.md).

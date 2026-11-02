@@ -10,7 +10,7 @@
 
 #include "graphics/palette.hpp"
 #include "math/matrix.hpp"
-#include "voxel/mesh.hpp"
+#include "voxel/geometry.hpp"
 
 namespace spk::Voxel
 {
@@ -55,11 +55,11 @@ namespace spk::Voxel
 
 	public:
 		Model();
-		Model(spk::Voxel::Mesh mesh);
+		Model(spk::Voxel::Geometry geometry);
 
-		[[nodiscard]] const spk::Voxel::Mesh &mesh() const noexcept;
-		[[nodiscard]] const spk::Voxel::Mesh::SurfaceMesh &opaqueMesh() const noexcept;
-		[[nodiscard]] const spk::Voxel::Mesh::SurfaceMesh &transparentMesh() const noexcept;
+		[[nodiscard]] const spk::Voxel::Geometry &geometry() const noexcept;
+		[[nodiscard]] const spk::Voxel::Geometry::SurfaceMesh &opaqueMesh() const noexcept;
+		[[nodiscard]] const spk::Voxel::Geometry::SurfaceMesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
 		[[nodiscard]] std::uint32_t materialIndexOffset() const noexcept;
@@ -74,13 +74,13 @@ namespace spk::Voxel
 	class Model::Builder final
 	{
 	private:
-		spk::Voxel::Mesh _mesh;
+		spk::Voxel::Geometry _geometry;
 		std::map<std::string, Anchor, std::less<>> _anchors;
 
 	public:
 		Builder() = default;
 		explicit Builder(const Model &source);
-		void setMesh(spk::Voxel::Mesh mesh);
+		void setGeometry(spk::Voxel::Geometry geometry);
 		void addAnchor(std::string name, spk::Matrix4x4 transform = spk::Matrix4x4::identity());
 		void removeAnchor(std::string_view name);
 		void setAnchorTransform(std::string_view name, spk::Matrix4x4 transform);

@@ -96,13 +96,13 @@ namespace
 		return builder.build();
 	}
 
-	[[nodiscard]] std::vector<Mesh::Vertex> vertices(const Mesh::SurfaceMesh &mesh)
+	[[nodiscard]] std::vector<Geometry::Vertex> vertices(const Geometry::SurfaceMesh &mesh)
 	{
-		const auto view = mesh.layout().vertexBuffer().cast<Mesh::Vertex>();
+		const auto view = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
 		return {view.begin(), view.end()};
 	}
 
-	[[nodiscard]] std::vector<std::uint32_t> indices(const Mesh::SurfaceMesh &mesh)
+	[[nodiscard]] std::vector<std::uint32_t> indices(const Geometry::SurfaceMesh &mesh)
 	{
 		const auto view = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		return {view.begin(), view.end()};
@@ -116,7 +116,7 @@ namespace
 			EXPECT_EQ(a.materialSlots()[i].name, b.materialSlots()[i].name);
 			EXPECT_FLOAT_EQ(a.materialSlots()[i].opacity, b.materialSlots()[i].opacity);
 		}
-		auto compare = [](const Mesh::SurfaceMesh &left, const Mesh::SurfaceMesh &right) {
+		auto compare = [](const Geometry::SurfaceMesh &left, const Geometry::SurfaceMesh &right) {
 			EXPECT_EQ(indices(left), indices(right));
 			const auto a = vertices(left);
 			const auto b = vertices(right);
@@ -231,7 +231,7 @@ namespace
 
 	[[nodiscard]] float generatedBoundaryArea(const Model &model, Face face)
 	{
-		const auto verticesView = model.opaqueMesh().layout().vertexBuffer().cast<Mesh::Vertex>();
+		const auto verticesView = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto indexView = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
 		const std::size_t axis = static_cast<std::size_t>(face) / 2;
 		const float plane = (static_cast<unsigned>(face) & 1U) ? 2.0f : 1.0f;
@@ -258,7 +258,7 @@ namespace
 
 	void expectShadowGeometryMatchesOpaque(const Model &model)
 	{
-		const auto visualVertices = model.opaqueMesh().layout().vertexBuffer().cast<Mesh::Vertex>();
+		const auto visualVertices = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto visualIndices = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
 		const auto shadowVertices = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
 		const auto shadowIndices = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
@@ -289,9 +289,9 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] float visualArea(const Mesh::SurfaceMesh &mesh)
+	[[nodiscard]] float visualArea(const Geometry::SurfaceMesh &mesh)
 	{
-		const auto vertex = mesh.layout().vertexBuffer().cast<Mesh::Vertex>();
+		const auto vertex = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		float result = 0.0f;
 		for (std::size_t i = 0; i < index.size(); i += 3)
@@ -304,9 +304,9 @@ namespace
 		return result;
 	}
 
-	void expectValidTriangles(const Model &model, const Mesh::SurfaceMesh &mesh, float opacity)
+	void expectValidTriangles(const Model &model, const Geometry::SurfaceMesh &mesh, float opacity)
 	{
-		const auto vertex = mesh.layout().vertexBuffer().cast<Mesh::Vertex>();
+		const auto vertex = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
 		ASSERT_EQ(index.size() % 3, 0u);
 		for (std::size_t i = 0; i < index.size(); i += 3)
@@ -511,7 +511,7 @@ TEST(MesherTest, CubeHasTwelveTrianglesAndMatchingDepthGeometryWithoutOpenGLCont
 	EXPECT_TRUE(model.transparentMesh().empty());
 	EXPECT_EQ(model.depthMesh().indexCount(), 36u);
 	const auto depth = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-	const auto visual = model.opaqueMesh().layout().vertexBuffer().cast<Mesh::Vertex>();
+	const auto visual = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 	ASSERT_EQ(depth.size(), visual.size());
 	for (std::size_t i = 0; i < depth.size(); ++i)
 	{
@@ -739,7 +739,7 @@ TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 		Face::PositiveX);
 	const Model model = Mesher().bake(volume);
 	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
-	const auto view = model.opaqueMesh().layout().vertexBuffer().cast<Mesh::Vertex>();
+	const auto view = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
 	const auto triangles = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
 	std::size_t visibleSource = 0;
 	for (std::size_t i = 0; i < triangles.size(); i += 3)
@@ -789,7 +789,7 @@ TEST(MesherMaterialOffset, BakeOffsetsOpaqueAndTransparentIndicesAndPreservesGeo
 	const Model shifted = Mesher().bake(volume, 27);
 	EXPECT_EQ(shifted.materialIndexOffset(), 27u);
 	EXPECT_EQ(shifted.materialSlots().size(), original.materialSlots().size());
-	auto compare = [](const Mesh::SurfaceMesh &first, const Mesh::SurfaceMesh &second) {
+	auto compare = [](const Geometry::SurfaceMesh &first, const Geometry::SurfaceMesh &second) {
 		const auto before = vertices(first);
 		const auto after = vertices(second);
 		ASSERT_EQ(before.size(), after.size());
@@ -852,7 +852,7 @@ TEST(MesherMaterialOffset, ExistingVisualMeshCanBeShiftedIndependently)
 
 TEST(MesherMaterialOffset, EmptyGeometryStillTracksOffsetAndSlots)
 {
-	const Mesh source({}, {}, {}, {{"hidden", 1.0f}, {"unseen", 0.4f}});
+	const Geometry source({}, {}, {}, {{"hidden", 1.0f}, {"unseen", 0.4f}});
 	const auto shifted = Mesher::offsetMaterialIndices(source, 42);
 	EXPECT_EQ(shifted.materialIndexOffset(), 42u);
 	EXPECT_EQ(shifted.materialSlot(42).name, "hidden");
@@ -877,8 +877,8 @@ TEST(MesherMaterialOffset, SlotCountOverflowIsRejectedDuringBake)
 
 TEST(MesherMaterialOffset, MeshVertexOverflowIsRejectedBeforeReturningResult)
 {
-	Mesh::SurfaceMesh::Builder builder;
-	const Mesh::Vertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, std::numeric_limits<std::uint32_t>::max()};
+	Geometry::SurfaceMesh::Builder builder;
+	const Geometry::Vertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, std::numeric_limits<std::uint32_t>::max()};
 	const auto a = builder.addVertex(vertex);
 	const auto b = builder.addVertex(vertex);
 	const auto c = builder.addVertex(vertex);

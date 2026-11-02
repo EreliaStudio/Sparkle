@@ -13,7 +13,7 @@
 
 namespace spk::Voxel
 {
-	class Mesh final
+	class Geometry final
 	{
 	public:
 		struct Vertex
@@ -48,8 +48,8 @@ namespace spk::Voxel
 		std::shared_ptr<const Data> _data;
 
 	public:
-		Mesh();
-		Mesh(
+		Geometry();
+		Geometry(
 			SurfaceMesh opaque,
 			SurfaceMesh translucent,
 			spk::ShadowMap::Mesh depth,

@@ -4,9 +4,9 @@
 
 ## 6. Composition et rendu
 
-### 6.1 Voxel::Mesh
+### 6.1 Voxel::Geometry
 
-Le Mesher produit un `spk::Voxel::Mesh` immuable et partageable. Il contient deux `Mesh::SurfaceMesh` (opaque et translucide), un `ShadowMap::Mesh`, et ses slots sémantiques (nom, opacité, offset). Chaque vertex est un `Mesh::Vertex`. La géométrie ne contient aucune palette.
+Le Mesher produit un `spk::Voxel::Geometry` immuable et partageable. Il contient deux `Geometry::SurfaceMesh` (opaque et translucide), un `ShadowMap::Mesh`, et ses slots sémantiques (nom, opacité, offset). Chaque vertex est un `Geometry::Vertex`. La géométrie ne contient aucune palette.
 
 ### 6.2 Model immutable, Model::Builder et Anchors
 

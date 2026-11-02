@@ -1,8 +1,8 @@
-# PR-08 — Voxel::Mesh, Model immutable, Model::Builder et Model::View
+# PR-08 — Voxel::Geometry, Model immutable, Model::Builder et Model::View
 
 ## Contrats publics
 
-- `Mesh::Vertex` et `Mesh::SurfaceMesh` sont des types imbriqués de `spk::Voxel::Mesh`.
+- `Geometry::Vertex` et `Geometry::SurfaceMesh` sont des types imbriqués de `spk::Voxel::Geometry`.
 - `Mesher::bake(volume, materialIndexOffset)` produit un Mesh immuable.
 - `Model` possède `shared_ptr<const Data>` ; seules ses données immuables sont accessibles.
 - `Model::Builder` configure le Mesh, les Anchors et leurs enfants via `setMesh`, `addAnchor`, `setAnchorTransform`, `removeAnchor`, `attach` et `detach`.

@@ -109,7 +109,7 @@ namespace spk::Voxel
 		}
 
 		void emit(
-			Mesh::SurfaceMesh::Builder &builder,
+			Geometry::SurfaceMesh::Builder &builder,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -142,8 +142,8 @@ namespace spk::Voxel
 			const Definition &definition,
 			Position position,
 			const SlotIndices &indices,
-			Mesh::SurfaceMesh::Builder &opaque,
-			Mesh::SurfaceMesh::Builder &translucent,
+			Geometry::SurfaceMesh::Builder &opaque,
+			Geometry::SurfaceMesh::Builder &translucent,
 			float tolerance)
 		{
 			const auto &slot = definition.slot(polygon.slotKey);
@@ -181,7 +181,7 @@ namespace spk::Voxel
 			return result;
 		}
 
-		Mesh::Vertex shiftedVertex(Mesh::Vertex vertex, std::uint32_t offset)
+		Geometry::Vertex shiftedVertex(Geometry::Vertex vertex, std::uint32_t offset)
 		{
 			if (vertex.materialIndex > std::numeric_limits<std::uint32_t>::max() - offset)
 			{
@@ -206,15 +206,15 @@ namespace spk::Voxel
 		}
 	}
 
-	Mesh::SurfaceMesh Mesher::offsetMaterialIndices(const Mesh::SurfaceMesh &source, std::uint32_t offset)
+	Geometry::SurfaceMesh Mesher::offsetMaterialIndices(const Geometry::SurfaceMesh &source, std::uint32_t offset)
 	{
 		if (offset == 0 || source.vertexCount() == 0)
 		{
 			return source;
 		}
-		const auto vertices = source.layout().vertexBuffer().cast<Mesh::Vertex>();
+		const auto vertices = source.layout().vertexBuffer().cast<Geometry::Vertex>();
 		const auto indices = source.layout().indexBuffer().cast<std::uint32_t>();
-		Mesh::SurfaceMesh::Builder builder;
+		Geometry::SurfaceMesh::Builder builder;
 		builder.reserve(vertices.size(), indices.size());
 		for (const auto &vertex : vertices)
 		{
@@ -227,7 +227,7 @@ namespace spk::Voxel
 		return std::move(builder).build();
 	}
 
-	Mesh Mesher::offsetMaterialIndices(const Mesh &mesh, std::uint32_t offset)
+	Geometry Mesher::offsetMaterialIndices(const Geometry &mesh, std::uint32_t offset)
 	{
 		if (offset == 0)
 		{
@@ -243,7 +243,7 @@ namespace spk::Voxel
 		{
 			throw spk::Exception("Voxel Mesher: material index offset overflow");
 		}
-		return Mesh(
+		return Geometry(
 			offsetMaterialIndices(mesh.opaqueMesh(), offset),
 			offsetMaterialIndices(mesh.transparentMesh(), offset),
 			mesh.depthMesh(),
@@ -280,12 +280,12 @@ namespace spk::Voxel
 		return _tolerance;
 	}
 
-	Mesh Mesher::bake(const Volume &volume, std::uint32_t materialIndexOffset) const
+	Geometry Mesher::bake(const Volume &volume, std::uint32_t materialIndexOffset) const
 	{
 		const auto slots = collectSlots(volume);
 		const auto indices = indexSlots(slots, materialIndexOffset);
-		Mesh::SurfaceMesh::Builder opaque;
-		Mesh::SurfaceMesh::Builder translucent;
+		Geometry::SurfaceMesh::Builder opaque;
+		Geometry::SurfaceMesh::Builder translucent;
 		const auto dimensions = volume.dimensions();
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -341,10 +341,10 @@ namespace spk::Voxel
 				}
 			}
 		}
-		Mesh::SurfaceMesh opaqueMesh = std::move(opaque).build();
-		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Mesh::Vertex &vertex) {
+		Geometry::SurfaceMesh opaqueMesh = std::move(opaque).build();
+		auto depth = spk::ShadowMap::Geometry::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
 		});
-		return Mesh(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots, materialIndexOffset);
+		return Geometry(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots, materialIndexOffset);
 	}
 }

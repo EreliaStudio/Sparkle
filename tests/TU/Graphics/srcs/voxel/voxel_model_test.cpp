@@ -15,9 +15,9 @@
 namespace
 {
 	using Model = spk::Voxel::Model;
-	using SurfaceMesh = spk::Voxel::Mesh::SurfaceMesh;
-	using Mesh = spk::Voxel::Mesh;
-	using Vertex = spk::Voxel::Mesh::Vertex;
+	using SurfaceMesh = spk::Voxel::Geometry::SurfaceMesh;
+	using Geometry = spk::Voxel::Geometry;
+	using Vertex = spk::Voxel::Geometry::Vertex;
 	using Matrix = spk::Matrix4x4;
 
 	[[nodiscard]] Model model(const std::string &slot, std::uint32_t index = 0)
@@ -28,7 +28,7 @@ namespace
 		const auto b = builder.addVertex(vertex);
 		const auto c = builder.addVertex(vertex);
 		builder.addTriangle(a, b, c);
-		return Model(Mesh(std::move(builder).build(), {}, {}, {{slot, 1.0f}}, index));
+		return Model(Geometry(std::move(builder).build(), {}, {}, {{slot, 1.0f}}, index));
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Texture &atlas, std::vector<std::string> names)
@@ -63,8 +63,8 @@ namespace
 TEST(VoxelModelTest, MeshCarriesGeometryAndMaterialSlots)
 {
 	const auto source = model("cloth", 5);
-	EXPECT_EQ(source.mesh().opaqueMesh().indexCount(), 3u);
-	EXPECT_TRUE(source.mesh().transparentMesh().empty());
+	EXPECT_EQ(source.geometry().opaqueMesh().indexCount(), 3u);
+	EXPECT_TRUE(source.geometry().transparentMesh().empty());
 	EXPECT_EQ(source.materialIndexOffset(), 5u);
 	EXPECT_EQ(source.materialSlot(5).name, "cloth");
 	EXPECT_THROW((void)source.materialSlot(4), spk::Exception);
@@ -103,7 +103,7 @@ TEST(VoxelModelTest, AnchorsRequireRigidFiniteMatrices)
 TEST(VoxelModelTest, BindingPreservesParentOnInvalidAttachment)
 {
 	Model::Builder arm;
-	arm.setMesh(model("skin").mesh());
+	arm.setGeometry(model("skin").geometry());
 	arm.addAnchor("shoulder", Matrix::translation(1, 0, 0));
 	Model::Builder torso;
 	torso.addAnchor("leftArm");
@@ -265,7 +265,7 @@ TEST(VoxelModelBuilderTest, HarmonizeRejectsOpacityConflictsAtomically)
 {
 	Model::Builder builder(model("cloth"));
 	builder.addAnchor("arm");
-	builder.attach("arm", Model(Mesh({}, {}, {}, {{"cloth", 0.5f}})));
+	builder.attach("arm", Model(Geometry({}, {}, {}, {{"cloth", 0.5f}})));
 	const Model before = builder.build();
 	EXPECT_THROW(builder.harmonize(), spk::Exception);
 	ASSERT_EQ(builder.build().materialSlots().size(), before.materialSlots().size());

@@ -1,4 +1,4 @@
-#include "voxel/mesh.hpp"
+#include "voxel/geometry.hpp"
 
 #include <iterator>
 #include <limits>
@@ -8,7 +8,7 @@
 
 namespace spk::Voxel
 {
-	void Mesh::SurfaceMesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
+	void Geometry::SurfaceMesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
 	{
 		using Type = spk::VertexBuffer::Attribute::Type;
 		buffer.addAttribute(0, Type::Float, 3);
@@ -17,14 +17,14 @@ namespace spk::Voxel
 		buffer.addAttribute(3, Type::UnsignedInt, 1, spk::VertexBuffer::Interpretation::Integer);
 	}
 
-	Mesh::Mesh() :
+	Geometry::Geometry() :
 		_data(std::make_shared<const Data>())
 	{
 	}
 
-	Mesh::Mesh(
-		Mesh::SurfaceMesh opaque,
-		Mesh::SurfaceMesh translucent,
+	Geometry::Geometry(
+		Geometry::SurfaceMesh opaque,
+		Geometry::SurfaceMesh translucent,
 		spk::ShadowMap::Mesh depth,
 		std::vector<Definition::Slot> slots,
 		std::uint32_t materialIndexOffset,
@@ -34,41 +34,41 @@ namespace spk::Voxel
 		if (!_data->slots.empty() &&
 			_data->slots.size() - 1 > std::numeric_limits<std::uint32_t>::max() - materialIndexOffset)
 		{
-			throw spk::Exception("Voxel Mesh: material index offset overflow");
+			throw spk::Exception("Voxel Geometry: material index offset overflow");
 		}
 	}
 
-	const Mesh::SurfaceMesh &Mesh::opaqueMesh() const noexcept
+	const Geometry::SurfaceMesh &Geometry::opaqueMesh() const noexcept
 	{
 		return _data->opaque;
 	}
 
-	const Mesh::SurfaceMesh &Mesh::transparentMesh() const noexcept
+	const Geometry::SurfaceMesh &Geometry::transparentMesh() const noexcept
 	{
 		return _data->translucent;
 	}
 
-	const spk::ShadowMap::Mesh &Mesh::depthMesh() const noexcept
+	const spk::ShadowMap::Mesh &Geometry::depthMesh() const noexcept
 	{
 		return _data->depth;
 	}
 
-	const std::vector<Definition::Slot> &Mesh::materialSlots() const noexcept
+	const std::vector<Definition::Slot> &Geometry::materialSlots() const noexcept
 	{
 		return _data->slots;
 	}
 
-	std::uint32_t Mesh::materialIndexOffset() const noexcept
+	std::uint32_t Geometry::materialIndexOffset() const noexcept
 	{
 		return _data->offset;
 	}
 
-	bool Mesh::isHarmonized() const noexcept
+	bool Geometry::isHarmonized() const noexcept
 	{
 		return _data->harmonized;
 	}
 
-	bool Mesh::isCompatible(const spk::Palette &palette) const noexcept
+	bool Geometry::isCompatible(const spk::Palette &palette) const noexcept
 	{
 		if (isHarmonized() && palette.materials().size() != materialSlots().size())
 		{
@@ -90,11 +90,11 @@ namespace spk::Voxel
 		return true;
 	}
 
-	const Definition::Slot &Mesh::materialSlot(std::uint32_t index) const
+	const Definition::Slot &Geometry::materialSlot(std::uint32_t index) const
 	{
 		if (index < materialIndexOffset() || index - materialIndexOffset() >= materialSlots().size())
 		{
-			throw spk::Exception("Voxel Mesh: material index out of range");
+			throw spk::Exception("Voxel Geometry: material index out of range");
 		}
 		return materialSlots()[index - materialIndexOffset()];
 	}
