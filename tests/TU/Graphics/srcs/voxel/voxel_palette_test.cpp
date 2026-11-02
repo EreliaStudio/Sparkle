@@ -61,7 +61,7 @@ namespace
 
 	[[nodiscard]] Definition definition(const spk::Voxel::Shape &shape, std::string name)
 	{
-		Definition::SlotMapping mapping;
+		Definition::SlotCollection mapping;
 		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, Definition::Slot{name, 1.0f});
@@ -71,7 +71,7 @@ namespace
 
 	[[nodiscard]] Model bakedSingleCube()
 	{
-		Definition::Registry::Builder definitions;
+		Definition::Collection::Builder definitions;
 		definitions.add(1, definition(cube(), "stone"));
 		spk::Voxel::Volume::Builder volume({1, 1, 1});
 		volume.bind(definitions.build());
@@ -82,7 +82,7 @@ namespace
 	[[nodiscard]] Model bakedOccludedCube()
 	{
 		const auto shape = cube();
-		Definition::Registry::Builder definitions;
+		Definition::Collection::Builder definitions;
 		definitions.add(1, definition(shape, "hidden"));
 		definitions.add(2, definition(shape, "outside"));
 		spk::Voxel::Volume::Builder volume({3, 3, 3});
@@ -507,10 +507,10 @@ TEST(VoxelPaletteTest, ModelViewRejectsMissingSlotsWithoutChangingBinding)
 	spk::Voxel::Model::View view(geometry);
 	const auto complete = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
 	const auto missing = palette({{"stone", material(atlas)}});
-	EXPECT_THROW(view.setPalette(missing), spk::Exception);
+	EXPECT_THROW(view.bind(missing), spk::Exception);
 	EXPECT_EQ(view.palette(), nullptr);
-	view.setPalette(complete);
-	EXPECT_THROW(view.setPalette(missing), spk::Exception);
+	view.bind(complete);
+	EXPECT_THROW(view.bind(missing), spk::Exception);
 	ASSERT_NE(view.palette(), nullptr);
 	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
 }
@@ -537,7 +537,7 @@ TEST(VoxelPaletteTest, ChangingViewPaletteDoesNotModifyBakedGeometry)
 	const auto before = vertices(source.opaqueMesh());
 	const auto beforeIndices = indices(source.opaqueMesh());
 	spk::Voxel::Model::View view(source, palette({{"stone", material(first)}}));
-	view.setPalette(palette({{"stone", material(second)}}));
+	view.bind(palette({{"stone", material(second)}}));
 	const auto after = vertices(view.model().opaqueMesh());
 	ASSERT_EQ(before.size(), after.size());
 	for (std::size_t i = 0; i < before.size(); ++i)
@@ -554,7 +554,7 @@ TEST(VoxelPaletteTest, ModelViewBindingRequiresFullyOccludedSlots)
 {
 	Texture atlas;
 	spk::Voxel::Model::View view(bakedOccludedCube());
-	EXPECT_THROW(view.setPalette(palette({{"outside", material(atlas)}})), spk::Exception);
-	view.setPalette(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
+	EXPECT_THROW(view.bind(palette({{"outside", material(atlas)}})), spk::Exception);
+	view.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
 	EXPECT_NE(view.palette(), nullptr);
 }

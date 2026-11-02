@@ -40,7 +40,7 @@ namespace spk::Voxel
 	Model::View::View(Model model, spk::Palette palette) :
 		View(std::move(model))
 	{
-		setPalette(std::move(palette));
+		bind(std::move(palette));
 	}
 
 	Model::View::View(const View &other) :
@@ -190,7 +190,7 @@ namespace spk::Voxel
 		std::map<Path, spk::Palette> &prepared) const
 	{
 		const Model &node = _node(path);
-		if (!node.mesh().accepts(palette))
+		if (!node.mesh().isCompatible(palette))
 		{
 			throw spk::Exception("Voxel View: palette is missing required material slots");
 		}
@@ -209,7 +209,7 @@ namespace spk::Voxel
 		}
 	}
 
-	void Model::View::setPalette(spk::Palette palette, PalettePropagation propagation)
+	void Model::View::bind(spk::Palette palette, PalettePropagation propagation)
 	{
 		(void)spk::Voxel::Palette::Builder(palette);
 		auto prepared = _palettes;
@@ -217,15 +217,15 @@ namespace spk::Voxel
 		_palettes.swap(prepared);
 	}
 
-	void Model::View::setPalette(
+	void Model::View::bind(
 		std::string_view anchorName,
 		spk::Palette palette,
 		PalettePropagation propagation)
 	{
-		setPalette(_findUnique(anchorName), std::move(palette), propagation);
+		bind(_findUnique(anchorName), std::move(palette), propagation);
 	}
 
-	void Model::View::setPalette(
+	void Model::View::bind(
 		const Anchor::Path &path,
 		spk::Palette palette,
 		PalettePropagation propagation)

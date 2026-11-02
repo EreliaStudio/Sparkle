@@ -34,15 +34,15 @@ namespace spk::Voxel
 		private:
 			spk::Vector3UInt _dimensions;
 			std::vector<std::uint32_t> _cells;
-			Definition::Registry _registry;
+			Definition::Collection _collection;
 			bool _consumed = false;
 
 			void _ensureActive() const;
 
 		public:
 			explicit Builder(spk::Vector3UInt dimensions);
-			void load(const Volume &volume);
-			void bind(const Definition::Registry &registry);
+			void copyFrom(const Volume &volume);
+			void bind(const Definition::Collection &collection);
 			void set(
 				spk::Vector3UInt position,
 				std::uint32_t definitionId,
@@ -57,7 +57,7 @@ namespace spk::Voxel
 		struct Data
 		{
 			spk::Vector3UInt dimensions;
-			Definition::Registry definitions;
+			Definition::Collection definitions;
 			std::vector<PackedCell::Storage> cells;
 		};
 

@@ -148,8 +148,8 @@ namespace
 			const auto path = std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (std::string(Names[i]) + ".json");
 			builder.addFromJSON(spk::JSON::Value::loadFromFile(path));
 			const Shape shape = builder.build();
-			Definition::SlotMapping opaque;
-			Definition::SlotMapping translucent;
+			Definition::SlotCollection opaque;
+			Definition::SlotCollection translucent;
 			for (const auto &slot : shape.slots())
 			{
 				opaque.emplace(slot.name, Definition::Slot{slot.name});

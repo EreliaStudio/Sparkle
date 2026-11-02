@@ -83,7 +83,7 @@ namespace spk::Voxel
 				result.addAnchor(name, anchor.transform());
 				if (anchor.model())
 				{
-					result.bind(name, rewrite(*anchor.model(), slots, indices), anchor.attachment());
+					result.attach(name, rewrite(*anchor.model(), slots, indices), anchor.attachment());
 				}
 			}
 			return result.build();

@@ -84,8 +84,8 @@ namespace spk::Voxel
 		void addAnchor(std::string name, spk::Matrix4x4 transform = spk::Matrix4x4::identity());
 		void removeAnchor(std::string_view name);
 		void setAnchorTransform(std::string_view name, spk::Matrix4x4 transform);
-		void bind(std::string_view name, const Model &model, std::string attachment = Anchor::NoAttachmentPoint);
-		void unbind(std::string_view name);
+		void attach(std::string_view name, const Model &model, std::string attachment = Anchor::NoAttachmentPoint);
+		void detach(std::string_view name);
 		void harmonize();
 		[[nodiscard]] Model build() const;
 	};
@@ -137,12 +137,12 @@ namespace spk::Voxel
 		[[nodiscard]] const spk::Palette *palette() const noexcept;
 		[[nodiscard]] const spk::Palette *palette(std::string_view anchorName) const;
 		[[nodiscard]] const spk::Palette *palette(const Anchor::Path &path) const;
-		void setPalette(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Recursive);
-		void setPalette(
+		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Recursive);
+		void bind(
 			std::string_view anchorName,
 			spk::Palette palette,
 			PalettePropagation propagation = PalettePropagation::Self);
-		void setPalette(
+		void bind(
 			const Anchor::Path &path,
 			spk::Palette palette,
 			PalettePropagation propagation = PalettePropagation::Self);

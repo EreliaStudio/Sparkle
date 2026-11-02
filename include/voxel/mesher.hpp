@@ -35,7 +35,8 @@ namespace spk::Voxel
 	public:
 		virtual ~Mesher() = default;
 
-		void bind(Occlusion::Cache *cache) noexcept;
+		void attachCache(Occlusion::Cache &cache) noexcept;
+		void detachCache() noexcept;
 		void setTolerance(float tolerance);
 		[[nodiscard]] float tolerance() const noexcept;
 		[[nodiscard]] Mesh bake(const Volume &volume, std::uint32_t materialIndexOffset = 0) const;

@@ -63,7 +63,7 @@ namespace spk::Voxel
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
 		[[nodiscard]] std::uint32_t materialIndexOffset() const noexcept;
 		[[nodiscard]] bool isHarmonized() const noexcept;
-		[[nodiscard]] bool accepts(const spk::Palette &palette) const noexcept;
+		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 	};
 }

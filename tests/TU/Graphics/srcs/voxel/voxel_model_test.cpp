@@ -107,13 +107,13 @@ TEST(VoxelModelTest, BindingPreservesParentOnInvalidAttachment)
 	arm.addAnchor("shoulder", Matrix::translation(1, 0, 0));
 	Model::Builder torso;
 	torso.addAnchor("leftArm");
-	torso.bind("leftArm", arm.build(), "shoulder");
+	torso.attach("leftArm", arm.build(), "shoulder");
 	const Model published = torso.build();
 	EXPECT_EQ(published.anchor("leftArm").attachment(), "shoulder");
 	ASSERT_NE(published.anchor("leftArm").model(), nullptr);
-	EXPECT_THROW(torso.bind("leftArm", arm.build(), "missing"), spk::Exception);
+	EXPECT_THROW(torso.attach("leftArm", arm.build(), "missing"), spk::Exception);
 	EXPECT_EQ(torso.build().anchor("leftArm").attachment(), "shoulder");
-	torso.unbind("leftArm");
+	torso.detach("leftArm");
 	EXPECT_EQ(torso.build().anchor("leftArm").model(), nullptr);
 	EXPECT_EQ(torso.build().anchor("leftArm").attachment(), Model::Anchor::NoAttachmentPoint);
 	EXPECT_NE(published.anchor("leftArm").model(), nullptr);
@@ -123,7 +123,7 @@ TEST(VoxelModelTest, CopiesShareImmutableHierarchies)
 {
 	Model::Builder builder;
 	builder.addAnchor("arm");
-	builder.bind("arm", model("skin"));
+	builder.attach("arm", model("skin"));
 	const Model original = builder.build();
 	const Model copy = original;
 	EXPECT_EQ(&original.anchors(), &copy.anchors());
@@ -139,11 +139,11 @@ TEST(VoxelModelViewTest, IndependentPalettesForEachModel)
 	spk::Texture atlas;
 	Model::Builder torsoBuilder(model("cloth"));
 	torsoBuilder.addAnchor("leftArm");
-	torsoBuilder.bind("leftArm", model("skin"));
+	torsoBuilder.attach("leftArm", model("skin"));
 	Model::View view(torsoBuilder.build());
 	EXPECT_FALSE(view.isRenderable());
-	view.setPalette(palette(atlas, {"cloth"}), Model::PalettePropagation::Self);
-	view.setPalette("leftArm", palette(atlas, {"skin"}));
+	view.bind(palette(atlas, {"cloth"}), Model::PalettePropagation::Self);
+	view.bind("leftArm", palette(atlas, {"skin"}));
 	EXPECT_TRUE(view.isRenderable());
 	ASSERT_NE(view.palette(), nullptr);
 	ASSERT_NE(view.palette("leftArm"), nullptr);
@@ -155,12 +155,12 @@ TEST(VoxelModelViewTest, RecursivePaletteBindingIsAtomic)
 	spk::Texture atlas;
 	Model::Builder torsoBuilder(model("cloth"));
 	torsoBuilder.addAnchor("leftArm");
-	torsoBuilder.bind("leftArm", model("skin"));
+	torsoBuilder.attach("leftArm", model("skin"));
 	Model::View view(torsoBuilder.build());
 	const auto complete = palette(atlas, {"cloth", "skin"});
-	view.setPalette(complete);
+	view.bind(complete);
 	EXPECT_TRUE(view.isRenderable());
-	EXPECT_THROW(view.setPalette(palette(atlas, {"cloth"})), spk::Exception);
+	EXPECT_THROW(view.bind(palette(atlas, {"cloth"})), spk::Exception);
 	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
 	EXPECT_EQ(&view.palette("leftArm")->materials(), &complete.materials());
 }
@@ -184,7 +184,7 @@ TEST(VoxelModelViewTest, ChildJointRotationKeepsAttachmentAligned)
 	torsoBuilder.addAnchor("shoulder", Matrix::translation(2, 0, 0));
 	Model::Builder armBuilder;
 	armBuilder.addAnchor("origin", Matrix::translation(1, 0, 0));
-	torsoBuilder.bind("shoulder", armBuilder.build(), "origin");
+	torsoBuilder.attach("shoulder", armBuilder.build(), "origin");
 	Model::View view(torsoBuilder.build());
 	view.setAnchorRotation("shoulder", spk::Quaternion::fromEuler({0, 0, 90}));
 	const auto rotation = Matrix::rotation(view.anchorRotation("shoulder"));
@@ -203,7 +203,7 @@ TEST(VoxelModelViewTest, AnimationsStayIndependentBetweenViews)
 {
 	Model::Builder torsoBuilder;
 	torsoBuilder.addAnchor("arm");
-	torsoBuilder.bind("arm", Model{});
+	torsoBuilder.attach("arm", Model{});
 	Model::View first(torsoBuilder.build());
 	Model::View second(torsoBuilder.build());
 	first.setAnchorRotation("arm", spk::Quaternion::fromEuler({0, 0, 45}));
@@ -218,8 +218,8 @@ TEST(VoxelModelViewTest, DuplicateAnchorNamesRejectAmbiguousLookup)
 	torsoBuilder.addAnchor("rightArm");
 	Model::Builder armBuilder;
 	armBuilder.addAnchor("elbow");
-	torsoBuilder.bind("leftArm", armBuilder.build());
-	torsoBuilder.bind("rightArm", armBuilder.build());
+	torsoBuilder.attach("leftArm", armBuilder.build());
+	torsoBuilder.attach("rightArm", armBuilder.build());
 	Model::View view(torsoBuilder.build());
 	EXPECT_THROW(view.setAnchorRotation("elbow", spk::Quaternion::identity()), spk::Exception);
 }
@@ -228,7 +228,7 @@ TEST(VoxelModelBuilderTest, HarmonizeCombinesSlotsAndPreservesSources)
 {
 	Model::Builder builder(model("cloth", 5));
 	builder.addAnchor("arm");
-	builder.bind("arm", model("skin"));
+	builder.attach("arm", model("skin"));
 	const Model before = builder.build();
 	builder.harmonize();
 	const Model result = builder.build();
@@ -251,8 +251,8 @@ TEST(VoxelModelBuilderTest, HarmonizeUnifiesSameNameAndOpacity)
 	Model::Builder builder(model("cloth", 5));
 	builder.addAnchor("left");
 	builder.addAnchor("right");
-	builder.bind("left", model("cloth", 8));
-	builder.bind("right", model("cloth", 2));
+	builder.attach("left", model("cloth", 8));
+	builder.attach("right", model("cloth", 2));
 	builder.harmonize();
 	const Model result = builder.build();
 	EXPECT_EQ(result.materialSlots().size(), 1u);
@@ -265,7 +265,7 @@ TEST(VoxelModelBuilderTest, HarmonizeRejectsOpacityConflictsAtomically)
 {
 	Model::Builder builder(model("cloth"));
 	builder.addAnchor("arm");
-	builder.bind("arm", Model(Mesh({}, {}, {}, {{"cloth", 0.5f}})));
+	builder.attach("arm", Model(Mesh({}, {}, {}, {{"cloth", 0.5f}})));
 	const Model before = builder.build();
 	EXPECT_THROW(builder.harmonize(), spk::Exception);
 	ASSERT_EQ(builder.build().materialSlots().size(), before.materialSlots().size());
@@ -277,7 +277,7 @@ TEST(VoxelModelBuilderTest, HarmonizeIsIdempotent)
 {
 	Model::Builder builder(model("cloth", 7));
 	builder.addAnchor("arm");
-	builder.bind("arm", model("skin", 3));
+	builder.attach("arm", model("skin", 3));
 	builder.harmonize();
 	const auto first = builder.build();
 	builder.harmonize();
@@ -306,8 +306,8 @@ TEST(VoxelModelViewTest, TypedPathsResolveRepeatedAnchorNames)
 	armBuilder.addAnchor("elbow");
 	torsoBuilder.addAnchor("leftShoulder");
 	torsoBuilder.addAnchor("rightShoulder");
-	torsoBuilder.bind("leftShoulder", armBuilder.build());
-	torsoBuilder.bind("rightShoulder", armBuilder.build());
+	torsoBuilder.attach("leftShoulder", armBuilder.build());
+	torsoBuilder.attach("rightShoulder", armBuilder.build());
 	Model::View view(torsoBuilder.build());
 	const auto left = Path{"leftShoulder", "elbow"};
 	const auto right = Path{"rightShoulder", "elbow"};
@@ -324,7 +324,7 @@ TEST(VoxelModelViewTest, AnchorHandleAppliesRotationOnlyToOwningView)
 	using Path = Model::Anchor::Path;
 	Model::Builder torsoBuilder;
 	torsoBuilder.addAnchor("arm");
-	torsoBuilder.bind("arm", Model{});
+	torsoBuilder.attach("arm", Model{});
 	Model::View first(torsoBuilder.build());
 	Model::View second(torsoBuilder.build());
 	auto handle = first.anchor(Path{"arm"});
@@ -343,11 +343,11 @@ TEST(VoxelModelViewTest, ShortNameLookupRequiresUniqueness)
 	Model::Builder armBuilder;
 	armBuilder.addAnchor("elbow");
 	torsoBuilder.addAnchor("leftArm");
-	torsoBuilder.bind("leftArm", armBuilder.build());
+	torsoBuilder.attach("leftArm", armBuilder.build());
 	Model::View single(torsoBuilder.build());
 	EXPECT_NO_THROW((void)single.anchor("elbow"));
 	torsoBuilder.addAnchor("rightArm");
-	torsoBuilder.bind("rightArm", armBuilder.build());
+	torsoBuilder.attach("rightArm", armBuilder.build());
 	Model::View duplicate(torsoBuilder.build());
 	EXPECT_THROW((void)duplicate.anchor("elbow"), spk::Exception);
 	EXPECT_NO_THROW((void)duplicate.anchor(Model::Anchor::Path{"leftArm", "elbow"}));
@@ -361,7 +361,7 @@ TEST(VoxelModelViewTest, ExplicitPathPreservesSlashInAnAnchorName)
 	armBuilder.addAnchor("elbow");
 	torsoBuilder.addAnchor("leftArm");
 	torsoBuilder.addAnchor("leftArm/elbow");
-	torsoBuilder.bind("leftArm", armBuilder.build());
+	torsoBuilder.attach("leftArm", armBuilder.build());
 	Model::View view(torsoBuilder.build());
 	const auto rotation = spk::Quaternion::fromEuler({0, 0, 33});
 	view.anchor(Path{"leftArm/elbow"}).setRotation(rotation);
@@ -375,19 +375,19 @@ TEST(VoxelModelViewTest, TypedPathsApplyIndependentChildPalettes)
 	spk::Texture atlas;
 	Model::Builder armBuilder(model("skin"));
 	armBuilder.addAnchor("elbow");
-	armBuilder.bind("elbow", model("metal"));
+	armBuilder.attach("elbow", model("metal"));
 	Model::Builder torsoBuilder;
 	torsoBuilder.addAnchor("leftArm");
 	torsoBuilder.addAnchor("rightArm");
-	torsoBuilder.bind("leftArm", armBuilder.build());
-	torsoBuilder.bind("rightArm", armBuilder.build());
+	torsoBuilder.attach("leftArm", armBuilder.build());
+	torsoBuilder.attach("rightArm", armBuilder.build());
 	Model::View view(torsoBuilder.build());
 	const auto skin = palette(atlas, {"skin"});
 	const auto metal = palette(atlas, {"metal"});
-	view.setPalette(Path{"leftArm"}, skin);
-	view.setPalette(Path{"rightArm"}, skin);
-	view.setPalette(Path{"leftArm", "elbow"}, metal);
-	view.setPalette(Path{"rightArm", "elbow"}, metal);
+	view.bind(Path{"leftArm"}, skin);
+	view.bind(Path{"rightArm"}, skin);
+	view.bind(Path{"leftArm", "elbow"}, metal);
+	view.bind(Path{"rightArm", "elbow"}, metal);
 	ASSERT_NE(view.palette(Path{"leftArm", "elbow"}), nullptr);
 	EXPECT_EQ(&view.palette(Path{"leftArm", "elbow"})->materials(), &metal.materials());
 	EXPECT_TRUE(view.isRenderable());

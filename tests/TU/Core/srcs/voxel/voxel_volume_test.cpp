@@ -16,7 +16,7 @@ namespace
 	using Volume = spk::Voxel::Volume;
 	using Cell = spk::Voxel::Cell;
 	using Definition = spk::Voxel::Definition;
-	using Registry = Definition::Registry;
+	using Collection = Definition::Collection;
 	using Shape = spk::Voxel::Shape;
 	using PackedCell = Volume::PackedCell;
 	using Position = spk::Vector3UInt;
@@ -25,7 +25,7 @@ namespace
 	static_assert(!std::is_default_constructible_v<Volume::Builder>);
 	static_assert(std::is_constructible_v<Volume::Builder, Position>);
 	static_assert(std::is_nothrow_copy_constructible_v<Volume>);
-	static_assert(std::is_nothrow_copy_constructible_v<Registry>);
+	static_assert(std::is_nothrow_copy_constructible_v<Collection>);
 	static_assert(std::is_same_v<decltype(std::declval<const Volume &>().at(Position{})), Cell>);
 	static_assert(std::is_same_v<decltype(std::declval<const Volume &>()[Position{}]), Cell>);
 	static_assert(std::is_same_v<decltype(std::declval<const Volume &>().atRaw(Position{})), PackedCell::Storage>);
@@ -37,9 +37,9 @@ namespace
 		return Definition(builder.build(), {{"surface", {"stone"}}});
 	}
 
-	Registry registry(std::initializer_list<std::pair<std::uint32_t, Definition>> entries)
+	Collection collection(std::initializer_list<std::pair<std::uint32_t, Definition>> entries)
 	{
-		Registry::Builder builder;
+		Collection::Builder builder;
 		for (const auto &[id, value] : entries)
 		{
 			builder.add(id, value);
@@ -73,16 +73,16 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder originalBuilder({2, 1, 1});
-		originalBuilder.bind(registry({{8, solid}}));
+		originalBuilder.bind(collection({{8, solid}}));
 		originalBuilder.set({1, 0, 0}, 8);
 		const Volume source = originalBuilder.build();
 
 		Volume::Builder mismatched({1, 1, 1});
-		EXPECT_THROW(mismatched.load(source), spk::Exception);
+		EXPECT_THROW(mismatched.copyFrom(source), spk::Exception);
 		EXPECT_TRUE(mismatched.build().at({0, 0, 0}).isAir());
 
 		Volume::Builder builder({2, 1, 1});
-		builder.load(source);
+		builder.copyFrom(source);
 		const Volume restored = builder.build();
 		EXPECT_EQ(restored.dimensions(), Position(2, 1, 1));
 		EXPECT_EQ(restored.atRaw({1, 0, 0}), source.atRaw({1, 0, 0}));
@@ -114,7 +114,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry({{42, solid}}));
+		builder.bind(collection({{42, solid}}));
 		builder.set({1, 0, 0}, 42, Horizontals[2], Verticals[1]);
 		const Volume volume = builder.build();
 		const Position position{1, 0, 0};
@@ -143,7 +143,7 @@ namespace
 		const Definition first = definition();
 		const Definition second = definition();
 		Volume::Builder builder({2, 3, 4});
-		builder.bind(registry({{12, first}, {47, second}}));
+		builder.bind(collection({{12, first}, {47, second}}));
 		builder.set({0, 0, 0}, 12);
 		builder.set({1, 2, 3}, 47, Horizontals[3], Verticals[1]);
 		const Volume volume = builder.build();
@@ -158,7 +158,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({4, 2, 1});
-		builder.bind(registry({{400, solid}}));
+		builder.bind(collection({{400, solid}}));
 		for (std::uint32_t i = 0; i < 8; ++i)
 		{
 			builder.set({i % 4, i / 4, 0}, 400, Horizontals[i % 4], Verticals[i / 4]);
@@ -184,7 +184,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry({{7, solid}, {200, solid}}));
+		builder.bind(collection({{7, solid}, {200, solid}}));
 		builder.set({0, 0, 0}, 7);
 		builder.set({1, 0, 0}, 200);
 		const Volume volume = builder.build();
@@ -198,7 +198,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry({{27, solid}}));
+		builder.bind(collection({{27, solid}}));
 		builder.set({0, 0, 0}, 27, Horizontals[2], Verticals[1]);
 		builder.set({1, 0, 0}, 0, Horizontals[3], Verticals[1]);
 		builder.erase({0, 0, 0});
@@ -217,7 +217,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({1, 1, 1});
-		builder.bind(registry({{101, solid}}));
+		builder.bind(collection({{101, solid}}));
 		builder.set({0, 0, 0}, 101, Horizontals[1], Verticals[1]);
 		const Volume volume = builder.build();
 		Cell detached = volume.at({0, 0, 0});
@@ -233,7 +233,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 2, 2});
-		builder.bind(registry({{17, solid}}));
+		builder.bind(collection({{17, solid}}));
 		builder.set({0, 0, 0}, 17);
 		const auto before = Volume::Builder(builder).build().atRaw({0, 0, 0});
 		EXPECT_THROW(builder.set({2, 0, 0}, 17), spk::Exception);
@@ -266,13 +266,13 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry({{72, solid}}));
+		builder.bind(collection({{72, solid}}));
 		builder.set({0, 0, 0}, 72);
 		const Volume original = builder.build();
 		const Volume copy = original;
 		EXPECT_EQ(original.atRaw({0, 0, 0}), copy.atRaw({0, 0, 0}));
 		Volume::Builder changed(original.dimensions());
-		changed.load(original);
+		changed.copyFrom(original);
 		changed.erase({0, 0, 0});
 		changed.set({1, 0, 0}, 72, Horizontals[2]);
 		const Volume updated = changed.build();
@@ -290,7 +290,7 @@ namespace
 		Volume::Builder builder({1, 1, 1});
 		const Volume volume = builder.build();
 		EXPECT_THROW(builder.build(), spk::Exception);
-		EXPECT_THROW(builder.load(volume), spk::Exception);
+		EXPECT_THROW(builder.copyFrom(volume), spk::Exception);
 		EXPECT_THROW(builder.erase({0, 0, 0}), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 0), spk::Exception);
 		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());
@@ -300,7 +300,7 @@ namespace
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry({{54, solid}}));
+		builder.bind(collection({{54, solid}}));
 		builder.set({1, 0, 0}, 54, Horizontals[2]);
 		const auto before = Volume::Builder(builder).build().atRaw({1, 0, 0});
 		EXPECT_THROW(builder.set({0, 0, 0}, 99), spk::Exception);
@@ -313,11 +313,11 @@ namespace
 		EXPECT_EQ(volume.at({1, 0, 0}).horizontalOrientation(), Horizontals[2]);
 	}
 
-	TEST(VoxelVolumeTest, SeparateVolumesPreserveExternalRegistryIDs)
+	TEST(VoxelVolumeTest, SeparateVolumesPreserveExternalCollectionIDs)
 	{
 		const Definition a = definition();
 		const Definition b = definition();
-		const Registry definitions = registry({{50, a}, {8, b}});
+		const Collection definitions = collection({{50, a}, {8, b}});
 		Volume::Builder first({2, 1, 1});
 		first.bind(definitions);
 		Volume::Builder second({2, 1, 1});
@@ -341,7 +341,7 @@ namespace
 		const Definition a = definition();
 		const Definition b = definition();
 		Volume::Builder builder({1, 1, 1});
-		builder.bind(registry({{100, a}, {200, b}}));
+		builder.bind(collection({{100, a}, {200, b}}));
 		builder.set({0, 0, 0}, 100);
 		builder.set({0, 0, 0}, 200);
 		builder.set({0, 0, 0}, 100, Horizontals[3]);
@@ -350,11 +350,11 @@ namespace
 		EXPECT_EQ(volume.at({0, 0, 0}).horizontalOrientation(), Horizontals[3]);
 	}
 
-	TEST(VoxelVolumeTest, SnapshotKeepsRegistryAliveAfterOriginalIsDestroyed)
+	TEST(VoxelVolumeTest, SnapshotKeepsCollectionAliveAfterOriginalIsDestroyed)
 	{
 		const Definition solid = definition();
 		Volume::Builder builder({1, 1, 1});
-		builder.bind(registry({{730, solid}}));
+		builder.bind(collection({{730, solid}}));
 		builder.set({0, 0, 0}, 730);
 		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);
@@ -364,13 +364,13 @@ namespace
 	{
 		const Definition solid = definition();
 		const Definition other = definition();
-		const Registry first = registry({{17, solid}});
+		const Collection first = collection({{17, solid}});
 		Volume::Builder builder({2, 1, 1});
 		builder.bind(first);
 		builder.set({0, 0, 0}, 17);
-		EXPECT_THROW(builder.bind(registry({{17, other}})), spk::Exception);
-		EXPECT_THROW(builder.bind(Registry()), spk::Exception);
-		builder.bind(registry({{17, solid}, {80, other}}));
+		EXPECT_THROW(builder.bind(collection({{17, other}})), spk::Exception);
+		EXPECT_THROW(builder.bind(Collection()), spk::Exception);
+		builder.bind(collection({{17, solid}, {80, other}}));
 		builder.set({1, 0, 0}, 80);
 		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.at({0, 0, 0}).definition() == solid);

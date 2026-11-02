@@ -19,7 +19,7 @@ spk::Voxel::Mesher mesher;
 auto uncachedModel = mesher.bake(volume); // Occlusion recalculée
 
 spk::Voxel::OcclusionCache occlusion;
-mesher.bind(&occlusion);                   // Optimisation facultative
+mesher.attachCache(occlusion);                   // Optimisation facultative
 auto cachedModel = mesher.bake(volume);
 ```
 

@@ -48,7 +48,7 @@ namespace
 
 	[[nodiscard]] Definition definition(const Shape &shape, const std::string &prefix, float opacity = 1.0f)
 	{
-		Definition::SlotMapping mapping;
+		Definition::SlotCollection mapping;
 		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, Definition::Slot{prefix + slot.name, opacity});
@@ -56,9 +56,9 @@ namespace
 		return Definition(shape, std::move(mapping));
 	}
 
-	[[nodiscard]] Definition::Registry registry(const std::vector<Definition> &definitions)
+	[[nodiscard]] Definition::Collection collection(const std::vector<Definition> &definitions)
 	{
-		Definition::Registry::Builder builder;
+		Definition::Collection::Builder builder;
 		for (std::size_t i = 0; i < definitions.size(); ++i)
 		{
 			builder.add(static_cast<std::uint32_t>(i + 1), definitions[i]);
@@ -69,7 +69,7 @@ namespace
 	[[nodiscard]] Volume single(const Definition &definition, Shape::Orientation orientation = {})
 	{
 		Volume::Builder builder({1, 1, 1});
-		builder.bind(registry({definition}));
+		builder.bind(collection({definition}));
 		builder.set({0, 0, 0}, 1, orientation.horizontal, orientation.vertical);
 		return builder.build();
 	}
@@ -90,7 +90,7 @@ namespace
 		Face face)
 	{
 		Volume::Builder builder({3, 3, 3});
-		builder.bind(registry({source, blocker}));
+		builder.bind(collection({source, blocker}));
 		builder.set({1, 1, 1}, 1, sourceOrientation.horizontal, sourceOrientation.vertical);
 		builder.set(neighbor(face), 2, blockerOrientation.horizontal, blockerOrientation.vertical);
 		return builder.build();
@@ -401,7 +401,7 @@ TEST(MesherGeometry, AirGapPreservesBothIndependentCubeShadowSurfaces)
 {
 	const auto stone = definition(fixture("cube"), "stone_");
 	Volume::Builder builder({3, 1, 1});
-	builder.bind(registry({stone}));
+	builder.bind(collection({stone}));
 	builder.set({0, 0, 0}, 1);
 	builder.set({2, 0, 0}, 1);
 	const Model model = Mesher().bake(builder.build());
@@ -423,7 +423,7 @@ TEST(MesherGeometry, HalfHeightSlabClipsCubeShadowBoundary)
 
 TEST(MesherGeometry, MixedMaterialOpacityCastsOnlyOpaqueFaces)
 {
-	Definition::SlotMapping mapping;
+	Definition::SlotCollection mapping;
 	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
 	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
 	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});
@@ -574,7 +574,7 @@ TEST(MesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 			const Shape cube = fixture("cube");
 			const Shape shape = fixture(name);
 			Volume::Builder builder({3, 3, 3});
-			builder.bind(registry({definition(shape, "source_"), definition(cube, "neighbor_")}));
+			builder.bind(collection({definition(shape, "source_"), definition(cube, "neighbor_")}));
 			builder.set({1, 1, 1}, 1, orientation.horizontal, orientation.vertical);
 			for (const Face face : Faces)
 			{
@@ -587,7 +587,7 @@ TEST(MesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 				EXPECT_FALSE(closed.materialSlots()[vertex.materialIndex].name.starts_with("source_"));
 			}
 			Volume::Builder opening(sealed.dimensions());
-			opening.load(sealed);
+			opening.copyFrom(sealed);
 			opening.erase(neighbor(Face::PositiveX));
 			const auto open = Mesher().bake(opening.build());
 			bool found = false;
@@ -607,7 +607,7 @@ TEST(MesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
 	const auto hidden = definition(builder.build(), "used_");
 	const auto unused = definition(fixture("cube"), "unused_");
 	Volume::Builder volume({1, 1, 1});
-	volume.bind(registry({hidden, unused}));
+	volume.bind(collection({hidden, unused}));
 	volume.set({0, 0, 0}, 1);
 	const Model model = Mesher().bake(volume.build());
 	EXPECT_TRUE(model.opaqueMesh().empty());
@@ -628,7 +628,7 @@ TEST(MesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
 	{
 		EXPECT_LT(model.materialSlots()[i - 1].name, model.materialSlots()[i].name);
 	}
-	Definition::SlotMapping same;
+	Definition::SlotCollection same;
 	for (const auto &slot : cube.slots())
 	{
 		same.emplace(slot.name, Definition::Slot{"unified", 1.0f});
@@ -653,13 +653,13 @@ TEST(MesherTest, CacheBindingAndDeterminismPreserveFullMeshPayload)
 	const auto baseline = mesher.bake(volume);
 	expectEqual(baseline, mesher.bake(volume));
 	Occlusion::Cache cache;
-	mesher.bind(&cache);
+	mesher.attachCache(cache);
 	expectEqual(baseline, mesher.bake(volume));
 	expectEqual(baseline, mesher.bake(volume));
 	Mesher another;
-	another.bind(&cache);
+	another.attachCache(cache);
 	expectEqual(baseline, another.bake(volume));
-	mesher.bind(nullptr);
+	mesher.detachCache();
 	expectEqual(baseline, mesher.bake(volume));
 }
 
@@ -780,7 +780,7 @@ TEST(MesherMaterialOffset, DefaultOffsetPreservesExistingIndices)
 
 TEST(MesherMaterialOffset, BakeOffsetsOpaqueAndTransparentIndicesAndPreservesGeometry)
 {
-	Definition::SlotMapping mapping;
+	Definition::SlotCollection mapping;
 	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
 	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
 	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});

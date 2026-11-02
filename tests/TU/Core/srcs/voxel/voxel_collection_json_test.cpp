@@ -22,15 +22,15 @@ namespace
 
 	static_assert(std::is_default_constructible_v<Shape::Builder>);
 	static_assert(!std::is_constructible_v<Shape::Builder, const spk::JSON::Value &>);
-	static_assert(std::is_default_constructible_v<Definition::Registry::Builder>);
-	static_assert(!std::is_constructible_v<Definition::Registry::Builder, const Shape::Registry &>);
+	static_assert(std::is_default_constructible_v<Definition::Collection::Builder>);
+	static_assert(!std::is_constructible_v<Definition::Collection::Builder, const Shape::Collection &>);
 	static_assert(!std::is_default_constructible_v<Volume::Builder>);
 	static_assert(std::is_constructible_v<Volume::Builder, spk::Vector3UInt>);
 	static_assert(!std::is_constructible_v<Volume::Builder, const Volume &>);
-	static_assert(!std::is_constructible_v<Volume::Builder, spk::Vector3UInt, const std::filesystem::path &, const Definition::Registry &>);
+	static_assert(!std::is_constructible_v<Volume::Builder, spk::Vector3UInt, const std::filesystem::path &, const Definition::Collection &>);
 	static_assert(std::is_default_constructible_v<Definition::Builder>);
-	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Registry &>);
-	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Registry &, const spk::JSON::Value &>);
+	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Collection &>);
+	static_assert(!std::is_constructible_v<Definition::Builder, const Shape::Collection &, const spk::JSON::Value &>);
 
 	class JSONFile
 	{
@@ -73,32 +73,32 @@ namespace
 		{"id":7,"data":{"shape":"slab","slots":{"side":{"name":"glass","opacity":0.75}}}}
 	]})";
 
-	Shape::Registry shapeRegistry()
+	Shape::Collection shapeCollection()
 	{
-		Shape::Registry::Builder builder;
+		Shape::Collection::Builder builder;
 		builder.load(JSONFile(Shapes).path());
 		return builder.build();
 	}
 
-	TEST(VoxelShapeRegistryTest, LoadsNamedShapesThroughJSONCatalog)
+	TEST(VoxelShapeCollectionTest, LoadsNamedShapesThroughJSONCatalog)
 	{
-		const Shape::Registry registry = shapeRegistry();
-		EXPECT_EQ(registry.size(), 2u);
-		EXPECT_TRUE(registry.contains("cube"));
-		EXPECT_TRUE(registry.contains("slab"));
-		EXPECT_EQ(registry["slab"].slot("side").name, "side");
-		EXPECT_EQ(&registry.at("cube"), &registry["cube"]);
-		EXPECT_THROW((void)registry["missing"], spk::Exception);
+		const Shape::Collection collection = shapeCollection();
+		EXPECT_EQ(collection.size(), 2u);
+		EXPECT_TRUE(collection.contains("cube"));
+		EXPECT_TRUE(collection.contains("slab"));
+		EXPECT_EQ(collection["slab"].slot("side").name, "side");
+		EXPECT_EQ(&collection.at("cube"), &collection["cube"]);
+		EXPECT_THROW((void)collection["missing"], spk::Exception);
 	}
 
-	TEST(VoxelShapeRegistryTest, UnknownIDReportsRequestedString)
+	TEST(VoxelShapeCollectionTest, UnknownIDReportsRequestedString)
 	{
-		const Shape::Registry registry = shapeRegistry();
-		EXPECT_FALSE(registry.contains("absent_shape"));
-		EXPECT_EQ(registry.tryGet("absent_shape"), nullptr);
+		const Shape::Collection collection = shapeCollection();
+		EXPECT_FALSE(collection.contains("absent_shape"));
+		EXPECT_EQ(collection.tryGet("absent_shape"), nullptr);
 		try
 		{
-			(void)registry["absent_shape"];
+			(void)collection["absent_shape"];
 			FAIL() << "Unknown Shape ID must throw";
 		} catch (const spk::Exception &exception)
 		{
@@ -106,32 +106,32 @@ namespace
 		}
 	}
 
-	TEST(VoxelShapeRegistryTest, SupportsProgrammaticAddAndRejectsDuplicateIDs)
+	TEST(VoxelShapeCollectionTest, SupportsProgrammaticAddAndRejectsDuplicateIDs)
 	{
-		Shape::Registry::Builder builder;
+		Shape::Collection::Builder builder;
 		Shape cube = Shape::Builder{}.build();
 		builder.add("cube", cube);
-		const Shape::Registry registry = builder.build();
-		EXPECT_TRUE(registry["cube"] == cube);
+		const Shape::Collection collection = builder.build();
+		EXPECT_TRUE(collection["cube"] == cube);
 		EXPECT_THROW(builder.add("cube", cube), spk::Exception);
 		EXPECT_THROW(builder.add("", cube), spk::Exception);
-		EXPECT_EQ(registry.size(), 1u);
+		EXPECT_EQ(collection.size(), 1u);
 	}
 
-	TEST(VoxelShapeRegistryTest, SupportsIndividualJSONCatalogElement)
+	TEST(VoxelShapeCollectionTest, SupportsIndividualJSONCatalogElement)
 	{
 		const JSONFile file(R"({"id":"single","data":{"slots":{},"polygons":[]}})");
-		Shape::Registry::Builder builder;
+		Shape::Collection::Builder builder;
 		builder.load(file.path());
-		const Shape::Registry registry = builder.build();
-		EXPECT_TRUE(registry.contains("single"));
-		EXPECT_TRUE(registry["single"].empty());
+		const Shape::Collection collection = builder.build();
+		EXPECT_TRUE(collection.contains("single"));
+		EXPECT_TRUE(collection["single"].empty());
 	}
 
-	TEST(VoxelShapeRegistryTest, EmptyJSONIDReportsMemberPath)
+	TEST(VoxelShapeCollectionTest, EmptyJSONIDReportsMemberPath)
 	{
 		const JSONFile file(R"({"id":"","data":{"slots":{},"polygons":[]}})");
-		Shape::Registry::Builder builder;
+		Shape::Collection::Builder builder;
 		try
 		{
 			builder.load(file.path());
@@ -143,20 +143,20 @@ namespace
 		}
 	}
 
-	TEST(VoxelShapeRegistryTest, RejectsDuplicateJSONEntries)
+	TEST(VoxelShapeCollectionTest, RejectsDuplicateJSONEntries)
 	{
 		const JSONFile file(R"({"elements":[
 			{"id":"same","data":{"slots":{},"polygons":[]}},
 			{"id":"same","data":{"slots":{},"polygons":[]}}
 		]})");
-		Shape::Registry::Builder builder;
+		Shape::Collection::Builder builder;
 		EXPECT_THROW(builder.load(file.path()), spk::Exception);
 		EXPECT_EQ(builder.build().size(), 1u);
 	}
 
 	TEST(VoxelDefinitionBuilderTest, UsesRegisteredShapeAndBuildsImmutableDefinitions)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
@@ -173,7 +173,7 @@ namespace
 
 	TEST(VoxelDefinitionBuilderTest, MissingShapeOrSlotsRejectBuild)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		Definition::Builder builder;
 		EXPECT_THROW((void)builder.build(), spk::Exception);
 		EXPECT_THROW(builder.setShape("missing"), spk::Exception);
@@ -185,22 +185,22 @@ namespace
 
 	TEST(VoxelDefinitionBuilderTest, FailedJSONParseLeavesPreviousStateIntact)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
 		builder.setSlots({{"face", {"original"}}});
 		const auto invalid = spk::JSON::Value::fromString(
 			R"({"shape":"absent","slots":{"face":"bad"}})");
-		EXPECT_THROW(builder.addFromJSON(invalid), spk::Exception);
+		EXPECT_THROW(builder.loadFromJSON(invalid), spk::Exception);
 		EXPECT_EQ(builder.build().semanticSlot("face"), "original");
 	}
 
-	TEST(VoxelDefinitionBuilderTest, RegistryBindingOutlivesOriginalRegistry)
+	TEST(VoxelDefinitionBuilderTest, CollectionBindingOutlivesOriginalCollection)
 	{
 		Definition::Builder builder;
 		{
-			const Shape::Registry shapes = shapeRegistry();
+			const Shape::Collection shapes = shapeCollection();
 			builder.bind(shapes);
 		}
 		builder.setShape("slab");
@@ -209,29 +209,29 @@ namespace
 		EXPECT_FLOAT_EQ(definition.slot("side").opacity, 0.75f);
 	}
 
-	TEST(VoxelDefinitionBuilderTest, EmptyRegistryRejectsUnknownIDsAndBindingEnablesJSON)
+	TEST(VoxelDefinitionBuilderTest, EmptyCollectionRejectsUnknownIDsAndBindingEnablesJSON)
 	{
 		Definition::Builder builder;
 		const auto json = spk::JSON::Value::fromString(
 			R"({"shape":"cube","slots":{"face":"stone"}})");
 		EXPECT_THROW(builder.setShape("cube"), spk::Exception);
-		EXPECT_THROW(builder.addFromJSON(json), spk::Exception);
+		EXPECT_THROW(builder.loadFromJSON(json), spk::Exception);
 		EXPECT_THROW((void)builder.build(), spk::Exception);
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		builder.bind(shapes);
-		builder.addFromJSON(json);
+		builder.loadFromJSON(json);
 		EXPECT_EQ(builder.build().semanticSlot("face"), "stone");
 	}
 
 	TEST(VoxelDefinitionBuilderTest, RebindingRequiresReselectingShape)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
 		builder.setSlots({{"face", {"stone"}}});
 		const Definition original = builder.build();
-		builder.bind(Shape::Registry());
+		builder.bind(Shape::Collection());
 		EXPECT_THROW((void)builder.build(), spk::Exception);
 		builder.setSlots({});
 		EXPECT_THROW((void)builder.build(), spk::Exception);
@@ -245,9 +245,9 @@ namespace
 
 	TEST(VoxelDefinitionBuilderTest, ExplicitlySelectedEmptyShapeIsNotAir)
 	{
-		Shape::Registry::Builder shapeBuilder;
+		Shape::Collection::Builder shapeBuilder;
 		shapeBuilder.add("empty", Shape::Builder{}.build());
-		const Shape::Registry shapes = shapeBuilder.build();
+		const Shape::Collection shapes = shapeBuilder.build();
 		Definition::Builder builder;
 		builder.bind(shapes);
 		EXPECT_THROW((void)builder.build(), spk::Exception);
@@ -258,72 +258,72 @@ namespace
 		EXPECT_FALSE(result.isAir());
 	}
 
-	TEST(VoxelDefinitionRegistryTest, LoadsNumericIDsThroughJSONCatalog)
+	TEST(VoxelDefinitionCollectionTest, LoadsNumericIDsThroughJSONCatalog)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder builder;
+		Definition::Collection::Builder builder;
 		builder.bind(shapes);
 		builder.load(file.path());
-		const Definition::Registry registry = builder.build();
-		EXPECT_EQ(registry.size(), 3u);
-		EXPECT_TRUE(registry[0].isAir());
-		EXPECT_TRUE(registry[42].shape() == shapes["cube"]);
-		EXPECT_EQ(registry[42].semanticSlot("face"), "stone");
-		EXPECT_EQ(registry[7].semanticSlot("side"), "glass");
-		EXPECT_FLOAT_EQ(registry[7].slot("side").opacity, 0.75f);
-		EXPECT_THROW((void)registry[10], spk::Exception);
+		const Definition::Collection collection = builder.build();
+		EXPECT_EQ(collection.size(), 3u);
+		EXPECT_TRUE(collection[0].isAir());
+		EXPECT_TRUE(collection[42].shape() == shapes["cube"]);
+		EXPECT_EQ(collection[42].semanticSlot("face"), "stone");
+		EXPECT_EQ(collection[7].semanticSlot("side"), "glass");
+		EXPECT_FLOAT_EQ(collection[7].slot("side").opacity, 0.75f);
+		EXPECT_THROW((void)collection[10], spk::Exception);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, AirAccessIsConsistentAcrossEveryLookupMethod)
+	TEST(VoxelDefinitionCollectionTest, AirAccessIsConsistentAcrossEveryLookupMethod)
 	{
-		const Definition::Registry registry;
+		const Definition::Collection collection;
 		const Definition *air = &Definition::air();
-		EXPECT_TRUE(registry.contains(0));
-		EXPECT_EQ(registry.tryGet(0), air);
-		EXPECT_EQ(&registry.at(0), air);
-		EXPECT_EQ(&registry[0], air);
-		EXPECT_EQ(registry.size(), 1u);
+		EXPECT_TRUE(collection.contains(0));
+		EXPECT_EQ(collection.tryGet(0), air);
+		EXPECT_EQ(&collection.at(0), air);
+		EXPECT_EQ(&collection[0], air);
+		EXPECT_EQ(collection.size(), 1u);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, UnknownAndRegisteredIDsMatchLookupContracts)
+	TEST(VoxelDefinitionCollectionTest, UnknownAndRegisteredIDsMatchLookupContracts)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder builder;
+		Definition::Collection::Builder builder;
 		builder.bind(shapes);
 		builder.load(file.path());
-		const Definition::Registry registry = builder.build();
-		EXPECT_EQ(registry.tryGet(42), &registry.at(42));
-		EXPECT_EQ(registry.tryGet(7), &registry[7]);
-		EXPECT_FALSE(registry.contains(999));
-		EXPECT_EQ(registry.tryGet(999), nullptr);
+		const Definition::Collection collection = builder.build();
+		EXPECT_EQ(collection.tryGet(42), &collection.at(42));
+		EXPECT_EQ(collection.tryGet(7), &collection[7]);
+		EXPECT_FALSE(collection.contains(999));
+		EXPECT_EQ(collection.tryGet(999), nullptr);
 		try
 		{
-			(void)registry.at(999);
+			(void)collection.at(999);
 			FAIL() << "Unknown Definition ID must throw";
 		} catch (const spk::Exception &exception)
 		{
 			EXPECT_NE(std::string(exception.what()).find("999"), std::string::npos);
 		}
-		EXPECT_THROW((void)registry[999], spk::Exception);
+		EXPECT_THROW((void)collection[999], spk::Exception);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, JSONRejectsUnboundShapesAndUnknownShapeKeys)
+	TEST(VoxelDefinitionCollectionTest, JSONRejectsUnboundShapesAndUnknownShapeKeys)
 	{
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder unbound;
+		Definition::Collection::Builder unbound;
 		EXPECT_THROW(unbound.load(file.path()), spk::Exception);
-		Shape::Registry shapes;
-		Definition::Registry::Builder builder;
+		Shape::Collection shapes;
+		Definition::Collection::Builder builder;
 		builder.bind(shapes);
 		EXPECT_THROW(builder.load(file.path()), spk::Exception);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, JSONRejectsReservedAndOversizedIDs)
+	TEST(VoxelDefinitionCollectionTest, JSONRejectsReservedAndOversizedIDs)
 	{
-		const Shape::Registry shapes = shapeRegistry();
-		Definition::Registry::Builder builder;
+		const Shape::Collection shapes = shapeCollection();
+		Definition::Collection::Builder builder;
 		builder.bind(shapes);
 		const JSONFile air(R"({"id":0,"data":{"shape":"cube","slots":{"face":"stone"}}})");
 		const JSONFile oversized(R"({"id":536870912,"data":{"shape":"cube","slots":{"face":"stone"}}})");
@@ -340,72 +340,72 @@ namespace
 		EXPECT_EQ(builder.build().size(), 1u);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, ProgrammaticAddChecksBoundsAndAir)
+	TEST(VoxelDefinitionCollectionTest, ProgrammaticAddChecksBoundsAndAir)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		Definition::Builder builder;
 		builder.bind(shapes);
 		builder.setShape("cube");
 		builder.setSlots({{"face", {"stone"}}});
 		const Definition stone = builder.build();
-		Definition::Registry::Builder builderRegistry;
-		builderRegistry.add(13, stone);
-		const Definition::Registry registry = builderRegistry.build();
-		EXPECT_TRUE(registry[13] == stone);
-		EXPECT_THROW(builderRegistry.add(13, stone), spk::Exception);
-		EXPECT_THROW(builderRegistry.add(0, stone), spk::Exception);
-		EXPECT_THROW(builderRegistry.add(14, Definition::air()), spk::Exception);
-		EXPECT_EQ(registry.size(), 2u);
+		Definition::Collection::Builder builderCollection;
+		builderCollection.add(13, stone);
+		const Definition::Collection collection = builderCollection.build();
+		EXPECT_TRUE(collection[13] == stone);
+		EXPECT_THROW(builderCollection.add(13, stone), spk::Exception);
+		EXPECT_THROW(builderCollection.add(0, stone), spk::Exception);
+		EXPECT_THROW(builderCollection.add(14, Definition::air()), spk::Exception);
+		EXPECT_EQ(collection.size(), 2u);
 	}
 
-	TEST(VoxelShapeRegistryTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
+	TEST(VoxelShapeCollectionTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
 	{
-		Shape::Registry::Builder builder;
+		Shape::Collection::Builder builder;
 		const Shape cube = Shape::Builder{}.build();
 		builder.add("cube", cube);
-		const Shape::Registry first = builder.build();
-		const Shape::Registry copy = first;
+		const Shape::Collection first = builder.build();
+		const Shape::Collection copy = first;
 		EXPECT_EQ(&first["cube"], &copy["cube"]);
 		builder.add("slab", Shape::Builder{}.build());
-		const Shape::Registry second = builder.build();
+		const Shape::Collection second = builder.build();
 		EXPECT_FALSE(first.contains("slab"));
 		EXPECT_TRUE(second.contains("slab"));
 		EXPECT_TRUE(first["cube"] == second["cube"]);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
+	TEST(VoxelDefinitionCollectionTest, PublishedSnapshotsShareDataButIgnoreLaterBuilderChanges)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		Definition::Builder definitionBuilder;
 		definitionBuilder.bind(shapes);
 		definitionBuilder.setShape("cube");
 		definitionBuilder.setSlots({{"face", {"rock"}}});
-		Definition::Registry::Builder builder;
+		Definition::Collection::Builder builder;
 		builder.add(9, definitionBuilder.build());
-		const Definition::Registry first = builder.build();
-		const Definition::Registry copy = first;
+		const Definition::Collection first = builder.build();
+		const Definition::Collection copy = first;
 		EXPECT_EQ(&first[9], &copy[9]);
 		definitionBuilder.setSlots({{"face", {"glass"}}});
 		builder.add(20, definitionBuilder.build());
-		const Definition::Registry second = builder.build();
+		const Definition::Collection second = builder.build();
 		EXPECT_FALSE(first.contains(20));
 		EXPECT_TRUE(second.contains(20));
 		EXPECT_TRUE(first[9] == second[9]);
 	}
 
-	TEST(VoxelDefinitionRegistryTest, LoadedDefinitionsBindToVolumeByNumericID)
+	TEST(VoxelDefinitionCollectionTest, LoadedDefinitionsBindToVolumeByNumericID)
 	{
-		const Shape::Registry shapes = shapeRegistry();
+		const Shape::Collection shapes = shapeCollection();
 		const JSONFile file(Definitions);
-		Definition::Registry::Builder registryBuilder;
-		registryBuilder.bind(shapes);
-		registryBuilder.load(file.path());
-		const Definition::Registry registry = registryBuilder.build();
+		Definition::Collection::Builder collectionBuilder;
+		collectionBuilder.bind(shapes);
+		collectionBuilder.load(file.path());
+		const Definition::Collection collection = collectionBuilder.build();
 		Volume::Builder builder({2, 1, 1});
-		builder.bind(registry);
+		builder.bind(collection);
 		builder.set({1, 0, 0}, 42);
 		const Volume volume = builder.build();
 		EXPECT_TRUE(volume.at({0, 0, 0}).isAir());
-		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == registry[42]);
+		EXPECT_TRUE(volume.at({1, 0, 0}).definition() == collection[42]);
 	}
 }

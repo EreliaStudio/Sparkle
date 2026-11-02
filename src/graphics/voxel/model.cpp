@@ -137,7 +137,7 @@ namespace spk::Voxel
 
 	bool Model::isCompatible(const spk::Palette &palette) const noexcept
 	{
-		return mesh().accepts(palette);
+		return mesh().isCompatible(palette);
 	}
 
 	bool Model::hasAnchor(std::string_view name) const noexcept
@@ -199,7 +199,7 @@ namespace spk::Voxel
 		found->second._transform = transform;
 	}
 
-	void Model::Builder::bind(std::string_view name, const Model &model, std::string attachment)
+	void Model::Builder::attach(std::string_view name, const Model &model, std::string attachment)
 	{
 		auto found = _anchors.find(name);
 		if (found == _anchors.end())
@@ -215,7 +215,7 @@ namespace spk::Voxel
 		found->second._attachment = std::move(attachment);
 	}
 
-	void Model::Builder::unbind(std::string_view name)
+	void Model::Builder::detach(std::string_view name)
 	{
 		auto found = _anchors.find(name);
 		if (found == _anchors.end())

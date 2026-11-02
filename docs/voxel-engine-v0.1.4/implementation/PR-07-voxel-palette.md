@@ -23,7 +23,7 @@
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
 - [x] `Model::isCompatible(const spk::Palette &)` vérifie uniquement les noms de slots ; le validateur de `spk::Voxel::Palette::Builder` impose immédiatement un atlas unique à chaque insertion.
 
-- [x] `Model::bind(spk::Palette)` vérifie la compatibilité, copie légèrement la palette et permet à chaque copie de Model de choisir sa propre apparence sans toucher aux meshes.
+- [x] `Model::View::bind(spk::Palette)` valide la compatibilité et permet à chaque View de choisir sa propre apparence sans toucher au Model ni aux meshes partagés.
 
 ## Instructions techniques et intégration
 

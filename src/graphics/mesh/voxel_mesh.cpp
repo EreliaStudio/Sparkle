@@ -68,7 +68,7 @@ namespace spk::Voxel
 		return _data->harmonized;
 	}
 
-	bool Mesh::accepts(const spk::Palette &palette) const noexcept
+	bool Mesh::isCompatible(const spk::Palette &palette) const noexcept
 	{
 		if (isHarmonized() && palette.materials().size() != materialSlots().size())
 		{

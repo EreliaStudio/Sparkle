@@ -256,9 +256,14 @@ namespace spk::Voxel
 		return {};
 	}
 
-	void Mesher::bind(Occlusion::Cache *cache) noexcept
+	void Mesher::attachCache(Occlusion::Cache &cache) noexcept
 	{
-		_cache = cache;
+		_cache = &cache;
+	}
+
+	void Mesher::detachCache() noexcept
+	{
+		_cache = nullptr;
 	}
 
 	void Mesher::setTolerance(float tolerance)

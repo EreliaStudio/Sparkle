@@ -12,7 +12,7 @@ Le Mesher produit un `spk::Voxel::Mesh` immuable et partageable. Il contient deu
 
 Un `Model` contient un Mesh et des Anchors nommés dans des données partagées `std::shared_ptr<const Data>`. Il ne propose aucun setter. `Model::Builder` possède les opérations `setMesh`, `addAnchor`, `removeAnchor`, `setAnchorTransform`, `bind`, `unbind`, `harmonize`, `build`. Une construction terminée ne modifie jamais un Model publié.
 
-Chaque Anchor possède un repère rigide et éventuellement un Model enfant immuable partagé. Le nom dans le parent est obligatoire et unique. L'argument `attachment` de `Builder::bind(name, child, attachment)` désigne un Anchor du Model enfant ; sa valeur par défaut `Anchor::NoAttachmentPoint = ""` signifie que l'origine du Model enfant sert de pivot.
+Chaque Anchor possède un repère rigide et éventuellement un Model enfant immuable partagé. Le nom dans le parent est obligatoire et unique. L'argument `attachment` de `Builder::attach(name, child, attachment)` désigne un Anchor du Model enfant ; sa valeur par défaut `Anchor::NoAttachmentPoint = ""` signifie que l'origine du Model enfant sert de pivot.
 
 ### 6.3 Model::View
 
@@ -31,3 +31,13 @@ L'harmonisation n'inspecte aucune palette ni Material concret : elle est stricte
 ### 6.5 Frontière du rendu
 
 La PR-08 définit les Models CPU, les poses et la visite des occurrences. Les GPU buffers, la capture et les passes de rendu seront implémentés dans les PR dédiées.
+
+### 6.6 Conventions de nommage des liaisons et collections
+
+- `bind` associe une dépendance requise au fonctionnement concerné : `Volume::Builder::bind(Definition::Collection)` ou `Model::View::bind(spk::Palette)` ; l'absence temporaire de palette laisse la View non rendable si elle a des slots.
+- `attach` et `detach` rattachent ou retirent un Model enfant facultatif d'un Anchor. Un Anchor sans enfant reste valide. `Model::Builder::attach(name, child, attachmentPoint)` utilise `Anchor::NoAttachmentPoint` pour l'origine de l'enfant.
+- `Mesher::attachCache(Occlusion::Cache&)` / `detachCache()` règlent une optimisation facultative ; le bake fonctionne sans cache.
+- `Collection` nomme les ensembles associatifs d'objets identifiés (`Shape::Collection`, `Definition::Collection`, `Definition::SlotCollection`) ; `Container` est réservé aux séquences lorsqu'un nom de type explicite est nécessaire. Les accesseurs simples `anchors()`, `slots()`, `triangles()` restent inchangés.
+- `set` remplace une propriété, `add` crée une nouvelle entrée et refuse les doublons, `remove` supprime une entrée, `build` publie les données immuables et `bake` génère le maillage optimisé.
+- `Shape::Builder::addFromJSON` ajoute des polygones et des slots ; `Definition::Builder::loadFromJSON` remplace sa sélection et ses slots ; `Volume::Builder::copyFrom` duplique un volume compatible.
+- `isCompatible` vérifie la compatibilité d'une palette avec `Mesh` ou `Model` ; `at` lève en cas d'absence, `tryGet` retourne `nullptr` et `contains` vérifie l'existence.

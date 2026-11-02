@@ -13,7 +13,7 @@
 namespace
 {
 	using PackedCell = spk::Voxel::Volume::PackedCell;
-	using Registry = spk::Voxel::Definition::Registry;
+	using Collection = spk::Voxel::Definition::Collection;
 
 	std::size_t checkedCellCount(spk::Vector3UInt dimensions)
 	{
@@ -76,7 +76,7 @@ namespace
 	std::vector<PackedCell::Storage> readPackedFile(
 		const std::filesystem::path &filename,
 		std::size_t count,
-		const Registry &registry)
+		const Collection &collection)
 	{
 		validatePackedFileSize(filename, count);
 		std::ifstream input(filename, std::ios::binary);
@@ -88,7 +88,7 @@ namespace
 		for (auto &packed : cells)
 		{
 			packed = readPackedWord(input);
-			(void)registry.at(PackedCell::definitionId(packed));
+			(void)collection.at(PackedCell::definitionId(packed));
 		}
 		if (input.peek() != std::char_traits<char>::eof())
 		{
@@ -143,20 +143,20 @@ namespace spk::Voxel
 	{
 	}
 
-	void Volume::Builder::load(const Volume &volume)
+	void Volume::Builder::copyFrom(const Volume &volume)
 	{
 		_ensureActive();
 		const auto dimensions = volume.dimensions();
 		if (dimensions.x != _dimensions.x || dimensions.y != _dimensions.y || dimensions.z != _dimensions.z)
 		{
-			throw spk::Exception("Voxel Volume Builder cannot load a Volume with different dimensions");
+			throw spk::Exception("Voxel Volume Builder cannot copy a Volume with different dimensions");
 		}
 		auto cells = volume._data->cells;
-		_registry = volume._data->definitions;
+		_collection = volume._data->definitions;
 		_cells.swap(cells);
 	}
 
-	void Volume::Builder::bind(const Definition::Registry &registry)
+	void Volume::Builder::bind(const Definition::Collection &collection)
 	{
 		_ensureActive();
 		for (const auto packed : _cells)
@@ -166,14 +166,14 @@ namespace spk::Voxel
 			{
 				continue;
 			}
-			const auto *current = _registry.tryGet(id);
-			const auto *replacement = registry.tryGet(id);
+			const auto *current = _collection.tryGet(id);
+			const auto *replacement = collection.tryGet(id);
 			if (!current || !replacement || !(*current == *replacement))
 			{
-				throw spk::Exception("Voxel Volume Registry rebind would change Definition ID " + std::to_string(id));
+				throw spk::Exception("Voxel Volume Collection rebind would change Definition ID " + std::to_string(id));
 			}
 		}
-		_registry = registry;
+		_collection = collection;
 	}
 
 	void Volume::Builder::set(
@@ -185,7 +185,7 @@ namespace spk::Voxel
 		_ensureActive();
 		const auto offset = cellOffset(position, _dimensions);
 		const auto packed = PackedCell::encode(definitionId, horizontal, vertical);
-		(void)_registry.at(definitionId);
+		(void)_collection.at(definitionId);
 		_cells[offset] = packed;
 	}
 
@@ -198,7 +198,7 @@ namespace spk::Voxel
 	void Volume::Builder::loadPacked(const std::filesystem::path &filename)
 	{
 		_ensureActive();
-		auto decoded = readPackedFile(filename, _cells.size(), _registry);
+		auto decoded = readPackedFile(filename, _cells.size(), _collection);
 		_cells.swap(decoded);
 	}
 
@@ -207,7 +207,7 @@ namespace spk::Voxel
 		_ensureActive();
 		auto data = std::make_shared<Data>();
 		data->dimensions = _dimensions;
-		data->definitions = _registry;
+		data->definitions = _collection;
 		data->cells = std::move(_cells);
 		_consumed = true;
 		return Volume(std::move(data));

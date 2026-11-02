@@ -134,7 +134,7 @@ namespace
 		{
 			SCOPED_TRACE(fixture.name);
 			const Shape shape = fixtureShape(fixture.name);
-			Definition::SlotMapping mapping;
+			Definition::SlotCollection mapping;
 			for (const auto &slot : shape.slots())
 			{
 				mapping.emplace(slot.name, Definition::Slot{fixture.name + std::string(".") + slot.name});
@@ -161,7 +161,7 @@ namespace
 			const Shape shape = fixtureShape(fixture.name);
 			const auto &original = shape.instance().triangles();
 			const Definition definition(shape, [&] {
-				Definition::SlotMapping mapping;
+				Definition::SlotCollection mapping;
 				for (const auto &slot : shape.slots())
 				{
 					mapping.emplace(slot.name, Definition::Slot{slot.name});
