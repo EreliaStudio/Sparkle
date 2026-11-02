@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "voxel/model.hpp"
+#include "voxel/geometry.hpp"
 #include "voxel/occlusion/cache.hpp"
 #include "voxel/volume.hpp"
 

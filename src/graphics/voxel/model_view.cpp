@@ -1,134 +1,71 @@
-#include "voxel/model.hpp"
+#include "voxel/model_view.hpp"
 
-#include <cmath>
 #include <utility>
 
 #include "exception.hpp"
-#include "voxel/palette.hpp"
+#include "voxel/mesher.hpp"
 
-namespace spk::Voxel
+namespace spk
 {
 	namespace
 	{
 		[[nodiscard]] spk::Matrix4x4 inverseAnchor(const spk::Matrix4x4 &matrix)
 		{
 			auto result = spk::Matrix4x4::identity();
-			for (std::size_t c = 0; c < 3; ++c)
+			for (std::size_t column = 0; column < 3; ++column)
 			{
-				for (std::size_t r = 0; r < 3; ++r)
+				for (std::size_t row = 0; row < 3; ++row)
 				{
-					result[c][r] = matrix[r][c];
+					result[column][row] = matrix[row][column];
 				}
 			}
-			for (std::size_t r = 0; r < 3; ++r)
+			for (std::size_t row = 0; row < 3; ++row)
 			{
-				result[3][r] = 0;
-				for (std::size_t c = 0; c < 3; ++c)
+				result[3][row] = 0.0f;
+				for (std::size_t column = 0; column < 3; ++column)
 				{
-					result[3][r] -= result[c][r] * matrix[3][c];
+					result[3][row] -= result[column][row] * matrix[3][column];
 				}
 			}
 			return result;
 		}
 	}
 
-	Model::Anchor::View::View(const Anchor &anchor)
+	Model::Skeleton::Part::View::View(Model &model, const Part &part) :
+		_model(&model),
+		_part(&part),
+		_root(&model.skeleton().root()),
+		_topologyVersion(model.version().topology)
 	{
-		if (const Model *model = anchor.model())
+		for (const auto &[name, joint] : part.joints())
 		{
-			_child = std::make_unique<Model::View>(*model);
-		}
-	}
-
-	Model::Anchor::View::View(const View &other) :
-		_rotation(other._rotation)
-	{
-		if (other._child)
-		{
-			_child = std::make_unique<Model::View>(*other._child);
-		}
-	}
-
-	Model::Anchor::View::View(View &&other) noexcept = default;
-	Model::Anchor::View &Model::Anchor::View::operator=(View &&other) noexcept = default;
-	Model::Anchor::View::~View() = default;
-
-	Model::Anchor::View &Model::Anchor::View::operator=(const View &other)
-	{
-		if (this != &other)
-		{
-			View replacement(other);
-			*this = std::move(replacement);
-		}
-		return *this;
-	}
-
-	bool Model::Anchor::View::hasChild() const noexcept
-	{
-		return _child != nullptr;
-	}
-
-	Model::View &Model::Anchor::View::child()
-	{
-		return const_cast<Model::View &>(std::as_const(*this).child());
-	}
-
-	const Model::View &Model::Anchor::View::child() const
-	{
-		if (!_child)
-		{
-			throw spk::Exception("Voxel Anchor View: no attached Model");
-		}
-		return *_child;
-	}
-
-	void Model::Anchor::View::setRotation(spk::Quaternion rotation)
-	{
-		for (const float component : rotation.data)
-		{
-			if (!std::isfinite(component))
+			if (const Part *child = joint.child())
 			{
-				throw spk::Exception("Voxel Anchor View: non-finite rotation");
+				_children.emplace(name, std::make_unique<View>(model, *child));
 			}
 		}
-		if (rotation.dot(rotation) <= 0.0f)
+	}
+
+	Model::Skeleton::Part::View::View(const View &other) :
+		_model(other._model),
+		_part(other._part),
+		_root(other._root),
+		_topologyVersion(other._topologyVersion),
+		_geometry(other._geometry),
+		_volumeVersion(other._volumeVersion),
+		_palette(other._palette)
+	{
+		for (const auto &[name, child] : other._children)
 		{
-			throw spk::Exception("Voxel Anchor View: zero rotation");
-		}
-		_rotation = rotation.normalized();
-	}
-
-	spk::Quaternion Model::Anchor::View::rotation() const noexcept
-	{
-		return _rotation;
-	}
-
-	void Model::Anchor::View::resetRotation() noexcept
-	{
-		_rotation = spk::Quaternion::identity();
-	}
-
-	Model::View::View(Model model) :
-		_model(std::move(model))
-	{
-		for (const auto &[name, anchor] : _model.anchors())
-		{
-			_anchors.emplace(name, Anchor::View(anchor));
+			_children.emplace(name, std::make_unique<View>(*child));
 		}
 	}
 
-	Model::View::View(Model model, spk::Palette palette) :
-		View(std::move(model))
-	{
-		bind(std::move(palette));
-	}
+	Model::Skeleton::Part::View::View(View &&other) noexcept = default;
+	Model::Skeleton::Part::View &Model::Skeleton::Part::View::operator=(View &&other) noexcept = default;
+	Model::Skeleton::Part::View::~View() = default;
 
-	Model::View::View(const View &other) = default;
-	Model::View::View(View &&other) noexcept = default;
-	Model::View &Model::View::operator=(View &&other) noexcept = default;
-	Model::View::~View() = default;
-
-	Model::View &Model::View::operator=(const View &other)
+	Model::Skeleton::Part::View &Model::Skeleton::Part::View::operator=(const View &other)
 	{
 		if (this != &other)
 		{
@@ -138,198 +75,212 @@ namespace spk::Voxel
 		return *this;
 	}
 
-	const Model &Model::View::model() const noexcept
+	void Model::Skeleton::Part::View::_checkTopology() const
 	{
-		return _model;
+		if (_root != &_model->skeleton().root() || _topologyVersion != _model->version().topology)
+		{
+			throw spk::Exception("Model View: Skeleton structure changed; reconstruct the View");
+		}
 	}
 
-	const spk::Palette *Model::View::palette() const noexcept
+	const Model::Skeleton::Part &Model::Skeleton::Part::View::part() const
+	{
+		_checkTopology();
+		return *_part;
+	}
+
+	const spk::Voxel::Geometry *Model::Skeleton::Part::View::geometry() const
+	{
+		const Part &source = part();
+		const auto *volume = source.volume();
+		if (volume == nullptr)
+		{
+			_geometry.reset();
+			return nullptr;
+		}
+		if (!_geometry || _volumeVersion != source.volumeVersion())
+		{
+			_geometry = spk::Voxel::Mesher{}.bake(*volume);
+			_volumeVersion = source.volumeVersion();
+		}
+		return &*_geometry;
+	}
+
+	const spk::Palette *Model::Skeleton::Part::View::palette() const noexcept
 	{
 		return _palette ? &*_palette : nullptr;
 	}
 
-	void Model::View::_collectMatches(
-		std::string_view name,
-		Anchor::Path &path,
-		std::vector<Anchor::Path> &matches) const
+	void Model::Skeleton::Part::View::_validatePalette(const spk::Palette &palette, PalettePropagation propagation) const
 	{
-		for (const auto &[key, anchor] : _anchors)
+		const auto *mesh = geometry();
+		if (mesh != nullptr && !mesh->isCompatible(palette))
 		{
-			path.push_back(key);
-			if (key == name)
-			{
-				matches.push_back(path);
-			}
-			if (anchor.hasChild())
-			{
-				anchor.child()._collectMatches(name, path, matches);
-			}
-			path.pop_back();
-		}
-	}
-
-	Model::Anchor::Path Model::View::_findUnique(std::string_view name) const
-	{
-		std::vector<Anchor::Path> matches;
-		Anchor::Path path;
-		_collectMatches(name, path, matches);
-		if (matches.size() != 1)
-		{
-			throw spk::Exception(matches.empty() ? "Voxel View: missing anchor" : "Voxel View: ambiguous anchor");
-		}
-		return matches.front();
-	}
-
-	Model::Anchor::View &Model::View::anchor(const Anchor::Path &path)
-	{
-		return const_cast<Anchor::View &>(std::as_const(*this).anchor(path));
-	}
-
-	const Model::Anchor::View &Model::View::anchor(const Anchor::Path &path) const
-	{
-		if (path.empty())
-		{
-			throw spk::Exception("Voxel View: empty Anchor::Path");
-		}
-		const Model::View *node = this;
-		for (std::size_t index = 0; index < path.size(); ++index)
-		{
-			const auto found = node->_anchors.find(path[index]);
-			if (found == node->_anchors.end())
-			{
-				throw spk::Exception("Voxel View: missing anchor: " + path[index]);
-			}
-			if (index + 1 == path.size())
-			{
-				return found->second;
-			}
-			node = &found->second.child();
-		}
-		throw spk::Exception("Voxel View: empty Anchor::Path");
-	}
-
-	Model::Anchor::View &Model::View::anchor(std::string_view uniqueName)
-	{
-		return anchor(_findUnique(uniqueName));
-	}
-
-	const Model::Anchor::View &Model::View::anchor(std::string_view uniqueName) const
-	{
-		return anchor(_findUnique(uniqueName));
-	}
-
-	void Model::View::_validatePalette(const spk::Palette &palette, PalettePropagation propagation) const
-	{
-		if (!_model.isCompatible(palette))
-		{
-			throw spk::Exception("Voxel View: palette is missing required material slots");
+			throw spk::Exception("Model Part View: palette is missing required material slots");
 		}
 		if (propagation == PalettePropagation::Recursive)
 		{
-			for (const auto &[name, anchor] : _anchors)
+			for (const auto &[name, child] : _children)
 			{
-				if (anchor.hasChild())
-				{
-					anchor.child()._validatePalette(palette, propagation);
-				}
+				child->_validatePalette(palette, propagation);
 			}
 		}
 	}
 
-	void Model::View::_applyPalette(const spk::Palette &palette, PalettePropagation propagation)
+	void Model::Skeleton::Part::View::_applyPalette(const spk::Palette &palette, PalettePropagation propagation)
 	{
 		_palette = palette;
 		if (propagation == PalettePropagation::Recursive)
 		{
-			for (auto &[name, anchor] : _anchors)
+			for (auto &[name, child] : _children)
 			{
-				if (anchor.hasChild())
-				{
-					anchor.child()._applyPalette(palette, propagation);
-				}
+				child->_applyPalette(palette, propagation);
 			}
 		}
 	}
 
-	void Model::View::bind(spk::Palette palette, PalettePropagation propagation)
+	void Model::Skeleton::Part::View::bind(spk::Palette palette, PalettePropagation propagation)
 	{
 		(void)spk::Voxel::Palette::Builder(palette);
 		_validatePalette(palette, propagation);
 		_applyPalette(palette, propagation);
 	}
 
-	void Model::View::setTransform(spk::Matrix4x4 transform)
+	Model::Skeleton::Part::View &Model::Skeleton::Part::View::child(std::string_view jointName)
 	{
-		for (std::size_t c = 0; c < 4; ++c)
+		return const_cast<View &>(std::as_const(*this).child(jointName));
+	}
+
+	const Model::Skeleton::Part::View &Model::Skeleton::Part::View::child(std::string_view jointName) const
+	{
+		_checkTopology();
+		const auto found = _children.find(jointName);
+		if (found == _children.end())
 		{
-			for (std::size_t r = 0; r < 4; ++r)
+			throw spk::Exception("Model Part View: joint has no child Part: " + std::string(jointName));
+		}
+		return *found->second;
+	}
+
+	void Model::Skeleton::Part::View::_collectMatches(std::string_view name, std::vector<View *> &matches)
+	{
+		_checkTopology();
+		for (auto &[key, child] : _children)
+		{
+			if (key == name)
 			{
-				if (!std::isfinite(transform[c][r]))
-				{
-					throw spk::Exception("Voxel View: non-finite transform");
-				}
+				matches.push_back(child.get());
 			}
+			child->_collectMatches(name, matches);
 		}
-		_transform = transform;
 	}
 
-	const spk::Matrix4x4 &Model::View::transform() const noexcept
+	void Model::Skeleton::Part::View::_visit(
+		const std::function<void(const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)> &callback,
+		spk::Matrix4x4 transform) const
 	{
-		return _transform;
-	}
-
-	spk::Matrix4x4 Model::View::_childTransform(
-		const Anchor &anchor,
-		const Anchor::View &view,
-		spk::Matrix4x4 parent) const
-	{
-		auto child = parent * anchor.transform() * spk::Matrix4x4::rotation(view.rotation());
-		if (!anchor.attachment().empty())
+		const auto *mesh = geometry();
+		if (mesh != nullptr)
 		{
-			child = child * inverseAnchor(view.child().model().anchor(anchor.attachment()).transform());
+			if (!_palette && !mesh->materialSlots().empty())
+			{
+				throw spk::Exception("Model Part View: missing palette");
+			}
+			const spk::Palette empty;
+			callback(*_part, *mesh, _palette ? *_palette : empty, transform);
 		}
-		return child;
+		for (const auto &[name, child] : _children)
+		{
+			const auto &joint = _part->joint(name);
+			auto attached = transform * joint.transform() * spk::Matrix4x4::rotation(joint.rotation());
+			if (!joint.attachment().empty())
+			{
+				attached = attached * inverseAnchor(joint.child()->joint(joint.attachment()).transform());
+			}
+			child->_visit(callback, attached);
+		}
+	}
+
+	Model::View::View(Model &model) :
+		_model(&model),
+		_root(model, model.skeleton().root())
+	{
+	}
+
+	const Model &Model::View::model() const noexcept
+	{
+		return *_model;
+	}
+
+	Model::Skeleton::Part::View &Model::View::root() noexcept
+	{
+		return _root;
+	}
+
+	const Model::Skeleton::Part::View &Model::View::root() const noexcept
+	{
+		return _root;
+	}
+
+	Model::Skeleton::Part::View &Model::View::part(const Path &path)
+	{
+		return const_cast<Skeleton::Part::View &>(std::as_const(*this).part(path));
+	}
+
+	const Model::Skeleton::Part::View &Model::View::part(const Path &path) const
+	{
+		const auto *current = &_root;
+		for (const auto &name : path)
+		{
+			current = &current->child(name);
+		}
+		return *current;
+	}
+
+	Model::Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName)
+	{
+		std::vector<Skeleton::Part::View *> matches;
+		_root._collectMatches(uniqueJointName, matches);
+		if (matches.size() != 1)
+		{
+			throw spk::Exception(matches.empty() ? "Model View: missing Part" : "Model View: ambiguous Part");
+		}
+		return *matches.front();
+	}
+
+	const Model::Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName) const
+	{
+		return const_cast<Model::View &>(*this).part(uniqueJointName);
+	}
+
+	void Model::View::bind(spk::Palette palette, PalettePropagation propagation)
+	{
+		_root.bind(std::move(palette), propagation);
 	}
 
 	bool Model::View::isRenderable() const
 	{
-		if (!_model.materialSlots().empty() && (!_palette || !_model.isCompatible(*_palette)))
-		{
-			return false;
-		}
-		for (const auto &[name, anchor] : _anchors)
-		{
-			if (anchor.hasChild() && !anchor.child().isRenderable())
+		std::function<bool(const Skeleton::Part::View &)> check = [&](const Skeleton::Part::View &view) {
+			const auto *mesh = view.geometry();
+			if (mesh && !mesh->materialSlots().empty() &&
+				(view.palette() == nullptr || !mesh->isCompatible(*view.palette())))
 			{
 				return false;
 			}
-		}
-		return true;
-	}
-
-	void Model::View::_visit(
-		const std::function<void(const Model &, const spk::Palette &, const spk::Matrix4x4 &)> &callback,
-		spk::Matrix4x4 parent) const
-	{
-		const auto transform = parent * _transform;
-		if (!_palette && !_model.materialSlots().empty())
-		{
-			throw spk::Exception("Voxel View: unbound Model palette");
-		}
-		const spk::Palette empty;
-		callback(_model, _palette ? *_palette : empty, transform);
-		for (const auto &[name, anchor] : _anchors)
-		{
-			if (anchor.hasChild())
+			for (const auto &[name, joint] : view.part().joints())
 			{
-				anchor.child()._visit(callback, _childTransform(_model.anchor(name), anchor, transform));
+				if (joint.child() && !check(view.child(name)))
+				{
+					return false;
+				}
 			}
-		}
+			return true;
+		};
+		return check(_root);
 	}
 
-	void Model::View::visit(
-		const std::function<void(const Model &, const spk::Palette &, const spk::Matrix4x4 &)> &callback) const
+	void Model::View::visit(const DrawCallback &callback) const
 	{
-		_visit(callback, spk::Matrix4x4::identity());
+		_root._visit(callback, _model->transform());
 	}
 }
