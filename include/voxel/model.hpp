@@ -10,7 +10,6 @@
 
 #include "graphics/palette.hpp"
 #include "math/matrix.hpp"
-#include "voxel/material_layout.hpp"
 #include "voxel/mesh.hpp"
 
 namespace spk::Voxel

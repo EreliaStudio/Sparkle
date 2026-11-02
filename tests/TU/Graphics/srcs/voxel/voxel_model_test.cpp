@@ -287,14 +287,6 @@ TEST(VoxelModelBuilderTest, HarmonizeIsIdempotent)
 	EXPECT_EQ(materialIndex(*first.anchor("arm").model()), materialIndex(*second.anchor("arm").model()));
 }
 
-TEST(VoxelMaterialLayoutTest, RequiresSortedUniqueNames)
-{
-	EXPECT_THROW((void)spk::Voxel::MaterialLayout({"skin", "cloth"}), spk::Exception);
-	EXPECT_THROW((void)spk::Voxel::MaterialLayout({"cloth", "cloth"}), spk::Exception);
-	spk::Voxel::MaterialLayout layout({"cloth", "skin"});
-	EXPECT_EQ(layout.names().size(), 2u);
-}
-
 TEST(VoxelAnchorPathTest, VectorOfSegmentsKeepsLiteralNames)
 {
 	using Path = Model::Anchor::Path;
