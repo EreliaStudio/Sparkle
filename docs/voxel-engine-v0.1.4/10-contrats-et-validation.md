@@ -4,7 +4,7 @@
 
 ## 8. Garanties transversales et frontières des interfaces
 
-> Révision PR-08 : `Voxel::Geometry` porte surfaces, profondeur et slots ; `Model` est immutable, `Model::Builder::attach/detach` configure les Anchors, `harmonize()` unifie leurs indices, et `Model::View::bind` lie les palettes par occurrence. Les anciens contrats `Model::bind`, `Model::Harmonizer` et `Assembly` ne font pas partie de cette API ; se référer au [chapitre 06](06-assemblies-scene.md).
+> Révision PR-08 : `spk::Model` est un objet Core composé d'un Skeleton de Parts (Volumes optionnels) reliées par des Joints avec rotations, repères et versions mutables. Les meshes et palettes n'existent que dans Graphics, sous `spk::Model::View` et `Skeleton::Part::View`. Le meshing et `harmonize()` sont des opérations graphiques explicites ; se référer au [chapitre 06](06-assemblies-scene.md).
 
 ### 8.1 Propriété des données
 

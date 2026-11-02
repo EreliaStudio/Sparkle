@@ -116,8 +116,8 @@ TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 	ASSERT_EQ(transforms.size(), 2u);
 	expectMatrix(transforms[0], Matrix::translation(5, 0, 0));
 	const auto rotation = Matrix::rotation(model.skeleton().joint("arm").rotation());
-	expectMatrix(transforms[1], Matrix::translation(5, 0, 0) * Matrix::translation(2, 0, 0) *
-		rotation * Matrix::translation(-1, 0, 0));
+	const auto jointTransform = Matrix::translation(5, 0, 0) * Matrix::translation(2, 0, 0);
+	expectMatrix(transforms[1], jointTransform * rotation * Matrix::translation(-1, 0, 0));
 }
 
 TEST(ModelGraphicsTest, BindingOnePartDoesNotBindItsChildren)
@@ -231,8 +231,8 @@ TEST(ModelGraphicsTest, HarmonizeRemapsOnlyGraphicalMeshes)
 	model.skeleton().joint("arm").attach(Part(volume("cloth")));
 	Model::View view(model);
 	ASSERT_NE(view.root().geometry(), nullptr);
-	const auto original = view.root().geometry()->opaqueMesh().layout().vertexBuffer()
-		.cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex;
+	const auto &buffer = view.root().geometry()->opaqueMesh().layout().vertexBuffer();
+	const auto original = buffer.cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex;
 	EXPECT_EQ(original, 0u);
 	view.harmonize();
 	const auto *body = view.root().geometry();

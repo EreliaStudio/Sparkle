@@ -116,3 +116,16 @@ TEST(ModelCoreTest, StructuralChangesAndModelTransformsAreVersionedSeparately)
 	EXPECT_THROW(model.setTransform(Matrix::translation(invalid, 0, 0)), spk::Exception);
 	EXPECT_EQ(model.version().transform, 1u);
 }
+
+TEST(ModelCoreTest, ReplacingAnExistingJointInvalidatesTopology)
+{
+	Model model;
+	model.skeleton().root().addJoint("arm");
+	const auto before = model.version();
+	Skeleton::Joint replacement;
+	replacement.attach(Part(volume()));
+	model.skeleton().joint("arm") = std::move(replacement);
+	EXPECT_GT(model.version().topology, before.topology);
+	ASSERT_NE(model.skeleton().joint("arm").child(), nullptr);
+	EXPECT_NE(model.skeleton().joint("arm").child()->volume(), nullptr);
+}

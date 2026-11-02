@@ -228,7 +228,24 @@ namespace spk
 	}
 
 	Model::Skeleton::Joint::Joint(Joint &&other) noexcept = default;
-	Model::Skeleton::Joint &Model::Skeleton::Joint::operator=(Joint &&other) noexcept = default;
+	Model::Skeleton::Joint &Model::Skeleton::Joint::operator=(Joint &&other) noexcept
+	{
+		if (this != &other)
+		{
+			_transform = other._transform;
+			_rotation = other._rotation;
+			_attachment = std::move(other._attachment);
+			_child = std::move(other._child);
+			_bindRevision(_revision);
+			if (_revision)
+			{
+				++_revision->pose;
+				++_revision->topology;
+				++_revision->geometry;
+			}
+		}
+		return *this;
+	}
 	Model::Skeleton::Joint::~Joint() = default;
 
 	Model::Skeleton::Joint &Model::Skeleton::Joint::operator=(const Joint &other)
@@ -238,7 +255,6 @@ namespace spk
 			Joint replacement(other);
 			replacement._bindRevision(_revision);
 			*this = std::move(replacement);
-			_changed();
 		}
 		return *this;
 	}

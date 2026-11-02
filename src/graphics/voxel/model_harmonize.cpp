@@ -67,7 +67,8 @@ namespace spk
 			return Geometry(
 				remapSurface(source.opaqueMesh(), source, indices),
 				remapSurface(source.transparentMesh(), source, indices),
-				source.depthMesh(), slots);
+				source.depthMesh(),
+				slots);
 		}
 
 		[[nodiscard]] std::vector<spk::Voxel::Definition::Slot> sharedSlots(const Slots &collected, Indices &indices)
