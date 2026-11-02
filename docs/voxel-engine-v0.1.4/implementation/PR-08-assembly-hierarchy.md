@@ -10,7 +10,7 @@
 - Model : un Mesh, des Model::Anchor nommés et enfants facultatifs ; aucune Palette.
 - Model::View : palettes indépendantes ou propagation explicite, rotations de joints, matrice globale, visite pour futurs renderers.
 - Model::Harmonizer : reindexation des meshes et génération d'une Palette harmonisée et d'un MaterialLayout commun.
-- Model::AnchorPath : segments explicites de noms, sans caractère séparateur réservé ; recherches courtes uniquement si uniques.
+- `Model::Anchor::Path` est un alias de `std::vector<std::string>` : chaque élément représente directement un nom d'Anchor ; aucune analyse d'une chaîne de caractères séparée par `/` ; recherches courtes uniquement si uniques.
 - Model::View::AnchorHandle : handle non propriétaire avec contrôle de validité après destruction, déplacement et réaffectation de la View.
 
 ## Contrats
@@ -19,7 +19,7 @@ La géométrie, les noms/opacités des slots et leurs indices viennent exclusive
 
 ## Accès aux articulations
 
-`view.anchor(Model::AnchorPath{"leftShoulder", "elbow"})` retourne un handle permettant de modifier l'articulation de cette View sans modifier les autres instances. `Model::AnchorPath{"leftShoulder/elbow"}` est un chemin distinct composé d'un seul segment. Les identités sont déterministes dans la hiérarchie et ne nécessitent aucun ID numérique.
+`view.anchor(Model::Anchor::Path{"leftShoulder", "elbow"})` retourne un handle permettant de modifier l'articulation de cette View sans modifier les autres instances. `Model::Anchor::Path{"leftShoulder/elbow"}` est un chemin distinct composé d'un seul segment. Les identités sont déterministes dans la hiérarchie et ne nécessitent aucun ID numérique.
 
 ## Tests
 

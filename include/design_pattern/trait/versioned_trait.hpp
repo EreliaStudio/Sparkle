@@ -18,8 +18,6 @@ namespace spk
 		Version _version = 0;
 		VersionProvider _versionProvider;
 
-	protected:
-		void resetAfterCopy() noexcept;
 
 	public:
 		VersionedTrait() = default;

@@ -181,6 +181,16 @@ namespace spk::Voxel
 			return result;
 		}
 
+		MeshVertex shiftedVertex(MeshVertex vertex, std::uint32_t offset)
+		{
+			if (vertex.materialIndex > std::numeric_limits<std::uint32_t>::max() - offset)
+			{
+				throw spk::Exception("Voxel Mesher: material index offset overflow");
+			}
+			vertex.materialIndex += offset;
+			return vertex;
+		}
+
 		[[nodiscard]] SlotIndices indexSlots(const std::vector<Definition::Slot> &slots, std::uint32_t offset)
 		{
 			SlotIndices result;
@@ -194,16 +204,6 @@ namespace spk::Voxel
 			}
 			return result;
 		}
-	}
-
-	MeshVertex shiftedVertex(MeshVertex vertex, std::uint32_t offset)
-	{
-		if (vertex.materialIndex > std::numeric_limits<std::uint32_t>::max() - offset)
-		{
-			throw spk::Exception("Voxel Mesher: material index offset overflow");
-		}
-		vertex.materialIndex += offset;
-		return vertex;
 	}
 
 	SurfaceMesh Mesher::offsetMaterialIndices(const SurfaceMesh &source, std::uint32_t offset)

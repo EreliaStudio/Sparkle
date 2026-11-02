@@ -30,6 +30,65 @@ namespace spk::Voxel
 			return true;
 		}
 
+		[[nodiscard]] SurfaceMesh remapSurface(
+			const SurfaceMesh &source,
+			std::uint32_t offset,
+			const std::vector<std::uint32_t> &mapping)
+		{
+			if (source.vertexCount() == 0)
+			{
+				return source;
+			}
+			SurfaceMesh::Builder builder;
+			const auto vertices = source.layout().vertexBuffer().cast<MeshVertex>();
+			const auto indices = source.layout().indexBuffer().cast<std::uint32_t>();
+			builder.reserve(vertices.size(), indices.size());
+			for (auto vertex : vertices)
+			{
+				if (vertex.materialIndex < offset || vertex.materialIndex - offset >= mapping.size())
+				{
+					throw spk::Exception("Voxel Mesh: invalid material index");
+				}
+				vertex.materialIndex = mapping[vertex.materialIndex - offset];
+				(void)builder.addVertex(vertex);
+			}
+			for (const auto index : indices)
+			{
+				builder.addIndex(index);
+			}
+			return std::move(builder).build();
+		}
+
+		void validateMapping(const Mesh &mesh, const std::vector<std::uint32_t> &indices, std::size_t count)
+		{
+			if (indices.size() != mesh.materialSlots().size())
+			{
+				throw spk::Exception("Voxel Harmonizer: incorrect material mapping size");
+			}
+			for (const auto index : indices)
+			{
+				if (index >= count)
+				{
+					throw spk::Exception("Voxel Harmonizer: material mapping exceeds slots");
+				}
+			}
+		}
+
+		[[nodiscard]] Mesh remapMesh(
+			const Mesh &source,
+			const std::vector<std::uint32_t> &indices,
+			std::vector<Definition::Slot> slots)
+		{
+			validateMapping(source, indices, slots.size());
+			return Mesh(
+				remapSurface(source.opaqueMesh(), source.materialIndexOffset(), indices),
+				remapSurface(source.transparentMesh(), source.materialIndexOffset(), indices),
+				source.depthMesh(),
+				std::move(slots),
+				0,
+				true);
+		}
+
 		void reserveNames(const Model &model, std::vector<std::string> &names)
 		{
 			for (const auto &slot : model.materialSlots())
@@ -128,7 +187,7 @@ namespace spk::Voxel
 		{
 			slots[mapping[i]].opacity = model.materialSlots()[i].opacity;
 		}
-		model._mesh = model._mesh.remap(mapping, std::move(slots));
+		model._mesh = remapMesh(model._mesh, mapping, std::move(slots));
 		for (const auto &[name, anchor] : model.anchors())
 		{
 			if (model.anchor(name).model())

@@ -1,9 +1,7 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <initializer_list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -18,37 +16,20 @@
 
 namespace spk::Voxel
 {
-	enum class PalettePropagation
-	{
-		Self,
-		Recursive
-	};
-
 	class Model
 	{
 	public:
-		class AnchorPath final
+		enum class PalettePropagation
 		{
-		private:
-			std::vector<std::string> _segments;
-
-		public:
-			AnchorPath() = default;
-			AnchorPath(std::initializer_list<std::string> segments);
-			explicit AnchorPath(std::vector<std::string> segments);
-			[[nodiscard]] const std::vector<std::string> &segments() const noexcept;
-			[[nodiscard]] bool empty() const noexcept;
-			[[nodiscard]] std::size_t size() const noexcept;
-			[[nodiscard]] bool operator<(const AnchorPath &other) const noexcept;
-			[[nodiscard]] bool operator==(const AnchorPath &other) const noexcept;
-			[[nodiscard]] std::vector<std::string>::const_iterator begin() const noexcept;
-			[[nodiscard]] std::vector<std::string>::const_iterator end() const noexcept;
-			void push_back(std::string segment);
-			void pop_back();
+			Self,
+			Recursive
 		};
 
 		class Anchor
 		{
+		public:
+			using Path = std::vector<std::string>;
+
 		private:
 			spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
 			std::unique_ptr<Model> _model;
@@ -109,7 +90,7 @@ namespace spk::Voxel
 	class Model::View final
 	{
 		friend class Model::Harmonizer;
-		using Path = AnchorPath;
+		using Path = Anchor::Path;
 
 	public:
 		class AnchorHandle;
@@ -148,25 +129,25 @@ namespace spk::Voxel
 		View &operator=(View &&other);
 		~View() = default;
 
-		[[nodiscard]] AnchorHandle anchor(const AnchorPath &path);
+		[[nodiscard]] AnchorHandle anchor(const Anchor::Path &path);
 		[[nodiscard]] AnchorHandle anchor(std::string_view uniqueName);
 		[[nodiscard]] const Model &model() const noexcept;
 		[[nodiscard]] const spk::Palette *palette() const noexcept;
 		[[nodiscard]] const spk::Palette *palette(std::string_view anchorName) const;
-		[[nodiscard]] const spk::Palette *palette(const AnchorPath &path) const;
+		[[nodiscard]] const spk::Palette *palette(const Anchor::Path &path) const;
 		void setPalette(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Recursive);
 		void setPalette(
 			std::string_view anchorName,
 			spk::Palette palette,
 			PalettePropagation propagation = PalettePropagation::Self);
 		void setPalette(
-			const AnchorPath &path,
+			const Anchor::Path &path,
 			spk::Palette palette,
 			PalettePropagation propagation = PalettePropagation::Self);
 		void setAnchorRotation(std::string_view name, spk::Quaternion rotation);
-		void setAnchorRotation(const AnchorPath &path, spk::Quaternion rotation);
+		void setAnchorRotation(const Anchor::Path &path, spk::Quaternion rotation);
 		[[nodiscard]] spk::Quaternion anchorRotation(std::string_view name) const;
-		[[nodiscard]] spk::Quaternion anchorRotation(const AnchorPath &path) const;
+		[[nodiscard]] spk::Quaternion anchorRotation(const Anchor::Path &path) const;
 		void setTransform(spk::Matrix4x4 transform);
 		[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
 		[[nodiscard]] bool isRenderable() const noexcept;
@@ -177,14 +158,14 @@ namespace spk::Voxel
 	{
 	private:
 		View *_view;
-		AnchorPath _path;
+		Anchor::Path _path;
 		std::weak_ptr<std::uint8_t> _lifetime;
 
-		explicit AnchorHandle(View &view, AnchorPath path);
+		explicit AnchorHandle(View &view, Anchor::Path path);
 		friend class View;
 
 	public:
-		[[nodiscard]] const AnchorPath &path() const noexcept;
+		[[nodiscard]] const Anchor::Path &path() const noexcept;
 		void setRotation(spk::Quaternion rotation);
 		[[nodiscard]] spk::Quaternion rotation() const;
 		void resetRotation();

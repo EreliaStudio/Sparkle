@@ -64,8 +64,5 @@ namespace spk::Voxel
 		[[nodiscard]] bool isHarmonized() const noexcept;
 		[[nodiscard]] bool accepts(const spk::Palette &palette) const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
-		[[nodiscard]] Mesh remap(
-			const std::vector<std::uint32_t> &indices,
-			std::vector<Definition::Slot> slots) const;
 	};
 }

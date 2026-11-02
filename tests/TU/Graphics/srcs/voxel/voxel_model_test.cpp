@@ -136,7 +136,7 @@ TEST(VoxelModelViewTest, IndependentPalettesForEachModel)
 	torso.anchor("leftArm").bind(model("skin"));
 	Model::View view(torso);
 	EXPECT_FALSE(view.isRenderable());
-	view.setPalette(palette(atlas, {"cloth"}), spk::Voxel::PalettePropagation::Self);
+	view.setPalette(palette(atlas, {"cloth"}), Model::PalettePropagation::Self);
 	view.setPalette("leftArm", palette(atlas, {"skin"}));
 	EXPECT_TRUE(view.isRenderable());
 	ASSERT_NE(view.palette(), nullptr);
@@ -225,7 +225,7 @@ TEST(VoxelModelHarmonizerTest, CombinesIndependentIndicesAndPreservesSource)
 	torso.addAnchor("arm");
 	torso.anchor("arm").bind(model("skin", 0));
 	Model::View view(torso);
-	view.setPalette(palette(atlas, {"cloth"}), spk::Voxel::PalettePropagation::Self);
+	view.setPalette(palette(atlas, {"cloth"}), Model::PalettePropagation::Self);
 	view.setPalette("arm", palette(atlas, {"skin"}));
 	Model::Harmonizer harmonizer;
 	const auto result = harmonizer.process(view);
@@ -270,7 +270,7 @@ TEST(VoxelModelHarmonizerTest, SameSlotAndDifferentMaterialsRemainDistinct)
 	torso.addAnchor("arm");
 	torso.anchor("arm").bind(model("cloth"));
 	Model::View source(torso);
-	source.setPalette(first.build(), spk::Voxel::PalettePropagation::Self);
+	source.setPalette(first.build(), Model::PalettePropagation::Self);
 	source.setPalette("arm", second.build());
 	const auto result = Model::Harmonizer().process(source);
 	EXPECT_EQ(result.materialLayout.names().size(), 2u);
@@ -286,7 +286,7 @@ TEST(VoxelModelHarmonizerTest, RejectsDifferentAtlasesWithoutModifyingSource)
 	torso.addAnchor("arm");
 	torso.anchor("arm").bind(model("skin"));
 	Model::View view(torso);
-	view.setPalette(palette(first, {"cloth"}), spk::Voxel::PalettePropagation::Self);
+	view.setPalette(palette(first, {"cloth"}), Model::PalettePropagation::Self);
 	view.setPalette("arm", palette(second, {"skin"}));
 	EXPECT_THROW((void)Model::Harmonizer().process(view), spk::Exception);
 	EXPECT_EQ(materialIndex(view.model()), 0u);
@@ -300,7 +300,7 @@ TEST(VoxelModelHarmonizerTest, MissingChildPaletteIsRejected)
 	torso.addAnchor("arm");
 	torso.anchor("arm").bind(model("skin"));
 	Model::View view(torso);
-	view.setPalette(palette(atlas, {"cloth"}), spk::Voxel::PalettePropagation::Self);
+	view.setPalette(palette(atlas, {"cloth"}), Model::PalettePropagation::Self);
 	EXPECT_THROW((void)Model::Harmonizer().process(view), spk::Exception);
 }
 
@@ -329,7 +329,7 @@ TEST(VoxelModelHarmonizerTest, ReusesEqualMaterialsAcrossThreeModels)
 	torso.anchor("leftArm").bind(model("cloth"));
 	torso.anchor("rightArm").bind(model("cloth"));
 	Model::View view(torso);
-	view.setPalette(firstPalette.build(), spk::Voxel::PalettePropagation::Self);
+	view.setPalette(firstPalette.build(), Model::PalettePropagation::Self);
 	view.setPalette("leftArm", secondPalette.build());
 	view.setPalette("rightArm", secondPalette.build());
 	const auto result = Model::Harmonizer().process(view);
@@ -342,21 +342,20 @@ TEST(VoxelModelHarmonizerTest, ReusesEqualMaterialsAcrossThreeModels)
 	EXPECT_EQ(materialIndex(*left), materialIndex(*right));
 }
 
-TEST(VoxelAnchorPathTest, NamedSegmentsDoNotTreatSlashAsSeparator)
+TEST(VoxelAnchorPathTest, VectorOfSegmentsKeepsLiteralNames)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	const Path nested{"leftShoulder", "elbow"};
 	const Path literal{"leftShoulder/elbow"};
 	EXPECT_NE(nested, literal);
 	EXPECT_EQ(nested.size(), 2u);
-	EXPECT_EQ(literal.size(), 1u);
-	EXPECT_EQ(literal.segments().front(), "leftShoulder/elbow");
-	EXPECT_THROW((void)(Path{"leftShoulder", ""}), spk::Exception);
+	ASSERT_EQ(literal.size(), 1u);
+	EXPECT_EQ(literal.front(), "leftShoulder/elbow");
 }
 
 TEST(VoxelModelViewTest, TypedPathsResolveRepeatedAnchorNames)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	Model torso;
 	Model arm;
 	arm.addAnchor("elbow");
@@ -377,7 +376,7 @@ TEST(VoxelModelViewTest, TypedPathsResolveRepeatedAnchorNames)
 
 TEST(VoxelModelViewTest, AnchorHandleAppliesRotationOnlyToOwningView)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	Model torso;
 	torso.addAnchor("arm");
 	torso.anchor("arm").bind(Model{});
@@ -406,12 +405,12 @@ TEST(VoxelModelViewTest, ShortNameLookupRequiresUniqueness)
 	torso.anchor("rightArm").bind(arm);
 	Model::View duplicate(torso);
 	EXPECT_THROW((void)duplicate.anchor("elbow"), spk::Exception);
-	EXPECT_NO_THROW((void)duplicate.anchor(Model::AnchorPath{"leftArm", "elbow"}));
+	EXPECT_NO_THROW((void)duplicate.anchor(Model::Anchor::Path{"leftArm", "elbow"}));
 }
 
 TEST(VoxelModelViewTest, ExplicitPathPreservesSlashInAnAnchorName)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	Model torso;
 	Model arm;
 	arm.addAnchor("elbow");
@@ -427,7 +426,7 @@ TEST(VoxelModelViewTest, ExplicitPathPreservesSlashInAnAnchorName)
 
 TEST(VoxelModelViewTest, TypedPathsApplyIndependentChildPalettes)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	spk::Texture atlas;
 	Model arm = model("skin");
 	arm.addAnchor("elbow");
@@ -451,7 +450,7 @@ TEST(VoxelModelViewTest, TypedPathsApplyIndependentChildPalettes)
 
 TEST(VoxelModelViewTest, HandleFailsSafelyAfterViewDestructionAndMove)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	Model source;
 	source.addAnchor("arm");
 	auto view = std::make_unique<Model::View>(source);
@@ -467,7 +466,7 @@ TEST(VoxelModelViewTest, HandleFailsSafelyAfterViewDestructionAndMove)
 
 TEST(VoxelModelViewTest, CopiedViewHasIndependentHandlesAndAssignmentInvalidatesThem)
 {
-	using Path = Model::AnchorPath;
+	using Path = Model::Anchor::Path;
 	Model source;
 	source.addAnchor("arm");
 	Model::View original(source);

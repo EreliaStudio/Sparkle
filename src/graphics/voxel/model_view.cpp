@@ -100,12 +100,12 @@ namespace spk::Voxel
 	{
 		if (path.empty())
 		{
-			throw spk::Exception("Voxel View: empty AnchorPath");
+			throw spk::Exception("Voxel View: empty Anchor::Path");
 		}
 		const Model *node = &_model;
 		for (std::size_t index = 0; index < path.size(); ++index)
 		{
-			const auto &joint = node->anchor(path.segments()[index]);
+			const auto &joint = node->anchor(path[index]);
 			if (index + 1 == path.size())
 			{
 				return joint;
@@ -116,10 +116,10 @@ namespace spk::Voxel
 				throw spk::Exception("Voxel View: unbound intermediate Anchor");
 			}
 		}
-		throw spk::Exception("Voxel View: empty AnchorPath");
+		throw spk::Exception("Voxel View: empty Anchor::Path");
 	}
 
-	Model::View::AnchorHandle Model::View::anchor(const AnchorPath &path)
+	Model::View::AnchorHandle Model::View::anchor(const Anchor::Path &path)
 	{
 		(void)_anchor(path);
 		return AnchorHandle(*this, path);
@@ -176,7 +176,7 @@ namespace spk::Voxel
 		return palette(_findUnique(anchorName));
 	}
 
-	const spk::Palette *Model::View::palette(const AnchorPath &path) const
+	const spk::Palette *Model::View::palette(const Anchor::Path &path) const
 	{
 		(void)_node(path);
 		const auto found = _palettes.find(path);
@@ -226,7 +226,7 @@ namespace spk::Voxel
 	}
 
 	void Model::View::setPalette(
-		const AnchorPath &path,
+		const Anchor::Path &path,
 		spk::Palette palette,
 		PalettePropagation propagation)
 	{
@@ -241,7 +241,7 @@ namespace spk::Voxel
 		setAnchorRotation(_findUnique(name), rotation);
 	}
 
-	void Model::View::setAnchorRotation(const AnchorPath &path, spk::Quaternion rotation)
+	void Model::View::setAnchorRotation(const Anchor::Path &path, spk::Quaternion rotation)
 	{
 		(void)_anchor(path);
 		for (const float component : rotation.data)
@@ -263,7 +263,7 @@ namespace spk::Voxel
 		return anchorRotation(_findUnique(name));
 	}
 
-	spk::Quaternion Model::View::anchorRotation(const AnchorPath &path) const
+	spk::Quaternion Model::View::anchorRotation(const Anchor::Path &path) const
 	{
 		(void)_anchor(path);
 		const auto found = _rotations.find(path);
@@ -341,14 +341,14 @@ namespace spk::Voxel
 		_visit(_model, path, _transform, callback);
 	}
 
-	Model::View::AnchorHandle::AnchorHandle(View &view, AnchorPath path) :
+	Model::View::AnchorHandle::AnchorHandle(View &view, Anchor::Path path) :
 		_view(&view),
 		_path(std::move(path)),
 		_lifetime(view._lifetime)
 	{
 	}
 
-	const Model::AnchorPath &Model::View::AnchorHandle::path() const noexcept
+	const Model::Anchor::Path &Model::View::AnchorHandle::path() const noexcept
 	{
 		return _path;
 	}
