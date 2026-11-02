@@ -87,6 +87,7 @@ namespace spk
 		[[nodiscard]] Skeleton::Part::View &part(std::string_view uniqueJointName);
 		[[nodiscard]] const Skeleton::Part::View &part(std::string_view uniqueJointName) const;
 		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
+		void harmonize();
 		[[nodiscard]] bool isRenderable() const;
 		void visit(const DrawCallback &callback) const;
 	};

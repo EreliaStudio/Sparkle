@@ -53,4 +53,4 @@ Dans cette PR, `Voxel::Mesher` produit ses meshes opaques et translucides et con
 
 Le Core expose les Volumes, Shapes et transformations nécessaires à une future collision. Un éventuel `Collision::Mesh` sera un type CPU sans dépendance Graphics. Les meshes de collision et d'ombres n'ont pas nécessairement la même géométrie ou les mêmes règles ; ils ne doivent donc pas être confondus automatiquement.
 
-L'harmonisation des indices de matériaux de la précédente `Voxel::Model::Builder` est retirée du Core. Un regroupement ou une harmonisation pour le rendu sera une opération graphique explicite, à réintroduire lors de la mise en place du batching, si nécessaire.
+L'harmonisation des indices de matériaux devient l'opération graphique explicite `Model::View::harmonize()`. Elle collecte les slots des Parts par nom et opacité, rejette les conflits, puis reconstruit les `Voxel::Geometry` des Part Views avec une table d'indices commune. Elle ne modifie ni les Volumes Core ni les Joints. Après remplacement d'un Volume, une nouvelle harmonisation est nécessaire pour rétablir cette table globale.

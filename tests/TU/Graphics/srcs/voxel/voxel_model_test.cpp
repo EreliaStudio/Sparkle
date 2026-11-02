@@ -222,3 +222,32 @@ TEST(ModelGraphicsTest, ViewCopiesHaveIndependentGraphicCaches)
 	ASSERT_NE(second.root().geometry(), nullptr);
 	EXPECT_NE(first.root().geometry(), second.root().geometry());
 }
+
+TEST(ModelGraphicsTest, HarmonizeRemapsOnlyGraphicalMeshes)
+{
+	Model model;
+	model.skeleton().root().setVolume(volume("skin"));
+	model.skeleton().root().addJoint("arm");
+	model.skeleton().joint("arm").attach(Part(volume("cloth")));
+	Model::View view(model);
+	ASSERT_NE(view.root().geometry(), nullptr);
+	const auto original = view.root().geometry()->opaqueMesh().layout().vertexBuffer()
+		.cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex;
+	EXPECT_EQ(original, 0u);
+	view.harmonize();
+	const auto *body = view.root().geometry();
+	const auto *arm = view.part("arm").geometry();
+	ASSERT_NE(body, nullptr);
+	ASSERT_NE(arm, nullptr);
+	EXPECT_EQ(body->materialSlots().size(), 2u);
+	EXPECT_EQ(arm->materialSlots().size(), 2u);
+	EXPECT_EQ(body->materialSlots()[0].name, "cloth");
+	EXPECT_EQ(body->materialSlots()[1].name, "skin");
+	EXPECT_EQ(body->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 1u);
+	EXPECT_EQ(arm->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
+	Model::View untouched(model);
+	EXPECT_EQ(untouched.root().geometry()->materialSlots().size(), 1u);
+	spk::Texture atlas;
+	view.bind(palette(atlas, {"skin", "cloth"}), Model::View::PalettePropagation::Recursive);
+	EXPECT_TRUE(view.isRenderable());
+}

@@ -14,7 +14,7 @@
 - Les transformations finales sont calculées à partir du Core, sans duplication de quaternions dans les Views.
 - `bind(palette)` est local par défaut ; `PalettePropagation::Recursive` doit être explicitement demandé et valide les slots avant mutation.
 - Une modification de la hiérarchie Core impose de reconstruire la View. Les rotations et remplacements de Volumes sont pris en compte sans recréer la View.
-- La précédente `Voxel::Model::Builder::harmonize()` est retirée du Core ; tout traitement d'indices de matériaux est réservé au rendu.
+- L'harmonisation devient `Model::View::harmonize()` côté Graphics : unification récursive des slots, indices déterministes et remplacement des meshes préparés, sans modifier les Volumes ou les poses Core.
 
 ## Vérifications
 

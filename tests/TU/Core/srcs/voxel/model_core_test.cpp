@@ -66,8 +66,9 @@ TEST(ModelCoreTest, IndependentCopiesShareVolumeDataWithoutSharingPose)
 	first.skeleton().joint("arm").setRotation(spk::Quaternion::fromEuler({0, 0, 45}));
 	EXPECT_NE(first.skeleton().joint("arm").rotation(), second.skeleton().joint("arm").rotation());
 	ASSERT_NE(second.skeleton().joint("arm").child()->volume(), nullptr);
-	EXPECT_EQ(first.skeleton().joint("arm").child()->volume()->atRaw({0, 0, 0}),
-		second.skeleton().joint("arm").child()->volume()->atRaw({0, 0, 0}));
+	const auto firstCell = first.skeleton().joint("arm").child()->volume()->atRaw({0, 0, 0});
+	const auto secondCell = second.skeleton().joint("arm").child()->volume()->atRaw({0, 0, 0});
+	EXPECT_EQ(firstCell, secondCell);
 	EXPECT_NE(first.version().pose, second.version().pose);
 }
 
