@@ -58,6 +58,8 @@ namespace spk::Voxel
 		friend class Builder;
 
 	public:
+		class View;
+
 		using Path = std::vector<std::string>;
 		static constexpr const char *NoAttachmentPoint = "";
 
@@ -92,86 +94,71 @@ namespace spk::Voxel
 		[[nodiscard]] Model build() const;
 	};
 
-	class Model::View final
+	class Model::Anchor::View final
 	{
-		using Path = Anchor::Path;
+	private:
+		spk::Quaternion _rotation = spk::Quaternion::identity();
+		std::unique_ptr<Model::View> _child;
 
 	public:
-		class AnchorHandle;
+		explicit View(const Anchor &anchor);
+		View(const View &other);
+		View(View &&other) noexcept;
+		View &operator=(const View &other);
+		View &operator=(View &&other) noexcept;
+		~View();
 
+		[[nodiscard]] bool hasChild() const noexcept;
+		[[nodiscard]] Model::View &child();
+		[[nodiscard]] const Model::View &child() const;
+		void setRotation(spk::Quaternion rotation);
+		[[nodiscard]] spk::Quaternion rotation() const noexcept;
+		void resetRotation() noexcept;
+	};
+
+	class Model::View final
+	{
 	private:
 		Model _model;
-		std::map<Path, spk::Palette> _palettes;
-		std::map<Path, spk::Quaternion> _rotations;
+		std::optional<spk::Palette> _palette;
 		spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
-		std::shared_ptr<std::uint8_t> _lifetime = std::make_shared<std::uint8_t>(0);
+		std::map<std::string, Anchor::View, std::less<>> _anchors;
 
-		[[nodiscard]] const Model::Anchor &_anchor(const Path &path) const;
-		[[nodiscard]] Path _findUnique(std::string_view name) const;
-		[[nodiscard]] const Model &_node(const Path &path) const;
-		void _applyPalette(
-			Path path,
-			const spk::Palette &palette,
-			PalettePropagation propagation,
-			std::map<Path, spk::Palette> &prepared) const;
+		[[nodiscard]] Anchor::Path _findUnique(std::string_view name) const;
+		void _collectMatches(
+			std::string_view name,
+			Anchor::Path &path,
+			std::vector<Anchor::Path> &matches) const;
+		void _validatePalette(const spk::Palette &palette, PalettePropagation propagation) const;
+		void _applyPalette(const spk::Palette &palette, PalettePropagation propagation);
 		[[nodiscard]] spk::Matrix4x4 _childTransform(
-			const Model::Anchor &anchor,
-			const Path &path,
+			const Anchor &anchor,
+			const Anchor::View &view,
 			spk::Matrix4x4 parent) const;
 		void _visit(
-			const Model &model,
-			Path &path,
-			spk::Matrix4x4 transform,
-			const std::function<void(const Model &, const spk::Palette &, const spk::Matrix4x4 &)> &callback) const;
+			const std::function<void(const Model &, const spk::Palette &, const spk::Matrix4x4 &)> &callback,
+			spk::Matrix4x4 parent) const;
 
 	public:
 		explicit View(Model model);
 		View(Model model, spk::Palette palette);
 		View(const View &other);
-		View(View &&other);
+		View(View &&other) noexcept;
 		View &operator=(const View &other);
-		View &operator=(View &&other);
-		~View() = default;
+		View &operator=(View &&other) noexcept;
+		~View();
 
-		[[nodiscard]] AnchorHandle anchor(const Anchor::Path &path);
-		[[nodiscard]] AnchorHandle anchor(std::string_view uniqueName);
 		[[nodiscard]] const Model &model() const noexcept;
 		[[nodiscard]] const spk::Palette *palette() const noexcept;
-		[[nodiscard]] const spk::Palette *palette(std::string_view anchorName) const;
-		[[nodiscard]] const spk::Palette *palette(const Anchor::Path &path) const;
+		[[nodiscard]] Anchor::View &anchor(const Anchor::Path &path);
+		[[nodiscard]] const Anchor::View &anchor(const Anchor::Path &path) const;
+		[[nodiscard]] Anchor::View &anchor(std::string_view uniqueName);
+		[[nodiscard]] const Anchor::View &anchor(std::string_view uniqueName) const;
 		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
-		void bind(
-			std::string_view anchorName,
-			spk::Palette palette,
-			PalettePropagation propagation = PalettePropagation::Self);
-		void bind(
-			const Anchor::Path &path,
-			spk::Palette palette,
-			PalettePropagation propagation = PalettePropagation::Self);
-		void setAnchorRotation(std::string_view name, spk::Quaternion rotation);
-		void setAnchorRotation(const Anchor::Path &path, spk::Quaternion rotation);
-		[[nodiscard]] spk::Quaternion anchorRotation(std::string_view name) const;
-		[[nodiscard]] spk::Quaternion anchorRotation(const Anchor::Path &path) const;
 		void setTransform(spk::Matrix4x4 transform);
 		[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
 		[[nodiscard]] bool isRenderable() const;
 		void visit(const std::function<void(const Model &, const spk::Palette &, const spk::Matrix4x4 &)> &callback) const;
 	};
 
-	class Model::View::AnchorHandle final
-	{
-	private:
-		View *_view;
-		Anchor::Path _path;
-		std::weak_ptr<std::uint8_t> _lifetime;
-
-		explicit AnchorHandle(View &view, Anchor::Path path);
-		friend class View;
-
-	public:
-		[[nodiscard]] const Anchor::Path &path() const noexcept;
-		void setRotation(spk::Quaternion rotation);
-		[[nodiscard]] spk::Quaternion rotation() const;
-		void resetRotation();
-	};
 }

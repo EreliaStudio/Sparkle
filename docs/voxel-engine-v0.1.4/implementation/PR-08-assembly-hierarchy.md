@@ -10,15 +10,16 @@
 - L'harmonisation ne dépend pas des palettes. Il n'existe plus de `Model::Harmonizer` ni de `Model::withMesh()`. `Geometry` n'enregistre ni décalage `offset` ni indicateur `harmonized` ; tous les indices sont locaux, à partir de zéro.
 - L'Anchor enfant est facultatif, et `Anchor::NoAttachmentPoint = ""` signifie un alignement sur l'origine.
 - Un Anchor conserve son enfant dans `std::optional<Model>` (absence : `std::nullopt`) et retourne `nullptr` depuis `model()` si l'optionnel est vide. `Model{}` reste un Model valide à géométrie vide. Un `attach()` copie légèrement le Model en partageant `shared_ptr<const Data>`, sans allouer de `shared_ptr<const Model>` et sans imposer de durée de vie à l'Asset Manager ; `detach()` rétablit l'absence. Les Models harmonisés sont conservés de la même façon dans la hiérarchie.
-- `Model::View` gère palettes et rotations par occurrence, indépendamment du Model partagé. Par défaut `bind(palette)` affecte uniquement le Model sélectionné ; `PalettePropagation::Recursive` est obligatoire pour les enfants.
+- `Model::View` représente une occurrence : Model immuable partagé, palette optionnelle, transformation locale et une map d'`Anchor::View`. À la construction, toutes les Anchor Views et les Model Views enfants sont créées récursivement. Chaque `Anchor::View` porte son quaternion, ainsi qu'un `unique_ptr<Model::View>` optionnel pour l'enfant. Les copies des Views ont des états de palette et de pose indépendants.
+- `bind(palette)` valide et affecte uniquement la View concernée ; `PalettePropagation::Recursive` doit être demandé pour tous les enfants. L'opération récursive valide l'ensemble avant de remplacer les palettes.
 - `View::isRenderable()` contrôle les palettes manquantes ou incompatibles sans avaler les exceptions inattendues.
 - `spk::JSON::Catalog::load()` valide tout le fichier dans un état temporaire avant insertion. Un échec ne modifie ni les Shapes ni les Definitions déjà chargées, tout en conservant le support des éléments non copiables.
 - `Model::Anchor::Path` est un `std::vector<std::string>` ; chaque nom est un segment littéral, sans séparateur réservé.
-- `Model::View::AnchorHandle` est lié à une View et détecte la destruction, le déplacement ou la réaffectation de celle-ci.
+- `Model::View::anchor(name ou Anchor::Path)` donne une référence à l'`Anchor::View` (nom court uniquement non ambigu). `Anchor::View::child()` donne la View du Model enfant ou lève une exception s'il n'y en a pas. Les anciennes maps de palettes/rotations par chemins et `AnchorHandle` sont supprimés.
 
 ## Vérifications
 
-Tester l'immuabilité des snapshots, la création des Anchors, les chemins typés et ambigus, l'absence de mutation en cas d'erreur de `attach` ou `harmonize`, la reconstruction effective lors de deux appels successifs à `harmonize`, la réindexation des indices de vertices, la propagation explicite des palettes, le chargement JSON atomique, la propagation des erreurs inattendues et l'invalidation des handles.
+Tester l'immuabilité des snapshots, la création récursive des Views et les Anchors sans enfant, les chemins typés et ambigus, les palettes et rotations indépendantes après copie, la composition de transformation racine/Anchor/enfant, l'absence de mutation en cas d'erreur de `attach` ou `harmonize`, la reconstruction effective lors de deux appels successifs à `harmonize`, la réindexation des indices de vertices, la propagation explicite des palettes, le chargement JSON atomique, la propagation des erreurs inattendues et l'invalidation des handles.
 
 Le rendu GPU appartient aux PR ultérieures. La PR-08 reste en Draft jusqu'au succès de la compilation, des tests et du formatage CI.
 
