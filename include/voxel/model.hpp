@@ -62,7 +62,6 @@ namespace spk::Voxel
 		[[nodiscard]] const spk::Voxel::Geometry::SurfaceMesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
-		[[nodiscard]] std::uint32_t materialIndexOffset() const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
 

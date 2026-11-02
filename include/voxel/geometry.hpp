@@ -41,8 +41,6 @@ namespace spk::Voxel
 			SurfaceMesh translucent;
 			spk::ShadowMap::Mesh depth;
 			std::vector<Definition::Slot> slots;
-			std::uint32_t offset = 0;
-			bool harmonized = false;
 		};
 
 		std::shared_ptr<const Data> _data;
@@ -53,16 +51,12 @@ namespace spk::Voxel
 			SurfaceMesh opaque,
 			SurfaceMesh translucent,
 			spk::ShadowMap::Mesh depth,
-			std::vector<Definition::Slot> slots,
-			std::uint32_t materialIndexOffset = 0,
-			bool harmonized = false);
+			std::vector<Definition::Slot> slots);
 
 		[[nodiscard]] const SurfaceMesh &opaqueMesh() const noexcept;
 		[[nodiscard]] const SurfaceMesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
-		[[nodiscard]] std::uint32_t materialIndexOffset() const noexcept;
-		[[nodiscard]] bool isHarmonized() const noexcept;
 		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 	};

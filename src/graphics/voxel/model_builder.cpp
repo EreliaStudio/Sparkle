@@ -66,9 +66,7 @@ namespace spk::Voxel
 				remapSurface(geometry.opaqueMesh(), geometry, indices),
 				remapSurface(geometry.transparentMesh(), geometry, indices),
 				geometry.depthMesh(),
-				slots,
-				0,
-				true);
+				slots);
 		}
 
 		[[nodiscard]] Model rewrite(

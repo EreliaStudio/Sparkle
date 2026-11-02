@@ -125,11 +125,6 @@ namespace spk::Voxel
 		return geometry().materialSlots();
 	}
 
-	std::uint32_t Model::materialIndexOffset() const noexcept
-	{
-		return geometry().materialIndexOffset();
-	}
-
 	const Definition::Slot &Model::materialSlot(std::uint32_t index) const
 	{
 		return geometry().materialSlot(index);

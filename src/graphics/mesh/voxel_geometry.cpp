@@ -1,7 +1,5 @@
 #include "voxel/geometry.hpp"
 
-#include <iterator>
-#include <limits>
 #include <utility>
 
 #include "exception.hpp"
@@ -26,16 +24,9 @@ namespace spk::Voxel
 		Geometry::SurfaceMesh opaque,
 		Geometry::SurfaceMesh translucent,
 		spk::ShadowMap::Mesh depth,
-		std::vector<Definition::Slot> slots,
-		std::uint32_t materialIndexOffset,
-		bool harmonized) :
-		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), materialIndexOffset, harmonized))
+		std::vector<Definition::Slot> slots) :
+		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots)))
 	{
-		if (!_data->slots.empty() &&
-			_data->slots.size() - 1 > std::numeric_limits<std::uint32_t>::max() - materialIndexOffset)
-		{
-			throw spk::Exception("Voxel Geometry: material index offset overflow");
-		}
 	}
 
 	const Geometry::SurfaceMesh &Geometry::opaqueMesh() const noexcept
@@ -58,44 +49,24 @@ namespace spk::Voxel
 		return _data->slots;
 	}
 
-	std::uint32_t Geometry::materialIndexOffset() const noexcept
-	{
-		return _data->offset;
-	}
-
-	bool Geometry::isHarmonized() const noexcept
-	{
-		return _data->harmonized;
-	}
-
 	bool Geometry::isCompatible(const spk::Palette &palette) const noexcept
 	{
-		if (isHarmonized() && palette.materials().size() != materialSlots().size())
-		{
-			return false;
-		}
-		std::size_t index = 0;
 		for (const auto &slot : materialSlots())
 		{
-			if (!palette.find(slot.name))
+			if (palette.find(slot.name) == nullptr)
 			{
 				return false;
 			}
-			if (isHarmonized() && std::next(palette.materials().begin(), static_cast<std::ptrdiff_t>(index))->first != slot.name)
-			{
-				return false;
-			}
-			++index;
 		}
 		return true;
 	}
 
 	const Definition::Slot &Geometry::materialSlot(std::uint32_t index) const
 	{
-		if (index < materialIndexOffset() || index - materialIndexOffset() >= materialSlots().size())
+		if (index >= materialSlots().size())
 		{
 			throw spk::Exception("Voxel Geometry: material index out of range");
 		}
-		return materialSlots()[index - materialIndexOffset()];
+		return materialSlots()[index];
 	}
 }

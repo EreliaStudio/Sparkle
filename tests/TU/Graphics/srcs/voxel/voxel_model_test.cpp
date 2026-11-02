@@ -20,15 +20,15 @@ namespace
 	using Vertex = spk::Voxel::Geometry::Vertex;
 	using Matrix = spk::Matrix4x4;
 
-	[[nodiscard]] Model model(const std::string &slot, std::uint32_t index = 0)
+	[[nodiscard]] Model model(const std::string &slot)
 	{
 		SurfaceMesh::Builder builder;
-		const Vertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, index};
+		const Vertex vertex{{0, 0, 0}, {0, 1, 0}, {0, 0}, 0};
 		const auto a = builder.addVertex(vertex);
 		const auto b = builder.addVertex(vertex);
 		const auto c = builder.addVertex(vertex);
 		builder.addTriangle(a, b, c);
-		return Model(Geometry(std::move(builder).build(), {}, {}, {{slot, 1.0f}}, index));
+		return Model(Geometry(std::move(builder).build(), {}, {}, {{slot, 1.0f}}));
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Texture &atlas, std::vector<std::string> names)
@@ -62,12 +62,12 @@ namespace
 
 TEST(VoxelModelTest, MeshCarriesGeometryAndMaterialSlots)
 {
-	const auto source = model("cloth", 5);
+	const auto source = model("cloth");
 	EXPECT_EQ(source.geometry().opaqueMesh().indexCount(), 3u);
 	EXPECT_TRUE(source.geometry().transparentMesh().empty());
-	EXPECT_EQ(source.materialIndexOffset(), 5u);
-	EXPECT_EQ(source.materialSlot(5).name, "cloth");
-	EXPECT_THROW((void)source.materialSlot(4), spk::Exception);
+	EXPECT_EQ(materialIndex(source), 0u);
+	EXPECT_EQ(source.materialSlot(0).name, "cloth");
+	EXPECT_THROW((void)source.materialSlot(1), spk::Exception);
 }
 
 TEST(VoxelModelTest, BuilderOwnsMutationsAndPublishedModelsStayImmutable)
@@ -247,20 +247,19 @@ TEST(VoxelModelViewTest, DuplicateAnchorNamesRejectAmbiguousLookup)
 
 TEST(VoxelModelBuilderTest, HarmonizeCombinesSlotsAndPreservesSources)
 {
-	Model::Builder builder(model("cloth", 5));
+	Model::Builder builder(model("skin"));
 	builder.addAnchor("arm");
-	builder.attach("arm", model("skin"));
+	builder.attach("arm", model("cloth"));
 	const Model before = builder.build();
 	builder.harmonize();
 	const Model result = builder.build();
-	EXPECT_EQ(result.materialIndexOffset(), 0u);
 	EXPECT_EQ(result.materialSlots().size(), 2u);
 	EXPECT_EQ(result.materialSlots()[0].name, "cloth");
 	EXPECT_EQ(result.materialSlots()[1].name, "skin");
-	EXPECT_EQ(materialIndex(result), 0u);
+	EXPECT_EQ(materialIndex(result), 1u);
 	ASSERT_NE(result.anchor("arm").model(), nullptr);
-	EXPECT_EQ(materialIndex(*result.anchor("arm").model()), 1u);
-	EXPECT_EQ(materialIndex(before), 5u);
+	EXPECT_EQ(materialIndex(*result.anchor("arm").model()), 0u);
+	EXPECT_EQ(materialIndex(before), 0u);
 	EXPECT_EQ(materialIndex(*before.anchor("arm").model()), 0u);
 	spk::Texture atlas;
 	Model::View view(result);
@@ -270,11 +269,11 @@ TEST(VoxelModelBuilderTest, HarmonizeCombinesSlotsAndPreservesSources)
 
 TEST(VoxelModelBuilderTest, HarmonizeUnifiesSameNameAndOpacity)
 {
-	Model::Builder builder(model("cloth", 5));
+	Model::Builder builder(model("cloth"));
 	builder.addAnchor("left");
 	builder.addAnchor("right");
-	builder.attach("left", model("cloth", 8));
-	builder.attach("right", model("cloth", 2));
+	builder.attach("left", model("cloth"));
+	builder.attach("right", model("cloth"));
 	builder.harmonize();
 	const Model result = builder.build();
 	EXPECT_EQ(result.materialSlots().size(), 1u);
@@ -295,11 +294,11 @@ TEST(VoxelModelBuilderTest, HarmonizeRejectsOpacityConflictsAtomically)
 	EXPECT_EQ(materialIndex(builder.build()), 0u);
 }
 
-TEST(VoxelModelBuilderTest, HarmonizeIsIdempotent)
+TEST(VoxelModelBuilderTest, HarmonizeAlwaysRecomputesEvenWhenAlreadyHarmonized)
 {
-	Model::Builder builder(model("cloth", 7));
+	Model::Builder builder(model("cloth"));
 	builder.addAnchor("arm");
-	builder.attach("arm", model("skin", 3));
+	builder.attach("arm", model("skin"));
 	builder.harmonize();
 	const auto first = builder.build();
 	builder.harmonize();
@@ -307,6 +306,42 @@ TEST(VoxelModelBuilderTest, HarmonizeIsIdempotent)
 	EXPECT_EQ(first.materialSlots().size(), second.materialSlots().size());
 	EXPECT_EQ(materialIndex(first), materialIndex(second));
 	EXPECT_EQ(materialIndex(*first.anchor("arm").model()), materialIndex(*second.anchor("arm").model()));
+	EXPECT_NE(&first.opaqueMesh().layout(), &second.opaqueMesh().layout());
+	EXPECT_NE(&first.anchor("arm").model()->opaqueMesh().layout(), &second.anchor("arm").model()->opaqueMesh().layout());
+}
+
+TEST(VoxelModelBuilderTest, ReharmonizingAfterAddingChildUpdatesAllIndices)
+{
+	Model::Builder builder(model("skin"));
+	builder.harmonize();
+	const Model original = builder.build();
+	EXPECT_EQ(materialIndex(original), 0u);
+	builder.addAnchor("arm");
+	builder.attach("arm", model("cloth"));
+	builder.harmonize();
+	const Model changed = builder.build();
+	ASSERT_EQ(changed.materialSlots().size(), 2u);
+	EXPECT_EQ(changed.materialSlots()[0].name, "cloth");
+	EXPECT_EQ(changed.materialSlots()[1].name, "skin");
+	EXPECT_EQ(materialIndex(changed), 1u);
+	EXPECT_EQ(materialIndex(*changed.anchor("arm").model()), 0u);
+	EXPECT_EQ(materialIndex(original), 0u);
+}
+
+TEST(VoxelModelBuilderTest, HarmonizedGeometryAcceptsPalettesWithAdditionalSlots)
+{
+	Model::Builder builder(model("skin"));
+	builder.addAnchor("arm");
+	builder.attach("arm", model("cloth"));
+	builder.harmonize();
+	const Model result = builder.build();
+	spk::Texture atlas;
+	const auto appearance = palette(atlas, {"cloth", "skin", "extra"});
+	EXPECT_TRUE(result.isCompatible(appearance));
+	EXPECT_TRUE(result.anchor("arm").model()->isCompatible(appearance));
+	Model::View view(result);
+	view.bind(appearance, Model::PalettePropagation::Recursive);
+	EXPECT_TRUE(view.isRenderable());
 }
 
 TEST(VoxelAnchorPathTest, VectorOfSegmentsKeepsLiteralNames)

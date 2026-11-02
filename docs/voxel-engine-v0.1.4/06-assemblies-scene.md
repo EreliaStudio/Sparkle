@@ -6,7 +6,7 @@
 
 ### 6.1 Voxel::Geometry
 
-Le Mesher produit un `spk::Voxel::Geometry` immuable et partageable. Il contient deux `Geometry::SurfaceMesh` (opaque et translucide), un `ShadowMap::Mesh`, et ses slots sémantiques (nom, opacité, offset). Chaque vertex est un `Geometry::Vertex`. La géométrie ne contient aucune palette.
+Le Mesher produit un `spk::Voxel::Geometry` immuable et partageable. Il contient deux `Geometry::SurfaceMesh` (opaque et translucide), un `ShadowMap::Mesh`, et ses slots sémantiques (nom et opacité). Les indices de vertices sont toujours locaux à la géométrie et commencent à zéro. Chaque vertex est un `Geometry::Vertex`. La géométrie ne contient aucune palette.
 
 ### 6.2 Model immutable, Model::Builder et Anchors
 
@@ -16,7 +16,7 @@ Chaque Anchor possède un repère rigide et éventuellement un Model enfant immu
 
 ### 6.3 Model::View
 
-Une View représente une instance indépendante, avec ses propres palettes, rotations de joints et transformation globale. Les palettes sont validées transactionnellement et peuvent être propres à chaque Model. `View::bind(palette)` ne modifie que la cible sélectionnée (`PalettePropagation::Self` par défaut) ; la propagation à tous ses enfants exige `PalettePropagation::Recursive`. Un Model harmonisé exige le layout complet pour chaque palette qui lui est associée.
+Une View représente une instance indépendante, avec ses propres palettes, rotations de joints et transformation globale. Les palettes sont validées transactionnellement et peuvent être propres à chaque Model. `View::bind(palette)` ne modifie que la cible sélectionnée (`PalettePropagation::Self` par défaut) ; la propagation à tous ses enfants exige `PalettePropagation::Recursive`. Chaque palette doit fournir tous les slots du Model ciblé ; les matériaux supplémentaires restent autorisés.
 
 La transformation d'un enfant est `M_child = M_parent * A_parent * R_joint * inverse(A_child)` si un point d'attache enfant est spécifié ; sinon, la dernière opération d'inversion est absente.
 
@@ -24,9 +24,9 @@ Les chemins d'Anchors utilisent `Model::Anchor::Path = std::vector<std::string>`
 
 ### 6.4 Model::Builder::harmonize()
 
-L'appel explicite à `harmonize()` précède `build()`. Le Builder parcourt la hiérarchie et collecte les slots par nom et opacité. Un nom existant avec la même opacité réutilise l'indice global ; une opacité contradictoire provoque une exception. Les slots globaux sont triés de façon déterministe et chaque Mesh, y compris celui des enfants, est réindexé sans altérer les positions, UV, normales, triangles ou mesh de profondeur.
+L'appel explicite à `harmonize()` précède `build()`. Le Builder parcourt la hiérarchie et collecte les slots par nom et opacité. Un nom existant avec la même opacité réutilise l'indice global ; une opacité contradictoire provoque une exception. Les slots globaux sont triés de façon déterministe et chaque `Geometry`, y compris celles des enfants, est réindexée sans altérer les positions, UV, normales, triangles ou mesh de profondeur.
 
-L'harmonisation n'inspecte aucune palette ni Material concret : elle est strictement structurelle. Les Models enfants sont reconstruits en valeurs immuables ; les Models sources restent inchangés. Les Views de ce Model harmonisé peuvent utiliser des palettes différentes, mais chacune doit fournir exactement les clés du layout commun dans l'ordre attendu. Le `Model::Harmonizer` indépendant a été supprimé.
+L'harmonisation n'inspecte aucune palette ni Material concret : elle est strictement structurelle. Les Models enfants sont reconstruits en valeurs immuables ; les Models sources restent inchangés. Les Views de ce Model peuvent utiliser des palettes différentes : chaque palette doit contenir tous les noms de slots requis. Aucun champ `harmonized` n'est conservé et un nouvel appel à `harmonize()` recalcule et reconstruit systématiquement les géométries, même déjà harmonisées. Le `Model::Harmonizer` indépendant a été supprimé.
 
 `View::isRenderable()` retourne `false` uniquement lorsque la hiérarchie manque de palettes compatibles, sans intercepter les erreurs inattendues (par exemple une allocation impossible).
 
