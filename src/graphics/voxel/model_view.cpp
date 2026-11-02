@@ -267,7 +267,7 @@ namespace spk::Voxel
 				if (!std::isfinite(transform[c][r]))
 				{
 					throw spk::Exception("Voxel View: non-finite transform");
-			}
+				}
 			}
 		}
 		_transform = transform;

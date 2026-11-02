@@ -200,9 +200,9 @@ TEST(VoxelModelViewTest, ChildViewTransformComposesAfterJointAndAttachment)
 		transforms.push_back(matrix);
 	});
 	ASSERT_EQ(transforms.size(), 2u);
-	const auto expected = Matrix::translation(5, 0, 0) * Matrix::translation(2, 0, 0) *
-		Matrix::rotation(view.anchor("shoulder").rotation()) * Matrix::translation(-1, 0, 0) *
-		Matrix::translation(0, 0, 3);
+	const auto parent = Matrix::translation(5, 0, 0) * Matrix::translation(2, 0, 0);
+	const auto joint = Matrix::rotation(view.anchor("shoulder").rotation()) * Matrix::translation(-1, 0, 0);
+	const auto expected = parent * joint * Matrix::translation(0, 0, 3);
 	expectMatrix(transforms[1], expected);
 }
 
