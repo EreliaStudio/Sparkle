@@ -337,3 +337,51 @@ TEST(ModelCoreTest, ReplacingAttachedModelAndSkeletonRebindsCachedMatrix)
 	attached->skeleton() = std::move(newSkeleton);
 	expectMatrix(attached->skeleton().joint("tip").globalMatrix(), Matrix::translation(15, 0, 0));
 }
+
+TEST(ModelCoreTest, PartAttachmentAnchorInvalidatesCachedPartMatrix)
+{
+	Model model;
+	model.skeleton().root().addJoint("mount", Matrix::translation(5, 0, 0));
+	Part part;
+	part.addJoint("pivot", Matrix::translation(1, 0, 0));
+	part.addJoint("tip", Matrix::translation(3, 0, 0));
+	model.skeleton().joint("mount").attach(part, "pivot");
+	auto *attached = model.skeleton().joint("mount").child();
+	ASSERT_NE(attached, nullptr);
+	expectMatrix(attached->globalMatrix(), Matrix::translation(4, 0, 0));
+	expectMatrix(attached->joint("tip").globalMatrix(), Matrix::translation(7, 0, 0));
+
+	attached->joint("pivot").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	expectMatrix(attached->globalMatrix(), Matrix::translation(4, 0, 0));
+	attached->joint("pivot").setTransform(Matrix::translation(2, 0, 0));
+	expectMatrix(attached->globalMatrix(), Matrix::translation(3, 0, 0));
+	expectMatrix(attached->joint("tip").globalMatrix(), Matrix::translation(6, 0, 0));
+}
+
+TEST(ModelCoreTest, NestedAttachedModelsKeepTheirOwnHierarchyMatrix)
+{
+	Model character;
+	character.setTransform(Matrix::translation(10, 0, 0));
+	character.skeleton().root().addJoint("hand", Matrix::translation(2, 0, 0));
+	Model sword;
+	sword.skeleton().root().addJoint("tip", Matrix::translation(3, 0, 0));
+	Model gem;
+	gem.setTransform(Matrix::translation(0, 1, 0));
+	sword.skeleton().joint("tip").attach(gem);
+	character.skeleton().joint("hand").attach(sword);
+
+	auto *attachedSword = character.skeleton().joint("hand").model();
+	ASSERT_NE(attachedSword, nullptr);
+	auto *attachedGem = attachedSword->skeleton().joint("tip").model();
+	ASSERT_NE(attachedGem, nullptr);
+	expectMatrix(attachedGem->globalMatrix(), Matrix::translation(15, 1, 0));
+
+	const auto before = character.version();
+	attachedSword->skeleton().joint("tip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	const auto rotation = Matrix::rotation(attachedSword->skeleton().joint("tip").rotation());
+	expectMatrix(attachedGem->globalMatrix(), Matrix::translation(15, 0, 0) * rotation * Matrix::translation(0, 1, 0));
+	EXPECT_EQ(character.version(), before);
+
+	character.setTransform(Matrix::translation(20, 0, 0));
+	expectMatrix(attachedGem->globalMatrix(), Matrix::translation(25, 0, 0) * rotation * Matrix::translation(0, 1, 0));
+}
