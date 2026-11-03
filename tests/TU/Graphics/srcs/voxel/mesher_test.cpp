@@ -587,7 +587,7 @@ TEST(MesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 				EXPECT_FALSE(closed.materialSlots()[vertex.materialIndex].name.starts_with("source_"));
 			}
 			Volume::Builder opening(sealed.dimensions());
-			opening.copyFrom(sealed);
+			opening.load(sealed);
 			opening.erase(neighbor(Face::PositiveX));
 			const auto open = Mesher().bake(opening.build());
 			bool found = false;
