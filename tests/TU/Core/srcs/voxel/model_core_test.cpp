@@ -602,20 +602,20 @@ TEST(ModelCoreTest, ModelDoesNotExtendBodyLifetime)
 {
 	struct TrackedBody final : spk::Body
 	{
-		bool &destroyed;
-		explicit TrackedBody(bool &flag) :
-			destroyed(flag)
-		{
-		}
+		bool *flag = nullptr;
 		~TrackedBody() override
 		{
-			destroyed = true;
+			if (flag)
+			{
+				*flag = true;
+			}
 		}
 	};
 	bool destroyed = false;
 	Skeleton skeleton;
 	{
-		TrackedBody body(destroyed);
+		TrackedBody body;
+		body.flag = &destroyed;
 		skeleton.root().setBody(&body);
 		EXPECT_EQ(skeleton.root().body(), &body);
 	}
