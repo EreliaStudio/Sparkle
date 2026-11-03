@@ -61,7 +61,7 @@ namespace
 
 	[[nodiscard]] Definition definition(const spk::Voxel::Shape &shape, std::string name)
 	{
-		Definition::SlotCollection mapping;
+		Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, Definition::Slot{name, 1.0f});
@@ -72,7 +72,7 @@ namespace
 	[[nodiscard]] const spk::Voxel::Volume &singleCubeVolume()
 	{
 		static const spk::Voxel::Volume result = [] {
-			Definition::Collection::Builder definitions;
+			Definition::Registry::Builder definitions;
 			definitions.add(1, definition(cube(), "stone"));
 			spk::Voxel::Volume::Builder volume({1, 1, 1});
 			volume.bind(definitions.build());
@@ -86,7 +86,7 @@ namespace
 	{
 		static const spk::Voxel::Volume result = [] {
 			const auto shape = cube();
-			Definition::Collection::Builder definitions;
+			Definition::Registry::Builder definitions;
 			definitions.add(1, definition(shape, "hidden"));
 			definitions.add(2, definition(shape, "outside"));
 			spk::Voxel::Volume::Builder volume({3, 3, 3});
@@ -129,7 +129,7 @@ namespace
 	}
 }
 
-TEST(VoxelPaletteTest, BuildsPaletteBeforeModelExists)
+TEST(VoxelPaletteTest, BuildsPaletteBeforeGeometryExists)
 {
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
@@ -139,7 +139,7 @@ TEST(VoxelPaletteTest, BuildsPaletteBeforeModelExists)
 	EXPECT_TRUE(source.isCompatible(result));
 }
 
-TEST(VoxelPaletteTest, ModelDetectsMissingRequiredMaterial)
+TEST(VoxelPaletteTest, GeometryDetectsMissingRequiredMaterial)
 {
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}});
@@ -150,7 +150,7 @@ TEST(VoxelPaletteTest, ModelDetectsMissingRequiredMaterial)
 		palette({{"stone", material(atlas)}, {"glass", material(atlas)}})));
 }
 
-TEST(VoxelPaletteTest, ModelChecksFullyOccludedSlot)
+TEST(VoxelPaletteTest, GeometryChecksFullyOccludedSlot)
 {
 	const Geometry source = bakedOccludedCube();
 	ASSERT_EQ(source.materialSlots().size(), 2u);
@@ -196,7 +196,7 @@ TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
 	EXPECT_NE(result.find("left")->find("albedo")->section, result.find("right")->find("albedo")->section);
 }
 
-TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutModel)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutGeometry)
 {
 	Texture first;
 	Texture second;
@@ -207,7 +207,7 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutModel)
 	EXPECT_EQ(builder.build().materials().size(), 1u);
 }
 
-TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfModelOpacity)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfGeometryOpacity)
 {
 	Texture first;
 	Texture second;
@@ -229,7 +229,7 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
 	EXPECT_FALSE(source.isCompatible(builder.build()));
 }
 
-TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByModel)
+TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByGeometry)
 {
 	const Geometry first = geometryWithSlots({{"stone", 1.0f}});
 	const Geometry other = geometryWithSlots({{"stone", 1.0f}, {"glass", 1.0f}, {"missing", 1.0f}});
@@ -300,7 +300,7 @@ TEST(VoxelPaletteTest, EmptyBuilderAllowsEitherFirstAtlas)
 	EXPECT_EQ(builder.build().find("stone")->find("albedo")->texture.identifier(), second.handle().identifier());
 }
 
-TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
+TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentGeometryOpacities)
 {
 	Texture atlas;
 	const auto result = palette({{"shared", material(atlas)}, {"extra", material(atlas)}});
@@ -311,7 +311,7 @@ TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
 	EXPECT_EQ(result.materials().size(), 2u);
 }
 
-TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralModels)
+TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralGeometrys)
 {
 	Texture atlas;
 	const auto result = palette({{"shared", material(atlas)}, {"left", material(atlas)}, {"right", material(atlas)}});
@@ -415,7 +415,7 @@ TEST(VoxelPaletteTest, MissingSlotIsIncompatibleButOpacityMayDiffer)
 	EXPECT_TRUE(source.isCompatible(palette({{"stone", material(atlas)}})));
 }
 
-TEST(VoxelPaletteTest, EmptyModelAcceptsEmptyPalette)
+TEST(VoxelPaletteTest, EmptyGeometryAcceptsEmptyPalette)
 {
 	const auto result = VoxelBuilder().build();
 	const Geometry source = geometryWithSlots({});

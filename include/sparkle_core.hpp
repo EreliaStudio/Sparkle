@@ -69,6 +69,7 @@
 #include "math/matrix.hpp"
 #include "math/quaternion.hpp"
 #include "math/rect2d.hpp"
+#include "math/camera_3d.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 #include "math/vector4.hpp"

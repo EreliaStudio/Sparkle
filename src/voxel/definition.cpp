@@ -10,7 +10,7 @@ namespace spk::Voxel
 	struct Definition::Data
 	{
 		Shape shape;
-		SlotCollection slots;
+		SlotMapping slots;
 	};
 
 	Definition::Definition() :
@@ -18,7 +18,7 @@ namespace spk::Voxel
 	{
 	}
 
-	Definition::Definition(Shape shape, SlotCollection mapping)
+	Definition::Definition(Shape shape, SlotMapping mapping)
 	{
 		if (mapping.size() != shape.slots().size())
 		{
@@ -61,7 +61,7 @@ namespace spk::Voxel
 		return _data->shape;
 	}
 
-	const Definition::SlotCollection &Definition::slots() const noexcept
+	const Definition::SlotMapping &Definition::slots() const noexcept
 	{
 		return _data->slots;
 	}
