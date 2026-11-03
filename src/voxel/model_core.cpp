@@ -52,16 +52,40 @@ namespace spk
 				throw spk::Exception("Model Joint: invalid homogeneous transformation");
 			}
 		}
+
+		[[nodiscard]] spk::Matrix4x4 inverseAnchor(const spk::Matrix4x4 &matrix)
+		{
+			spk::Matrix4x4 result = spk::Matrix4x4::identity();
+			for (std::size_t column = 0; column < 3; ++column)
+			{
+				for (std::size_t row = 0; row < 3; ++row)
+				{
+					result[column][row] = matrix[row][column];
+				}
+			}
+			for (std::size_t row = 0; row < 3; ++row)
+			{
+				result[3][row] = 0.0f;
+				for (std::size_t column = 0; column < 3; ++column)
+				{
+					result[3][row] -= result[column][row] * matrix[3][column];
+				}
+			}
+			return result;
+		}
 	}
+
 
 	Model::Model() :
 		_skeleton(std::make_unique<Skeleton>())
 	{
+		_skeleton->_bindOwner(this);
 	}
 
 	Model::Model(Skeleton skeleton) :
 		_skeleton(std::make_unique<Skeleton>(std::move(skeleton)))
 	{
+		_skeleton->_bindOwner(this);
 	}
 
 	Model::Model(const Model &other) :
@@ -69,10 +93,39 @@ namespace spk
 		_transform(other._transform),
 		_transformVersion(other._transformVersion)
 	{
+		_skeleton->_bindOwner(this);
 	}
 
-	Model::Model(Model &&other) noexcept = default;
-	Model &Model::operator=(Model &&other) noexcept = default;
+	Model::Model(Model &&other) noexcept :
+		_skeleton(std::move(other._skeleton)),
+		_transform(other._transform),
+		_transformVersion(other._transformVersion)
+	{
+		if (_skeleton)
+		{
+			_skeleton->_bindOwner(this);
+			_skeleton->_bindParentJoint(nullptr);
+		}
+	}
+
+	Model &Model::operator=(Model &&other) noexcept
+	{
+		if (this != &other)
+		{
+			auto *parent = _skeleton ? _skeleton->_parentJoint : nullptr;
+			_skeleton = std::move(other._skeleton);
+			_transform = other._transform;
+			_transformVersion = other._transformVersion;
+			if (_skeleton)
+			{
+				_skeleton->_bindOwner(this);
+				_skeleton->_bindParentJoint(parent);
+			}
+			_globalMatrix.invalidate();
+		}
+		return *this;
+	}
+
 	Model::~Model() = default;
 
 	Model &Model::operator=(const Model &other)
@@ -100,11 +153,41 @@ namespace spk
 		validateFinite(transform);
 		_transform = transform;
 		++_transformVersion;
+		_invalidateGlobalMatrices();
 	}
 
 	const spk::Matrix4x4 &Model::transform() const noexcept
 	{
 		return _transform;
+	}
+
+	spk::Matrix4x4 Model::_calculateGlobalMatrix() const
+	{
+		const auto *parent = _skeleton->_parentJoint;
+		if (parent == nullptr)
+		{
+			return _transform;
+		}
+		auto matrix = parent->globalMatrix();
+		if (!parent->attachment().empty())
+		{
+			matrix = matrix * inverseAnchor(skeleton().root().joint(parent->attachment()).transform());
+		}
+		return matrix * _transform;
+	}
+
+	void Model::_invalidateGlobalMatrices() noexcept
+	{
+		_globalMatrix.invalidate();
+		if (_skeleton)
+		{
+			_skeleton->root()._invalidateGlobalMatrices();
+		}
+	}
+
+	const spk::Matrix4x4 &Model::globalMatrix() const
+	{
+		return _globalMatrix.get();
 	}
 
 	Model::Version Model::version() const noexcept
