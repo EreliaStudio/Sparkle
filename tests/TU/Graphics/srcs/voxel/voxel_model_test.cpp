@@ -46,12 +46,10 @@ namespace
 		}
 		return builder.build();
 	}
-
 }
 
 TEST(ModelGraphicsTest, PartsWithoutVolumeNeedNoMeshOrPalette)
 {
-
 	Model model;
 	model.skeleton().root().addJoint("hand");
 	model.skeleton().joint("hand").attach(Part{});
@@ -81,7 +79,6 @@ TEST(ModelGraphicsTest, ViewBuildsAndCachesRenderMeshesOnDemand)
 
 TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 {
-
 	Model model;
 	model.skeleton().root().setVolume(volume("cloth"));
 	model.skeleton().root().addJoint("arm", Matrix::translation(2, 0, 0));
@@ -141,7 +138,6 @@ TEST(ModelGraphicsTest, RecursiveBindingRejectsMissingMaterialsWithoutChangingPa
 
 TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 {
-
 	Model model;
 	model.skeleton().root().setVolume(volume("skin"));
 	model.skeleton().root().addJoint("arm");
@@ -276,7 +272,6 @@ TEST(ModelGraphicsTest, HarmonizePreservesPerDefinitionOpacityWithSharedMaterial
 
 TEST(ModelGraphicsTest, AttachedModelPoseChangesPreserveGraphicCaches)
 {
-
 	Model parent;
 	parent.skeleton().root().addJoint("hand", Matrix::translation(4, 0, 0));
 	Model tool;
@@ -302,7 +297,6 @@ TEST(ModelGraphicsTest, AttachedModelPoseChangesPreserveGraphicCaches)
 
 TEST(ModelGraphicsTest, AttachingModelUpdatesViewAndPreservesExistingMeshes)
 {
-
 	Model character;
 	character.skeleton().root().setVolume(volume("cloth"));
 	character.skeleton().root().addJoint("hand", Matrix::translation(2, 0, 0));
@@ -355,7 +349,6 @@ TEST(ModelGraphicsTest, ReplacingAttachedModelRebuildsOnlyItsBranch)
 
 TEST(ModelGraphicsTest, NestedAttachedModelsKeepGraphicCachesAfterPoseChanges)
 {
-
 	Model parent;
 	parent.skeleton().root().addJoint("hand");
 	Model sword;
