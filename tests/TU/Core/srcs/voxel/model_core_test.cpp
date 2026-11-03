@@ -2,8 +2,8 @@
 
 #include <array>
 #include <cmath>
-#include <string>
 #include <limits>
+#include <string>
 #include <utility>
 
 #include "exception.hpp"
@@ -523,8 +523,7 @@ TEST(ModelCoreTest, LongArticulatedChainMatchesIndependentPlanarReference)
 
 		if (phase == 0)
 		{
-			model.skeleton().joint(Skeleton::Path{"joint_0", "joint_1", "joint_2"})
-				.setRotation(spk::Quaternion::fromEuler({0, 0, 270}));
+			model.skeleton().joint(Skeleton::Path{"joint_0", "joint_1", "joint_2"}).setRotation(spk::Quaternion::fromEuler({0, 0, 270}));
 		}
 		if (phase == 1)
 		{
