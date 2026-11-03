@@ -16,8 +16,6 @@ namespace spk
 {
 	class Model
 	{
-		friend class Skeleton;
-
 	public:
 		class Skeleton;
 		class View;
@@ -62,6 +60,8 @@ namespace spk
 
 	class Model::Skeleton
 	{
+		friend class Model;
+
 	public:
 		class Part;
 		class Joint;
