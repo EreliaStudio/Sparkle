@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
+#include <string>
 #include <limits>
 #include <utility>
 
@@ -18,6 +20,29 @@ namespace
 	{
 		spk::Voxel::Volume::Builder builder({1, 1, 1});
 		return builder.build();
+	}
+
+	[[nodiscard]] Matrix referenceQuarterTurn(int turns, float x, float y, float z = 0.0f)
+	{
+		Matrix result = Matrix::identity();
+		const int orientation = turns % 4;
+		const std::array<float, 4> cosine{1, 0, -1, 0};
+		const std::array<float, 4> sine{0, 1, 0, -1};
+		result[0][0] = cosine[orientation];
+		result[0][1] = sine[orientation];
+		result[1][0] = -sine[orientation];
+		result[1][1] = cosine[orientation];
+		result[3][0] = x;
+		result[3][1] = y;
+		result[3][2] = z;
+		return result;
+	}
+
+	[[nodiscard]] std::array<float, 2> referenceStep(int turns, float distance)
+	{
+		const std::array<float, 4> x{distance, 0, -distance, 0};
+		const std::array<float, 4> y{0, distance, 0, -distance};
+		return {x[turns % 4], y[turns % 4]};
 	}
 
 	void expectMatrix(const Matrix &actual, const Matrix &expected)
@@ -384,4 +409,136 @@ TEST(ModelCoreTest, NestedAttachedModelsKeepTheirOwnHierarchyMatrix)
 
 	character.setTransform(Matrix::translation(20, 0, 0));
 	expectMatrix(attachedGem->globalMatrix(), Matrix::translation(25, 0, 0) * rotation * Matrix::translation(0, 1, 0));
+}
+
+TEST(ModelCoreTest, GoldenQuarterTurnMatricesIncludeChildAnchorOffset)
+{
+	Model character;
+	character.setTransform(Matrix::translation(7, 2, 3));
+	character.skeleton().root().addJoint("shoulder", Matrix::translation(2, 0, 0));
+	Part arm;
+	arm.addJoint("pivot", Matrix::translation(1, 0, 0));
+	arm.addJoint("elbow", Matrix::translation(3, 0, 0));
+	character.skeleton().joint("shoulder").attach(arm, "pivot");
+	character.skeleton().joint("shoulder").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+
+	const auto &shoulder = character.skeleton().joint("shoulder");
+	ASSERT_NE(shoulder.child(), nullptr);
+	expectMatrix(character.globalMatrix(), referenceQuarterTurn(0, 7, 2, 3));
+	expectMatrix(character.skeleton().root().globalMatrix(), referenceQuarterTurn(0, 7, 2, 3));
+	expectMatrix(shoulder.globalMatrix(), referenceQuarterTurn(1, 9, 2, 3));
+	expectMatrix(shoulder.child()->globalMatrix(), referenceQuarterTurn(1, 9, 1, 3));
+	expectMatrix(shoulder.child()->joint("elbow").globalMatrix(), referenceQuarterTurn(1, 9, 4, 3));
+
+	shoulder.child()->joint("pivot").setRotation(spk::Quaternion::fromEuler({0, 0, 180}));
+	expectMatrix(shoulder.child()->globalMatrix(), referenceQuarterTurn(1, 9, 1, 3));
+}
+
+TEST(ModelCoreTest, GoldenRotatedModelSocketInvertsRigidOrientation)
+{
+	Model character;
+	character.skeleton().root().addJoint("hand", Matrix::translation(5, 3, 0));
+	character.skeleton().joint("hand").setRotation(spk::Quaternion::fromEuler({0, 0, 180}));
+	Model shield;
+	shield.setTransform(Matrix::translation(0, 2, 0));
+	const auto grip = Matrix::translation(1, 0, 0) * Matrix::rotation(0, 0, 90);
+	shield.skeleton().root().addJoint("strap", grip);
+	shield.skeleton().root().addJoint("edge", Matrix::translation(2, 0, 0));
+	character.skeleton().joint("hand").attach(shield, "strap");
+	const auto *equipped = character.skeleton().joint("hand").model();
+	ASSERT_NE(equipped, nullptr);
+
+	expectMatrix(character.skeleton().joint("hand").globalMatrix(), referenceQuarterTurn(2, 5, 3));
+	expectMatrix(equipped->globalMatrix(), referenceQuarterTurn(1, 3, 2));
+	expectMatrix(equipped->skeleton().root().globalMatrix(), referenceQuarterTurn(1, 3, 2));
+	expectMatrix(equipped->skeleton().joint("edge").globalMatrix(), referenceQuarterTurn(1, 3, 4));
+
+	equipped->skeleton().joint("strap").setRotation(spk::Quaternion::fromEuler({0, 0, 45}));
+	expectMatrix(equipped->globalMatrix(), referenceQuarterTurn(1, 3, 2));
+}
+
+TEST(ModelCoreTest, GoldenNonUniformScaleFollowsCorrectMatrixOrder)
+{
+	Model model;
+	model.setTransform(Matrix::translation(4, 0, 0) * Matrix::scale(2, 3, 1));
+	model.skeleton().root().addJoint("shoulder", Matrix::translation(1, 1, 0));
+	model.skeleton().joint("shoulder").attach(Part{});
+	model.skeleton().joint("shoulder").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	auto expected = Matrix::identity();
+	expected[0][0] = 0;
+	expected[0][1] = 3;
+	expected[1][0] = -2;
+	expected[1][1] = 0;
+	expected[3][0] = 6;
+	expected[3][1] = 3;
+	expectMatrix(model.skeleton().joint("shoulder").globalMatrix(), expected);
+	expectMatrix(model.skeleton().joint("shoulder").child()->globalMatrix(), expected);
+}
+
+TEST(ModelCoreTest, LongArticulatedChainMatchesIndependentPlanarReference)
+{
+	constexpr std::array<int, 8> turns{1, 3, 2, 1, 0, 3, 1, 2};
+	Model model;
+	Part chain;
+	for (int i = static_cast<int>(turns.size()) - 1; i >= 0; --i)
+	{
+		Part parent;
+		const auto name = "joint_" + std::to_string(i);
+		parent.addJoint(name, Matrix::translation(2, 0, 0));
+		parent.joint(name).attach(std::move(chain));
+		chain = std::move(parent);
+	}
+	model.skeleton().root() = std::move(chain);
+	model.setTransform(Matrix::translation(10, 20, 5));
+	Part *current = &model.skeleton().root();
+	for (std::size_t i = 0; i < turns.size(); ++i)
+	{
+		const auto name = "joint_" + std::to_string(i);
+		current->joint(name).setRotation(spk::Quaternion::fromEuler({0, 0, static_cast<float>(turns[i] * 90)}));
+		current = current->joint(name).child();
+		ASSERT_NE(current, nullptr);
+	}
+
+	for (int phase = 0; phase < 3; ++phase)
+	{
+		float x = phase == 2 ? 30.0f : 10.0f;
+		float y = 20;
+		int orientation = 0;
+		current = &model.skeleton().root();
+		expectMatrix(current->globalMatrix(), referenceQuarterTurn(0, x, y, 5));
+		for (std::size_t i = 0; i < turns.size(); ++i)
+		{
+			const auto step = referenceStep(orientation, 2);
+			x += step[0];
+			y += step[1];
+			const int angle = phase >= 1 && i == 2 ? 3 : turns[i];
+			orientation = (orientation + angle) % 4;
+			const auto name = "joint_" + std::to_string(i);
+			auto &joint = current->joint(name);
+			expectMatrix(joint.globalMatrix(), referenceQuarterTurn(orientation, x, y, 5));
+			current = joint.child();
+			ASSERT_NE(current, nullptr);
+			expectMatrix(current->globalMatrix(), referenceQuarterTurn(orientation, x, y, 5));
+		}
+
+		if (phase == 0)
+		{
+			model.skeleton().joint(Skeleton::Path{"joint_0", "joint_1", "joint_2"})
+				.setRotation(spk::Quaternion::fromEuler({0, 0, 270}));
+		}
+		if (phase == 1)
+		{
+			model.setTransform(Matrix::translation(30, 20, 5));
+		}
+	}
+}
+
+TEST(ModelCoreTest, InvalidJointTransformDoesNotChangePreviouslyCachedMatrices)
+{
+	Model model;
+	model.skeleton().root().addJoint("elbow", Matrix::translation(3, 2, 1));
+	const auto before = model.skeleton().joint("elbow").globalMatrix();
+	EXPECT_THROW(model.skeleton().joint("elbow").setTransform(Matrix::scale(2, 1, 1)), spk::Exception);
+	EXPECT_THROW(model.skeleton().joint("elbow").setRotation({0, 0, 0, 0}), spk::Exception);
+	expectMatrix(model.skeleton().joint("elbow").globalMatrix(), before);
 }
