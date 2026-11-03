@@ -11,13 +11,13 @@
 - `spk::Model::View` est définie dans Graphics (`voxel/model_view.hpp`) et référence un Model Core existant. Elle construit les Part Views correspondant à la hiérarchie.
 - `Skeleton::Part::View` conserve la palette facultative et la `Voxel::Geometry` optionnelle. Elle appelle `Mesher::bake(volume)` à la première demande et sur remplacement de Volume.
 - Le mesh de profondeur reste construit dans Graphics depuis le mesh opaque par le Mesher. Les collisions triangulaires CPU constituent une responsabilité séparée, non réalisée par cette PR.
-- Les transformations finales sont calculées à partir du Core, sans duplication de quaternions dans les Views.
+- Les transformations et les rotations restent dans le Core, sans duplication de quaternions dans les Views. Le calcul des matrices de rendu et la collecte des contributions au `RenderSnapshot` relèvent d'une PR ultérieure, via un `VoxelModelRenderer3D` dérivé de `RenderingComponent3D`. Aucune API `Model::View::visit()` n'est exposée.
 - `bind(palette)` est local par défaut ; `PalettePropagation::Recursive` doit être explicitement demandé et valide les slots avant mutation.
 - Les modifications de topologie Core sont réconciliées à la demande par la View, sans recréer les branches inchangées. Les Views de Models attachés sont accessibles via `Part::View::attachedModel(name)` ; elles possèdent leur état graphique indépendant. Les rotations et remplacements de Volumes sont pris en compte sans recréer la View.
-- L'harmonisation devient `Model::View::harmonize()` côté Graphics : unification récursive des slots, indices déterministes et remplacement des meshes préparés, sans modifier les Volumes ou les poses Core.
+- L'harmonisation devient `Model::View::harmonize()` côté Graphics : unification récursive des slots des Parts du Model courant par (nom, opacité), indices déterministes et remplacement des meshes préparés, sans modifier les Volumes ou les poses Core ni traverser les Models attachés.
 
 ## Vérifications
 
-Tester la compilation de `sparkle_core` sans Graphics, les Parts sans Volume, les Joints sans enfant, les Models attachés par valeur, la pose Core, le versionnement et les copies indépendantes. Tester côté Graphics le meshing à la demande, les caches, les palettes indépendantes, les transformations de points d'attache et la réconciliation dynamique lors de l'équipement, du remplacement et du détachement d'un Model ou d'une Part.
+Tester la compilation de `sparkle_core` sans Graphics, les Parts sans Volume, les Joints sans enfant, les Models attachés par valeur, la pose Core, le versionnement et les copies indépendantes. Tester côté Graphics le meshing à la demande, les caches, les palettes indépendantes, les repères d'attache conservés dans le Core et la réconciliation dynamique lors de l'équipement, du remplacement et du détachement d'un Model ou d'une Part.
 
 La PR reste en Draft jusqu'au succès des tests et du formatage CI.
