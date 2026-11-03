@@ -10,17 +10,17 @@ Les huit `Shape::Instance` (quatre rotations horizontales × inversion verticale
 
 ### 3.1 `spk::Voxel::Mesher`
 
-Le Mesher transforme un `Volume` immuable en un **nouveau `Model` à géométrie immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
+Le Mesher transforme un `Volume` immuable en une nouvelle **`spk::Voxel::Geometry` immuable** par un bake synchrone et complet. Le programme peut lancer le bake dans le thread de son choix ; Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Après remplacement d'un Volume, `Model::View` reconstruit la géométrie à la demande : l'objet `spk::Model` Core ne contient aucun mesh.
 
 Son travail est indépendant des matériaux concrets et des pixels de texture. Le `Mesher` fonctionne **avec ou sans `OcclusionCache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
 
 ```cpp
 spk::Voxel::Mesher mesher;
-auto uncachedModel = mesher.bake(volume); // Occlusion recalculée
+auto uncachedGeometry = mesher.bake(volume); // Occlusion recalculée
 
 spk::Voxel::OcclusionCache occlusion;
 mesher.attachCache(occlusion);                   // Optimisation facultative
-auto cachedModel = mesher.bake(volume);
+auto cachedGeometry = mesher.bake(volume);
 ```
 
 La liaison du cache, lorsqu'elle existe, est non propriétaire : l'appelant garantit sa durée de vie pendant le bake. Une absence de cache ou une liaison retirée signifie le mode sans cache, **pas une erreur**. La forme exacte de `bind(nullptr)` ou `unbind()` reste un détail d'API locale ; aucune liaison de cache de transformations n'est nécessaire. Le clipping partagé ne doit pas être dupliqué entre le chemin avec cache et le chemin sans cache.
@@ -104,6 +104,6 @@ Le clipping lui-même s'effectue **hors verrou**. Les copies immuables d'`Occlus
 
 Un cache partagé peut être interrogé simultanément ; sa **destruction** ou le changement de liaison facultative du Mesher pendant un bake actif ne sont pas rendus sûrs par la seule synchronisation de `find/store/clear`.
 
-### 3.6 Voxel::Geometry et Voxel::Model
+### 3.6 `Voxel::Geometry` et `spk::Model::View`
 
-Le Mesher fournit un `Voxel::Geometry` immuable contenant deux `Geometry::SurfaceMesh`, un ShadowMap::Mesh et les slots sémantiques, y compris ceux occultés. Le `Model::Builder` crée les hiérarchies immuables et `harmonize()` réindexe les slots par nom et opacité, sans palette. Les `Model::View` possèdent palettes et rotations. Voir [chapitre 06](06-assemblies-scene.md).
+Le Mesher fournit une `Voxel::Geometry` immuable contenant deux `Geometry::SurfaceMesh`, un `ShadowMap::Mesh` et les slots sémantiques, y compris ceux occultés. Le `spk::Model` Core possède la hiérarchie mutable des Parts, Joints et Volumes. Les `Model::View` graphiques construisent et conservent les Geometry à la demande, portent les palettes par Part et utilisent les poses du Core. `Model::View::harmonize()` réindexe les slots selon **(nom, opacité)** : plusieurs opacités d'un même nom restent distinctes dans la géométrie, tout en référençant le même Material dans une Palette. Voir [chapitre 06](06-assemblies-scene.md).
