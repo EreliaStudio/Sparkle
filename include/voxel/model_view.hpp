@@ -13,16 +13,9 @@
 
 namespace spk
 {
-	class Model::Skeleton::Part::View
+	class Skeleton::Part::View
 	{
 		friend class Model::View;
-
-	public:
-		enum class PalettePropagation
-		{
-			Self,
-			Recursive
-		};
 
 	private:
 		Model *_model = nullptr;
@@ -30,8 +23,7 @@ namespace spk
 		const Part *_root = nullptr;
 		mutable std::uint64_t _topologyVersion = 0;
 		mutable std::optional<spk::Voxel::Geometry> _geometry;
-		mutable std::uint64_t _volumeVersion = 0;
-		std::optional<spk::Palette> _palette;
+		mutable std::uint64_t _bodyVersion = 0;
 		mutable std::map<std::string, std::unique_ptr<View>, std::less<>> _children;
 		mutable std::map<std::string, std::unique_ptr<Model::View>, std::less<>> _models;
 		mutable std::map<std::string, std::uint64_t, std::less<>> _attachmentVersions;
@@ -40,8 +32,6 @@ namespace spk
 		void _dropOutdatedAttachments() const;
 		void _addMissingAttachments() const;
 		void _sync() const;
-		void _validatePalette(const spk::Palette &palette, PalettePropagation propagation) const;
-		void _applyPalette(const spk::Palette &palette, PalettePropagation propagation);
 		void _collectMatches(std::string_view name, std::vector<View *> &matches);
 
 	public:
@@ -54,8 +44,6 @@ namespace spk
 
 		[[nodiscard]] const Part &part() const;
 		[[nodiscard]] const spk::Voxel::Geometry *geometry() const;
-		[[nodiscard]] const spk::Palette *palette() const noexcept;
-		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
 		[[nodiscard]] View &child(std::string_view jointName);
 		[[nodiscard]] const View &child(std::string_view jointName) const;
 		[[nodiscard]] Model::View &attachedModel(std::string_view jointName);
@@ -67,12 +55,12 @@ namespace spk
 		friend class Skeleton::Part::View;
 
 	public:
-		using PalettePropagation = Skeleton::Part::View::PalettePropagation;
 		using Path = Skeleton::Path;
 
 	private:
 		Model *_model;
 		mutable Skeleton::Part::View _root;
+		std::optional<spk::Palette> _palette;
 
 		void _sync() const;
 
@@ -91,8 +79,8 @@ namespace spk
 		[[nodiscard]] const Skeleton::Part::View &part(const Path &path) const;
 		[[nodiscard]] Skeleton::Part::View &part(std::string_view uniqueJointName);
 		[[nodiscard]] const Skeleton::Part::View &part(std::string_view uniqueJointName) const;
-		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
-		void harmonize();
+		void bind(spk::Palette palette);
+		[[nodiscard]] const spk::Palette *palette() const noexcept;
 		[[nodiscard]] bool isRenderable() const;
 	};
 }

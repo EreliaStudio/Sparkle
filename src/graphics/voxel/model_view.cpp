@@ -5,10 +5,11 @@
 
 #include "exception.hpp"
 #include "voxel/mesher.hpp"
+#include "voxel/volume.hpp"
 
 namespace spk
 {
-	Model::Skeleton::Part::View::View(Model &model, Part &part) :
+	Skeleton::Part::View::View(Model &model, Part &part) :
 		_model(&model),
 		_part(&part),
 		_root(&model.skeleton().root()),
@@ -17,14 +18,13 @@ namespace spk
 		_sync();
 	}
 
-	Model::Skeleton::Part::View::View(const View &other) :
+	Skeleton::Part::View::View(const View &other) :
 		_model(other._model),
 		_part(other._part),
 		_root(other._root),
 		_topologyVersion(other._topologyVersion),
 		_geometry(other._geometry),
-		_volumeVersion(other._volumeVersion),
-		_palette(other._palette),
+		_bodyVersion(other._bodyVersion),
 		_attachmentVersions(other._attachmentVersions)
 	{
 		for (const auto &[name, child] : other._children)
@@ -37,11 +37,11 @@ namespace spk
 		}
 	}
 
-	Model::Skeleton::Part::View::View(View &&other) noexcept = default;
-	Model::Skeleton::Part::View &Model::Skeleton::Part::View::operator=(View &&other) noexcept = default;
-	Model::Skeleton::Part::View::~View() = default;
+	Skeleton::Part::View::View(View &&other) noexcept = default;
+	Skeleton::Part::View &Skeleton::Part::View::operator=(View &&other) noexcept = default;
+	Skeleton::Part::View::~View() = default;
 
-	Model::Skeleton::Part::View &Model::Skeleton::Part::View::operator=(const View &other)
+	Skeleton::Part::View &Skeleton::Part::View::operator=(const View &other)
 	{
 		if (this != &other)
 		{
@@ -51,7 +51,7 @@ namespace spk
 		return *this;
 	}
 
-	bool Model::Skeleton::Part::View::_attachmentChanged(const std::string &name, std::uint64_t version) const
+	bool Skeleton::Part::View::_attachmentChanged(const std::string &name, std::uint64_t version) const
 	{
 		const auto found = _part->joints().find(name);
 		if (found == _part->joints().end() || found->second.attachmentVersion() != version)
@@ -69,7 +69,7 @@ namespace spk
 		return true;
 	}
 
-	void Model::Skeleton::Part::View::_dropOutdatedAttachments() const
+	void Skeleton::Part::View::_dropOutdatedAttachments() const
 	{
 		for (auto it = _attachmentVersions.begin(); it != _attachmentVersions.end();)
 		{
@@ -84,7 +84,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::View::_addMissingAttachments() const
+	void Skeleton::Part::View::_addMissingAttachments() const
 	{
 		for (const auto &[name, joint] : _part->joints())
 		{
@@ -108,7 +108,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::View::_sync() const
+	void Skeleton::Part::View::_sync() const
 	{
 		if (_root != &_model->skeleton().root())
 		{
@@ -128,77 +128,40 @@ namespace spk
 		_topologyVersion = version;
 	}
 
-	const Model::Skeleton::Part &Model::Skeleton::Part::View::part() const
+	const Skeleton::Part &Skeleton::Part::View::part() const
 	{
 		_sync();
 		return *_part;
 	}
 
-	const spk::Voxel::Geometry *Model::Skeleton::Part::View::geometry() const
+	const spk::Voxel::Geometry *Skeleton::Part::View::geometry() const
 	{
 		const Part &source = part();
-		const auto *volume = source.volume();
-		if (volume == nullptr)
+		const spk::Body *body = source.body();
+		if (body == nullptr)
 		{
 			_geometry.reset();
 			return nullptr;
 		}
-		if (!_geometry || _volumeVersion != source.volumeVersion())
+		const auto *volume = dynamic_cast<const spk::Voxel::Volume *>(body);
+		if (volume == nullptr)
+		{
+			throw spk::Exception("Model Part View: unsupported Body type for voxel meshing");
+		}
+		if (!_geometry || _bodyVersion != source.bodyVersion())
 		{
 			_geometry = spk::Voxel::Mesher{}.bake(*volume);
-			_volumeVersion = source.volumeVersion();
+			_bodyVersion = source.bodyVersion();
 		}
 		return &*_geometry;
 	}
 
-	const spk::Palette *Model::Skeleton::Part::View::palette() const noexcept
-	{
-		return _palette ? &*_palette : nullptr;
-	}
-
-	void Model::Skeleton::Part::View::_validatePalette(const spk::Palette &palette, PalettePropagation propagation) const
-	{
-		_sync();
-		const auto *mesh = geometry();
-		if (mesh != nullptr && !mesh->isCompatible(palette))
-		{
-			throw spk::Exception("Model Part View: palette is missing required material slots");
-		}
-		if (propagation == PalettePropagation::Recursive)
-		{
-			for (const auto &[name, child] : _children)
-			{
-				child->_validatePalette(palette, propagation);
-			}
-		}
-	}
-
-	void Model::Skeleton::Part::View::_applyPalette(const spk::Palette &palette, PalettePropagation propagation)
-	{
-		_sync();
-		_palette = palette;
-		if (propagation == PalettePropagation::Recursive)
-		{
-			for (auto &[name, child] : _children)
-			{
-				child->_applyPalette(palette, propagation);
-			}
-		}
-	}
-
-	void Model::Skeleton::Part::View::bind(spk::Palette palette, PalettePropagation propagation)
-	{
-		(void)spk::Voxel::Palette::Builder(palette);
-		_validatePalette(palette, propagation);
-		_applyPalette(palette, propagation);
-	}
-
-	Model::Skeleton::Part::View &Model::Skeleton::Part::View::child(std::string_view jointName)
+	Skeleton::Part::View &Skeleton::Part::View::child(std::string_view jointName)
 	{
 		return const_cast<View &>(std::as_const(*this).child(jointName));
 	}
 
-	const Model::Skeleton::Part::View &Model::Skeleton::Part::View::child(std::string_view jointName) const
+	const Skeleton::Part::View &Skeleton::Part::View::child(std::string_view jointName) const
 	{
 		_sync();
 		const auto found = _children.find(jointName);
@@ -209,12 +172,12 @@ namespace spk
 		return *found->second;
 	}
 
-	Model::View &Model::Skeleton::Part::View::attachedModel(std::string_view jointName)
+	Model::View &Skeleton::Part::View::attachedModel(std::string_view jointName)
 	{
 		return const_cast<Model::View &>(std::as_const(*this).attachedModel(jointName));
 	}
 
-	const Model::View &Model::Skeleton::Part::View::attachedModel(std::string_view jointName) const
+	const Model::View &Skeleton::Part::View::attachedModel(std::string_view jointName) const
 	{
 		_sync();
 		const auto found = _models.find(jointName);
@@ -225,7 +188,7 @@ namespace spk
 		return *found->second;
 	}
 
-	void Model::Skeleton::Part::View::_collectMatches(std::string_view name, std::vector<View *> &matches)
+	void Skeleton::Part::View::_collectMatches(std::string_view name, std::vector<View *> &matches)
 	{
 		_sync();
 		for (auto &[key, child] : _children)
@@ -258,24 +221,24 @@ namespace spk
 		_root._sync();
 	}
 
-	Model::Skeleton::Part::View &Model::View::root()
+	Skeleton::Part::View &Model::View::root()
 	{
 		_sync();
 		return _root;
 	}
 
-	const Model::Skeleton::Part::View &Model::View::root() const
+	const Skeleton::Part::View &Model::View::root() const
 	{
 		_sync();
 		return _root;
 	}
 
-	Model::Skeleton::Part::View &Model::View::part(const Path &path)
+	Skeleton::Part::View &Model::View::part(const Path &path)
 	{
 		return const_cast<Skeleton::Part::View &>(std::as_const(*this).part(path));
 	}
 
-	const Model::Skeleton::Part::View &Model::View::part(const Path &path) const
+	const Skeleton::Part::View &Model::View::part(const Path &path) const
 	{
 		const auto *current = &root();
 		for (const auto &name : path)
@@ -285,7 +248,7 @@ namespace spk
 		return *current;
 	}
 
-	Model::Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName)
+	Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName)
 	{
 		std::vector<Skeleton::Part::View *> matches;
 		root()._collectMatches(uniqueJointName, matches);
@@ -296,14 +259,34 @@ namespace spk
 		return *matches.front();
 	}
 
-	const Model::Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName) const
+	const Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName) const
 	{
 		return const_cast<Model::View &>(*this).part(uniqueJointName);
 	}
 
-	void Model::View::bind(spk::Palette palette, PalettePropagation propagation)
+	void Model::View::bind(spk::Palette palette)
 	{
-		root().bind(std::move(palette), propagation);
+		(void)spk::Voxel::Palette::Builder(palette);
+		std::function<void(const Skeleton::Part::View &)> validate = [&](const Skeleton::Part::View &view) {
+			if (const auto *geometry = view.geometry(); geometry && !geometry->isCompatible(palette))
+			{
+				throw spk::Exception("Model View: palette is missing required material slots");
+			}
+			for (const auto &[name, joint] : view.part().joints())
+			{
+				if (joint.child())
+				{
+					validate(view.child(name));
+				}
+			}
+		};
+		validate(root());
+		_palette = std::move(palette);
+	}
+
+	const spk::Palette *Model::View::palette() const noexcept
+	{
+		return _palette ? &*_palette : nullptr;
 	}
 
 	bool Model::View::isRenderable() const
@@ -311,7 +294,7 @@ namespace spk
 		std::function<bool(const Skeleton::Part::View &)> check = [&](const Skeleton::Part::View &view) {
 			const auto *mesh = view.geometry();
 			if (mesh && !mesh->materialSlots().empty() &&
-				(view.palette() == nullptr || !mesh->isCompatible(*view.palette())))
+				(_palette == std::nullopt || !mesh->isCompatible(*_palette)))
 			{
 				return false;
 			}

@@ -6,12 +6,13 @@
 #include <memory>
 #include <vector>
 
+#include "body.hpp"
 #include "math/vector3.hpp"
 #include "voxel/cell.hpp"
 
 namespace spk::Voxel
 {
-	class Volume
+	class Volume : public spk::Body
 	{
 	public:
 		struct PackedCell

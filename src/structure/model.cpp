@@ -137,12 +137,12 @@ namespace spk
 		return *this;
 	}
 
-	Model::Skeleton &Model::skeleton() noexcept
+	Skeleton &Model::skeleton() noexcept
 	{
 		return *_skeleton;
 	}
 
-	const Model::Skeleton &Model::skeleton() const noexcept
+	const Skeleton &Model::skeleton() const noexcept
 	{
 		return *_skeleton;
 	}
@@ -195,21 +195,21 @@ namespace spk
 		return {_transformVersion, revision.pose, revision.topology, revision.geometry};
 	}
 
-	Model::Skeleton::Skeleton() :
+	Skeleton::Skeleton() :
 		_root(std::make_unique<Part>()),
 		_revision(std::make_shared<Revision>())
 	{
 		_root->_bindRevision(_revision);
 	}
 
-	Model::Skeleton::Skeleton(const Skeleton &other) :
+	Skeleton::Skeleton(const Skeleton &other) :
 		_root(std::make_unique<Part>(*other._root)),
 		_revision(std::make_shared<Revision>(*other._revision))
 	{
 		_root->_bindRevision(_revision);
 	}
 
-	Model::Skeleton::Skeleton(Skeleton &&other) noexcept :
+	Skeleton::Skeleton(Skeleton &&other) noexcept :
 		_root(std::move(other._root)),
 		_revision(std::move(other._revision))
 	{
@@ -219,7 +219,7 @@ namespace spk
 		}
 	}
 
-	Model::Skeleton &Model::Skeleton::operator=(Skeleton &&other) noexcept
+	Skeleton &Skeleton::operator=(Skeleton &&other) noexcept
 	{
 		if (this != &other)
 		{
@@ -237,9 +237,9 @@ namespace spk
 		return *this;
 	}
 
-	Model::Skeleton::~Skeleton() = default;
+	Skeleton::~Skeleton() = default;
 
-	void Model::Skeleton::_bindOwner(Model *owner) noexcept
+	void Skeleton::_bindOwner(Model *owner) noexcept
 	{
 		_ownerModel = owner;
 		if (_root)
@@ -248,7 +248,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::_bindParentJoint(Joint *parent) noexcept
+	void Skeleton::_bindParentJoint(Joint *parent) noexcept
 	{
 		_parentJoint = parent;
 		if (_ownerModel)
@@ -257,7 +257,7 @@ namespace spk
 		}
 	}
 
-	Model::Skeleton &Model::Skeleton::operator=(const Skeleton &other)
+	Skeleton &Skeleton::operator=(const Skeleton &other)
 	{
 		if (this != &other)
 		{
@@ -267,17 +267,17 @@ namespace spk
 		return *this;
 	}
 
-	Model::Skeleton::Part &Model::Skeleton::root() noexcept
+	Skeleton::Part &Skeleton::root() noexcept
 	{
 		return *_root;
 	}
 
-	const Model::Skeleton::Part &Model::Skeleton::root() const noexcept
+	const Skeleton::Part &Skeleton::root() const noexcept
 	{
 		return *_root;
 	}
 
-	Model::Skeleton::Joint &Model::Skeleton::joint(const Path &path)
+	Skeleton::Joint &Skeleton::joint(const Path &path)
 	{
 		if (path.empty())
 		{
@@ -300,12 +300,12 @@ namespace spk
 		throw spk::Exception("Model Skeleton: empty joint path");
 	}
 
-	const Model::Skeleton::Joint &Model::Skeleton::joint(const Path &path) const
+	const Skeleton::Joint &Skeleton::joint(const Path &path) const
 	{
 		return const_cast<Skeleton &>(*this).joint(path);
 	}
 
-	Model::Skeleton::Joint &Model::Skeleton::joint(std::string_view uniqueName)
+	Skeleton::Joint &Skeleton::joint(std::string_view uniqueName)
 	{
 		std::vector<Joint *> found;
 		std::function<void(Part &)> scan = [&](Part &part) {
@@ -329,23 +329,23 @@ namespace spk
 		return *found.front();
 	}
 
-	const Model::Skeleton::Joint &Model::Skeleton::joint(std::string_view uniqueName) const
+	const Skeleton::Joint &Skeleton::joint(std::string_view uniqueName) const
 	{
 		return const_cast<Skeleton &>(*this).joint(uniqueName);
 	}
 
-	Model::Skeleton::Revision Model::Skeleton::revision() const noexcept
+	Skeleton::Revision Skeleton::revision() const noexcept
 	{
 		return *_revision;
 	}
 
-	Model::Skeleton::Joint::Joint(spk::Matrix4x4 transform) :
+	Skeleton::Joint::Joint(spk::Matrix4x4 transform) :
 		_transform(transform)
 	{
 		validateJointTransform(transform);
 	}
 
-	Model::Skeleton::Joint::Joint(const Joint &other) :
+	Skeleton::Joint::Joint(const Joint &other) :
 		_transform(other._transform),
 		_rotation(other._rotation),
 		_attachment(other._attachment),
@@ -356,7 +356,7 @@ namespace spk
 		_bindHierarchy(nullptr);
 	}
 
-	Model::Skeleton::Joint::Joint(Joint &&other) noexcept :
+	Skeleton::Joint::Joint(Joint &&other) noexcept :
 		_transform(other._transform),
 		_rotation(other._rotation),
 		_attachment(std::move(other._attachment)),
@@ -367,7 +367,7 @@ namespace spk
 	{
 		_bindHierarchy(nullptr);
 	}
-	Model::Skeleton::Joint &Model::Skeleton::Joint::operator=(Joint &&other) noexcept
+	Skeleton::Joint &Skeleton::Joint::operator=(Joint &&other) noexcept
 	{
 		if (this != &other)
 		{
@@ -393,9 +393,9 @@ namespace spk
 		}
 		return *this;
 	}
-	Model::Skeleton::Joint::~Joint() = default;
+	Skeleton::Joint::~Joint() = default;
 
-	Model::Skeleton::Joint &Model::Skeleton::Joint::operator=(const Joint &other)
+	Skeleton::Joint &Skeleton::Joint::operator=(const Joint &other)
 	{
 		if (this != &other)
 		{
@@ -406,7 +406,7 @@ namespace spk
 		return *this;
 	}
 
-	void Model::Skeleton::Joint::_bindRevision(std::shared_ptr<Revision> revision)
+	void Skeleton::Joint::_bindRevision(std::shared_ptr<Revision> revision)
 	{
 		_revision = std::move(revision);
 		if (_child)
@@ -415,13 +415,13 @@ namespace spk
 		}
 	}
 
-	spk::Matrix4x4 Model::Skeleton::Joint::_calculateGlobalMatrix() const
+	spk::Matrix4x4 Skeleton::Joint::_calculateGlobalMatrix() const
 	{
 		const auto parent = _parentPart ? _parentPart->globalMatrix() : spk::Matrix4x4::identity();
 		return parent * _transform * spk::Matrix4x4::rotation(_rotation);
 	}
 
-	void Model::Skeleton::Joint::_invalidateGlobalMatrices() noexcept
+	void Skeleton::Joint::_invalidateGlobalMatrices() noexcept
 	{
 		_globalMatrix.invalidate();
 		if (_child)
@@ -434,7 +434,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Joint::_bindHierarchy(Part *parent) noexcept
+	void Skeleton::Joint::_bindHierarchy(Part *parent) noexcept
 	{
 		_parentPart = parent;
 		_globalMatrix.invalidate();
@@ -448,7 +448,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Joint::_changed() noexcept
+	void Skeleton::Joint::_changed() noexcept
 	{
 		if (_revision)
 		{
@@ -457,7 +457,7 @@ namespace spk
 		_invalidateGlobalMatrices();
 	}
 
-	void Model::Skeleton::Joint::setTransform(spk::Matrix4x4 transform)
+	void Skeleton::Joint::setTransform(spk::Matrix4x4 transform)
 	{
 		validateJointTransform(transform);
 		_transform = transform;
@@ -468,12 +468,12 @@ namespace spk
 		}
 	}
 
-	const spk::Matrix4x4 &Model::Skeleton::Joint::transform() const noexcept
+	const spk::Matrix4x4 &Skeleton::Joint::transform() const noexcept
 	{
 		return _transform;
 	}
 
-	void Model::Skeleton::Joint::setRotation(spk::Quaternion rotation)
+	void Skeleton::Joint::setRotation(spk::Quaternion rotation)
 	{
 		for (const float component : rotation.data)
 		{
@@ -490,17 +490,17 @@ namespace spk
 		_changed();
 	}
 
-	spk::Quaternion Model::Skeleton::Joint::rotation() const noexcept
+	spk::Quaternion Skeleton::Joint::rotation() const noexcept
 	{
 		return _rotation;
 	}
 
-	const spk::Matrix4x4 &Model::Skeleton::Joint::globalMatrix() const
+	const spk::Matrix4x4 &Skeleton::Joint::globalMatrix() const
 	{
 		return _globalMatrix.get();
 	}
 
-	void Model::Skeleton::Joint::attach(Part child, std::string attachment)
+	void Skeleton::Joint::attach(Part child, std::string attachment)
 	{
 		if (!attachment.empty() && !child.joints().contains(attachment))
 		{
@@ -519,7 +519,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Joint::attach(Model model, std::string attachment)
+	void Skeleton::Joint::attach(Model model, std::string attachment)
 	{
 		if (!attachment.empty() && !model.skeleton().root().joints().contains(attachment))
 		{
@@ -537,7 +537,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Joint::detach() noexcept
+	void Skeleton::Joint::detach() noexcept
 	{
 		_child.reset();
 		_model.reset();
@@ -549,66 +549,66 @@ namespace spk
 		}
 	}
 
-	Model::Skeleton::Part *Model::Skeleton::Joint::child() noexcept
+	Skeleton::Part *Skeleton::Joint::child() noexcept
 	{
 		return _child.get();
 	}
 
-	const Model::Skeleton::Part *Model::Skeleton::Joint::child() const noexcept
+	const Skeleton::Part *Skeleton::Joint::child() const noexcept
 	{
 		return _child.get();
 	}
 
-	Model *Model::Skeleton::Joint::model() noexcept
+	Model *Skeleton::Joint::model() noexcept
 	{
 		return _model.get();
 	}
 
-	const Model *Model::Skeleton::Joint::model() const noexcept
+	const Model *Skeleton::Joint::model() const noexcept
 	{
 		return _model.get();
 	}
 
-	const std::string &Model::Skeleton::Joint::attachment() const noexcept
+	const std::string &Skeleton::Joint::attachment() const noexcept
 	{
 		return _attachment;
 	}
 
-	std::uint64_t Model::Skeleton::Joint::attachmentVersion() const noexcept
+	std::uint64_t Skeleton::Joint::attachmentVersion() const noexcept
 	{
 		return _attachmentVersion;
 	}
 
-	Model::Skeleton::Part::Part(spk::Voxel::Volume volume) :
-		_volume(std::move(volume))
+	Skeleton::Part::Part(const spk::Body *body) noexcept :
+		_body(body)
 	{
 	}
 
-	Model::Skeleton::Part::Part(const Part &other) :
-		_volume(other._volume),
+	Skeleton::Part::Part(const Part &other) :
+		_body(other._body),
 		_joints(other._joints),
-		_volumeVersion(other._volumeVersion)
+		_bodyVersion(other._bodyVersion)
 	{
 		_bindHierarchy(nullptr, nullptr);
 	}
 
-	Model::Skeleton::Part::Part(Part &&other) noexcept :
-		_volume(std::move(other._volume)),
+	Skeleton::Part::Part(Part &&other) noexcept :
+		_body(other._body),
 		_joints(std::move(other._joints)),
 		_revision(std::move(other._revision)),
-		_volumeVersion(other._volumeVersion)
+		_bodyVersion(other._bodyVersion)
 	{
 		_bindHierarchy(nullptr, nullptr);
 	}
-	Model::Skeleton::Part::~Part() = default;
+	Skeleton::Part::~Part() = default;
 
-	Model::Skeleton::Part &Model::Skeleton::Part::operator=(Part &&other) noexcept
+	Skeleton::Part &Skeleton::Part::operator=(Part &&other) noexcept
 	{
 		if (this != &other)
 		{
-			_volume = std::move(other._volume);
+			_body = other._body;
 			_joints = std::move(other._joints);
-			++_volumeVersion;
+			++_bodyVersion;
 			_bindRevision(_revision);
 			_bindHierarchy(_parentJoint, _ownerModel);
 			if (_revision)
@@ -624,7 +624,7 @@ namespace spk
 		return *this;
 	}
 
-	Model::Skeleton::Part &Model::Skeleton::Part::operator=(const Part &other)
+	Skeleton::Part &Skeleton::Part::operator=(const Part &other)
 	{
 		if (this != &other)
 		{
@@ -634,7 +634,7 @@ namespace spk
 		return *this;
 	}
 
-	void Model::Skeleton::Part::_bindRevision(std::shared_ptr<Revision> revision)
+	void Skeleton::Part::_bindRevision(std::shared_ptr<Revision> revision)
 	{
 		_revision = std::move(revision);
 		for (auto &[name, joint] : _joints)
@@ -643,7 +643,7 @@ namespace spk
 		}
 	}
 
-	spk::Matrix4x4 Model::Skeleton::Part::_calculateGlobalMatrix() const
+	spk::Matrix4x4 Skeleton::Part::_calculateGlobalMatrix() const
 	{
 		if (_ownerModel)
 		{
@@ -661,7 +661,7 @@ namespace spk
 		return matrix;
 	}
 
-	void Model::Skeleton::Part::_invalidateGlobalMatrices() noexcept
+	void Skeleton::Part::_invalidateGlobalMatrices() noexcept
 	{
 		_globalMatrix.invalidate();
 		for (auto &[name, joint] : _joints)
@@ -670,7 +670,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::_bindHierarchy(Joint *parent, Model *owner) noexcept
+	void Skeleton::Part::_bindHierarchy(Joint *parent, Model *owner) noexcept
 	{
 		_parentJoint = parent;
 		_ownerModel = owner;
@@ -681,7 +681,7 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::_anchorChanged(Joint *joint) noexcept
+	void Skeleton::Part::_anchorChanged(Joint *joint) noexcept
 	{
 		if (_parentJoint && !_parentJoint->attachment().empty())
 		{
@@ -705,42 +705,32 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::setVolume(spk::Voxel::Volume volume)
+	void Skeleton::Part::setBody(const spk::Body *body) noexcept
 	{
-		_volume = std::move(volume);
-		++_volumeVersion;
+		_body = body;
+		++_bodyVersion;
 		if (_revision)
 		{
 			++_revision->geometry;
 		}
 	}
 
-	void Model::Skeleton::Part::clearVolume() noexcept
+	const spk::Body *Skeleton::Part::body() const noexcept
 	{
-		_volume.reset();
-		++_volumeVersion;
-		if (_revision)
-		{
-			++_revision->geometry;
-		}
+		return _body;
 	}
 
-	const spk::Voxel::Volume *Model::Skeleton::Part::volume() const noexcept
+	std::uint64_t Skeleton::Part::bodyVersion() const noexcept
 	{
-		return _volume ? &*_volume : nullptr;
+		return _bodyVersion;
 	}
 
-	std::uint64_t Model::Skeleton::Part::volumeVersion() const noexcept
-	{
-		return _volumeVersion;
-	}
-
-	const spk::Matrix4x4 &Model::Skeleton::Part::globalMatrix() const
+	const spk::Matrix4x4 &Skeleton::Part::globalMatrix() const
 	{
 		return _globalMatrix.get();
 	}
 
-	void Model::Skeleton::Part::addJoint(std::string name, spk::Matrix4x4 transform)
+	void Skeleton::Part::addJoint(std::string name, spk::Matrix4x4 transform)
 	{
 		if (name.empty() || _joints.contains(name))
 		{
@@ -756,12 +746,12 @@ namespace spk
 		}
 	}
 
-	Model::Skeleton::Joint &Model::Skeleton::Part::joint(std::string_view name)
+	Skeleton::Joint &Skeleton::Part::joint(std::string_view name)
 	{
 		return const_cast<Joint &>(std::as_const(*this).joint(name));
 	}
 
-	const Model::Skeleton::Joint &Model::Skeleton::Part::joint(std::string_view name) const
+	const Skeleton::Joint &Skeleton::Part::joint(std::string_view name) const
 	{
 		const auto found = _joints.find(name);
 		if (found == _joints.end())
@@ -771,7 +761,7 @@ namespace spk
 		return found->second;
 	}
 
-	const std::map<std::string, Model::Skeleton::Joint, std::less<>> &Model::Skeleton::Part::joints() const noexcept
+	const std::map<std::string, Skeleton::Joint, std::less<>> &Skeleton::Part::joints() const noexcept
 	{
 		return _joints;
 	}
