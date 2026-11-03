@@ -29,7 +29,7 @@ Les types `spk::Voxel::Geometry`, `Geometry::SurfaceMesh`, `spk::Mesh` et `spk::
 
 `spk::Model::View` référence un `spk::Model` mutable existant. Elle construit récursivement une `Model::Skeleton::Part::View` par Part attachée. Chaque Part View possède sa palette facultative et un cache de `Voxel::Geometry` créé **à la demande** depuis le `Voxel::Volume` de la Part avec `Voxel::Mesher::bake()`. Une Part sans Volume n'a pas de Geometry.
 
-Une rotation de Joint ou une translation du Model ne reconstruit jamais les vertices : seule la matrice finale change. Le cache est reconstruit si le Volume d'une Part change. Le meshing est réalisé côté Graphics et jamais dans Core.
+Une rotation de Joint ou une translation du Model ne reconstruit jamais les vertices : seules les données de pose et de transformation Core changent. Le cache est reconstruit si le Volume d'une Part change. Le meshing est réalisé côté Graphics et jamais dans Core.
 
 La View réconcilie la hiérarchie graphique avec la topologie du Core à la demande : les attachements et détachements de Parts ou de Models reconstruisent seulement les branches concernées, en conservant les palettes et caches des branches intactes. `partView.attachedModel(jointName)` donne accès à la View du Model enfant, qui possède ses propres palettes. Une View d'un Model attaché suit sa pose et sa transformation propres. Lorsque la Part racine du Model est remplacée, `Model::View` reconstruit sa racine graphique.
 
@@ -45,7 +45,7 @@ La transformation d'une Part enfant est :
 
 Le terme `inverse(A_child)` est appliqué seulement si le Joint désigne un repère d'attache présent dans la Part enfant.
 
-`Model::View::visit()` parcourt les Parts possédant un Volume et fournit au renderer leur Geometry, leur Palette et leur matrice finale. Les Parts purement logiques restent dans le parcours hiérarchique mais ne déclenchent aucun draw. La View n'effectue pas directement d'appel OpenGL.
+La PR-08 ne fournit pas de méthode `Model::View::visit()` ni de capture graphique de la hiérarchie. La future intégration `VoxelModelRenderer3D`, fondée sur `RenderingComponent3D`, parcourra les Part Views et les Views des Models attachés pour produire des contributions au `RenderSnapshot` en composant leurs transformations. Les Parts purement logiques ne produiront pas de commande de dessin.
 
 ## 6.5 Ombres et collision
 
@@ -53,7 +53,7 @@ Dans cette PR, `Voxel::Mesher` produit ses meshes opaques et translucides et con
 
 Le Core expose les Volumes, Shapes et transformations nécessaires à une future collision. Un éventuel `Collision::Mesh` sera un type CPU sans dépendance Graphics. Les meshes de collision et d'ombres n'ont pas nécessairement la même géométrie ou les mêmes règles ; ils ne doivent donc pas être confondus automatiquement.
 
-L'harmonisation des indices de matériaux devient l'opération graphique explicite `Model::View::harmonize()`. Elle collecte les slots des Parts par nom et opacité, rejette les conflits, puis reconstruit les `Voxel::Geometry` des Part Views avec une table d'indices commune. Elle ne modifie ni les Volumes Core ni les Joints. Après remplacement d'un Volume, une nouvelle harmonisation est nécessaire pour rétablir cette table globale.
+L'harmonisation des indices de matériaux devient l'opération graphique explicite `Model::View::harmonize()`. Elle collecte les slots des Parts par couple (nom, opacité), puis reconstruit les `Voxel::Geometry` des Part Views avec une table d'indices commune. Plusieurs opacités peuvent partager le même nom de matériau. Elle ne modifie ni les Volumes Core ni les Joints. Après remplacement d'un Volume, une nouvelle harmonisation est nécessaire pour rétablir cette table globale. L'harmonisation ne traverse jamais les Models attachés.
 
 ### 6.6 Models attachés aux Joints
 
