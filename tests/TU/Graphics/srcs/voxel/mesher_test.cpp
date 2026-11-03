@@ -48,7 +48,7 @@ namespace
 
 	[[nodiscard]] Definition definition(const Shape &shape, const std::string &prefix, float opacity = 1.0f)
 	{
-		Definition::SlotCollection mapping;
+		Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, Definition::Slot{prefix + slot.name, opacity});
@@ -56,9 +56,9 @@ namespace
 		return Definition(shape, std::move(mapping));
 	}
 
-	[[nodiscard]] Definition::Collection collection(const std::vector<Definition> &definitions)
+	[[nodiscard]] Definition::Registry collection(const std::vector<Definition> &definitions)
 	{
-		Definition::Collection::Builder builder;
+		Definition::Registry::Builder builder;
 		for (std::size_t i = 0; i < definitions.size(); ++i)
 		{
 			builder.add(static_cast<std::uint32_t>(i + 1), definitions[i]);
@@ -423,7 +423,7 @@ TEST(MesherGeometry, HalfHeightSlabClipsCubeShadowBoundary)
 
 TEST(MesherGeometry, MixedMaterialOpacityCastsOnlyOpaqueFaces)
 {
-	Definition::SlotCollection mapping;
+	Definition::SlotMapping mapping;
 	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
 	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
 	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});
@@ -628,7 +628,7 @@ TEST(MesherTest, SlotOrderMergeCollisionAndHiddenSlotPreservation)
 	{
 		EXPECT_LT(model.materialSlots()[i - 1].name, model.materialSlots()[i].name);
 	}
-	Definition::SlotCollection same;
+	Definition::SlotMapping same;
 	for (const auto &slot : cube.slots())
 	{
 		same.emplace(slot.name, Definition::Slot{"unified", 1.0f});
@@ -767,7 +767,7 @@ TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 
 TEST(MesherMaterialIndices, BakeUsesLocalIndicesForOpaqueAndTranslucentGeometry)
 {
-	Definition::SlotCollection mapping;
+	Definition::SlotMapping mapping;
 	mapping.emplace("side", Definition::Slot{"glass", 0.25f});
 	mapping.emplace("top", Definition::Slot{"roof", 1.0f});
 	mapping.emplace("bottom", Definition::Slot{"floor", 1.0f});

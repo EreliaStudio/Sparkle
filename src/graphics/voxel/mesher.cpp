@@ -167,7 +167,7 @@ namespace spk::Voxel
 							auto [it, inserted] = names.try_emplace(slot.name, slot.opacity);
 							if (!inserted && it->second != slot.opacity)
 							{
-								throw spk::Exception("Voxel Model material slot has conflicting opacity: " + slot.name);
+								throw spk::Exception("Voxel Geometry material slot has conflicting opacity: " + slot.name);
 							}
 						}
 					}

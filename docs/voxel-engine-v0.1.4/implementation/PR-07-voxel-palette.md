@@ -1,5 +1,8 @@
 # PR-07 — Palette générique et validateur voxel, compatibilité des Models
 
+> **Statut PR-08.1 :** le voxel de rendu est désormais `spk::Voxel::Geometry`, construit par `spk::Voxel::Mesher::bake(Volume)`. La conception de `Skeleton`, `Model`, `Assembly` et leurs `View` est reportée à PR-08.2 ; les mentions anciennes de `Voxel::Model` ci-dessous décrivent la spécification historique, pas l'API de PR-08.1.
+
+
 > **PR GitHub Draft #48** : implémentation sur `impl/v0.1.4/07-voxel-palette`, cible `V0.1.4` ; ne pas fusionner sans validation.
 >
 > **Branche source :** `impl/v0.1.4/07-voxel-palette`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
@@ -23,7 +26,7 @@
 - [x] Aucune opacité dans les palettes ; `Voxel::Definition` et `Voxel::Model` portent seuls ce contrat.
 - [x] `Model::isCompatible(const spk::Palette &)` vérifie uniquement les noms de slots ; le validateur de `spk::Voxel::Palette::Builder` impose immédiatement un atlas unique à chaque insertion.
 
-- [x] `Model::View::bind(spk::Palette)` valide la compatibilité et permet à chaque View de choisir sa propre apparence sans toucher au Model ni aux meshes partagés.
+- [x] `Model::bind(spk::Palette)` vérifie la compatibilité, copie légèrement la palette et permet à chaque copie de Model de choisir sa propre apparence sans toucher aux meshes.
 
 ## Instructions techniques et intégration
 

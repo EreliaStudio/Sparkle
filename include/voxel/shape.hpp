@@ -19,7 +19,7 @@ namespace spk::Voxel
 	class Shape
 	{
 	public:
-		class Collection;
+		class Registry;
 
 		struct Vertex
 		{
@@ -123,7 +123,7 @@ namespace spk::Voxel
 		[[nodiscard]] const Slot &slot(std::string_view name) const;
 	};
 
-	class Shape::Collection
+	class Shape::Registry
 	{
 	public:
 		using ID = std::string;
@@ -137,10 +137,10 @@ namespace spk::Voxel
 
 		std::shared_ptr<const Data> _data;
 
-		explicit Collection(std::shared_ptr<const Data> data) noexcept;
+		explicit Registry(std::shared_ptr<const Data> data) noexcept;
 
 	public:
-		Collection();
+		Registry();
 
 		[[nodiscard]] const Shape &at(const ID &id) const;
 		[[nodiscard]] const Shape &operator[](const ID &id) const;
@@ -149,7 +149,7 @@ namespace spk::Voxel
 		[[nodiscard]] std::size_t size() const noexcept;
 	};
 
-	class Shape::Collection::Builder final : public spk::JSON::Catalog<Shape, std::string>
+	class Shape::Registry::Builder final : public spk::JSON::Catalog<Shape, std::string>
 	{
 	private:
 		[[nodiscard]] ID _parseKey(const spk::JSON::Reader &reader) const override;
@@ -158,6 +158,6 @@ namespace spk::Voxel
 	public:
 		Builder() = default;
 		void add(ID id, Shape shape);
-		[[nodiscard]] Collection build() const;
+		[[nodiscard]] Registry build() const;
 	};
 }

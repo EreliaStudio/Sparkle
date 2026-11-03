@@ -89,7 +89,7 @@ Le `Voxel::Model` produit **au maximum deux meshes visuels** (opaque et transluc
 // Exemple conceptuel : noms secondaires et signatures à finaliser.
 spk::Voxel::Shape shape = makeShape();
 spk::Voxel::Definition stone = makeDefinition(shape);
-spk::Voxel::Definition::Collection::Builder definitionsBuilder;
+spk::Voxel::Definition::Registry::Builder definitionsBuilder;
 definitionsBuilder.add(1, stone);
 const auto definitions = definitionsBuilder.build();
 

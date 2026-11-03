@@ -6,7 +6,7 @@
 
 namespace spk::Voxel
 {
-	void Definition::Builder::bind(const Shape::Collection &shapes)
+	void Definition::Builder::bind(const Shape::Registry &shapes)
 	{
 		_shape.reset();
 		_shapes = shapes;
@@ -17,17 +17,17 @@ namespace spk::Voxel
 		_shape = _shapes.at(std::string(id));
 	}
 
-	void Definition::Builder::setSlots(SlotCollection slots)
+	void Definition::Builder::setSlots(SlotMapping slots)
 	{
 		_slots.swap(slots);
 	}
 
-	void Definition::Builder::loadFromJSON(const spk::JSON::Value &value)
+	void Definition::Builder::addFromJSON(const spk::JSON::Value &value)
 	{
 		spk::JSON::Reader reader(value, "<definition>");
 		reader.forbidUnknown({"shape", "slots"});
 		Shape shape = _shapes.at(reader.require<std::string>("shape"));
-		SlotCollection slots;
+		SlotMapping slots;
 		for (const auto &[key, value] : reader.child("slots").value().asObject())
 		{
 			if (value.isString())
