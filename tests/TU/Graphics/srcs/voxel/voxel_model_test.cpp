@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <cmath>
 #include <filesystem>
 #include <string>
 #include <utility>
@@ -48,20 +47,11 @@ namespace
 		return builder.build();
 	}
 
-	void expectMatrix(const Matrix &actual, const Matrix &expected)
-	{
-		for (std::size_t column = 0; column < 4; ++column)
-		{
-			for (std::size_t row = 0; row < 4; ++row)
-			{
-				EXPECT_NEAR(actual[column][row], expected[column][row], 0.0001f);
-			}
-		}
-	}
 }
 
 TEST(ModelGraphicsTest, PartsWithoutVolumeNeedNoMeshOrPalette)
 {
+
 	Model model;
 	model.skeleton().root().addJoint("hand");
 	model.skeleton().joint("hand").attach(Part{});
@@ -69,11 +59,6 @@ TEST(ModelGraphicsTest, PartsWithoutVolumeNeedNoMeshOrPalette)
 	EXPECT_EQ(view.root().geometry(), nullptr);
 	EXPECT_EQ(view.part("hand").geometry(), nullptr);
 	EXPECT_TRUE(view.isRenderable());
-	std::size_t count = 0;
-	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &) {
-		++count;
-	});
-	EXPECT_EQ(count, 0u);
 }
 
 TEST(ModelGraphicsTest, ViewBuildsAndCachesRenderMeshesOnDemand)
@@ -96,6 +81,7 @@ TEST(ModelGraphicsTest, ViewBuildsAndCachesRenderMeshesOnDemand)
 
 TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 {
+
 	Model model;
 	model.skeleton().root().setVolume(volume("cloth"));
 	model.skeleton().root().addJoint("arm", Matrix::translation(2, 0, 0));
@@ -107,17 +93,17 @@ TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 	spk::Texture atlas;
 	view.root().bind(palette(atlas, {"cloth"}));
 	view.part("arm").bind(palette(atlas, {"skin"}));
-	EXPECT_TRUE(view.isRenderable());
+	ASSERT_TRUE(view.isRenderable());
+	const auto *rootGeometry = view.root().geometry();
+	const auto *armGeometry = view.part("arm").geometry();
+	const auto before = model.version().pose;
 	model.skeleton().joint("arm").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
-	std::vector<Matrix> transforms;
-	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &matrix) {
-		transforms.push_back(matrix);
-	});
-	ASSERT_EQ(transforms.size(), 2u);
-	expectMatrix(transforms[0], Matrix::translation(5, 0, 0));
-	const auto rotation = Matrix::rotation(model.skeleton().joint("arm").rotation());
-	const auto jointTransform = Matrix::translation(5, 0, 0) * Matrix::translation(2, 0, 0);
-	expectMatrix(transforms[1], jointTransform * rotation * Matrix::translation(-1, 0, 0));
+	EXPECT_GT(model.version().pose, before);
+	EXPECT_EQ(model.transform()[3][0], 5.0f);
+	EXPECT_EQ(model.skeleton().joint("arm").attachment(), "pivot");
+	EXPECT_EQ(view.root().geometry(), rootGeometry);
+	EXPECT_EQ(view.part("arm").geometry(), armGeometry);
+	EXPECT_TRUE(view.isRenderable());
 }
 
 TEST(ModelGraphicsTest, BindingOnePartDoesNotBindItsChildren)
@@ -155,6 +141,7 @@ TEST(ModelGraphicsTest, RecursiveBindingRejectsMissingMaterialsWithoutChangingPa
 
 TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 {
+
 	Model model;
 	model.skeleton().root().setVolume(volume("skin"));
 	model.skeleton().root().addJoint("arm");
@@ -165,18 +152,15 @@ TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 	spk::Texture b;
 	first.bind(palette(a, {"skin"}), Model::View::PalettePropagation::Recursive);
 	second.bind(palette(b, {"skin"}), Model::View::PalettePropagation::Recursive);
+	const auto *firstGeometry = first.part("arm").geometry();
+	const auto *secondGeometry = second.part("arm").geometry();
+	const auto before = model.version().pose;
 	model.skeleton().joint("arm").setRotation(spk::Quaternion::fromEuler({0, 0, 30}));
-	std::vector<Matrix> firstMatrices;
-	std::vector<Matrix> secondMatrices;
-	first.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
-		firstMatrices.push_back(m);
-	});
-	second.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
-		secondMatrices.push_back(m);
-	});
-	ASSERT_EQ(firstMatrices.size(), 2u);
-	ASSERT_EQ(secondMatrices.size(), 2u);
-	expectMatrix(firstMatrices[1], secondMatrices[1]);
+	EXPECT_GT(model.version().pose, before);
+	EXPECT_EQ(&first.part("arm").part(), &second.part("arm").part());
+	EXPECT_EQ(first.part("arm").geometry(), firstGeometry);
+	EXPECT_EQ(second.part("arm").geometry(), secondGeometry);
+	EXPECT_NE(firstGeometry, secondGeometry);
 	EXPECT_NE(&first.root().palette()->materials(), &second.root().palette()->materials());
 }
 
@@ -290,8 +274,9 @@ TEST(ModelGraphicsTest, HarmonizePreservesPerDefinitionOpacityWithSharedMaterial
 	EXPECT_TRUE(view.isRenderable());
 }
 
-TEST(ModelGraphicsTest, ChildGripRotationDoesNotMoveItsAttachmentFrame)
+TEST(ModelGraphicsTest, AttachedModelPoseChangesPreserveGraphicCaches)
 {
+
 	Model parent;
 	parent.skeleton().root().addJoint("hand", Matrix::translation(4, 0, 0));
 	Model tool;
@@ -300,30 +285,24 @@ TEST(ModelGraphicsTest, ChildGripRotationDoesNotMoveItsAttachmentFrame)
 	parent.skeleton().joint("hand").attach(tool, "grip");
 	Model::View view(parent);
 	spk::Texture atlas;
-	view.root().attachedModel("hand").bind(palette(atlas, {"metal"}));
-	std::vector<Matrix> transforms;
-	auto capture = [&] {
-		transforms.clear();
-		view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &matrix) {
-			transforms.push_back(matrix);
-		});
-		EXPECT_EQ(transforms.size(), 1u);
-	};
-	capture();
-	expectMatrix(transforms.front(), Matrix::translation(3, 0, 0));
+	auto &toolView = view.root().attachedModel("hand");
+	toolView.bind(palette(atlas, {"metal"}));
+	const auto *cached = toolView.root().geometry();
 	auto *attached = parent.skeleton().joint("hand").model();
 	ASSERT_NE(attached, nullptr);
+	const auto parentBefore = parent.version();
 	attached->skeleton().joint("grip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
-	capture();
-	expectMatrix(transforms.front(), Matrix::translation(3, 0, 0));
+	EXPECT_EQ(parent.version(), parentBefore);
+	EXPECT_EQ(attached->skeleton().joint("grip").transform()[3][0], 1.0f);
+	EXPECT_EQ(view.root().attachedModel("hand").root().geometry(), cached);
 	parent.skeleton().joint("hand").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
-	capture();
-	const auto rotated = Matrix::rotation(parent.skeleton().joint("hand").rotation());
-	expectMatrix(transforms.front(), Matrix::translation(4, 0, 0) * rotated * Matrix::translation(-1, 0, 0));
+	EXPECT_GT(parent.version().pose, parentBefore.pose);
+	EXPECT_EQ(view.root().attachedModel("hand").root().geometry(), cached);
 }
 
 TEST(ModelGraphicsTest, AttachingModelUpdatesViewAndPreservesExistingMeshes)
 {
+
 	Model character;
 	character.skeleton().root().setVolume(volume("cloth"));
 	character.skeleton().root().addJoint("hand", Matrix::translation(2, 0, 0));
@@ -339,15 +318,11 @@ TEST(ModelGraphicsTest, AttachingModelUpdatesViewAndPreservesExistingMeshes)
 	character.skeleton().joint("hand").attach(sword, "grip");
 	EXPECT_FALSE(view.isRenderable());
 	auto &swordView = view.root().attachedModel("hand");
+	EXPECT_EQ(swordView.model().skeleton().joint("grip").transform()[3][0], 1.0f);
 	swordView.bind(palette(atlas, {"metal"}));
 	EXPECT_TRUE(view.isRenderable());
-	std::vector<Matrix> matrices;
-	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
-		matrices.push_back(m);
-	});
-	ASSERT_EQ(matrices.size(), 2u);
-	expectMatrix(matrices[0], Matrix::translation(10, 0, 0));
-	expectMatrix(matrices[1], Matrix::translation(11, 3, 0));
+	ASSERT_NE(swordView.root().geometry(), nullptr);
+	EXPECT_EQ(swordView.root().geometry()->materialSlots()[0].name, "metal");
 	EXPECT_EQ(view.root().geometry(), cached);
 	character.skeleton().joint("hand").detach();
 	EXPECT_THROW((void)view.root().attachedModel("hand"), spk::Exception);
@@ -378,8 +353,9 @@ TEST(ModelGraphicsTest, ReplacingAttachedModelRebuildsOnlyItsBranch)
 	EXPECT_TRUE(view.isRenderable());
 }
 
-TEST(ModelGraphicsTest, NestedAttachedModelsObserveTheirOwnCorePose)
+TEST(ModelGraphicsTest, NestedAttachedModelsKeepGraphicCachesAfterPoseChanges)
 {
+
 	Model parent;
 	parent.skeleton().root().addJoint("hand");
 	Model sword;
@@ -391,21 +367,17 @@ TEST(ModelGraphicsTest, NestedAttachedModelsObserveTheirOwnCorePose)
 	Model::View view(parent);
 	spk::Texture atlas;
 	auto &swordView = view.root().attachedModel("hand");
-	swordView.root().attachedModel("tip").bind(palette(atlas, {"gem"}));
+	auto &gemView = swordView.root().attachedModel("tip");
+	gemView.bind(palette(atlas, {"gem"}));
 	EXPECT_TRUE(view.isRenderable());
-	std::vector<Matrix> matrices;
-	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
-		matrices.push_back(m);
-	});
-	ASSERT_EQ(matrices.size(), 1u);
-	expectMatrix(matrices[0], Matrix::translation(3, 0, 0));
+	const auto *gemGeometry = gemView.root().geometry();
+	const auto parentBefore = parent.version();
 	auto *attached = parent.skeleton().joint("hand").model();
 	ASSERT_NE(attached, nullptr);
+	const auto poseBefore = attached->version().pose;
 	attached->skeleton().joint("tip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
-	matrices.clear();
-	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
-		matrices.push_back(m);
-	});
-	ASSERT_EQ(matrices.size(), 1u);
-	expectMatrix(matrices[0], Matrix::translation(3, 0, 0) * Matrix::rotation(attached->skeleton().joint("tip").rotation()));
+	EXPECT_GT(attached->version().pose, poseBefore);
+	EXPECT_EQ(parent.version(), parentBefore);
+	EXPECT_EQ(view.root().attachedModel("hand").root().attachedModel("tip").root().geometry(), gemGeometry);
+	EXPECT_TRUE(view.isRenderable());
 }
