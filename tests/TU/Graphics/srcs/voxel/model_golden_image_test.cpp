@@ -5,11 +5,14 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <span>
+#include <stdexcept>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "graphics/internal/resource.hpp"
 #include "graphics/opengl/layout_buffer.hpp"
 #include "graphics/opengl/program.hpp"
 #include "math/camera_3d.hpp"
@@ -37,6 +40,17 @@ namespace
 		spk::Vector3 color;
 	};
 
+	[[nodiscard]] std::string shaderSource(const std::string &filename)
+	{
+		const auto path = std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "shaders" / filename;
+		std::ifstream file(path);
+		if (!file)
+		{
+			throw std::runtime_error("Cannot read model golden-image shader: " + path.string());
+		}
+		return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+	}
+
 	class FlatModelCommand final : public spk::RenderCommand
 	{
 	private:
@@ -47,8 +61,8 @@ namespace
 		[[nodiscard]] static spk::Program &_program()
 		{
 			static spk::Program program(
-				std::string(spk::resources::text("shaders/flat_color_3d.vert.glsl")),
-				std::string(spk::resources::text("shaders/flat_color_3d.frag.glsl")));
+				shaderSource("flat_color_3d.vert.glsl"),
+				shaderSource("flat_color_3d.frag.glsl"));
 			return program;
 		}
 
@@ -60,10 +74,10 @@ namespace
 			auto &verticesBuffer = _mesh.vertexBuffer();
 			verticesBuffer.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 3);
 			verticesBuffer.addAttribute(1, spk::VertexBuffer::Attribute::Type::Float, 3);
-			verticesBuffer.insert<Vertex>(vertices);
+			verticesBuffer.insert<Vertex>(std::span<const Vertex>(vertices));
 			auto &indicesBuffer = _mesh.indexBuffer();
 			indicesBuffer.setType(spk::IndexBuffer::Type::UnsignedInt);
-			indicesBuffer.insert<std::uint32_t>(indices);
+			indicesBuffer.insert<std::uint32_t>(std::span<const std::uint32_t>(indices));
 			_mesh.validate();
 		}
 
@@ -157,12 +171,17 @@ namespace
 
 		Figure()
 		{
-			bodies[0] = {{}, {0, 0.125f, 0}, {0.375f, 0.625f, 0.125f}, {0.25f, 0.625f, 1}};
-			bodies[1] = {{}, {0, 0.25f, 0}, {0.25f, 0.25f, 0.125f}, {1, 0.75f, 0.25f}};
-			bodies[2] = {{}, {-0.5f, 0, 0}, {0.5f, 0.125f, 0.125f}, {1, 0.25f, 0.375f}};
-			bodies[3] = {{}, {0.5f, 0, 0}, {0.5f, 0.125f, 0.125f}, {0.25f, 1, 0.5f}};
-			bodies[4] = {{}, {0, -0.625f, 0}, {0.1875f, 0.625f, 0.125f}, {0.375f, 0.5f, 1}};
-			bodies[5] = {{}, {0, -0.625f, 0}, {0.1875f, 0.625f, 0.125f}, {0.875f, 0.375f, 1}};
+			const auto assign = [](BoxBody &body, spk::Vector3 center, spk::Vector3 halfSize, spk::Vector3 color) {
+				body.center = center;
+				body.halfSize = halfSize;
+				body.color = color;
+			};
+			assign(bodies[0], {0, 0.125f, 0}, {0.375f, 0.625f, 0.125f}, {0.25f, 0.625f, 1});
+			assign(bodies[1], {0, 0.25f, 0}, {0.25f, 0.25f, 0.125f}, {1, 0.75f, 0.25f});
+			assign(bodies[2], {-0.5f, 0, 0}, {0.5f, 0.125f, 0.125f}, {1, 0.25f, 0.375f});
+			assign(bodies[3], {0.5f, 0, 0}, {0.5f, 0.125f, 0.125f}, {0.25f, 1, 0.5f});
+			assign(bodies[4], {0, -0.625f, 0}, {0.1875f, 0.625f, 0.125f}, {0.375f, 0.5f, 1});
+			assign(bodies[5], {0, -0.625f, 0}, {0.1875f, 0.625f, 0.125f}, {0.875f, 0.375f, 1});
 			auto &root = model.skeleton().root();
 			root.setBody(&bodies[0]);
 			root.addJoint("head", spk::Matrix4x4::translation(0, 0.75f, 0));
