@@ -33,7 +33,8 @@ classDiagram
   class Model {
     +skeleton() Skeleton
     +transform() Matrix4x4
-    -données Core mutables
+    +globalMatrix() Matrix4x4
+    -données Core mutables avec matrices cachées
   }
   class Geometry {
     +opaqueMesh()
