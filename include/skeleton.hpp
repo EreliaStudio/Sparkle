@@ -151,3 +151,4 @@ namespace spk
 		[[nodiscard]] const Joint &joint(std::string_view name) const;
 		[[nodiscard]] const std::map<std::string, Joint, std::less<>> &joints() const noexcept;
 	};
+}
