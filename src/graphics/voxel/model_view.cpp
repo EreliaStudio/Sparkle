@@ -1,5 +1,6 @@
 #include "voxel/model_view.hpp"
 
+#include <functional>
 #include <utility>
 
 #include "exception.hpp"
