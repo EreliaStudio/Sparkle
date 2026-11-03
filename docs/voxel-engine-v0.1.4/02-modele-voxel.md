@@ -31,10 +31,20 @@ classDiagram
     -grille compacte + collection partagée
   }
   class Model {
+    +skeleton() Skeleton
+    +transform() Matrix4x4
+    -données Core mutables
+  }
+  class Geometry {
     +opaqueMesh()
     +transparentMesh()
     +materialSlots()
-    -données immuables partagées
+    -données Graphics immuables
+  }
+  class ModelView {
+    +root() PartView
+    +visit()
+    +harmonize()
   }
   class ShapeInstance {
     +triangles() const
@@ -43,7 +53,7 @@ classDiagram
     +find/store/clear
   }
   class Mesher {
-    +bake(Volume) Mesh
+    +bake(Volume) Geometry
     +attachCache(OcclusionCache&) facultatif
     +detachCache()
   }
@@ -53,8 +63,10 @@ classDiagram
   Shape *-- ShapeInstance : huit orientations
   Mesher ..> OcclusionCache : facultatif
   Volume --> Mesher
-  Mesher --> Mesh
-  Mesh --> Model
+  Mesher --> Geometry
+  Model --> Volume : Part optionnelle
+  ModelView --> Model
+  ModelView --> Geometry
 ```
 
 ### 2.1 `spk::Voxel::Shape` : géométrie locale réutilisable
@@ -148,10 +160,10 @@ Un Volume représente une grille **dense et contiguë** de cellules, d'extension
 
 Un Volume contient une **copie légère de `Definition::Collection` immuable**, donc une référence partagée à ses données. Il ne possède **aucune table locale d'indices ou de Definitions**. Plusieurs Volumes utilisant le même collection partagent ses Definitions à coût constant. Des IDs distincts associés à la même Definition gardent leurs IDs distincts dans la grille et conservent la même identité de Definition à la lecture. Il n'existe pas de `span<const Cell>` vers le stockage compact. Aucun accès privilégié de test `VolumeTestAccess`, ni déclaration `friend` associée, n'existe : les tests utilisent les accesseurs publics, dont `atRaw`.
 
-`Volume::Builder` exige `dimensions` dans son **unique constructeur** `explicit Builder(spk::Vector3UInt dimensions)` : les dimensions sont invariantes pendant toute la vie du Builder. Le constructeur valide les dimensions et initialise immédiatement la grille dense avec Air. Il n'existe ni constructeur par défaut, ni `setDimensions()`. `bind(registry)` associe ensuite une collection immuable. Pour reprendre un Volume existant, `load(const Volume&)` copie son collection et ses cellules **seulement si ses dimensions correspondent à celles du Builder** ; sinon une `spk::Exception` est levée sans modifier le Builder. Le chargement conserve la garantie forte en cas d'échec. La grille est modifiée avec **`set(position, definitionId, horizontal, vertical)`**, dont les paramètres d'orientation ont une valeur par défaut, ou `erase(position)`. **`set(position, Cell)` est supprimé** : une Cell arbitraire ne fournit pas un ID unique, particulièrement si plusieurs IDs pointent vers la même Definition. Tout ID utilisé doit exister dans le collection lié au Builder, sauf Air `0`. Les dimensions ne changent jamais ; les limites, la capacité 29 bits et les allocations sont vérifiées.
+`Volume::Builder` exige `dimensions` dans son unique constructeur `explicit Builder(spk::Vector3UInt dimensions)` : les dimensions sont invariantes. Le constructeur valide les dimensions et initialise la grille dense avec Air. `bind(collection)` associe une collection immuable ; `copyFrom(const Volume&)` reprend une collection et des cellules existantes si les dimensions correspondent, sinon une `spk::Exception` est levée sans modifier le Builder. La grille est modifiée avec `set(position, definitionId, horizontal, vertical)` (orientations par défaut) ou `erase(position)`. Tout ID non-Air doit exister dans la collection liée au Builder.
 
-Le Builder peut recevoir un nouveau snapshot de collection via `bind(registry)` ; si des IDs non-Air sont déjà utilisés dans sa grille, leur Definition doit conserver **la même identité** dans le nouveau collection, sinon `bind` échoue sans modification de l'état. `Volume::Builder::load(volume)` reprend le snapshot du Volume existant. Les dimensions sont toujours initialisées par le constructeur et ne peuvent ensuite être modifiées. `load(volume)` refuse les dimensions incompatibles et laisse le Builder inchangé. Un `build()` réussi publie un nouveau snapshot immuable et consomme le Builder ; toute exception doit le laisser réutilisable.
+Un nouveau snapshot peut être lié par `bind(collection)` : si des IDs non-Air sont déjà utilisés, leurs Definitions doivent garder la même identité, sinon l'opération échoue sans mutation. `copyFrom(volume)` reprend les cellules et la collection d'un Volume compatible. Un `build()` réussi publie un nouveau snapshot immuable et consomme le Builder ; une exception le laisse réutilisable.
 
-L'import brut `loadPacked(filename)`, appelé après construction `Builder(dimensions)` et `bind(registry)`, lit des mots little-endian de quatre octets, sans en-tête ni dimensions encodées, avec l'ordre X puis Y puis Z. Les **29 bits sont déjà les IDs de la collection** : aucune déduplication, aucune création de table locale ni conversion n'est nécessaire. Chaque ID est validé contre le collection avant publication ; un fichier incomplet, surdimensionné, illisible ou contenant un ID inconnu ne modifie pas le Builder. Un fichier binaire et son collection correspondant doivent toujours être fournis ensemble.
+L'import brut `loadPacked(filename)`, après `Builder(dimensions)` et `bind(collection)`, lit les mots little-endian de quatre octets (ordre X, Y, Z), sans en-tête ni dimensions. Les 29 bits sont les IDs de la collection ; un fichier incomplet, surdimensionné, illisible ou avec un ID inconnu ne modifie pas le Builder. Le fichier binaire et sa collection doivent être fournis ensemble.
 
 L'architecture garantit une lecture moyenne en O(1) par ID via `unordered_map`; une éventuelle optimisation spécifique au mesher attendra une mesure effective, sans complexité anticipée. Les classes Shape, Definition, Cell et Volume fonctionnent **sans Engine ni OpenGL**.
