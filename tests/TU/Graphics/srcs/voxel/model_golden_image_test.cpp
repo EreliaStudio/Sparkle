@@ -5,9 +5,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <span>
 #include <stdexcept>
-#include <memory>
 #include <string>
 #include <vector>
 
