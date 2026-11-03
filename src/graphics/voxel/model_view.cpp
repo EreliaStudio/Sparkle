@@ -7,30 +7,6 @@
 
 namespace spk
 {
-	namespace
-	{
-		[[nodiscard]] spk::Matrix4x4 inverseAnchor(const spk::Matrix4x4 &matrix)
-		{
-			auto result = spk::Matrix4x4::identity();
-			for (std::size_t column = 0; column < 3; ++column)
-			{
-				for (std::size_t row = 0; row < 3; ++row)
-				{
-					result[column][row] = matrix[row][column];
-				}
-			}
-			for (std::size_t row = 0; row < 3; ++row)
-			{
-				result[3][row] = 0.0f;
-				for (std::size_t column = 0; column < 3; ++column)
-				{
-					result[3][row] -= result[column][row] * matrix[3][column];
-				}
-			}
-			return result;
-		}
-	}
-
 	Model::Skeleton::Part::View::View(Model &model, Part &part) :
 		_model(&model),
 		_part(&part),
@@ -261,46 +237,6 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::View::_visitJoint(
-		const std::string &name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const
-	{
-		auto attached = transform * joint.transform() * spk::Matrix4x4::rotation(joint.rotation());
-		if (const Part *child = joint.child())
-		{
-			if (!joint.attachment().empty())
-			{
-				attached = attached * inverseAnchor(child->joint(joint.attachment()).transform());
-			}
-			_children.at(name)->_visit(callback, attached);
-		}
-		else if (const Model *model = joint.model())
-		{
-			if (!joint.attachment().empty())
-			{
-				attached = attached * inverseAnchor(model->skeleton().root().joint(joint.attachment()).transform());
-			}
-			_models.at(name)->_visit(callback, attached);
-		}
-	}
-
-	void Model::Skeleton::Part::View::_visit(const DrawCallback &callback, spk::Matrix4x4 transform) const
-	{
-		const auto *mesh = geometry();
-		if (mesh != nullptr)
-		{
-			if (!_palette && !mesh->materialSlots().empty())
-			{
-				throw spk::Exception("Model Part View: missing palette");
-			}
-			const spk::Palette empty;
-			callback(*_part, *mesh, _palette ? *_palette : empty, transform);
-		}
-		for (const auto &[name, joint] : _part->joints())
-		{
-			_visitJoint(name, joint, callback, transform);
-		}
-	}
-
 	Model::View::View(Model &model) :
 		_model(&model),
 		_root(model, model.skeleton().root())
@@ -394,13 +330,4 @@ namespace spk
 		return check(root());
 	}
 
-	void Model::View::_visit(const DrawCallback &callback, spk::Matrix4x4 parent) const
-	{
-		root()._visit(callback, parent * _model->transform());
-	}
-
-	void Model::View::visit(const DrawCallback &callback) const
-	{
-		_visit(callback, spk::Matrix4x4::identity());
-	}
 }
