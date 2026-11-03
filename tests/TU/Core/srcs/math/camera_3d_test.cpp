@@ -285,12 +285,12 @@ TEST(Camera3DTest, PerspectiveProjectionChangesApparentSizeWithDepth)
 	spk::Camera3D camera;
 	camera.setPerspective(std::numbers::pi_v<float> / 2, 1, 1, 11);
 	const auto projection = camera.viewProjectionMatrix();
-	const auto near = projection * spk::Vector4{1, 1, -1, 1};
-	const auto far = projection * spk::Vector4{1, 1, -11, 1};
-	expectVector(near, {1, 1, -1, 1});
-	expectVector(far, {1, 1, 11, 11});
-	EXPECT_NEAR(near.x / near.w, 1.0f, Tolerance);
-	EXPECT_NEAR(far.x / far.w, 1.0f / 11.0f, Tolerance);
+	const auto nearPoint = projection * spk::Vector4{1, 1, -1, 1};
+	const auto farPoint = projection * spk::Vector4{1, 1, -11, 1};
+	expectVector(nearPoint, {1, 1, -1, 1});
+	expectVector(farPoint, {1, 1, 11, 11});
+	EXPECT_NEAR(nearPoint.x / nearPoint.w, 1.0f, Tolerance);
+	EXPECT_NEAR(farPoint.x / farPoint.w, 1.0f / 11.0f, Tolerance);
 }
 
 TEST(Camera3DTest, ThreeQuarterLookAtRemainsConsistentWithCustomTarget)
