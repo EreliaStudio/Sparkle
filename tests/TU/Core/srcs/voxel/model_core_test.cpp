@@ -129,3 +129,65 @@ TEST(ModelCoreTest, ReplacingAnExistingJointInvalidatesTopology)
 	ASSERT_NE(model.skeleton().joint("arm").child(), nullptr);
 	EXPECT_NE(model.skeleton().joint("arm").child()->volume(), nullptr);
 }
+
+TEST(ModelCoreTest, JointCanAttachIndependentModelWithNamedGrip)
+{
+	Model character;
+	character.skeleton().root().addJoint("hand");
+	Model sword;
+	sword.skeleton().root().setVolume(volume());
+	sword.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
+	const auto before = character.version().topology;
+	auto &hand = character.skeleton().joint("hand");
+	EXPECT_THROW(hand.attach(sword, "missing"), spk::Exception);
+	EXPECT_EQ(hand.model(), nullptr);
+	EXPECT_EQ(character.version().topology, before);
+	hand.attach(sword, "grip");
+	ASSERT_NE(hand.model(), nullptr);
+	EXPECT_NE(hand.model(), &sword);
+	EXPECT_EQ(hand.child(), nullptr);
+	EXPECT_EQ(hand.attachment(), "grip");
+	EXPECT_GT(character.version().topology, before);
+	EXPECT_NE(hand.model()->skeleton().root().volume(), nullptr);
+	hand.model()->setTransform(Matrix::translation(0, 2, 0));
+	EXPECT_EQ(sword.transform()[3][1], 0.0f);
+}
+
+TEST(ModelCoreTest, JointSwitchesBetweenPartAndModelAndDetaches)
+{
+	Model character;
+	character.skeleton().root().addJoint("hand");
+	auto &hand = character.skeleton().joint("hand");
+	hand.attach(Part(volume()));
+	ASSERT_NE(hand.child(), nullptr);
+	const auto firstVersion = hand.attachmentVersion();
+	hand.attach(Model{});
+	EXPECT_EQ(hand.child(), nullptr);
+	ASSERT_NE(hand.model(), nullptr);
+	EXPECT_GT(hand.attachmentVersion(), firstVersion);
+	hand.attach(Part{});
+	EXPECT_EQ(hand.model(), nullptr);
+	ASSERT_NE(hand.child(), nullptr);
+	hand.detach();
+	EXPECT_EQ(hand.child(), nullptr);
+	EXPECT_EQ(hand.model(), nullptr);
+	EXPECT_TRUE(hand.attachment().empty());
+}
+
+TEST(ModelCoreTest, AttachedModelIsDeepCopiedWithItsOwnPose)
+{
+	Model character;
+	character.skeleton().root().addJoint("hand");
+	Model weapon;
+	weapon.skeleton().root().addJoint("trigger");
+	character.skeleton().joint("hand").attach(weapon);
+	Model clone(character);
+	auto *original = character.skeleton().joint("hand").model();
+	auto *independent = clone.skeleton().joint("hand").model();
+	ASSERT_NE(original, nullptr);
+	ASSERT_NE(independent, nullptr);
+	EXPECT_NE(original, independent);
+	original->skeleton().joint("trigger").setRotation(spk::Quaternion::fromEuler({0, 0, 30}));
+	EXPECT_NE(original->skeleton().joint("trigger").rotation(), independent->skeleton().joint("trigger").rotation());
+	EXPECT_EQ(clone.skeleton().joint("hand").child(), nullptr);
+}

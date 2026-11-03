@@ -180,16 +180,27 @@ TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 	EXPECT_NE(&first.root().palette()->materials(), &second.root().palette()->materials());
 }
 
-TEST(ModelGraphicsTest, SkeletonTopologyChangeRequiresRecreatingTheView)
+TEST(ModelGraphicsTest, TopologyChangesRefreshOnlyAffectedViews)
 {
 	Model model;
+	model.skeleton().root().setVolume(volume("stone"));
 	Model::View view(model);
+	spk::Texture atlas;
+	view.bind(palette(atlas, {"stone"}));
+	const auto *cached = view.root().geometry();
 	model.skeleton().root().addJoint("new");
-	EXPECT_THROW((void)view.root().geometry(), spk::Exception);
-	EXPECT_THROW((void)view.isRenderable(), spk::Exception);
-	Model::View rebuilt(model);
-	EXPECT_TRUE(rebuilt.isRenderable());
-	EXPECT_THROW((void)rebuilt.part("new"), spk::Exception);
+	EXPECT_EQ(view.root().geometry(), cached);
+	EXPECT_TRUE(view.isRenderable());
+	EXPECT_THROW((void)view.part("new"), spk::Exception);
+	model.skeleton().joint("new").attach(Part(volume("wood")));
+	EXPECT_NO_THROW((void)view.part("new"));
+	view.part("new").bind(palette(atlas, {"wood"}));
+	EXPECT_TRUE(view.isRenderable());
+	model.skeleton().joint("new").detach();
+	EXPECT_THROW((void)view.part("new"), spk::Exception);
+	EXPECT_TRUE(view.isRenderable());
+	EXPECT_EQ(view.root().geometry(), cached);
+	EXPECT_NE(view.root().palette(), nullptr);
 }
 
 TEST(ModelGraphicsTest, ViewsCanFindUniquePartsOrTypedPaths)
@@ -250,4 +261,92 @@ TEST(ModelGraphicsTest, HarmonizeRemapsOnlyGraphicalMeshes)
 	spk::Texture atlas;
 	view.bind(palette(atlas, {"skin", "cloth"}), Model::View::PalettePropagation::Recursive);
 	EXPECT_TRUE(view.isRenderable());
+}
+
+TEST(ModelGraphicsTest, AttachingModelUpdatesViewAndPreservesExistingMeshes)
+{
+	Model character;
+	character.skeleton().root().setVolume(volume("cloth"));
+	character.skeleton().root().addJoint("hand", Matrix::translation(2, 0, 0));
+	character.setTransform(Matrix::translation(10, 0, 0));
+	Model sword;
+	sword.skeleton().root().setVolume(volume("metal"));
+	sword.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
+	sword.setTransform(Matrix::translation(0, 3, 0));
+	Model::View view(character);
+	spk::Texture atlas;
+	view.bind(palette(atlas, {"cloth"}));
+	const auto *cached = view.root().geometry();
+	character.skeleton().joint("hand").attach(sword, "grip");
+	EXPECT_FALSE(view.isRenderable());
+	auto &swordView = view.root().attachedModel("hand");
+	swordView.bind(palette(atlas, {"metal"}));
+	EXPECT_TRUE(view.isRenderable());
+	std::vector<Matrix> matrices;
+	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
+		matrices.push_back(m);
+	});
+	ASSERT_EQ(matrices.size(), 2u);
+	expectMatrix(matrices[0], Matrix::translation(10, 0, 0));
+	expectMatrix(matrices[1], Matrix::translation(11, 3, 0));
+	EXPECT_EQ(view.root().geometry(), cached);
+	character.skeleton().joint("hand").detach();
+	EXPECT_THROW((void)view.root().attachedModel("hand"), spk::Exception);
+	EXPECT_TRUE(view.isRenderable());
+	EXPECT_EQ(view.root().geometry(), cached);
+}
+
+TEST(ModelGraphicsTest, ReplacingAttachedModelRebuildsOnlyItsBranch)
+{
+	Model character;
+	character.skeleton().root().addJoint("hand");
+	Model::View view(character);
+	spk::Texture atlas;
+	Model first;
+	first.skeleton().root().setVolume(volume("steel"));
+	character.skeleton().joint("hand").attach(first);
+	view.root().attachedModel("hand").bind(palette(atlas, {"steel"}));
+	EXPECT_TRUE(view.isRenderable());
+	Model second;
+	second.skeleton().root().setVolume(volume("wood"));
+	character.skeleton().joint("hand").attach(second);
+	EXPECT_FALSE(view.isRenderable());
+	view.root().attachedModel("hand").bind(palette(atlas, {"wood"}));
+	EXPECT_TRUE(view.isRenderable());
+	character.skeleton().joint("hand").attach(Part(volume("stone")));
+	EXPECT_THROW((void)view.root().attachedModel("hand"), spk::Exception);
+	view.part("hand").bind(palette(atlas, {"stone"}));
+	EXPECT_TRUE(view.isRenderable());
+}
+
+TEST(ModelGraphicsTest, NestedAttachedModelsObserveTheirOwnCorePose)
+{
+	Model parent;
+	parent.skeleton().root().addJoint("hand");
+	Model sword;
+	sword.skeleton().root().addJoint("tip", Matrix::translation(3, 0, 0));
+	Model gem;
+	gem.skeleton().root().setVolume(volume("gem"));
+	sword.skeleton().joint("tip").attach(gem);
+	parent.skeleton().joint("hand").attach(sword);
+	Model::View view(parent);
+	spk::Texture atlas;
+	auto &swordView = view.root().attachedModel("hand");
+	swordView.root().attachedModel("tip").bind(palette(atlas, {"gem"}));
+	EXPECT_TRUE(view.isRenderable());
+	std::vector<Matrix> matrices;
+	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
+		matrices.push_back(m);
+	});
+	ASSERT_EQ(matrices.size(), 1u);
+	expectMatrix(matrices[0], Matrix::translation(3, 0, 0));
+	auto *attached = parent.skeleton().joint("hand").model();
+	ASSERT_NE(attached, nullptr);
+	attached->skeleton().joint("tip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	matrices.clear();
+	view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &m) {
+		matrices.push_back(m);
+	});
+	ASSERT_EQ(matrices.size(), 1u);
+	expectMatrix(matrices[0], Matrix::translation(3, 0, 0) * Matrix::rotation(attached->skeleton().joint("tip").rotation()));
 }

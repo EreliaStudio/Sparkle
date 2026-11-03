@@ -27,7 +27,7 @@ namespace spk
 
 	private:
 		Model *_model = nullptr;
-		const Part *_part = nullptr;
+		Part *_part = nullptr;
 		const Part *_root = nullptr;
 		mutable std::uint64_t _topologyVersion = 0;
 		mutable std::optional<spk::Voxel::Geometry> _geometry;
@@ -37,16 +37,19 @@ namespace spk
 		mutable std::map<std::string, std::unique_ptr<Model::View>, std::less<>> _models;
 		mutable std::map<std::string, std::uint64_t, std::less<>> _attachmentVersions;
 
+		[[nodiscard]] bool _attachmentChanged(std::string_view name, std::uint64_t version) const;
+		void _dropOutdatedAttachments() const;
+		void _addMissingAttachments() const;
 		void _sync() const;
 		void _validatePalette(const spk::Palette &palette, PalettePropagation propagation) const;
 		void _applyPalette(const spk::Palette &palette, PalettePropagation propagation);
-		void _visit(
-			const std::function<void(const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)> &callback,
-			spk::Matrix4x4 transform) const;
+		using DrawCallback = std::function<void(const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)>;
+		void _visitJoint(std::string_view name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const;
+		void _visit(const DrawCallback &callback, spk::Matrix4x4 transform) const;
 		void _collectMatches(std::string_view name, std::vector<View *> &matches);
 
 	public:
-		View(Model &model, const Part &part);
+		View(Model &model, Part &part);
 		View(const View &other);
 		View(View &&other) noexcept;
 		View &operator=(const View &other);

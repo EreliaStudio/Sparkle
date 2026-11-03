@@ -31,7 +31,7 @@ namespace spk
 		}
 	}
 
-	Model::Skeleton::Part::View::View(Model &model, const Part &part) :
+	Model::Skeleton::Part::View::View(Model &model, Part &part) :
 		_model(&model),
 		_part(&part),
 		_root(&model.skeleton().root()),
@@ -45,10 +45,10 @@ namespace spk
 		_part(other._part),
 		_root(other._root),
 		_topologyVersion(other._topologyVersion),
-		_attachmentVersions(other._attachmentVersions),
 		_geometry(other._geometry),
 		_volumeVersion(other._volumeVersion),
-		_palette(other._palette)
+		_palette(other._palette),
+		_attachmentVersions(other._attachmentVersions)
 	{
 		for (const auto &[name, child] : other._children)
 		{
@@ -74,6 +74,63 @@ namespace spk
 		return *this;
 	}
 
+	bool Model::Skeleton::Part::View::_attachmentChanged(std::string_view name, std::uint64_t version) const
+	{
+		const auto found = _part->joints().find(name);
+		if (found == _part->joints().end() || found->second.attachmentVersion() != version)
+		{
+			return true;
+		}
+		if (const Part *child = found->second.child())
+		{
+			return !_children.contains(name) || _children.at(name)->_part != child;
+		}
+		if (const Model *model = found->second.model())
+		{
+			return !_models.contains(name) || &_models.at(name)->model() != model;
+		}
+		return true;
+	}
+
+	void Model::Skeleton::Part::View::_dropOutdatedAttachments() const
+	{
+		for (auto it = _attachmentVersions.begin(); it != _attachmentVersions.end();)
+		{
+			if (!_attachmentChanged(it->first, it->second))
+			{
+				++it;
+				continue;
+			}
+			_children.erase(it->first);
+			_models.erase(it->first);
+			it = _attachmentVersions.erase(it);
+		}
+	}
+
+	void Model::Skeleton::Part::View::_addMissingAttachments() const
+	{
+		for (const auto &[name, joint] : _part->joints())
+		{
+			if (_attachmentVersions.contains(name))
+			{
+				continue;
+			}
+			if (Part *child = _part->joint(name).child())
+			{
+				_children.emplace(name, std::make_unique<View>(*_model, *child));
+			}
+			else if (Model *model = _part->joint(name).model())
+			{
+				_models.emplace(name, std::make_unique<Model::View>(*model));
+			}
+			else
+			{
+				continue;
+			}
+			_attachmentVersions.emplace(name, joint.attachmentVersion());
+		}
+	}
+
 	void Model::Skeleton::Part::View::_sync() const
 	{
 		if (_root != &_model->skeleton().root())
@@ -85,41 +142,8 @@ namespace spk
 		{
 			return;
 		}
-		for (auto it = _attachmentVersions.begin(); it != _attachmentVersions.end();)
-		{
-			const auto found = _part->joints().find(it->first);
-			if (found == _part->joints().end() || found->second.attachmentVersion() != it->second ||
-				(found->second.child() && (!_children.contains(it->first) || _children.at(it->first)->_part != found->second.child())) ||
-				(found->second.model() && (!_models.contains(it->first) || &_models.at(it->first)->model() != found->second.model())))
-			{
-				_children.erase(it->first);
-				_models.erase(it->first);
-				it = _attachmentVersions.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-		for (const auto &[name, joint] : _part->joints())
-		{
-			if (_attachmentVersions.contains(name))
-			{
-				continue;
-			}
-			if (const Part *child = joint.child())
-			{
-				_children.emplace(name, std::make_unique<View>(*_model, *child));
-			}
-			else if (Model *model = joint.model())
-			{
-				_models.emplace(name, std::make_unique<Model::View>(*model));
-			}
-			if (joint.child() || joint.model())
-			{
-				_attachmentVersions.emplace(name, joint.attachmentVersion());
-			}
-		}
+		_dropOutdatedAttachments();
+		_addMissingAttachments();
 		for (const auto &[name, child] : _children)
 		{
 			child->_sync();
@@ -237,9 +261,29 @@ namespace spk
 		}
 	}
 
-	void Model::Skeleton::Part::View::_visit(
-		const std::function<void(const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)> &callback,
-		spk::Matrix4x4 transform) const
+	void Model::Skeleton::Part::View::_visitJoint(
+		std::string_view name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const
+	{
+		auto attached = transform * joint.transform() * spk::Matrix4x4::rotation(joint.rotation());
+		if (const Part *child = joint.child())
+		{
+			if (!joint.attachment().empty())
+			{
+				attached = attached * inverseAnchor(child->joint(joint.attachment()).transform());
+			}
+			_children.at(name)->_visit(callback, attached);
+		}
+		else if (const Model *model = joint.model())
+		{
+			if (!joint.attachment().empty())
+			{
+				attached = attached * inverseAnchor(model->skeleton().root().joint(joint.attachment()).transform());
+			}
+			_models.at(name)->_visit(callback, attached);
+		}
+	}
+
+	void Model::Skeleton::Part::View::_visit(const DrawCallback &callback, spk::Matrix4x4 transform) const
 	{
 		const auto *mesh = geometry();
 		if (mesh != nullptr)
@@ -253,23 +297,7 @@ namespace spk
 		}
 		for (const auto &[name, joint] : _part->joints())
 		{
-			auto attached = transform * joint.transform() * spk::Matrix4x4::rotation(joint.rotation());
-			if (const Part *child = joint.child())
-			{
-				if (!joint.attachment().empty())
-				{
-					attached = attached * inverseAnchor(child->joint(joint.attachment()).transform());
-				}
-				_children.at(name)->_visit(callback, attached);
-			}
-			else if (const Model *model = joint.model())
-			{
-				if (!joint.attachment().empty())
-				{
-					attached = attached * inverseAnchor(model->skeleton().root().joint(joint.attachment()).transform());
-				}
-				_models.at(name)->_visit(callback, attached);
-			}
+			_visitJoint(name, joint, callback, transform);
 		}
 	}
 
