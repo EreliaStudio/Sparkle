@@ -4,7 +4,7 @@
 
 ## 6.1 Frontière Core / Graphics
 
-La notion de `spk::Model` appartient au **Core**. Elle ne dépend d'aucun type de mesh, de palette, de GPU ou d'OpenGL. `Model` possède un `Model::Skeleton`, une transformation globale et un compteur de version propre à cette transformation.
+La notion de `spk::Model` appartient au **Core**. Elle ne dépend d'aucun type de mesh, de palette, de GPU ou d'OpenGL. `Model` possède un `Model::Skeleton`, une transformation locale et un compteur de version propre à cette transformation. La transformation de l'`Entity3D` reste extérieure au Model.
 
 Le `Skeleton` contient une `Skeleton::Part` racine et une hiérarchie de Parts reliées par des `Skeleton::Joint`. Une Part peut porter un `spk::Voxel::Volume` **optionnel**. Les Parts sans Volume sont des éléments logiques valides et ne produisent aucun mesh graphique.
 
@@ -29,7 +29,7 @@ Les types `spk::Voxel::Geometry`, `Geometry::SurfaceMesh`, `spk::Mesh` et `spk::
 
 `spk::Model::View` référence un `spk::Model` mutable existant. Elle construit récursivement une `Model::Skeleton::Part::View` par Part attachée. Chaque Part View possède sa palette facultative et un cache de `Voxel::Geometry` créé **à la demande** depuis le `Voxel::Volume` de la Part avec `Voxel::Mesher::bake()`. Une Part sans Volume n'a pas de Geometry.
 
-Une rotation de Joint ou une translation du Model ne reconstruit jamais les vertices : seules les données de pose et de transformation Core changent. Le cache est reconstruit si le Volume d'une Part change. Le meshing est réalisé côté Graphics et jamais dans Core.
+Une rotation de Joint ou une translation du Model ne reconstruit jamais les vertices : seules les données de pose et de transformation Core changent. Les matrices cumulées du Core sont calculées et conservées en cache indépendamment des meshes. Le cache est reconstruit si le Volume d'une Part change. Le meshing est réalisé côté Graphics et jamais dans Core.
 
 La View réconcilie la hiérarchie graphique avec la topologie du Core à la demande : les attachements et détachements de Parts ou de Models reconstruisent seulement les branches concernées, en conservant les palettes et caches des branches intactes. `partView.attachedModel(jointName)` donne accès à la View du Model enfant, qui possède ses propres palettes. Une View d'un Model attaché suit sa pose et sa transformation propres. Lorsque la Part racine du Model est remplacée, `Model::View` reconstruit sa racine graphique.
 
@@ -39,13 +39,17 @@ La View et les Part Views ne possèdent pas les Models ou les Parts Core qu'elle
 
 `bind(palette)` affecte uniquement la Part View ciblée (`PalettePropagation::Self` par défaut). Une propagation récursive doit être demandée explicitement ; la compatibilité de tous les slots de toutes les géométries concernées est vérifiée avant de modifier les palettes. Les Materials supplémentaires restent autorisés.
 
-La transformation d'une Part enfant est :
+`Model::globalMatrix()`, `Skeleton::Part::globalMatrix()` et `Skeleton::Joint::globalMatrix()` renvoient une référence constante vers leur matrice cumulée **dans l'assemblage de Models**, sans la matrice de l'`Entity3D`.
 
-`M_child = M_parent * A_parent * R_joint * inverse(A_child)`
+- `M_joint = M_part * A_joint * R_joint` : le repère fixe du Joint précède sa rotation de pose.
+- `M_partChild = M_jointParent * inverse(A_child)` : l'inverse du repère fixe d'attache facultatif repositionne la Part enfant.
+- `M_modelChild = M_jointParent * inverse(A_childRoot) * M_modelLocal` : un Model attaché conserve sa transformation propre, appliquée après l'alignement de son repère d'attache.
 
-Le terme `inverse(A_child)` est appliqué seulement si le Joint désigne un repère d'attache présent dans la Part enfant.
+L'inverse du repère d'attache ignore la rotation de pose du Joint utilisé comme ancre. Les matrices utilisent des `CachedData<Matrix4x4>` à génération paresseuse, sur le modèle de `Transform3D` : une mutation invalide le nœud et ses descendants, pas les branches indépendantes. Les modifications du repère fixe utilisé comme ancre invalident également la Part ou le Model attaché. Les copies et déplacements rétablissent les liens parentaux non propriétaires.
 
-La PR-08 ne fournit pas de méthode `Model::View::visit()` ni de capture graphique de la hiérarchie. La future intégration `VoxelModelRenderer3D`, fondée sur `RenderingComponent3D`, parcourra les Part Views et les Views des Models attachés pour produire des contributions au `RenderSnapshot` en composant leurs transformations. Les Parts purement logiques ne produiront pas de commande de dessin.
+La matrice monde finale reste la composition explicite `entity.transform().modelMatrix() * model.globalMatrix()`. Aucun lien vers une Entity n'existe dans Core.
+
+La PR-08 ne fournit pas de méthode `Model::View::visit()` ni de capture graphique de la hiérarchie. La future intégration `VoxelModelRenderer3D`, fondée sur `RenderingComponent3D`, parcourra les Part Views et les Views des Models attachés pour produire des contributions au `RenderSnapshot` en utilisant les matrices cumulées calculées par le Core et la matrice de l'Entity. Les Parts purement logiques ne produiront pas de commande de dessin.
 
 ## 6.5 Ombres et collision
 
