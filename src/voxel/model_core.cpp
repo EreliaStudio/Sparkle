@@ -75,7 +75,6 @@ namespace spk
 		}
 	}
 
-
 	Model::Model() :
 		_skeleton(std::make_unique<Skeleton>())
 	{
@@ -195,7 +194,6 @@ namespace spk
 		const auto revision = skeleton().revision();
 		return {_transformVersion, revision.pose, revision.topology, revision.geometry};
 	}
-
 
 	Model::Skeleton::Skeleton() :
 		_root(std::make_unique<Part>()),
@@ -346,7 +344,6 @@ namespace spk
 	{
 		validateJointTransform(transform);
 	}
-
 
 	Model::Skeleton::Joint::Joint(const Joint &other) :
 		_transform(other._transform),
@@ -586,7 +583,6 @@ namespace spk
 		_volume(std::move(volume))
 	{
 	}
-
 
 	Model::Skeleton::Part::Part(const Part &other) :
 		_volume(other._volume),
