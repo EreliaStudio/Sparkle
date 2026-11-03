@@ -278,21 +278,17 @@ TEST(ModelCoreTest, AttachedModelCachesFollowParentAndNamedGrip)
 	parent.skeleton().joint("hand").attach(sword, "grip");
 	auto *attached = parent.skeleton().joint("hand").model();
 	ASSERT_NE(attached, nullptr);
-	const auto initial = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) *
-		Matrix::translation(-1, 0, 0) * Matrix::translation(0, 2, 0);
+	const auto initial = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) * Matrix::translation(-1, 0, 0) * Matrix::translation(0, 2, 0);
 	expectMatrix(attached->globalMatrix(), initial);
 	expectMatrix(attached->skeleton().joint("tip").globalMatrix(), initial * Matrix::translation(3, 0, 0));
 
 	attached->skeleton().joint("grip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
 	expectMatrix(attached->globalMatrix(), initial);
 	attached->skeleton().joint("grip").setTransform(Matrix::translation(2, 0, 0));
-	const auto movedGrip = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) *
-		Matrix::translation(-2, 0, 0) * Matrix::translation(0, 2, 0);
+	const auto movedGrip = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) * Matrix::translation(-2, 0, 0) * Matrix::translation(0, 2, 0);
 	expectMatrix(attached->globalMatrix(), movedGrip);
 	parent.skeleton().joint("hand").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
-	const auto rotated = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) *
-		Matrix::rotation(parent.skeleton().joint("hand").rotation()) *
-		Matrix::translation(-2, 0, 0) * Matrix::translation(0, 2, 0);
+	const auto rotated = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) * Matrix::rotation(parent.skeleton().joint("hand").rotation()) * Matrix::translation(-2, 0, 0) * Matrix::translation(0, 2, 0);
 	expectMatrix(attached->globalMatrix(), rotated);
 }
 
