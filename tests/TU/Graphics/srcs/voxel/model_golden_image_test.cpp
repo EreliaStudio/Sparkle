@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <GL/glew.h>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -11,6 +10,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <GL/glew.h>
 
 #include "graphics/opengl/layout_buffer.hpp"
 #include "graphics/opengl/program.hpp"
