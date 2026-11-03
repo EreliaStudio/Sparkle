@@ -91,7 +91,7 @@ namespace spk
 	void Model::View::harmonize()
 	{
 		Slots collected;
-		collectSlots(_root, collected);
+		collectSlots(root(), collected);
 		Indices indices;
 		const auto slots = sharedSlots(collected, indices);
 		std::vector<std::pair<Skeleton::Part::View *, Geometry>> prepared;
@@ -108,7 +108,7 @@ namespace spk
 				}
 			}
 		};
-		rewrite(_root);
+		rewrite(root());
 		for (auto &[view, geometry] : prepared)
 		{
 			view->_geometry = std::move(geometry);

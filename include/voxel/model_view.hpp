@@ -37,14 +37,14 @@ namespace spk
 		mutable std::map<std::string, std::unique_ptr<Model::View>, std::less<>> _models;
 		mutable std::map<std::string, std::uint64_t, std::less<>> _attachmentVersions;
 
-		[[nodiscard]] bool _attachmentChanged(std::string_view name, std::uint64_t version) const;
+		[[nodiscard]] bool _attachmentChanged(const std::string &name, std::uint64_t version) const;
 		void _dropOutdatedAttachments() const;
 		void _addMissingAttachments() const;
 		void _sync() const;
 		void _validatePalette(const spk::Palette &palette, PalettePropagation propagation) const;
 		void _applyPalette(const spk::Palette &palette, PalettePropagation propagation);
 		using DrawCallback = std::function<void(const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)>;
-		void _visitJoint(std::string_view name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const;
+		void _visitJoint(const std::string &name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const;
 		void _visit(const DrawCallback &callback, spk::Matrix4x4 transform) const;
 		void _collectMatches(std::string_view name, std::vector<View *> &matches);
 

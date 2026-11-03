@@ -66,6 +66,7 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "file_utils.hpp"
+#include "model.hpp"
 #include "math/matrix.hpp"
 #include "math/quaternion.hpp"
 #include "math/rect2d.hpp"

@@ -74,7 +74,7 @@ namespace spk
 		return *this;
 	}
 
-	bool Model::Skeleton::Part::View::_attachmentChanged(std::string_view name, std::uint64_t version) const
+	bool Model::Skeleton::Part::View::_attachmentChanged(const std::string &name, std::uint64_t version) const
 	{
 		const auto found = _part->joints().find(name);
 		if (found == _part->joints().end() || found->second.attachmentVersion() != version)
@@ -262,7 +262,7 @@ namespace spk
 	}
 
 	void Model::Skeleton::Part::View::_visitJoint(
-		std::string_view name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const
+		const std::string &name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const
 	{
 		auto attached = transform * joint.transform() * spk::Matrix4x4::rotation(joint.rotation());
 		if (const Part *child = joint.child())
