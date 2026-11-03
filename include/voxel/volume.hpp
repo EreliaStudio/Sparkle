@@ -6,13 +6,12 @@
 #include <memory>
 #include <vector>
 
-#include "body.hpp"
 #include "math/vector3.hpp"
 #include "voxel/cell.hpp"
 
 namespace spk::Voxel
 {
-	class Volume : public spk::Body
+	class Volume
 	{
 	public:
 		struct PackedCell
@@ -35,15 +34,15 @@ namespace spk::Voxel
 		private:
 			spk::Vector3UInt _dimensions;
 			std::vector<std::uint32_t> _cells;
-			Definition::Collection _collection;
+			Definition::Registry _registry;
 			bool _consumed = false;
 
 			void _ensureActive() const;
 
 		public:
 			explicit Builder(spk::Vector3UInt dimensions);
-			void copyFrom(const Volume &volume);
-			void bind(const Definition::Collection &collection);
+			void load(const Volume &volume);
+			void bind(const Definition::Registry &registry);
 			void set(
 				spk::Vector3UInt position,
 				std::uint32_t definitionId,
@@ -58,7 +57,7 @@ namespace spk::Voxel
 		struct Data
 		{
 			spk::Vector3UInt dimensions;
-			Definition::Collection definitions;
+			Definition::Registry definitions;
 			std::vector<PackedCell::Storage> cells;
 		};
 

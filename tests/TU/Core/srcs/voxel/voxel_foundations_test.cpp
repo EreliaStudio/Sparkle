@@ -176,7 +176,7 @@ namespace
 		EXPECT_THROW(first.semanticSlot("none"), spk::Exception);
 	}
 
-	TEST(VoxelDefinitionTest, SlotCollectionsMustBeCompleteAndValid)
+	TEST(VoxelDefinitionTest, SlotMappingsMustBeCompleteAndValid)
 	{
 		const Shape shape = makeSquare();
 		EXPECT_THROW((Definition(shape, {})), spk::Exception);
@@ -188,7 +188,7 @@ namespace
 	TEST(VoxelDefinitionTest, OpacityIsValidatedAndDefaultsToOpaque)
 	{
 		const Shape shape = makeSquare();
-		const Definition::SlotCollection slots{{"wall", {"stone"}}};
+		const Definition::SlotMapping slots{{"wall", {"stone"}}};
 		EXPECT_FLOAT_EQ(Definition(shape, slots).opacity("wall"), 1.0f);
 		EXPECT_FLOAT_EQ((Definition(shape, {{"wall", {"stone", 0.25f}}})).opacity("wall"), 0.25f);
 		EXPECT_THROW((Definition(shape, {{"wall", {"stone", -0.1f}}})), spk::Exception);
