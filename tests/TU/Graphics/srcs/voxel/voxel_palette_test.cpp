@@ -412,7 +412,9 @@ TEST(VoxelPaletteTest, MissingSlotIsIncompatibleButOpacityMayDiffer)
 	const Geometry other = geometryWithSlots({{"stone", 0.3f}});
 	Texture atlas;
 	EXPECT_FALSE(source.isCompatible(Palette{}));
-	EXPECT_TRUE(source.isCompatible(palette({{"stone", material(atlas)}})));
+	const auto matchingPalette = palette({{"stone", material(atlas)}});
+	EXPECT_TRUE(source.isCompatible(matchingPalette));
+	EXPECT_TRUE(other.isCompatible(matchingPalette));
 }
 
 TEST(VoxelPaletteTest, EmptyGeometryAcceptsEmptyPalette)
@@ -504,4 +506,3 @@ TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
 	EXPECT_EQ(first.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
 	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
 }
-

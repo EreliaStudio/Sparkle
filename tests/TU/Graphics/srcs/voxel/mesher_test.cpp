@@ -56,7 +56,7 @@ namespace
 		return Definition(shape, std::move(mapping));
 	}
 
-	[[nodiscard]] Definition::Registry collection(const std::vector<Definition> &definitions)
+	[[nodiscard]] Definition::Registry registry(const std::vector<Definition> &definitions)
 	{
 		Definition::Registry::Builder builder;
 		for (std::size_t i = 0; i < definitions.size(); ++i)
@@ -69,7 +69,7 @@ namespace
 	[[nodiscard]] Volume single(const Definition &definition, Shape::Orientation orientation = {})
 	{
 		Volume::Builder builder({1, 1, 1});
-		builder.bind(collection({definition}));
+		builder.bind(registry({definition}));
 		builder.set({0, 0, 0}, 1, orientation.horizontal, orientation.vertical);
 		return builder.build();
 	}
@@ -90,7 +90,7 @@ namespace
 		Face face)
 	{
 		Volume::Builder builder({3, 3, 3});
-		builder.bind(collection({source, blocker}));
+		builder.bind(registry({source, blocker}));
 		builder.set({1, 1, 1}, 1, sourceOrientation.horizontal, sourceOrientation.vertical);
 		builder.set(neighbor(face), 2, blockerOrientation.horizontal, blockerOrientation.vertical);
 		return builder.build();
@@ -401,7 +401,7 @@ TEST(MesherGeometry, AirGapPreservesBothIndependentCubeShadowSurfaces)
 {
 	const auto stone = definition(fixture("cube"), "stone_");
 	Volume::Builder builder({3, 1, 1});
-	builder.bind(collection({stone}));
+	builder.bind(registry({stone}));
 	builder.set({0, 0, 0}, 1);
 	builder.set({2, 0, 0}, 1);
 	const Geometry model = Mesher().bake(builder.build());
@@ -574,7 +574,7 @@ TEST(MesherTest, GlobalInnerShellRequiresAllSixOpaqueNeighbors)
 			const Shape cube = fixture("cube");
 			const Shape shape = fixture(name);
 			Volume::Builder builder({3, 3, 3});
-			builder.bind(collection({definition(shape, "source_"), definition(cube, "neighbor_")}));
+			builder.bind(registry({definition(shape, "source_"), definition(cube, "neighbor_")}));
 			builder.set({1, 1, 1}, 1, orientation.horizontal, orientation.vertical);
 			for (const Face face : Faces)
 			{
@@ -607,7 +607,7 @@ TEST(MesherTest, EmptyGeometryKeepsUsedSlotsButNotUnusedDefinitions)
 	const auto hidden = definition(builder.build(), "used_");
 	const auto unused = definition(fixture("cube"), "unused_");
 	Volume::Builder volume({1, 1, 1});
-	volume.bind(collection({hidden, unused}));
+	volume.bind(registry({hidden, unused}));
 	volume.set({0, 0, 0}, 1);
 	const Geometry model = Mesher().bake(volume.build());
 	EXPECT_TRUE(model.opaqueMesh().empty());
