@@ -18,7 +18,7 @@ namespace
 	using Part = Skeleton::Part;
 	using Matrix = spk::Matrix4x4;
 
-	[[nodiscard]] spk::Voxel::Volume volume(const std::string &slot)
+	[[nodiscard]] spk::Voxel::Volume volume(const std::string &slot, float opacity = 1.0f)
 	{
 		spk::Voxel::Shape::Builder shape;
 		shape.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
@@ -26,7 +26,7 @@ namespace
 		spk::Voxel::Definition::SlotCollection slots;
 		for (const auto &entry : cube.slots())
 		{
-			slots.emplace(entry.name, spk::Voxel::Definition::Slot{slot, 1.0f});
+			slots.emplace(entry.name, spk::Voxel::Definition::Slot{slot, opacity});
 		}
 		spk::Voxel::Definition::Collection::Builder definitions;
 		definitions.add(1, spk::Voxel::Definition(cube, std::move(slots)));
@@ -261,6 +261,65 @@ TEST(ModelGraphicsTest, HarmonizeRemapsOnlyGraphicalMeshes)
 	spk::Texture atlas;
 	view.bind(palette(atlas, {"skin", "cloth"}), Model::View::PalettePropagation::Recursive);
 	EXPECT_TRUE(view.isRenderable());
+}
+
+TEST(ModelGraphicsTest, HarmonizePreservesPerDefinitionOpacityWithSharedMaterialName)
+{
+	Model model;
+	model.skeleton().root().setVolume(volume("shared", 1.0f));
+	model.skeleton().root().addJoint("overlay");
+	model.skeleton().joint("overlay").attach(Part(volume("shared", 0.35f)));
+	const auto before = model.version();
+	Model::View view(model);
+	view.harmonize();
+	const auto *opaque = view.root().geometry();
+	const auto *translucent = view.part("overlay").geometry();
+	ASSERT_NE(opaque, nullptr);
+	ASSERT_NE(translucent, nullptr);
+	ASSERT_EQ(opaque->materialSlots().size(), 2u);
+	ASSERT_EQ(translucent->materialSlots().size(), 2u);
+	EXPECT_EQ(opaque->materialSlots()[0].name, "shared");
+	EXPECT_EQ(opaque->materialSlots()[1].name, "shared");
+	EXPECT_FLOAT_EQ(opaque->materialSlots()[0].opacity, 0.35f);
+	EXPECT_FLOAT_EQ(opaque->materialSlots()[1].opacity, 1.0f);
+	EXPECT_EQ(opaque->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 1u);
+	EXPECT_EQ(translucent->transparentMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
+	EXPECT_EQ(model.version(), before);
+	spk::Texture atlas;
+	view.bind(palette(atlas, {"shared"}), Model::View::PalettePropagation::Recursive);
+	EXPECT_TRUE(view.isRenderable());
+}
+
+TEST(ModelGraphicsTest, ChildGripRotationDoesNotMoveItsAttachmentFrame)
+{
+	Model parent;
+	parent.skeleton().root().addJoint("hand", Matrix::translation(4, 0, 0));
+	Model tool;
+	tool.skeleton().root().setVolume(volume("metal"));
+	tool.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
+	parent.skeleton().joint("hand").attach(tool, "grip");
+	Model::View view(parent);
+	spk::Texture atlas;
+	view.root().attachedModel("hand").bind(palette(atlas, {"metal"}));
+	std::vector<Matrix> transforms;
+	auto capture = [&] {
+		transforms.clear();
+		view.visit([&](const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const Matrix &matrix) {
+			transforms.push_back(matrix);
+		});
+		EXPECT_EQ(transforms.size(), 1u);
+	};
+	capture();
+	expectMatrix(transforms.front(), Matrix::translation(3, 0, 0));
+	auto *attached = parent.skeleton().joint("hand").model();
+	ASSERT_NE(attached, nullptr);
+	attached->skeleton().joint("grip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	capture();
+	expectMatrix(transforms.front(), Matrix::translation(3, 0, 0));
+	parent.skeleton().joint("hand").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	capture();
+	const auto rotated = Matrix::rotation(parent.skeleton().joint("hand").rotation());
+	expectMatrix(transforms.front(), Matrix::translation(4, 0, 0) * rotated * Matrix::translation(-1, 0, 0));
 }
 
 TEST(ModelGraphicsTest, AttachingModelUpdatesViewAndPreservesExistingMeshes)

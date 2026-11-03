@@ -191,3 +191,25 @@ TEST(ModelCoreTest, AttachedModelIsDeepCopiedWithItsOwnPose)
 	EXPECT_NE(original->skeleton().joint("trigger").rotation(), independent->skeleton().joint("trigger").rotation());
 	EXPECT_EQ(clone.skeleton().joint("hand").child(), nullptr);
 }
+
+TEST(ModelCoreTest, AttachedModelRevisionsStayLocal)
+{
+	Model parent;
+	parent.skeleton().root().addJoint("hand");
+	Model child;
+	child.skeleton().root().addJoint("tip");
+	parent.skeleton().joint("hand").attach(std::move(child));
+	const auto before = parent.version();
+	auto *attached = parent.skeleton().joint("hand").model();
+	ASSERT_NE(attached, nullptr);
+	attached->setTransform(Matrix::translation(1, 2, 3));
+	attached->skeleton().joint("tip").setRotation(spk::Quaternion::fromEuler({0, 0, 30}));
+	attached->skeleton().root().setVolume(volume());
+	attached->skeleton().root().addJoint("extra");
+	EXPECT_EQ(parent.version(), before);
+	EXPECT_EQ(attached->version().transform, 1u);
+	EXPECT_EQ(attached->version().pose, 1u);
+	EXPECT_EQ(attached->version().geometry, 1u);
+	EXPECT_EQ(attached->version().topology, 2u);
+}
+

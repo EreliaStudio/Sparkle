@@ -2,6 +2,8 @@
 
 #include <limits>
 #include <map>
+#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -12,8 +14,9 @@ namespace spk
 	namespace
 	{
 		using Geometry = spk::Voxel::Geometry;
-		using Slots = std::map<std::string, float, std::less<>>;
-		using Indices = std::map<std::string, std::uint32_t, std::less<>>;
+		using SlotKey = std::pair<std::string, float>;
+		using Slots = std::set<SlotKey>;
+		using Indices = std::map<SlotKey, std::uint32_t>;
 		using PartView = spk::Model::Skeleton::Part::View;
 
 		void collectSlots(const PartView &view, Slots &slots)
@@ -22,11 +25,7 @@ namespace spk
 			{
 				for (const auto &slot : geometry->materialSlots())
 				{
-					const auto [it, added] = slots.try_emplace(slot.name, slot.opacity);
-					if (!added && it->second != slot.opacity)
-					{
-						throw spk::Exception("Model View: conflicting material slot opacity: " + slot.name);
-					}
+					slots.emplace(slot.name, slot.opacity);
 				}
 			}
 			for (const auto &[name, joint] : view.part().joints())
@@ -51,7 +50,8 @@ namespace spk
 			builder.reserve(vertices.size(), triangles.size());
 			for (auto vertex : vertices)
 			{
-				vertex.materialIndex = indices.at(geometry.materialSlot(vertex.materialIndex).name);
+				const auto &slot = geometry.materialSlot(vertex.materialIndex);
+				vertex.materialIndex = indices.at({slot.name, slot.opacity});
 				(void)builder.addVertex(vertex);
 			}
 			for (const auto index : triangles)
