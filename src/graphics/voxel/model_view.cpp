@@ -330,5 +330,4 @@ namespace spk
 		};
 		return check(root());
 	}
-
 }
