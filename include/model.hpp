@@ -8,6 +8,7 @@
 #include <string_view>
 #include <vector>
 
+#include "container/cached_data.hpp"
 #include "math/matrix.hpp"
 #include "voxel/volume.hpp"
 
@@ -15,6 +16,8 @@ namespace spk
 {
 	class Model
 	{
+		friend class Skeleton;
+
 	public:
 		class Skeleton;
 		class View;
@@ -33,6 +36,10 @@ namespace spk
 		std::unique_ptr<Skeleton> _skeleton;
 		spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
 		std::uint64_t _transformVersion = 0;
+		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] { return _calculateGlobalMatrix(); }};
+
+		[[nodiscard]] spk::Matrix4x4 _calculateGlobalMatrix() const;
+		void _invalidateGlobalMatrices() noexcept;
 
 	public:
 		Model();
@@ -47,6 +54,7 @@ namespace spk
 		[[nodiscard]] const Skeleton &skeleton() const noexcept;
 		void setTransform(spk::Matrix4x4 transform);
 		[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
+		[[nodiscard]] const spk::Matrix4x4 &globalMatrix() const;
 		[[nodiscard]] Version version() const noexcept;
 	};
 
@@ -68,6 +76,11 @@ namespace spk
 	private:
 		std::unique_ptr<Part> _root;
 		std::shared_ptr<Revision> _revision;
+		Model *_ownerModel = nullptr;
+		Joint *_parentJoint = nullptr;
+
+		void _bindOwner(Model *owner) noexcept;
+		void _bindParentJoint(Joint *parent) noexcept;
 
 	public:
 		Skeleton();
@@ -97,7 +110,13 @@ namespace spk
 		std::unique_ptr<Part> _child;
 		std::unique_ptr<Model> _model;
 		std::shared_ptr<Revision> _revision;
+		Part *_parentPart = nullptr;
 		std::uint64_t _attachmentVersion = 0;
+		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] { return _calculateGlobalMatrix(); }};
+
+		[[nodiscard]] spk::Matrix4x4 _calculateGlobalMatrix() const;
+		void _bindHierarchy(Part *parent) noexcept;
+		void _invalidateGlobalMatrices() noexcept;
 
 		void _bindRevision(std::shared_ptr<Revision> revision);
 		void _changed() noexcept;
@@ -114,6 +133,7 @@ namespace spk
 		[[nodiscard]] const spk::Matrix4x4 &transform() const noexcept;
 		void setRotation(spk::Quaternion rotation);
 		[[nodiscard]] spk::Quaternion rotation() const noexcept;
+		[[nodiscard]] const spk::Matrix4x4 &globalMatrix() const;
 		void attach(Part child, std::string attachment = "");
 		void attach(Model model, std::string attachment = "");
 		void detach() noexcept;
@@ -127,6 +147,7 @@ namespace spk
 
 	class Model::Skeleton::Part
 	{
+		friend class Model;
 		friend class Joint;
 		friend class Skeleton;
 
@@ -137,7 +158,15 @@ namespace spk
 		std::optional<spk::Voxel::Volume> _volume;
 		std::map<std::string, Joint, std::less<>> _joints;
 		std::shared_ptr<Revision> _revision;
+		Joint *_parentJoint = nullptr;
+		Model *_ownerModel = nullptr;
 		std::uint64_t _volumeVersion = 0;
+		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] { return _calculateGlobalMatrix(); }};
+
+		[[nodiscard]] spk::Matrix4x4 _calculateGlobalMatrix() const;
+		void _bindHierarchy(Joint *parent, Model *owner) noexcept;
+		void _invalidateGlobalMatrices() noexcept;
+		void _anchorChanged(Joint *joint) noexcept;
 
 		void _bindRevision(std::shared_ptr<Revision> revision);
 
@@ -154,6 +183,7 @@ namespace spk
 		void clearVolume() noexcept;
 		[[nodiscard]] const spk::Voxel::Volume *volume() const noexcept;
 		[[nodiscard]] std::uint64_t volumeVersion() const noexcept;
+		[[nodiscard]] const spk::Matrix4x4 &globalMatrix() const;
 		void addJoint(std::string name, spk::Matrix4x4 transform = spk::Matrix4x4::identity());
 		[[nodiscard]] Joint &joint(std::string_view name);
 		[[nodiscard]] const Joint &joint(std::string_view name) const;
