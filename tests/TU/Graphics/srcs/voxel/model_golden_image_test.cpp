@@ -195,9 +195,9 @@ namespace
 	void expectGolden(const Figure &figure, const std::string &name)
 	{
 		spk::Camera3D camera;
-		camera.setPosition({3.5f, 2.5f, 6.0f});
+		camera.setPosition({5.0f, 5.0f, 5.0f});
 		camera.lookAt({0, 0, 0});
-		camera.setOrthographic(-2.2f, 2.2f, -2.2f, 2.2f, 0.1f, 20.0f);
+		camera.setOrthographic(-3.0f, 3.0f, -3.0f, 3.0f, 0.1f, 20.0f);
 		ASSERT_EQ(camera.projectionMode(), spk::Camera3D::ProjectionMode::Orthographic);
 		ModelPreviewWidget widget(figure.model, camera);
 		auto &context = sparkle_test::OpenGLTestContext::instance();

@@ -239,3 +239,149 @@ TEST(Camera3DTest, CopyAndMoveAssignmentsKeepIndependentCaches)
 	expectMatrix(target.viewMatrix(), spk::Matrix4x4::translation(-4, -5, -6));
 	expectMatrix(target.viewProjectionMatrix(), target.projectionMatrix() * target.viewMatrix());
 }
+
+TEST(Camera3DTest, ThreeQuarterOrthographicCameraProjectsKnownWorldDirections)
+{
+	spk::Camera3D camera;
+	camera.setPosition({5, 5, 5});
+	camera.lookAt({0, 0, 0});
+	camera.setOrthographic(-3, 3, -3, 3, 0.1f, 20);
+	ASSERT_EQ(camera.projectionMode(), spk::Camera3D::ProjectionMode::Orthographic);
+
+	const auto view = camera.viewMatrix();
+	const float diagonal = std::sqrt(75.0f);
+	const auto center = view * spk::Vector4{0, 0, 0, 1};
+	expectVector(center, {0, 0, -diagonal, 1});
+	expectVector(view * spk::Vector4{5, 5, 5, 1}, {0, 0, 0, 1});
+
+	const auto x = view * spk::Vector4{1, 0, 0, 0};
+	const auto y = view * spk::Vector4{0, 1, 0, 0};
+	const auto z = view * spk::Vector4{0, 0, 1, 0};
+	const float inverseSqrt2 = 1.0f / std::sqrt(2.0f);
+	const float inverseSqrt6 = 1.0f / std::sqrt(6.0f);
+	EXPECT_NEAR(x.x, inverseSqrt2, Tolerance);
+	EXPECT_NEAR(y.x, 0.0f, Tolerance);
+	EXPECT_NEAR(z.x, -inverseSqrt2, Tolerance);
+	EXPECT_NEAR(x.y, -inverseSqrt6, Tolerance);
+	EXPECT_NEAR(y.y, 2.0f * inverseSqrt6, Tolerance);
+	EXPECT_NEAR(z.y, -inverseSqrt6, Tolerance);
+	EXPECT_NEAR(x.z, 1.0f / std::sqrt(3.0f), Tolerance);
+	EXPECT_NEAR(y.z, 1.0f / std::sqrt(3.0f), Tolerance);
+	EXPECT_NEAR(z.z, 1.0f / std::sqrt(3.0f), Tolerance);
+}
+
+TEST(Camera3DTest, OrthographicProjectionMapsBoundsAndClippingPlanesToUnitCube)
+{
+	spk::Camera3D camera;
+	camera.setOrthographic(-3, 3, -3, 3, 0.1f, 20);
+	const auto projection = camera.viewProjectionMatrix();
+	expectVector(projection * spk::Vector4{-3, -3, -0.1f, 1}, {-1, -1, -1, 1});
+	expectVector(projection * spk::Vector4{3, 3, -20, 1}, {1, 1, 1, 1});
+	expectVector(projection * spk::Vector4{0, 0, -10.05f, 1}, {0, 0, 0, 1});
+}
+
+TEST(Camera3DTest, PerspectiveProjectionChangesApparentSizeWithDepth)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(std::numbers::pi_v<float> / 2, 1, 1, 11);
+	const auto projection = camera.viewProjectionMatrix();
+	const auto near = projection * spk::Vector4{1, 1, -1, 1};
+	const auto far = projection * spk::Vector4{1, 1, -11, 1};
+	expectVector(near, {1, 1, -1, 1});
+	expectVector(far, {1, 1, 11, 11});
+	EXPECT_NEAR(near.x / near.w, 1.0f, Tolerance);
+	EXPECT_NEAR(far.x / far.w, 1.0f / 11.0f, Tolerance);
+}
+
+TEST(Camera3DTest, ThreeQuarterLookAtRemainsConsistentWithCustomTarget)
+{
+	spk::Camera3D camera;
+	camera.setPosition({8, 7, 6});
+	const spk::Vector3 target{1, 2, 3};
+	camera.lookAt(target);
+	const auto centered = camera.viewMatrix() * spk::Vector4{target.x, target.y, target.z, 1};
+	const float distance = std::sqrt(7.0f * 7 + 5.0f * 5 + 3.0f * 3);
+	expectVector(centered, {0, 0, -distance, 1});
+	EXPECT_NEAR(camera.rotation().dot(camera.rotation()), 1.0f, Tolerance);
+
+	camera.lookAt(target, {0, 0, 1});
+	const auto customUp = camera.viewMatrix() * spk::Vector4{target.x, target.y, target.z, 1};
+	expectVector(customUp, {0, 0, -distance, 1});
+}
+
+TEST(Camera3DTest, LookAtParallelUpUsesFallbackWithoutChangingTarget)
+{
+	spk::Camera3D camera;
+	camera.setPosition({0, 5, 0});
+	camera.lookAt({0, 0, 0}, {0, 1, 0});
+	expectVector(camera.viewMatrix() * spk::Vector4{0, 0, 0, 1}, {0, 0, -5, 1});
+	EXPECT_NEAR(camera.rotation().dot(camera.rotation()), 1.0f, Tolerance);
+}
+
+TEST(Camera3DTest, InvalidProjectionParametersLeaveModeMatricesAndViewUnchanged)
+{
+	spk::Camera3D camera;
+	camera.setPosition({5, 5, 5});
+	camera.lookAt({0, 0, 0});
+	camera.setOrthographic(-3, 3, -3, 3, 0.1f, 20);
+	const auto view = camera.viewMatrix();
+	const auto projection = camera.projectionMatrix();
+	const auto combined = camera.viewProjectionMatrix();
+	const float nan = std::numeric_limits<float>::quiet_NaN();
+	const float infinity = std::numeric_limits<float>::infinity();
+	EXPECT_THROW(camera.setOrthographic(-3, 3, nan, 3, 0.1f, 20), std::invalid_argument);
+	EXPECT_THROW(camera.setOrthographic(-3, 3, -3, 3, nan, 20), std::invalid_argument);
+	EXPECT_THROW(camera.setOrthographic(-3, 3, -3, infinity, 0.1f, 20), std::invalid_argument);
+	EXPECT_THROW(camera.setOrthographic(-3, 3, -3, 3, 0.1f, infinity), std::invalid_argument);
+	EXPECT_THROW(camera.setPerspective(nan, 1, 0.1f, 20), std::invalid_argument);
+	EXPECT_THROW(camera.setPerspective(1, infinity, 0.1f, 20), std::invalid_argument);
+	EXPECT_THROW(camera.setPerspective(1, 1, nan, 20), std::invalid_argument);
+	EXPECT_THROW(camera.setPerspective(1, 1, 0.1f, infinity), std::invalid_argument);
+	expectMatrix(camera.viewMatrix(), view);
+	expectMatrix(camera.projectionMatrix(), projection);
+	expectMatrix(camera.viewProjectionMatrix(), combined);
+	EXPECT_EQ(camera.projectionMode(), spk::Camera3D::ProjectionMode::Orthographic);
+}
+
+TEST(Camera3DTest, ExplicitProjectionModeSwitchPreservesSeparateFrustums)
+{
+	spk::Camera3D camera;
+	camera.setOrthographic(-3, 3, -3, 3, 0.1f, 20);
+	const auto orthographic = camera.projectionMatrix();
+	camera.setPerspective(1.1f, 1.75f, 0.25f, 45);
+	const auto perspective = camera.projectionMatrix();
+	camera.setProjectionMode(spk::Camera3D::ProjectionMode::Orthographic);
+	expectMatrix(camera.projectionMatrix(), orthographic);
+	camera.setProjectionMode(spk::Camera3D::ProjectionMode::Perspective);
+	expectMatrix(camera.projectionMatrix(), perspective);
+	camera.setProjectionMode(spk::Camera3D::ProjectionMode::Orthographic);
+	expectMatrix(camera.viewProjectionMatrix(), orthographic * camera.viewMatrix());
+}
+
+TEST(Camera3DTest, ScaledQuaternionKeepsCameraOrientationNormalized)
+{
+	spk::Camera3D camera;
+	const auto rotation = spk::Quaternion::fromEuler({17, 29, -41});
+	camera.setRotation({rotation.x * 5, rotation.y * 5, rotation.z * 5, rotation.w * 5});
+	EXPECT_NEAR(std::abs(camera.rotation().dot(rotation)), 1.0f, Tolerance);
+	expectMatrix(camera.viewMatrix(), spk::Matrix4x4::rotation(rotation.conjugated()));
+}
+
+TEST(Camera3DTest, SelfAssignmentAndCopiesRetainIndependentThreeQuarterProjection)
+{
+	spk::Camera3D camera;
+	camera.setPosition({5, 5, 5});
+	camera.lookAt({0, 0, 0});
+	camera.setOrthographic(-3, 3, -3, 3, 0.1f, 20);
+	const auto before = camera.viewProjectionMatrix();
+	camera = camera;
+	expectMatrix(camera.viewProjectionMatrix(), before);
+	camera = std::move(camera);
+	expectMatrix(camera.viewProjectionMatrix(), before);
+
+	spk::Camera3D copy(camera);
+	copy.setPosition({0, 0, 8});
+	copy.lookAt({0, 0, 0});
+	expectMatrix(camera.viewProjectionMatrix(), before);
+	EXPECT_NEAR((copy.viewMatrix() * spk::Vector4{0, 0, 0, 1}).z, -8.0f, Tolerance);
+}
