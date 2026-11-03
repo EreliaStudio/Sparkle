@@ -12,8 +12,8 @@
 #include "container/json/object.hpp"
 #include "exception.hpp"
 #include "graphics/palette.hpp"
-#include "voxel/mesher.hpp"
 #include "voxel/geometry.hpp"
+#include "voxel/mesher.hpp"
 #include "voxel/model_view.hpp"
 #include "voxel/palette.hpp"
 
@@ -31,7 +31,7 @@ namespace
 
 	[[nodiscard]] Geometry geometryWithSlots(std::initializer_list<Definition::Slot> slots)
 	{
-		return Geometry(spk::Voxel::Geometry({}, {}, {}, std::vector<Definition::Slot>(slots)));
+		return Geometry({}, {}, {}, std::vector<Definition::Slot>(slots));
 	}
 
 	[[nodiscard]] Material material(
