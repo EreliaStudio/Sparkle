@@ -70,35 +70,41 @@ namespace
 		return Definition(shape, std::move(mapping));
 	}
 
-	[[nodiscard]] spk::Voxel::Volume singleCubeVolume()
+	[[nodiscard]] const spk::Voxel::Volume &singleCubeVolume()
 	{
-		Definition::Collection::Builder definitions;
-		definitions.add(1, definition(cube(), "stone"));
-		spk::Voxel::Volume::Builder volume({1, 1, 1});
-		volume.bind(definitions.build());
-		volume.set({0, 0, 0}, 1);
-		return volume.build();
+		static const spk::Voxel::Volume result = [] {
+			Definition::Collection::Builder definitions;
+			definitions.add(1, definition(cube(), "stone"));
+			spk::Voxel::Volume::Builder volume({1, 1, 1});
+			volume.bind(definitions.build());
+			volume.set({0, 0, 0}, 1);
+			return volume.build();
+		}();
+		return result;
 	}
 
-	[[nodiscard]] spk::Voxel::Volume occludedCubeVolume()
+	[[nodiscard]] const spk::Voxel::Volume &occludedCubeVolume()
 	{
-		const auto shape = cube();
-		Definition::Collection::Builder definitions;
-		definitions.add(1, definition(shape, "hidden"));
-		definitions.add(2, definition(shape, "outside"));
-		spk::Voxel::Volume::Builder volume({3, 3, 3});
-		volume.bind(definitions.build());
-		for (unsigned z = 0; z < 3; ++z)
-		{
-			for (unsigned y = 0; y < 3; ++y)
+		static const spk::Voxel::Volume result = [] {
+			const auto shape = cube();
+			Definition::Collection::Builder definitions;
+			definitions.add(1, definition(shape, "hidden"));
+			definitions.add(2, definition(shape, "outside"));
+			spk::Voxel::Volume::Builder volume({3, 3, 3});
+			volume.bind(definitions.build());
+			for (unsigned z = 0; z < 3; ++z)
 			{
-				for (unsigned x = 0; x < 3; ++x)
+				for (unsigned y = 0; y < 3; ++y)
 				{
-					volume.set({x, y, z}, (x == 1 && y == 1 && z == 1) ? 1 : 2);
+					for (unsigned x = 0; x < 3; ++x)
+					{
+						volume.set({x, y, z}, (x == 1 && y == 1 && z == 1) ? 1 : 2);
+					}
 				}
 			}
-		}
-		return volume.build();
+			return volume.build();
+		}();
+		return result;
 	}
 
 	[[nodiscard]] Geometry bakedSingleCube()
@@ -111,10 +117,10 @@ namespace
 		return spk::Voxel::Mesher().bake(occludedCubeVolume());
 	}
 
-	[[nodiscard]] spk::Model coreModel(spk::Voxel::Volume volume)
+	[[nodiscard]] spk::Model coreModel(const spk::Voxel::Volume &volume)
 	{
 		spk::Model result;
-		result.skeleton().root().setVolume(std::move(volume));
+		result.skeleton().root().setBody(&volume);
 		return result;
 	}
 
@@ -516,8 +522,8 @@ TEST(VoxelPaletteTest, ModelViewBindsPaletteWithoutModifyingGeometry)
 	ASSERT_NE(originalGeometry, nullptr);
 	const auto appearance = palette({{"stone", material(atlas)}});
 	view.bind(appearance);
-	ASSERT_NE(view.root().palette(), nullptr);
-	EXPECT_EQ(&view.root().palette()->materials(), &appearance.materials());
+	ASSERT_NE(view.palette(), nullptr);
+	EXPECT_EQ(&view.palette()->materials(), &appearance.materials());
 	EXPECT_EQ(view.root().geometry(), originalGeometry);
 }
 
@@ -529,11 +535,11 @@ TEST(VoxelPaletteTest, ModelViewRejectsMissingSlotsWithoutChangingBinding)
 	const auto complete = palette({{"outside", material(atlas)}, {"hidden", material(atlas)}});
 	const auto missing = palette({{"outside", material(atlas)}});
 	EXPECT_THROW(view.bind(missing), spk::Exception);
-	EXPECT_EQ(view.root().palette(), nullptr);
+	EXPECT_EQ(view.palette(), nullptr);
 	view.bind(complete);
 	EXPECT_THROW(view.bind(missing), spk::Exception);
-	ASSERT_NE(view.root().palette(), nullptr);
-	EXPECT_EQ(&view.root().palette()->materials(), &complete.materials());
+	ASSERT_NE(view.palette(), nullptr);
+	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
 }
 
 TEST(VoxelPaletteTest, TwoViewsShareCoreModelButNotPalette)
@@ -549,8 +555,8 @@ TEST(VoxelPaletteTest, TwoViewsShareCoreModelButNotPalette)
 	ASSERT_NE(original.root().geometry(), nullptr);
 	ASSERT_NE(variant.root().geometry(), nullptr);
 	EXPECT_EQ(original.root().geometry()->opaqueMesh().indexCount(), variant.root().geometry()->opaqueMesh().indexCount());
-	const auto originalTexture = original.root().palette()->find("stone")->find("albedo")->texture.identifier();
-	const auto variantTexture = variant.root().palette()->find("stone")->find("albedo")->texture.identifier();
+	const auto originalTexture = original.palette()->find("stone")->find("albedo")->texture.identifier();
+	const auto variantTexture = variant.palette()->find("stone")->find("albedo")->texture.identifier();
 	EXPECT_NE(originalTexture, variantTexture);
 }
 
@@ -587,5 +593,5 @@ TEST(VoxelPaletteTest, ModelViewBindingRequiresFullyOccludedSlots)
 	spk::Model::View view(source);
 	EXPECT_THROW(view.bind(palette({{"outside", material(atlas)}})), spk::Exception);
 	view.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
-	EXPECT_NE(view.root().palette(), nullptr);
+	EXPECT_NE(view.palette(), nullptr);
 }
