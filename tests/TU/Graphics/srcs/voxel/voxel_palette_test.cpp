@@ -14,7 +14,6 @@
 #include "graphics/palette.hpp"
 #include "voxel/geometry.hpp"
 #include "voxel/mesher.hpp"
-#include "voxel/model_view.hpp"
 #include "voxel/palette.hpp"
 
 namespace
@@ -115,13 +114,6 @@ namespace
 	[[nodiscard]] Geometry bakedOccludedCube()
 	{
 		return spk::Voxel::Mesher().bake(occludedCubeVolume());
-	}
-
-	[[nodiscard]] spk::Model coreModel(const spk::Voxel::Volume &volume)
-	{
-		spk::Model result;
-		result.skeleton().root().setBody(&volume);
-		return result;
 	}
 
 	[[nodiscard]] std::vector<GeometryVertex> vertices(const spk::Voxel::Geometry::SurfaceMesh &mesh)
@@ -513,85 +505,3 @@ TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
 	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
 }
 
-TEST(VoxelPaletteTest, ModelViewBindsPaletteWithoutModifyingGeometry)
-{
-	Texture atlas;
-	auto source = coreModel(singleCubeVolume());
-	spk::Model::View view(source);
-	const auto *originalGeometry = view.root().geometry();
-	ASSERT_NE(originalGeometry, nullptr);
-	const auto appearance = palette({{"stone", material(atlas)}});
-	view.bind(appearance);
-	ASSERT_NE(view.palette(), nullptr);
-	EXPECT_EQ(&view.palette()->materials(), &appearance.materials());
-	EXPECT_EQ(view.root().geometry(), originalGeometry);
-}
-
-TEST(VoxelPaletteTest, ModelViewRejectsMissingSlotsWithoutChangingBinding)
-{
-	Texture atlas;
-	auto source = coreModel(occludedCubeVolume());
-	spk::Model::View view(source);
-	const auto complete = palette({{"outside", material(atlas)}, {"hidden", material(atlas)}});
-	const auto missing = palette({{"outside", material(atlas)}});
-	EXPECT_THROW(view.bind(missing), spk::Exception);
-	EXPECT_EQ(view.palette(), nullptr);
-	view.bind(complete);
-	EXPECT_THROW(view.bind(missing), spk::Exception);
-	ASSERT_NE(view.palette(), nullptr);
-	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
-}
-
-TEST(VoxelPaletteTest, TwoViewsShareCoreModelButNotPalette)
-{
-	Texture first;
-	Texture second;
-	auto source = coreModel(singleCubeVolume());
-	spk::Model::View original(source);
-	spk::Model::View variant(source);
-	original.bind(palette({{"stone", material(first)}}));
-	variant.bind(palette({{"stone", material(second)}}));
-	EXPECT_EQ(&original.model(), &variant.model());
-	ASSERT_NE(original.root().geometry(), nullptr);
-	ASSERT_NE(variant.root().geometry(), nullptr);
-	EXPECT_EQ(original.root().geometry()->opaqueMesh().indexCount(), variant.root().geometry()->opaqueMesh().indexCount());
-	const auto originalTexture = original.palette()->find("stone")->find("albedo")->texture.identifier();
-	const auto variantTexture = variant.palette()->find("stone")->find("albedo")->texture.identifier();
-	EXPECT_NE(originalTexture, variantTexture);
-}
-
-TEST(VoxelPaletteTest, ChangingViewPaletteDoesNotModifyBakedGeometry)
-{
-	Texture first;
-	Texture second;
-	auto source = coreModel(singleCubeVolume());
-	spk::Model::View view(source);
-	const auto *geometry = view.root().geometry();
-	ASSERT_NE(geometry, nullptr);
-	const auto before = vertices(geometry->opaqueMesh());
-	const auto beforeIndices = indices(geometry->opaqueMesh());
-	view.bind(palette({{"stone", material(first)}}));
-	view.bind(palette({{"stone", material(second)}}));
-	const auto *afterGeometry = view.root().geometry();
-	ASSERT_NE(afterGeometry, nullptr);
-	const auto after = vertices(afterGeometry->opaqueMesh());
-	ASSERT_EQ(before.size(), after.size());
-	for (std::size_t i = 0; i < before.size(); ++i)
-	{
-		EXPECT_EQ(before[i].position, after[i].position);
-		EXPECT_EQ(before[i].normal, after[i].normal);
-		EXPECT_EQ(before[i].uv, after[i].uv);
-		EXPECT_EQ(before[i].materialIndex, after[i].materialIndex);
-	}
-	EXPECT_EQ(indices(afterGeometry->opaqueMesh()), beforeIndices);
-}
-
-TEST(VoxelPaletteTest, ModelViewBindingRequiresFullyOccludedSlots)
-{
-	Texture atlas;
-	auto source = coreModel(occludedCubeVolume());
-	spk::Model::View view(source);
-	EXPECT_THROW(view.bind(palette({{"outside", material(atlas)}})), spk::Exception);
-	view.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
-	EXPECT_NE(view.palette(), nullptr);
-}

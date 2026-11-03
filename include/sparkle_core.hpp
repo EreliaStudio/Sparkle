@@ -72,7 +72,6 @@
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 #include "math/vector4.hpp"
-#include "model.hpp"
 #include "network/network.hpp"
 #include "query/exclude.hpp"
 #include "query/from.hpp"
