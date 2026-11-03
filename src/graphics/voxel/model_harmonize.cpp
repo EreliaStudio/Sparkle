@@ -81,7 +81,7 @@ namespace spk
 			slots.reserve(collected.size());
 			for (const auto &[name, opacity] : collected)
 			{
-				indices.emplace(name, static_cast<std::uint32_t>(slots.size()));
+				indices.emplace(SlotKey{name, opacity}, static_cast<std::uint32_t>(slots.size()));
 				slots.push_back({name, opacity});
 			}
 			return slots;
