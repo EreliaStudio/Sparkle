@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -43,9 +42,6 @@ namespace spk
 		void _sync() const;
 		void _validatePalette(const spk::Palette &palette, PalettePropagation propagation) const;
 		void _applyPalette(const spk::Palette &palette, PalettePropagation propagation);
-		using DrawCallback = std::function<void(const Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)>;
-		void _visitJoint(const std::string &name, const Joint &joint, const DrawCallback &callback, spk::Matrix4x4 transform) const;
-		void _visit(const DrawCallback &callback, spk::Matrix4x4 transform) const;
 		void _collectMatches(std::string_view name, std::vector<View *> &matches);
 
 	public:
@@ -73,15 +69,12 @@ namespace spk
 	public:
 		using PalettePropagation = Skeleton::Part::View::PalettePropagation;
 		using Path = Skeleton::Path;
-		using DrawCallback = std::function<void(
-			const Skeleton::Part &, const spk::Voxel::Geometry &, const spk::Palette &, const spk::Matrix4x4 &)>;
 
 	private:
 		Model *_model;
 		mutable Skeleton::Part::View _root;
 
 		void _sync() const;
-		void _visit(const DrawCallback &callback, spk::Matrix4x4 parent) const;
 
 	public:
 		explicit View(Model &model);
@@ -101,6 +94,5 @@ namespace spk
 		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
 		void harmonize();
 		[[nodiscard]] bool isRenderable() const;
-		void visit(const DrawCallback &callback) const;
 	};
 }
