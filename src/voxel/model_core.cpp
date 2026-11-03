@@ -587,14 +587,23 @@ namespace spk
 	{
 	}
 
+
 	Model::Skeleton::Part::Part(const Part &other) :
 		_volume(other._volume),
 		_joints(other._joints),
 		_volumeVersion(other._volumeVersion)
 	{
+		_bindHierarchy(nullptr, nullptr);
 	}
 
-	Model::Skeleton::Part::Part(Part &&other) noexcept = default;
+	Model::Skeleton::Part::Part(Part &&other) noexcept :
+		_volume(std::move(other._volume)),
+		_joints(std::move(other._joints)),
+		_revision(std::move(other._revision)),
+		_volumeVersion(other._volumeVersion)
+	{
+		_bindHierarchy(nullptr, nullptr);
+	}
 	Model::Skeleton::Part::~Part() = default;
 
 	Model::Skeleton::Part &Model::Skeleton::Part::operator=(Part &&other) noexcept
@@ -605,10 +614,15 @@ namespace spk
 			_joints = std::move(other._joints);
 			++_volumeVersion;
 			_bindRevision(_revision);
+			_bindHierarchy(_parentJoint, _ownerModel);
 			if (_revision)
 			{
 				++_revision->topology;
 				++_revision->geometry;
+			}
+			if (_ownerModel)
+			{
+				_ownerModel->_invalidateGlobalMatrices();
 			}
 		}
 		return *this;
@@ -630,6 +644,68 @@ namespace spk
 		for (auto &[name, joint] : _joints)
 		{
 			joint._bindRevision(_revision);
+		}
+	}
+
+	spk::Matrix4x4 Model::Skeleton::Part::_calculateGlobalMatrix() const
+	{
+		if (_ownerModel)
+		{
+			return _ownerModel->globalMatrix();
+		}
+		if (_parentJoint == nullptr)
+		{
+			return spk::Matrix4x4::identity();
+		}
+		auto matrix = _parentJoint->globalMatrix();
+		if (!_parentJoint->attachment().empty())
+		{
+			matrix = matrix * inverseAnchor(joint(_parentJoint->attachment()).transform());
+		}
+		return matrix;
+	}
+
+	void Model::Skeleton::Part::_invalidateGlobalMatrices() noexcept
+	{
+		_globalMatrix.invalidate();
+		for (auto &[name, joint] : _joints)
+		{
+			joint._invalidateGlobalMatrices();
+		}
+	}
+
+	void Model::Skeleton::Part::_bindHierarchy(Joint *parent, Model *owner) noexcept
+	{
+		_parentJoint = parent;
+		_ownerModel = owner;
+		_globalMatrix.invalidate();
+		for (auto &[name, joint] : _joints)
+		{
+			joint._bindHierarchy(this);
+		}
+	}
+
+	void Model::Skeleton::Part::_anchorChanged(Joint *joint) noexcept
+	{
+		if (_parentJoint && !_parentJoint->attachment().empty())
+		{
+			const auto it = _joints.find(_parentJoint->attachment());
+			if (it != _joints.end() && &it->second == joint)
+			{
+				_invalidateGlobalMatrices();
+			}
+		}
+		if (_ownerModel)
+		{
+			const auto *parent = _ownerModel->_skeleton->_parentJoint;
+			if (parent && !parent->attachment().empty())
+			{
+				const auto it = _joints.find(parent->attachment());
+				if (it != _joints.end() && &it->second == joint)
+				{
+					_ownerModel->_invalidateGlobalMatrices();
+				}
+			}
 		}
 	}
 
@@ -663,6 +739,11 @@ namespace spk
 		return _volumeVersion;
 	}
 
+	const spk::Matrix4x4 &Model::Skeleton::Part::globalMatrix() const
+	{
+		return _globalMatrix.get();
+	}
+
 	void Model::Skeleton::Part::addJoint(std::string name, spk::Matrix4x4 transform)
 	{
 		if (name.empty() || _joints.contains(name))
@@ -672,6 +753,7 @@ namespace spk
 		auto [it, inserted] = _joints.try_emplace(std::move(name), transform);
 		(void)inserted;
 		it->second._bindRevision(_revision);
+		it->second._bindHierarchy(this);
 		if (_revision)
 		{
 			++_revision->topology;
