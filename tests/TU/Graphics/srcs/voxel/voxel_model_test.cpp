@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,16 +10,24 @@
 #include "exception.hpp"
 #include "model.hpp"
 #include "voxel/model_view.hpp"
+#include "voxel/volume.hpp"
 
 namespace
 {
 	using Model = spk::Model;
-	using Skeleton = Model::Skeleton;
+	using Skeleton = spk::Skeleton;
 	using Part = Skeleton::Part;
 	using Matrix = spk::Matrix4x4;
 
-	[[nodiscard]] spk::Voxel::Volume volume(const std::string &slot, float opacity = 1.0f)
+	[[nodiscard]] const spk::Voxel::Volume &volume(const std::string &slot, float opacity = 1.0f)
 	{
+		using Key = std::pair<std::string, float>;
+		static std::map<Key, spk::Voxel::Volume> volumes;
+		const Key key{slot, opacity};
+		if (const auto it = volumes.find(key); it != volumes.end())
+		{
+			return it->second;
+		}
 		spk::Voxel::Shape::Builder shape;
 		shape.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
 		const auto cube = shape.build();
@@ -32,7 +41,7 @@ namespace
 		spk::Voxel::Volume::Builder builder({1, 1, 1});
 		builder.bind(definitions.build());
 		builder.set({0, 0, 0}, 1);
-		return builder.build();
+		return volumes.emplace(key, builder.build()).first->second;
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Texture &atlas, std::vector<std::string> names)
@@ -62,7 +71,7 @@ TEST(ModelGraphicsTest, PartsWithoutVolumeNeedNoMeshOrPalette)
 TEST(ModelGraphicsTest, ViewBuildsAndCachesRenderMeshesOnDemand)
 {
 	Model model;
-	model.skeleton().root().setVolume(volume("stone"));
+	model.skeleton().root().setBody(&volume("stone"));
 	Model::View view(model);
 	ASSERT_NE(view.root().geometry(), nullptr);
 	const auto *first = view.root().geometry();
@@ -70,7 +79,7 @@ TEST(ModelGraphicsTest, ViewBuildsAndCachesRenderMeshesOnDemand)
 	EXPECT_GT(first->opaqueMesh().indexCount(), 0u);
 	EXPECT_GT(first->depthMesh().indexCount(), 0u);
 	EXPECT_EQ(first->materialSlots()[0].name, "stone");
-	model.skeleton().root().setVolume(volume("sand"));
+	model.skeleton().root().setBody(&volume("sand"));
 	const auto *second = view.root().geometry();
 	EXPECT_EQ(first, second);
 	EXPECT_EQ(second->materialSlots()[0].name, "sand");
@@ -80,16 +89,15 @@ TEST(ModelGraphicsTest, ViewBuildsAndCachesRenderMeshesOnDemand)
 TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 {
 	Model model;
-	model.skeleton().root().setVolume(volume("cloth"));
+	model.skeleton().root().setBody(&volume("cloth"));
 	model.skeleton().root().addJoint("arm", Matrix::translation(2, 0, 0));
-	Part arm(volume("skin"));
+	Part arm(&volume("skin"));
 	arm.addJoint("pivot", Matrix::translation(1, 0, 0));
 	model.skeleton().joint("arm").attach(arm, "pivot");
 	model.setTransform(Matrix::translation(5, 0, 0));
 	Model::View view(model);
 	spk::Texture atlas;
-	view.root().bind(palette(atlas, {"cloth"}));
-	view.part("arm").bind(palette(atlas, {"skin"}));
+	view.bind(palette(atlas, {"cloth", "skin"}));
 	ASSERT_TRUE(view.isRenderable());
 	const auto *rootGeometry = view.root().geometry();
 	const auto *armGeometry = view.part("arm").geometry();
@@ -103,51 +111,50 @@ TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 	EXPECT_TRUE(view.isRenderable());
 }
 
-TEST(ModelGraphicsTest, BindingOnePartDoesNotBindItsChildren)
+TEST(ModelGraphicsTest, SinglePaletteCoversEveryPart)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("cloth"));
+Model model;
+	model.skeleton().root().setBody(&volume("cloth"));
 	model.skeleton().root().addJoint("arm");
-	model.skeleton().joint("arm").attach(Part(volume("skin")));
+	model.skeleton().joint("arm").attach(Part(&volume("skin")));
 	Model::View view(model);
 	spk::Texture atlas;
-	view.bind(palette(atlas, {"cloth", "skin"}));
-	EXPECT_EQ(view.part("arm").palette(), nullptr);
 	EXPECT_FALSE(view.isRenderable());
-	view.part("arm").bind(palette(atlas, {"skin"}));
+	view.bind(palette(atlas, {"cloth", "skin"}));
+	ASSERT_NE(view.palette(), nullptr);
+	ASSERT_NE(view.part("arm").geometry(), nullptr);
 	EXPECT_TRUE(view.isRenderable());
 }
 
-TEST(ModelGraphicsTest, RecursiveBindingRejectsMissingMaterialsWithoutChangingPalettes)
+TEST(ModelGraphicsTest, PaletteBindingValidatesAllPartsWithoutPartialChanges)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("cloth"));
+Model model;
+	model.skeleton().root().setBody(&volume("cloth"));
 	model.skeleton().root().addJoint("arm");
-	model.skeleton().joint("arm").attach(Part(volume("skin")));
+	model.skeleton().joint("arm").attach(Part(&volume("skin")));
 	Model::View view(model);
 	spk::Texture atlas;
 	const auto complete = palette(atlas, {"cloth", "skin"});
-	view.bind(complete, Model::View::PalettePropagation::Recursive);
+	view.bind(complete);
 	EXPECT_TRUE(view.isRenderable());
-	EXPECT_THROW(view.bind(palette(atlas, {"cloth"}), Model::View::PalettePropagation::Recursive), spk::Exception);
-	ASSERT_NE(view.root().palette(), nullptr);
-	ASSERT_NE(view.part("arm").palette(), nullptr);
-	EXPECT_EQ(&view.root().palette()->materials(), &complete.materials());
-	EXPECT_EQ(&view.part("arm").palette()->materials(), &complete.materials());
+	EXPECT_THROW(view.bind(palette(atlas, {"cloth"})), spk::Exception);
+	ASSERT_NE(view.palette(), nullptr);
+	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
+	EXPECT_TRUE(view.isRenderable());
 }
 
 TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("skin"));
+Model model;
+	model.skeleton().root().setBody(&volume("skin"));
 	model.skeleton().root().addJoint("arm");
-	model.skeleton().joint("arm").attach(Part(volume("skin")));
+	model.skeleton().joint("arm").attach(Part(&volume("skin")));
 	Model::View first(model);
 	Model::View second(model);
 	spk::Texture a;
 	spk::Texture b;
-	first.bind(palette(a, {"skin"}), Model::View::PalettePropagation::Recursive);
-	second.bind(palette(b, {"skin"}), Model::View::PalettePropagation::Recursive);
+	first.bind(palette(a, {"skin"}));
+	second.bind(palette(b, {"skin"}));
 	const auto *firstGeometry = first.part("arm").geometry();
 	const auto *secondGeometry = second.part("arm").geometry();
 	const auto before = model.version().pose;
@@ -157,13 +164,15 @@ TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 	EXPECT_EQ(first.part("arm").geometry(), firstGeometry);
 	EXPECT_EQ(second.part("arm").geometry(), secondGeometry);
 	EXPECT_NE(firstGeometry, secondGeometry);
-	EXPECT_NE(&first.root().palette()->materials(), &second.root().palette()->materials());
+	ASSERT_NE(first.palette(), nullptr);
+	ASSERT_NE(second.palette(), nullptr);
+	EXPECT_NE(&first.palette()->materials(), &second.palette()->materials());
 }
 
 TEST(ModelGraphicsTest, TopologyChangesRefreshOnlyAffectedViews)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("stone"));
+Model model;
+	model.skeleton().root().setBody(&volume("stone"));
 	Model::View view(model);
 	spk::Texture atlas;
 	view.bind(palette(atlas, {"stone"}));
@@ -172,15 +181,16 @@ TEST(ModelGraphicsTest, TopologyChangesRefreshOnlyAffectedViews)
 	EXPECT_EQ(view.root().geometry(), cached);
 	EXPECT_TRUE(view.isRenderable());
 	EXPECT_THROW((void)view.part("new"), spk::Exception);
-	model.skeleton().joint("new").attach(Part(volume("wood")));
+	model.skeleton().joint("new").attach(Part(&volume("wood")));
 	EXPECT_NO_THROW((void)view.part("new"));
-	view.part("new").bind(palette(atlas, {"wood"}));
+	EXPECT_FALSE(view.isRenderable());
+	view.bind(palette(atlas, {"stone", "wood"}));
 	EXPECT_TRUE(view.isRenderable());
 	model.skeleton().joint("new").detach();
 	EXPECT_THROW((void)view.part("new"), spk::Exception);
 	EXPECT_TRUE(view.isRenderable());
 	EXPECT_EQ(view.root().geometry(), cached);
-	EXPECT_NE(view.root().palette(), nullptr);
+	EXPECT_NE(view.palette(), nullptr);
 }
 
 TEST(ModelGraphicsTest, ViewsCanFindUniquePartsOrTypedPaths)
@@ -201,72 +211,62 @@ TEST(ModelGraphicsTest, ViewsCanFindUniquePartsOrTypedPaths)
 
 TEST(ModelGraphicsTest, ViewCopiesHaveIndependentGraphicCaches)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("stone"));
+Model model;
+	model.skeleton().root().setBody(&volume("stone"));
 	Model::View first(model);
 	Model::View second(first);
 	spk::Texture atlas;
 	first.bind(palette(atlas, {"stone"}));
-	EXPECT_EQ(second.root().palette(), nullptr);
+	EXPECT_EQ(second.palette(), nullptr);
 	EXPECT_EQ(&first.root().part(), &second.root().part());
 	ASSERT_NE(first.root().geometry(), nullptr);
 	ASSERT_NE(second.root().geometry(), nullptr);
 	EXPECT_NE(first.root().geometry(), second.root().geometry());
 }
 
-TEST(ModelGraphicsTest, HarmonizeRemapsOnlyGraphicalMeshes)
+TEST(ModelGraphicsTest, DifferentBodiesKeepTheirLocalMaterialIndices)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("skin"));
+Model model;
+	model.skeleton().root().setBody(&volume("skin"));
 	model.skeleton().root().addJoint("arm");
-	model.skeleton().joint("arm").attach(Part(volume("cloth")));
+	model.skeleton().joint("arm").attach(Part(&volume("cloth")));
 	Model::View view(model);
-	ASSERT_NE(view.root().geometry(), nullptr);
-	const auto &buffer = view.root().geometry()->opaqueMesh().layout().vertexBuffer();
-	const auto original = buffer.cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex;
-	EXPECT_EQ(original, 0u);
-	view.harmonize();
-	const auto *body = view.root().geometry();
-	const auto *arm = view.part("arm").geometry();
-	ASSERT_NE(body, nullptr);
-	ASSERT_NE(arm, nullptr);
-	EXPECT_EQ(body->materialSlots().size(), 2u);
-	EXPECT_EQ(arm->materialSlots().size(), 2u);
-	EXPECT_EQ(body->materialSlots()[0].name, "cloth");
-	EXPECT_EQ(body->materialSlots()[1].name, "skin");
-	EXPECT_EQ(body->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 1u);
-	EXPECT_EQ(arm->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
-	Model::View untouched(model);
-	EXPECT_EQ(untouched.root().geometry()->materialSlots().size(), 1u);
+	const auto *skin = view.root().geometry();
+	const auto *cloth = view.part("arm").geometry();
+	ASSERT_NE(skin, nullptr);
+	ASSERT_NE(cloth, nullptr);
+	ASSERT_EQ(skin->materialSlots().size(), 1u);
+	ASSERT_EQ(cloth->materialSlots().size(), 1u);
+	EXPECT_EQ(skin->materialSlots()[0].name, "skin");
+	EXPECT_EQ(cloth->materialSlots()[0].name, "cloth");
+	EXPECT_EQ(skin->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
+	EXPECT_EQ(cloth->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
 	spk::Texture atlas;
-	view.bind(palette(atlas, {"skin", "cloth"}), Model::View::PalettePropagation::Recursive);
+	view.bind(palette(atlas, {"cloth", "skin"}));
 	EXPECT_TRUE(view.isRenderable());
 }
 
-TEST(ModelGraphicsTest, HarmonizePreservesPerDefinitionOpacityWithSharedMaterialName)
+TEST(ModelGraphicsTest, IndependentBodiesRetainTheirMaterialOpacities)
 {
-	Model model;
-	model.skeleton().root().setVolume(volume("shared", 1.0f));
+Model model;
+	model.skeleton().root().setBody(&volume("shared", 1.0f));
 	model.skeleton().root().addJoint("overlay");
-	model.skeleton().joint("overlay").attach(Part(volume("shared", 0.35f)));
+	model.skeleton().joint("overlay").attach(Part(&volume("shared", 0.35f)));
 	const auto before = model.version();
 	Model::View view(model);
-	view.harmonize();
 	const auto *opaque = view.root().geometry();
 	const auto *translucent = view.part("overlay").geometry();
 	ASSERT_NE(opaque, nullptr);
 	ASSERT_NE(translucent, nullptr);
-	ASSERT_EQ(opaque->materialSlots().size(), 2u);
-	ASSERT_EQ(translucent->materialSlots().size(), 2u);
-	EXPECT_EQ(opaque->materialSlots()[0].name, "shared");
-	EXPECT_EQ(opaque->materialSlots()[1].name, "shared");
-	EXPECT_FLOAT_EQ(opaque->materialSlots()[0].opacity, 0.35f);
-	EXPECT_FLOAT_EQ(opaque->materialSlots()[1].opacity, 1.0f);
-	EXPECT_EQ(opaque->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 1u);
+	ASSERT_EQ(opaque->materialSlots().size(), 1u);
+	ASSERT_EQ(translucent->materialSlots().size(), 1u);
+	EXPECT_FLOAT_EQ(opaque->materialSlots()[0].opacity, 1.0f);
+	EXPECT_FLOAT_EQ(translucent->materialSlots()[0].opacity, 0.35f);
+	EXPECT_EQ(opaque->opaqueMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
 	EXPECT_EQ(translucent->transparentMesh().layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>()[0].materialIndex, 0u);
 	EXPECT_EQ(model.version(), before);
 	spk::Texture atlas;
-	view.bind(palette(atlas, {"shared"}), Model::View::PalettePropagation::Recursive);
+	view.bind(palette(atlas, {"shared"}));
 	EXPECT_TRUE(view.isRenderable());
 }
 
@@ -275,7 +275,7 @@ TEST(ModelGraphicsTest, AttachedModelPoseChangesPreserveGraphicCaches)
 	Model parent;
 	parent.skeleton().root().addJoint("hand", Matrix::translation(4, 0, 0));
 	Model tool;
-	tool.skeleton().root().setVolume(volume("metal"));
+	tool.skeleton().root().setBody(&volume("metal"));
 	tool.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
 	parent.skeleton().joint("hand").attach(tool, "grip");
 	Model::View view(parent);
@@ -298,11 +298,11 @@ TEST(ModelGraphicsTest, AttachedModelPoseChangesPreserveGraphicCaches)
 TEST(ModelGraphicsTest, AttachingModelUpdatesViewAndPreservesExistingMeshes)
 {
 	Model character;
-	character.skeleton().root().setVolume(volume("cloth"));
+	character.skeleton().root().setBody(&volume("cloth"));
 	character.skeleton().root().addJoint("hand", Matrix::translation(2, 0, 0));
 	character.setTransform(Matrix::translation(10, 0, 0));
 	Model sword;
-	sword.skeleton().root().setVolume(volume("metal"));
+	sword.skeleton().root().setBody(&volume("metal"));
 	sword.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
 	sword.setTransform(Matrix::translation(0, 3, 0));
 	Model::View view(character);
@@ -331,19 +331,19 @@ TEST(ModelGraphicsTest, ReplacingAttachedModelRebuildsOnlyItsBranch)
 	Model::View view(character);
 	spk::Texture atlas;
 	Model first;
-	first.skeleton().root().setVolume(volume("steel"));
+	first.skeleton().root().setBody(&volume("steel"));
 	character.skeleton().joint("hand").attach(first);
 	view.root().attachedModel("hand").bind(palette(atlas, {"steel"}));
 	EXPECT_TRUE(view.isRenderable());
 	Model second;
-	second.skeleton().root().setVolume(volume("wood"));
+	second.skeleton().root().setBody(&volume("wood"));
 	character.skeleton().joint("hand").attach(second);
 	EXPECT_FALSE(view.isRenderable());
 	view.root().attachedModel("hand").bind(palette(atlas, {"wood"}));
 	EXPECT_TRUE(view.isRenderable());
-	character.skeleton().joint("hand").attach(Part(volume("stone")));
+	character.skeleton().joint("hand").attach(Part(&volume("stone")));
 	EXPECT_THROW((void)view.root().attachedModel("hand"), spk::Exception);
-	view.part("hand").bind(palette(atlas, {"stone"}));
+	view.bind(palette(atlas, {"stone"}));
 	EXPECT_TRUE(view.isRenderable());
 }
 
@@ -354,7 +354,7 @@ TEST(ModelGraphicsTest, NestedAttachedModelsKeepGraphicCachesAfterPoseChanges)
 	Model sword;
 	sword.skeleton().root().addJoint("tip", Matrix::translation(3, 0, 0));
 	Model gem;
-	gem.skeleton().root().setVolume(volume("gem"));
+	gem.skeleton().root().setBody(&volume("gem"));
 	sword.skeleton().joint("tip").attach(gem);
 	parent.skeleton().joint("hand").attach(sword);
 	Model::View view(parent);

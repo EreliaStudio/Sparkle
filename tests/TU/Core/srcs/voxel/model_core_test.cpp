@@ -8,18 +8,22 @@
 
 #include "exception.hpp"
 #include "model.hpp"
+#include "voxel/volume.hpp"
 
 namespace
 {
 	using Model = spk::Model;
-	using Skeleton = Model::Skeleton;
+	using Skeleton = spk::Skeleton;
 	using Part = Skeleton::Part;
 	using Matrix = spk::Matrix4x4;
 
-	[[nodiscard]] spk::Voxel::Volume volume()
+	[[nodiscard]] const spk::Voxel::Volume &volume()
 	{
-		spk::Voxel::Volume::Builder builder({1, 1, 1});
-		return builder.build();
+		static const spk::Voxel::Volume value = [] {
+			spk::Voxel::Volume::Builder builder({1, 1, 1});
+			return builder.build();
+		}();
+		return value;
 	}
 
 	[[nodiscard]] Matrix referenceQuarterTurn(int turns, float x, float y, float z = 0.0f)
@@ -60,7 +64,7 @@ namespace
 TEST(ModelCoreTest, EmptyPartsAndJointsNeedNoGraphicResources)
 {
 	Model model;
-	EXPECT_EQ(model.skeleton().root().volume(), nullptr);
+	EXPECT_EQ(model.skeleton().root().body(), nullptr);
 	model.skeleton().root().addJoint("hand");
 	EXPECT_EQ(model.skeleton().joint("hand").child(), nullptr);
 	EXPECT_EQ(model.version().topology, 1u);
@@ -70,12 +74,12 @@ TEST(ModelCoreTest, PartsMayCarryImmutableVoxelVolumes)
 {
 	Model model;
 	const auto original = volume();
-	model.skeleton().root().setVolume(original);
-	ASSERT_NE(model.skeleton().root().volume(), nullptr);
-	EXPECT_EQ(model.skeleton().root().volume()->dimensions(), original.dimensions());
+	model.skeleton().root().setBody(&original);
+	ASSERT_NE(model.skeleton().root().body(), nullptr);
+	EXPECT_EQ(model.skeleton().static_cast<const spk::Voxel::Volume *>(model.skeleton().root().body())->dimensions(), original.dimensions());
 	EXPECT_EQ(model.version().geometry, 1u);
-	model.skeleton().root().clearVolume();
-	EXPECT_EQ(model.skeleton().root().volume(), nullptr);
+	model.skeleton().root().setBody(nullptr);
+	EXPECT_EQ(model.skeleton().root().body(), nullptr);
 	EXPECT_EQ(model.version().geometry, 2u);
 }
 
@@ -96,14 +100,14 @@ TEST(ModelCoreTest, IndependentCopiesShareVolumeDataWithoutSharingPose)
 {
 	Skeleton skeleton;
 	skeleton.root().addJoint("arm");
-	skeleton.root().joint("arm").attach(Part(volume()));
+	skeleton.root().joint("arm").attach(Part(&volume()));
 	Model first(std::move(skeleton));
 	Model second(first);
 	first.skeleton().joint("arm").setRotation(spk::Quaternion::fromEuler({0, 0, 45}));
 	EXPECT_NE(first.skeleton().joint("arm").rotation(), second.skeleton().joint("arm").rotation());
-	ASSERT_NE(second.skeleton().joint("arm").child()->volume(), nullptr);
-	const auto firstCell = first.skeleton().joint("arm").child()->volume()->atRaw({0, 0, 0});
-	const auto secondCell = second.skeleton().joint("arm").child()->volume()->atRaw({0, 0, 0});
+	ASSERT_NE(second.skeleton().joint("arm").child()->body(), nullptr);
+	const auto firstCell = static_cast<const spk::Voxel::Volume *>(first.skeleton().joint("arm").child()->body())->atRaw({0, 0, 0});
+	const auto secondCell = static_cast<const spk::Voxel::Volume *>(second.skeleton().joint("arm").child()->body())->atRaw({0, 0, 0});
 	EXPECT_EQ(firstCell, secondCell);
 	EXPECT_NE(first.version().pose, second.version().pose);
 }
@@ -159,11 +163,11 @@ TEST(ModelCoreTest, ReplacingAnExistingJointInvalidatesTopology)
 	model.skeleton().root().addJoint("arm");
 	const auto before = model.version();
 	Skeleton::Joint replacement;
-	replacement.attach(Part(volume()));
+	replacement.attach(Part(&volume()));
 	model.skeleton().joint("arm") = std::move(replacement);
 	EXPECT_GT(model.version().topology, before.topology);
 	ASSERT_NE(model.skeleton().joint("arm").child(), nullptr);
-	EXPECT_NE(model.skeleton().joint("arm").child()->volume(), nullptr);
+	EXPECT_NE(model.skeleton().joint("arm").child()->body(), nullptr);
 }
 
 TEST(ModelCoreTest, JointCanAttachIndependentModelWithNamedGrip)
@@ -171,7 +175,7 @@ TEST(ModelCoreTest, JointCanAttachIndependentModelWithNamedGrip)
 	Model character;
 	character.skeleton().root().addJoint("hand");
 	Model sword;
-	sword.skeleton().root().setVolume(volume());
+	sword.skeleton().root().setBody(&volume());
 	sword.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
 	const auto before = character.version().topology;
 	auto &hand = character.skeleton().joint("hand");
@@ -184,7 +188,7 @@ TEST(ModelCoreTest, JointCanAttachIndependentModelWithNamedGrip)
 	EXPECT_EQ(hand.child(), nullptr);
 	EXPECT_EQ(hand.attachment(), "grip");
 	EXPECT_GT(character.version().topology, before);
-	EXPECT_NE(hand.model()->skeleton().root().volume(), nullptr);
+	EXPECT_NE(hand.model()->skeleton().root().body(), nullptr);
 	hand.model()->setTransform(Matrix::translation(0, 2, 0));
 	EXPECT_EQ(sword.transform()[3][1], 0.0f);
 }
@@ -194,7 +198,7 @@ TEST(ModelCoreTest, JointSwitchesBetweenPartAndModelAndDetaches)
 	Model character;
 	character.skeleton().root().addJoint("hand");
 	auto &hand = character.skeleton().joint("hand");
-	hand.attach(Part(volume()));
+	hand.attach(Part(&volume()));
 	ASSERT_NE(hand.child(), nullptr);
 	const auto firstVersion = hand.attachmentVersion();
 	hand.attach(Model{});
@@ -240,7 +244,7 @@ TEST(ModelCoreTest, AttachedModelRevisionsStayLocal)
 	ASSERT_NE(attached, nullptr);
 	attached->setTransform(Matrix::translation(1, 2, 3));
 	attached->skeleton().joint("tip").setRotation(spk::Quaternion::fromEuler({0, 0, 30}));
-	attached->skeleton().root().setVolume(volume());
+	attached->skeleton().root().setBody(&volume());
 	attached->skeleton().root().addJoint("extra");
 	EXPECT_EQ(parent.version(), before);
 	EXPECT_EQ(attached->version().transform, 1u);
@@ -276,8 +280,8 @@ TEST(ModelCoreTest, CachedMatricesInvalidateAffectedBranchesAndAncestors)
 	Model model;
 	model.skeleton().root().addJoint("left", Matrix::translation(-2, 0, 0));
 	model.skeleton().root().addJoint("right", Matrix::translation(2, 0, 0));
-	model.skeleton().joint("left").attach(Part(volume()));
-	model.skeleton().joint("right").attach(Part(volume()));
+	model.skeleton().joint("left").attach(Part(&volume()));
+	model.skeleton().joint("right").attach(Part(&volume()));
 	(void)model.skeleton().joint("left").child()->globalMatrix();
 	(void)model.skeleton().joint("right").child()->globalMatrix();
 
@@ -568,4 +572,48 @@ TEST(ModelCoreTest, GoldenThreeDimensionalJointRotationsComposeInOrder)
 
 	expected[3][0] = 3;
 	expectMatrix(model.skeleton().joint(Skeleton::Path{"shoulder", "elbow"}).globalMatrix(), expected);
+}
+
+TEST(ModelCoreTest, StandaloneSkeletonReferencesAnyBodyWithoutOwningIt)
+{
+	struct GenericBody final : spk::Body
+	{
+	};
+	GenericBody object;
+	spk::Skeleton skeleton;
+	skeleton.root().setBody(&object);
+	skeleton.root().addJoint("socket", Matrix::translation(3, 0, 0));
+	skeleton.joint("socket").attach(Part(&object));
+	EXPECT_EQ(skeleton.root().body(), &object);
+	ASSERT_NE(skeleton.joint("socket").child(), nullptr);
+	EXPECT_EQ(skeleton.joint("socket").child()->body(), &object);
+	expectMatrix(skeleton.joint("socket").globalMatrix(), Matrix::translation(3, 0, 0));
+
+	Model model(std::move(skeleton));
+	model.setTransform(Matrix::translation(5, 0, 0));
+	EXPECT_EQ(model.skeleton().root().body(), &object);
+	expectMatrix(model.skeleton().joint("socket").globalMatrix(), Matrix::translation(8, 0, 0));
+	Model clone(model);
+	EXPECT_EQ(clone.skeleton().root().body(), &object);
+	EXPECT_EQ(clone.skeleton().joint("socket").child()->body(), &object);
+}
+
+TEST(ModelCoreTest, ModelDoesNotExtendBodyLifetime)
+{
+	struct TrackedBody final : spk::Body
+	{
+		bool &destroyed;
+		explicit TrackedBody(bool &flag) : destroyed(flag) {}
+		~TrackedBody() override { destroyed = true; }
+	};
+	bool destroyed = false;
+	Skeleton skeleton;
+	{
+		TrackedBody body(destroyed);
+		skeleton.root().setBody(&body);
+		EXPECT_EQ(skeleton.root().body(), &body);
+	}
+	EXPECT_TRUE(destroyed);
+	skeleton.root().setBody(nullptr);
+	EXPECT_EQ(skeleton.root().body(), nullptr);
 }
