@@ -212,4 +212,3 @@ TEST(ModelCoreTest, AttachedModelRevisionsStayLocal)
 	EXPECT_EQ(attached->version().geometry, 1u);
 	EXPECT_EQ(attached->version().topology, 2u);
 }
-
