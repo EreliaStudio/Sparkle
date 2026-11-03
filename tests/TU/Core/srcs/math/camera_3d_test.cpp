@@ -65,8 +65,8 @@ TEST(Camera3DTest, ViewCacheIsInvalidatedByPositionAndRotation)
 	expectMatrix(camera.viewMatrix(), spk::Matrix4x4::translation(0, 0, -5));
 	expectMatrix(camera.viewProjectionMatrix(), camera.projectionMatrix() * camera.viewMatrix());
 	camera.setRotation(spk::Quaternion::fromEuler({0, 90, 0}));
-	expectMatrix(camera.viewMatrix(), spk::Matrix4x4::rotation(0, -90, 0) *
-										 spk::Matrix4x4::translation(0, 0, -5));
+	const auto rotated = spk::Matrix4x4::rotation(0, -90, 0) * spk::Matrix4x4::translation(0, 0, -5);
+	expectMatrix(camera.viewMatrix(), rotated);
 	expectMatrix(camera.viewProjectionMatrix(), camera.projectionMatrix() * camera.viewMatrix());
 }
 
