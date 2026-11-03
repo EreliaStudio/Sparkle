@@ -35,15 +35,9 @@ namespace spk
 		_model(&model),
 		_part(&part),
 		_root(&model.skeleton().root()),
-		_topologyVersion(model.version().topology)
+		_topologyVersion(~std::uint64_t{0})
 	{
-		for (const auto &[name, joint] : part.joints())
-		{
-			if (const Part *child = joint.child())
-			{
-				_children.emplace(name, std::make_unique<View>(model, *child));
-			}
-		}
+		_sync();
 	}
 
 	Model::Skeleton::Part::View::View(const View &other) :
@@ -51,6 +45,7 @@ namespace spk
 		_part(other._part),
 		_root(other._root),
 		_topologyVersion(other._topologyVersion),
+		_attachmentVersions(other._attachmentVersions),
 		_geometry(other._geometry),
 		_volumeVersion(other._volumeVersion),
 		_palette(other._palette)
@@ -58,6 +53,10 @@ namespace spk
 		for (const auto &[name, child] : other._children)
 		{
 			_children.emplace(name, std::make_unique<View>(*child));
+		}
+		for (const auto &[name, child] : other._models)
+		{
+			_models.emplace(name, std::make_unique<Model::View>(*child));
 		}
 	}
 
@@ -75,17 +74,62 @@ namespace spk
 		return *this;
 	}
 
-	void Model::Skeleton::Part::View::_checkTopology() const
+	void Model::Skeleton::Part::View::_sync() const
 	{
-		if (_root != &_model->skeleton().root() || _topologyVersion != _model->version().topology)
+		if (_root != &_model->skeleton().root())
 		{
-			throw spk::Exception("Model View: Skeleton structure changed; reconstruct the View");
+			throw spk::Exception("Model Part View: root was replaced; obtain a new View");
 		}
+		const auto version = _model->version().topology;
+		if (_topologyVersion == version)
+		{
+			return;
+		}
+		for (auto it = _attachmentVersions.begin(); it != _attachmentVersions.end();)
+		{
+			const auto found = _part->joints().find(it->first);
+			if (found == _part->joints().end() || found->second.attachmentVersion() != it->second ||
+				(found->second.child() && (!_children.contains(it->first) || _children.at(it->first)->_part != found->second.child())) ||
+				(found->second.model() && (!_models.contains(it->first) || &_models.at(it->first)->model() != found->second.model())))
+			{
+				_children.erase(it->first);
+				_models.erase(it->first);
+				it = _attachmentVersions.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
+		for (const auto &[name, joint] : _part->joints())
+		{
+			if (_attachmentVersions.contains(name))
+			{
+				continue;
+			}
+			if (const Part *child = joint.child())
+			{
+				_children.emplace(name, std::make_unique<View>(*_model, *child));
+			}
+			else if (Model *model = joint.model())
+			{
+				_models.emplace(name, std::make_unique<Model::View>(*model));
+			}
+			if (joint.child() || joint.model())
+			{
+				_attachmentVersions.emplace(name, joint.attachmentVersion());
+			}
+		}
+		for (const auto &[name, child] : _children)
+		{
+			child->_sync();
+		}
+		_topologyVersion = version;
 	}
 
 	const Model::Skeleton::Part &Model::Skeleton::Part::View::part() const
 	{
-		_checkTopology();
+		_sync();
 		return *_part;
 	}
 
@@ -113,6 +157,7 @@ namespace spk
 
 	void Model::Skeleton::Part::View::_validatePalette(const spk::Palette &palette, PalettePropagation propagation) const
 	{
+		_sync();
 		const auto *mesh = geometry();
 		if (mesh != nullptr && !mesh->isCompatible(palette))
 		{
@@ -129,6 +174,7 @@ namespace spk
 
 	void Model::Skeleton::Part::View::_applyPalette(const spk::Palette &palette, PalettePropagation propagation)
 	{
+		_sync();
 		_palette = palette;
 		if (propagation == PalettePropagation::Recursive)
 		{
@@ -153,7 +199,7 @@ namespace spk
 
 	const Model::Skeleton::Part::View &Model::Skeleton::Part::View::child(std::string_view jointName) const
 	{
-		_checkTopology();
+		_sync();
 		const auto found = _children.find(jointName);
 		if (found == _children.end())
 		{
@@ -162,9 +208,25 @@ namespace spk
 		return *found->second;
 	}
 
+	Model::View &Model::Skeleton::Part::View::attachedModel(std::string_view jointName)
+	{
+		return const_cast<Model::View &>(std::as_const(*this).attachedModel(jointName));
+	}
+
+	const Model::View &Model::Skeleton::Part::View::attachedModel(std::string_view jointName) const
+	{
+		_sync();
+		const auto found = _models.find(jointName);
+		if (found == _models.end())
+		{
+			throw spk::Exception("Model Part View: joint has no attached Model: " + std::string(jointName));
+		}
+		return *found->second;
+	}
+
 	void Model::Skeleton::Part::View::_collectMatches(std::string_view name, std::vector<View *> &matches)
 	{
-		_checkTopology();
+		_sync();
 		for (auto &[key, child] : _children)
 		{
 			if (key == name)
@@ -189,15 +251,25 @@ namespace spk
 			const spk::Palette empty;
 			callback(*_part, *mesh, _palette ? *_palette : empty, transform);
 		}
-		for (const auto &[name, child] : _children)
+		for (const auto &[name, joint] : _part->joints())
 		{
-			const auto &joint = _part->joint(name);
 			auto attached = transform * joint.transform() * spk::Matrix4x4::rotation(joint.rotation());
-			if (!joint.attachment().empty())
+			if (const Part *child = joint.child())
 			{
-				attached = attached * inverseAnchor(joint.child()->joint(joint.attachment()).transform());
+				if (!joint.attachment().empty())
+				{
+					attached = attached * inverseAnchor(child->joint(joint.attachment()).transform());
+				}
+				_children.at(name)->_visit(callback, attached);
 			}
-			child->_visit(callback, attached);
+			else if (const Model *model = joint.model())
+			{
+				if (!joint.attachment().empty())
+				{
+					attached = attached * inverseAnchor(model->skeleton().root().joint(joint.attachment()).transform());
+				}
+				_models.at(name)->_visit(callback, attached);
+			}
 		}
 	}
 
@@ -212,13 +284,24 @@ namespace spk
 		return *_model;
 	}
 
-	Model::Skeleton::Part::View &Model::View::root() noexcept
+	void Model::View::_sync() const
 	{
+		if (_root._root != &_model->skeleton().root())
+		{
+			_root = Skeleton::Part::View(*_model, _model->skeleton().root());
+		}
+		_root._sync();
+	}
+
+	Model::Skeleton::Part::View &Model::View::root()
+	{
+		_sync();
 		return _root;
 	}
 
-	const Model::Skeleton::Part::View &Model::View::root() const noexcept
+	const Model::Skeleton::Part::View &Model::View::root() const
 	{
+		_sync();
 		return _root;
 	}
 
@@ -229,7 +312,7 @@ namespace spk
 
 	const Model::Skeleton::Part::View &Model::View::part(const Path &path) const
 	{
-		const auto *current = &_root;
+		const auto *current = &root();
 		for (const auto &name : path)
 		{
 			current = &current->child(name);
@@ -240,7 +323,7 @@ namespace spk
 	Model::Skeleton::Part::View &Model::View::part(std::string_view uniqueJointName)
 	{
 		std::vector<Skeleton::Part::View *> matches;
-		_root._collectMatches(uniqueJointName, matches);
+		root()._collectMatches(uniqueJointName, matches);
 		if (matches.size() != 1)
 		{
 			throw spk::Exception(matches.empty() ? "Model View: missing Part" : "Model View: ambiguous Part");
@@ -255,7 +338,7 @@ namespace spk
 
 	void Model::View::bind(spk::Palette palette, PalettePropagation propagation)
 	{
-		_root.bind(std::move(palette), propagation);
+		root().bind(std::move(palette), propagation);
 	}
 
 	bool Model::View::isRenderable() const
@@ -273,14 +356,23 @@ namespace spk
 				{
 					return false;
 				}
+				if (joint.model() && !view.attachedModel(name).isRenderable())
+				{
+					return false;
+				}
 			}
 			return true;
 		};
-		return check(_root);
+		return check(root());
+	}
+
+	void Model::View::_visit(const DrawCallback &callback, spk::Matrix4x4 parent) const
+	{
+		root()._visit(callback, parent * _model->transform());
 	}
 
 	void Model::View::visit(const DrawCallback &callback) const
 	{
-		_root._visit(callback, _model->transform());
+		_visit(callback, spk::Matrix4x4::identity());
 	}
 }

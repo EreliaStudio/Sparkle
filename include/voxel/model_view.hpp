@@ -29,13 +29,15 @@ namespace spk
 		Model *_model = nullptr;
 		const Part *_part = nullptr;
 		const Part *_root = nullptr;
-		std::uint64_t _topologyVersion = 0;
+		mutable std::uint64_t _topologyVersion = 0;
 		mutable std::optional<spk::Voxel::Geometry> _geometry;
 		mutable std::uint64_t _volumeVersion = 0;
 		std::optional<spk::Palette> _palette;
-		std::map<std::string, std::unique_ptr<View>, std::less<>> _children;
+		mutable std::map<std::string, std::unique_ptr<View>, std::less<>> _children;
+		mutable std::map<std::string, std::unique_ptr<Model::View>, std::less<>> _models;
+		mutable std::map<std::string, std::uint64_t, std::less<>> _attachmentVersions;
 
-		void _checkTopology() const;
+		void _sync() const;
 		void _validatePalette(const spk::Palette &palette, PalettePropagation propagation) const;
 		void _applyPalette(const spk::Palette &palette, PalettePropagation propagation);
 		void _visit(
@@ -57,10 +59,14 @@ namespace spk
 		void bind(spk::Palette palette, PalettePropagation propagation = PalettePropagation::Self);
 		[[nodiscard]] View &child(std::string_view jointName);
 		[[nodiscard]] const View &child(std::string_view jointName) const;
+		[[nodiscard]] Model::View &attachedModel(std::string_view jointName);
+		[[nodiscard]] const Model::View &attachedModel(std::string_view jointName) const;
 	};
 
 	class Model::View
 	{
+		friend class Skeleton::Part::View;
+
 	public:
 		using PalettePropagation = Skeleton::Part::View::PalettePropagation;
 		using Path = Skeleton::Path;
@@ -69,7 +75,10 @@ namespace spk
 
 	private:
 		Model *_model;
-		Skeleton::Part::View _root;
+		mutable Skeleton::Part::View _root;
+
+		void _sync() const;
+		void _visit(const DrawCallback &callback, spk::Matrix4x4 parent) const;
 
 	public:
 		explicit View(Model &model);
@@ -80,8 +89,8 @@ namespace spk
 		~View() = default;
 
 		[[nodiscard]] const Model &model() const noexcept;
-		[[nodiscard]] Skeleton::Part::View &root() noexcept;
-		[[nodiscard]] const Skeleton::Part::View &root() const noexcept;
+		[[nodiscard]] Skeleton::Part::View &root();
+		[[nodiscard]] const Skeleton::Part::View &root() const;
 		[[nodiscard]] Skeleton::Part::View &part(const Path &path);
 		[[nodiscard]] const Skeleton::Part::View &part(const Path &path) const;
 		[[nodiscard]] Skeleton::Part::View &part(std::string_view uniqueJointName);

@@ -95,7 +95,9 @@ namespace spk
 		spk::Quaternion _rotation = spk::Quaternion::identity();
 		std::string _attachment;
 		std::unique_ptr<Part> _child;
+		std::unique_ptr<Model> _model;
 		std::shared_ptr<Revision> _revision;
+		std::uint64_t _attachmentVersion = 0;
 
 		void _bindRevision(std::shared_ptr<Revision> revision);
 		void _changed() noexcept;
@@ -113,10 +115,14 @@ namespace spk
 		void setRotation(spk::Quaternion rotation);
 		[[nodiscard]] spk::Quaternion rotation() const noexcept;
 		void attach(Part child, std::string attachment = "");
+		void attach(Model model, std::string attachment = "");
 		void detach() noexcept;
 		[[nodiscard]] Part *child() noexcept;
 		[[nodiscard]] const Part *child() const noexcept;
+		[[nodiscard]] Model *model() noexcept;
+		[[nodiscard]] const Model *model() const noexcept;
 		[[nodiscard]] const std::string &attachment() const noexcept;
+		[[nodiscard]] std::uint64_t attachmentVersion() const noexcept;
 	};
 
 	class Model::Skeleton::Part

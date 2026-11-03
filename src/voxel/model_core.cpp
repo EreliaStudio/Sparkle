@@ -223,7 +223,9 @@ namespace spk
 		_transform(other._transform),
 		_rotation(other._rotation),
 		_attachment(other._attachment),
-		_child(other._child ? std::make_unique<Part>(*other._child) : nullptr)
+		_child(other._child ? std::make_unique<Part>(*other._child) : nullptr),
+		_model(other._model ? std::make_unique<Model>(*other._model) : nullptr),
+		_attachmentVersion(other._attachmentVersion)
 	{
 	}
 
@@ -236,6 +238,8 @@ namespace spk
 			_rotation = other._rotation;
 			_attachment = std::move(other._attachment);
 			_child = std::move(other._child);
+			_model = std::move(other._model);
+			++_attachmentVersion;
 			_bindRevision(_revision);
 			if (_revision)
 			{
@@ -319,7 +323,26 @@ namespace spk
 		auto prepared = std::make_unique<Part>(std::move(child));
 		prepared->_bindRevision(_revision);
 		_child = std::move(prepared);
+		_model.reset();
 		_attachment = std::move(attachment);
+		++_attachmentVersion;
+		if (_revision)
+		{
+			++_revision->topology;
+		}
+	}
+
+	void Model::Skeleton::Joint::attach(Model model, std::string attachment)
+	{
+		if (!attachment.empty() && !model.skeleton().root().joints().contains(attachment))
+		{
+			throw spk::Exception("Model Joint: missing model attachment: " + attachment);
+		}
+		auto prepared = std::make_unique<Model>(std::move(model));
+		_model = std::move(prepared);
+		_child.reset();
+		_attachment = std::move(attachment);
+		++_attachmentVersion;
 		if (_revision)
 		{
 			++_revision->topology;
@@ -329,7 +352,9 @@ namespace spk
 	void Model::Skeleton::Joint::detach() noexcept
 	{
 		_child.reset();
+		_model.reset();
 		_attachment.clear();
+		++_attachmentVersion;
 		if (_revision)
 		{
 			++_revision->topology;
@@ -346,9 +371,24 @@ namespace spk
 		return _child.get();
 	}
 
+	Model *Model::Skeleton::Joint::model() noexcept
+	{
+		return _model.get();
+	}
+
+	const Model *Model::Skeleton::Joint::model() const noexcept
+	{
+		return _model.get();
+	}
+
 	const std::string &Model::Skeleton::Joint::attachment() const noexcept
 	{
 		return _attachment;
+	}
+
+	std::uint64_t Model::Skeleton::Joint::attachmentVersion() const noexcept
+	{
+		return _attachmentVersion;
 	}
 
 	Model::Skeleton::Part::Part(spk::Voxel::Volume volume) :
