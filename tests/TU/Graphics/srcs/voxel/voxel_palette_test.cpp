@@ -14,7 +14,6 @@
 #include "graphics/palette.hpp"
 #include "voxel/geometry.hpp"
 #include "voxel/mesher.hpp"
-#include "voxel/model_view.hpp"
 #include "voxel/palette.hpp"
 
 namespace
@@ -62,7 +61,7 @@ namespace
 
 	[[nodiscard]] Definition definition(const spk::Voxel::Shape &shape, std::string name)
 	{
-		Definition::SlotCollection mapping;
+		Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, Definition::Slot{name, 1.0f});
@@ -73,7 +72,7 @@ namespace
 	[[nodiscard]] const spk::Voxel::Volume &singleCubeVolume()
 	{
 		static const spk::Voxel::Volume result = [] {
-			Definition::Collection::Builder definitions;
+			Definition::Registry::Builder definitions;
 			definitions.add(1, definition(cube(), "stone"));
 			spk::Voxel::Volume::Builder volume({1, 1, 1});
 			volume.bind(definitions.build());
@@ -87,7 +86,7 @@ namespace
 	{
 		static const spk::Voxel::Volume result = [] {
 			const auto shape = cube();
-			Definition::Collection::Builder definitions;
+			Definition::Registry::Builder definitions;
 			definitions.add(1, definition(shape, "hidden"));
 			definitions.add(2, definition(shape, "outside"));
 			spk::Voxel::Volume::Builder volume({3, 3, 3});
@@ -117,13 +116,6 @@ namespace
 		return spk::Voxel::Mesher().bake(occludedCubeVolume());
 	}
 
-	[[nodiscard]] spk::Model coreModel(const spk::Voxel::Volume &volume)
-	{
-		spk::Model result;
-		result.skeleton().root().setBody(&volume);
-		return result;
-	}
-
 	[[nodiscard]] std::vector<GeometryVertex> vertices(const spk::Voxel::Geometry::SurfaceMesh &mesh)
 	{
 		const auto values = mesh.layout().vertexBuffer().cast<GeometryVertex>();
@@ -137,7 +129,7 @@ namespace
 	}
 }
 
-TEST(VoxelPaletteTest, BuildsPaletteBeforeModelExists)
+TEST(VoxelPaletteTest, BuildsPaletteBeforeGeometryExists)
 {
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
@@ -147,7 +139,7 @@ TEST(VoxelPaletteTest, BuildsPaletteBeforeModelExists)
 	EXPECT_TRUE(source.isCompatible(result));
 }
 
-TEST(VoxelPaletteTest, ModelDetectsMissingRequiredMaterial)
+TEST(VoxelPaletteTest, GeometryDetectsMissingRequiredMaterial)
 {
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}});
@@ -158,7 +150,7 @@ TEST(VoxelPaletteTest, ModelDetectsMissingRequiredMaterial)
 		palette({{"stone", material(atlas)}, {"glass", material(atlas)}})));
 }
 
-TEST(VoxelPaletteTest, ModelChecksFullyOccludedSlot)
+TEST(VoxelPaletteTest, GeometryChecksFullyOccludedSlot)
 {
 	const Geometry source = bakedOccludedCube();
 	ASSERT_EQ(source.materialSlots().size(), 2u);
@@ -204,7 +196,7 @@ TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
 	EXPECT_NE(result.find("left")->find("albedo")->section, result.find("right")->find("albedo")->section);
 }
 
-TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutModel)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutGeometry)
 {
 	Texture first;
 	Texture second;
@@ -215,7 +207,7 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesWithoutModel)
 	EXPECT_EQ(builder.build().materials().size(), 1u);
 }
 
-TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfModelOpacity)
+TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfGeometryOpacity)
 {
 	Texture first;
 	Texture second;
@@ -237,7 +229,7 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
 	EXPECT_FALSE(source.isCompatible(builder.build()));
 }
 
-TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByModel)
+TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByGeometry)
 {
 	const Geometry first = geometryWithSlots({{"stone", 1.0f}});
 	const Geometry other = geometryWithSlots({{"stone", 1.0f}, {"glass", 1.0f}, {"missing", 1.0f}});
@@ -308,7 +300,7 @@ TEST(VoxelPaletteTest, EmptyBuilderAllowsEitherFirstAtlas)
 	EXPECT_EQ(builder.build().find("stone")->find("albedo")->texture.identifier(), second.handle().identifier());
 }
 
-TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
+TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentGeometryOpacities)
 {
 	Texture atlas;
 	const auto result = palette({{"shared", material(atlas)}, {"extra", material(atlas)}});
@@ -319,7 +311,7 @@ TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentModelOpacities)
 	EXPECT_EQ(result.materials().size(), 2u);
 }
 
-TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralModels)
+TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralGeometrys)
 {
 	Texture atlas;
 	const auto result = palette({{"shared", material(atlas)}, {"left", material(atlas)}, {"right", material(atlas)}});
@@ -420,10 +412,12 @@ TEST(VoxelPaletteTest, MissingSlotIsIncompatibleButOpacityMayDiffer)
 	const Geometry other = geometryWithSlots({{"stone", 0.3f}});
 	Texture atlas;
 	EXPECT_FALSE(source.isCompatible(Palette{}));
-	EXPECT_TRUE(source.isCompatible(palette({{"stone", material(atlas)}})));
+	const auto matchingPalette = palette({{"stone", material(atlas)}});
+	EXPECT_TRUE(source.isCompatible(matchingPalette));
+	EXPECT_TRUE(other.isCompatible(matchingPalette));
 }
 
-TEST(VoxelPaletteTest, EmptyModelAcceptsEmptyPalette)
+TEST(VoxelPaletteTest, EmptyGeometryAcceptsEmptyPalette)
 {
 	const auto result = VoxelBuilder().build();
 	const Geometry source = geometryWithSlots({});
@@ -511,87 +505,4 @@ TEST(PaletteTest, GenericPaletteSupportsVariantsAndCheapImmutableCopies)
 	EXPECT_NE(&first.materials(), &second.materials());
 	EXPECT_EQ(first.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
 	EXPECT_EQ(second.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
-}
-
-TEST(VoxelPaletteTest, ModelViewBindsPaletteWithoutModifyingGeometry)
-{
-	Texture atlas;
-	auto source = coreModel(singleCubeVolume());
-	spk::Model::View view(source);
-	const auto *originalGeometry = view.root().geometry();
-	ASSERT_NE(originalGeometry, nullptr);
-	const auto appearance = palette({{"stone", material(atlas)}});
-	view.bind(appearance);
-	ASSERT_NE(view.palette(), nullptr);
-	EXPECT_EQ(&view.palette()->materials(), &appearance.materials());
-	EXPECT_EQ(view.root().geometry(), originalGeometry);
-}
-
-TEST(VoxelPaletteTest, ModelViewRejectsMissingSlotsWithoutChangingBinding)
-{
-	Texture atlas;
-	auto source = coreModel(occludedCubeVolume());
-	spk::Model::View view(source);
-	const auto complete = palette({{"outside", material(atlas)}, {"hidden", material(atlas)}});
-	const auto missing = palette({{"outside", material(atlas)}});
-	EXPECT_THROW(view.bind(missing), spk::Exception);
-	EXPECT_EQ(view.palette(), nullptr);
-	view.bind(complete);
-	EXPECT_THROW(view.bind(missing), spk::Exception);
-	ASSERT_NE(view.palette(), nullptr);
-	EXPECT_EQ(&view.palette()->materials(), &complete.materials());
-}
-
-TEST(VoxelPaletteTest, TwoViewsShareCoreModelButNotPalette)
-{
-	Texture first;
-	Texture second;
-	auto source = coreModel(singleCubeVolume());
-	spk::Model::View original(source);
-	spk::Model::View variant(source);
-	original.bind(palette({{"stone", material(first)}}));
-	variant.bind(palette({{"stone", material(second)}}));
-	EXPECT_EQ(&original.model(), &variant.model());
-	ASSERT_NE(original.root().geometry(), nullptr);
-	ASSERT_NE(variant.root().geometry(), nullptr);
-	EXPECT_EQ(original.root().geometry()->opaqueMesh().indexCount(), variant.root().geometry()->opaqueMesh().indexCount());
-	const auto originalTexture = original.palette()->find("stone")->find("albedo")->texture.identifier();
-	const auto variantTexture = variant.palette()->find("stone")->find("albedo")->texture.identifier();
-	EXPECT_NE(originalTexture, variantTexture);
-}
-
-TEST(VoxelPaletteTest, ChangingViewPaletteDoesNotModifyBakedGeometry)
-{
-	Texture first;
-	Texture second;
-	auto source = coreModel(singleCubeVolume());
-	spk::Model::View view(source);
-	const auto *geometry = view.root().geometry();
-	ASSERT_NE(geometry, nullptr);
-	const auto before = vertices(geometry->opaqueMesh());
-	const auto beforeIndices = indices(geometry->opaqueMesh());
-	view.bind(palette({{"stone", material(first)}}));
-	view.bind(palette({{"stone", material(second)}}));
-	const auto *afterGeometry = view.root().geometry();
-	ASSERT_NE(afterGeometry, nullptr);
-	const auto after = vertices(afterGeometry->opaqueMesh());
-	ASSERT_EQ(before.size(), after.size());
-	for (std::size_t i = 0; i < before.size(); ++i)
-	{
-		EXPECT_EQ(before[i].position, after[i].position);
-		EXPECT_EQ(before[i].normal, after[i].normal);
-		EXPECT_EQ(before[i].uv, after[i].uv);
-		EXPECT_EQ(before[i].materialIndex, after[i].materialIndex);
-	}
-	EXPECT_EQ(indices(afterGeometry->opaqueMesh()), beforeIndices);
-}
-
-TEST(VoxelPaletteTest, ModelViewBindingRequiresFullyOccludedSlots)
-{
-	Texture atlas;
-	auto source = coreModel(occludedCubeVolume());
-	spk::Model::View view(source);
-	EXPECT_THROW(view.bind(palette({{"outside", material(atlas)}})), spk::Exception);
-	view.bind(palette({{"outside", material(atlas)}, {"hidden", material(atlas)}}));
-	EXPECT_NE(view.palette(), nullptr);
 }
