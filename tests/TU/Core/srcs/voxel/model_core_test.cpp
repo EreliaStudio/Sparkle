@@ -542,3 +542,31 @@ TEST(ModelCoreTest, InvalidJointTransformDoesNotChangePreviouslyCachedMatrices)
 	EXPECT_THROW(model.skeleton().joint("elbow").setRotation({0, 0, 0, 0}), spk::Exception);
 	expectMatrix(model.skeleton().joint("elbow").globalMatrix(), before);
 }
+
+TEST(ModelCoreTest, GoldenThreeDimensionalJointRotationsComposeInOrder)
+{
+	Model model;
+	model.setTransform(Matrix::translation(1, 2, 3));
+	const auto fixed = Matrix::translation(0, 1, 0) * Matrix::rotation(90, 0, 0);
+	model.skeleton().root().addJoint("shoulder", fixed);
+	Part arm;
+	arm.addJoint("elbow", Matrix::translation(0, 0, 2));
+	model.skeleton().joint("shoulder").attach(arm);
+	model.skeleton().joint("shoulder").setRotation(spk::Quaternion::fromEuler({0, 90, 0}));
+
+	Matrix expected = Matrix::identity();
+	expected[0][0] = 0;
+	expected[0][1] = 1;
+	expected[1][1] = 0;
+	expected[1][2] = 1;
+	expected[2][2] = 0;
+	expected[2][0] = 1;
+	expected[3][0] = 1;
+	expected[3][1] = 3;
+	expected[3][2] = 3;
+	expectMatrix(model.skeleton().joint("shoulder").globalMatrix(), expected);
+	expectMatrix(model.skeleton().joint("shoulder").child()->globalMatrix(), expected);
+
+	expected[3][0] = 3;
+	expectMatrix(model.skeleton().joint(Skeleton::Path{"shoulder", "elbow"}).globalMatrix(), expected);
+}
