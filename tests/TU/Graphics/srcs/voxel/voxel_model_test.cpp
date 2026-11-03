@@ -113,7 +113,7 @@ TEST(ModelGraphicsTest, CoreJointsProvidePoseAndGraphicsOnlyProvidePalette)
 
 TEST(ModelGraphicsTest, SinglePaletteCoversEveryPart)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("cloth"));
 	model.skeleton().root().addJoint("arm");
 	model.skeleton().joint("arm").attach(Part(&volume("skin")));
@@ -128,7 +128,7 @@ Model model;
 
 TEST(ModelGraphicsTest, PaletteBindingValidatesAllPartsWithoutPartialChanges)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("cloth"));
 	model.skeleton().root().addJoint("arm");
 	model.skeleton().joint("arm").attach(Part(&volume("skin")));
@@ -145,7 +145,7 @@ Model model;
 
 TEST(ModelGraphicsTest, TwoViewsObserveTheSameCorePoseButOwnIndependentPalettes)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("skin"));
 	model.skeleton().root().addJoint("arm");
 	model.skeleton().joint("arm").attach(Part(&volume("skin")));
@@ -171,7 +171,7 @@ Model model;
 
 TEST(ModelGraphicsTest, TopologyChangesRefreshOnlyAffectedViews)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("stone"));
 	Model::View view(model);
 	spk::Texture atlas;
@@ -211,7 +211,7 @@ TEST(ModelGraphicsTest, ViewsCanFindUniquePartsOrTypedPaths)
 
 TEST(ModelGraphicsTest, ViewCopiesHaveIndependentGraphicCaches)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("stone"));
 	Model::View first(model);
 	Model::View second(first);
@@ -226,7 +226,7 @@ Model model;
 
 TEST(ModelGraphicsTest, DifferentBodiesKeepTheirLocalMaterialIndices)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("skin"));
 	model.skeleton().root().addJoint("arm");
 	model.skeleton().joint("arm").attach(Part(&volume("cloth")));
@@ -248,7 +248,7 @@ Model model;
 
 TEST(ModelGraphicsTest, IndependentBodiesRetainTheirMaterialOpacities)
 {
-Model model;
+	Model model;
 	model.skeleton().root().setBody(&volume("shared", 1.0f));
 	model.skeleton().root().addJoint("overlay");
 	model.skeleton().joint("overlay").attach(Part(&volume("shared", 0.35f)));

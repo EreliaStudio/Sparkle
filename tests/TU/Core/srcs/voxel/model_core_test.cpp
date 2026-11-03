@@ -70,13 +70,13 @@ TEST(ModelCoreTest, EmptyPartsAndJointsNeedNoGraphicResources)
 	EXPECT_EQ(model.version().topology, 1u);
 }
 
-TEST(ModelCoreTest, PartsMayCarryImmutableVoxelVolumes)
+TEST(ModelCoreTest, PartsReferenceImmutableVoxelVolumesWithoutOwnership)
 {
 	Model model;
 	const auto original = volume();
 	model.skeleton().root().setBody(&original);
 	ASSERT_NE(model.skeleton().root().body(), nullptr);
-	EXPECT_EQ(model.skeleton().static_cast<const spk::Voxel::Volume *>(model.skeleton().root().body())->dimensions(), original.dimensions());
+	EXPECT_EQ(static_cast<const spk::Voxel::Volume *>(model.skeleton().root().body())->dimensions(), original.dimensions());
 	EXPECT_EQ(model.version().geometry, 1u);
 	model.skeleton().root().setBody(nullptr);
 	EXPECT_EQ(model.skeleton().root().body(), nullptr);
