@@ -347,6 +347,7 @@ namespace spk
 		validateJointTransform(transform);
 	}
 
+
 	Model::Skeleton::Joint::Joint(const Joint &other) :
 		_transform(other._transform),
 		_rotation(other._rotation),
@@ -355,9 +356,20 @@ namespace spk
 		_model(other._model ? std::make_unique<Model>(*other._model) : nullptr),
 		_attachmentVersion(other._attachmentVersion)
 	{
+		_bindHierarchy(nullptr);
 	}
 
-	Model::Skeleton::Joint::Joint(Joint &&other) noexcept = default;
+	Model::Skeleton::Joint::Joint(Joint &&other) noexcept :
+		_transform(other._transform),
+		_rotation(other._rotation),
+		_attachment(std::move(other._attachment)),
+		_child(std::move(other._child)),
+		_model(std::move(other._model)),
+		_revision(std::move(other._revision)),
+		_attachmentVersion(other._attachmentVersion)
+	{
+		_bindHierarchy(nullptr);
+	}
 	Model::Skeleton::Joint &Model::Skeleton::Joint::operator=(Joint &&other) noexcept
 	{
 		if (this != &other)
@@ -369,11 +381,17 @@ namespace spk
 			_model = std::move(other._model);
 			++_attachmentVersion;
 			_bindRevision(_revision);
+			_bindHierarchy(_parentPart);
 			if (_revision)
 			{
 				++_revision->pose;
 				++_revision->topology;
 				++_revision->geometry;
+			}
+			_invalidateGlobalMatrices();
+			if (_parentPart)
+			{
+				_parentPart->_anchorChanged(this);
 			}
 		}
 		return *this;
@@ -400,12 +418,46 @@ namespace spk
 		}
 	}
 
+	spk::Matrix4x4 Model::Skeleton::Joint::_calculateGlobalMatrix() const
+	{
+		const auto parent = _parentPart ? _parentPart->globalMatrix() : spk::Matrix4x4::identity();
+		return parent * _transform * spk::Matrix4x4::rotation(_rotation);
+	}
+
+	void Model::Skeleton::Joint::_invalidateGlobalMatrices() noexcept
+	{
+		_globalMatrix.invalidate();
+		if (_child)
+		{
+			_child->_invalidateGlobalMatrices();
+		}
+		if (_model)
+		{
+			_model->_invalidateGlobalMatrices();
+		}
+	}
+
+	void Model::Skeleton::Joint::_bindHierarchy(Part *parent) noexcept
+	{
+		_parentPart = parent;
+		_globalMatrix.invalidate();
+		if (_child)
+		{
+			_child->_bindHierarchy(this, nullptr);
+		}
+		if (_model)
+		{
+			_model->skeleton()._bindParentJoint(this);
+		}
+	}
+
 	void Model::Skeleton::Joint::_changed() noexcept
 	{
 		if (_revision)
 		{
 			++_revision->pose;
 		}
+		_invalidateGlobalMatrices();
 	}
 
 	void Model::Skeleton::Joint::setTransform(spk::Matrix4x4 transform)
@@ -413,6 +465,10 @@ namespace spk
 		validateJointTransform(transform);
 		_transform = transform;
 		_changed();
+		if (_parentPart)
+		{
+			_parentPart->_anchorChanged(this);
+		}
 	}
 
 	const spk::Matrix4x4 &Model::Skeleton::Joint::transform() const noexcept
@@ -442,6 +498,11 @@ namespace spk
 		return _rotation;
 	}
 
+	const spk::Matrix4x4 &Model::Skeleton::Joint::globalMatrix() const
+	{
+		return _globalMatrix.get();
+	}
+
 	void Model::Skeleton::Joint::attach(Part child, std::string attachment)
 	{
 		if (!attachment.empty() && !child.joints().contains(attachment))
@@ -453,6 +514,7 @@ namespace spk
 		_child = std::move(prepared);
 		_model.reset();
 		_attachment = std::move(attachment);
+		_child->_bindHierarchy(this, nullptr);
 		++_attachmentVersion;
 		if (_revision)
 		{
@@ -470,6 +532,7 @@ namespace spk
 		_model = std::move(prepared);
 		_child.reset();
 		_attachment = std::move(attachment);
+		_model->skeleton()._bindParentJoint(this);
 		++_attachmentVersion;
 		if (_revision)
 		{
