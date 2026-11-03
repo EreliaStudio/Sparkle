@@ -30,6 +30,18 @@ classDiagram
     +atRaw(position) uint32
     -grille compacte + collection partagée
   }
+  class Body {
+    +~Body()
+  }
+  class Skeleton {
+    +root() Part
+    +joint(path) Joint
+  }
+  class Part {
+    +body() const Body*
+    +setBody(const Body*)
+    +globalMatrix() Matrix4x4
+  }
   class Model {
     +skeleton() Skeleton
     +transform() Matrix4x4
@@ -45,7 +57,7 @@ classDiagram
   class ModelView {
     +root() PartView
     +isRenderable()
-    +harmonize()
+    +bind(palette)
   }
   class ShapeInstance {
     +triangles() const
@@ -65,7 +77,10 @@ classDiagram
   Mesher ..> OcclusionCache : facultatif
   Volume --> Mesher
   Mesher --> Geometry
-  Model --> Volume : Part optionnelle
+  Body <|-- Volume
+  Model *-- Skeleton
+  Skeleton *-- Part
+  Part --> Body : pointeur non propriétaire
   ModelView --> Model
   ModelView --> Geometry
 ```

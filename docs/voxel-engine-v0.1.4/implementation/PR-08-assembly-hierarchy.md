@@ -1,25 +1,24 @@
-# PR-08 — Model Core, Skeleton articulé et Views graphiques
+# PR-08 — Body Core, Skeleton articulé autonome et Model::View
 
 ## Contrats publics
 
-- `spk::Model` appartient à `sparkle_core`, sans inclusion de `spk::Mesh`, `Voxel::Geometry`, `spk::Palette` ou d'un en-tête OpenGL.
-- `Model` porte un `Model::Skeleton` mutable, une transformation globale et des versions indépendantes de transformation, pose, topologie et géométrie.
-- `Model::Skeleton::Part` possède un `std::optional<Voxel::Volume>` : aucune géométrie requise pour une Part purement logique.
-- `Model::Skeleton::Joint` possède une rotation mutable validée, un repère rigide et soit une Part enfant, soit un `spk::Model` autonome, soit aucun enfant. `attach(Part)` et `attach(Model)` sont exclusifs, `detach()` retire l'enfant, et l'attribut `attachment` sélectionne un Joint de référence chez l'enfant.
-- Les copies de Models et de Skeletons sont indépendantes pour les états mutables, avec partage des snapshots de Volumes.
-- Les chemins de Joints sont des `Skeleton::Path = std::vector<std::string>` et les recherches courtes exigent un nom unique.
-- `spk::Model::View` est définie dans Graphics (`voxel/model_view.hpp`) et référence un Model Core existant. Elle construit les Part Views correspondant à la hiérarchie.
-- `Skeleton::Part::View` conserve la palette facultative et la `Voxel::Geometry` optionnelle. Elle appelle `Mesher::bake(volume)` à la première demande et sur remplacement de Volume.
-- Le mesh de profondeur reste construit dans Graphics depuis le mesh opaque par le Mesher. Les collisions triangulaires CPU constituent une responsabilité séparée, non réalisée par cette PR.
-- Les transformations et les rotations restent dans le Core, sans duplication de quaternions dans les Views. `Model`, `Skeleton::Part` et `Skeleton::Joint` exposent `globalMatrix()` : matrices cumulées dans l'assemblage, excluant la transformation de l'`Entity3D`, avec caches `CachedData<Matrix4x4>` invalidés par branche à chaque modification pertinente.
-- Les liens parentaux non propriétaires sont restaurés après copies, déplacements et remplacements. Les changements de repères d'attache invalident également les matrices des enfants alignés sur ces repères.
-- La collecte des contributions au `RenderSnapshot` relève d'une PR ultérieure, via un `VoxelModelRenderer3D` dérivé de `RenderingComponent3D`. Aucune API `Model::View::visit()` n'est exposée.
-- `bind(palette)` est local par défaut ; `PalettePropagation::Recursive` doit être explicitement demandé et valide les slots avant mutation.
-- Les modifications de topologie Core sont réconciliées à la demande par la View, sans recréer les branches inchangées. Les Views de Models attachés sont accessibles via `Part::View::attachedModel(name)` ; elles possèdent leur état graphique indépendant. Les rotations et remplacements de Volumes sont pris en compte sans recréer la View.
-- L'harmonisation devient `Model::View::harmonize()` côté Graphics : unification récursive des slots des Parts du Model courant par (nom, opacité), indices déterministes et remplacement des meshes préparés, sans modifier les Volumes ou les poses Core ni traverser les Models attachés.
+- `spk::Body` : interface polymorphe Core minimale, sans dépendance Graphics ou physique ; `Voxel::Volume : spk::Body` expose toujours ses données voxel habituelles.
+- `spk::Skeleton` : type Core autonome. Une `Skeleton::Part` contient un `const Body *` facultatif et **non propriétaire**. `setBody()`, `body()` et `bodyVersion()` remplacent les méthodes spécifiques aux Volumes.
+- Les Bodies doivent rester vivants tant qu'ils sont utilisés ; ni la Part ni le Model ne contrôlent leur durée de vie. Les copies de Parts et Models conservent les pointeurs nus.
+- `Skeleton::Joint` possède un repère fixe, une rotation mutable et peut attacher une Part ou un Model par valeur. Les Models attachés restent indépendants et disposent de leurs propres palettes graphiques.
+- `spk::Model` : Skeleton et transformation locale ; versions `transform`, `pose`, `topology`, `geometry` indépendantes.
+- `Model::globalMatrix()`, `Skeleton::Part::globalMatrix()` et `Skeleton::Joint::globalMatrix()` : matrices d'assemblage Core avec `CachedData<Matrix4x4>` et invalidation de branche. La matrice de l'Entity est externe.
+- `spk::Model::View` : classe Graphics qui référence un Model Core. Ses Part Views construisent des `Voxel::Geometry` depuis les Bodies `Voxel::Volume` et les gardent en cache selon `bodyVersion()`. Les autres types de Body attendent leurs providers graphiques futurs.
+- **Une seule `spk::Palette` par `Model::View`** ; `bind(palette)` vérifie tous les slots du Model courant, sans toucher aux Models attachés. `harmonize()`, `PalettePropagation` et les palettes de Part Views sont supprimés.
+- Les indices de matériaux restent locaux aux géométries. Le futur renderer devra associer ces slots à la palette du Model.
+- Pas de `Model::View::visit()` ni de renderer dans cette PR ; le futur `VoxelModelRenderer3D` étendra `RenderingComponent3D`.
 
-## Vérifications
+## Tests requis
 
-Tester la compilation de `sparkle_core` sans Graphics, les Parts sans Volume, les Joints sans enfant, les Models attachés par valeur, la pose Core, le versionnement, les matrices cumulées mises en cache, leurs invalidations, les repères d'attache et les copies/déplacements indépendants. Tester côté Graphics le meshing à la demande, les caches, les palettes indépendantes, les repères d'attache conservés dans le Core et la réconciliation dynamique lors de l'équipement, du remplacement et du détachement d'un Model ou d'une Part.
+- Compilation et installation de `sparkle_core` sans Graphics, indépendamment des voxels.
+- Skeleton sans Body et avec Body générique, pointeurs non propriétaires, copies et déplacements, invalidations des versions de Body.
+- Tests de matrices **avec valeurs de référence indépendantes** : rotations, ancrages orientés, Models imbriqués, chaînes articulées, mise en cache et changement de pose.
+- Côté Graphics : génération voxel à la demande, remplacement de Body, mise en cache, palette unique et validation atomique, indépendance des palettes des Models attachés, pas de réindexation implicite.
+- Les formes de collision et providers graphiques génériques sont hors de cette PR.
 
-La PR reste en Draft jusqu'au succès des tests et du formatage CI.
+La PR reste Draft jusqu'à validation complète par CI.
