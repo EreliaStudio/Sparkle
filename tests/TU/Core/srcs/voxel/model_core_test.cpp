@@ -19,6 +19,17 @@ namespace
 		spk::Voxel::Volume::Builder builder({1, 1, 1});
 		return builder.build();
 	}
+
+	void expectMatrix(const Matrix &actual, const Matrix &expected)
+	{
+		for (std::size_t column = 0; column < 4; ++column)
+		{
+			for (std::size_t row = 0; row < 4; ++row)
+			{
+				EXPECT_NEAR(actual[column][row], expected[column][row], 0.0001f);
+			}
+		}
+	}
 }
 
 TEST(ModelCoreTest, EmptyPartsAndJointsNeedNoGraphicResources)
@@ -211,4 +222,122 @@ TEST(ModelCoreTest, AttachedModelRevisionsStayLocal)
 	EXPECT_EQ(attached->version().pose, 1u);
 	EXPECT_EQ(attached->version().geometry, 1u);
 	EXPECT_EQ(attached->version().topology, 2u);
+}
+
+TEST(ModelCoreTest, CachedGlobalMatricesComposeNestedJointsAndPartAnchors)
+{
+	Model model;
+	model.setTransform(Matrix::translation(10, 0, 0));
+	model.skeleton().root().addJoint("shoulder", Matrix::translation(2, 0, 0));
+	Part arm;
+	arm.addJoint("pivot", Matrix::translation(1, 0, 0));
+	arm.addJoint("elbow", Matrix::translation(3, 0, 0));
+	model.skeleton().joint("shoulder").attach(arm, "pivot");
+	model.skeleton().joint("shoulder").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+
+	const auto rotation = Matrix::rotation(model.skeleton().joint("shoulder").rotation());
+	const auto shoulder = Matrix::translation(10, 0, 0) * Matrix::translation(2, 0, 0) * rotation;
+	const auto armMatrix = shoulder * Matrix::translation(-1, 0, 0);
+	expectMatrix(model.globalMatrix(), Matrix::translation(10, 0, 0));
+	expectMatrix(model.skeleton().root().globalMatrix(), model.globalMatrix());
+	expectMatrix(model.skeleton().joint("shoulder").globalMatrix(), shoulder);
+	expectMatrix(model.skeleton().joint("shoulder").child()->globalMatrix(), armMatrix);
+	expectMatrix(model.skeleton().joint({"shoulder", "elbow"}).globalMatrix(), armMatrix * Matrix::translation(3, 0, 0));
+	EXPECT_EQ(&model.globalMatrix(), &model.globalMatrix());
+}
+
+TEST(ModelCoreTest, CachedMatricesInvalidateAffectedBranchesAndAncestors)
+{
+	Model model;
+	model.skeleton().root().addJoint("left", Matrix::translation(-2, 0, 0));
+	model.skeleton().root().addJoint("right", Matrix::translation(2, 0, 0));
+	model.skeleton().joint("left").attach(Part(volume()));
+	model.skeleton().joint("right").attach(Part(volume()));
+	(void)model.skeleton().joint("left").child()->globalMatrix();
+	(void)model.skeleton().joint("right").child()->globalMatrix();
+
+	model.skeleton().joint("left").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	const auto leftRotation = Matrix::rotation(model.skeleton().joint("left").rotation());
+	expectMatrix(model.skeleton().joint("left").child()->globalMatrix(), Matrix::translation(-2, 0, 0) * leftRotation);
+	expectMatrix(model.skeleton().joint("right").child()->globalMatrix(), Matrix::translation(2, 0, 0));
+
+	model.setTransform(Matrix::translation(5, 0, 0));
+	expectMatrix(model.skeleton().joint("left").child()->globalMatrix(), Matrix::translation(5, 0, 0) * Matrix::translation(-2, 0, 0) * leftRotation);
+	expectMatrix(model.skeleton().joint("right").child()->globalMatrix(), Matrix::translation(7, 0, 0));
+}
+
+TEST(ModelCoreTest, AttachedModelCachesFollowParentAndNamedGrip)
+{
+	Model parent;
+	parent.setTransform(Matrix::translation(10, 0, 0));
+	parent.skeleton().root().addJoint("hand", Matrix::translation(4, 0, 0));
+	Model sword;
+	sword.setTransform(Matrix::translation(0, 2, 0));
+	sword.skeleton().root().addJoint("grip", Matrix::translation(1, 0, 0));
+	sword.skeleton().root().addJoint("tip", Matrix::translation(3, 0, 0));
+	parent.skeleton().joint("hand").attach(sword, "grip");
+	auto *attached = parent.skeleton().joint("hand").model();
+	ASSERT_NE(attached, nullptr);
+	const auto initial = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) *
+		Matrix::translation(-1, 0, 0) * Matrix::translation(0, 2, 0);
+	expectMatrix(attached->globalMatrix(), initial);
+	expectMatrix(attached->skeleton().joint("tip").globalMatrix(), initial * Matrix::translation(3, 0, 0));
+
+	attached->skeleton().joint("grip").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	expectMatrix(attached->globalMatrix(), initial);
+	attached->skeleton().joint("grip").setTransform(Matrix::translation(2, 0, 0));
+	const auto movedGrip = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) *
+		Matrix::translation(-2, 0, 0) * Matrix::translation(0, 2, 0);
+	expectMatrix(attached->globalMatrix(), movedGrip);
+	parent.skeleton().joint("hand").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
+	const auto rotated = Matrix::translation(10, 0, 0) * Matrix::translation(4, 0, 0) *
+		Matrix::rotation(parent.skeleton().joint("hand").rotation()) *
+		Matrix::translation(-2, 0, 0) * Matrix::translation(0, 2, 0);
+	expectMatrix(attached->globalMatrix(), rotated);
+}
+
+TEST(ModelCoreTest, CopiedAndMovedModelsHaveIndependentCachedMatrices)
+{
+	Model source;
+	source.setTransform(Matrix::translation(3, 0, 0));
+	source.skeleton().root().addJoint("arm", Matrix::translation(2, 0, 0));
+	Part part;
+	part.addJoint("elbow", Matrix::translation(1, 0, 0));
+	source.skeleton().joint("arm").attach(part);
+	(void)source.skeleton().joint({"arm", "elbow"}).globalMatrix();
+	Model copy(source);
+	Model moved(std::move(copy));
+	expectMatrix(moved.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+
+	source.skeleton().joint("arm").setTransform(Matrix::translation(5, 0, 0));
+	expectMatrix(source.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(9, 0, 0));
+	expectMatrix(moved.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+
+	Model assigned;
+	assigned = moved;
+	expectMatrix(assigned.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+	assigned = std::move(moved);
+	expectMatrix(assigned.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+}
+
+TEST(ModelCoreTest, ReplacingAttachedModelAndSkeletonRebindsCachedMatrix)
+{
+	Model parent;
+	parent.skeleton().root().addJoint("mount", Matrix::translation(8, 0, 0));
+	parent.skeleton().joint("mount").attach(Model{});
+	auto *attached = parent.skeleton().joint("mount").model();
+	ASSERT_NE(attached, nullptr);
+	expectMatrix(attached->globalMatrix(), Matrix::translation(8, 0, 0));
+
+	Model replacement;
+	replacement.setTransform(Matrix::translation(2, 0, 0));
+	replacement.skeleton().root().addJoint("tip", Matrix::translation(3, 0, 0));
+	*attached = std::move(replacement);
+	expectMatrix(attached->globalMatrix(), Matrix::translation(10, 0, 0));
+	expectMatrix(attached->skeleton().joint("tip").globalMatrix(), Matrix::translation(13, 0, 0));
+
+	Skeleton newSkeleton;
+	newSkeleton.root().addJoint("tip", Matrix::translation(5, 0, 0));
+	attached->skeleton() = std::move(newSkeleton);
+	expectMatrix(attached->skeleton().joint("tip").globalMatrix(), Matrix::translation(15, 0, 0));
 }
