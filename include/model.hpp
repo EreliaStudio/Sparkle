@@ -36,7 +36,9 @@ namespace spk
 		std::unique_ptr<Skeleton> _skeleton;
 		spk::Matrix4x4 _transform = spk::Matrix4x4::identity();
 		std::uint64_t _transformVersion = 0;
-		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] { return _calculateGlobalMatrix(); }};
+		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] {
+			return _calculateGlobalMatrix();
+		}};
 
 		[[nodiscard]] spk::Matrix4x4 _calculateGlobalMatrix() const;
 		void _invalidateGlobalMatrices() noexcept;
@@ -112,7 +114,9 @@ namespace spk
 		std::shared_ptr<Revision> _revision;
 		Part *_parentPart = nullptr;
 		std::uint64_t _attachmentVersion = 0;
-		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] { return _calculateGlobalMatrix(); }};
+		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] {
+			return _calculateGlobalMatrix();
+		}};
 
 		[[nodiscard]] spk::Matrix4x4 _calculateGlobalMatrix() const;
 		void _bindHierarchy(Part *parent) noexcept;
@@ -161,7 +165,9 @@ namespace spk
 		Joint *_parentJoint = nullptr;
 		Model *_ownerModel = nullptr;
 		std::uint64_t _volumeVersion = 0;
-		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] { return _calculateGlobalMatrix(); }};
+		mutable spk::CachedData<spk::Matrix4x4> _globalMatrix{[this] {
+			return _calculateGlobalMatrix();
+		}};
 
 		[[nodiscard]] spk::Matrix4x4 _calculateGlobalMatrix() const;
 		void _bindHierarchy(Joint *parent, Model *owner) noexcept;
