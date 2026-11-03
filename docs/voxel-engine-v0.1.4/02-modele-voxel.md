@@ -43,7 +43,7 @@ classDiagram
   }
   class ModelView {
     +root() PartView
-    +visit()
+    +isRenderable()
     +harmonize()
   }
   class ShapeInstance {
