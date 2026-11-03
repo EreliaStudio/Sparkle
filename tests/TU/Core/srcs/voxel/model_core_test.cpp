@@ -426,7 +426,7 @@ TEST(ModelCoreTest, GoldenQuarterTurnMatricesIncludeChildAnchorOffset)
 	character.skeleton().joint("shoulder").attach(arm, "pivot");
 	character.skeleton().joint("shoulder").setRotation(spk::Quaternion::fromEuler({0, 0, 90}));
 
-	const auto &shoulder = character.skeleton().joint("shoulder");
+	auto &shoulder = character.skeleton().joint("shoulder");
 	ASSERT_NE(shoulder.child(), nullptr);
 	expectMatrix(character.globalMatrix(), referenceQuarterTurn(0, 7, 2, 3));
 	expectMatrix(character.skeleton().root().globalMatrix(), referenceQuarterTurn(0, 7, 2, 3));
@@ -449,7 +449,7 @@ TEST(ModelCoreTest, GoldenRotatedModelSocketInvertsRigidOrientation)
 	shield.skeleton().root().addJoint("strap", grip);
 	shield.skeleton().root().addJoint("edge", Matrix::translation(2, 0, 0));
 	character.skeleton().joint("hand").attach(shield, "strap");
-	const auto *equipped = character.skeleton().joint("hand").model();
+	auto *equipped = character.skeleton().joint("hand").model();
 	ASSERT_NE(equipped, nullptr);
 
 	expectMatrix(character.skeleton().joint("hand").globalMatrix(), referenceQuarterTurn(2, 5, 3));
