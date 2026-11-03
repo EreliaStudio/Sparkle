@@ -242,7 +242,7 @@ TEST(ModelCoreTest, CachedGlobalMatricesComposeNestedJointsAndPartAnchors)
 	expectMatrix(model.skeleton().root().globalMatrix(), model.globalMatrix());
 	expectMatrix(model.skeleton().joint("shoulder").globalMatrix(), shoulder);
 	expectMatrix(model.skeleton().joint("shoulder").child()->globalMatrix(), armMatrix);
-	expectMatrix(model.skeleton().joint({"shoulder", "elbow"}).globalMatrix(), armMatrix * Matrix::translation(3, 0, 0));
+	expectMatrix(model.skeleton().joint(Skeleton::Path{"shoulder", "elbow"}).globalMatrix(), armMatrix * Matrix::translation(3, 0, 0));
 	EXPECT_EQ(&model.globalMatrix(), &model.globalMatrix());
 }
 
@@ -300,20 +300,20 @@ TEST(ModelCoreTest, CopiedAndMovedModelsHaveIndependentCachedMatrices)
 	Part part;
 	part.addJoint("elbow", Matrix::translation(1, 0, 0));
 	source.skeleton().joint("arm").attach(part);
-	(void)source.skeleton().joint({"arm", "elbow"}).globalMatrix();
+	(void)source.skeleton().joint(Skeleton::Path{"arm", "elbow"}).globalMatrix();
 	Model copy(source);
 	Model moved(std::move(copy));
-	expectMatrix(moved.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+	expectMatrix(moved.skeleton().joint(Skeleton::Path{"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
 
 	source.skeleton().joint("arm").setTransform(Matrix::translation(5, 0, 0));
-	expectMatrix(source.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(9, 0, 0));
-	expectMatrix(moved.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+	expectMatrix(source.skeleton().joint(Skeleton::Path{"arm", "elbow"}).globalMatrix(), Matrix::translation(9, 0, 0));
+	expectMatrix(moved.skeleton().joint(Skeleton::Path{"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
 
 	Model assigned;
 	assigned = moved;
-	expectMatrix(assigned.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+	expectMatrix(assigned.skeleton().joint(Skeleton::Path{"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
 	assigned = std::move(moved);
-	expectMatrix(assigned.skeleton().joint({"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
+	expectMatrix(assigned.skeleton().joint(Skeleton::Path{"arm", "elbow"}).globalMatrix(), Matrix::translation(6, 0, 0));
 }
 
 TEST(ModelCoreTest, ReplacingAttachedModelAndSkeletonRebindsCachedMatrix)
