@@ -196,6 +196,7 @@ namespace spk
 		return {_transformVersion, revision.pose, revision.topology, revision.geometry};
 	}
 
+
 	Model::Skeleton::Skeleton() :
 		_root(std::make_unique<Part>()),
 		_revision(std::make_shared<Revision>())
@@ -210,9 +211,53 @@ namespace spk
 		_root->_bindRevision(_revision);
 	}
 
-	Model::Skeleton::Skeleton(Skeleton &&other) noexcept = default;
-	Model::Skeleton &Model::Skeleton::operator=(Skeleton &&other) noexcept = default;
+	Model::Skeleton::Skeleton(Skeleton &&other) noexcept :
+		_root(std::move(other._root)),
+		_revision(std::move(other._revision))
+	{
+		if (_root)
+		{
+			_root->_bindHierarchy(nullptr, nullptr);
+		}
+	}
+
+	Model::Skeleton &Model::Skeleton::operator=(Skeleton &&other) noexcept
+	{
+		if (this != &other)
+		{
+			_root = std::move(other._root);
+			_revision = std::move(other._revision);
+			if (_root)
+			{
+				_root->_bindHierarchy(nullptr, _ownerModel);
+			}
+			if (_ownerModel)
+			{
+				_ownerModel->_invalidateGlobalMatrices();
+			}
+		}
+		return *this;
+	}
+
 	Model::Skeleton::~Skeleton() = default;
+
+	void Model::Skeleton::_bindOwner(Model *owner) noexcept
+	{
+		_ownerModel = owner;
+		if (_root)
+		{
+			_root->_bindHierarchy(nullptr, owner);
+		}
+	}
+
+	void Model::Skeleton::_bindParentJoint(Joint *parent) noexcept
+	{
+		_parentJoint = parent;
+		if (_ownerModel)
+		{
+			_ownerModel->_invalidateGlobalMatrices();
+		}
+	}
 
 	Model::Skeleton &Model::Skeleton::operator=(const Skeleton &other)
 	{
