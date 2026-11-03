@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <GL/glew.h>
-
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -106,18 +105,13 @@ namespace
 								   spk::Matrix4x4::translation(body.center) *
 								   spk::Matrix4x4::scale(body.halfSize);
 			const std::uint32_t base = static_cast<std::uint32_t>(vertices.size());
-			const std::array<spk::Vector3, 8> corners{
-				spk::Vector3{-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1},
-				{-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1}};
+			const std::array<spk::Vector3, 8> corners{spk::Vector3{-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1}};
 			for (const auto &corner : corners)
 			{
 				const auto position = transform * spk::Vector4{corner.x, corner.y, corner.z, 1};
 				vertices.push_back({{position.x, position.y, position.z}, body.color});
 			}
-			constexpr std::array<std::uint32_t, 36> faces{
-				0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6,
-				1, 5, 6, 1, 6, 2, 4, 0, 3, 4, 3, 7,
-				3, 2, 6, 3, 6, 7, 4, 5, 1, 4, 1, 0};
+			constexpr std::array<std::uint32_t, 36> faces{0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 1, 5, 6, 1, 6, 2, 4, 0, 3, 4, 3, 7, 3, 2, 6, 3, 6, 7, 4, 5, 1, 4, 1, 0};
 			for (const auto index : faces)
 			{
 				indices.push_back(base + index);
