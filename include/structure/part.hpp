@@ -18,12 +18,11 @@ namespace spk
 	class Part : public NameTrait
 	{
 	public:
-		class Attachment
+		class Attachment : public NameTrait
 		{
 			friend class Part;
 
 		private:
-			std::string _name;
 			Matrix4x4 _transform = Matrix4x4::identity();
 			std::unique_ptr<Part> _child;
 
@@ -34,9 +33,8 @@ namespace spk
 			Attachment(const Attachment &) = delete;
 			Attachment &operator=(const Attachment &) = delete;
 			Attachment(Attachment &&) noexcept;
-			Attachment &operator=(Attachment &&) noexcept;
+			Attachment &operator=(Attachment &&);
 
-			[[nodiscard]] const std::string &name() const noexcept;
 			[[nodiscard]] const Matrix4x4 &transform() const noexcept;
 			[[nodiscard]] const Part *child() const noexcept;
 

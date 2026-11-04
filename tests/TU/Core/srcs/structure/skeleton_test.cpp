@@ -109,3 +109,13 @@ TEST(SkeletonTest, RejectsRootMoveThroughBaseReference)
 	EXPECT_EQ(root.code, 10);
 	EXPECT_EQ(builder.build().part<TypedPart>("root").code, 10);
 }
+
+TEST(SkeletonTest, RejectsDuplicatedAttachmentNamesAfterRenaming)
+{
+	spk::Skeleton::Builder builder;
+	auto &root = builder.setRoot<spk::Part>("root");
+	root.addAttachmentPoint("first");
+	root.addAttachmentPoint("second").setName("first");
+
+	EXPECT_THROW((void)builder.build(), spk::Exception);
+}

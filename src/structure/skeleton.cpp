@@ -1,6 +1,7 @@
 #include "structure/skeleton.hpp"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace spk
@@ -20,8 +21,13 @@ namespace spk
 			{
 				throw spk::Exception("Duplicate Part name '" + part.name() + "' in Skeleton");
 			}
+			std::unordered_set<std::string> attachmentNames;
 			for (const auto &attachment : part.attachments())
 			{
+				if (!attachmentNames.insert(attachment.name()).second)
+				{
+					throw spk::Exception("Duplicate attachment name '" + attachment.name() + "' in Part '" + part.name() + "'");
+				}
 				if (const Part *child = attachment.child())
 				{
 					collectParts(*child, parts);

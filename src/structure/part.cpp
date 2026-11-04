@@ -30,18 +30,13 @@ namespace
 namespace spk
 {
 	Part::Attachment::Attachment(std::string name) :
-		_name(std::move(name))
+		NameTrait(std::move(name))
 	{
 	}
 
 	Part::Attachment::~Attachment() = default;
 	Part::Attachment::Attachment(Attachment &&) noexcept = default;
-	Part::Attachment &Part::Attachment::operator=(Attachment &&) noexcept = default;
-
-	const std::string &Part::Attachment::name() const noexcept
-	{
-		return _name;
-	}
+	Part::Attachment &Part::Attachment::operator=(Attachment &&) = default;
 
 	const Matrix4x4 &Part::Attachment::transform() const noexcept
 	{

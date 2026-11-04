@@ -139,3 +139,13 @@ TEST(PartTest, RejectsInvalidQuaternionWithoutChangingTransform)
 	EXPECT_THROW(torso.setAnchor({0, 0, 0}, {0, 0, 0, 0}), spk::Exception);
 	EXPECT_EQ(torso.anchor()[0][0], 1.0f);
 }
+
+TEST(PartTest, AttachmentUsesNameTrait)
+{
+	spk::Part part("torso");
+	auto &attachment = part.addAttachmentPoint("oldName");
+	attachment.setName("newName");
+
+	EXPECT_EQ(part.attachment("newName").name(), "newName");
+	EXPECT_THROW((void)part.attachment("oldName"), spk::Exception);
+}
