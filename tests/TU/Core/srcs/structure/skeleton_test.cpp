@@ -20,6 +20,14 @@ namespace
 		{
 		}
 	};
+	class AnotherTypedPart : public spk::Part
+	{
+	public:
+		explicit AnotherTypedPart(std::string name) :
+			Part(std::move(name))
+		{
+		}
+	};
 }
 
 TEST(SkeletonTest, SupportsPreassembledAndBuilderAssembledSubtrees)
@@ -96,6 +104,7 @@ TEST(SkeletonTest, RejectsSecondRootAndWrongDerivedType)
 	const auto skeleton = builder.build();
 	EXPECT_THROW((void)skeleton.part<spk::Part>("missing"), spk::Exception);
 	EXPECT_THROW((void)skeleton.part<TypedPart>("wrong"), spk::Exception);
+	EXPECT_THROW((void)skeleton.part<AnotherTypedPart>("root"), spk::Exception);
 }
 
 TEST(SkeletonTest, RejectsRootMoveThroughBaseReference)
@@ -108,6 +117,20 @@ TEST(SkeletonTest, RejectsRootMoveThroughBaseReference)
 	auto &root = builder.setRoot<TypedPart>("root", 10);
 	EXPECT_EQ(root.code, 10);
 	EXPECT_EQ(builder.build().part<TypedPart>("root").code, 10);
+}
+
+TEST(SkeletonTest, AcceptsMovedRootAndPreservesItsDerivedType)
+{
+	TypedPart root("root", 27);
+	root.addAttachmentPoint("child");
+	root.attach<spk::Part>("child", "leaf");
+
+	spk::Skeleton::Builder builder;
+	builder.setRoot(std::move(root));
+	const auto skeleton = builder.build();
+
+	EXPECT_EQ(skeleton.part<TypedPart>("root").code, 27);
+	EXPECT_EQ(skeleton.part("leaf").name(), "leaf");
 }
 
 TEST(SkeletonTest, RejectsDuplicatedAttachmentNamesAfterRenaming)
