@@ -80,6 +80,8 @@
 #include "query/operations.hpp"
 #include "query/union.hpp"
 #include "query/where.hpp"
+#include "structure/part.hpp"
+#include "structure/skeleton.hpp"
 #include "system/argument_parser.hpp"
 #include "system/translator.hpp"
 #include "threading/task.hpp"
