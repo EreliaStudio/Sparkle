@@ -29,26 +29,26 @@ namespace
 
 namespace spk
 {
-	Assembly::Element::Attachment::Attachment(std::string name) :
+	Assembly::Element::AttachmentPoint::AttachmentPoint(std::string name) :
 		NameTrait(std::move(name))
 	{
 	}
 
-	Assembly::Element::Attachment::~Attachment() = default;
-	Assembly::Element::Attachment::Attachment(Attachment &&) noexcept = default;
-	Assembly::Element::Attachment &Assembly::Element::Attachment::operator=(Attachment &&) = default;
+	Assembly::Element::AttachmentPoint::~AttachmentPoint() = default;
+	Assembly::Element::AttachmentPoint::AttachmentPoint(AttachmentPoint &&) noexcept = default;
+	Assembly::Element::AttachmentPoint &Assembly::Element::AttachmentPoint::operator=(AttachmentPoint &&) = default;
 
-	const Matrix4x4 &Assembly::Element::Attachment::transform() const noexcept
+	const Matrix4x4 &Assembly::Element::AttachmentPoint::transform() const noexcept
 	{
 		return _transform;
 	}
 
-	const Assembly::Element *Assembly::Element::Attachment::child() const noexcept
+	const Assembly::Element *Assembly::Element::AttachmentPoint::child() const noexcept
 	{
 		return _child.get();
 	}
 
-	void Assembly::Element::Attachment::setPosition(const Vector3 &position)
+	void Assembly::Element::AttachmentPoint::setPosition(const Vector3 &position)
 	{
 		validatePosition(position);
 		_transform[3][0] = position.x;
@@ -56,13 +56,13 @@ namespace spk
 		_transform[3][2] = position.z;
 	}
 
-	void Assembly::Element::Attachment::setOrientation(const Quaternion &orientation)
+	void Assembly::Element::AttachmentPoint::setOrientation(const Quaternion &orientation)
 	{
 		const Vector3 position{_transform[3][0], _transform[3][1], _transform[3][2]};
 		setTransform(position, orientation);
 	}
 
-	void Assembly::Element::Attachment::setTransform(const Vector3 &position, const Quaternion &orientation)
+	void Assembly::Element::AttachmentPoint::setTransform(const Vector3 &position, const Quaternion &orientation)
 	{
 		_transform = rigidTransform(position, orientation);
 	}
@@ -85,68 +85,68 @@ namespace spk
 		_anchor = rigidTransform(position, orientation);
 	}
 
-	Assembly::Element::Attachment &Assembly::Element::addAttachmentPoint(
+	Assembly::Element::AttachmentPoint &Assembly::Element::addAttachmentPoint(
 		std::string name,
 		const Vector3 &position,
 		const Quaternion &orientation)
 	{
-		const auto existing = std::ranges::find_if(_attachments, [&name](const Attachment &entry) {
+		const auto existing = std::ranges::find_if(_attachmentPoints, [&name](const AttachmentPoint &entry) {
 			return entry.name() == name;
 		});
-		if (existing != _attachments.end())
+		if (existing != _attachmentPoints.end())
 		{
-			throw spk::Exception("Duplicate attachment point '" + name + "' in Assembly::Element '" + this->name() + "'");
+			throw spk::Exception("Duplicate attachmentPoint point '" + name + "' in Assembly::Element '" + this->name() + "'");
 		}
 
-		Attachment entry(std::move(name));
+		AttachmentPoint entry(std::move(name));
 		entry.setTransform(position, orientation);
-		_attachments.push_back(std::move(entry));
-		return _attachments.back();
+		_attachmentPoints.push_back(std::move(entry));
+		return _attachmentPoints.back();
 	}
 
-	void Assembly::Element::reserveAttachments(std::size_t count)
+	void Assembly::Element::reserveAttachmentPoints(std::size_t count)
 	{
-		_attachments.reserve(count);
+		_attachmentPoints.reserve(count);
 	}
 
-	Assembly::Element::Attachment &Assembly::Element::attachment(const std::string &name)
+	Assembly::Element::AttachmentPoint &Assembly::Element::attachmentPoint(const std::string &name)
 	{
-		const auto it = std::ranges::find_if(_attachments, [&name](const Attachment &entry) {
+		const auto it = std::ranges::find_if(_attachmentPoints, [&name](const AttachmentPoint &entry) {
 			return entry.name() == name;
 		});
-		if (it == _attachments.end())
+		if (it == _attachmentPoints.end())
 		{
-			throw spk::Exception("Unknown attachment point '" + name + "' in Assembly::Element '" + this->name() + "'");
+			throw spk::Exception("Unknown attachmentPoint point '" + name + "' in Assembly::Element '" + this->name() + "'");
 		}
 		return *it;
 	}
 
-	const Assembly::Element::Attachment &Assembly::Element::attachment(const std::string &name) const
+	const Assembly::Element::AttachmentPoint &Assembly::Element::attachmentPoint(const std::string &name) const
 	{
-		return const_cast<Assembly::Element *>(this)->attachment(name);
+		return const_cast<Assembly::Element *>(this)->attachmentPoint(name);
 	}
 
-	const std::vector<Assembly::Element::Attachment> &Assembly::Element::attachments() const noexcept
+	const std::vector<Assembly::Element::AttachmentPoint> &Assembly::Element::attachmentPoints() const noexcept
 	{
-		return _attachments;
+		return _attachmentPoints;
 	}
 
-	Assembly::Element::Attachment &Assembly::Element::_availableAttachment(const std::string &name)
+	Assembly::Element::AttachmentPoint &Assembly::Element::_availableAttachmentPoint(const std::string &name)
 	{
-		Attachment &entry = attachment(name);
+		AttachmentPoint &entry = attachmentPoint(name);
 		if (entry._child != nullptr)
 		{
-			throw spk::Exception("Attachment point '" + name + "' in Assembly::Element '" + this->name() + "' already has a child");
+			throw spk::Exception("AttachmentPoint point '" + name + "' in Assembly::Element '" + this->name() + "' already has a child");
 		}
 		return entry;
 	}
 
 	void Assembly::Element::removeChild(const std::string &name)
 	{
-		Attachment &entry = attachment(name);
+		AttachmentPoint &entry = attachmentPoint(name);
 		if (entry._child == nullptr)
 		{
-			throw spk::Exception("Attachment point '" + name + "' has no child to remove");
+			throw spk::Exception("AttachmentPoint point '" + name + "' has no child to remove");
 		}
 		entry._child.reset();
 	}

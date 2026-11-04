@@ -21,14 +21,14 @@ namespace spk
 			{
 				throw spk::Exception("Duplicate Assembly::Element name '" + element.name() + "' in Assembly");
 			}
-			std::unordered_set<std::string> attachmentNames;
-			for (const auto &attachment : element.attachments())
+			std::unordered_set<std::string> attachmentPointNames;
+			for (const auto &attachmentPoint : element.attachmentPoints())
 			{
-				if (!attachmentNames.insert(attachment.name()).second)
+				if (!attachmentPointNames.insert(attachmentPoint.name()).second)
 				{
-					throw spk::Exception("Duplicate attachment name '" + attachment.name() + "' in Assembly::Element '" + element.name() + "'");
+					throw spk::Exception("Duplicate attachmentPoint name '" + attachmentPoint.name() + "' in Assembly::Element '" + element.name() + "'");
 				}
-				if (const Assembly::Element *child = attachment.child())
+				if (const Assembly::Element *child = attachmentPoint.child())
 				{
 					collectElements(*child, elements);
 				}
@@ -68,7 +68,7 @@ namespace spk
 		const std::string &elementName,
 		const std::string &attachmentName) const
 	{
-		return _element(elementName).attachment(attachmentName).transform();
+		return _element(elementName).attachmentPoint(attachmentName).transform();
 	}
 
 	Assembly::Builder::Builder() :

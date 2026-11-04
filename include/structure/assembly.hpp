@@ -53,7 +53,7 @@ namespace spk
 	class Assembly::Element : public NameTrait
 	{
 	public:
-		class Attachment : public NameTrait
+		class AttachmentPoint : public NameTrait
 		{
 			friend class Element;
 
@@ -62,13 +62,13 @@ namespace spk
 			std::unique_ptr<Element> _child;
 
 		public:
-			explicit Attachment(std::string name);
-			~Attachment();
+			explicit AttachmentPoint(std::string name);
+			~AttachmentPoint();
 
-			Attachment(const Attachment &) = delete;
-			Attachment &operator=(const Attachment &) = delete;
-			Attachment(Attachment &&) noexcept;
-			Attachment &operator=(Attachment &&);
+			AttachmentPoint(const AttachmentPoint &) = delete;
+			AttachmentPoint &operator=(const AttachmentPoint &) = delete;
+			AttachmentPoint(AttachmentPoint &&) noexcept;
+			AttachmentPoint &operator=(AttachmentPoint &&);
 
 			[[nodiscard]] const Matrix4x4 &transform() const noexcept;
 			[[nodiscard]] const Element *child() const noexcept;
@@ -80,15 +80,15 @@ namespace spk
 
 	private:
 		Matrix4x4 _anchor = Matrix4x4::identity();
-		std::vector<Attachment> _attachments;
+		std::vector<AttachmentPoint> _attachmentPoints;
 
-		[[nodiscard]] Attachment &_availableAttachment(const std::string &name);
+		[[nodiscard]] AttachmentPoint &_availableAttachmentPoint(const std::string &name);
 
 		template <typename T, typename... TArgs>
 			requires std::derived_from<T, Element> && std::constructible_from<T, TArgs...>
 		T &_emplaceChild(const std::string &name, TArgs &&...args)
 		{
-			Attachment &entry = _availableAttachment(name);
+			AttachmentPoint &entry = _availableAttachmentPoint(name);
 			auto child = std::make_unique<T>(std::forward<TArgs>(args)...);
 			T &result = *child;
 			entry._child = std::move(child);
@@ -107,14 +107,14 @@ namespace spk
 		[[nodiscard]] const Matrix4x4 &anchor() const noexcept;
 		void setAnchor(const Vector3 &position, const Quaternion &orientation = {});
 
-		Attachment &addAttachmentPoint(
+		AttachmentPoint &addAttachmentPoint(
 			std::string name,
 			const Vector3 &position = {},
 			const Quaternion &orientation = {});
-		void reserveAttachments(std::size_t count);
-		[[nodiscard]] Attachment &attachment(const std::string &name);
-		[[nodiscard]] const Attachment &attachment(const std::string &name) const;
-		[[nodiscard]] const std::vector<Attachment> &attachments() const noexcept;
+		void reserveAttachmentPoints(std::size_t count);
+		[[nodiscard]] AttachmentPoint &attachmentPoint(const std::string &name);
+		[[nodiscard]] const AttachmentPoint &attachmentPoint(const std::string &name) const;
+		[[nodiscard]] const std::vector<AttachmentPoint> &attachmentPoints() const noexcept;
 
 		template <typename T>
 			requires std::derived_from<std::remove_cvref_t<T>, Element> &&
@@ -142,7 +142,7 @@ namespace spk
 			requires std::derived_from<T, Element>
 		[[nodiscard]] const T *child(const std::string &name) const
 		{
-			const Element *result = attachment(name).child();
+			const Element *result = attachmentPoint(name).child();
 			if (result == nullptr)
 			{
 				return nullptr;

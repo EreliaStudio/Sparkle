@@ -71,9 +71,9 @@ TEST(AssemblyElementTest, AttachmentNamesAreUniqueAndLookupThrows)
 	spk::Assembly::Element element("torso");
 	element.addAttachmentPoint("shoulder");
 	EXPECT_THROW(element.addAttachmentPoint("shoulder"), spk::Exception);
-	EXPECT_THROW((void)element.attachment("missing"), spk::Exception);
-	EXPECT_EQ(element.attachment("shoulder").name(), "shoulder");
-	EXPECT_EQ(element.attachment("shoulder").child(), nullptr);
+	EXPECT_THROW((void)element.attachmentPoint("missing"), spk::Exception);
+	EXPECT_EQ(element.attachmentPoint("shoulder").name(), "shoulder");
+	EXPECT_EQ(element.attachmentPoint("shoulder").child(), nullptr);
 }
 
 TEST(AssemblyElementTest, AttachPreservesDerivedTypesAndSupportsInPlaceConstruction)
@@ -102,7 +102,7 @@ TEST(AssemblyElementTest, AttachmentValidationAndRemovalKeepGeometry)
 	EXPECT_THROW(torso.attach<spk::Assembly::Element>("shoulder", "other"), spk::Exception);
 
 	torso.removeChild("shoulder");
-	EXPECT_EQ(torso.attachment("shoulder").transform()[3][0], 3.0f);
+	EXPECT_EQ(torso.attachmentPoint("shoulder").transform()[3][0], 3.0f);
 	EXPECT_EQ(torso.child("shoulder"), nullptr);
 	EXPECT_THROW(torso.removeChild("shoulder"), spk::Exception);
 }
@@ -110,14 +110,14 @@ TEST(AssemblyElementTest, AttachmentValidationAndRemovalKeepGeometry)
 TEST(AssemblyElementTest, ReserveAllowsStableAttachmentReferencesWithinCapacity)
 {
 	spk::Assembly::Element torso("torso");
-	torso.reserveAttachments(3);
+	torso.reserveAttachmentPoints(3);
 	auto &first = torso.addAttachmentPoint("first");
 	torso.addAttachmentPoint("second");
 	torso.addAttachmentPoint("third");
 	first.setPosition({1, 0, 0});
 
-	EXPECT_EQ(torso.attachment("first").transform()[3][0], 1.0f);
-	EXPECT_EQ(torso.attachments().size(), 3u);
+	EXPECT_EQ(torso.attachmentPoint("first").transform()[3][0], 1.0f);
+	EXPECT_EQ(torso.attachmentPoints().size(), 3u);
 }
 
 TEST(AssemblyElementTest, MovingThroughPolymorphicBaseReferenceIsRejected)
@@ -133,9 +133,9 @@ TEST(AssemblyElementTest, MovingThroughPolymorphicBaseReferenceIsRejected)
 TEST(AssemblyElementTest, RejectsInvalidQuaternionWithoutChangingTransform)
 {
 	spk::Assembly::Element torso("torso");
-	auto &attachment = torso.addAttachmentPoint("point");
-	EXPECT_THROW(attachment.setOrientation({0, 0, 0, 0}), spk::Exception);
-	EXPECT_EQ(attachment.transform()[0][0], 1.0f);
+	auto &attachmentPoint = torso.addAttachmentPoint("point");
+	EXPECT_THROW(attachmentPoint.setOrientation({0, 0, 0, 0}), spk::Exception);
+	EXPECT_EQ(attachmentPoint.transform()[0][0], 1.0f);
 	EXPECT_THROW(torso.setAnchor({0, 0, 0}, {0, 0, 0, 0}), spk::Exception);
 	EXPECT_EQ(torso.anchor()[0][0], 1.0f);
 }
@@ -143,9 +143,9 @@ TEST(AssemblyElementTest, RejectsInvalidQuaternionWithoutChangingTransform)
 TEST(AssemblyElementTest, AttachmentUsesNameTrait)
 {
 	spk::Assembly::Element element("torso");
-	auto &attachment = element.addAttachmentPoint("oldName");
-	attachment.setName("newName");
+	auto &attachmentPoint = element.addAttachmentPoint("oldName");
+	attachmentPoint.setName("newName");
 
-	EXPECT_EQ(element.attachment("newName").name(), "newName");
-	EXPECT_THROW((void)element.attachment("oldName"), spk::Exception);
+	EXPECT_EQ(element.attachmentPoint("newName").name(), "newName");
+	EXPECT_THROW((void)element.attachmentPoint("oldName"), spk::Exception);
 }
