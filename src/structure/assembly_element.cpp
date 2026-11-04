@@ -95,7 +95,7 @@ namespace spk
 		});
 		if (existing != _attachmentPoints.end())
 		{
-			throw spk::Exception("Duplicate attachmentPoint point '" + name + "' in Assembly::Element '" + this->name() + "'");
+			throw spk::Exception("Duplicate attachment point '" + name + "' in Assembly::Element '" + this->name() + "'");
 		}
 
 		AttachmentPoint entry(std::move(name));
@@ -116,7 +116,7 @@ namespace spk
 		});
 		if (it == _attachmentPoints.end())
 		{
-			throw spk::Exception("Unknown attachmentPoint point '" + name + "' in Assembly::Element '" + this->name() + "'");
+			throw spk::Exception("Unknown attachment point '" + name + "' in Assembly::Element '" + this->name() + "'");
 		}
 		return *it;
 	}

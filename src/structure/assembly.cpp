@@ -26,7 +26,7 @@ namespace spk
 			{
 				if (!attachmentPointNames.insert(attachmentPoint.name()).second)
 				{
-					throw spk::Exception("Duplicate attachmentPoint name '" + attachmentPoint.name() + "' in Assembly::Element '" + element.name() + "'");
+					throw spk::Exception("Duplicate attachment point name '" + attachmentPoint.name() + "' in Assembly::Element '" + element.name() + "'");
 				}
 				if (const Assembly::Element *child = attachmentPoint.child())
 				{
