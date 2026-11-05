@@ -114,7 +114,7 @@ namespace spk
 			if (const auto *bound = dynamic_cast<const Instance *>(child))
 			{
 				const std::string &name = bound->parentAttachment()->definition().name();
-				target.attachment(name).bind(*bound);
+				target.attachment(name).attach(*bound);
 			}
 		}
 		for (std::size_t i = 0; i < source._ownedChildren.size(); ++i)
@@ -163,7 +163,7 @@ namespace spk
 		}
 		if (other.parentAttachment() != nullptr)
 		{
-			throw spk::Exception("Cannot move an attached Assembly::Instance; unbind it first");
+			throw spk::Exception("Cannot move an attached Assembly::Instance; detach it first");
 		}
 		_adopt(other);
 	}
@@ -180,7 +180,7 @@ namespace spk
 		}
 		if (other.parentAttachment() != nullptr)
 		{
-			throw spk::Exception("Cannot move an attached Assembly::Instance; unbind it first");
+			throw spk::Exception("Cannot move an attached Assembly::Instance; detach it first");
 		}
 		for (const Instance *ancestor = this; ancestor->parentAttachment() != nullptr;)
 		{
