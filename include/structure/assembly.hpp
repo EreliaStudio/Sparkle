@@ -251,7 +251,7 @@ namespace spk
 		std::unique_ptr<Data> _data;
 
 		static void _copyPose(ElementNode &target, const ElementNode &source);
-		void _adopt(std::unique_ptr<Data> data);
+		void _adopt(Instance &source) noexcept;
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
