@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -82,7 +84,7 @@ TEST(AssemblyInstanceTest, RejectsInvalidRotationsWithoutChangingPose)
 	const float before = pose.element("arm").globalTransform()[3][0];
 
 	EXPECT_THROW(shoulder.setRotation(spk::Quaternion{0, 0, 0, 0}), spk::Exception);
-	EXPECT_THROW(shoulder.rotate(spk::Vector3{INFINITY, 0, 0}), spk::Exception);
+	EXPECT_THROW(shoulder.rotate(spk::Vector3{std::numeric_limits<float>::infinity(), 0, 0}), spk::Exception);
 	EXPECT_NEAR(pose.element("arm").globalTransform()[3][0], before, 0.0001f);
 }
 
