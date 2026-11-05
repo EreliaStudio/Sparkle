@@ -8,6 +8,9 @@
 #include <typeinfo>
 #include <utility>
 #include <vector>
+#include <unordered_map>
+
+#include "container/cached_data.hpp"
 
 #include "design_pattern/trait/name_trait.hpp"
 #include "exception.hpp"
@@ -20,6 +23,9 @@ namespace spk
 	public:
 		class Element;
 		class Builder;
+		class Attachable;
+		class AttachmentNode;
+		class Instance;
 
 	private:
 		struct Data;
@@ -200,4 +206,137 @@ namespace spk
 		[[nodiscard]] Element &root();
 		[[nodiscard]] Assembly build();
 	};
+
+	class Assembly::Attachable
+	{
+		friend class Assembly::AttachmentNode;
+
+	private:
+		Attachable *_structuralParent;
+		AttachmentNode *_parentAttachment;
+		std::vector<Attachable *> _children;
+		mutable CachedData<Matrix4x4> _globalTransform;
+
+		[[nodiscard]] Matrix4x4 _calculateGlobalTransform() const;
+
+	protected:
+		explicit Attachable(Attachable *structuralParent = nullptr, AttachmentNode *parentAttachment = nullptr);
+		void _addChild(Attachable &child);
+		void _removeChild(Attachable &child);
+		void _invalidateTransform() const;
+		[[nodiscard]] virtual const Matrix4x4 &_localTransform() const noexcept = 0;
+
+	public:
+		virtual ~Attachable() = default;
+
+		Attachable(const Attachable &) = delete;
+		Attachable &operator=(const Attachable &) = delete;
+		Attachable(Attachable &&) = delete;
+		Attachable &operator=(Attachable &&) = delete;
+
+		[[nodiscard]] AttachmentNode *parentAttachment() noexcept;
+		[[nodiscard]] const AttachmentNode *parentAttachment() const noexcept;
+		[[nodiscard]] const std::vector<Attachable *> &children() const noexcept;
+		[[nodiscard]] const Matrix4x4 &globalTransform() const;
+	};
+
+	class Assembly::Instance : public Assembly::Attachable
+	{
+	public:
+		class ElementNode;
+		using AttachmentNode = Assembly::AttachmentNode;
+
+	private:
+		Assembly _assembly;
+		std::unique_ptr<ElementNode> _root;
+		std::unordered_map<std::string, ElementNode *> _elements;
+
+		void _register(ElementNode &node);
+		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
+
+	public:
+		explicit Instance(Assembly assembly);
+		~Instance();
+
+		Instance(const Instance &) = delete;
+		Instance &operator=(const Instance &) = delete;
+		Instance(Instance &&) = delete;
+		Instance &operator=(Instance &&) = delete;
+
+		[[nodiscard]] const Assembly &assembly() const noexcept;
+		[[nodiscard]] ElementNode &root() noexcept;
+		[[nodiscard]] const ElementNode &root() const noexcept;
+		[[nodiscard]] ElementNode &element(const std::string &name);
+		[[nodiscard]] const ElementNode &element(const std::string &name) const;
+		[[nodiscard]] AttachmentNode &attachment(const std::string &elementName, const std::string &attachmentName);
+		[[nodiscard]] const AttachmentNode &attachment(const std::string &elementName, const std::string &attachmentName) const;
+	};
+
+	class Assembly::AttachmentNode
+	{
+	private:
+		Instance::ElementNode *_owner;
+		const Element::AttachmentPoint *_definition;
+		Matrix4x4 _rotationMatrix = Matrix4x4::identity();
+		Matrix4x4 _transform = Matrix4x4::identity();
+		std::unique_ptr<Instance> _bound;
+
+		void _applyRotation(const Matrix4x4 &rotation);
+
+	public:
+		AttachmentNode(Instance::ElementNode &owner, const Element::AttachmentPoint &definition);
+		~AttachmentNode();
+
+		AttachmentNode(const AttachmentNode &) = delete;
+		AttachmentNode &operator=(const AttachmentNode &) = delete;
+		AttachmentNode(AttachmentNode &&) = delete;
+		AttachmentNode &operator=(AttachmentNode &&) = delete;
+
+		[[nodiscard]] const Element::AttachmentPoint &definition() const noexcept;
+		[[nodiscard]] Instance::ElementNode &owner() noexcept;
+		[[nodiscard]] const Instance::ElementNode &owner() const noexcept;
+		[[nodiscard]] const Matrix4x4 &rotationMatrix() const noexcept;
+		[[nodiscard]] const Matrix4x4 &transform() const noexcept;
+
+		void setRotation(const Quaternion &rotation);
+		void setRotation(const Vector3 &euler);
+		void rotate(const Quaternion &rotation);
+		void rotate(const Vector3 &euler);
+
+		[[nodiscard]] Instance *bound() noexcept;
+		[[nodiscard]] const Instance *bound() const noexcept;
+		Instance &bind(const Assembly &assembly);
+		Instance &bind(std::unique_ptr<Instance> instance);
+		[[nodiscard]] std::unique_ptr<Instance> unbind();
+	};
+
+	class Assembly::Instance::ElementNode : public Assembly::Attachable
+	{
+		friend class Assembly::Instance;
+		friend class Assembly::AttachmentNode;
+
+	private:
+		const Element *_definition;
+		Instance *_instance;
+		std::vector<std::unique_ptr<ElementNode>> _ownedChildren;
+		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
+
+		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
+
+	public:
+		ElementNode(Instance &instance, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
+		~ElementNode();
+
+		ElementNode(const ElementNode &) = delete;
+		ElementNode &operator=(const ElementNode &) = delete;
+		ElementNode(ElementNode &&) = delete;
+		ElementNode &operator=(ElementNode &&) = delete;
+
+		[[nodiscard]] const Element &definition() const noexcept;
+		[[nodiscard]] Instance &instance() noexcept;
+		[[nodiscard]] const Instance &instance() const noexcept;
+		[[nodiscard]] AttachmentNode &attachment(const std::string &name);
+		[[nodiscard]] const AttachmentNode &attachment(const std::string &name) const;
+	};
+
 }
