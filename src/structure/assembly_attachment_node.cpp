@@ -112,8 +112,7 @@ namespace spk
 		try
 		{
 			_owner->_addChild(*_bound.back());
-		}
-		catch (...)
+		} catch (...)
 		{
 			_bound.pop_back();
 			throw;
