@@ -23,9 +23,9 @@ namespace spk
 		void _register(ElementNode &node)
 		{
 			elements.emplace(node.definition().name(), &node);
-			for (Attachable *child : node.children())
+			for (const auto &child : node._ownedChildren)
 			{
-				_register(static_cast<ElementNode &>(*child));
+				_register(*child);
 			}
 		}
 	};
@@ -82,7 +82,7 @@ namespace spk
 		return _parentAttachment;
 	}
 
-	const std::vector<Assembly::Attachable *> &Assembly::Attachable::children() const noexcept
+	const std::vector<const Assembly::Attachable *> &Assembly::Attachable::children() const noexcept
 	{
 		return _children;
 	}
