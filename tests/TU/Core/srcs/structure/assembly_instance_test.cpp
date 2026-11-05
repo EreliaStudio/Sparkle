@@ -117,7 +117,7 @@ TEST(AssemblyInstanceTest, TraversesOnlyDirectChildrenInStructuralThenInsertionO
 	EXPECT_EQ(character.element("arm").children()[0], &character.element("hand"));
 }
 
-TEST(AssemblyInstanceTest, BindsMultipleAccessoriesToStructuralAttachment)
+TEST(AssemblyInstanceTest, AttachesMultipleAccessoriesToStructuralAttachment)
 {
 	spk::Assembly::Instance character(armAssembly());
 	auto &shoulder = character.attachment("body", "shoulder");
@@ -188,7 +188,7 @@ TEST(AssemblyInstanceTest, DetachesSpecificAccessoryWithoutAffectingOthers)
 	EXPECT_EQ(character.root().children().size(), 2u);
 }
 
-TEST(AssemblyInstanceTest, DetachThenRebindKeepsRecursiveArticulations)
+TEST(AssemblyInstanceTest, DetachThenReattachKeepsRecursiveArticulations)
 {
 	spk::Assembly::Instance character(armAssembly());
 	spk::Assembly::Instance sword(swordAssembly());
@@ -212,7 +212,7 @@ TEST(AssemblyInstanceTest, DetachThenRebindKeepsRecursiveArticulations)
 	EXPECT_NEAR(rebound.root().globalTransform()[3][0], 3.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, BindCopiesSourcePoseWithoutSharingMutableNodes)
+TEST(AssemblyInstanceTest, AttachCopiesSourcePoseWithoutSharingMutableNodes)
 {
 	spk::Assembly::Instance source(swordAssembly());
 	auto &sourceGuard = source.attachment("blade", "guard");
