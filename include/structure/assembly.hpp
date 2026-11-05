@@ -284,7 +284,7 @@ namespace spk
 		std::vector<std::unique_ptr<Instance>> _bound;
 
 		void _applyRotation(const Matrix4x4 &rotation);
-		Instance &_bindOwned(std::unique_ptr<Instance> instance);
+		Instance &_attachOwned(std::unique_ptr<Instance> instance);
 
 	public:
 		AttachmentNode(Instance::ElementNode &owner, const Element::AttachmentPoint &definition);
@@ -306,11 +306,11 @@ namespace spk
 		void rotate(const Quaternion &rotation);
 		void rotate(const Vector3 &euler);
 
-		[[nodiscard]] std::size_t boundCount() const noexcept;
-		Instance &bind(const Assembly &assembly);
-		Instance &bind(const Instance &instance);
-		Instance &bind(Instance &&instance);
-		[[nodiscard]] Instance unbind(Instance &instance);
+		[[nodiscard]] std::size_t attachedCount() const noexcept;
+		Instance &attach(const Assembly &assembly);
+		Instance &attach(const Instance &instance);
+		Instance &attach(Instance &&instance);
+		[[nodiscard]] Instance detach(Instance &instance);
 	};
 
 	class Assembly::Instance::ElementNode : public Assembly::Attachable
