@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 #include "exception.hpp"
@@ -33,6 +34,10 @@ namespace
 		return builder.build();
 	}
 }
+
+static_assert(std::is_same_v<
+	decltype(std::declval<const spk::Assembly::Attachable &>().children()),
+	const std::vector<const spk::Assembly::Attachable *> &>);
 
 TEST(AssemblyInstanceTest, UsesSharedDefinitionsAndIndependentGlobalTransforms)
 {
@@ -240,7 +245,7 @@ TEST(AssemblyInstanceTest, CopiesNestedInstancesAndKeepsThemIndependent)
 	EXPECT_NE(&copy.root(), &original.root());
 	EXPECT_EQ(copy.attachment("body", "grip").boundCount(), 1u);
 	EXPECT_EQ(copy.root().children().size(), original.root().children().size());
-	auto *copiedSword = dynamic_cast<spk::Assembly::Instance *>(copy.root().children()[1]);
+	const auto *copiedSword = dynamic_cast<const spk::Assembly::Instance *>(copy.root().children()[1]);
 	ASSERT_NE(copiedSword, nullptr);
 	EXPECT_NE(copiedSword, &sword);
 	EXPECT_EQ(copiedSword->attachment("blade", "guard").boundCount(), 1u);
