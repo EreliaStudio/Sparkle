@@ -366,3 +366,17 @@ TEST(AssemblyInstanceTest, CopiesAnAttachedInstanceAsIndependentRoot)
 	EXPECT_THROW(character.attachment("body", "shoulder").unbind(original), spk::Exception);
 	EXPECT_EQ(grip.boundCount(), 1u);
 }
+
+TEST(AssemblyInstanceTest, RejectsMovingAnInstanceWhoseDataWasAlreadyTransferred)
+{
+	spk::Assembly::Instance original(swordAssembly());
+	spk::Assembly::Instance transferred(std::move(original));
+	spk::Assembly::Instance destination(armAssembly());
+	auto &grip = destination.attachment("body", "grip");
+
+	EXPECT_THROW(grip.bind(std::move(original)), spk::Exception);
+	EXPECT_EQ(grip.boundCount(), 0u);
+	EXPECT_THROW((transferred = std::move(original)), spk::Exception);
+	EXPECT_EQ(transferred.assembly().root().name(), "blade");
+	EXPECT_EQ(&transferred.root().instance(), &transferred);
+}
