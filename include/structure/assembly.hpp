@@ -209,6 +209,7 @@ namespace spk
 	class Assembly::Attachable
 	{
 		friend class Assembly::AttachmentNode;
+		friend class Assembly::Instance;
 
 	private:
 		Attachable *_structuralParent;
@@ -246,21 +247,21 @@ namespace spk
 		using AttachmentNode = Assembly::AttachmentNode;
 
 	private:
-		Assembly _assembly;
-		std::unique_ptr<ElementNode> _root;
-		std::unordered_map<std::string, ElementNode *> _elements;
+		struct Data;
+		std::unique_ptr<Data> _data;
 
-		void _register(ElementNode &node);
+		static void _copyPose(ElementNode &target, const ElementNode &source);
+		void _adopt(std::unique_ptr<Data> data);
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
 		explicit Instance(Assembly assembly);
 		~Instance();
 
-		Instance(const Instance &) = delete;
-		Instance &operator=(const Instance &) = delete;
-		Instance(Instance &&) = delete;
-		Instance &operator=(Instance &&) = delete;
+		Instance(const Instance &other);
+		Instance &operator=(const Instance &other);
+		Instance(Instance &&other);
+		Instance &operator=(Instance &&other);
 
 		[[nodiscard]] const Assembly &assembly() const noexcept;
 		[[nodiscard]] ElementNode &root() noexcept;
@@ -273,14 +274,17 @@ namespace spk
 
 	class Assembly::AttachmentNode
 	{
+		friend class Assembly::Instance;
+
 	private:
 		Instance::ElementNode *_owner;
 		const Element::AttachmentPoint *_definition;
 		Matrix4x4 _rotationMatrix = Matrix4x4::identity();
 		Matrix4x4 _transform = Matrix4x4::identity();
-		std::unique_ptr<Instance> _bound;
+		std::vector<std::unique_ptr<Instance>> _bound;
 
 		void _applyRotation(const Matrix4x4 &rotation);
+		Instance &_bindOwned(std::unique_ptr<Instance> instance);
 
 	public:
 		AttachmentNode(Instance::ElementNode &owner, const Element::AttachmentPoint &definition);
@@ -302,11 +306,11 @@ namespace spk
 		void rotate(const Quaternion &rotation);
 		void rotate(const Vector3 &euler);
 
-		[[nodiscard]] Instance *bound() noexcept;
-		[[nodiscard]] const Instance *bound() const noexcept;
+		[[nodiscard]] std::size_t boundCount() const noexcept;
 		Instance &bind(const Assembly &assembly);
-		Instance &bind(std::unique_ptr<Instance> instance);
-		[[nodiscard]] std::unique_ptr<Instance> unbind();
+		Instance &bind(const Instance &instance);
+		Instance &bind(Instance &&instance);
+		[[nodiscard]] Instance unbind(Instance &instance);
 	};
 
 	class Assembly::Instance::ElementNode : public Assembly::Attachable
@@ -316,14 +320,14 @@ namespace spk
 
 	private:
 		const Element *_definition;
-		Instance *_instance;
+		Instance::Data *_instanceData;
 		std::vector<std::unique_ptr<ElementNode>> _ownedChildren;
 		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
 
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
-		ElementNode(Instance &instance, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
+		ElementNode(Instance::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
 		~ElementNode();
 
 		ElementNode(const ElementNode &) = delete;
