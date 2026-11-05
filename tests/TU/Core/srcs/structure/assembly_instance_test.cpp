@@ -27,7 +27,9 @@ namespace
 	spk::Assembly swordAssembly()
 	{
 		spk::Assembly::Builder builder;
-		builder.setRoot<spk::Assembly::Element>("blade").setAnchor({0, 2, 0});
+		auto &blade = builder.setRoot<spk::Assembly::Element>("blade");
+		blade.setAnchor({0, 2, 0});
+		blade.addAttachmentPoint("guard", {0, 1, 0});
 		return builder.build();
 	}
 }
@@ -289,12 +291,12 @@ TEST(AssemblyInstanceTest, AssignmentPreservesParentAttachmentAndRecomputesPose)
 	EXPECT_EQ(&bound.root().instance(), &bound);
 	EXPECT_EQ(bound.assembly().root().name(), "body");
 	EXPECT_NEAR(bound.root().globalTransform()[3][0], oldGlobal[3][0] + 1.0f, 0.0001f);
-	EXPECT_NEAR(bound.element("arm").globalTransform()[3][0], 5.0f, 0.0001f);
+	EXPECT_NEAR(bound.element("arm").globalTransform()[3][0], 6.0f, 0.0001f);
 
 	spk::Assembly::Instance other(armAssembly());
 	bound = std::move(other);
 	EXPECT_EQ(bound.parentAttachment(), &grip);
-	EXPECT_NEAR(bound.element("arm").globalTransform()[3][0], 6.0f, 0.0001f);
+	EXPECT_NEAR(bound.element("arm").globalTransform()[3][0], 7.0f, 0.0001f);
 }
 
 TEST(AssemblyInstanceTest, RejectsInvalidAttachmentsAndMoves)
