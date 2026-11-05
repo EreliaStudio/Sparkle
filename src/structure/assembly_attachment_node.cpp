@@ -66,7 +66,7 @@ namespace spk
 	{
 		_rotationMatrix = rotation;
 		_transform = _definition->transform() * _rotationMatrix;
-		for (Attachable *child : _owner->children())
+		for (const Attachable *child : _owner->children())
 		{
 			if (child->parentAttachment() == this)
 			{
