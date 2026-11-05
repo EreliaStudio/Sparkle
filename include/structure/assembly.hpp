@@ -214,7 +214,7 @@ namespace spk
 	private:
 		Attachable *_structuralParent;
 		AttachmentNode *_parentAttachment;
-		std::vector<Attachable *> _children;
+		std::vector<const Attachable *> _children;
 		mutable CachedData<Matrix4x4> _globalTransform;
 
 		[[nodiscard]] Matrix4x4 _calculateGlobalTransform() const;
@@ -236,7 +236,7 @@ namespace spk
 
 		[[nodiscard]] AttachmentNode *parentAttachment() noexcept;
 		[[nodiscard]] const AttachmentNode *parentAttachment() const noexcept;
-		[[nodiscard]] const std::vector<Attachable *> &children() const noexcept;
+		[[nodiscard]] const std::vector<const Attachable *> &children() const noexcept;
 		[[nodiscard]] const Matrix4x4 &globalTransform() const;
 	};
 
