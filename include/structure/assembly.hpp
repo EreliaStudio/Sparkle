@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "container/cached_data.hpp"
-
 #include "design_pattern/trait/name_trait.hpp"
 #include "exception.hpp"
 #include "math/matrix.hpp"
