@@ -263,9 +263,9 @@ namespace spk
 		Instance(Instance &&other);
 		Instance &operator=(Instance &&other);
 
-		[[nodiscard]] const Assembly &assembly() const noexcept;
-		[[nodiscard]] ElementNode &root() noexcept;
-		[[nodiscard]] const ElementNode &root() const noexcept;
+		[[nodiscard]] const Assembly &assembly() const;
+		[[nodiscard]] ElementNode &root();
+		[[nodiscard]] const ElementNode &root() const;
 		[[nodiscard]] ElementNode &element(const std::string &name);
 		[[nodiscard]] const ElementNode &element(const std::string &name) const;
 		[[nodiscard]] AttachmentNode &attachment(const std::string &elementName, const std::string &attachmentName);
