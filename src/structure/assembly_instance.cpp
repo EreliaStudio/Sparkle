@@ -157,6 +157,10 @@ namespace spk
 
 	Assembly::Instance::Instance(Instance &&other)
 	{
+		if (other._data == nullptr)
+		{
+			throw spk::Exception("Cannot move an already moved-from Assembly::Instance");
+		}
 		if (other.parentAttachment() != nullptr)
 		{
 			throw spk::Exception("Cannot move an attached Assembly::Instance; unbind it first");
@@ -169,6 +173,10 @@ namespace spk
 		if (this == &other)
 		{
 			return *this;
+		}
+		if (other._data == nullptr)
+		{
+			throw spk::Exception("Cannot move an already moved-from Assembly::Instance");
 		}
 		if (other.parentAttachment() != nullptr)
 		{
