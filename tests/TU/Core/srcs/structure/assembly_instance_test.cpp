@@ -35,9 +35,9 @@ namespace
 	}
 }
 
-static_assert(std::is_same_v<
-	decltype(std::declval<const spk::Assembly::Attachable &>().children()),
-	const std::vector<const spk::Assembly::Attachable *> &>);
+using ReadOnlyChildren = const std::vector<const spk::Assembly::Attachable *> &;
+using ActualChildren = decltype(std::declval<const spk::Assembly::Attachable &>().children());
+static_assert(std::is_same_v<ActualChildren, ReadOnlyChildren>);
 
 TEST(AssemblyInstanceTest, UsesSharedDefinitionsAndIndependentGlobalTransforms)
 {
