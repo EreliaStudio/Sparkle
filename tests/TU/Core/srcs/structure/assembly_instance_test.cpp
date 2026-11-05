@@ -314,7 +314,7 @@ TEST(AssemblyInstanceTest, RejectsInvalidAttachmentsAndMoves)
 	EXPECT_EQ(grip.boundCount(), 1u);
 	EXPECT_EQ(sword.parentAttachment(), &grip);
 	EXPECT_THROW((sword = std::move(character)), spk::Exception);
-	EXPECT_EQ(&sword.assembly().root(), &unrelated.assembly().root());
+	EXPECT_EQ(sword.assembly().root().name(), "blade");
 }
 
 TEST(AssemblyInstanceTest, RejectsQuaternionOverflowAndInvalidEulerWithoutMutation)
@@ -328,4 +328,41 @@ TEST(AssemblyInstanceTest, RejectsQuaternionOverflowAndInvalidEulerWithoutMutati
 	EXPECT_THROW(shoulder.rotate(spk::Quaternion{max, 0, 0, max}), spk::Exception);
 	EXPECT_THROW(shoulder.setRotation(spk::Vector3{0, max, std::numeric_limits<float>::quiet_NaN()}), spk::Exception);
 	EXPECT_NEAR(character.element("arm").globalTransform()[3][0], before, 0.0001f);
+}
+
+TEST(AssemblyInstanceTest, ComposesStaticAttachmentOrientationBeforeDynamicRotation)
+{
+	spk::Assembly::Builder builder;
+	auto &root = builder.setRoot<spk::Assembly::Element>("root");
+	root.addAttachmentPoint("pivot", {2, 0, 0}, spk::Quaternion::fromAxisAngle({0, 0, 1}, 90.0f));
+	root.attach<spk::Assembly::Element>("pivot", "child").setAnchor({1, 0, 0});
+	spk::Assembly::Instance instance(builder.build());
+	auto &pivot = instance.attachment("root", "pivot");
+
+	EXPECT_NEAR(instance.element("child").globalTransform()[3][0], 2.0f, 0.0001f);
+	EXPECT_NEAR(instance.element("child").globalTransform()[3][1], 1.0f, 0.0001f);
+	pivot.rotate(spk::Vector3{0, 0, 90});
+	EXPECT_NEAR(instance.element("child").globalTransform()[3][0], 1.0f, 0.0001f);
+	EXPECT_NEAR(instance.element("child").globalTransform()[3][1], 0.0f, 0.0001f);
+	EXPECT_NEAR(pivot.transform()[3][0], 2.0f, 0.0001f);
+	EXPECT_NEAR(pivot.transform()[3][1], 0.0f, 0.0001f);
+}
+
+TEST(AssemblyInstanceTest, CopiesAnAttachedInstanceAsIndependentRoot)
+{
+	spk::Assembly::Instance character(armAssembly());
+	auto &grip = character.attachment("body", "grip");
+	auto &original = grip.bind(swordAssembly());
+	original.attachment("blade", "guard").setRotation(spk::Vector3{0, 0, 90});
+	const auto attachedX = original.root().globalTransform()[3][0];
+
+	spk::Assembly::Instance copy = original;
+	EXPECT_EQ(copy.parentAttachment(), nullptr);
+	EXPECT_NE(&copy.root(), &original.root());
+	EXPECT_EQ(&copy.assembly().root(), &original.assembly().root());
+	EXPECT_NEAR(copy.root().globalTransform()[3][0], 0.0f, 0.0001f);
+	EXPECT_NEAR(original.root().globalTransform()[3][0], attachedX, 0.0001f);
+	EXPECT_NEAR(copy.attachment("blade", "guard").rotationMatrix()[0][0], 0.0f, 0.0001f);
+	EXPECT_THROW(character.attachment("body", "shoulder").unbind(original), spk::Exception);
+	EXPECT_EQ(grip.boundCount(), 1u);
 }
