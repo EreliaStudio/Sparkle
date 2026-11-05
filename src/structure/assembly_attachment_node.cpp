@@ -1,5 +1,6 @@
 #include "structure/assembly.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -7,9 +8,8 @@ namespace
 {
 	void validateRotation(const spk::Quaternion &rotation)
 	{
-		if (!std::isfinite(rotation.x) || !std::isfinite(rotation.y) ||
-			!std::isfinite(rotation.z) || !std::isfinite(rotation.w) ||
-			rotation.dot(rotation) == 0.0f)
+		const float lengthSquared = rotation.dot(rotation);
+		if (!std::isfinite(lengthSquared) || lengthSquared <= 0.0f)
 		{
 			throw spk::Exception("Assembly::AttachmentNode rotation must be a finite non-zero quaternion");
 		}
@@ -66,7 +66,13 @@ namespace spk
 	{
 		_rotationMatrix = rotation;
 		_transform = _definition->transform() * _rotationMatrix;
-		_owner->instance()._invalidateTransform();
+		for (Attachable *child : _owner->children())
+		{
+			if (child->parentAttachment() == this)
+			{
+				child->_invalidateTransform();
+			}
+		}
 	}
 
 	void Assembly::AttachmentNode::setRotation(const Quaternion &rotation)
@@ -91,44 +97,71 @@ namespace spk
 		rotate(eulerRotation(euler));
 	}
 
-	Assembly::Instance *Assembly::AttachmentNode::bound() noexcept
+	std::size_t Assembly::AttachmentNode::boundCount() const noexcept
 	{
-		return _bound.get();
+		return _bound.size();
 	}
 
-	const Assembly::Instance *Assembly::AttachmentNode::bound() const noexcept
+	Assembly::Instance &Assembly::AttachmentNode::_bindOwned(std::unique_ptr<Instance> instance)
 	{
-		return _bound.get();
+		if (!instance || instance->parentAttachment() != nullptr)
+		{
+			throw spk::Exception("Assembly::AttachmentNode cannot bind an invalid or attached instance");
+		}
+		_bound.push_back(std::move(instance));
+		try
+		{
+			_owner->_addChild(*_bound.back());
+		}
+		catch (...)
+		{
+			_bound.pop_back();
+			throw;
+		}
+		Instance &result = *_bound.back();
+		result._parentAttachment = this;
+		result._invalidateTransform();
+		return result;
 	}
 
 	Assembly::Instance &Assembly::AttachmentNode::bind(const Assembly &assembly)
 	{
-		return bind(std::make_unique<Instance>(assembly));
+		return _bindOwned(std::make_unique<Instance>(assembly));
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::bind(std::unique_ptr<Instance> instance)
+	Assembly::Instance &Assembly::AttachmentNode::bind(const Instance &instance)
 	{
-		if (_bound || _definition->child() != nullptr || !instance || instance->parentAttachment())
-		{
-			throw spk::Exception("Assembly::AttachmentNode cannot bind an occupied or invalid instance");
-		}
-		Instance &result = *instance;
-		_owner->_addChild(result);
-		result._parentAttachment = this;
-		result._invalidateTransform();
-		_bound = std::move(instance);
-		return result;
+		return _bindOwned(std::make_unique<Instance>(instance));
 	}
 
-	std::unique_ptr<Assembly::Instance> Assembly::AttachmentNode::unbind()
+	Assembly::Instance &Assembly::AttachmentNode::bind(Instance &&instance)
 	{
-		if (!_bound)
+		for (const Instance *ancestor = &_owner->instance(); ancestor != nullptr;)
 		{
-			throw spk::Exception("Assembly::AttachmentNode has no bound instance");
+			if (ancestor == &instance)
+			{
+				throw spk::Exception("Assembly::AttachmentNode cannot bind its own ancestor");
+			}
+			const AttachmentNode *parent = ancestor->parentAttachment();
+			ancestor = parent != nullptr ? &parent->owner().instance() : nullptr;
 		}
-		_owner->_removeChild(*_bound);
-		_bound->_parentAttachment = nullptr;
-		_bound->_invalidateTransform();
-		return std::move(_bound);
+		return _bindOwned(std::make_unique<Instance>(std::move(instance)));
+	}
+
+	Assembly::Instance Assembly::AttachmentNode::unbind(Instance &instance)
+	{
+		const auto it = std::ranges::find_if(_bound, [&instance](const auto &entry) {
+			return entry.get() == &instance;
+		});
+		if (it == _bound.end())
+		{
+			throw spk::Exception("Assembly::AttachmentNode does not own the requested instance");
+		}
+		_owner->_removeChild(**it);
+		(*it)->_parentAttachment = nullptr;
+		(*it)->_invalidateTransform();
+		Instance detached(std::move(**it));
+		_bound.erase(it);
+		return detached;
 	}
 }
