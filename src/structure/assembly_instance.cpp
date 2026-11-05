@@ -8,7 +8,9 @@ namespace spk
 	Assembly::Attachable::Attachable(Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		_structuralParent(structuralParent),
 		_parentAttachment(parentAttachment),
-		_globalTransform([this]() { return _calculateGlobalTransform(); })
+		_globalTransform([this]() {
+			return _calculateGlobalTransform();
+		})
 	{
 	}
 
