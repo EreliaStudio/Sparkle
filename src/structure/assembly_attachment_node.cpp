@@ -97,16 +97,16 @@ namespace spk
 		rotate(eulerRotation(euler));
 	}
 
-	std::size_t Assembly::AttachmentNode::boundCount() const noexcept
+	std::size_t Assembly::AttachmentNode::attachedCount() const noexcept
 	{
 		return _bound.size();
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::_bindOwned(std::unique_ptr<Instance> instance)
+	Assembly::Instance &Assembly::AttachmentNode::_attachOwned(std::unique_ptr<Instance> instance)
 	{
 		if (!instance || instance->parentAttachment() != nullptr)
 		{
-			throw spk::Exception("Assembly::AttachmentNode cannot bind an invalid or attached instance");
+			throw spk::Exception("Assembly::AttachmentNode cannot attach an invalid or already attached instance");
 		}
 		_bound.push_back(std::move(instance));
 		try
@@ -123,31 +123,31 @@ namespace spk
 		return result;
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::bind(const Assembly &assembly)
+	Assembly::Instance &Assembly::AttachmentNode::attach(const Assembly &assembly)
 	{
-		return _bindOwned(std::make_unique<Instance>(assembly));
+		return _attachOwned(std::make_unique<Instance>(assembly));
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::bind(const Instance &instance)
+	Assembly::Instance &Assembly::AttachmentNode::attach(const Instance &instance)
 	{
-		return _bindOwned(std::make_unique<Instance>(instance));
+		return _attachOwned(std::make_unique<Instance>(instance));
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::bind(Instance &&instance)
+	Assembly::Instance &Assembly::AttachmentNode::attach(Instance &&instance)
 	{
 		for (const Instance *ancestor = &_owner->instance(); ancestor != nullptr;)
 		{
 			if (ancestor == &instance)
 			{
-				throw spk::Exception("Assembly::AttachmentNode cannot bind its own ancestor");
+				throw spk::Exception("Assembly::AttachmentNode cannot attach its own ancestor");
 			}
 			const AttachmentNode *parent = ancestor->parentAttachment();
 			ancestor = parent != nullptr ? &parent->owner().instance() : nullptr;
 		}
-		return _bindOwned(std::make_unique<Instance>(std::move(instance)));
+		return _attachOwned(std::make_unique<Instance>(std::move(instance)));
 	}
 
-	Assembly::Instance Assembly::AttachmentNode::unbind(Instance &instance)
+	Assembly::Instance Assembly::AttachmentNode::detach(Instance &instance)
 	{
 		const auto it = std::ranges::find_if(_bound, [&instance](const auto &entry) {
 			return entry.get() == &instance;
