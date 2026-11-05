@@ -5,6 +5,31 @@
 
 namespace spk
 {
+	struct Assembly::Instance::Data
+	{
+		Instance *owner;
+		Assembly assembly;
+		std::unique_ptr<ElementNode> root;
+		std::unordered_map<std::string, ElementNode *> elements;
+
+		explicit Data(Instance &instance, Assembly definition) :
+			owner(&instance),
+			assembly(std::move(definition))
+		{
+			root = std::make_unique<ElementNode>(*this, assembly.root(), &instance, nullptr);
+			_register(*root);
+		}
+
+		void _register(ElementNode &node)
+		{
+			elements.emplace(node.definition().name(), &node);
+			for (Attachable *child : node.children())
+			{
+				_register(static_cast<ElementNode &>(*child));
+			}
+		}
+	};
+
 	Assembly::Attachable::Attachable(Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		_structuralParent(structuralParent),
 		_parentAttachment(parentAttachment),
@@ -68,22 +93,101 @@ namespace spk
 	}
 
 	Assembly::Instance::Instance(Assembly assembly) :
-		_assembly(std::move(assembly))
+		_data(std::make_unique<Data>(*this, std::move(assembly)))
 	{
-		_root = std::make_unique<ElementNode>(*this, _assembly.root(), this, nullptr);
-		_addChild(*_root);
-		_register(*_root);
+		_addChild(*_data->root);
 	}
 
 	Assembly::Instance::~Instance() = default;
 
-	void Assembly::Instance::_register(ElementNode &node)
+	void Assembly::Instance::_copyPose(ElementNode &target, const ElementNode &source)
 	{
-		_elements.emplace(node.definition().name(), &node);
-		for (const auto &child : node._ownedChildren)
+		for (std::size_t i = 0; i < source._attachments.size(); ++i)
 		{
-			_register(*child);
+			auto &destination = *target._attachments[i];
+			const auto &origin = *source._attachments[i];
+			destination._rotationMatrix = origin._rotationMatrix;
+			destination._transform = origin._transform;
 		}
+		for (const Attachable *child : source.children())
+		{
+			if (const auto *bound = dynamic_cast<const Instance *>(child))
+			{
+				const std::string &name = bound->parentAttachment()->definition().name();
+				target.attachment(name).bind(*bound);
+			}
+		}
+		for (std::size_t i = 0; i < source._ownedChildren.size(); ++i)
+		{
+			_copyPose(*target._ownedChildren[i], *source._ownedChildren[i]);
+		}
+	}
+
+	Assembly::Instance::Instance(const Instance &other) :
+		Instance(other.assembly())
+	{
+		_copyPose(root(), other.root());
+	}
+
+	void Assembly::Instance::_adopt(Instance &source) noexcept
+	{
+		_data = std::move(source._data);
+		_children.swap(source._children);
+		source._children.clear();
+		if (_data != nullptr)
+		{
+			_data->owner = this;
+			_data->root->_structuralParent = this;
+		}
+	}
+
+	Assembly::Instance &Assembly::Instance::operator=(const Instance &other)
+	{
+		if (this != &other)
+		{
+			Instance copy(other);
+			_adopt(copy);
+			if (parentAttachment() != nullptr)
+			{
+				_invalidateTransform();
+			}
+		}
+		return *this;
+	}
+
+	Assembly::Instance::Instance(Instance &&other)
+	{
+		if (other.parentAttachment() != nullptr)
+		{
+			throw spk::Exception("Cannot move an attached Assembly::Instance; unbind it first");
+		}
+		_adopt(other);
+	}
+
+	Assembly::Instance &Assembly::Instance::operator=(Instance &&other)
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+		if (other.parentAttachment() != nullptr)
+		{
+			throw spk::Exception("Cannot move an attached Assembly::Instance; unbind it first");
+		}
+		for (const Instance *ancestor = this; ancestor->parentAttachment() != nullptr;)
+		{
+			ancestor = &ancestor->parentAttachment()->owner().instance();
+			if (ancestor == &other)
+			{
+				throw spk::Exception("Cannot move an ancestor into its own attached descendant");
+			}
+		}
+		_adopt(other);
+		if (parentAttachment() != nullptr)
+		{
+			_invalidateTransform();
+		}
+		return *this;
 	}
 
 	const Matrix4x4 &Assembly::Instance::_localTransform() const noexcept
@@ -92,25 +196,37 @@ namespace spk
 		return identity;
 	}
 
-	const Assembly &Assembly::Instance::assembly() const noexcept
+	const Assembly &Assembly::Instance::assembly() const
 	{
-		return _assembly;
+		if (_data == nullptr)
+		{
+			throw spk::Exception("Assembly::Instance has been moved from");
+		}
+		return _data->assembly;
 	}
 
-	Assembly::Instance::ElementNode &Assembly::Instance::root() noexcept
+	Assembly::Instance::ElementNode &Assembly::Instance::root()
 	{
-		return *_root;
+		if (_data == nullptr)
+		{
+			throw spk::Exception("Assembly::Instance has been moved from");
+		}
+		return *_data->root;
 	}
 
-	const Assembly::Instance::ElementNode &Assembly::Instance::root() const noexcept
+	const Assembly::Instance::ElementNode &Assembly::Instance::root() const
 	{
-		return *_root;
+		return const_cast<Instance *>(this)->root();
 	}
 
 	Assembly::Instance::ElementNode &Assembly::Instance::element(const std::string &name)
 	{
-		const auto it = _elements.find(name);
-		if (it == _elements.end())
+		if (_data == nullptr)
+		{
+			throw spk::Exception("Assembly::Instance has been moved from");
+		}
+		const auto it = _data->elements.find(name);
+		if (it == _data->elements.end())
 		{
 			throw spk::Exception("Unknown Assembly::Instance Element '" + name + "'");
 		}
@@ -135,10 +251,10 @@ namespace spk
 	}
 
 	Assembly::Instance::ElementNode::ElementNode(
-		Instance &instance, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
+		Instance::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		Attachable(structuralParent, parentAttachment),
 		_definition(&definition),
-		_instance(&instance)
+		_instanceData(&instanceData)
 	{
 		_attachments.reserve(definition.attachmentPoints().size());
 		_ownedChildren.reserve(definition.attachmentPoints().size());
@@ -147,7 +263,7 @@ namespace spk
 			auto attachment = std::make_unique<AttachmentNode>(*this, point);
 			if (const Element *child = point.child())
 			{
-				auto node = std::make_unique<ElementNode>(instance, *child, nullptr, attachment.get());
+				auto node = std::make_unique<ElementNode>(instanceData, *child, nullptr, attachment.get());
 				_addChild(*node);
 				_ownedChildren.push_back(std::move(node));
 			}
@@ -169,12 +285,12 @@ namespace spk
 
 	Assembly::Instance &Assembly::Instance::ElementNode::instance() noexcept
 	{
-		return *_instance;
+		return *_instanceData->owner;
 	}
 
 	const Assembly::Instance &Assembly::Instance::ElementNode::instance() const noexcept
 	{
-		return *_instance;
+		return *_instanceData->owner;
 	}
 
 	Assembly::AttachmentNode &Assembly::Instance::ElementNode::attachment(const std::string &name)
