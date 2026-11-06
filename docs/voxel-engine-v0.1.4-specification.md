@@ -21,6 +21,10 @@ Ce fichier est le **sommaire normatif** des dix fichiers thématiques de Sparkle
 | 7.5–7.8 | [GPU, Forward et WBOIT](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) |
 | 8 | [Contrats et validation](voxel-engine-v0.1.4/10-contrats-et-validation.md) |
 
+## Actualisation de l'architecture des vues d'Assembly (6 novembre 2026)
+
+La conception des `spk::Assembly::Instance::View` et de leur préparation par des systèmes orchestrateurs est explicitée dans le [chapitre 6 — vues d'Instance et workers](voxel-engine-v0.1.4/06-assemblies-scene.md#décisions-de-conception-du-6-novembre-2026--vues-dinstance-et-workers). La décision validée est un **`spk::WorkerPool` créé, configuré et détenu par l'utilisateur, lié facultativement aux systèmes** : sans pool, le système construit les vues de manière synchrone. Les descriptions plus anciennes de rendu d'Assembly doivent être réconciliées avec cette conception avant l'implémentation.
+
 ## État consolidé de l'éclairage (Q-TECH-002)
 
 Les arbitrages suivants sont **validés** et décrits de façon normative dans le [chapitre Lumières et ombres](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) et ses [tests](voxel-engine-v0.1.4/10-contrats-et-validation.md) :
