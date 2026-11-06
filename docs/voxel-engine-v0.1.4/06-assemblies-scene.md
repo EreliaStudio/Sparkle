@@ -4,6 +4,36 @@
 
 ## 6. Assembly, composants et scène
 
+## Décisions de conception du 6 novembre 2026 — vues d'Instance et workers
+
+> **Révision en cours de l'architecture d'Assembly.** Les décisions ci-dessous résultent d'une reprise de la conception des vues à partir des classes Core existantes `spk::Assembly` et `spk::Assembly::Instance`. Elles prévalent, pour les vues et leur orchestration, sur les propositions historiques contradictoires plus bas dans ce chapitre. Les paragraphes historiques devront être harmonisés avant l'implémentation ; aucune nouvelle organisation interne des vues n'est présumée.
+
+### Responsabilités confirmées
+
+- **`spk::Assembly::Instance` (Core) :** décrit l'objet et ses transformations en **repère local**. L'Instance ne détermine pas à elle seule sa position dans le monde.
+- **`spk::Assembly::Instance::View` (Graphics, nom de conception) :** représente graphiquement une Instance liée. La View sait préparer/construire les meshes nécessaires à sa représentation et **conserve dans le temps ses associations de palettes, élément par élément**. Il n'y a pas de palette globale imposée à la View.
+- **Partage :** plusieurs View peuvent représenter la **même Instance** simultanément, avec des palettes indépendantes. Les modifications de l'Instance sont communes aux représentations ; la relation habituelle restera une View pour une Instance.
+- **Placement dans le monde (futur composant ECS) :** un composant portant une View obtiendra le `Transform3D` de son `Owner` et appliquera la matrice de l'entité aux transformations locales de l'Instance. Deux composants distincts pourront placer la même Instance à des endroits différents. La conception détaillée de ce composant reste à faire.
+- **Systèmes ECS :** ils sont principalement des **orchestrateurs**. Un futur système de rendu d'Instances parcourt les composants enregistrés, identifie les View à préparer, puis sollicite leur construction. Il peut ensuite collecter, produire ou faire produire les commandes de rendu ; la logique de construction des meshes appartient à chaque View.
+
+### `spk::WorkerPool` optionnel, possédé par l'utilisateur
+
+L'**utilisateur de Sparkle** crée et configure lui-même le `spk::WorkerPool` (notamment son nombre de workers), en garantit la durée de vie et **fournit explicitement son adresse aux systèmes** qui doivent s'en servir. Un même pool peut ainsi être partagé entre plusieurs systèmes. Les systèmes ne sont **pas propriétaires** du pool ; ni singleton global, ni pool automatiquement imposé par `Application` ou `Window`.
+
+Exemple **conceptuel**, sans figer l'API exacte :
+
+```cpp
+spk::WorkerPool pool(/* configuration choisie par l'utilisateur */);
+mySystem.bind(&pool); // liaison non propriétaire ; nom/signature indicatifs
+```
+
+- **Avec pool lié :** le système soumet un job par View qui nécessite une préparation ; ce job demande à la View d'effectuer sa construction CPU. La View reste indépendante du pool et du thread d'exécution.
+- **Sans pool lié :** le système **effectue lui-même les mêmes constructions**, directement et de manière synchrone sur son thread d'appel. L'absence de pool n'empêche pas le rendu et ne doit pas entraîner l'abandon des View à construire.
+- **Travail graphique :** les calculs de meshes CPU peuvent être différés, mais les opérations OpenGL nécessitant un contexte sont réalisées sur un thread disposant du contexte approprié, pas arbitrairement dans les workers.
+- **Durée de vie :** l'utilisateur veille à ne pas détruire le pool tant que des systèmes ou jobs en dépendent. Les contrats exacts de fin de tâche, invalidation et publication des résultats restent à définir, sans ajouter à ce stade d'identifiants, de caches ou de synchronisation propres aux vues.
+
+**Point encore ouvert :** la manière exacte dont le système constate qu'une View doit être construite ou reconstruite, et l'API finale de liaison du pool. Le choix de **propriété utilisateur + liaison facultative + repli synchrone** est, lui, validé.
+
 ### 6.1 `spk::Voxel::Assembly`
 
 Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **contenant sa propre liaison à une `spk::Palette`**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.
