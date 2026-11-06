@@ -4,6 +4,32 @@
 
 ## 6. Assembly, composants et scène
 
+## Décisions de conception du 6 novembre 2026 — vues d'Instance et workers
+
+> **Révision en cours de l'architecture d'Assembly.** Les décisions ci-dessous résultent d'une reprise de la conception des vues à partir des classes Core existantes `spk::Assembly` et `spk::Assembly::Instance`. Elles prévalent, pour les vues et leur orchestration, sur les propositions historiques contradictoires plus bas dans ce chapitre. Les paragraphes historiques devront être harmonisés avant l'implémentation ; aucune nouvelle organisation interne des vues n'est présumée.
+
+### Responsabilités confirmées
+
+- **`spk::Assembly::Instance` (Core) :** décrit l'objet et ses transformations en **repère local**. L'Instance ne détermine pas à elle seule sa position dans le monde.
+- **`spk::Assembly::Instance::View` (Graphics, nom de conception) :** représente graphiquement une Instance liée. La View sait préparer/construire les meshes nécessaires à sa représentation et **conserve dans le temps ses associations de palettes, élément par élément**. Il n'y a pas de palette globale imposée à la View.
+- **Partage :** plusieurs View peuvent représenter la **même Instance** simultanément, avec des palettes indépendantes. Les modifications de l'Instance sont communes aux représentations ; la relation habituelle restera une View pour une Instance.
+- **Placement dans le monde (futur composant ECS) :** un composant portant une View obtiendra le `Transform3D` de son `Owner` et appliquera la matrice de l'entité aux transformations locales de l'Instance. Deux composants distincts pourront placer la même Instance à des endroits différents. La conception détaillée de ce composant reste à faire.
+- **Systèmes ECS :** ils sont principalement des **orchestrateurs**. Un futur système de rendu d'Instances parcourt les composants enregistrés, identifie les View à préparer, puis sollicite leur construction. Il peut ensuite collecter, produire ou faire produire les commandes de rendu ; la logique de construction des meshes appartient à chaque View.
+
+### `spk::Services::workerPool()` — service transverse partagé
+
+**Orientation de conception pour PR-08.4 :** Sparkle fournit un point d'accès global `spk::Services` (pluriel), proposant `workerPool()`, qui retourne une **référence** vers un unique `spk::WorkerPool` partagé par tous les systèmes et par tout autre code utilisateur. Le pool n'est pas un membre statique de `spk::System` : les systèmes, comme les autres appelants, utilisent ce service commun. Aucun `WorkerPool` n'est à transmettre manuellement aux composants, événements, `View` ou systèmes.
+
+- **Premier accès et démarrage (validé) :** le premier appel à `spk::Services::workerPool()` crée le pool partagé et **démarre immédiatement ses workers**, puis retourne une référence stable. Les appels suivants récupèrent la même instance déjà démarrée. L'accès et le démarrage sont indépendants de `Application::run()` ou du thread d'update : les jobs soumis avant l'exécution de l'application peuvent donc commencer aussitôt.
+- **Valeur par défaut validée :** `max(1, std::thread::hardware_concurrency() / 2)` workers, avec division entière. `hardware_concurrency()` est une estimation du nombre de threads matériels, pas du nombre de cœurs physiques ; si elle retourne `0`, utiliser un seul worker.
+- **Configuration :** l'utilisateur peut appeler `spk::Services::setWorkerCount(std::size_t count)` (nom proposé, cohérent avec `WorkerPool::workerCount()`) **avant le premier appel à `workerPool()`**, pour remplacer la valeur par défaut. Un nombre nul est invalide et doit lever `spk::Exception`. **Après création/démarrage du pool, tout appel à `setWorkerCount()` lève `spk::Exception`**, même si la valeur demandée est identique. La configuration et le premier accès doivent être coordonnés pour éviter une course entre appels concurrents. Le constructeur actuel de `spk::WorkerPool` démarre déjà les threads ; aucune méthode `start()` séparée n'est nécessaire.
+- **Pas de remplacement de pool prévu :** l'API normale porte sur la configuration et l'usage du service existant, non sur l'échange du pool en activité. L'utilisateur ne doit pas tenter d'écraser le pool via `spk::Services::workerPool() = autrePool;`. **Dans le code actuel, cette affectation est interdite à la compilation** : les opérateurs d'affectation par copie et déplacement de `spk::WorkerPool` sont supprimés. N'introduire aucun contrat de remplacement/annulation des jobs à partir de cette hypothèse.
+- **Utilisation par les systèmes :** les systèmes ECS restent des orchestrateurs ; par exemple le futur système de rendu repère les `View` qui nécessitent une construction et soumet au pool partagé un job qui demande à chaque `View` de construire sa géométrie CPU. Chaque `View` reste indépendante de `Services` et des threads.
+- **Contexte graphique :** les opérations OpenGL restent sur le thread disposant du contexte graphique approprié, même lorsque la préparation CPU est déléguée.
+- **Travaux restant à spécifier :** l'arrêt propre du service à la fin du programme et la manière dont une `View` signale qu'elle nécessite une préparation. Il n'est pas prévu de protéger une affectation/recréation forcée du pool par l'utilisateur.
+
+L'ancienne approche `spk::System` avec un `WorkerPool` statique et `setWorkerPool(...)`, comme la proposition d'un pool fourni séparément par l'utilisateur à chaque système, sont **remplacées** par cette orientation de service transverse. Cela ne constitue pas une autorisation de modifier l'implémentation.
+
 ### 6.1 `spk::Voxel::Assembly`
 
 Une Assembly est une **hiérarchie mutable de parties** sans Entity propre pour chaque membre. Chaque Part possède un identifiant stable au sein de son Assembly, un nom, éventuellement un parent, une transformation locale et éventuellement une copie légère de `Model` **contenant sa propre liaison à une `spk::Palette`**. Un point d'attache nommé peut ne contenir aucun mesh ; il peut servir à composer des modèles ou à **insérer une copie développée** d'une autre Assembly, sans référence vivante à celle-ci.

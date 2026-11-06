@@ -21,6 +21,10 @@ Ce fichier est le **sommaire normatif** des dix fichiers thématiques de Sparkle
 | 7.5–7.8 | [GPU, Forward et WBOIT](voxel-engine-v0.1.4/09-pipeline-gpu-transparence.md) |
 | 8 | [Contrats et validation](voxel-engine-v0.1.4/10-contrats-et-validation.md) |
 
+## Actualisation de l'architecture des vues d'Assembly (6 novembre 2026)
+
+La conception des `spk::Assembly::Instance::View` et de leur préparation par des systèmes orchestrateurs est explicitée dans le [chapitre 6 — vues d'Instance et workers](voxel-engine-v0.1.4/06-assemblies-scene.md#décisions-de-conception-du-6-novembre-2026--vues-dinstance-et-workers). La décision retenue pour la PR-08.4 est un service générique **`spk::Services::workerPool()`**, utilisable depuis les systèmes comme partout ailleurs : **au premier appel, il crée et démarre un pool partagé avec un nombre de workers par défaut calculé selon le parallélisme matériel** ; les appels suivants retournent une référence vers cette même instance. Ce démarrage peut précéder `Application::run()`. Le nombre de workers par défaut est `max(1, std::thread::hardware_concurrency() / 2)` ; l'utilisateur peut le modifier avant le premier accès via `spk::Services::setWorkerCount(count)` (nom d'API proposé). Après la création du pool, cette méthode lève `spk::Exception`. Aucune substitution de pool en activité n'est prévue. Les descriptions plus anciennes de rendu d'Assembly doivent être réconciliées avec cette conception avant l'implémentation.
+
 ## État consolidé de l'éclairage (Q-TECH-002)
 
 Les arbitrages suivants sont **validés** et décrits de façon normative dans le [chapitre Lumières et ombres](voxel-engine-v0.1.4/08-lumieres-et-ombres.md) et ses [tests](voxel-engine-v0.1.4/10-contrats-et-validation.md) :
