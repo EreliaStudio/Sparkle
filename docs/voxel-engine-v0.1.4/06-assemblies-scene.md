@@ -16,23 +16,19 @@
 - **Placement dans le monde (futur composant ECS) :** un composant portant une View obtiendra le `Transform3D` de son `Owner` et appliquera la matrice de l'entité aux transformations locales de l'Instance. Deux composants distincts pourront placer la même Instance à des endroits différents. La conception détaillée de ce composant reste à faire.
 - **Systèmes ECS :** ils sont principalement des **orchestrateurs**. Un futur système de rendu d'Instances parcourt les composants enregistrés, identifie les View à préparer, puis sollicite leur construction. Il peut ensuite collecter, produire ou faire produire les commandes de rendu ; la logique de construction des meshes appartient à chaque View.
 
-### `spk::WorkerPool` optionnel, possédé par l'utilisateur
+### `spk::WorkerPool` partagé entre tous les systèmes
 
-L'**utilisateur de Sparkle** crée et configure lui-même le `spk::WorkerPool` (notamment son nombre de workers), en garantit la durée de vie et **fournit explicitement son adresse aux systèmes** qui doivent s'en servir. Un même pool peut ainsi être partagé entre plusieurs systèmes. Les systèmes ne sont **pas propriétaires** du pool ; ni singleton global, ni pool automatiquement imposé par `Application` ou `Window`.
+**Décision de conception pour PR-08.4 :** la classe de base `spk::System` expose un **pool de workers statique partagé** (membre `static inline` envisagé), auquel **tous les systèmes** ont accès directement. Un pool est disponible par défaut : l'utilisateur n'a pas à créer un `WorkerPool` ni à le lier à chaque système pour que ceux-ci puissent soumettre des jobs. Cette ressource appartient à l'infrastructure générique des systèmes, pas au module Graphics ni à chaque instance de système.
 
-Exemple **conceptuel**, sans figer l'API exacte :
+- **Utilisation :** les systèmes soumettent leurs calculs différés au pool partagé. Pour les vues, le système de rendu orchestre les demandes ; chaque `View` sait construire sa géométrie CPU et n'a pas besoin de connaître le pool.
+- **Configuration :** une API telle que `spk::System::setWorkerPool(...)` est envisagée pour permettre à l'utilisateur de remplacer/configurer le pool partagé. Le type exact du paramètre, l'éventuel transfert de propriété et les règles de remplacement restent à définir.
+- **Valeur par défaut :** le pool existe dès le fonctionnement normal du programme avec un nombre de workers par défaut **non arrêté**. Le chiffre de six a été cité uniquement comme exemple, sans validation.
+- **Construction graphique :** les calculs CPU des meshes sont adaptés aux workers ; les opérations nécessitant un contexte OpenGL restent sur le thread/context graphique approprié.
+- **Concurrence et durée de vie :** la coordination des tâches déjà soumises lorsqu'on remplace le pool, la destruction du pool et le cas où le pool est explicitement désactivé ne sont pas encore définis. Ne pas imposer à ce stade de solution non décidée.
 
-```cpp
-spk::WorkerPool pool(/* configuration choisie par l'utilisateur */);
-mySystem.bind(&pool); // liaison non propriétaire ; nom/signature indicatifs
-```
+**Attention à l'unicité :** le pool doit être **commun à tous les systèmes** ; si `System` est un template ou utilise un mécanisme susceptible de créer des membres statiques par spécialisation, la réalisation devra placer le stockage partagé dans une base non spécialisée ou un emplacement commun équivalent.
 
-- **Avec pool lié :** le système soumet un job par View qui nécessite une préparation ; ce job demande à la View d'effectuer sa construction CPU. La View reste indépendante du pool et du thread d'exécution.
-- **Sans pool lié :** le système **effectue lui-même les mêmes constructions**, directement et de manière synchrone sur son thread d'appel. L'absence de pool n'empêche pas le rendu et ne doit pas entraîner l'abandon des View à construire.
-- **Travail graphique :** les calculs de meshes CPU peuvent être différés, mais les opérations OpenGL nécessitant un contexte sont réalisées sur un thread disposant du contexte approprié, pas arbitrairement dans les workers.
-- **Durée de vie :** l'utilisateur veille à ne pas détruire le pool tant que des systèmes ou jobs en dépendent. Les contrats exacts de fin de tâche, invalidation et publication des résultats restent à définir, sans ajouter à ce stade d'identifiants, de caches ou de synchronisation propres aux vues.
-
-**Point encore ouvert :** la manière exacte dont le système constate qu'une View doit être construite ou reconstruite, et l'API finale de liaison du pool. Le choix de **propriété utilisateur + liaison facultative + repli synchrone** est, lui, validé.
+**Point encore ouvert :** comment un système détecte qu'une View doit être construite ou reconstruite, et les modalités exactes de configuration du pool partagé. Le précédent choix « pool créé par l'utilisateur puis lié individuellement, avec repli synchrone sans pool » est **abandonné** au profit du pool commun par défaut.
 
 ### 6.1 `spk::Voxel::Assembly`
 
