@@ -23,7 +23,7 @@ Ce fichier est le **sommaire normatif** des dix fichiers thématiques de Sparkle
 
 ## Actualisation de l'architecture des vues d'Assembly (6 novembre 2026)
 
-La conception des `spk::Assembly::Instance::View` et de leur préparation par des systèmes orchestrateurs est explicitée dans le [chapitre 6 — vues d'Instance et workers](voxel-engine-v0.1.4/06-assemblies-scene.md#décisions-de-conception-du-6-novembre-2026--vues-dinstance-et-workers). La décision validée est un **`spk::WorkerPool` créé, configuré et détenu par l'utilisateur, lié facultativement aux systèmes** : sans pool, le système construit les vues de manière synchrone. Les descriptions plus anciennes de rendu d'Assembly doivent être réconciliées avec cette conception avant l'implémentation.
+La conception des `spk::Assembly::Instance::View` et de leur préparation par des systèmes orchestrateurs est explicitée dans le [chapitre 6 — vues d'Instance et workers](voxel-engine-v0.1.4/06-assemblies-scene.md#décisions-de-conception-du-6-novembre-2026--vues-dinstance-et-workers). La décision retenue pour la PR-08.4 est un **`spk::WorkerPool` statique partagé par tous les systèmes via `spk::System`, disponible par défaut**. Une API de remplacement/configuration comme `spk::System::setWorkerPool(...)` est envisagée, avec ses modalités et le nombre de workers par défaut encore à définir. Les descriptions plus anciennes de rendu d'Assembly doivent être réconciliées avec cette conception avant l'implémentation.
 
 ## État consolidé de l'éclairage (Q-TECH-002)
 
