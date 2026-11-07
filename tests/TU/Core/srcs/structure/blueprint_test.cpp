@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "structure/assembly.hpp"
+#include "structure/blueprint.hpp"
 
 namespace
 {
@@ -30,7 +30,7 @@ namespace
 	};
 }
 
-TEST(AssemblyTest, SupportsPreassembledAndBuilderAssembledSubtrees)
+TEST(BlueprintTest, SupportsPreassembledAndBuilderAssembledSubtrees)
 {
 	spk::Assembly::Blueprint::Element hand("leftHand");
 	spk::Assembly::Blueprint::Element arm("leftArm");
@@ -51,7 +51,7 @@ TEST(AssemblyTest, SupportsPreassembledAndBuilderAssembledSubtrees)
 	EXPECT_EQ(skeleton.element("torso").child("shoulder"), &skeleton.element("leftArm"));
 }
 
-TEST(AssemblyTest, SharesImmutableDataAcrossCopies)
+TEST(BlueprintTest, SharesImmutableDataAcrossCopies)
 {
 	spk::Assembly::Blueprint::Builder builder;
 	auto &root = builder.setRoot<TypedElement>("root", 42);
@@ -68,7 +68,7 @@ TEST(AssemblyTest, SharesImmutableDataAcrossCopies)
 	EXPECT_THROW((void)first.element<spk::Assembly::Blueprint::Element>("unused"), spk::Exception);
 }
 
-TEST(AssemblyTest, RejectsDuplicatedNamesAndCanRetryAfterCorrection)
+TEST(BlueprintTest, RejectsDuplicatedNamesAndCanRetryAfterCorrection)
 {
 	spk::Assembly::Blueprint::Builder builder;
 	auto &root = builder.setRoot<spk::Assembly::Blueprint::Element>("body");
@@ -81,7 +81,7 @@ TEST(AssemblyTest, RejectsDuplicatedNamesAndCanRetryAfterCorrection)
 	EXPECT_EQ(skeleton.element("renamed").name(), "renamed");
 }
 
-TEST(AssemblyTest, BuilderCannotBeUsedAfterBuild)
+TEST(BlueprintTest, BuilderCannotBeUsedAfterBuild)
 {
 	spk::Assembly::Blueprint::Builder builder;
 	EXPECT_THROW((void)builder.root(), spk::Exception);
@@ -95,7 +95,7 @@ TEST(AssemblyTest, BuilderCannotBeUsedAfterBuild)
 	EXPECT_THROW(builder.setRoot<spk::Assembly::Blueprint::Element>("other"), spk::Exception);
 }
 
-TEST(AssemblyTest, RejectsSecondRootAndWrongDerivedType)
+TEST(BlueprintTest, RejectsSecondRootAndWrongDerivedType)
 {
 	spk::Assembly::Blueprint::Builder builder;
 	builder.setRoot<TypedElement>("root", 3);
@@ -107,7 +107,7 @@ TEST(AssemblyTest, RejectsSecondRootAndWrongDerivedType)
 	EXPECT_THROW((void)skeleton.element<AnotherTypedElement>("root"), spk::Exception);
 }
 
-TEST(AssemblyTest, RejectsRootMoveThroughBaseReference)
+TEST(BlueprintTest, RejectsRootMoveThroughBaseReference)
 {
 	TypedElement typed("root", 9);
 	spk::Assembly::Blueprint::Element &base = typed;
@@ -119,7 +119,7 @@ TEST(AssemblyTest, RejectsRootMoveThroughBaseReference)
 	EXPECT_EQ(builder.build().element<TypedElement>("root").code, 10);
 }
 
-TEST(AssemblyTest, AcceptsMovedRootAndPreservesItsDerivedType)
+TEST(BlueprintTest, AcceptsMovedRootAndPreservesItsDerivedType)
 {
 	TypedElement root("root", 27);
 	root.addAttachmentPoint("child");
@@ -133,7 +133,7 @@ TEST(AssemblyTest, AcceptsMovedRootAndPreservesItsDerivedType)
 	EXPECT_EQ(skeleton.element("leaf").name(), "leaf");
 }
 
-TEST(AssemblyTest, RejectsDuplicatedAttachmentNamesAfterRenaming)
+TEST(BlueprintTest, RejectsDuplicatedAttachmentNamesAfterRenaming)
 {
 	spk::Assembly::Blueprint::Builder builder;
 	auto &root = builder.setRoot<spk::Assembly::Blueprint::Element>("root");

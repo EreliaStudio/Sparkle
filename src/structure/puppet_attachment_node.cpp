@@ -1,4 +1,4 @@
-#include "structure/assembly.hpp"
+#include "structure/puppet.hpp"
 
 #include <algorithm>
 #include <cmath>
