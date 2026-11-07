@@ -18,8 +18,7 @@ namespace spk::Assembly
 	concept PuppetGraphics = requires(
 		TGraphics &graphics,
 		RenderSnapshot::Builder &builder,
-		const Matrix4x4 &transform)
-	{
+		const Matrix4x4 &transform) {
 		typename TGraphics::ElementType;
 		requires std::derived_from<typename TGraphics::ElementType, Blueprint::Element>;
 		requires std::constructible_from<TGraphics, const typename TGraphics::ElementType &>;
