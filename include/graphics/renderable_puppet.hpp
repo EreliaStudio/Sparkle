@@ -108,6 +108,17 @@ namespace spk::Assembly
 			_prune();
 		}
 
+		void _rebindMovedOwner(const Puppet *previous) noexcept
+		{
+			for (auto &entry : _graphics)
+			{
+				if (entry.second.instance == previous)
+				{
+					entry.second.instance = this;
+				}
+			}
+		}
+
 	public:
 		explicit RenderablePuppet(Blueprint blueprint) :
 			Puppet(std::move(blueprint))
@@ -145,6 +156,7 @@ namespace spk::Assembly
 			_graphics(std::move(other._graphics)),
 			_generation(std::exchange(other._generation, 0))
 		{
+			_rebindMovedOwner(&other);
 		}
 
 		RenderablePuppet &operator=(RenderablePuppet &&other)
@@ -155,6 +167,7 @@ namespace spk::Assembly
 				_graphics = std::move(other._graphics);
 				_generation = std::exchange(other._generation, 0);
 				other._graphics.clear();
+				_rebindMovedOwner(&other);
 			}
 			return *this;
 		}
