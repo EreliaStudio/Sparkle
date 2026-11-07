@@ -1,199 +1,296 @@
+#include <GL/glew.h>
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <string>
 #include <utility>
-#include <vector>
 
-#include "geometry/color_mesh_2d.hpp"
+#include "geometry/texture_mesh_3d.hpp"
 #include "graphics/color.hpp"
+#include "graphics/opengl/program.hpp"
+#include "graphics/opengl/uniform.hpp"
 #include "graphics/renderable_puppet.hpp"
 #include "math/camera_3d.hpp"
 #include "rendering/command/clear_render_command.hpp"
-#include "rendering/command/draw_color_mesh_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
-#include "rendering/command/viewport_uniform_render_command.hpp"
 #include "rendering/render_snapshot.hpp"
+#include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 #include "sparkle_test/paths.hpp"
 
 namespace
 {
 	using Blueprint = spk::Assembly::Blueprint;
-	using ElementNode = spk::Assembly::Puppet::ElementNode;
+	using Character = spk::Assembly::RenderablePuppet<class ColorView>;
 
-	class ColorElement final : public Blueprint::Element
+	constexpr spk::Vector2UInt ImageSize{640, 480};
+	constexpr spk::Color Background{0.06f, 0.09f, 0.14f, 1.0f};
+	constexpr const char *GoldenCategory = "rendering/puppet_3d";
+
+	class ColorVolume final : public Blueprint::Element
 	{
 	public:
 		spk::Color color;
-		spk::Vector2 minimum;
-		spk::Vector2 maximum;
+		spk::Vector3 center;
+		spk::Vector3 size;
 
-		ColorElement(std::string name, spk::Color fill, spk::Vector2 min, spk::Vector2 max) :
+		ColorVolume(std::string name, spk::Color fill, spk::Vector3 position, spk::Vector3 dimensions) :
 			Element(std::move(name)),
 			color(fill),
-			minimum(min),
-			maximum(max)
+			center(position),
+			size(dimensions)
 		{
 		}
 	};
 
-	class ColorElementView final
+	void addFace(
+		spk::TextureMesh3D::Builder &mesh,
+		spk::Vector3 normal,
+		spk::Vector3 a, spk::Vector3 b, spk::Vector3 c, spk::Vector3 d)
+	{
+		mesh.addShape({a, normal, {0, 0}}, {b, normal, {0, 1}}, {c, normal, {1, 1}}, {d, normal, {1, 0}});
+	}
+
+	[[nodiscard]] spk::TextureMesh3D createBox(const ColorVolume &volume)
+	{
+		const auto point = [&](float x, float y, float z) -> spk::Vector3 {
+			return {volume.center.x + x * volume.size.x * 0.5f,
+					volume.center.y + y * volume.size.y * 0.5f,
+					volume.center.z + z * volume.size.z * 0.5f};
+		};
+		spk::TextureMesh3D::Builder mesh;
+		addFace(mesh, {0, 0, 1}, point(-1, 1, 1), point(-1, -1, 1), point(1, -1, 1), point(1, 1, 1));
+		addFace(mesh, {0, 0, -1}, point(1, 1, -1), point(1, -1, -1), point(-1, -1, -1), point(-1, 1, -1));
+		addFace(mesh, {1, 0, 0}, point(1, 1, 1), point(1, -1, 1), point(1, -1, -1), point(1, 1, -1));
+		addFace(mesh, {-1, 0, 0}, point(-1, 1, -1), point(-1, -1, -1), point(-1, -1, 1), point(-1, 1, 1));
+		addFace(mesh, {0, 1, 0}, point(-1, 1, -1), point(-1, 1, 1), point(1, 1, 1), point(1, 1, -1));
+		addFace(mesh, {0, -1, 0}, point(-1, -1, 1), point(-1, -1, -1), point(1, -1, -1), point(1, -1, 1));
+		return std::move(mesh).build();
+	}
+
+	class DrawColorVolumeCommand final : public spk::RenderCommand
+	{
+	private:
+		spk::TextureMesh3D _mesh;
+		spk::Matrix4x4 _transform;
+		spk::Color _color;
+
+		[[nodiscard]] static spk::Program &_program()
+		{
+			static spk::Program result(
+				R"(#version 430 core
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+uniform mat4 uTransform;
+flat out float vShade;
+void main()
+{
+	gl_Position = uTransform * vec4(aPosition, 1.0);
+	vShade = 0.65 + 0.35 * max(dot(aNormal, normalize(vec3(0.3, 0.6, 0.7))), 0.0);
+}
+)",
+				R"(#version 430 core
+flat in float vShade;
+uniform vec4 uColor;
+layout(location = 0) out vec4 fragColor;
+void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
+)");
+			return result;
+		}
+
+	public:
+		DrawColorVolumeCommand(spk::TextureMesh3D mesh, spk::Matrix4x4 transform, spk::Color color) :
+			_mesh(std::move(mesh)),
+			_transform(transform),
+			_color(color)
+		{
+		}
+
+		void execute(spk::RenderContext &context) const override
+		{
+			auto &program = _program();
+			program.activate(context);
+			spk::Uniform<spk::Matrix4x4>("uTransform", _transform).activate(context);
+			spk::Uniform<spk::Vector4>("uColor", {_color.r, _color.g, _color.b, _color.a}).activate(context);
+			_mesh.layout().activate(context);
+			program.render(spk::Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+		}
+	};
+
+	class ColorView final
 	{
 	public:
-		using ElementType = ColorElement;
+		using ElementType = ColorVolume;
 
 	private:
+		spk::TextureMesh3D _mesh;
 		spk::Color _color;
-		spk::Vector2 _min;
-		spk::Vector2 _max;
 
 	public:
-		explicit ColorElementView(const ColorElement &element) :
-			_color(element.color),
-			_min(element.minimum),
-			_max(element.maximum)
+		explicit ColorView(const ColorVolume &element) :
+			_mesh(createBox(element)),
+			_color(element.color)
 		{
 		}
 
-		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform) const;
+		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform) const
+		{
+			builder.renderPass({"puppet-3d", 0}).emplace<DrawColorVolumeCommand>(_mesh, transform, _color);
+		}
 	};
 
-	using Character = spk::Assembly::RenderablePuppet<ColorElementView>;
-	constexpr spk::Vector2UInt ImageSize{640, 480};
-
-	[[nodiscard]] spk::ColorVertex2D project(
-		const spk::Matrix4x4 &transform,
-		spk::Vector2 local,
-		spk::Color color)
-	{
-		const auto clip = transform * spk::Vector4{local.x, local.y, 0.0f, 1.0f};
-		const spk::Vector2 screen{
-			(clip.x / clip.w + 1.0f) * ImageSize.x * 0.5f,
-			(1.0f - clip.y / clip.w) * ImageSize.y * 0.5f};
-		return {screen, 0.0f, color};
-	}
-
-	void ColorElementView::buildRenderSnapshot(
-		spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform) const
-	{
-		auto &pass = builder.renderPass({"puppet-preview", 0});
-		spk::ColorMesh2D::Builder mesh;
-		mesh.addShape(
-			project(transform, {_min.x, _max.y}, _color),
-			project(transform, {_min.x, _min.y}, _color),
-			project(transform, {_max.x, _min.y}, _color),
-			project(transform, {_max.x, _max.y}, _color));
-		pass.emplace<spk::DrawColorMeshRenderCommand>(std::move(mesh).build());
-	}
+	static_assert(spk::Assembly::PuppetGraphics<ColorView>);
 
 	[[nodiscard]] Blueprint characterBlueprint()
 	{
 		Blueprint::Builder builder;
-		auto &torso = builder.setRoot<ColorElement>("torso", spk::Color{0.16f, 0.45f, 0.76f, 1}, spk::Vector2{-0.58f, -0.64f}, spk::Vector2{0.58f, 0.64f});
-		torso.addAttachmentPoint("shoulder", {0.67f, 0.49f, 0.0f});
-		auto &arm = torso.attach<ColorElement>("shoulder", "arm", spk::Color{0.96f, 0.43f, 0.24f, 1}, spk::Vector2{-0.15f, -0.9f}, spk::Vector2{0.15f, 0.05f});
-		arm.addAttachmentPoint("wrist", {0, -0.92f, 0});
-		arm.attach<ColorElement>("wrist", "hand", spk::Color{0.98f, 0.78f, 0.54f, 1}, spk::Vector2{-0.18f, -0.33f}, spk::Vector2{0.18f, 0.02f});
-		torso.addAttachmentPoint("otherShoulder", {-0.67f, 0.49f, 0});
-		torso.attach<ColorElement>("otherShoulder", "otherArm", spk::Color{0.34f, 0.72f, 0.57f, 1}, spk::Vector2{-0.15f, -0.98f}, spk::Vector2{0.15f, 0.05f});
-		torso.addAttachmentPoint("neck", {0, 0.75f, 0});
-		torso.attach<ColorElement>("neck", "head", spk::Color{0.98f, 0.77f, 0.46f, 1}, spk::Vector2{-0.4f, 0}, spk::Vector2{0.4f, 0.7f});
+		auto &torso = builder.setRoot<ColorVolume>("torso", spk::Color{0.17f, 0.46f, 0.78f, 1}, spk::Vector3{}, spk::Vector3{0.93f, 1.35f, 0.48f});
+		torso.addAttachmentPoint("neck", {0, 0.73f, 0});
+		torso.attach<ColorVolume>("neck", "head", spk::Color{0.96f, 0.76f, 0.51f, 1}, spk::Vector3{0, 0.32f, 0}, spk::Vector3{0.62f, 0.64f, 0.54f});
+		torso.addAttachmentPoint("leftShoulder", {-0.58f, 0.56f, 0});
+		torso.addAttachmentPoint("rightShoulder", {0.58f, 0.56f, 0});
+		auto &leftArm = torso.attach<ColorVolume>("leftShoulder", "leftArm", spk::Color{0.94f, 0.41f, 0.25f, 1}, spk::Vector3{0, -0.44f, 0}, spk::Vector3{0.28f, 0.88f, 0.35f});
+		auto &rightArm = torso.attach<ColorVolume>("rightShoulder", "rightArm", spk::Color{0.37f, 0.73f, 0.54f, 1}, spk::Vector3{0, -0.44f, 0}, spk::Vector3{0.28f, 0.88f, 0.35f});
+		leftArm.addAttachmentPoint("wrist", {0, -0.90f, 0});
+		rightArm.addAttachmentPoint("wrist", {0, -0.90f, 0});
+		leftArm.attach<ColorVolume>("wrist", "leftHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
+		rightArm.attach<ColorVolume>("wrist", "rightHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
+		torso.addAttachmentPoint("leftHip", {-0.25f, -0.72f, 0});
+		torso.addAttachmentPoint("rightHip", {0.25f, -0.72f, 0});
+		torso.attach<ColorVolume>("leftHip", "leftLeg", spk::Color{0.34f, 0.49f, 0.81f, 1}, spk::Vector3{0, -0.56f, 0}, spk::Vector3{0.34f, 1.11f, 0.40f});
+		torso.attach<ColorVolume>("rightHip", "rightLeg", spk::Color{0.34f, 0.49f, 0.81f, 1}, spk::Vector3{0, -0.56f, 0}, spk::Vector3{0.34f, 1.11f, 0.40f});
 		return builder.build();
+	}
+
+	enum class Pose
+	{
+		Neutral,
+		OneArmRaised,
+		BothArmsRaised,
+		Walking,
+		Combined
+	};
+
+	[[nodiscard]] std::string poseName(Pose pose)
+	{
+		switch (pose)
+		{
+		case Pose::Neutral: return "neutral";
+		case Pose::OneArmRaised: return "arm_raised";
+		case Pose::BothArmsRaised: return "both_arms_raised";
+		case Pose::Walking: return "walking";
+		case Pose::Combined: return "combined";
+		}
+		return "unknown";
+	}
+
+	void poseCharacter(Character &character, Pose pose)
+	{
+		const float leftArm = pose == Pose::OneArmRaised || pose == Pose::BothArmsRaised ? -95.0f : pose == Pose::Combined ? -55.0f : 0.0f;
+		const float rightArm = pose == Pose::BothArmsRaised ? 95.0f : pose == Pose::Combined ? 75.0f : 0.0f;
+		const float leftLeg = pose == Pose::Walking ? 28.0f : pose == Pose::Combined ? 22.0f : 0.0f;
+		const float rightLeg = pose == Pose::Walking ? -28.0f : pose == Pose::Combined ? -22.0f : 0.0f;
+		character.attachment("torso", "leftShoulder").setRotation(spk::Vector3{0, 0, leftArm});
+		character.attachment("torso", "rightShoulder").setRotation(spk::Vector3{0, 0, rightArm});
+		character.attachment("torso", "leftHip").setRotation(spk::Vector3{0, 0, leftLeg});
+		character.attachment("torso", "rightHip").setRotation(spk::Vector3{0, 0, rightLeg});
 	}
 
 	[[nodiscard]] spk::Camera3D previewCamera()
 	{
 		spk::Camera3D camera;
-		camera.setPosition({0, 0, 5});
-		camera.setOrthographic(-2.6f, 2.6f, -2.35f, 2.0f, 0.1f, 20.0f);
+		camera.setPosition({3.0f, 2.0f, 7.2f});
+		camera.lookAt({0, -0.2f, 0});
+		camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
 		return camera;
 	}
 
-	[[nodiscard]] sparkle_test::FramebufferImage render(
-		Character &character, const spk::Camera3D &camera, const std::string &pose)
+	[[nodiscard]] sparkle_test::FramebufferImage capture(Character &character, const spk::Camera3D &camera, const std::string &name)
 	{
 		auto &context = sparkle_test::OpenGLTestContext::instance();
 		context.reset(ImageSize);
-		const spk::Rect2D viewport{.anchor = {0, 0}, .size = ImageSize};
 		spk::RenderSnapshot::Builder builder;
-		auto &pass = builder.renderPass({"puppet-preview", 0});
-		pass.emplace<spk::ClearRenderCommand>(spk::Color{0.07f, 0.10f, 0.15f, 1}, spk::ClearRenderCommand::Mask::All);
-		pass.emplace<spk::ViewportRenderCommand>(viewport);
-		pass.emplace<spk::ViewportUniformRenderCommand>(viewport);
+		auto &pass = builder.renderPass({"puppet-3d", 0});
+		pass.emplace<spk::ClearRenderCommand>(Background, spk::ClearRenderCommand::Mask::All);
+		pass.emplace<spk::ViewportRenderCommand>(spk::Rect2D{.anchor = {0, 0}, .size = ImageSize});
 		character.buildRenderSnapshot(builder, camera.viewProjectionMatrix());
 		builder.build().execute(context.renderContext());
-		context.save(sparkle_test::resultImagePath("rendering/puppet", pose));
+		context.save(sparkle_test::resultImagePath(GoldenCategory, name));
 		return context.capture();
 	}
 
-	[[nodiscard]] std::size_t orangePixels(const sparkle_test::FramebufferImage &image)
+	[[nodiscard]] spk::Vector4 pointOn(const Character &character, const char *part, spk::Vector3 local = {})
 	{
-		std::size_t count = 0;
-		for (std::uint32_t y = 0; y < image.size.y; ++y)
-		{
-			for (std::uint32_t x = 0; x < image.size.x; ++x)
-			{
-				const auto *pixel = image.pixel({x, y});
-				count += pixel[0] > 200 && pixel[1] > 70 && pixel[1] < 175 && pixel[2] < 110;
-			}
-		}
-		return count;
+		return character.element(part).globalTransform() * spk::Vector4{local.x, local.y, local.z, 1.0f};
 	}
-	struct PixelCluster
-	{
-		std::size_t count = 0;
-		std::uint64_t x = 0;
-		std::uint64_t y = 0;
-	};
 
-	[[nodiscard]] PixelCluster handPixels(const sparkle_test::FramebufferImage &image)
+	void expectJointChain(const Character &character, const char *parent, const char *joint, const char *child)
 	{
-		PixelCluster result;
-		for (std::uint32_t y = 0; y < image.size.y; ++y)
+		const auto &source = character.element(parent);
+		const auto &target = character.element(child);
+		const auto expected = source.globalTransform() * source.attachment(joint).transform() * target.definition().anchor();
+		for (std::size_t column = 0; column < 4; ++column)
 		{
-			for (std::uint32_t x = 0; x < image.size.x; ++x)
+			for (std::size_t row = 0; row < 4; ++row)
 			{
-				const auto *pixel = image.pixel({x, y});
-				if (pixel[0] >= 245 && pixel[1] >= 185 && pixel[1] <= 210 && pixel[2] >= 125 && pixel[2] <= 150)
-				{
-					++result.count;
-					result.x += x;
-					result.y += y;
-				}
+				EXPECT_NEAR(target.globalTransform()[column][row], expected[column][row], 0.0001f);
 			}
 		}
-		return result;
 	}
 }
 
-TEST(RenderablePuppetPreviewTest, ArmAndHandFollowShoulderAcrossThreeRenderedPoses)
+class RenderablePuppet3DGoldenTest : public ::testing::TestWithParam<Pose>
+{
+};
+
+TEST_P(RenderablePuppet3DGoldenTest, ArticulatedCharacterMatchesReference)
+{
+	const Pose pose = GetParam();
+	Character character(characterBlueprint());
+	poseCharacter(character, pose);
+	const auto name = poseName(pose);
+	const auto actual = sparkle_test::resultImagePath(GoldenCategory, name);
+	const auto expected = sparkle_test::expectedImagePath(GoldenCategory, name);
+	const auto difference = sparkle_test::resultImagePath(GoldenCategory, name + "_difference");
+	const auto image = capture(character, previewCamera(), name);
+	EXPECT_EQ(character.graphicsCount(), 8u);
+	EXPECT_EQ(image.size.x, ImageSize.x);
+	EXPECT_EQ(image.size.y, ImageSize.y);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing approved golden: " << expected << "; rendered: " << actual;
+
+	sparkle_test::ImageComparisonOptions tolerance;
+	tolerance.rgbTolerance = 6;
+	tolerance.alphaTolerance = 8;
+	const auto comparison = sparkle_test::compareImages(actual, expected, difference, tolerance, false);
+	EXPECT_EQ(comparison.actualWidth, comparison.expectedWidth);
+	EXPECT_EQ(comparison.actualHeight, comparison.expectedHeight);
+	EXPECT_LE(comparison.differentPixelCount, 150u) << "Golden mismatch: " << name << "; diff: " << difference;
+}
+
+TEST(RenderablePuppet3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParentTransforms)
 {
 	Character character(characterBlueprint());
-	const auto camera = previewCamera();
-	const auto resting = character.element("hand").globalTransform() * spk::Vector4{0, 0, 0, 1};
-	const auto image0 = render(character, camera, "arm_000");
-	const auto hand0 = handPixels(image0);
-	EXPECT_GT(orangePixels(image0), 100u);
-	ASSERT_GT(hand0.count, 50u);
-
-	character.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 45});
-	const auto image45 = render(character, camera, "arm_045");
-	const auto hand45 = handPixels(image45);
-	EXPECT_NE(image0.pixels, image45.pixels);
-	ASSERT_GT(hand45.count, 50u);
-	EXPECT_GT(hand45.x / hand45.count, hand0.x / hand0.count + 20);
-
-	character.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 90});
-	const auto raised = character.element("hand").globalTransform() * spk::Vector4{0, 0, 0, 1};
-	const auto image90 = render(character, camera, "arm_090");
-	const auto hand90 = handPixels(image90);
-	EXPECT_NE(image45.pixels, image90.pixels);
-	ASSERT_GT(hand90.count, 50u);
-	EXPECT_GT(hand90.x / hand90.count, hand0.x / hand0.count + 40);
-	EXPECT_LT(hand90.y / hand90.count + 40, hand0.y / hand0.count);
-	EXPECT_GT(raised.x, resting.x + 0.5f);
-	EXPECT_GT(raised.y, resting.y + 0.5f);
-	EXPECT_EQ(character.graphicsCount(), 5u);
+	poseCharacter(character, Pose::Neutral);
+	const auto leftHandAtRest = pointOn(character, "leftHand", {0, -0.15f, 0});
+	const auto rightHandAtRest = pointOn(character, "rightHand", {0, -0.15f, 0});
+	const auto leftFootAtRest = pointOn(character, "leftLeg", {0, -1.10f, 0});
+	poseCharacter(character, Pose::Combined);
+	expectJointChain(character, "torso", "leftShoulder", "leftArm");
+	expectJointChain(character, "torso", "leftHip", "leftLeg");
+	expectJointChain(character, "leftArm", "wrist", "leftHand");
+	const auto leftHand = pointOn(character, "leftHand", {0, -0.15f, 0});
+	const auto rightHand = pointOn(character, "rightHand", {0, -0.15f, 0});
+	const auto leftFoot = pointOn(character, "leftLeg", {0, -1.10f, 0});
+	EXPECT_GT(std::abs(leftHand.x - leftHandAtRest.x), 0.35f);
+	EXPECT_GT(std::abs(rightHand.x - rightHandAtRest.x), 0.35f);
+	EXPECT_GT(std::abs(leftFoot.x - leftFootAtRest.x), 0.20f);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+	FivePoses,
+	RenderablePuppet3DGoldenTest,
+	::testing::Values(Pose::Neutral, Pose::OneArmRaised, Pose::BothArmsRaised, Pose::Walking, Pose::Combined),
+	[](const ::testing::TestParamInfo<Pose> &info) { return poseName(info.param); });
