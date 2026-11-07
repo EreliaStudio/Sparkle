@@ -3,16 +3,16 @@
 #include <algorithm>
 #include <utility>
 
-namespace spk
+namespace spk::Assembly
 {
-	struct Assembly::Instance::Data
+	struct Puppet::Data
 	{
-		Instance *owner;
-		Assembly assembly;
+		Puppet *owner;
+		Blueprint assembly;
 		std::unique_ptr<ElementNode> root;
 		std::unordered_map<std::string, ElementNode *> elements;
 
-		explicit Data(Instance &instance, Assembly definition) :
+		explicit Data(Puppet &instance, Blueprint definition) :
 			owner(&instance),
 			assembly(std::move(definition))
 		{
@@ -30,7 +30,7 @@ namespace spk
 		}
 	};
 
-	Assembly::Attachable::Attachable(Attachable *structuralParent, AttachmentNode *parentAttachment) :
+	Attachable::Attachable(Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		_structuralParent(structuralParent),
 		_parentAttachment(parentAttachment),
 		_globalTransform([this]() {
@@ -39,7 +39,7 @@ namespace spk
 	{
 	}
 
-	Matrix4x4 Assembly::Attachable::_calculateGlobalTransform() const
+	Matrix4x4 Attachable::_calculateGlobalTransform() const
 	{
 		if (_parentAttachment != nullptr)
 		{
@@ -53,17 +53,17 @@ namespace spk
 		return _localTransform();
 	}
 
-	void Assembly::Attachable::_addChild(Attachable &child)
+	void Attachable::_addChild(Attachable &child)
 	{
 		_children.push_back(&child);
 	}
 
-	void Assembly::Attachable::_removeChild(Attachable &child)
+	void Attachable::_removeChild(Attachable &child)
 	{
 		std::erase(_children, &child);
 	}
 
-	void Assembly::Attachable::_invalidateTransform() const
+	void Attachable::_invalidateTransform() const
 	{
 		_globalTransform.invalidate();
 		for (const Attachable *child : _children)
@@ -72,35 +72,35 @@ namespace spk
 		}
 	}
 
-	Assembly::AttachmentNode *Assembly::Attachable::parentAttachment() noexcept
+	AttachmentNode *Attachable::parentAttachment() noexcept
 	{
 		return _parentAttachment;
 	}
 
-	const Assembly::AttachmentNode *Assembly::Attachable::parentAttachment() const noexcept
+	const AttachmentNode *Attachable::parentAttachment() const noexcept
 	{
 		return _parentAttachment;
 	}
 
-	const std::vector<const Assembly::Attachable *> &Assembly::Attachable::children() const noexcept
+	const std::vector<const Attachable *> &Attachable::children() const noexcept
 	{
 		return _children;
 	}
 
-	const Matrix4x4 &Assembly::Attachable::globalTransform() const
+	const Matrix4x4 &Attachable::globalTransform() const
 	{
 		return _globalTransform.get();
 	}
 
-	Assembly::Instance::Instance(Assembly assembly) :
+	Puppet::Puppet(Blueprint assembly) :
 		_data(std::make_unique<Data>(*this, std::move(assembly)))
 	{
 		_addChild(*_data->root);
 	}
 
-	Assembly::Instance::~Instance() = default;
+	Puppet::~Puppet() = default;
 
-	void Assembly::Instance::_copyPose(ElementNode &target, const ElementNode &source)
+	void Puppet::_copyPose(ElementNode &target, const ElementNode &source)
 	{
 		for (std::size_t i = 0; i < source._attachments.size(); ++i)
 		{
@@ -111,7 +111,7 @@ namespace spk
 		}
 		for (const Attachable *child : source.children())
 		{
-			if (const auto *bound = dynamic_cast<const Instance *>(child))
+			if (const auto *bound = dynamic_cast<const Puppet *>(child))
 			{
 				const std::string &name = bound->parentAttachment()->definition().name();
 				target.attachment(name).attach(*bound);
@@ -123,13 +123,13 @@ namespace spk
 		}
 	}
 
-	Assembly::Instance::Instance(const Instance &other) :
-		Instance(other.assembly())
+	Puppet::Puppet(const Puppet &other) :
+		Puppet(other.assembly())
 	{
 		_copyPose(root(), other.root());
 	}
 
-	void Assembly::Instance::_adopt(Instance &source) noexcept
+	void Puppet::_adopt(Puppet &source) noexcept
 	{
 		_data = std::move(source._data);
 		_children.swap(source._children);
@@ -141,11 +141,11 @@ namespace spk
 		}
 	}
 
-	Assembly::Instance &Assembly::Instance::operator=(const Instance &other)
+	Puppet &Puppet::operator=(const Puppet &other)
 	{
 		if (this != &other)
 		{
-			Instance copy(other);
+			Puppet copy(other);
 			_adopt(copy);
 			if (parentAttachment() != nullptr)
 			{
@@ -155,20 +155,20 @@ namespace spk
 		return *this;
 	}
 
-	Assembly::Instance::Instance(Instance &&other)
+	Puppet::Puppet(Puppet &&other)
 	{
 		if (other._data == nullptr)
 		{
-			throw spk::Exception("Cannot move an already moved-from Assembly::Instance");
+			throw spk::Exception("Cannot move an already moved-from Puppet");
 		}
 		if (other.parentAttachment() != nullptr)
 		{
-			throw spk::Exception("Cannot move an attached Assembly::Instance; detach it first");
+			throw spk::Exception("Cannot move an attached Puppet; detach it first");
 		}
 		_adopt(other);
 	}
 
-	Assembly::Instance &Assembly::Instance::operator=(Instance &&other)
+	Puppet &Puppet::operator=(Puppet &&other)
 	{
 		if (this == &other)
 		{
@@ -176,13 +176,13 @@ namespace spk
 		}
 		if (other._data == nullptr)
 		{
-			throw spk::Exception("Cannot move an already moved-from Assembly::Instance");
+			throw spk::Exception("Cannot move an already moved-from Puppet");
 		}
 		if (other.parentAttachment() != nullptr)
 		{
-			throw spk::Exception("Cannot move an attached Assembly::Instance; detach it first");
+			throw spk::Exception("Cannot move an attached Puppet; detach it first");
 		}
-		for (const Instance *ancestor = this; ancestor->parentAttachment() != nullptr;)
+		for (const Puppet *ancestor = this; ancestor->parentAttachment() != nullptr;)
 		{
 			ancestor = &ancestor->parentAttachment()->owner().instance();
 			if (ancestor == &other)
@@ -198,68 +198,68 @@ namespace spk
 		return *this;
 	}
 
-	const Matrix4x4 &Assembly::Instance::_localTransform() const noexcept
+	const Matrix4x4 &Puppet::_localTransform() const noexcept
 	{
 		static const Matrix4x4 identity = Matrix4x4::identity();
 		return identity;
 	}
 
-	const Assembly &Assembly::Instance::assembly() const
+	const Blueprint &Puppet::assembly() const
 	{
 		if (_data == nullptr)
 		{
-			throw spk::Exception("Assembly::Instance has been moved from");
+			throw spk::Exception("Puppet has been moved from");
 		}
 		return _data->assembly;
 	}
 
-	Assembly::Instance::ElementNode &Assembly::Instance::root()
+	Puppet::ElementNode &Puppet::root()
 	{
 		if (_data == nullptr)
 		{
-			throw spk::Exception("Assembly::Instance has been moved from");
+			throw spk::Exception("Puppet has been moved from");
 		}
 		return *_data->root;
 	}
 
-	const Assembly::Instance::ElementNode &Assembly::Instance::root() const
+	const Puppet::ElementNode &Puppet::root() const
 	{
-		return const_cast<Instance *>(this)->root();
+		return const_cast<Puppet *>(this)->root();
 	}
 
-	Assembly::Instance::ElementNode &Assembly::Instance::element(const std::string &name)
+	Puppet::ElementNode &Puppet::element(const std::string &name)
 	{
 		if (_data == nullptr)
 		{
-			throw spk::Exception("Assembly::Instance has been moved from");
+			throw spk::Exception("Puppet has been moved from");
 		}
 		const auto it = _data->elements.find(name);
 		if (it == _data->elements.end())
 		{
-			throw spk::Exception("Unknown Assembly::Instance Element '" + name + "'");
+			throw spk::Exception("Unknown Puppet Element '" + name + "'");
 		}
 		return *it->second;
 	}
 
-	const Assembly::Instance::ElementNode &Assembly::Instance::element(const std::string &name) const
+	const Puppet::ElementNode &Puppet::element(const std::string &name) const
 	{
-		return const_cast<Instance *>(this)->element(name);
+		return const_cast<Puppet *>(this)->element(name);
 	}
 
-	Assembly::AttachmentNode &Assembly::Instance::attachment(
+	AttachmentNode &Puppet::attachment(
 		const std::string &elementName, const std::string &attachmentName)
 	{
 		return element(elementName).attachment(attachmentName);
 	}
 
-	const Assembly::AttachmentNode &Assembly::Instance::attachment(
+	const AttachmentNode &Puppet::attachment(
 		const std::string &elementName, const std::string &attachmentName) const
 	{
 		return element(elementName).attachment(attachmentName);
 	}
 
-	Assembly::Instance::ElementNode::ElementNode(
-		Instance::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
+	Puppet::ElementNode::ElementNode(
+		Puppet::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		Attachable(structuralParent, parentAttachment),
 		_definition(&definition),
 		_instanceData(&instanceData)
@@ -279,41 +279,41 @@ namespace spk
 		}
 	}
 
-	Assembly::Instance::ElementNode::~ElementNode() = default;
+	Puppet::ElementNode::~ElementNode() = default;
 
-	const Matrix4x4 &Assembly::Instance::ElementNode::_localTransform() const noexcept
+	const Matrix4x4 &Puppet::ElementNode::_localTransform() const noexcept
 	{
 		return _definition->anchor();
 	}
 
-	const Assembly::Element &Assembly::Instance::ElementNode::definition() const noexcept
+	const Blueprint::Element &Puppet::ElementNode::definition() const noexcept
 	{
 		return *_definition;
 	}
 
-	Assembly::Instance &Assembly::Instance::ElementNode::instance() noexcept
+	Puppet &Puppet::ElementNode::instance() noexcept
 	{
 		return *_instanceData->owner;
 	}
 
-	const Assembly::Instance &Assembly::Instance::ElementNode::instance() const noexcept
+	const Puppet &Puppet::ElementNode::instance() const noexcept
 	{
 		return *_instanceData->owner;
 	}
 
-	Assembly::AttachmentNode &Assembly::Instance::ElementNode::attachment(const std::string &name)
+	AttachmentNode &Puppet::ElementNode::attachment(const std::string &name)
 	{
 		const auto it = std::ranges::find_if(_attachments, [&name](const auto &node) {
 			return node->definition().name() == name;
 		});
 		if (it == _attachments.end())
 		{
-			throw spk::Exception("Unknown Assembly::Instance AttachmentNode '" + name + "'");
+			throw spk::Exception("Unknown Puppet AttachmentNode '" + name + "'");
 		}
 		return **it;
 	}
 
-	const Assembly::AttachmentNode &Assembly::Instance::ElementNode::attachment(const std::string &name) const
+	const AttachmentNode &Puppet::ElementNode::attachment(const std::string &name) const
 	{
 		return const_cast<ElementNode *>(this)->attachment(name);
 	}

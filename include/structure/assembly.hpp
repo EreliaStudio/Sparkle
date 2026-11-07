@@ -15,22 +15,23 @@
 #include "exception.hpp"
 #include "math/matrix.hpp"
 
-namespace spk
+namespace spk::Assembly
 {
-	class Assembly
+	class Attachable;
+	class AttachmentNode;
+	class Puppet;
+
+	class Blueprint
 	{
 	public:
 		class Element;
 		class Builder;
-		class Attachable;
-		class AttachmentNode;
-		class Instance;
 
 	private:
 		struct Data;
 		std::shared_ptr<const Data> _data;
 
-		explicit Assembly(std::shared_ptr<const Data> data) noexcept;
+		explicit Blueprint(std::shared_ptr<const Data> data) noexcept;
 
 	public:
 		[[nodiscard]] const Element &root() const;
@@ -46,7 +47,7 @@ namespace spk
 			const T *typed = dynamic_cast<const T *>(&result);
 			if (typed == nullptr)
 			{
-				throw spk::Exception("Assembly Element '" + name + "' has an incompatible type");
+				throw spk::Exception("Blueprint Element '" + name + "' has an incompatible type");
 			}
 			return *typed;
 		}
@@ -55,7 +56,7 @@ namespace spk
 		[[nodiscard]] const Element &_element(const std::string &name) const;
 	};
 
-	class Assembly::Element : public NameTrait
+	class Blueprint::Element : public NameTrait
 	{
 	public:
 		class AttachmentPoint : public NameTrait
@@ -161,7 +162,7 @@ namespace spk
 		}
 	};
 
-	class Assembly::Builder
+	class Blueprint::Builder
 	{
 	private:
 		std::shared_ptr<Data> _data;
@@ -203,13 +204,13 @@ namespace spk
 		}
 
 		[[nodiscard]] Element &root();
-		[[nodiscard]] Assembly build();
+		[[nodiscard]] Blueprint build();
 	};
 
-	class Assembly::Attachable
+	class Attachable
 	{
-		friend class Assembly::AttachmentNode;
-		friend class Assembly::Instance;
+		friend class AttachmentNode;
+		friend class Puppet;
 
 	private:
 		Attachable *_structuralParent;
@@ -240,30 +241,30 @@ namespace spk
 		[[nodiscard]] const Matrix4x4 &globalTransform() const;
 	};
 
-	class Assembly::Instance : public Assembly::Attachable
+	class Puppet : public Attachable
 	{
 	public:
 		class ElementNode;
-		using AttachmentNode = Assembly::AttachmentNode;
+		using AttachmentNode = ::spk::Assembly::AttachmentNode;
 
 	private:
 		struct Data;
 		std::unique_ptr<Data> _data;
 
 		static void _copyPose(ElementNode &target, const ElementNode &source);
-		void _adopt(Instance &source) noexcept;
+		void _adopt(Puppet &source) noexcept;
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
-		explicit Instance(Assembly assembly);
-		~Instance();
+		explicit Puppet(Blueprint assembly);
+		~Puppet();
 
-		Instance(const Instance &other);
-		Instance &operator=(const Instance &other);
-		Instance(Instance &&other);
-		Instance &operator=(Instance &&other);
+		Puppet(const Puppet &other);
+		Puppet &operator=(const Puppet &other);
+		Puppet(Puppet &&other);
+		Puppet &operator=(Puppet &&other);
 
-		[[nodiscard]] const Assembly &assembly() const;
+		[[nodiscard]] const Blueprint &assembly() const;
 		[[nodiscard]] ElementNode &root();
 		[[nodiscard]] const ElementNode &root() const;
 		[[nodiscard]] ElementNode &element(const std::string &name);
@@ -272,22 +273,22 @@ namespace spk
 		[[nodiscard]] const AttachmentNode &attachment(const std::string &elementName, const std::string &attachmentName) const;
 	};
 
-	class Assembly::AttachmentNode
+	class AttachmentNode
 	{
-		friend class Assembly::Instance;
+		friend class Puppet;
 
 	private:
-		Instance::ElementNode *_owner;
+		Puppet::ElementNode *_owner;
 		const Element::AttachmentPoint *_definition;
 		Matrix4x4 _rotationMatrix = Matrix4x4::identity();
 		Matrix4x4 _transform = Matrix4x4::identity();
-		std::vector<std::unique_ptr<Instance>> _bound;
+		std::vector<std::unique_ptr<Puppet>> _bound;
 
 		void _applyRotation(const Matrix4x4 &rotation);
-		Instance &_attachOwned(std::unique_ptr<Instance> instance);
+		Puppet &_attachOwned(std::unique_ptr<Puppet> instance);
 
 	public:
-		AttachmentNode(Instance::ElementNode &owner, const Element::AttachmentPoint &definition);
+		AttachmentNode(Puppet::ElementNode &owner, const Element::AttachmentPoint &definition);
 		~AttachmentNode();
 
 		AttachmentNode(const AttachmentNode &) = delete;
@@ -296,8 +297,8 @@ namespace spk
 		AttachmentNode &operator=(AttachmentNode &&) = delete;
 
 		[[nodiscard]] const Element::AttachmentPoint &definition() const noexcept;
-		[[nodiscard]] Instance::ElementNode &owner() noexcept;
-		[[nodiscard]] const Instance::ElementNode &owner() const noexcept;
+		[[nodiscard]] Puppet::ElementNode &owner() noexcept;
+		[[nodiscard]] const Puppet::ElementNode &owner() const noexcept;
 		[[nodiscard]] const Matrix4x4 &rotationMatrix() const noexcept;
 		[[nodiscard]] const Matrix4x4 &transform() const noexcept;
 
@@ -307,27 +308,27 @@ namespace spk
 		void rotate(const Vector3 &euler);
 
 		[[nodiscard]] std::size_t attachedCount() const noexcept;
-		Instance &attach(const Assembly &assembly);
-		Instance &attach(const Instance &instance);
-		Instance &attach(Instance &&instance);
-		[[nodiscard]] Instance detach(Instance &instance);
+		Puppet &attach(const Blueprint &assembly);
+		Puppet &attach(const Puppet &instance);
+		Puppet &attach(Puppet &&instance);
+		[[nodiscard]] Puppet detach(Puppet &instance);
 	};
 
-	class Assembly::Instance::ElementNode : public Assembly::Attachable
+	class Puppet::ElementNode : public Attachable
 	{
-		friend class Assembly::Instance;
-		friend class Assembly::AttachmentNode;
+		friend class Puppet;
+		friend class AttachmentNode;
 
 	private:
 		const Element *_definition;
-		Instance::Data *_instanceData;
+		Puppet::Data *_instanceData;
 		std::vector<std::unique_ptr<ElementNode>> _ownedChildren;
 		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
 
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
-		ElementNode(Instance::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
+		ElementNode(Puppet::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
 		~ElementNode();
 
 		ElementNode(const ElementNode &) = delete;
@@ -336,8 +337,8 @@ namespace spk
 		ElementNode &operator=(ElementNode &&) = delete;
 
 		[[nodiscard]] const Element &definition() const noexcept;
-		[[nodiscard]] Instance &instance() noexcept;
-		[[nodiscard]] const Instance &instance() const noexcept;
+		[[nodiscard]] Puppet &instance() noexcept;
+		[[nodiscard]] const Puppet &instance() const noexcept;
 		[[nodiscard]] AttachmentNode &attachment(const std::string &name);
 		[[nodiscard]] const AttachmentNode &attachment(const std::string &name) const;
 	};

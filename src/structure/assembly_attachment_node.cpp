@@ -11,7 +11,7 @@ namespace
 		const float lengthSquared = rotation.dot(rotation);
 		if (!std::isfinite(lengthSquared) || lengthSquared <= 0.0f)
 		{
-			throw spk::Exception("Assembly::AttachmentNode rotation must be a finite non-zero quaternion");
+			throw spk::Exception("AttachmentNode rotation must be a finite non-zero quaternion");
 		}
 	}
 
@@ -19,50 +19,50 @@ namespace
 	{
 		if (!std::isfinite(euler.x) || !std::isfinite(euler.y) || !std::isfinite(euler.z))
 		{
-			throw spk::Exception("Assembly::AttachmentNode Euler angles must be finite");
+			throw spk::Exception("AttachmentNode Euler angles must be finite");
 		}
 		return spk::Quaternion::fromEuler(euler);
 	}
 }
 
-namespace spk
+namespace spk::Assembly
 {
-	Assembly::AttachmentNode::AttachmentNode(
-		Instance::ElementNode &owner, const Element::AttachmentPoint &definition) :
+	AttachmentNode::AttachmentNode(
+		Puppet::ElementNode &owner, const Element::AttachmentPoint &definition) :
 		_owner(&owner),
 		_definition(&definition),
 		_transform(definition.transform())
 	{
 	}
 
-	Assembly::AttachmentNode::~AttachmentNode() = default;
+	AttachmentNode::~AttachmentNode() = default;
 
-	const Assembly::Element::AttachmentPoint &Assembly::AttachmentNode::definition() const noexcept
+	const Blueprint::Element::AttachmentPoint &AttachmentNode::definition() const noexcept
 	{
 		return *_definition;
 	}
 
-	Assembly::Instance::ElementNode &Assembly::AttachmentNode::owner() noexcept
+	Puppet::ElementNode &AttachmentNode::owner() noexcept
 	{
 		return *_owner;
 	}
 
-	const Assembly::Instance::ElementNode &Assembly::AttachmentNode::owner() const noexcept
+	const Puppet::ElementNode &AttachmentNode::owner() const noexcept
 	{
 		return *_owner;
 	}
 
-	const Matrix4x4 &Assembly::AttachmentNode::rotationMatrix() const noexcept
+	const Matrix4x4 &AttachmentNode::rotationMatrix() const noexcept
 	{
 		return _rotationMatrix;
 	}
 
-	const Matrix4x4 &Assembly::AttachmentNode::transform() const noexcept
+	const Matrix4x4 &AttachmentNode::transform() const noexcept
 	{
 		return _transform;
 	}
 
-	void Assembly::AttachmentNode::_applyRotation(const Matrix4x4 &rotation)
+	void AttachmentNode::_applyRotation(const Matrix4x4 &rotation)
 	{
 		_rotationMatrix = rotation;
 		_transform = _definition->transform() * _rotationMatrix;
@@ -75,38 +75,38 @@ namespace spk
 		}
 	}
 
-	void Assembly::AttachmentNode::setRotation(const Quaternion &rotation)
+	void AttachmentNode::setRotation(const Quaternion &rotation)
 	{
 		validateRotation(rotation);
 		_applyRotation(Matrix4x4::rotation(rotation));
 	}
 
-	void Assembly::AttachmentNode::setRotation(const Vector3 &euler)
+	void AttachmentNode::setRotation(const Vector3 &euler)
 	{
 		setRotation(eulerRotation(euler));
 	}
 
-	void Assembly::AttachmentNode::rotate(const Quaternion &rotation)
+	void AttachmentNode::rotate(const Quaternion &rotation)
 	{
 		validateRotation(rotation);
 		_applyRotation(_rotationMatrix * Matrix4x4::rotation(rotation));
 	}
 
-	void Assembly::AttachmentNode::rotate(const Vector3 &euler)
+	void AttachmentNode::rotate(const Vector3 &euler)
 	{
 		rotate(eulerRotation(euler));
 	}
 
-	std::size_t Assembly::AttachmentNode::attachedCount() const noexcept
+	std::size_t AttachmentNode::attachedCount() const noexcept
 	{
 		return _bound.size();
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::_attachOwned(std::unique_ptr<Instance> instance)
+	Puppet &AttachmentNode::_attachOwned(std::unique_ptr<Puppet> instance)
 	{
 		if (!instance || instance->parentAttachment() != nullptr)
 		{
-			throw spk::Exception("Assembly::AttachmentNode cannot attach an invalid or already attached instance");
+			throw spk::Exception("AttachmentNode cannot attach an invalid or already attached instance");
 		}
 		_bound.push_back(std::move(instance));
 		try
@@ -117,49 +117,49 @@ namespace spk
 			_bound.pop_back();
 			throw;
 		}
-		Instance &result = *_bound.back();
+		Puppet &result = *_bound.back();
 		result._parentAttachment = this;
 		result._invalidateTransform();
 		return result;
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::attach(const Assembly &assembly)
+	Puppet &AttachmentNode::attach(const Blueprint &assembly)
 	{
-		return _attachOwned(std::make_unique<Instance>(assembly));
+		return _attachOwned(std::make_unique<Puppet>(assembly));
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::attach(const Instance &instance)
+	Puppet &AttachmentNode::attach(const Puppet &instance)
 	{
-		return _attachOwned(std::make_unique<Instance>(instance));
+		return _attachOwned(std::make_unique<Puppet>(instance));
 	}
 
-	Assembly::Instance &Assembly::AttachmentNode::attach(Instance &&instance)
+	Puppet &AttachmentNode::attach(Puppet &&instance)
 	{
-		for (const Instance *ancestor = &_owner->instance(); ancestor != nullptr;)
+		for (const Puppet *ancestor = &_owner->instance(); ancestor != nullptr;)
 		{
 			if (ancestor == &instance)
 			{
-				throw spk::Exception("Assembly::AttachmentNode cannot attach its own ancestor");
+				throw spk::Exception("AttachmentNode cannot attach its own ancestor");
 			}
 			const AttachmentNode *parent = ancestor->parentAttachment();
 			ancestor = parent != nullptr ? &parent->owner().instance() : nullptr;
 		}
-		return _attachOwned(std::make_unique<Instance>(std::move(instance)));
+		return _attachOwned(std::make_unique<Puppet>(std::move(instance)));
 	}
 
-	Assembly::Instance Assembly::AttachmentNode::detach(Instance &instance)
+	Puppet AttachmentNode::detach(Puppet &instance)
 	{
 		const auto it = std::ranges::find_if(_bound, [&instance](const auto &entry) {
 			return entry.get() == &instance;
 		});
 		if (it == _bound.end())
 		{
-			throw spk::Exception("Assembly::AttachmentNode does not own the requested instance");
+			throw spk::Exception("AttachmentNode does not own the requested instance");
 		}
 		_owner->_removeChild(**it);
 		(*it)->_parentAttachment = nullptr;
 		(*it)->_invalidateTransform();
-		Instance detached(std::move(**it));
+		Puppet detached(std::move(**it));
 		_bound.erase(it);
 		return detached;
 	}
