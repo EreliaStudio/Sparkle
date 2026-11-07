@@ -23,6 +23,7 @@
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "graphics/image.hpp"
+#include "graphics/renderable_puppet.hpp"
 #include "graphics/opengl/buffer_gpu_resource.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
