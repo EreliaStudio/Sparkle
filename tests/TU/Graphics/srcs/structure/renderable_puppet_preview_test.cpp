@@ -141,6 +141,31 @@ namespace
 		}
 		return count;
 	}
+	struct PixelCluster
+	{
+		std::size_t count = 0;
+		std::uint64_t x = 0;
+		std::uint64_t y = 0;
+	};
+
+	[[nodiscard]] PixelCluster handPixels(const sparkle_test::FramebufferImage &image)
+	{
+		PixelCluster result;
+		for (std::uint32_t y = 0; y < image.size.y; ++y)
+		{
+			for (std::uint32_t x = 0; x < image.size.x; ++x)
+			{
+				const auto *pixel = image.pixel({x, y});
+				if (pixel[0] >= 245 && pixel[1] >= 185 && pixel[1] <= 210 && pixel[2] >= 125 && pixel[2] <= 150)
+				{
+					++result.count;
+					result.x += x;
+					result.y += y;
+				}
+			}
+		}
+		return result;
+	}
 }
 
 TEST(RenderablePuppetPreviewTest, ArmAndHandFollowShoulderAcrossThreeRenderedPoses)
@@ -149,16 +174,25 @@ TEST(RenderablePuppetPreviewTest, ArmAndHandFollowShoulderAcrossThreeRenderedPos
 	const auto camera = previewCamera();
 	const auto resting = character.element("hand").globalTransform() * spk::Vector4{0, 0, 0, 1};
 	const auto image0 = render(character, camera, "arm_000");
+	const auto hand0 = handPixels(image0);
 	EXPECT_GT(orangePixels(image0), 100u);
+	ASSERT_GT(hand0.count, 50u);
 
 	character.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 45});
 	const auto image45 = render(character, camera, "arm_045");
+	const auto hand45 = handPixels(image45);
 	EXPECT_NE(image0.pixels, image45.pixels);
+	ASSERT_GT(hand45.count, 50u);
+	EXPECT_GT(hand45.x / hand45.count, hand0.x / hand0.count + 20);
 
 	character.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 90});
 	const auto raised = character.element("hand").globalTransform() * spk::Vector4{0, 0, 0, 1};
 	const auto image90 = render(character, camera, "arm_090");
+	const auto hand90 = handPixels(image90);
 	EXPECT_NE(image45.pixels, image90.pixels);
+	ASSERT_GT(hand90.count, 50u);
+	EXPECT_GT(hand90.x / hand90.count, hand0.x / hand0.count + 40);
+	EXPECT_LT(hand90.y / hand90.count + 40, hand0.y / hand0.count);
 	EXPECT_GT(raised.x, resting.x + 0.5f);
 	EXPECT_GT(raised.y, resting.y + 0.5f);
 	EXPECT_EQ(character.graphicsCount(), 5u);

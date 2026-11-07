@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "graphics/renderable_puppet.hpp"
 
@@ -32,6 +31,7 @@ namespace
 		static inline int constructed = 0;
 		static inline int destroyed = 0;
 		static inline bool throwOnConstruction = false;
+		static inline bool throwOnSnapshot = false;
 
 		int marker;
 		std::size_t snapshotCount = 0;
@@ -49,6 +49,10 @@ namespace
 
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform)
 		{
+			if (throwOnSnapshot)
+			{
+				throw std::runtime_error("Mock snapshot construction failed");
+			}
 			++snapshotCount;
 			lastTransform = transform;
 			(void)builder.renderPass({"puppet-graphics-test", 0});
@@ -67,6 +71,7 @@ namespace
 			constructed = 0;
 			destroyed = 0;
 			throwOnConstruction = false;
+			throwOnSnapshot = false;
 		}
 	};
 
@@ -91,15 +96,15 @@ TEST(RenderablePuppetTest, CreatesOnlyDrawableElementsAndReusesTheirGraphics)
 	TrackedGraphics::reset();
 	{
 		Renderable character(characterBlueprint());
-		std::vector<std::string> names;
-		character.visitGraphics([&](const auto &node, TrackedGraphics &graphics) {
-			names.push_back(node.definition().name());
-			EXPECT_NE(graphics.marker, 0);
-		});
-
-		EXPECT_EQ(names, (std::vector<std::string>{"arm", "hand"}));
+		character.synchronize();
 		EXPECT_EQ(character.graphicsCount(), 2u);
+		EXPECT_EQ(character.graphics(character.element("torso")), nullptr);
 		auto *graphics = character.graphics(character.element("arm"));
+		auto *hand = character.graphics(character.element("hand"));
+		ASSERT_NE(graphics, nullptr);
+		ASSERT_NE(hand, nullptr);
+		EXPECT_EQ(graphics->marker, 10);
+		EXPECT_EQ(hand->marker, 20);
 
 		character.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 45});
 		character.synchronize();
@@ -207,6 +212,64 @@ TEST(RenderablePuppetTest, BuildsSnapshotsWithEachElementWorldTransform)
 	EXPECT_EQ(arm->lastTransform[0][0], expected[0][0]);
 	EXPECT_EQ(arm->lastTransform[3][1], expected[3][1]);
 	EXPECT_EQ(TrackedGraphics::constructed, 2);
+}
+
+TEST(RenderablePuppetTest, MoveAssignmentPreservesGraphicsAndNodes)
+{
+	TrackedGraphics::reset();
+	Renderable source(characterBlueprint());
+	source.synchronize();
+	const auto *node = &source.element("arm");
+	const auto *graphics = source.graphics(*node);
+
+	Renderable target(characterBlueprint());
+	target.synchronize();
+	target = std::move(source);
+
+	EXPECT_EQ(&target.element("arm"), node);
+	EXPECT_EQ(target.graphics(*node), graphics);
+	target.synchronize();
+	EXPECT_EQ(TrackedGraphics::constructed, 4);
+	EXPECT_EQ(TrackedGraphics::destroyed, 2);
+}
+
+TEST(RenderablePuppetTest, FailedSnapshotCanBeRetriedWithoutCorruptingGraphics)
+{
+	TrackedGraphics::reset();
+	Renderable character(characterBlueprint());
+	TrackedGraphics::throwOnSnapshot = true;
+	spk::RenderSnapshot::Builder failed;
+	EXPECT_THROW(character.buildRenderSnapshot(failed), std::runtime_error);
+	EXPECT_EQ(character.graphicsCount(), 1u);
+
+	TrackedGraphics::throwOnSnapshot = false;
+	spk::RenderSnapshot::Builder retry;
+	EXPECT_NO_THROW(character.buildRenderSnapshot(retry));
+	EXPECT_EQ(character.graphicsCount(), 2u);
+	EXPECT_EQ(TrackedGraphics::constructed, 2);
+	EXPECT_EQ(character.graphics(character.element("arm"))->snapshotCount, 1u);
+}
+
+TEST(RenderablePuppetTest, FailedTraversalDoesNotPrunePreviouslyCachedGraphics)
+{
+	TrackedGraphics::reset();
+	Renderable character(characterBlueprint());
+	character.synchronize();
+	auto &grip = character.attachment("hand", "grip");
+	Puppet &bound = grip.attach(characterBlueprint());
+	character.synchronize();
+	ASSERT_EQ(character.graphicsCount(), 4u);
+
+	Puppet detached = grip.detach(bound);
+	TrackedGraphics::throwOnSnapshot = true;
+	spk::RenderSnapshot::Builder failed;
+	EXPECT_THROW(character.buildRenderSnapshot(failed), std::runtime_error);
+	EXPECT_EQ(character.graphicsCount(), 4u);
+
+	TrackedGraphics::throwOnSnapshot = false;
+	character.synchronize();
+	EXPECT_EQ(character.graphicsCount(), 2u);
+	EXPECT_NE(&detached.element("arm"), &character.element("arm"));
 }
 
 namespace

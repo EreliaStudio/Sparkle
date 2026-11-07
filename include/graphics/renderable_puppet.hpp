@@ -37,6 +37,7 @@ namespace spk::Assembly
 		{
 			std::unique_ptr<TGraphics> graphics;
 			const Blueprint::Element *definition;
+			const Puppet *instance;
 			std::uint64_t generation;
 		};
 
@@ -51,32 +52,35 @@ namespace spk::Assembly
 				return nullptr;
 			}
 			auto it = _graphics.find(&node);
-			if (it != _graphics.end() && it->second.definition != &node.definition())
+			if (it != _graphics.end() &&
+				(it->second.definition != &node.definition() || it->second.instance != &node.instance()))
 			{
 				it = _graphics.erase(it);
 			}
 			if (it == _graphics.end())
 			{
 				auto graphics = std::make_unique<TGraphics>(*typed);
-				it = _graphics.emplace(&node, GraphicsEntry{std::move(graphics), &node.definition(), _generation}).first;
+				it = _graphics.emplace(&node, GraphicsEntry{std::move(graphics), &node.definition(), &node.instance(), _generation}).first;
 			}
 			it->second.generation = _generation;
 			return it->second.graphics.get();
 		}
 
-		template <typename TVisitor>
-		void _visit(const Attachable &node, TVisitor &visitor)
+		void _collect(
+			const Attachable &node,
+			RenderSnapshot::Builder *builder,
+			const Matrix4x4 &transform)
 		{
 			if (const auto *element = dynamic_cast<const ElementNode *>(&node))
 			{
-				if (TGraphics *graphics = _prepare(*element))
+				if (TGraphics *graphics = _prepare(*element); graphics != nullptr && builder != nullptr)
 				{
-					visitor(*element, *graphics);
+					graphics->buildRenderSnapshot(*builder, transform * element->globalTransform());
 				}
 			}
 			for (const Attachable *child : node.children())
 			{
-				_visit(*child, visitor);
+				_collect(*child, builder, transform);
 			}
 		}
 
@@ -95,6 +99,13 @@ namespace spk::Assembly
 			std::erase_if(_graphics, [this](const auto &entry) {
 				return entry.second.generation != _generation;
 			});
+		}
+
+		void _refresh(RenderSnapshot::Builder *builder, const Matrix4x4 &transform)
+		{
+			_nextGeneration();
+			_collect(*this, builder, transform);
+			_prune();
 		}
 
 	public:
@@ -164,27 +175,16 @@ namespace spk::Assembly
 			return const_cast<RenderablePuppet *>(this)->graphics(node);
 		}
 
-		template <typename TVisitor>
-		void visitGraphics(TVisitor &&visitor)
-		{
-			_nextGeneration();
-			_visit(*this, visitor);
-			_prune();
-		}
-
 		void synchronize()
 		{
-			visitGraphics([](const ElementNode &, TGraphics &) {
-			});
+			_refresh(nullptr, Matrix4x4::identity());
 		}
 
 		void buildRenderSnapshot(
 			RenderSnapshot::Builder &builder,
 			const Matrix4x4 &transform = Matrix4x4::identity())
 		{
-			visitGraphics([&](const ElementNode &node, TGraphics &graphics) {
-				graphics.buildRenderSnapshot(builder, transform * node.globalTransform());
-			});
+			_refresh(&builder, transform);
 		}
 	};
 }
