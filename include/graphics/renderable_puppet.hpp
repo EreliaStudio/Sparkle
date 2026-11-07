@@ -16,7 +16,9 @@ namespace spk::Assembly
 {
 	template <typename TGraphics>
 	concept PuppetGraphics = requires(
-		TGraphics &graphics, RenderSnapshot::Builder &builder, const Matrix4x4 &transform)
+		TGraphics &graphics,
+		RenderSnapshot::Builder &builder,
+		const Matrix4x4 &transform)
 	{
 		typename TGraphics::ElementType;
 		requires std::derived_from<typename TGraphics::ElementType, Blueprint::Element>;
