@@ -38,6 +38,7 @@
 #include "graphics/opengl/uniform_buffer.hpp"
 #include "graphics/opengl/vertex_array.hpp"
 #include "graphics/opengl/vertex_buffer.hpp"
+#include "graphics/renderable_puppet.hpp"
 #include "graphics/sprite_sheet.hpp"
 #include "input/device_context.hpp"
 #include "input/input_state.hpp"
