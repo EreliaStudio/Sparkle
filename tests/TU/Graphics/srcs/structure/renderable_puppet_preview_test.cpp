@@ -161,7 +161,7 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		rightArm.addAttachmentPoint("wrist", {0, -0.90f, 0});
 		leftArm.attach<ColorVolume>("wrist", "leftHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
 		auto &rightHand = rightArm.attach<ColorVolume>("wrist", "rightHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
-		rightHand.addAttachmentPoint("grip", {0, -0.28f, 0});
+		rightHand.addAttachmentPoint("grip", {0, -0.28f, 0}, spk::Quaternion::fromEuler({0, 0, 90}));
 		torso.addAttachmentPoint("leftHip", {-0.25f, -0.72f, 0});
 		torso.addAttachmentPoint("rightHip", {0.25f, -0.72f, 0});
 		torso.attach<ColorVolume>("leftHip", "leftLeg", spk::Color{0.34f, 0.49f, 0.81f, 1}, spk::Vector3{0, -0.56f, 0}, spk::Vector3{0.34f, 1.11f, 0.40f});
@@ -317,6 +317,18 @@ TEST_P(RenderablePuppet3DGoldenTest, ArticulatedCharacterMatchesReference)
 	expectGolden(name);
 }
 
+TEST(RenderablePuppet3DGoldenTest, SwordGripIsPerpendicularToHandAxis)
+{
+	Character character(characterBlueprint());
+	spk::Assembly::Puppet &sword = character.attachment("rightHand", "grip").attach(swordBlueprint());
+	const auto handAxis = character.element("rightHand").globalTransform() * spk::Vector4{0, -1, 0, 0};
+	const auto swordAxis = sword.root().globalTransform() * spk::Vector4{0, -1, 0, 0};
+	const float dot = handAxis.x * swordAxis.x + handAxis.y * swordAxis.y + handAxis.z * swordAxis.z;
+	EXPECT_NEAR(dot, 0.0f, 0.0001f);
+	EXPECT_GT(swordAxis.x, 0.99f);
+	EXPECT_NEAR(swordAxis.y, 0.0f, 0.0001f);
+}
+
 TEST(RenderablePuppet3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFollowsArm)
 {
 	Character character(characterBlueprint());
@@ -336,7 +348,7 @@ TEST(RenderablePuppet3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFoll
 	EXPECT_NE(resting.pixels, raised.pixels);
 	EXPECT_EQ(character.graphicsCount(), 11u);
 	EXPECT_EQ(character.graphics(sword.root()), hiltGraphics);
-	EXPECT_GT(raisedBlade.x, restingBlade.x + 0.9f);
+	EXPECT_GT(std::abs(raisedBlade.x - restingBlade.x) + std::abs(raisedBlade.y - restingBlade.y), 1.0f);
 	EXPECT_GT(raisedBlade.y, restingBlade.y + 0.5f);
 	expectGolden("sword_raised");
 
