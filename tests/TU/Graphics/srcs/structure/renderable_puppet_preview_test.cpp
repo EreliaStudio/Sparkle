@@ -284,7 +284,7 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		return character.element(part).globalTransform() * spk::Vector4{local.x, local.y, local.z, 1.0f};
 	}
 
-	void expectJointChain(const Character &character, const char *parent, const char *joint, const char *child)
+	void expectJointChain(const spk::Assembly::Puppet &character, const char *parent, const char *joint, const char *child)
 	{
 		const auto &source = character.element(parent);
 		const auto &target = character.element(child);
