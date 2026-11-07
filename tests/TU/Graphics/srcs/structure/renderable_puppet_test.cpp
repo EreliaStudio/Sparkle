@@ -215,7 +215,9 @@ namespace
 	{
 	public:
 		using ElementType = DrawableElement;
-		explicit MissingSnapshotMethod(const DrawableElement &) {}
+		explicit MissingSnapshotMethod(const DrawableElement &)
+		{
+		}
 	};
 }
 
