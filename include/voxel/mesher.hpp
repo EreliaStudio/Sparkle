@@ -1,12 +1,14 @@
 #pragma once
 
-#include "voxel/model.hpp"
+#include <cstdint>
+
+#include "voxel/geometry.hpp"
 #include "voxel/occlusion/cache.hpp"
 #include "voxel/volume.hpp"
 
 namespace spk::Voxel
 {
-	class VoxelMesher
+	class Mesher
 	{
 	private:
 		Occlusion::Cache *_cache = nullptr;
@@ -31,11 +33,12 @@ namespace spk::Voxel
 			Shape::Face direction) const;
 
 	public:
-		virtual ~VoxelMesher() = default;
+		virtual ~Mesher() = default;
 
-		void bind(Occlusion::Cache *cache) noexcept;
+		void attachCache(Occlusion::Cache &cache) noexcept;
+		void detachCache() noexcept;
 		void setTolerance(float tolerance);
 		[[nodiscard]] float tolerance() const noexcept;
-		[[nodiscard]] Model bake(const Volume &volume) const;
+		[[nodiscard]] Geometry bake(const Volume &volume) const;
 	};
 }

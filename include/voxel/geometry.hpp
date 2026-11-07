@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <vector>
 
 #include "geometry/mesh.hpp"
@@ -14,51 +13,51 @@
 
 namespace spk::Voxel
 {
-	struct MeshVertex
-	{
-		spk::Vector3 position;
-		spk::Vector3 normal;
-		spk::Vector2 uv;
-		std::uint32_t materialIndex;
-	};
-
-	class Mesh final : public spk::Mesh<MeshVertex>
+	class Geometry final
 	{
 	public:
-		class Builder final : public spk::Mesh<MeshVertex>::Builder<Mesh>
+		struct Vertex
 		{
-		private:
-			void _setupAttributes(spk::VertexBuffer &buffer) override;
+			spk::Vector3 position;
+			spk::Vector3 normal;
+			spk::Vector2 uv;
+			std::uint32_t materialIndex;
 		};
-	};
 
-	class Model final
-	{
+		class SurfaceMesh final : public spk::Mesh<Vertex>
+		{
+		public:
+			class Builder final : public spk::Mesh<Vertex>::Builder<SurfaceMesh>
+			{
+			private:
+				void _setupAttributes(spk::VertexBuffer &buffer) override;
+			};
+		};
+
 	private:
 		struct Data
 		{
-			Mesh opaque;
-			Mesh translucent;
+			SurfaceMesh opaque;
+			SurfaceMesh translucent;
 			spk::ShadowMap::Mesh depth;
 			std::vector<Definition::Slot> slots;
 		};
 
 		std::shared_ptr<const Data> _data;
-		std::optional<spk::Palette> _palette;
 
 	public:
-		Model(
-			Mesh opaque,
-			Mesh translucent,
+		Geometry();
+		Geometry(
+			SurfaceMesh opaque,
+			SurfaceMesh translucent,
 			spk::ShadowMap::Mesh depth,
 			std::vector<Definition::Slot> slots);
 
-		[[nodiscard]] const Mesh &opaqueMesh() const noexcept;
-		[[nodiscard]] const Mesh &transparentMesh() const noexcept;
+		[[nodiscard]] const SurfaceMesh &opaqueMesh() const noexcept;
+		[[nodiscard]] const SurfaceMesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
 		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
-		void bind(spk::Palette palette);
-		[[nodiscard]] const spk::Palette *palette() const noexcept;
+		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 	};
 }

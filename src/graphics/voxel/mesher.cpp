@@ -1,4 +1,4 @@
-#include "voxel/voxel_mesher.hpp"
+#include "voxel/mesher.hpp"
 
 #include <algorithm>
 #include <array>
@@ -109,7 +109,7 @@ namespace spk::Voxel
 		}
 
 		void emit(
-			Mesh::Builder &builder,
+			Geometry::SurfaceMesh::Builder &builder,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -142,8 +142,8 @@ namespace spk::Voxel
 			const Definition &definition,
 			Position position,
 			const SlotIndices &indices,
-			Mesh::Builder &opaque,
-			Mesh::Builder &translucent,
+			Geometry::SurfaceMesh::Builder &opaque,
+			Geometry::SurfaceMesh::Builder &translucent,
 			float tolerance)
 		{
 			const auto &slot = definition.slot(polygon.slotKey);
@@ -167,7 +167,7 @@ namespace spk::Voxel
 							auto [it, inserted] = names.try_emplace(slot.name, slot.opacity);
 							if (!inserted && it->second != slot.opacity)
 							{
-								throw spk::Exception("Voxel Model material slot has conflicting opacity: " + slot.name);
+								throw spk::Exception("Voxel Geometry material slot has conflicting opacity: " + slot.name);
 							}
 						}
 					}
@@ -188,7 +188,7 @@ namespace spk::Voxel
 			{
 				if (i > std::numeric_limits<std::uint32_t>::max())
 				{
-					throw spk::Exception("Voxel Model material slot index overflow");
+					throw spk::Exception("Voxel Mesher: too many material slots");
 				}
 				result.emplace(slots[i].name, static_cast<std::uint32_t>(i));
 			}
@@ -196,36 +196,41 @@ namespace spk::Voxel
 		}
 	}
 
-	VoxelMesher::OutsideCell VoxelMesher::outsideCell(Position, Face) const
+	Mesher::OutsideCell Mesher::outsideCell(Position, Face) const
 	{
 		return {};
 	}
 
-	void VoxelMesher::bind(Occlusion::Cache *cache) noexcept
+	void Mesher::attachCache(Occlusion::Cache &cache) noexcept
 	{
-		_cache = cache;
+		_cache = &cache;
 	}
 
-	void VoxelMesher::setTolerance(float tolerance)
+	void Mesher::detachCache() noexcept
+	{
+		_cache = nullptr;
+	}
+
+	void Mesher::setTolerance(float tolerance)
 	{
 		if (!std::isfinite(tolerance) || tolerance <= 0.0f)
 		{
-			throw spk::Exception("VoxelMesher tolerance must be positive and finite");
+			throw spk::Exception("Mesher tolerance must be positive and finite");
 		}
 		_tolerance = tolerance;
 	}
 
-	float VoxelMesher::tolerance() const noexcept
+	float Mesher::tolerance() const noexcept
 	{
 		return _tolerance;
 	}
 
-	Model VoxelMesher::bake(const Volume &volume) const
+	Geometry Mesher::bake(const Volume &volume) const
 	{
 		const auto slots = collectSlots(volume);
 		const auto indices = indexSlots(slots);
-		Mesh::Builder opaque;
-		Mesh::Builder translucent;
+		Geometry::SurfaceMesh::Builder opaque;
+		Geometry::SurfaceMesh::Builder translucent;
 		const auto dimensions = volume.dimensions();
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -281,10 +286,10 @@ namespace spk::Voxel
 				}
 			}
 		}
-		Mesh opaqueMesh = std::move(opaque).build();
-		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const MeshVertex &vertex) {
+		Geometry::SurfaceMesh opaqueMesh = std::move(opaque).build();
+		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
 		});
-		return Model(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
+		return Geometry(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
 	}
 }

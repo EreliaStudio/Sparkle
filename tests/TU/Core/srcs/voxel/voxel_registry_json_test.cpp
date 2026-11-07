@@ -143,7 +143,7 @@ namespace
 		}
 	}
 
-	TEST(VoxelShapeRegistryTest, RejectsDuplicateJSONEntries)
+	TEST(VoxelShapeRegistryTest, RejectsDuplicateJSONEntriesAtomically)
 	{
 		const JSONFile file(R"({"elements":[
 			{"id":"same","data":{"slots":{},"polygons":[]}},
@@ -151,7 +151,7 @@ namespace
 		]})");
 		Shape::Registry::Builder builder;
 		EXPECT_THROW(builder.load(file.path()), spk::Exception);
-		EXPECT_EQ(builder.build().size(), 1u);
+		EXPECT_EQ(builder.build().size(), 0u);
 	}
 
 	TEST(VoxelDefinitionBuilderTest, UsesRegisteredShapeAndBuildsImmutableDefinitions)
