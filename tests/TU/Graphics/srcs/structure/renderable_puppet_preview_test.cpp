@@ -208,14 +208,14 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 			rightArm.z = 95;
 			break;
 		case Pose::Walking:
-			leftLeg.z = 28;
-			rightLeg.z = -28;
+			leftLeg.x = 28;
+			rightLeg.x = -28;
 			break;
 		case Pose::Combined:
 			leftArm.z = -55;
 			rightArm.z = 75;
-			leftLeg.z = 22;
-			rightLeg.z = -22;
+			leftLeg.x = 22;
+			rightLeg.x = -22;
 			break;
 		default:
 			break;
@@ -305,6 +305,7 @@ TEST(RenderablePuppet3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParen
 	const auto leftHandAtRest = pointOn(character, "leftHand", {0, -0.15f, 0});
 	const auto rightHandAtRest = pointOn(character, "rightHand", {0, -0.15f, 0});
 	const auto leftFootAtRest = pointOn(character, "leftLeg", {0, -1.10f, 0});
+	const auto rightFootAtRest = pointOn(character, "rightLeg", {0, -1.10f, 0});
 	poseCharacter(character, Pose::Combined);
 	expectJointChain(character, "torso", "leftShoulder", "leftArm");
 	expectJointChain(character, "torso", "leftHip", "leftLeg");
@@ -312,9 +313,31 @@ TEST(RenderablePuppet3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParen
 	const auto leftHand = pointOn(character, "leftHand", {0, -0.15f, 0});
 	const auto rightHand = pointOn(character, "rightHand", {0, -0.15f, 0});
 	const auto leftFoot = pointOn(character, "leftLeg", {0, -1.10f, 0});
+	const auto rightFoot = pointOn(character, "rightLeg", {0, -1.10f, 0});
 	EXPECT_GT(std::abs(leftHand.x - leftHandAtRest.x), 0.35f);
 	EXPECT_GT(std::abs(rightHand.x - rightHandAtRest.x), 0.35f);
-	EXPECT_GT(std::abs(leftFoot.x - leftFootAtRest.x), 0.20f);
+	EXPECT_LT(leftFoot.z, leftFootAtRest.z - 0.30f);
+	EXPECT_GT(rightFoot.z, rightFootAtRest.z + 0.30f);
+	EXPECT_NEAR(leftFoot.x, leftFootAtRest.x, 0.001f);
+	EXPECT_NEAR(rightFoot.x, rightFootAtRest.x, 0.001f);
+}
+
+TEST(RenderablePuppet3DGoldenTest, WalkingPoseSwingsLegsForwardAndBackwardWithoutLateralCrossing)
+{
+	Character character(characterBlueprint());
+	poseCharacter(character, Pose::Neutral);
+	const auto neutralLeft = pointOn(character, "leftLeg", {0, -1.10f, 0});
+	const auto neutralRight = pointOn(character, "rightLeg", {0, -1.10f, 0});
+	poseCharacter(character, Pose::Walking);
+	const auto walkingLeft = pointOn(character, "leftLeg", {0, -1.10f, 0});
+	const auto walkingRight = pointOn(character, "rightLeg", {0, -1.10f, 0});
+	expectJointChain(character, "torso", "leftHip", "leftLeg");
+	expectJointChain(character, "torso", "rightHip", "rightLeg");
+	EXPECT_LT(walkingLeft.z, neutralLeft.z - 0.4f);
+	EXPECT_GT(walkingRight.z, neutralRight.z + 0.4f);
+	EXPECT_NEAR(walkingLeft.x, neutralLeft.x, 0.001f);
+	EXPECT_NEAR(walkingRight.x, neutralRight.x, 0.001f);
+	EXPECT_LT(walkingLeft.x, walkingRight.x);
 }
 
 INSTANTIATE_TEST_SUITE_P(
