@@ -164,7 +164,8 @@ namespace spk::Assembly
 
 		void synchronize()
 		{
-			visitGraphics([](const ElementNode &, TGraphics &) {});
+			visitGraphics([](const ElementNode &, TGraphics &) {
+			});
 		}
 	};
 }

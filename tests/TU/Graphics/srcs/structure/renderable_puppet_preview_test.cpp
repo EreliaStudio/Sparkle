@@ -69,9 +69,10 @@ namespace
 		spk::Color color)
 	{
 		const auto clip = transform * spk::Vector4{local.x, local.y, 0.0f, 1.0f};
-		return {{(clip.x / clip.w + 1.0f) * ImageSize.x * 0.5f,
-				 (1.0f - clip.y / clip.w) * ImageSize.y * 0.5f},
-				0.0f, color};
+		const spk::Vector2 screen{
+			(clip.x / clip.w + 1.0f) * ImageSize.x * 0.5f,
+			(1.0f - clip.y / clip.w) * ImageSize.y * 0.5f};
+		return {screen, 0.0f, color};
 	}
 
 	void ColorElementView::append(
