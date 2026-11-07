@@ -47,7 +47,10 @@ namespace
 	void addFace(
 		spk::TextureMesh3D::Builder &mesh,
 		spk::Vector3 normal,
-		spk::Vector3 a, spk::Vector3 b, spk::Vector3 c, spk::Vector3 d)
+		spk::Vector3 a,
+		spk::Vector3 b,
+		spk::Vector3 c,
+		spk::Vector3 d)
 	{
 		mesh.addShape({a, normal, {0, 0}}, {b, normal, {0, 1}}, {c, normal, {1, 1}}, {d, normal, {1, 0}});
 	}
@@ -55,9 +58,10 @@ namespace
 	[[nodiscard]] spk::TextureMesh3D createBox(const ColorVolume &volume)
 	{
 		const auto point = [&](float x, float y, float z) -> spk::Vector3 {
-			return {volume.center.x + x * volume.size.x * 0.5f,
-					volume.center.y + y * volume.size.y * 0.5f,
-					volume.center.z + z * volume.size.z * 0.5f};
+			return {
+				volume.center.x + x * volume.size.x * 0.5f,
+				volume.center.y + y * volume.size.y * 0.5f,
+				volume.center.z + z * volume.size.z * 0.5f};
 		};
 		spk::TextureMesh3D::Builder mesh;
 		addFace(mesh, {0, 0, 1}, point(-1, 1, 1), point(-1, -1, 1), point(1, -1, 1), point(1, 1, 1));
@@ -177,25 +181,49 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 	{
 		switch (pose)
 		{
-		case Pose::Neutral: return "neutral";
-		case Pose::OneArmRaised: return "arm_raised";
-		case Pose::BothArmsRaised: return "both_arms_raised";
-		case Pose::Walking: return "walking";
-		case Pose::Combined: return "combined";
+		case Pose::Neutral:
+			return "neutral";
+		case Pose::OneArmRaised:
+			return "arm_raised";
+		case Pose::BothArmsRaised:
+			return "both_arms_raised";
+		case Pose::Walking:
+			return "walking";
+		case Pose::Combined:
+			return "combined";
 		}
 		return "unknown";
 	}
 
 	void poseCharacter(Character &character, Pose pose)
 	{
-		const float leftArm = pose == Pose::OneArmRaised || pose == Pose::BothArmsRaised ? -95.0f : pose == Pose::Combined ? -55.0f : 0.0f;
-		const float rightArm = pose == Pose::BothArmsRaised ? 95.0f : pose == Pose::Combined ? 75.0f : 0.0f;
-		const float leftLeg = pose == Pose::Walking ? 28.0f : pose == Pose::Combined ? 22.0f : 0.0f;
-		const float rightLeg = pose == Pose::Walking ? -28.0f : pose == Pose::Combined ? -22.0f : 0.0f;
-		character.attachment("torso", "leftShoulder").setRotation(spk::Vector3{0, 0, leftArm});
-		character.attachment("torso", "rightShoulder").setRotation(spk::Vector3{0, 0, rightArm});
-		character.attachment("torso", "leftHip").setRotation(spk::Vector3{0, 0, leftLeg});
-		character.attachment("torso", "rightHip").setRotation(spk::Vector3{0, 0, rightLeg});
+		spk::Vector3 leftArm{}, rightArm{}, leftLeg{}, rightLeg{};
+		switch (pose)
+		{
+		case Pose::OneArmRaised:
+			leftArm.z = -95;
+			break;
+		case Pose::BothArmsRaised:
+			leftArm.z = -95;
+			rightArm.z = 95;
+			break;
+		case Pose::Walking:
+			leftLeg.z = 28;
+			rightLeg.z = -28;
+			break;
+		case Pose::Combined:
+			leftArm.z = -55;
+			rightArm.z = 75;
+			leftLeg.z = 22;
+			rightLeg.z = -22;
+			break;
+		default:
+			break;
+		}
+		character.attachment("torso", "leftShoulder").setRotation(leftArm);
+		character.attachment("torso", "rightShoulder").setRotation(rightArm);
+		character.attachment("torso", "leftHip").setRotation(leftLeg);
+		character.attachment("torso", "rightHip").setRotation(rightLeg);
 	}
 
 	[[nodiscard]] spk::Camera3D previewCamera()
@@ -293,4 +321,6 @@ INSTANTIATE_TEST_SUITE_P(
 	FivePoses,
 	RenderablePuppet3DGoldenTest,
 	::testing::Values(Pose::Neutral, Pose::OneArmRaised, Pose::BothArmsRaised, Pose::Walking, Pose::Combined),
-	[](const ::testing::TestParamInfo<Pose> &info) { return poseName(info.param); });
+	[](const ::testing::TestParamInfo<Pose> &info) {
+		return poseName(info.param);
+	});
