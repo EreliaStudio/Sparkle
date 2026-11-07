@@ -23,7 +23,6 @@
 namespace
 {
 	using Blueprint = spk::Assembly::Blueprint;
-	using Character = spk::Assembly::RenderablePuppet<class ColorView>;
 
 	constexpr spk::Vector2UInt ImageSize{640, 480};
 	constexpr spk::Color Background{0.06f, 0.09f, 0.14f, 1.0f};
@@ -142,6 +141,7 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 	};
 
 	static_assert(spk::Assembly::PuppetGraphics<ColorView>);
+	using Character = spk::Assembly::RenderablePuppet<ColorView>;
 
 	[[nodiscard]] Blueprint characterBlueprint()
 	{
