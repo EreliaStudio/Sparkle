@@ -55,7 +55,8 @@ namespace spk::Assembly
 			if (it != _graphics.end() &&
 				(it->second.definition != &node.definition() || it->second.instance != &node.instance()))
 			{
-				it = _graphics.erase(it);
+				_graphics.erase(it);
+				it = _graphics.end();
 			}
 			if (it == _graphics.end())
 			{

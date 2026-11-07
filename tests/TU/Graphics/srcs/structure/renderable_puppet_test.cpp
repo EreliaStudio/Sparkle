@@ -140,6 +140,30 @@ TEST(RenderablePuppetTest, TracksDynamicAttachmentsAndCleansDetachedSubtrees)
 	EXPECT_EQ(TrackedGraphics::constructed, 6);
 }
 
+TEST(RenderablePuppetTest, ReattachBeforeSynchronizeRebuildsOnlyRelocatedGraphics)
+{
+	TrackedGraphics::reset();
+	Renderable character(characterBlueprint());
+	auto &grip = character.attachment("hand", "grip");
+	Puppet &bound = grip.attach(characterBlueprint());
+	character.synchronize();
+	const auto *attachedArm = &bound.element("arm");
+	ASSERT_EQ(character.graphicsCount(), 4u);
+
+	Puppet detached = grip.detach(bound);
+	Puppet &rebound = grip.attach(std::move(detached));
+	ASSERT_EQ(&rebound.element("arm"), attachedArm);
+	character.synchronize();
+
+	ASSERT_EQ(character.graphicsCount(), 4u);
+	ASSERT_NE(character.graphics(rebound.element("arm")), nullptr);
+	ASSERT_NE(character.graphics(rebound.element("hand")), nullptr);
+	EXPECT_EQ(character.graphics(rebound.element("arm"))->marker, 10);
+	EXPECT_EQ(character.graphics(rebound.element("hand"))->marker, 20);
+	EXPECT_EQ(TrackedGraphics::constructed, 6);
+	EXPECT_EQ(TrackedGraphics::destroyed, 2);
+}
+
 TEST(RenderablePuppetTest, CopyHasIndependentArticulationsAndGraphics)
 {
 	TrackedGraphics::reset();
