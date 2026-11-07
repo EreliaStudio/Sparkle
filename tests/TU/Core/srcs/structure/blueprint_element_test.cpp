@@ -6,11 +6,11 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "structure/assembly.hpp"
+#include "structure/blueprint.hpp"
 
 namespace
 {
-	class SpecializedElement : public spk::Assembly::Element
+	class SpecializedElement : public spk::Assembly::Blueprint::Element
 	{
 	public:
 		int payload;
@@ -22,7 +22,7 @@ namespace
 		}
 	};
 
-	class NonMovableElement : public spk::Assembly::Element
+	class NonMovableElement : public spk::Assembly::Blueprint::Element
 	{
 	public:
 		explicit NonMovableElement(std::string name) :
@@ -34,9 +34,9 @@ namespace
 	};
 }
 
-TEST(AssemblyElementTest, AnchorDefaultsToIdentityAndStoresRigidTransform)
+TEST(BlueprintElementTest, AnchorDefaultsToIdentityAndStoresRigidTransform)
 {
-	spk::Assembly::Element element("torso");
+	spk::Assembly::Blueprint::Element element("torso");
 	EXPECT_EQ(element.anchor()[3][1], 0.0f);
 	EXPECT_EQ(element.anchor()[0][0], 1.0f);
 
@@ -49,9 +49,9 @@ TEST(AssemblyElementTest, AnchorDefaultsToIdentityAndStoresRigidTransform)
 	EXPECT_NEAR(element.anchor()[0][1], 1.0f, 0.0001f);
 }
 
-TEST(AssemblyElementTest, AttachmentConfigurationPreservesPositionAndOrientationIndependently)
+TEST(BlueprintElementTest, AttachmentConfigurationPreservesPositionAndOrientationIndependently)
 {
-	spk::Assembly::Element element("torso");
+	spk::Assembly::Blueprint::Element element("torso");
 	auto &point = element.addAttachmentPoint("shoulder");
 	point.setPosition({2, 3, 4});
 	EXPECT_EQ(point.transform()[3][0], 2.0f);
@@ -66,9 +66,9 @@ TEST(AssemblyElementTest, AttachmentConfigurationPreservesPositionAndOrientation
 	EXPECT_FLOAT_EQ(point.transform()[0][0], 1.0f);
 }
 
-TEST(AssemblyElementTest, AttachmentNamesAreUniqueAndLookupThrows)
+TEST(BlueprintElementTest, AttachmentNamesAreUniqueAndLookupThrows)
 {
-	spk::Assembly::Element element("torso");
+	spk::Assembly::Blueprint::Element element("torso");
 	element.addAttachmentPoint("shoulder");
 	EXPECT_THROW(element.addAttachmentPoint("shoulder"), spk::Exception);
 	EXPECT_THROW((void)element.attachmentPoint("missing"), spk::Exception);
@@ -76,9 +76,9 @@ TEST(AssemblyElementTest, AttachmentNamesAreUniqueAndLookupThrows)
 	EXPECT_EQ(element.attachmentPoint("shoulder").child(), nullptr);
 }
 
-TEST(AssemblyElementTest, AttachPreservesDerivedTypesAndSupportsInPlaceConstruction)
+TEST(BlueprintElementTest, AttachPreservesDerivedTypesAndSupportsInPlaceConstruction)
 {
-	spk::Assembly::Element torso("torso");
+	spk::Assembly::Blueprint::Element torso("torso");
 	torso.addAttachmentPoint("left");
 	torso.addAttachmentPoint("right");
 	SpecializedElement left("leftArm", 17);
@@ -91,15 +91,15 @@ TEST(AssemblyElementTest, AttachPreservesDerivedTypesAndSupportsInPlaceConstruct
 	EXPECT_THROW((void)torso.child<NonMovableElement>("left"), spk::Exception);
 }
 
-TEST(AssemblyElementTest, AttachmentValidationAndRemovalKeepGeometry)
+TEST(BlueprintElementTest, AttachmentValidationAndRemovalKeepGeometry)
 {
-	spk::Assembly::Element torso("torso");
+	spk::Assembly::Blueprint::Element torso("torso");
 	torso.addAttachmentPoint("shoulder", {3, 4, 5});
-	EXPECT_THROW(torso.attach<spk::Assembly::Element>("missing", "child"), spk::Exception);
+	EXPECT_THROW(torso.attach<spk::Assembly::Blueprint::Element>("missing", "child"), spk::Exception);
 	EXPECT_EQ(torso.child("shoulder"), nullptr);
 
-	torso.attach<spk::Assembly::Element>("shoulder", "child");
-	EXPECT_THROW(torso.attach<spk::Assembly::Element>("shoulder", "other"), spk::Exception);
+	torso.attach<spk::Assembly::Blueprint::Element>("shoulder", "child");
+	EXPECT_THROW(torso.attach<spk::Assembly::Blueprint::Element>("shoulder", "other"), spk::Exception);
 
 	torso.removeChild("shoulder");
 	EXPECT_EQ(torso.attachmentPoint("shoulder").transform()[3][0], 3.0f);
@@ -107,9 +107,9 @@ TEST(AssemblyElementTest, AttachmentValidationAndRemovalKeepGeometry)
 	EXPECT_THROW(torso.removeChild("shoulder"), spk::Exception);
 }
 
-TEST(AssemblyElementTest, ReserveAllowsStableAttachmentReferencesWithinCapacity)
+TEST(BlueprintElementTest, ReserveAllowsStableAttachmentReferencesWithinCapacity)
 {
-	spk::Assembly::Element torso("torso");
+	spk::Assembly::Blueprint::Element torso("torso");
 	torso.reserveAttachmentPoints(3);
 	auto &first = torso.addAttachmentPoint("first");
 	torso.addAttachmentPoint("second");
@@ -120,19 +120,19 @@ TEST(AssemblyElementTest, ReserveAllowsStableAttachmentReferencesWithinCapacity)
 	EXPECT_EQ(torso.attachmentPoints().size(), 3u);
 }
 
-TEST(AssemblyElementTest, MovingThroughPolymorphicBaseReferenceIsRejected)
+TEST(BlueprintElementTest, MovingThroughPolymorphicBaseReferenceIsRejected)
 {
 	SpecializedElement derived("derived", 12);
-	spk::Assembly::Element &base = derived;
-	spk::Assembly::Element torso("torso");
+	spk::Assembly::Blueprint::Element &base = derived;
+	spk::Assembly::Blueprint::Element torso("torso");
 	torso.addAttachmentPoint("child");
 	EXPECT_THROW(torso.attach("child", std::move(base)), spk::Exception);
 	EXPECT_EQ(torso.child("child"), nullptr);
 }
 
-TEST(AssemblyElementTest, RejectsInvalidQuaternionWithoutChangingTransform)
+TEST(BlueprintElementTest, RejectsInvalidQuaternionWithoutChangingTransform)
 {
-	spk::Assembly::Element torso("torso");
+	spk::Assembly::Blueprint::Element torso("torso");
 	auto &attachmentPoint = torso.addAttachmentPoint("point");
 	EXPECT_THROW(attachmentPoint.setOrientation({0, 0, 0, 0}), spk::Exception);
 	EXPECT_EQ(attachmentPoint.transform()[0][0], 1.0f);
@@ -140,9 +140,9 @@ TEST(AssemblyElementTest, RejectsInvalidQuaternionWithoutChangingTransform)
 	EXPECT_EQ(torso.anchor()[0][0], 1.0f);
 }
 
-TEST(AssemblyElementTest, AttachmentUsesNameTrait)
+TEST(BlueprintElementTest, AttachmentUsesNameTrait)
 {
-	spk::Assembly::Element element("torso");
+	spk::Assembly::Blueprint::Element element("torso");
 	auto &attachmentPoint = element.addAttachmentPoint("oldName");
 	attachmentPoint.setName("newName");
 

@@ -7,28 +7,28 @@
 #include <utility>
 
 #include "exception.hpp"
-#include "structure/assembly.hpp"
+#include "structure/puppet.hpp"
 
 namespace
 {
-	spk::Assembly armAssembly()
+	spk::Assembly::Blueprint armAssembly()
 	{
-		spk::Assembly::Builder builder;
-		auto &body = builder.setRoot<spk::Assembly::Element>("body");
+		spk::Assembly::Blueprint::Builder builder;
+		auto &body = builder.setRoot<spk::Assembly::Blueprint::Element>("body");
 		body.setAnchor({1, 0, 0});
 		body.addAttachmentPoint("shoulder", {2, 0, 0});
-		auto &arm = body.attach<spk::Assembly::Element>("shoulder", "arm");
+		auto &arm = body.attach<spk::Assembly::Blueprint::Element>("shoulder", "arm");
 		arm.setAnchor({0, 1, 0});
 		arm.addAttachmentPoint("wrist", {1, 0, 0});
-		arm.attach<spk::Assembly::Element>("wrist", "hand").setAnchor({1, 0, 0});
+		arm.attach<spk::Assembly::Blueprint::Element>("wrist", "hand").setAnchor({1, 0, 0});
 		body.addAttachmentPoint("grip", {3, 0, 0});
 		return builder.build();
 	}
 
-	spk::Assembly swordAssembly()
+	spk::Assembly::Blueprint swordAssembly()
 	{
-		spk::Assembly::Builder builder;
-		auto &blade = builder.setRoot<spk::Assembly::Element>("blade");
+		spk::Assembly::Blueprint::Builder builder;
+		auto &blade = builder.setRoot<spk::Assembly::Blueprint::Element>("blade");
 		blade.setAnchor({0, 2, 0});
 		blade.addAttachmentPoint("guard", {0, 1, 0});
 		return builder.build();
@@ -39,11 +39,11 @@ using ReadOnlyChildren = const std::vector<const spk::Assembly::Attachable *> &;
 using ActualChildren = decltype(std::declval<const spk::Assembly::Attachable &>().children());
 static_assert(std::is_same_v<ActualChildren, ReadOnlyChildren>);
 
-TEST(AssemblyInstanceTest, UsesSharedDefinitionsAndIndependentGlobalTransforms)
+TEST(PuppetTest, UsesSharedDefinitionsAndIndependentGlobalTransforms)
 {
 	const auto definition = armAssembly();
-	spk::Assembly::Instance first(definition);
-	spk::Assembly::Instance second(definition);
+	spk::Assembly::Puppet first(definition);
+	spk::Assembly::Puppet second(definition);
 
 	EXPECT_EQ(&first.root().definition().anchor(), &second.root().definition().anchor());
 	EXPECT_EQ(first.parentAttachment(), nullptr);
@@ -64,9 +64,9 @@ TEST(AssemblyInstanceTest, UsesSharedDefinitionsAndIndependentGlobalTransforms)
 	EXPECT_FLOAT_EQ(second.element("arm").globalTransform()[3][0], 3.0f);
 }
 
-TEST(AssemblyInstanceTest, RotatesLocallyAndKeepsJointPivotFixed)
+TEST(PuppetTest, RotatesLocallyAndKeepsJointPivotFixed)
 {
-	spk::Assembly::Instance pose(armAssembly());
+	spk::Assembly::Puppet pose(armAssembly());
 	auto &shoulder = pose.attachment("body", "shoulder");
 	const auto quarterTurn = spk::Quaternion::fromAxisAngle({0, 0, 1}, 90.0f);
 	shoulder.setRotation(quarterTurn);
@@ -83,9 +83,9 @@ TEST(AssemblyInstanceTest, RotatesLocallyAndKeepsJointPivotFixed)
 	EXPECT_NEAR(pose.element("arm").globalTransform()[3][1], 1.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, RejectsInvalidRotationsWithoutChangingPose)
+TEST(PuppetTest, RejectsInvalidRotationsWithoutChangingPose)
 {
-	spk::Assembly::Instance pose(armAssembly());
+	spk::Assembly::Puppet pose(armAssembly());
 	auto &shoulder = pose.attachment("body", "shoulder");
 	shoulder.setRotation(spk::Vector3{0, 0, 90});
 	const float before = pose.element("arm").globalTransform()[3][0];
@@ -95,9 +95,9 @@ TEST(AssemblyInstanceTest, RejectsInvalidRotationsWithoutChangingPose)
 	EXPECT_NEAR(pose.element("arm").globalTransform()[3][0], before, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, TraversesOnlyDirectChildrenInStructuralThenInsertionOrder)
+TEST(PuppetTest, TraversesOnlyDirectChildrenInStructuralThenInsertionOrder)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &shoulder = character.attachment("body", "shoulder");
 	auto &grip = character.attachment("body", "grip");
 	auto &sword = grip.attach(swordAssembly());
@@ -117,9 +117,9 @@ TEST(AssemblyInstanceTest, TraversesOnlyDirectChildrenInStructuralThenInsertionO
 	EXPECT_EQ(character.element("arm").children()[0], &character.element("hand"));
 }
 
-TEST(AssemblyInstanceTest, AttachesMultipleAccessoriesToStructuralAttachment)
+TEST(PuppetTest, AttachesMultipleAccessoriesToStructuralAttachment)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &shoulder = character.attachment("body", "shoulder");
 	auto &sword = shoulder.attach(swordAssembly());
 	auto &shield = shoulder.attach(swordAssembly());
@@ -136,9 +136,9 @@ TEST(AssemblyInstanceTest, AttachesMultipleAccessoriesToStructuralAttachment)
 	EXPECT_EQ(&sword.root(), swordRoot);
 }
 
-TEST(AssemblyInstanceTest, InvalidatesOnlyArticulatedSubtreeAndPreservesOtherBranch)
+TEST(PuppetTest, InvalidatesOnlyArticulatedSubtreeAndPreservesOtherBranch)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
 	auto &sword = grip.attach(swordAssembly());
 	const auto beforeRoot = character.root().globalTransform();
@@ -154,9 +154,9 @@ TEST(AssemblyInstanceTest, InvalidatesOnlyArticulatedSubtreeAndPreservesOtherBra
 	EXPECT_NEAR(sword.root().globalTransform()[3][1], 0.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, ReusesCachedTransformUntilPoseChanges)
+TEST(PuppetTest, ReusesCachedTransformUntilPoseChanges)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	const auto &first = character.element("arm").globalTransform();
 	const auto &second = character.element("arm").globalTransform();
 	EXPECT_EQ(&first, &second);
@@ -166,9 +166,9 @@ TEST(AssemblyInstanceTest, ReusesCachedTransformUntilPoseChanges)
 	EXPECT_NEAR(character.element("arm").globalTransform()[3][0], 2.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, DetachesSpecificAccessoryWithoutAffectingOthers)
+TEST(PuppetTest, DetachesSpecificAccessoryWithoutAffectingOthers)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
 	auto &sword = grip.attach(swordAssembly());
 	auto &shield = grip.attach(swordAssembly());
@@ -177,7 +177,7 @@ TEST(AssemblyInstanceTest, DetachesSpecificAccessoryWithoutAffectingOthers)
 	grip.rotate(spk::Vector3{0, 0, 90});
 	EXPECT_NEAR(sword.root().globalTransform()[3][0], 2.0f, 0.0001f);
 
-	spk::Assembly::Instance detached = grip.detach(sword);
+	spk::Assembly::Puppet detached = grip.detach(sword);
 	EXPECT_EQ(detached.parentAttachment(), nullptr);
 	EXPECT_EQ(&detached.root(), originalRoot);
 	EXPECT_EQ(grip.attachedCount(), 1u);
@@ -188,10 +188,10 @@ TEST(AssemblyInstanceTest, DetachesSpecificAccessoryWithoutAffectingOthers)
 	EXPECT_EQ(character.root().children().size(), 2u);
 }
 
-TEST(AssemblyInstanceTest, DetachThenReattachKeepsRecursiveArticulations)
+TEST(PuppetTest, DetachThenReattachKeepsRecursiveArticulations)
 {
-	spk::Assembly::Instance character(armAssembly());
-	spk::Assembly::Instance sword(swordAssembly());
+	spk::Assembly::Puppet character(armAssembly());
+	spk::Assembly::Puppet sword(swordAssembly());
 	sword.attachment("blade", "guard").setRotation(spk::Vector3{0, 0, 90});
 	auto &gem = sword.attachment("blade", "guard").attach(swordAssembly());
 	gem.attachment("blade", "guard").rotate(spk::Vector3{0, 0, 45});
@@ -199,7 +199,7 @@ TEST(AssemblyInstanceTest, DetachThenReattachKeepsRecursiveArticulations)
 	auto &grip = character.attachment("body", "grip");
 	auto &attached = grip.attach(std::move(sword));
 	const auto *innerRoot = &attached.root();
-	spk::Assembly::Instance detached = grip.detach(attached);
+	spk::Assembly::Puppet detached = grip.detach(attached);
 	EXPECT_EQ(detached.attachment("blade", "guard").attachedCount(), 1u);
 	EXPECT_NEAR(detached.attachment("blade", "guard").rotationMatrix()[0][0], 0.0f, 0.0001f);
 	EXPECT_EQ(detached.parentAttachment(), nullptr);
@@ -212,13 +212,13 @@ TEST(AssemblyInstanceTest, DetachThenReattachKeepsRecursiveArticulations)
 	EXPECT_NEAR(rebound.root().globalTransform()[3][0], 3.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, AttachCopiesSourcePoseWithoutSharingMutableNodes)
+TEST(PuppetTest, AttachCopiesSourcePoseWithoutSharingMutableNodes)
 {
-	spk::Assembly::Instance source(swordAssembly());
+	spk::Assembly::Puppet source(swordAssembly());
 	auto &sourceGuard = source.attachment("blade", "guard");
 	sourceGuard.setRotation(spk::Vector3{0, 0, 90});
 	sourceGuard.attach(swordAssembly());
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
 	auto &copy = grip.attach(source);
 
@@ -231,21 +231,21 @@ TEST(AssemblyInstanceTest, AttachCopiesSourcePoseWithoutSharingMutableNodes)
 	EXPECT_NEAR(sourceGuard.rotationMatrix()[0][0], 1.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, CopiesNestedInstancesAndKeepsThemIndependent)
+TEST(PuppetTest, CopiesNestedInstancesAndKeepsThemIndependent)
 {
-	spk::Assembly::Instance original(armAssembly());
+	spk::Assembly::Puppet original(armAssembly());
 	auto &sword = original.attachment("body", "grip").attach(swordAssembly());
 	auto &guard = sword.attachment("blade", "guard");
 	guard.setRotation(spk::Vector3{0, 0, 45});
 	guard.attach(swordAssembly());
 	original.attachment("body", "shoulder").setRotation(spk::Vector3{0, 0, 90});
 
-	spk::Assembly::Instance copy = original;
+	spk::Assembly::Puppet copy = original;
 	EXPECT_EQ(&copy.assembly().root(), &original.assembly().root());
 	EXPECT_NE(&copy.root(), &original.root());
 	EXPECT_EQ(copy.attachment("body", "grip").attachedCount(), 1u);
 	EXPECT_EQ(copy.root().children().size(), original.root().children().size());
-	const auto *copiedSword = dynamic_cast<const spk::Assembly::Instance *>(copy.root().children()[1]);
+	const auto *copiedSword = dynamic_cast<const spk::Assembly::Puppet *>(copy.root().children()[1]);
 	ASSERT_NE(copiedSword, nullptr);
 	EXPECT_NE(copiedSword, &sword);
 	EXPECT_EQ(copiedSword->attachment("blade", "guard").attachedCount(), 1u);
@@ -255,16 +255,16 @@ TEST(AssemblyInstanceTest, CopiesNestedInstancesAndKeepsThemIndependent)
 	EXPECT_NEAR(copy.element("arm").globalTransform()[3][0], 2.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, MovePreservesNodeAddressesAndOwners)
+TEST(PuppetTest, MovePreservesNodeAddressesAndOwners)
 {
-	spk::Assembly::Instance original(armAssembly());
+	spk::Assembly::Puppet original(armAssembly());
 	auto &sword = original.attachment("body", "grip").attach(swordAssembly());
 	auto *root = &original.root();
 	auto *arm = &original.element("arm");
 	auto *swordRoot = &sword.root();
 	const auto transform = sword.root().globalTransform();
 
-	spk::Assembly::Instance moved(std::move(original));
+	spk::Assembly::Puppet moved(std::move(original));
 	EXPECT_EQ(&moved.root(), root);
 	EXPECT_EQ(&moved.element("arm"), arm);
 	EXPECT_EQ(&moved.root().instance(), &moved);
@@ -274,7 +274,7 @@ TEST(AssemblyInstanceTest, MovePreservesNodeAddressesAndOwners)
 	EXPECT_EQ(moved.root().children().size(), 2u);
 	EXPECT_THROW(original.root(), spk::Exception);
 
-	spk::Assembly::Instance replacement(swordAssembly());
+	spk::Assembly::Puppet replacement(swordAssembly());
 	replacement = std::move(moved);
 	EXPECT_EQ(&replacement.root(), root);
 	EXPECT_EQ(&replacement.element("arm"), arm);
@@ -282,13 +282,13 @@ TEST(AssemblyInstanceTest, MovePreservesNodeAddressesAndOwners)
 	EXPECT_THROW(moved.root(), spk::Exception);
 }
 
-TEST(AssemblyInstanceTest, AssignmentPreservesParentAttachmentAndRecomputesPose)
+TEST(PuppetTest, AssignmentPreservesParentAttachmentAndRecomputesPose)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
 	auto &bound = grip.attach(swordAssembly());
 	const auto oldGlobal = bound.root().globalTransform();
-	spk::Assembly::Instance replacement(armAssembly());
+	spk::Assembly::Puppet replacement(armAssembly());
 	replacement.attachment("body", "shoulder").setRotation(spk::Vector3{0, 0, 90});
 
 	bound = replacement;
@@ -298,21 +298,21 @@ TEST(AssemblyInstanceTest, AssignmentPreservesParentAttachmentAndRecomputesPose)
 	EXPECT_NEAR(bound.root().globalTransform()[3][0], oldGlobal[3][0] + 1.0f, 0.0001f);
 	EXPECT_NEAR(bound.element("arm").globalTransform()[3][0], 6.0f, 0.0001f);
 
-	spk::Assembly::Instance other(armAssembly());
+	spk::Assembly::Puppet other(armAssembly());
 	bound = std::move(other);
 	EXPECT_EQ(bound.parentAttachment(), &grip);
 	EXPECT_NEAR(bound.element("arm").globalTransform()[3][0], 7.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, RejectsInvalidAttachmentsAndMoves)
+TEST(PuppetTest, RejectsInvalidAttachmentsAndMoves)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
 	EXPECT_THROW(character.attachment("body", "missing"), spk::Exception);
 	EXPECT_THROW(character.element("missing"), spk::Exception);
 	EXPECT_THROW(grip.detach(character), spk::Exception);
 	auto &sword = grip.attach(swordAssembly());
-	spk::Assembly::Instance unrelated(swordAssembly());
+	spk::Assembly::Puppet unrelated(swordAssembly());
 	EXPECT_THROW(grip.detach(unrelated), spk::Exception);
 	EXPECT_THROW(grip.attach(std::move(sword)), spk::Exception);
 	EXPECT_THROW(grip.attach(std::move(character)), spk::Exception);
@@ -322,9 +322,9 @@ TEST(AssemblyInstanceTest, RejectsInvalidAttachmentsAndMoves)
 	EXPECT_EQ(sword.assembly().root().name(), "blade");
 }
 
-TEST(AssemblyInstanceTest, RejectsQuaternionOverflowAndInvalidEulerWithoutMutation)
+TEST(PuppetTest, RejectsQuaternionOverflowAndInvalidEulerWithoutMutation)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &shoulder = character.attachment("body", "shoulder");
 	shoulder.setRotation(spk::Vector3{0, 0, 90});
 	const float before = character.element("arm").globalTransform()[3][0];
@@ -335,13 +335,13 @@ TEST(AssemblyInstanceTest, RejectsQuaternionOverflowAndInvalidEulerWithoutMutati
 	EXPECT_NEAR(character.element("arm").globalTransform()[3][0], before, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, ComposesStaticAttachmentOrientationBeforeDynamicRotation)
+TEST(PuppetTest, ComposesStaticAttachmentOrientationBeforeDynamicRotation)
 {
-	spk::Assembly::Builder builder;
-	auto &root = builder.setRoot<spk::Assembly::Element>("root");
+	spk::Assembly::Blueprint::Builder builder;
+	auto &root = builder.setRoot<spk::Assembly::Blueprint::Element>("root");
 	root.addAttachmentPoint("pivot", {2, 0, 0}, spk::Quaternion::fromAxisAngle({0, 0, 1}, 90.0f));
-	root.attach<spk::Assembly::Element>("pivot", "child").setAnchor({1, 0, 0});
-	spk::Assembly::Instance instance(builder.build());
+	root.attach<spk::Assembly::Blueprint::Element>("pivot", "child").setAnchor({1, 0, 0});
+	spk::Assembly::Puppet instance(builder.build());
 	auto &pivot = instance.attachment("root", "pivot");
 
 	EXPECT_NEAR(instance.element("child").globalTransform()[3][0], 2.0f, 0.0001f);
@@ -353,15 +353,15 @@ TEST(AssemblyInstanceTest, ComposesStaticAttachmentOrientationBeforeDynamicRotat
 	EXPECT_NEAR(pivot.transform()[3][1], 0.0f, 0.0001f);
 }
 
-TEST(AssemblyInstanceTest, CopiesAnAttachedInstanceAsIndependentRoot)
+TEST(PuppetTest, CopiesAnAttachedInstanceAsIndependentRoot)
 {
-	spk::Assembly::Instance character(armAssembly());
+	spk::Assembly::Puppet character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
 	auto &original = grip.attach(swordAssembly());
 	original.attachment("blade", "guard").setRotation(spk::Vector3{0, 0, 90});
 	const auto attachedX = original.root().globalTransform()[3][0];
 
-	spk::Assembly::Instance copy = original;
+	spk::Assembly::Puppet copy = original;
 	EXPECT_EQ(copy.parentAttachment(), nullptr);
 	EXPECT_NE(&copy.root(), &original.root());
 	EXPECT_EQ(&copy.assembly().root(), &original.assembly().root());
@@ -372,11 +372,11 @@ TEST(AssemblyInstanceTest, CopiesAnAttachedInstanceAsIndependentRoot)
 	EXPECT_EQ(grip.attachedCount(), 1u);
 }
 
-TEST(AssemblyInstanceTest, RejectsMovingAnInstanceWhoseDataWasAlreadyTransferred)
+TEST(PuppetTest, RejectsMovingAnInstanceWhoseDataWasAlreadyTransferred)
 {
-	spk::Assembly::Instance original(swordAssembly());
-	spk::Assembly::Instance transferred(std::move(original));
-	spk::Assembly::Instance destination(armAssembly());
+	spk::Assembly::Puppet original(swordAssembly());
+	spk::Assembly::Puppet transferred(std::move(original));
+	spk::Assembly::Puppet destination(armAssembly());
 	auto &grip = destination.attachment("body", "grip");
 
 	EXPECT_THROW(grip.attach(std::move(original)), spk::Exception);
