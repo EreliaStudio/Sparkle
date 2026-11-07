@@ -160,11 +160,26 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		leftArm.addAttachmentPoint("wrist", {0, -0.90f, 0});
 		rightArm.addAttachmentPoint("wrist", {0, -0.90f, 0});
 		leftArm.attach<ColorVolume>("wrist", "leftHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
-		rightArm.attach<ColorVolume>("wrist", "rightHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
+		auto &rightHand = rightArm.attach<ColorVolume>("wrist", "rightHand", spk::Color{0.98f, 0.79f, 0.54f, 1}, spk::Vector3{0, -0.15f, 0}, spk::Vector3{0.25f, 0.30f, 0.27f});
+		rightHand.addAttachmentPoint("grip", {0, -0.28f, 0});
 		torso.addAttachmentPoint("leftHip", {-0.25f, -0.72f, 0});
 		torso.addAttachmentPoint("rightHip", {0.25f, -0.72f, 0});
 		torso.attach<ColorVolume>("leftHip", "leftLeg", spk::Color{0.34f, 0.49f, 0.81f, 1}, spk::Vector3{0, -0.56f, 0}, spk::Vector3{0.34f, 1.11f, 0.40f});
 		torso.attach<ColorVolume>("rightHip", "rightLeg", spk::Color{0.34f, 0.49f, 0.81f, 1}, spk::Vector3{0, -0.56f, 0}, spk::Vector3{0.34f, 1.11f, 0.40f});
+		return builder.build();
+	}
+
+	[[nodiscard]] Blueprint swordBlueprint()
+	{
+		Blueprint::Builder builder;
+		auto &hilt = builder.setRoot<ColorVolume>(
+			"swordHilt", spk::Color{0.37f, 0.25f, 0.16f, 1}, spk::Vector3{0, -0.22f, 0}, spk::Vector3{0.16f, 0.44f, 0.16f});
+		hilt.addAttachmentPoint("guard", {0, -0.46f, 0});
+		auto &guard = hilt.attach<ColorVolume>(
+			"guard", "swordGuard", spk::Color{0.95f, 0.72f, 0.18f, 1}, spk::Vector3{}, spk::Vector3{0.58f, 0.13f, 0.17f});
+		guard.addAttachmentPoint("blade", {0, -0.11f, 0});
+		guard.attach<ColorVolume>(
+			"blade", "swordBlade", spk::Color{0.82f, 0.88f, 0.95f, 1}, spk::Vector3{0, -0.48f, 0}, spk::Vector3{0.19f, 0.96f, 0.12f});
 		return builder.build();
 	}
 
@@ -249,6 +264,21 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		return context.capture();
 	}
 
+	void expectGolden(const std::string &name)
+	{
+		const auto actual = sparkle_test::resultImagePath(GoldenCategory, name);
+		const auto expected = sparkle_test::expectedImagePath(GoldenCategory, name);
+		const auto difference = sparkle_test::resultImagePath(GoldenCategory, name + "_difference");
+		ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing approved golden: " << expected << "; rendered: " << actual;
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 6;
+		tolerance.alphaTolerance = 8;
+		const auto comparison = sparkle_test::compareImages(actual, expected, difference, tolerance, false);
+		EXPECT_EQ(comparison.actualWidth, comparison.expectedWidth);
+		EXPECT_EQ(comparison.actualHeight, comparison.expectedHeight);
+		EXPECT_LE(comparison.differentPixelCount, 150u) << "Golden mismatch: " << name << "; diff: " << difference;
+	}
+
 	[[nodiscard]] spk::Vector4 pointOn(const Character &character, const char *part, spk::Vector3 local = {})
 	{
 		return character.element(part).globalTransform() * spk::Vector4{local.x, local.y, local.z, 1.0f};
@@ -279,23 +309,48 @@ TEST_P(RenderablePuppet3DGoldenTest, ArticulatedCharacterMatchesReference)
 	Character character(characterBlueprint());
 	poseCharacter(character, pose);
 	const auto name = poseName(pose);
-	const auto actual = sparkle_test::resultImagePath(GoldenCategory, name);
-	const auto expected = sparkle_test::expectedImagePath(GoldenCategory, name);
-	const auto difference = sparkle_test::resultImagePath(GoldenCategory, name + "_difference");
 	const auto image = capture(character, previewCamera(), name);
 	EXPECT_EQ(character.graphicsCount(), 8u);
 	EXPECT_EQ(image.size.x, ImageSize.x);
 	EXPECT_EQ(image.size.y, ImageSize.y);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
-	ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing approved golden: " << expected << "; rendered: " << actual;
+	expectGolden(name);
+}
 
-	sparkle_test::ImageComparisonOptions tolerance;
-	tolerance.rgbTolerance = 6;
-	tolerance.alphaTolerance = 8;
-	const auto comparison = sparkle_test::compareImages(actual, expected, difference, tolerance, false);
-	EXPECT_EQ(comparison.actualWidth, comparison.expectedWidth);
-	EXPECT_EQ(comparison.actualHeight, comparison.expectedHeight);
-	EXPECT_LE(comparison.differentPixelCount, 150u) << "Golden mismatch: " << name << "; diff: " << difference;
+TEST(RenderablePuppet3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFollowsArm)
+{
+	Character character(characterBlueprint());
+	auto &grip = character.attachment("rightHand", "grip");
+	spk::Assembly::Puppet &sword = grip.attach(swordBlueprint());
+	const auto camera = previewCamera();
+	const auto restingBlade = sword.element("swordBlade").globalTransform() * spk::Vector4{0, -0.96f, 0, 1};
+	const auto resting = capture(character, camera, "sword_resting");
+	EXPECT_EQ(character.graphicsCount(), 11u);
+	ASSERT_NE(character.graphics(sword.root()), nullptr);
+	const auto *hiltGraphics = character.graphics(sword.root());
+	expectGolden("sword_resting");
+
+	character.attachment("torso", "rightShoulder").setRotation(spk::Vector3{0, 0, 55});
+	const auto raisedBlade = sword.element("swordBlade").globalTransform() * spk::Vector4{0, -0.96f, 0, 1};
+	const auto raised = capture(character, camera, "sword_raised");
+	EXPECT_NE(resting.pixels, raised.pixels);
+	EXPECT_EQ(character.graphicsCount(), 11u);
+	EXPECT_EQ(character.graphics(sword.root()), hiltGraphics);
+	EXPECT_GT(raisedBlade.x, restingBlade.x + 0.9f);
+	EXPECT_GT(raisedBlade.y, restingBlade.y + 0.5f);
+	expectGolden("sword_raised");
+
+	const auto expected = character.element("rightHand").globalTransform() * grip.transform() * sword.root().definition().anchor();
+	for (std::size_t axis = 0; axis < 3; ++axis)
+	{
+		EXPECT_NEAR(sword.root().globalTransform()[3][axis], expected[3][axis], 0.0001f);
+	}
+	expectJointChain(sword, "swordHilt", "guard", "swordGuard");
+	expectJointChain(sword, "swordGuard", "blade", "swordBlade");
+	spk::Assembly::Puppet detached = grip.detach(sword);
+	character.synchronize();
+	EXPECT_EQ(character.graphicsCount(), 8u);
+	EXPECT_EQ(grip.attachedCount(), 0u);
 }
 
 TEST(RenderablePuppet3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParentTransforms)
