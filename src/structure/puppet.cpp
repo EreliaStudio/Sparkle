@@ -259,7 +259,7 @@ namespace spk::Assembly
 	}
 
 	Puppet::ElementNode::ElementNode(
-		Puppet::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
+		Puppet::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		Attachable(structuralParent, parentAttachment),
 		_definition(&definition),
 		_instanceData(&instanceData)
@@ -269,7 +269,7 @@ namespace spk::Assembly
 		for (const auto &point : definition.attachmentPoints())
 		{
 			auto attachment = std::make_unique<AttachmentNode>(*this, point);
-			if (const Element *child = point.child())
+			if (const Blueprint::Element *child = point.child())
 			{
 				auto node = std::make_unique<ElementNode>(instanceData, *child, nullptr, attachment.get());
 				_addChild(*node);

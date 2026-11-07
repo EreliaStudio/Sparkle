@@ -28,7 +28,7 @@ namespace
 namespace spk::Assembly
 {
 	AttachmentNode::AttachmentNode(
-		Puppet::ElementNode &owner, const Element::AttachmentPoint &definition) :
+		Puppet::ElementNode &owner, const Blueprint::Element::AttachmentPoint &definition) :
 		_owner(&owner),
 		_definition(&definition),
 		_transform(definition.transform())

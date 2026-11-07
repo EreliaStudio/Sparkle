@@ -82,7 +82,7 @@ namespace spk::Assembly
 
 	private:
 		Puppet::ElementNode *_owner;
-		const Element::AttachmentPoint *_definition;
+		const Blueprint::Element::AttachmentPoint *_definition;
 		Matrix4x4 _rotationMatrix = Matrix4x4::identity();
 		Matrix4x4 _transform = Matrix4x4::identity();
 		std::vector<std::unique_ptr<Puppet>> _bound;
@@ -91,7 +91,7 @@ namespace spk::Assembly
 		Puppet &_attachOwned(std::unique_ptr<Puppet> instance);
 
 	public:
-		AttachmentNode(Puppet::ElementNode &owner, const Element::AttachmentPoint &definition);
+		AttachmentNode(Puppet::ElementNode &owner, const Blueprint::Element::AttachmentPoint &definition);
 		~AttachmentNode();
 
 		AttachmentNode(const AttachmentNode &) = delete;
@@ -99,7 +99,7 @@ namespace spk::Assembly
 		AttachmentNode(AttachmentNode &&) = delete;
 		AttachmentNode &operator=(AttachmentNode &&) = delete;
 
-		[[nodiscard]] const Element::AttachmentPoint &definition() const noexcept;
+		[[nodiscard]] const Blueprint::Element::AttachmentPoint &definition() const noexcept;
 		[[nodiscard]] Puppet::ElementNode &owner() noexcept;
 		[[nodiscard]] const Puppet::ElementNode &owner() const noexcept;
 		[[nodiscard]] const Matrix4x4 &rotationMatrix() const noexcept;
@@ -120,10 +120,10 @@ namespace spk::Assembly
 	class Puppet::ElementNode : public Attachable
 	{
 		friend class Puppet;
-		friend class AttachmentNode;
+		friend class ::spk::Assembly::AttachmentNode;
 
 	private:
-		const Element *_definition;
+		const Blueprint::Element *_definition;
 		Puppet::Data *_instanceData;
 		std::vector<std::unique_ptr<ElementNode>> _ownedChildren;
 		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
@@ -131,7 +131,7 @@ namespace spk::Assembly
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
-		ElementNode(Puppet::Data &instanceData, const Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
+		ElementNode(Puppet::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
 		~ElementNode();
 
 		ElementNode(const ElementNode &) = delete;
@@ -139,7 +139,7 @@ namespace spk::Assembly
 		ElementNode(ElementNode &&) = delete;
 		ElementNode &operator=(ElementNode &&) = delete;
 
-		[[nodiscard]] const Element &definition() const noexcept;
+		[[nodiscard]] const Blueprint::Element &definition() const noexcept;
 		[[nodiscard]] Puppet &instance() noexcept;
 		[[nodiscard]] const Puppet &instance() const noexcept;
 		[[nodiscard]] AttachmentNode &attachment(const std::string &name);
