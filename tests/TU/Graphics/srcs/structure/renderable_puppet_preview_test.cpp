@@ -57,7 +57,7 @@ namespace
 		{
 		}
 
-		void append(const ElementNode &node, const spk::Camera3D &camera, spk::RenderPass &pass) const;
+		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform) const;
 	};
 
 	using Character = spk::Assembly::RenderablePuppet<ColorElementView>;
@@ -75,10 +75,10 @@ namespace
 		return {screen, 0.0f, color};
 	}
 
-	void ColorElementView::append(
-		const ElementNode &node, const spk::Camera3D &camera, spk::RenderPass &pass) const
+	void ColorElementView::buildRenderSnapshot(
+		spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform) const
 	{
-		const auto transform = camera.viewProjectionMatrix() * node.globalTransform();
+		auto &pass = builder.renderPass({"puppet-preview", 0});
 		spk::ColorMesh2D::Builder mesh;
 		mesh.addShape(
 			project(transform, {_min.x, _max.y}, _color),
@@ -122,9 +122,7 @@ namespace
 		pass.emplace<spk::ClearRenderCommand>(spk::Color{0.07f, 0.10f, 0.15f, 1}, spk::ClearRenderCommand::Mask::All);
 		pass.emplace<spk::ViewportRenderCommand>(viewport);
 		pass.emplace<spk::ViewportUniformRenderCommand>(viewport);
-		character.visitGraphics([&](const ElementNode &node, ColorElementView &view) {
-			view.append(node, camera, pass);
-		});
+		character.buildRenderSnapshot(builder, camera.viewProjectionMatrix());
 		builder.build().execute(context.renderContext());
 		context.save(sparkle_test::resultImagePath("rendering/puppet", pose));
 		return context.capture();

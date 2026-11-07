@@ -34,6 +34,8 @@ namespace
 		static inline bool throwOnConstruction = false;
 
 		int marker;
+		std::size_t snapshotCount = 0;
+		spk::Matrix4x4 lastTransform = spk::Matrix4x4::identity();
 
 		explicit TrackedGraphics(const DrawableElement &element) :
 			marker(element.marker)
@@ -43,6 +45,13 @@ namespace
 				throw std::runtime_error("Mock graphics creation failed");
 			}
 			++constructed;
+		}
+
+		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::Matrix4x4 &transform)
+		{
+			++snapshotCount;
+			lastTransform = transform;
+			(void)builder.renderPass({"puppet-graphics-test", 0});
 		}
 
 		TrackedGraphics(const TrackedGraphics &) = delete;
@@ -174,3 +183,41 @@ TEST(RenderablePuppetTest, FailedConstructionCanBeRetried)
 	EXPECT_NO_THROW(character.synchronize());
 	EXPECT_EQ(character.graphicsCount(), 2u);
 }
+
+TEST(RenderablePuppetTest, BuildsSnapshotsWithEachElementWorldTransform)
+{
+	TrackedGraphics::reset();
+	Renderable character(characterBlueprint());
+	spk::RenderSnapshot::Builder builder;
+	character.buildRenderSnapshot(builder);
+
+	EXPECT_EQ(character.graphicsCount(), 2u);
+	auto *arm = character.graphics(character.element("arm"));
+	ASSERT_NE(arm, nullptr);
+	EXPECT_EQ(arm->snapshotCount, 1u);
+	EXPECT_EQ(arm->lastTransform[3][0], character.element("arm").globalTransform()[3][0]);
+
+	const auto cameraTransform = spk::Matrix4x4::translation({1, 2, 3});
+	character.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 45});
+	character.buildRenderSnapshot(builder, cameraTransform);
+
+	ASSERT_EQ(arm, character.graphics(character.element("arm")));
+	EXPECT_EQ(arm->snapshotCount, 2u);
+	const auto expected = cameraTransform * character.element("arm").globalTransform();
+	EXPECT_EQ(arm->lastTransform[0][0], expected[0][0]);
+	EXPECT_EQ(arm->lastTransform[3][1], expected[3][1]);
+	EXPECT_EQ(TrackedGraphics::constructed, 2);
+}
+
+namespace
+{
+	class MissingSnapshotMethod
+	{
+	public:
+		using ElementType = DrawableElement;
+		explicit MissingSnapshotMethod(const DrawableElement &) {}
+	};
+}
+
+static_assert(spk::Assembly::PuppetGraphics<TrackedGraphics>);
+static_assert(!spk::Assembly::PuppetGraphics<MissingSnapshotMethod>);
