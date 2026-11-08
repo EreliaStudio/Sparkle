@@ -1,5 +1,7 @@
 # PR-01 — Shape, Definition et Cell
 
+> **État : livré dans `V0.1.4` (PR fusionnée).** Cette fiche conserve les étapes et checklists historiques. Les API finales et les décisions qui remplacent des éléments du plan figurent dans [IMPLEMENTED-01-08.md](IMPLEMENTED-01-08.md). Les cases non cochées ne désignent pas automatiquement du travail restant.
+
 > **PR-01 en cours :** [PR GitHub #40](https://github.com/EreliaStudio/Sparkle/pull/40), sur `impl/v0.1.4/01-voxel-foundations` créée depuis `V0.1.4` et ciblant `V0.1.4`. Ne pas fusionner sans validation du propriétaire.
 
 **Objectif :** Constituer le modèle voxel public sans Engine et sans OpenGL.

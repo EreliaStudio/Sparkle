@@ -1,5 +1,7 @@
 # PR-06 — Material multi-rôles, Texture et SpriteSheet
 
+> **État : livré dans `V0.1.4` (PR fusionnée).** Cette fiche conserve les étapes et checklists historiques. Les API finales et les décisions qui remplacent des éléments du plan figurent dans [IMPLEMENTED-01-08.md](IMPLEMENTED-01-08.md). Les cases non cochées ne désignent pas automatiquement du travail restant.
+
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
 > **Branche source :** `impl/v0.1.4/06-materials-json`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
