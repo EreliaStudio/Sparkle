@@ -173,7 +173,7 @@ namespace
 		EXPECT_EQ(first.slot("wall").name, "stone");
 		EXPECT_EQ(second.semanticSlot("wall"), "glass");
 		EXPECT_EQ(first.shape().instance().triangles().size(), 2u);
-		EXPECT_THROW(first.semanticSlot("none"), spk::Exception);
+		EXPECT_THROW((void)first.semanticSlot("none"), spk::Exception);
 	}
 
 	TEST(VoxelDefinitionTest, SlotMappingsMustBeCompleteAndValid)

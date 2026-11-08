@@ -289,7 +289,7 @@ namespace
 	{
 		Volume::Builder builder({1, 1, 1});
 		const Volume volume = builder.build();
-		EXPECT_THROW(builder.build(), spk::Exception);
+		EXPECT_THROW((void)builder.build(), spk::Exception);
 		EXPECT_THROW(builder.load(volume), spk::Exception);
 		EXPECT_THROW(builder.erase({0, 0, 0}), spk::Exception);
 		EXPECT_THROW(builder.set({0, 0, 0}, 0), spk::Exception);

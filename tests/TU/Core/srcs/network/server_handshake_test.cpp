@@ -17,7 +17,7 @@ TEST(ServerHandshake, AcceptanceRequiresCompletedControlWrite)
 	EXPECT_FALSE(handshake.ready());
 	EXPECT_TRUE(handshake.written(spk::NetworkInternal::Handshake::Kind::Accepted));
 	EXPECT_TRUE(handshake.ready());
-	EXPECT_THROW(handshake.accept(*hello), spk::Exception);
+	EXPECT_THROW((void)handshake.accept(*hello), spk::Exception);
 }
 
 TEST(ServerHandshake, InvalidVersionIsExplicitlyRejected)

@@ -178,8 +178,8 @@ TEST(VoxelOcclusion, RejectInvalidTolerance)
 {
 	auto a = shape(1);
 	auto b = shape(0, 0, 1, 1, false);
-	EXPECT_ANY_THROW(Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, 0));
-	EXPECT_ANY_THROW(Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, -1));
+	EXPECT_ANY_THROW((void)Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, 0));
+	EXPECT_ANY_THROW((void)Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, -1));
 }
 
 TEST(VoxelOcclusion, RepeatedClearAndGet)
@@ -295,6 +295,6 @@ TEST(VoxelOcclusion, RejectNonFiniteTolerance)
 {
 	auto a = shape(1);
 	auto b = shape(0, 0, 1, 1, false);
-	EXPECT_ANY_THROW(Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, std::numeric_limits<float>::infinity()));
-	EXPECT_ANY_THROW(Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, std::numeric_limits<float>::quiet_NaN()));
+	EXPECT_ANY_THROW((void)Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, std::numeric_limits<float>::infinity()));
+	EXPECT_ANY_THROW((void)Algorithm::compute(a, {}, b, {}, Shape::Face::PositiveX, std::numeric_limits<float>::quiet_NaN()));
 }
