@@ -30,7 +30,7 @@ classDiagram
     +atRaw(position) uint32
     -grille compacte + registre partagé
   }
-  class Model {
+  class Geometry {
     +opaqueMesh()
     +transparentMesh()
     +materialSlots()
@@ -40,19 +40,20 @@ classDiagram
     +triangles() const
   }
   class OcclusionCache {
-    +find/store/clear
+    +get(key) Result
+    +clear()
   }
-  class VoxelMesher {
-    +bake(Volume) Model
-    +bind(OcclusionCache*) facultatif
+  class Mesher {
+    +bake(Volume) Geometry
+    +attachCache(Occlusion::Cache&) facultatif
   }
   Shape <-- Definition
   Definition <-- Cell
   Cell <-- Volume
   Shape *-- ShapeInstance : huit orientations
-  VoxelMesher ..> OcclusionCache : facultatif
-  Volume --> VoxelMesher
-  VoxelMesher --> Model
+  Mesher ..> OcclusionCache : facultatif
+  Volume --> Mesher
+  Mesher --> Geometry
 ```
 
 ### 2.1 `spk::Voxel::Shape` : géométrie locale réutilisable
