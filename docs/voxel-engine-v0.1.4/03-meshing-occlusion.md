@@ -10,20 +10,21 @@ Les huit `Shape::Instance` (quatre rotations horizontales × inversion verticale
 
 ### 3.1 `spk::Voxel::Mesher`
 
-Le Mesher transforme un `Volume` immuable en un **nouveau `Model` à géométrie immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat du Model.
+Le Mesher transforme un `Volume` immuable en une **nouvelle `Voxel::Geometry` immuable** par un **bake synchrone et complet**. Le programme peut lancer le bake dans le thread de son choix, gérer les priorités et choisir d'utiliser ou non le résultat, mais Sparkle n'impose aucun ordonnanceur ni rebake incrémental. Changer des cellules ou des données voisines nécessite un nouveau bake pour modifier le résultat de `Geometry`.
 
 Son travail est indépendant des matériaux concrets et des pixels de texture. Le `Mesher` fonctionne **avec ou sans `Occlusion::Cache`**. Si un cache externe lui est explicitement lié, il réutilise ou mémorise ses résultats d'occlusion ; sinon, il calcule l'occlusion à chaque bake par **le même algorithme CPU de clipping**, sans la mémoriser entre les requêtes. Il consulte toujours les `Shape::Instance` précalculées et ne recalcule jamais les orientations.
 
 ```cpp
 spk::Voxel::Mesher mesher;
-auto uncachedModel = mesher.bake(volume); // Occlusion recalculée
+auto uncachedGeometry = mesher.bake(volume); // Occlusion recalculée
 
 spk::Voxel::Occlusion::Cache occlusion;
-mesher.bind(&occlusion);                   // Optimisation facultative
-auto cachedModel = mesher.bake(volume);
+mesher.attachCache(occlusion);             // Optimisation facultative
+auto cachedGeometry = mesher.bake(volume);
+mesher.detachCache();
 ```
 
-La liaison du cache, lorsqu'elle existe, est non propriétaire : l'appelant garantit sa durée de vie pendant le bake. Une absence de cache ou une liaison retirée signifie le mode sans cache, **pas une erreur**. La forme exacte de `bind(nullptr)` ou `unbind()` reste un détail d'API locale ; aucune liaison de cache de transformations n'est nécessaire. Le clipping partagé ne doit pas être dupliqué entre le chemin avec cache et le chemin sans cache.
+La liaison du cache, lorsqu'elle existe, est non propriétaire : l'appelant garantit sa durée de vie pendant le bake. Une absence de cache ou une liaison retirée signifie le mode sans cache, **pas une erreur**. La désactivation du cache se fait par `detachCache()` ; aucun cache de transformations n'est nécessaire. Le clipping partagé ne doit pas être dupliqué entre le chemin avec cache et le chemin sans cache.
 
 La tolérance de clipping est un seul paramètre configurable du Mesher, **`1e-5` par défaut** dans les unités locales du cube. Toute valeur non finie ou non strictement positive est rejetée par `spk::Exception`. Cette tolérance contribue à la clé du cache. La détermination des longueurs, aires et seuils de dégénérescence doit rester dimensionnellement cohérente : ne pas comparer une aire directement à une longueur.
 

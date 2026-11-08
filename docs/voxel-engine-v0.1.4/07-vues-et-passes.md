@@ -559,7 +559,7 @@ L'état **« non configuré »** doit rester distinct d'une liste vide et être 
 
 **Cas voxel — responsabilités visuelles (PR-13/14).** Un futur `VoxelRenderingSystem` recevra les `Voxel::Geometry` et `spk::Palette` d'occurrences graphiques compatibles avec la vue, et soumettra exclusivement leurs commandes visuelles. Les types de composants ECS seront fixés à l'intégration : ni `ModelRenderingComponent` ni `AssemblyRenderingComponent` ne sont présents aujourd'hui. `Geometry::isCompatible(palette)` vérifie les noms de slots ; la vue est responsable du choix de palette et de la capture des transforms.
 
-**Cas des ombres séparé (PR-20 et suivantes).** `Voxel::Geometry::depthMesh()` fournit un mesh géométrique, sans crée automatiquement de `ShadowMap::Contributor`. Un jeu qui souhaite des ombres lie explicitement ses meshes et les matrices cumulées des éléments de `Model3D::ObjectHeadless` via la future API `ShadowMap::MeshInstance`. Aucun import/expansion de `Voxel::Assembly` ne doit être recréé. Les snapshots capturent leurs transformations par valeur.
+**Cas des ombres séparé (PR-20 et suivantes).** `Voxel::Geometry::depthMesh()` fournit un mesh géométrique, sans créer automatiquement de `ShadowMap::Contributor`. Un jeu qui souhaite des ombres lie explicitement ses meshes et les matrices cumulées des éléments de `Model3D::ObjectHeadless` via la future API `ShadowMap::MeshInstance`. Aucun import/expansion de `Voxel::Assembly` ne doit être recréé. Les snapshots capturent leurs transformations par valeur.
 
 ```cpp
 // API conceptuelle, signatures finales à vérifier durant l'implémentation.

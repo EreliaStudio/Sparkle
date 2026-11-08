@@ -39,7 +39,7 @@ classDiagram
   class ShapeInstance {
     +triangles() const
   }
-  class OcclusionCache {
+  class OcclusionCacheAPI["Voxel::Occlusion::Cache"] {
     +get(key) Result
     +clear()
   }
@@ -51,7 +51,7 @@ classDiagram
   Definition <-- Cell
   Cell <-- Volume
   Shape *-- ShapeInstance : huit orientations
-  Mesher ..> OcclusionCache : facultatif
+  Mesher ..> OcclusionCacheAPI : facultatif
   Volume --> Mesher
   Mesher --> Geometry
 ```
@@ -86,7 +86,7 @@ Chaque `Shape::Data` détient **huit `Shape::Instance` immuables** (`std::array<
 
 ### 2.2 `spk::Voxel::Definition` : sens des slots
 
-Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → `Definition::Slot`**, contenant un nom de slot sémantique destiné au Model et une opacité dans `[0,1]` (par défaut `1.0`). Elle ne contient pas de `Material` ; l'opacité est spécifique à chaque Definition et détermine l'occlusion.
+Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → `Definition::Slot`**, contenant un nom de slot sémantique destiné à `Voxel::Geometry` et une opacité dans `[0,1]` (par défaut `1.0`). Elle ne contient pas de `Material` ; l'opacité est spécifique à chaque Definition et détermine l'occlusion.
 
 `Definition` utilise également des données immuables partagées (`shared_ptr<const Data>`) et conserve la durée de vie de sa Shape. Copier une Definition est léger. Une même Shape peut être réutilisée dans différentes Definitions pour produire des noms de slots sémantiques différents. Les huit `Shape::Instance` sont alors réellement communes à ces Definitions : le mapping sémantique est appliqué plus tard et ne modifie ni l'identité ni les polygones orientés de la Shape.
 
