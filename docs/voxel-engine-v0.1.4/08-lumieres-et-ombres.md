@@ -80,7 +80,7 @@ flowchart LR
   ShadowComp --> Filter["MeshFilter : collection de MeshInstance"]
   SourceMesh["spk::Mesh de TVertex"] -->|"extracteur Vector3 + indices"| Converted["ShadowMap::Mesh"]
   Converted -->|"copie legere"| Instance["MeshInstance : mesh + matrice locale"]
-  AssemblyPose["Assembly : matrices cumulees des Parts relatives a Assembly"] -->|"valeurs explicites"| Instance
+  Model3DPose["Model3D : matrices cumulees des éléments"] -->|"valeurs explicites"| Instance
   AssemblyMatrix["Matrice Assembly relative a Entity"] -->|"bind(collection, assemblyMatrix)"| Filter
   Instance -->|"bind(collection, assemblyMatrix) : remplace tout"| Filter
   Visual --> VR["VoxelRenderingSystem : rendu visuel"]
@@ -117,11 +117,11 @@ flowchart LR
 
 **Q-ARCH — ombres exclusivement géométriques (option A validée pour V0.1.4).** Le rendu des shadow maps emploie **uniquement les positions, les indices et les matrices** fournis par `ShadowMap::Mesh` et `MeshInstance`, avec écriture de profondeur pour les triangles admis. Il **ne lit ni texture albedo, ni UV, ni canal alpha, ni `Material`** et n'effectue aucun `alpha test`, `alpha discard`, seuil de cutout ou découpe de silhouette dépendant d'une texture. Tous les triangles du mesh d'ombre lié explicitement et classés comme casters opaques sont traités comme **entièrement occultants** sur leur surface, même si le matériau visuel comporte des pixels transparents. Un rectangle texturé représentant une feuille ajourée projette donc l'ombre pleine du rectangle, sauf si le développeur fournit **un mesh d'ombre géométriquement découpé** adapté. Le meshing voxel continue de sélectionner ses triangles d'ombre depuis les seuls polygones de slot d'opacité `1` au bake, indépendamment de l'alpha de l'albedo ; les surfaces visuelles translucides de slot d'opacité `< 1` ne projettent pas d'ombres, mais peuvent en recevoir. Aucune nouvelle catégorie `cutout`, aucun lien implicite matériau→caster et aucun shader de profondeur alpha-aware ne sont introduits. Changer uniquement une texture ou une palette ne modifie ni la géométrie du caster ni la validité des caches d'ombres : seul un nouveau `bind()` ou une autre invalidation géométrique explicite doit les affecter.
 
-**`ShadowMap::MeshInstance` et transformations locales (A1, complément matrice commune).** Une `MeshInstance` est une structure publique contenant un `ShadowMap::Mesh mesh` et une `spk::Matrix4x4 localTransform`. La copie de `mesh` est **légère** : elle partage les données immuables de `spk::Mesh`. La matrice est détenue **par valeur**, sans pointeur, abonnement ni dépendance à un autre `Transform3D`. Elle exprime la pose du mesh **dans le repère local de la collection**, par exemple le repère d'une `Voxel::Assembly`, et non le monde. Le `MeshFilter` conserve également **une seule `spk::Matrix4x4 baseTransform` commune à toutes les instances**, exprimée dans le repère de l'`Entity3D` porteuse ; à défaut elle est identité. Pour chaque position, la matrice complète est `M_world = M_entityWorld * M_base * M_instanceLocal`, appliquée au sommet du mesh, selon la convention algébrique de Sparkle. `M_base` peut être la matrice de l'Assembly : chaque descendant conserve sa propre matrice cumulée **relative à l'Assembly**, sans incorporer `M_base` une seconde fois. Plusieurs instances peuvent partager le même mesh avec des matrices différentes ; elles n'ont pas d'identifiant ni de cycle de vie indépendant. Le système peut composer les matrices à la capture CPU sans modifier ni prétransformer les buffers des meshes.
+**`ShadowMap::MeshInstance` et transformations locales (A1, complément matrice commune).** Une `MeshInstance` est une structure publique contenant un `ShadowMap::Mesh mesh` et une `spk::Matrix4x4 localTransform`. La copie de `mesh` est **légère** : elle partage les données immuables de `spk::Mesh`. La matrice est détenue **par valeur**, sans pointeur, abonnement ni dépendance à un autre `Transform3D`. Elle exprime la pose du mesh **dans le repère local de la collection**, par exemple le repère d'une `Model3D::ObjectHeadless`, et non le monde. Le `MeshFilter` conserve également **une seule `spk::Matrix4x4 baseTransform` commune à toutes les instances**, exprimée dans le repère de l'`Entity3D` porteuse ; à défaut elle est identité. Pour chaque position, la matrice complète est `M_world = M_entityWorld * M_base * M_instanceLocal`, appliquée au sommet du mesh, selon la convention algébrique de Sparkle. `M_base` peut être la matrice de l'Assembly : chaque descendant conserve sa propre matrice cumulée **relative à l'Assembly**, sans incorporer `M_base` une seconde fois. Plusieurs instances peuvent partager le même mesh avec des matrices différentes ; elles n'ont pas d'identifiant ni de cycle de vie indépendant. Le système peut composer les matrices à la capture CPU sans modifier ni prétransformer les buffers des meshes.
 
 **API de liaison, remplacement intégral et état atomique (A1, complément matrice commune).** Le `MeshFilter` intégré au Contributor contient **une collection ordonnée** de `MeshInstance` **et une matrice commune `baseTransform`**. Les signatures conceptuelles sont `bind(const ShadowMap::Mesh&)`, `bind(const ShadowMap::Mesh&, const spk::Matrix4x4&)`, `bind(collection<MeshInstance>)` et **`bind(collection<MeshInstance>, const spk::Matrix4x4& baseMatrix)`**. Pour un mesh unique, `bind(mesh, matrix)` équivaut à une collection d'une entrée avec `localTransform = identité` et `baseTransform = matrix` ; pour une collection sans second argument, `baseTransform = identité`. **Toutes les surcharges remplacent intégralement et atomiquement le couple `(instances, baseTransform)`**, sans ajout incrémental ni conservation cachée de l'ancienne matrice commune. Une collection vide supprime toutes les instances, remet la matrice commune à l'identité ; `unbind()` peut être un raccourci explicite à cette remise à zéro. Il n'existe ni `add(mesh, transform)`, ni `remove(id)`, ni `setTransform(id)` ni identifiants pérennes d'entrée. Les wrappers des meshes immuables sont copiés légèrement ; toutes les matrices (instance et base) sont copiées par valeur. La destruction des wrappers, du Model ou de l'Assembly de départ ne rend pas les copies invalides. Une matrice non finie, qu'elle soit commune ou particulière, est refusée par `spk::Exception`, et toute erreur de validation laisse **collection et matrice commune anciennes intactes**.
 
-**Invalidation des bindings et capture sûre (A1, clos).** Le Contributor prépare sa nouvelle collection avant de remplacer la précédente. Chaque **appel `bind()` réussi**, même si le contenu est identique, effectue un remplacement logique puis émet **une notification unique** via son `ContractProvider`, quel que soit le nombre de meshes ou matrices changés ; il n'existe aucune notification par entrée ni comparaison profonde implicite. Le système d'ombres invalide les caches selon le **mode propre du Contributor** : un changement purement `Dynamic` n'invalide que la **carte finale**, tandis qu'un changement `Static` invalide **statique et finale**. Un changement de `ShadowMode` conserve sa propre invalidation statique + finale déjà spécifiée. La notification unique d'un `bind()` suffit à déclencher cette logique de classification. Pour actualiser la pose d'une `Voxel::Assembly`, le jeu recalcule les matrices locales **cumulées par rapport à l'Assembly** des Parts et rappelle `bind(collection, assemblyMatrix)` ; pour déplacer l'Assembly entière relativement à l'Entity, il peut réutiliser la même collection et fournir **une nouvelle matrice commune**, sans rebake, ni fusion géométrique, ni suivi automatique d'Assembly. Un mouvement global de l'Entity ne nécessite pas de nouveau bind local, mais sa notification de transformation demeure nécessaire au système d'ombres. Lors de la capture CPU, chaque entrée admise est transformée par `M_entityWorld * M_base * M_instanceLocal` ; les **commandes du snapshot copient/capturent les matrices finales, buffers et handles**. `execute(RenderContext&) const` n'accède jamais au conteneur du Contributor, à l'Entity mutable ou à une Part d'Assembly. Les snapshots publiés avant le bind continuent d'utiliser leurs anciennes versions.
+**Invalidation des bindings et capture sûre (A1, clos).** Le Contributor prépare sa nouvelle collection avant de remplacer la précédente. Chaque **appel `bind()` réussi**, même si le contenu est identique, effectue un remplacement logique puis émet **une notification unique** via son `ContractProvider`, quel que soit le nombre de meshes ou matrices changés ; il n'existe aucune notification par entrée ni comparaison profonde implicite. Le système d'ombres invalide les caches selon le **mode propre du Contributor** : un changement purement `Dynamic` n'invalide que la **carte finale**, tandis qu'un changement `Static` invalide **statique et finale**. Un changement de `ShadowMode` conserve sa propre invalidation statique + finale déjà spécifiée. La notification unique d'un `bind()` suffit à déclencher cette logique de classification. Pour actualiser la pose d'une `Model3D::ObjectHeadless`, le jeu recalcule les matrices locales **cumulées par rapport à l'Assembly** des Parts et rappelle `bind(collection, assemblyMatrix)` ; pour déplacer l'Assembly entière relativement à l'Entity, il peut réutiliser la même collection et fournir **une nouvelle matrice commune**, sans rebake, ni fusion géométrique, ni suivi automatique d'Assembly. Un mouvement global de l'Entity ne nécessite pas de nouveau bind local, mais sa notification de transformation demeure nécessaire au système d'ombres. Lors de la capture CPU, chaque entrée admise est transformée par `M_entityWorld * M_base * M_instanceLocal` ; les **commandes du snapshot copient/capturent les matrices finales, buffers et handles**. `execute(RenderContext&) const` n'accède jamais au conteneur du Contributor, à l'Entity mutable ou à une Part d'Assembly. Les snapshots publiés avant le bind continuent d'utiliser leurs anciennes versions.
 
 **État initial et absence de sources (A1, clos).** Un `ShadowMap::Contributor` est **facultatif** sur une Entity ; aucun composant visuel ne le crée automatiquement. À la construction : `ShadowMode = None`, collection de `MeshInstance` **vide**, `baseTransform = identité`, et **aucun layer** (collection de noms vide). `None` évite toute projection implicite ; l'application demande explicitement `Static` ou `Dynamic` **sur ce Contributor**. Aucun mesh, une collection vide ou des meshes vides ne produisent de triangles d'ombre et ne déclenchent pas d'exception. Le Contributor ne transmet aucun mode d'ombre aux descendants, même s'il n'a lui-même aucune géométrie. Les layers ne s'héritent ni de l'Entity ni du visuel : selon §7.2, une liste vide est admise par une vue **sans filtre configuré**, et exclue d'une vue **avec filtre explicite**, même si la liste de filtre est vide. Aucune liaison implicite au premier mesh visuel n'est autorisée. Le producteur garantit l'opacité des triangles fournis ; le mesh position-seule ne peut pas vérifier l'alpha.
 
@@ -147,40 +147,25 @@ Les noms secondaires et la qualification exacte des enums sont illustratifs ; le
 
 **Setter et notifications automatiques (A2).** `ShadowMap::Contributor::setShadowMode(mode)` compare uniquement le nouveau `ShadowMode` à la valeur stockée. Si le mode change, il l'enregistre et notifie son **`ContractProvider` propre aux ombres** ; sinon il ne notifie rien. Aucune politique de propagation, ni mise à jour des composants parents ou enfants, n'est effectuée. `ShadowMap::RenderingSystem` souscrit par contrats RAII à ses `ShadowMap::Contributor` connus ; à la réception, il marque **ses caches statique et final** logiquement invalides pour les vues/lumières concernées. Aucun appel manuel à `invalidateShadowMap()` n'est exigé après le setter, et aucune copie de l'ancienne catégorie n'est requise. Les événements de transformation (y compris un reparenting qui change une transformation monde), de modification de la géométrie `MeshFilter`, des layers ou de la disponibilité d'une source demandent également une invalidation, selon des mécanismes précis encore à finaliser. Le reparenting ne modifie **aucun** `ShadowMode`.
 
-**Séquence de liaison d'une Assembly animée (A1, matrice commune ; Q-ARCH-004).** Le jeu calcule les matrices des Parts relatives au repère de l'Assembly et sa matrice commune relative à l'Entity, puis soumet l'ensemble atomiquement. Si une autre Assembly a été insérée, ses Parts ont été **copiées et développées** dans la seule hiérarchie de destination : le jeu parcourt les Parts importées comme toute autre Part, sans référence à une sous-Assembly vivante et sans appliquer une seconde fois la transform externe de l'Assembly source. Retirer l'ancrage ou reparent une Part importée ne notifie pas automatiquement les ombres : un nouveau `bind(collection, assemblyMatrixDest)` est nécessaire, avec la matrice commune de destination uniquement. Les snapshots et `MeshInstance` déjà construits restent inchangés. Le système graphique n'extrait pas de Parts depuis l'Assembly et la thread GPU ne consulte pas les objets mutables.
+**Séquence de liaison d'un objet articulé Model3D (contrat futur).** Les matrices globales des `ElementNode` sont calculées en Core par `ObjectHeadless::globalTransform()`. Lorsqu'une contribution d'ombres est demandée, le jeu ou son intégration graphique prépare explicitement une collection de `ShadowMap::MeshInstance` dont chaque transformation est relative à un repère commun choisi. Les meshes depth proviennent des `Voxel::Geometry`, et non d'une `Voxel::Assembly` mutable ou de Parts expansées.
 
 ```mermaid
 sequenceDiagram
-  participant Jeu as Jeu/animation
-  participant Assembly as Voxel::Assembly
-  participant C as ShadowMap::Contributor
-  participant Sh as ShadowMap::RenderingSystem
-  participant B as Builder de vue
-  participant GPU as RenderContext
-  Jeu->>Assembly: modifier poses des Parts
-  Jeu->>Assembly: invalidate() pour chemin visuel
-  Jeu->>Assembly: lire meshes et matrices Parts relatives a Assembly
-  Assembly-->>Jeu: collection de MeshInstance (valeurs)
-  Jeu->>Jeu: preparer M_base = matrice Assembly dans repere Entity
-  Jeu->>C: bind(collection, M_base) (remplacement entier)
-  C->>C: copier Mesh partages + matrices Parts + M_base, valider
-  alt Erreur de validation
-    C-->>Jeu: Exception ; collection et M_base precedentes intactes
-  else Liaison acceptee
-    C->>C: substituer ensemble collection et M_base
-    C-->>Sh: ContractProvider : un evenement
-    Sh->>Sh: invalider caches des ombres concernes
-  end
-  Jeu->>Sh: capture vue suivante via RenderingEngine
-  Sh->>C: lire collection et Entity world matrix sur thread capture
-  C-->>Sh: MeshInstance[], M_base et M_entityWorld
-  loop Chaque MeshInstance et lumiere admissible
-    Sh->>Sh: M_world = M_entityWorld * M_base * M_instanceLocal
-    Sh->>B: commandes profondeur avec mesh et matrice captures
-  end
-  B-->>GPU: snapshot immuable publie et execute plus tard
-  Note over GPU: Aucune lecture de Contributor, Entity ou Assembly mutable
+  participant Jeu as Jeu et animations
+  participant Objet as Model3D::ObjectHeadless
+  participant C as ShadowMap::Contributor (PR-20)
+  participant S as ShadowMap::RenderingSystem (PR-22)
+  Jeu->>Objet: setRotation sur AttachmentNode
+  Jeu->>Objet: lire globalTransform de chaque ElementNode
+  Objet-->>Jeu: matrices articulees mises en cache
+  Jeu->>Jeu: composer MeshInstance par element compatible
+  Jeu->>C: bind(collection, matrice commune)
+  C-->>S: notification de changement
+  S->>S: reconstruire les ombres admissibles
+  Note over S: Aucun accès GPU à une pose Core mutable
 ```
+
+Il n'existe pas d'invalidation automatique de shadow maps dans `Model3D`. Un mouvement d'articulation ne doit pas imposer de re-bake de la géométrie. Les captures précédentes conservent leurs matrices et handles.
 
 **`Light::ShadowResult` : résultat immuable par surface.** Une publication représente les **shadow maps finales** déjà produites pour une `EngineView` sur une `Window::Surface` particulière. Elle contient des entrées par lumière, chacune avec identité logique, génération individuelle, texture de profondeur finale (2D pour Spot/Directional, cubemap pour Point), projections et matrices correspondantes, et paramètres d'échantillonnage, **état géométrique lumineux historique, identité d'admission aux ombres et ordinal de capture source**. Les caches statiques restent internes à `ShadowMap::RenderingSystem`. Un `ShadowResult` ne contient pas un framebuffer de production, ni des copies de pixels CPU, ni des références aux Entities mutables.
 
@@ -796,42 +781,28 @@ flowchart TD
 
 **Projection des ombres directionnelles — couverture automatique et plafond configurable (option A validée).** Pour toute `Light::Directional` active avec ombres activées, chaque `EngineView` calcule **automatiquement la région de sa propre shadow map à partir du volume visible de sa caméra**, tel que capturé dans le snapshot de cette vue ; l'application ne spécifie pas manuellement les limites d'un volume d'ombres distinct. `Light::Directional` expose toutefois **`shadowDistance`**, distance maximale de couverture des ombres exprimée en unités de monde `U` : ce plafond est propre à la lumière et s'applique à chacune des vues qui la consomment. Le calcul automatique couvre le frustum de caméra uniquement jusqu'au plan lointain effectif `min(cameraFar, shadowDistance)` (ou `shadowDistance` si le `far` de la caméra est infini). Il ne limite **pas** la lumière elle-même, qui continue d'éclairer hors de la zone ombrée sans atténuation de distance. La lumière utilise **une seule shadow map de profondeur par vue et par surface**, sans Cascaded Shadow Maps (CSM), sans atlas de cascades ni mutualisation obligatoire entre vues. Les matrices de l'ombre utilisent la direction de la lumière issue du `Transform3D` capturé et **une projection orthographique** ajustée pour couvrir conservativement la partie finie du frustum caméra à protéger ; il ne s'agit pas d'une région mondiale infinie. Le calcul des bornes de projection dans le repère de la lumière doit couvrir les récepteurs visibles et permettre aux `ShadowMap::Contributor` éligibles situés hors du frustum de la caméra de projeter leurs ombres sur ces récepteurs : **ne pas éliminer un caster au seul motif qu'il est invisible pour la caméra**. La capture de la caméra, de l'orientation lumineuse et des casters pertinents reste cohérente avec les générations et les publications historiques de §7.3. Un déplacement ou changement de projection de caméra peut entraîner la mise à jour des matrices et cartes ; il n'y a aucune garantie d'une résolution constante en unités de monde pendant les mouvements de caméra. Un changement de `shadowDistance` invalide les projections et caches d'ombres directionnels concernés, sans toucher à la géométrie des autres lumières ni aux snapshots déjà publiés ; les cartes historiques conservent leur plafond d'origine. `shadowDistance` doit disposer d'une **valeur initiale automatique** pour qu'une Directional fonctionne sans réglage, mais sa valeur numérique et les cas limites de validation restent à consolider. Les règles techniques restantes (calcul exact des bornes de profondeur, extension aux casters, frustum sans profondeur exploitable, résolution, précision, biais et politique de rafraîchissement) doivent être définies et testées avant implémentation, sans ajouter de volume manuel imposé, de cascades ni de seconde carte pour la V0.1.4.
 
-**Flux complet d'un modèle voxel jusqu'aux commandes par vue.** Les données métier sont créées indépendamment du thread GPU. Le bake sépare les meshes opaques et translucides ; le rendu réunit les composants actifs par vue, tandis que les casters utilisent un chemin de capture distinct.
+**Flux cible du volume voxel jusqu'au rendu (PR-13, PR-14 et PR-20 et suivantes).** Les données Core sont produites avant la capture ; le mesher Graphics fournit les meshes, mais ni le dessin voxel ni son intégration Model3D ne sont livrés par PR-08.
 
 ```mermaid
 flowchart TD
-    Shape["Voxel::Shape : polygones et slots"] --> Definition["Voxel::Definition : association des slots"]
-    Definition --> Volume["Voxel::Volume : Cells orientees et donnees immuables"]
-    Volume --> Mesher["VoxelMesher : bake du Volume"]
-    Occlusion["OcclusionCache optionnel"] -.-> Mesher
-    Mesher --> Model["Voxel::Model : meshes et slots semantiques"]
-    Model --> Opaque["Mesh opaque"]
-    Model --> Translucent["Mesh translucide"]
-    Model --> ShadowDepth["ShadowMap::Mesh : positions + indices"]
-    Material["Material : textures nommees et UV"] --> Palette["spk::Palette : materials par slot"]
-    Model --> Assembly["Assembly : parties et transforms locales"]
-    Palette --> Assembly
-    Model --> ModelComp["ModelRenderingComponent : references empruntees"]
-    Palette --> ModelComp
-    Assembly --> AssemblyComp["AssemblyRenderingComponent : reference empruntee"]
-    ModelComp --> VR["VoxelRenderingSystem : filtrage par vue et layers"]
-    AssemblyComp --> VR
-    Opaque --> VR
-    Translucent --> VR
-    VR --> Buckets["Buckets : mesh, atlas et material compatibles"]
-    Buckets --> SSBO["SSBO instances et materials du snapshot"]
-    SSBO --> Draw["DrawVoxelBucketCommand avec handles captures"]
-    Draw --> Forward["Passe opaque Forward"]
-    Draw --> WBOIT["Passe translucide WBOIT"]
-    ShadowDepth -->|"copie partagee"| MeshPart["MeshInstance : Mesh + matrice locale"]
-    Assembly -->|"Composer matrices Parts relatives a Assembly"| MeshPart
-    AssemblyMatrix["Matrice Assembly relative a Entity"] -->|"appliquer avant toutes les Parts"| Caster["ShadowMap::Contributor : MeshFilter"]
-    MeshPart -->|"bind(collection, assemblyMatrix) : remplacement complet"| Caster
-    Caster --> Shadow["ShadowMap::RenderingSystem : caches ombres"]
-    Shadow --> Out["Light::ShadowResults : slot de la surface, entrées par lumière"]
-    Out --> SurfaceCheck["Lighting : acquireLatest et filtrage de sélection"]
-    SurfaceCheck -->|"Valide ou sans ombre"| Forward
-    SurfaceCheck -->|"Valide ou sans ombre"| WBOIT
+  Shape["Voxel::Shape"] --> Def["Voxel::Definition"] --> Vol["Voxel::Volume"]
+  Vol --> Mesher["Voxel::Mesher : Graphics"] --> Geo["Voxel::Geometry"]
+  Cache["Voxel::Occlusion::Cache facultatif"] -.-> Mesher
+  Geo --> Opaque["opaqueMesh"]
+  Geo --> Transparent["transparentMesh"]
+  Geo --> Depth["depthMesh"]
+  Mat["Material"] --> Palette["spk::Palette"]
+  Palette --> Render["PR-13 : voxel renderer / buckets / SSBO"]
+  Opaque --> Render
+  Transparent --> Render
+  Blueprint["Model3D::Blueprint"] --> Object["Model3D::ObjectHeadless"]
+  Object --> Pose["ElementNode : globalTransform"]
+  Pose --> Articulated["PR-14 : vues Model3D"]
+  Articulated --> Render
+  Depth --> Source["PR-20 : ShadowMap::MeshInstance"]
+  Pose --> Source
+  Source --> Shadow["ShadowMap::Contributor explicite"]
+  Shadow --> ShadowSystem["ShadowMap::RenderingSystem"]
 ```
 
-Les liaisons depuis `Model` et ses **meshes visuels** vers le rendu représentent la **géométrie du modèle emprunté**, et non la possession des objets par `VoxelRenderingSystem`. Un `ShadowMap::Contributor` est distinct des composants de rendu visuel ; il n'est jamais créé automatiquement par ce flux. Le mesh d'ombre du Model doit aussi être **lié explicitement** à un Contributor. Le `MeshFilter` détient une collection de `MeshInstance` dont les meshes partagent leurs données immuables et dont les matrices locales sont des valeurs. Pour une `Assembly`, le jeu compose les matrices des Parts **relatives à l'Assembly**, et fournit la **matrice commune de l'Assembly relative à l'Entity** à `bind(collection, assemblyMatrix)` après chaque nouvelle pose ou changement de la matrice commune. Le résultat suit `M_entityWorld * M_assembly * M_partLocal` sans double application des transformations. La matrice commune peut changer sans remailler ou recalculer les transformations locales des Parts ; aucune fusion géométrique ni notification automatique par l'Assembly n'est introduite.
+Les images visibles et les shadow maps utilisent deux circuits de capture distincts. La palette reste choisie au niveau de l'occurrence graphique ; `Geometry` ne lui est jamais liée. Pour les ombres, la collection d'instances depth est liée explicitement et les matrices relatives au repère commun ne sont pas multipliées deux fois par la transformation de l'Entity. Aucune contribution d'ombre implicite n'est créée par `Voxel::Mesher` ou `Model3D`.
