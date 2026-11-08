@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include "rendering/render_snapshot.hpp"
 #include "model3d/object_headless.hpp"
+#include "rendering/render_snapshot.hpp"
 
 namespace spk::Model3D
 {
