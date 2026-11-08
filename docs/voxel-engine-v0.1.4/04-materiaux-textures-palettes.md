@@ -188,7 +188,7 @@ builder.add("albedo", texture);
 spk::Material material = builder.build();
 ```
 
-La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `assets.load<spk::Material>(id, config)`. La factory reçoit l'`Asset::Manager&`, résout `Texture.path` et les références `Texture.asset`, puis remplit un Builder local. Ni le Builder ni le Material final ne conservent de référence vers l'Asset::Manager.
+La lecture du JSON appartient à `Asset::Factory<spk::Material>`, appelée par `assets.load<spk::Material>(id, config)`. La factory reçoit l'`Asset::Manager&`, résout les références `Texture.path` et les éventuels `SpriteSheet` désignés par `size`, puis remplit un Builder local. Ni le Builder ni le Material final ne conservent de référence vers l'Asset::Manager.
 
 ### 4.4 `spk::Palette` et validation optionnelle du Builder
 
@@ -228,8 +228,6 @@ Changer de palette ne déclenche aucun remaillage. L'ancien type `spk::Voxel::Mo
 **Identité d'atlas des sources de vue (Q-ARCH-003 validée).** La vérification de compatibilité utilise une **identité logique immuable de la source `albedo`**, jamais son handle GPU résolu. Deux types d'identités sont incompatibles entre eux : `Static(Texture::Handle)` (identité du `GPUResource::State` effectivement capturé, sans considérer une génération/pixels ultérieurs comme un nouvel atlas tant que le State reste le même) et `EngineView(identité de vie de la vue)`. La seconde identité est propre à **l'incarnation concrète** de la vue dans son `RenderingEngine`, et non à son nom textuel : supprimer puis recréer `"monitor"` ne rétablit aucune identité ou liaison antérieure. Un simple identifiant de vue stable attribué par son moteur suffit, sans registre global ni possession nouvelle. La source de vue reste non propriétaire et le développeur doit cesser de l'utiliser avant destruction.
 
 **Validation de la palette destinée aux voxels.** À chaque `spk::Voxel::Palette::Builder::setMaterial()`, le Material proposé est comparé aux Materials déjà présents pour garantir une seule identité logique d'atlas `albedo`. Deux Materials avec des UV différents sur le même atlas sont autorisés. Deux textures distinctes, deux EngineView distinctes, ou une source statique et une source de vue sont incompatibles, indépendamment de l'opacité future de leurs slots. Le Builder rejette cette incohérence par `spk::Exception` sans publier de palette partielle. La création et la copie de palettes restent indépendantes de `Voxel::Geometry`.
-
-**Validation de compatibilité `Geometry`/`Palette`.** `Voxel::Geometry::isCompatible(palette)` vérifie uniquement la présence de tous ses noms de slots, même occultés. Cette méthode renvoie un booléen et ne lie **aucune** palette à la géométrie. Le futur renderer (PR-13) contrôlera la compatibilité au moment d'associer une palette à une occurrence graphique, et conservera sa sélection indépendamment des meshes. La garantie d'atlas unique appartient à `Voxel::Palette::Builder`, pas à `Geometry`.
 
 **Contrat de capture Q-ARCH-008.** Pour un rôle de Material lié à une EngineView active, le handle résolu est celui de sa **sortie finale tone-mappée** ; jamais un attachment opaque `RGBA16F`, une accumulation WBOIT ou une texture pré-tone mapping. En politique `KeepLastFrame`, réutiliser l'ancienne sortie finale produite sur cette version et surface. En `DefaultTexture`, le fallback explicitement fourni conserve son contrat ordinaire sans obligation de provenir d'une EngineView.
 

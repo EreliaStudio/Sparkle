@@ -33,19 +33,21 @@ classDiagram
   class Geometry {
     +opaqueMesh()
     +transparentMesh()
+    +depthMesh()
     +materialSlots()
+    +isCompatible(palette) bool
     -données immuables partagées
   }
   class ShapeInstance {
     +triangles() const
   }
-  class OcclusionCacheAPI["Voxel::Occlusion::Cache"] {
+  class OcclusionCacheAPI {
     +get(key) Result
     +clear()
   }
   class Mesher {
     +bake(Volume) Geometry
-    +attachCache(Occlusion::Cache&) facultatif
+    +attachCache(cache)
   }
   Shape <-- Definition
   Definition <-- Cell
@@ -55,6 +57,8 @@ classDiagram
   Volume --> Mesher
   Mesher --> Geometry
 ```
+
+Dans ce diagramme, `OcclusionCacheAPI` représente `spk::Voxel::Occlusion::Cache` ; `Mesher` et `Geometry` sont dans le module Graphics, contrairement aux données voxel et à l’occlusion dans Core.
 
 ### 2.1 `spk::Voxel::Shape` : géométrie locale réutilisable
 
