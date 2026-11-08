@@ -366,6 +366,54 @@ jobs:
             build/vcpkg-port-check/**/Testing
 
 
+  compiler-compatibility:
+    name: Compiler compatibility (${{ matrix.os }}, ${{ matrix.configuration }}, ${{ matrix.compiler }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+        configuration: [Debug, Release]
+        include:
+          - os: windows-2022
+            compiler: cl
+          - os: ubuntu-24.04
+            compiler: g++
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Configure with MSVC
+        if: runner.os == 'Windows'
+        run: >-
+          cmake -S . -B build/compiler-compat -G Ninja
+          -DCMAKE_CXX_COMPILER=cl
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=ON
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Configure with GCC
+        if: runner.os == 'Linux'
+        run: >-
+          cmake -S . -B build/compiler-compat -G Ninja
+          -DCMAKE_CXX_COMPILER=g++
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-linux
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=ON
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Compile Core and Graphics suites
+        run: cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
+
   coverage:
     name: LLVM coverage
     runs-on: windows-2022
