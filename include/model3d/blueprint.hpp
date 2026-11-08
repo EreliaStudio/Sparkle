@@ -15,11 +15,11 @@
 #include "exception.hpp"
 #include "math/matrix.hpp"
 
-namespace spk::Assembly
+namespace spk::Model3D
 {
 	class Attachable;
 	class AttachmentNode;
-	class Puppet;
+	class ObjectHeadless;
 
 	class Blueprint
 	{

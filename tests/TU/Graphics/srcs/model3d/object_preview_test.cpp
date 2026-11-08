@@ -11,7 +11,7 @@
 #include "graphics/color.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/uniform.hpp"
-#include "graphics/renderable_puppet.hpp"
+#include "model3d/object.hpp"
 #include "math/camera_3d.hpp"
 #include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
@@ -22,11 +22,11 @@
 
 namespace
 {
-	using Blueprint = spk::Assembly::Blueprint;
+	using Blueprint = spk::Model3D::Blueprint;
 
 	constexpr spk::Vector2UInt ImageSize{640, 480};
 	constexpr spk::Color Background{0.06f, 0.09f, 0.14f, 1.0f};
-	constexpr const char *GoldenCategory = "rendering/puppet_3d";
+	constexpr const char *GoldenCategory = "rendering/model3d";
 
 	class ColorVolume final : public Blueprint::Element
 	{
@@ -144,8 +144,8 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		}
 	};
 
-	static_assert(spk::Assembly::PuppetGraphics<ColorView>);
-	using Character = spk::Assembly::RenderablePuppet<ColorView>;
+	static_assert(spk::Model3D::ObjectGraphics<ColorView>);
+	using Character = spk::Model3D::Object<ColorView>;
 
 	[[nodiscard]] Blueprint characterBlueprint()
 	{
@@ -284,7 +284,7 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		return character.element(part).globalTransform() * spk::Vector4{local.x, local.y, local.z, 1.0f};
 	}
 
-	void expectJointChain(const spk::Assembly::Puppet &character, const char *parent, const char *joint, const char *child)
+	void expectJointChain(const spk::Model3D::ObjectHeadless &character, const char *parent, const char *joint, const char *child)
 	{
 		const auto &source = character.element(parent);
 		const auto &target = character.element(child);
@@ -299,11 +299,11 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 	}
 }
 
-class RenderablePuppet3DGoldenTest : public ::testing::TestWithParam<Pose>
+class Object3DGoldenTest : public ::testing::TestWithParam<Pose>
 {
 };
 
-TEST_P(RenderablePuppet3DGoldenTest, ArticulatedCharacterMatchesReference)
+TEST_P(Object3DGoldenTest, ArticulatedCharacterMatchesReference)
 {
 	const Pose pose = GetParam();
 	Character character(characterBlueprint());
@@ -317,10 +317,10 @@ TEST_P(RenderablePuppet3DGoldenTest, ArticulatedCharacterMatchesReference)
 	expectGolden(name);
 }
 
-TEST(RenderablePuppet3DGoldenTest, SwordGripIsPerpendicularToHandAxis)
+TEST(Object3DGoldenTest, SwordGripIsPerpendicularToHandAxis)
 {
 	Character character(characterBlueprint());
-	spk::Assembly::Puppet &sword = character.attachment("rightHand", "grip").attach(swordBlueprint());
+	spk::Model3D::ObjectHeadless &sword = character.attachment("rightHand", "grip").attach(swordBlueprint());
 	const auto handAxis = character.element("rightHand").globalTransform() * spk::Vector4{0, -1, 0, 0};
 	const auto swordAxis = sword.root().globalTransform() * spk::Vector4{0, -1, 0, 0};
 	const float dot = handAxis.x * swordAxis.x + handAxis.y * swordAxis.y + handAxis.z * swordAxis.z;
@@ -329,11 +329,11 @@ TEST(RenderablePuppet3DGoldenTest, SwordGripIsPerpendicularToHandAxis)
 	EXPECT_NEAR(swordAxis.y, 0.0f, 0.0001f);
 }
 
-TEST(RenderablePuppet3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFollowsArm)
+TEST(Object3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFollowsArm)
 {
 	Character character(characterBlueprint());
 	auto &grip = character.attachment("rightHand", "grip");
-	spk::Assembly::Puppet &sword = grip.attach(swordBlueprint());
+	spk::Model3D::ObjectHeadless &sword = grip.attach(swordBlueprint());
 	const auto camera = previewCamera();
 	const auto restingBlade = sword.element("swordBlade").globalTransform() * spk::Vector4{0, -0.96f, 0, 1};
 	const auto resting = capture(character, camera, "sword_resting");
@@ -359,13 +359,13 @@ TEST(RenderablePuppet3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFoll
 	}
 	expectJointChain(sword, "swordHilt", "guard", "swordGuard");
 	expectJointChain(sword, "swordGuard", "blade", "swordBlade");
-	spk::Assembly::Puppet detached = grip.detach(sword);
+	spk::Model3D::ObjectHeadless detached = grip.detach(sword);
 	character.synchronize();
 	EXPECT_EQ(character.graphicsCount(), 8u);
 	EXPECT_EQ(grip.attachedCount(), 0u);
 }
 
-TEST(RenderablePuppet3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParentTransforms)
+TEST(Object3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParentTransforms)
 {
 	Character character(characterBlueprint());
 	poseCharacter(character, Pose::Neutral);
@@ -389,7 +389,7 @@ TEST(RenderablePuppet3DGoldenTest, ArticulationsMoveBothHandsAndLegsThroughParen
 	EXPECT_NEAR(rightFoot.x, rightFootAtRest.x, 0.001f);
 }
 
-TEST(RenderablePuppet3DGoldenTest, WalkingPoseSwingsLegsForwardAndBackwardWithoutLateralCrossing)
+TEST(Object3DGoldenTest, WalkingPoseSwingsLegsForwardAndBackwardWithoutLateralCrossing)
 {
 	Character character(characterBlueprint());
 	poseCharacter(character, Pose::Neutral);
@@ -409,7 +409,7 @@ TEST(RenderablePuppet3DGoldenTest, WalkingPoseSwingsLegsForwardAndBackwardWithou
 
 INSTANTIATE_TEST_SUITE_P(
 	FivePoses,
-	RenderablePuppet3DGoldenTest,
+	Object3DGoldenTest,
 	::testing::Values(Pose::Neutral, Pose::OneArmRaised, Pose::BothArmsRaised, Pose::Walking, Pose::Combined),
 	[](const ::testing::TestParamInfo<Pose> &info) {
 		return poseName(info.param);

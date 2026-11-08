@@ -10,12 +10,12 @@
 #include <utility>
 
 #include "rendering/render_snapshot.hpp"
-#include "structure/puppet.hpp"
+#include "model3d/object_headless.hpp"
 
-namespace spk::Assembly
+namespace spk::Model3D
 {
 	template <typename TGraphics>
-	concept PuppetGraphics = requires(
+	concept ObjectGraphics = requires(
 		TGraphics &graphics,
 		RenderSnapshot::Builder &builder,
 		const Matrix4x4 &transform) {
@@ -25,19 +25,19 @@ namespace spk::Assembly
 		{ graphics.buildRenderSnapshot(builder, transform) } -> std::same_as<void>;
 	};
 
-	template <PuppetGraphics TGraphics>
-	class RenderablePuppet : public Puppet
+	template <ObjectGraphics TGraphics>
+	class Object : public ObjectHeadless
 	{
 	public:
 		using ElementType = typename TGraphics::ElementType;
-		using ElementNode = Puppet::ElementNode;
+		using ElementNode = ObjectHeadless::ElementNode;
 
 	private:
 		struct GraphicsEntry
 		{
 			std::unique_ptr<TGraphics> graphics;
 			const Blueprint::Element *definition;
-			const Puppet *instance;
+			const ObjectHeadless *instance;
 			std::uint64_t generation;
 		};
 
@@ -109,7 +109,7 @@ namespace spk::Assembly
 			_prune();
 		}
 
-		void _rebindMovedOwner(const Puppet *previous) noexcept
+		void _rebindMovedOwner(const ObjectHeadless *previous) noexcept
 		{
 			for (auto &entry : _graphics)
 			{
@@ -121,50 +121,50 @@ namespace spk::Assembly
 		}
 
 	public:
-		explicit RenderablePuppet(Blueprint blueprint) :
-			Puppet(std::move(blueprint))
+		explicit Object(Blueprint blueprint) :
+			ObjectHeadless(std::move(blueprint))
 		{
 		}
 
-		explicit RenderablePuppet(const Puppet &puppet) :
-			Puppet(puppet)
+		explicit Object(const ObjectHeadless &puppet) :
+			ObjectHeadless(puppet)
 		{
 		}
 
-		explicit RenderablePuppet(Puppet &&puppet) :
-			Puppet(std::move(puppet))
+		explicit Object(ObjectHeadless &&puppet) :
+			ObjectHeadless(std::move(puppet))
 		{
 		}
 
-		RenderablePuppet(const RenderablePuppet &other) :
-			Puppet(other)
+		Object(const Object &other) :
+			ObjectHeadless(other)
 		{
 		}
 
-		RenderablePuppet &operator=(const RenderablePuppet &other)
+		Object &operator=(const Object &other)
 		{
 			if (this != &other)
 			{
-				Puppet::operator=(other);
+				ObjectHeadless::operator=(other);
 				_graphics.clear();
 				_generation = 0;
 			}
 			return *this;
 		}
 
-		RenderablePuppet(RenderablePuppet &&other) :
-			Puppet(std::move(other)),
+		Object(Object &&other) :
+			ObjectHeadless(std::move(other)),
 			_graphics(std::move(other._graphics)),
 			_generation(std::exchange(other._generation, 0))
 		{
 			_rebindMovedOwner(&other);
 		}
 
-		RenderablePuppet &operator=(RenderablePuppet &&other)
+		Object &operator=(Object &&other)
 		{
 			if (this != &other)
 			{
-				Puppet::operator=(std::move(other));
+				ObjectHeadless::operator=(std::move(other));
 				_graphics = std::move(other._graphics);
 				_generation = std::exchange(other._generation, 0);
 				other._graphics.clear();
@@ -186,7 +186,7 @@ namespace spk::Assembly
 
 		[[nodiscard]] const TGraphics *graphics(const ElementNode &node) const noexcept
 		{
-			return const_cast<RenderablePuppet *>(this)->graphics(node);
+			return const_cast<Object *>(this)->graphics(node);
 		}
 
 		void synchronize()

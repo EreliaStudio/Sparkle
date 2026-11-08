@@ -4,12 +4,12 @@
 #include <string>
 #include <utility>
 
-#include "graphics/renderable_puppet.hpp"
+#include "model3d/object.hpp"
 
 namespace
 {
-	using Blueprint = spk::Assembly::Blueprint;
-	using Puppet = spk::Assembly::Puppet;
+	using Blueprint = spk::Model3D::Blueprint;
+	using ObjectHeadless = spk::Model3D::ObjectHeadless;
 
 	class DrawableElement final : public Blueprint::Element
 	{
@@ -75,7 +75,7 @@ namespace
 		}
 	};
 
-	using Renderable = spk::Assembly::RenderablePuppet<TrackedGraphics>;
+	using Renderable = spk::Model3D::Object<TrackedGraphics>;
 
 	[[nodiscard]] Blueprint characterBlueprint()
 	{
@@ -91,7 +91,7 @@ namespace
 	}
 }
 
-TEST(RenderablePuppetTest, CreatesOnlyDrawableElementsAndReusesTheirGraphics)
+TEST(ObjectTest, CreatesOnlyDrawableElementsAndReusesTheirGraphics)
 {
 	TrackedGraphics::reset();
 	{
@@ -115,43 +115,43 @@ TEST(RenderablePuppetTest, CreatesOnlyDrawableElementsAndReusesTheirGraphics)
 	EXPECT_EQ(TrackedGraphics::constructed, TrackedGraphics::destroyed);
 }
 
-TEST(RenderablePuppetTest, TracksDynamicAttachmentsAndCleansDetachedSubtrees)
+TEST(ObjectTest, TracksDynamicAttachmentsAndCleansDetachedSubtrees)
 {
 	TrackedGraphics::reset();
 	Renderable character(characterBlueprint());
 	character.synchronize();
 	auto &grip = character.attachment("hand", "grip");
-	Puppet &bound = grip.attach(characterBlueprint());
+	ObjectHeadless &bound = grip.attach(characterBlueprint());
 
 	character.synchronize();
 	ASSERT_EQ(character.graphicsCount(), 4u);
-	const Puppet::ElementNode *attachedArm = &bound.element("arm");
+	const ObjectHeadless::ElementNode *attachedArm = &bound.element("arm");
 	ASSERT_NE(character.graphics(*attachedArm), nullptr);
 
-	Puppet detached = grip.detach(bound);
+	ObjectHeadless detached = grip.detach(bound);
 	character.synchronize();
 	EXPECT_EQ(character.graphicsCount(), 2u);
 	EXPECT_EQ(TrackedGraphics::destroyed, 2);
 
-	Puppet &rebound = grip.attach(std::move(detached));
+	ObjectHeadless &rebound = grip.attach(std::move(detached));
 	EXPECT_EQ(&rebound.element("arm"), attachedArm);
 	character.synchronize();
 	EXPECT_EQ(character.graphicsCount(), 4u);
 	EXPECT_EQ(TrackedGraphics::constructed, 6);
 }
 
-TEST(RenderablePuppetTest, ReattachBeforeSynchronizeKeepsCorrectGraphics)
+TEST(ObjectTest, ReattachBeforeSynchronizeKeepsCorrectGraphics)
 {
 	TrackedGraphics::reset();
 	Renderable character(characterBlueprint());
 	auto &grip = character.attachment("hand", "grip");
-	Puppet &bound = grip.attach(characterBlueprint());
+	ObjectHeadless &bound = grip.attach(characterBlueprint());
 	character.synchronize();
 	const auto *attachedArm = &bound.element("arm");
 	ASSERT_EQ(character.graphicsCount(), 4u);
 
-	Puppet detached = grip.detach(bound);
-	Puppet &rebound = grip.attach(std::move(detached));
+	ObjectHeadless detached = grip.detach(bound);
+	ObjectHeadless &rebound = grip.attach(std::move(detached));
 	ASSERT_EQ(&rebound.element("arm"), attachedArm);
 	character.synchronize();
 
@@ -165,7 +165,7 @@ TEST(RenderablePuppetTest, ReattachBeforeSynchronizeKeepsCorrectGraphics)
 	EXPECT_EQ(TrackedGraphics::constructed - TrackedGraphics::destroyed, 4);
 }
 
-TEST(RenderablePuppetTest, CopyHasIndependentArticulationsAndGraphics)
+TEST(ObjectTest, CopyHasIndependentArticulationsAndGraphics)
 {
 	TrackedGraphics::reset();
 	Renderable first(characterBlueprint());
@@ -186,7 +186,7 @@ TEST(RenderablePuppetTest, CopyHasIndependentArticulationsAndGraphics)
 	EXPECT_EQ(copy.graphicsCount(), 2u);
 }
 
-TEST(RenderablePuppetTest, MovePreservesGraphicsAndNodes)
+TEST(ObjectTest, MovePreservesGraphicsAndNodes)
 {
 	TrackedGraphics::reset();
 	Renderable original(characterBlueprint());
@@ -201,7 +201,7 @@ TEST(RenderablePuppetTest, MovePreservesGraphicsAndNodes)
 	EXPECT_EQ(TrackedGraphics::constructed, 2);
 }
 
-TEST(RenderablePuppetTest, FailedConstructionCanBeRetried)
+TEST(ObjectTest, FailedConstructionCanBeRetried)
 {
 	TrackedGraphics::reset();
 	Renderable character(characterBlueprint());
@@ -214,7 +214,7 @@ TEST(RenderablePuppetTest, FailedConstructionCanBeRetried)
 	EXPECT_EQ(character.graphicsCount(), 2u);
 }
 
-TEST(RenderablePuppetTest, BuildsSnapshotsWithEachElementWorldTransform)
+TEST(ObjectTest, BuildsSnapshotsWithEachElementWorldTransform)
 {
 	TrackedGraphics::reset();
 	Renderable character(characterBlueprint());
@@ -239,7 +239,7 @@ TEST(RenderablePuppetTest, BuildsSnapshotsWithEachElementWorldTransform)
 	EXPECT_EQ(TrackedGraphics::constructed, 2);
 }
 
-TEST(RenderablePuppetTest, MoveAssignmentPreservesGraphicsAndNodes)
+TEST(ObjectTest, MoveAssignmentPreservesGraphicsAndNodes)
 {
 	TrackedGraphics::reset();
 	Renderable source(characterBlueprint());
@@ -258,7 +258,7 @@ TEST(RenderablePuppetTest, MoveAssignmentPreservesGraphicsAndNodes)
 	EXPECT_EQ(TrackedGraphics::destroyed, 2);
 }
 
-TEST(RenderablePuppetTest, FailedSnapshotCanBeRetriedWithoutCorruptingGraphics)
+TEST(ObjectTest, FailedSnapshotCanBeRetriedWithoutCorruptingGraphics)
 {
 	TrackedGraphics::reset();
 	Renderable character(characterBlueprint());
@@ -275,17 +275,17 @@ TEST(RenderablePuppetTest, FailedSnapshotCanBeRetriedWithoutCorruptingGraphics)
 	EXPECT_EQ(character.graphics(character.element("arm"))->snapshotCount, 1u);
 }
 
-TEST(RenderablePuppetTest, FailedTraversalDoesNotPrunePreviouslyCachedGraphics)
+TEST(ObjectTest, FailedTraversalDoesNotPrunePreviouslyCachedGraphics)
 {
 	TrackedGraphics::reset();
 	Renderable character(characterBlueprint());
 	character.synchronize();
 	auto &grip = character.attachment("hand", "grip");
-	Puppet &bound = grip.attach(characterBlueprint());
+	ObjectHeadless &bound = grip.attach(characterBlueprint());
 	character.synchronize();
 	ASSERT_EQ(character.graphicsCount(), 4u);
 
-	Puppet detached = grip.detach(bound);
+	ObjectHeadless detached = grip.detach(bound);
 	TrackedGraphics::throwOnSnapshot = true;
 	spk::RenderSnapshot::Builder failed;
 	EXPECT_THROW(character.buildRenderSnapshot(failed), std::runtime_error);
@@ -309,5 +309,5 @@ namespace
 	};
 }
 
-static_assert(spk::Assembly::PuppetGraphics<TrackedGraphics>);
-static_assert(!spk::Assembly::PuppetGraphics<MissingSnapshotMethod>);
+static_assert(spk::Model3D::ObjectGraphics<TrackedGraphics>);
+static_assert(!spk::Model3D::ObjectGraphics<MissingSnapshotMethod>);

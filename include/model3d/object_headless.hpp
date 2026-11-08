@@ -6,14 +6,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "structure/blueprint.hpp"
+#include "model3d/blueprint.hpp"
 
-namespace spk::Assembly
+namespace spk::Model3D
 {
 	class Attachable
 	{
 		friend class AttachmentNode;
-		friend class Puppet;
+		friend class ObjectHeadless;
 
 	private:
 		Attachable *_structuralParent;
@@ -44,30 +44,30 @@ namespace spk::Assembly
 		[[nodiscard]] const Matrix4x4 &globalTransform() const;
 	};
 
-	class Puppet : public Attachable
+	class ObjectHeadless : public Attachable
 	{
 	public:
 		class ElementNode;
-		using AttachmentNode = ::spk::Assembly::AttachmentNode;
+		using AttachmentNode = ::spk::Model3D::AttachmentNode;
 
 	private:
 		struct Data;
 		std::unique_ptr<Data> _data;
 
 		static void _copyPose(ElementNode &target, const ElementNode &source);
-		void _adopt(Puppet &source) noexcept;
+		void _adopt(ObjectHeadless &source) noexcept;
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
-		explicit Puppet(Blueprint assembly);
-		~Puppet();
+		explicit ObjectHeadless(Blueprint assembly);
+		~ObjectHeadless();
 
-		Puppet(const Puppet &other);
-		Puppet &operator=(const Puppet &other);
-		Puppet(Puppet &&other);
-		Puppet &operator=(Puppet &&other);
+		ObjectHeadless(const ObjectHeadless &other);
+		ObjectHeadless &operator=(const ObjectHeadless &other);
+		ObjectHeadless(ObjectHeadless &&other);
+		ObjectHeadless &operator=(ObjectHeadless &&other);
 
-		[[nodiscard]] const Blueprint &assembly() const;
+		[[nodiscard]] const Blueprint &blueprint() const;
 		[[nodiscard]] ElementNode &root();
 		[[nodiscard]] const ElementNode &root() const;
 		[[nodiscard]] ElementNode &element(const std::string &name);
@@ -78,20 +78,20 @@ namespace spk::Assembly
 
 	class AttachmentNode
 	{
-		friend class Puppet;
+		friend class ObjectHeadless;
 
 	private:
-		Puppet::ElementNode *_owner;
+		ObjectHeadless::ElementNode *_owner;
 		const Blueprint::Element::AttachmentPoint *_definition;
 		Matrix4x4 _rotationMatrix = Matrix4x4::identity();
 		Matrix4x4 _transform = Matrix4x4::identity();
-		std::vector<std::unique_ptr<Puppet>> _bound;
+		std::vector<std::unique_ptr<ObjectHeadless>> _bound;
 
 		void _applyRotation(const Matrix4x4 &rotation);
-		Puppet &_attachOwned(std::unique_ptr<Puppet> instance);
+		ObjectHeadless &_attachOwned(std::unique_ptr<ObjectHeadless> instance);
 
 	public:
-		AttachmentNode(Puppet::ElementNode &owner, const Blueprint::Element::AttachmentPoint &definition);
+		AttachmentNode(ObjectHeadless::ElementNode &owner, const Blueprint::Element::AttachmentPoint &definition);
 		~AttachmentNode();
 
 		AttachmentNode(const AttachmentNode &) = delete;
@@ -100,8 +100,8 @@ namespace spk::Assembly
 		AttachmentNode &operator=(AttachmentNode &&) = delete;
 
 		[[nodiscard]] const Blueprint::Element::AttachmentPoint &definition() const noexcept;
-		[[nodiscard]] Puppet::ElementNode &owner() noexcept;
-		[[nodiscard]] const Puppet::ElementNode &owner() const noexcept;
+		[[nodiscard]] ObjectHeadless::ElementNode &owner() noexcept;
+		[[nodiscard]] const ObjectHeadless::ElementNode &owner() const noexcept;
 		[[nodiscard]] const Matrix4x4 &rotationMatrix() const noexcept;
 		[[nodiscard]] const Matrix4x4 &transform() const noexcept;
 
@@ -111,27 +111,27 @@ namespace spk::Assembly
 		void rotate(const Vector3 &euler);
 
 		[[nodiscard]] std::size_t attachedCount() const noexcept;
-		Puppet &attach(const Blueprint &assembly);
-		Puppet &attach(const Puppet &instance);
-		Puppet &attach(Puppet &&instance);
-		[[nodiscard]] Puppet detach(Puppet &instance);
+		ObjectHeadless &attach(const Blueprint &assembly);
+		ObjectHeadless &attach(const ObjectHeadless &instance);
+		ObjectHeadless &attach(ObjectHeadless &&instance);
+		[[nodiscard]] ObjectHeadless detach(ObjectHeadless &instance);
 	};
 
-	class Puppet::ElementNode : public Attachable
+	class ObjectHeadless::ElementNode : public Attachable
 	{
-		friend class Puppet;
-		friend class ::spk::Assembly::AttachmentNode;
+		friend class ObjectHeadless;
+		friend class ::spk::Model3D::AttachmentNode;
 
 	private:
 		const Blueprint::Element *_definition;
-		Puppet::Data *_instanceData;
+		ObjectHeadless::Data *_instanceData;
 		std::vector<std::unique_ptr<ElementNode>> _ownedChildren;
 		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
 
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
 
 	public:
-		ElementNode(Puppet::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
+		ElementNode(ObjectHeadless::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
 		~ElementNode();
 
 		ElementNode(const ElementNode &) = delete;
@@ -140,8 +140,8 @@ namespace spk::Assembly
 		ElementNode &operator=(ElementNode &&) = delete;
 
 		[[nodiscard]] const Blueprint::Element &definition() const noexcept;
-		[[nodiscard]] Puppet &instance() noexcept;
-		[[nodiscard]] const Puppet &instance() const noexcept;
+		[[nodiscard]] ObjectHeadless &instance() noexcept;
+		[[nodiscard]] const ObjectHeadless &instance() const noexcept;
 		[[nodiscard]] AttachmentNode &attachment(const std::string &name);
 		[[nodiscard]] const AttachmentNode &attachment(const std::string &name) const;
 	};

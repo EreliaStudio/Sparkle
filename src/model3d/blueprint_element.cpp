@@ -1,4 +1,4 @@
-#include "structure/blueprint.hpp"
+#include "model3d/blueprint.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -27,7 +27,7 @@ namespace
 	}
 }
 
-namespace spk::Assembly
+namespace spk::Model3D
 {
 	Blueprint::Element::AttachmentPoint::AttachmentPoint(std::string name) :
 		NameTrait(std::move(name))
