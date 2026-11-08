@@ -1,13 +1,13 @@
-**Précision après fusion PR-08 :** le nœud PR-08 représente désormais le socle `Model3D` (Blueprint/Object), et non l'ancienne `Voxel::Assembly`. PR-13 doit dessiner une `Voxel::Geometry` avec une palette ; PR-14 doit exploiter ce dessin dans les objets articulés. Voir [l'état consolidé](IMPLEMENTED-01-08.md).
-
 # Graphe de dépendances et chemin critique
+
+**Précision après fusion PR-08 :** le nœud PR-08 représente désormais le socle `Model3D` (Blueprint/Object), et non l'ancienne `Voxel::Assembly`. PR-13 doit dessiner une `Voxel::Geometry` avec une palette ; PR-14 doit exploiter ce dessin dans les objets articulés. Voir [l'état consolidé](IMPLEMENTED-01-08.md).
 
 Les liens entre fiches sont des prérequis **techniques**, pas seulement un ordre de numérotation.
 
 ```mermaid
 flowchart TD
   P01["01 Shape"] --> P02["02 Volume"]
-  P01 --> P03["03 Clipping + OcclusionCache"]
+  P01 --> P03["03 Clipping + Occlusion::Cache"]
   P02 --> P04["04 Mesher + Geometry"]
   P03 --> P04
   P05["05 Assets"] --> P06["06 Material"]
@@ -51,7 +51,7 @@ flowchart TD
   P25 --> P26
 ```
 
-**Deux chaînes parallèles au début :** la chaîne voxel (PR01–04, avec PR02 et PR03 parallèles) et la chaîne graphique (PR09–12). La chaîne AssetManager/Material (PR05–06) peut commencer sans les autres. Elles convergent sur PR13. Les ombres dépendent de l'éclairage mais PR25 WBOIT ne dépend pas du calcul des shadow maps ; elle peut progresser en parallèle des PR20–24.
+**Deux chaînes parallèles au début :** la chaîne voxel (PR01–04, avec PR02 et PR03 parallèles) et la chaîne graphique (PR09–12). La chaîne Asset::Manager/Material (PR05–06) peut commencer sans les autres. Elles convergent sur PR13. Les ombres dépendent de l'éclairage mais PR25 WBOIT ne dépend pas du calcul des shadow maps ; elle peut progresser en parallèle des PR20–24.
 
 **Chemin critique visible :** PR09 → PR10 et PR11 → PR12, puis PR04 + PR07 + PR12 → PR13. Il donne le fond d'une EngineView d'abord, puis un vrai voxel texturé.
 
@@ -59,4 +59,4 @@ flowchart TD
 
 **Mode de collaboration :** une branche par fiche, créée **depuis la tête courante de `V0.1.4`** et ciblant **`V0.1.4`**. Fusionner d'abord les prérequis dans `V0.1.4` ; deux fiches indépendantes peuvent avancer en branches parallèles, à resynchroniser avant fusion. Ne jamais créer une branche sur une autre branche de développement, ni cibler `main` avec une des 26 PR. La PR #37 reste le regroupement final `V0.1.4` → `main`.
 
-**Contrat voxel :** PR-01 fournit les huit `Shape::Instance` dans `Shape::Data` ; PR-03 fournit le clipping directionnel CPU et son `OcclusionCache` facultatif ; PR-04 consomme le même algorithme de clipping avec ou sans cache. Aucun `ShapeTransformationCache` autonome, aucune liaison obligatoire au Mesher et aucune transformation répétée des Shapes.
+**Contrat voxel :** PR-01 fournit les huit `Shape::Instance` dans `Shape::Data` ; PR-03 fournit le clipping directionnel CPU et son `Occlusion::Cache` facultatif ; PR-04 consomme le même algorithme de clipping avec ou sans cache. Aucun `ShapeTransformationCache` autonome, aucune liaison obligatoire au Mesher et aucune transformation répétée des Shapes.

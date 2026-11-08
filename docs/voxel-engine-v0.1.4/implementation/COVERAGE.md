@@ -1,6 +1,6 @@
-**État :** les capacités PR-01 à PR-08 sont implémentées sous les noms décrits dans [IMPLEMENTED-01-08.md](IMPLEMENTED-01-08.md). Les autres lignes désignent des objectifs futurs, non des API déjà disponibles.
-
 # Couverture de la spécification par les 26 PR
+
+**État :** les capacités PR-01 à PR-08 sont implémentées sous les noms décrits dans [IMPLEMENTED-01-08.md](IMPLEMENTED-01-08.md). Les autres lignes désignent des objectifs futurs, non des API déjà disponibles.
 
 | Contrat fonctionnel obligatoire | Référence normative | Fiche(s) |
 |---|---|---|
@@ -10,7 +10,7 @@
 | Mesher, assemblage des fragments, innerShell, voisins extérieurs | [03](../03-meshing-occlusion.md) | PR04 |
 | `Voxel::Geometry` : meshes opaques, translucides et depth, sans palette | [03](../03-meshing-occlusion.md) | PR04 |
 | `Occlusion::Cache` facultatif et clipping directionnel partagé avec le mode sans cache | [03](../03-meshing-occlusion.md) | PR03, PR04 |
-| AssetManager, AssetFactory, JSON structurel et cycles | [05](../05-asset-manager.md) | PR05 |
+| `Asset::Manager`, `Asset::Factory<T>`, JSON structurel et cycles | [05](../05-asset-manager.md) | PR05 |
 | Material multi-rôles, texture, SpriteSheet, JSON strict | [04](../04-materiaux-textures-palettes.md) | PR06 |
 | `Voxel::Palette::Builder`, compatibilité `Geometry` et identités d'albedo | [04](../04-materiaux-textures-palettes.md) | PR07 |
 | `Model3D::Blueprint`, `ObjectHeadless`, `Object<TGraphics>` et attachments | [06](../06-assemblies-scene.md) | PR08 |

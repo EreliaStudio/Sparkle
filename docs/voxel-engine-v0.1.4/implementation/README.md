@@ -10,9 +10,9 @@ Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été
 |---|---|---|
 | [PR-01 — Shape, Definition et Cell](PR-01-voxel-foundations.md) | — | Constituer le modèle voxel public sans Engine et sans OpenGL. |
 | [PR-02 — Volume dense et Builder](PR-02-voxel-volume.md) | 01 | Éditer une grille voxel puis publier des snapshots immuables. |
-| [PR-03 — Clipping directionnel et OcclusionCache](PR-03-occlusion-cache.md) | 01 | Fournir le clipping CPU commun et un cache de résultats facultatif. |
+| [PR-03 — Clipping directionnel et Occlusion::Cache](PR-03-occlusion-cache.md) | 01 | Fournir le clipping CPU commun et un cache de résultats facultatif. |
 | [PR-04 — Mesher et Geometry](PR-04-voxel-mesher-model.md) | 02, 03 | Produire `Voxel::Geometry` depuis `Volume` avec ou sans `Occlusion::Cache`. |
-| [PR-05 — AssetManager et AssetFactory typés](PR-05-asset-manager.md) | — | Charger et posséder des assets C++ génériques à identité stable. |
+| [PR-05 — Asset::Manager et Asset::Factory typés](PR-05-asset-manager.md) | — | Charger et posséder des assets C++ génériques à identité stable. |
 | [PR-06 — Material multi-rôles, Texture et SpriteSheet](PR-06-materials-json.md) | 05 | Construire des Materials immuables via Builder ou JSON. |
 | [PR-07 — Palette et compatibilité Geometry](PR-07-voxel-palette.md) | 04, 06 | Créer des palettes immuables et vérifier les slots de `Voxel::Geometry`. |
 | [PR-08 — Model3D Blueprint et Object](PR-08-assembly-hierarchy.md) | — | Définir des hiérarchies immuables, leurs occurrences articulées et le cache de vues graphiques génériques. |
@@ -51,8 +51,8 @@ Chaque PR **restante** possède une **branche Git dédiée**, créée depuis la 
 - Exécuter les tests CTest/GoogleTest pertinents en Debug et Release, Core Windows/Linux et Graphics Windows lorsque ces cibles sont touchées. Les images de référence nécessitent une revue humaine.
 - Réaliser une revue indépendante et obtenir accord du propriétaire pour chaque fusion.
 
-**Jalons :** PR01 huit Shape::Instance précalculées ; PR03 clipping et cache d'occlusion facultatif ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 Assembly articulée ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
+**Jalons :** PR01 huit Shape::Instance précalculées ; PR03 clipping et cache d'occlusion facultatif ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 rendu voxel articulé Model3D ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
 
 **Hors scope volontaire :** éviction automatique des caches de géométrie, raffinements adaptatifs d'ombres, Tiled Forward+, moteur de chunks, scheduling GPU global, optimisation SSBO incrémentale.
 
-**Ordre voxel révisé :** PR-01 crée les huit instances dans Shape ; PR-02 (Volume) et PR-03 (clipping + cache facultatif) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Model) attend les deux. Le Mesher sans cache recalcule seulement l'occlusion, jamais les orientations.
+**Ordre voxel révisé :** PR-01 crée les huit instances dans Shape ; PR-02 (Volume) et PR-03 (clipping + cache facultatif) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Geometry) attend les deux. Le Mesher sans cache recalcule seulement l'occlusion, jamais les orientations.
