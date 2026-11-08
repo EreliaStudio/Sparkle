@@ -1,3 +1,5 @@
+**Précision après fusion PR-08 :** le nœud PR-08 représente désormais le socle `Model3D` (Blueprint/Object), et non l'ancienne `Voxel::Assembly`. PR-13 doit dessiner une `Voxel::Geometry` avec une palette ; PR-14 doit exploiter ce dessin dans les objets articulés. Voir [l'état consolidé](IMPLEMENTED-01-08.md).
+
 # Graphe de dépendances et chemin critique
 
 Les liens entre fiches sont des prérequis **techniques**, pas seulement un ordre de numérotation.
@@ -6,18 +8,18 @@ Les liens entre fiches sont des prérequis **techniques**, pas seulement un ordr
 flowchart TD
   P01["01 Shape"] --> P02["02 Volume"]
   P01 --> P03["03 Clipping + OcclusionCache"]
-  P02 --> P04["04 Mesher + Model"]
+  P02 --> P04["04 Mesher + Geometry"]
   P03 --> P04
   P05["05 Assets"] --> P06["06 Material"]
-  P04 --> P07["07 Palette"]
-  P06 --> P07 --> P08["08 Assembly"]
+  P04 --> P07["07 Palette / Geometry"]
+  P06 --> P07 --> P08["08 Model3D"]
   P09["09 RenderingEngine"] --> P10["10 EngineView"]
   P11["11 GPU Targets"] --> P12["12 EngineWidget"]
   P10 --> P12
   P09 --> P12
   P04 --> P13["13 Voxel opaque"]
   P07 --> P13
-  P12 --> P13 --> P14["14 Assembly Render"]
+  P12 --> P13 --> P14["14 Model3D Render"]
   P08 --> P14
   P06 --> P15["15 Material source View"]
   P12 --> P15

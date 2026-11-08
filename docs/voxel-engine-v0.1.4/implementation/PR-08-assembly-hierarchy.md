@@ -1,59 +1,22 @@
-# PR-08 — Voxel::Assembly par copie et expansion
+# PR-08 — Model3D Blueprint, ObjectHeadless et Object<TGraphics> (livrée)
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
->
-> **Branche source :** `impl/v0.1.4/08-assembly-hierarchy`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Implémentée et fusionnée dans `V0.1.4` via PR #49 et ses PR intermédiaires.** L'ancien intitulé « Voxel::Assembly par copie et expansion » est abandonné. Voir [l'état consolidé](IMPLEMENTED-01-08.md) et [le chapitre 06](../06-assemblies-scene.md).
 
-**Objectif :** Composer une hiérarchie de Parts animables sans Entity par Part.
+## Périmètre livré
 
-**Prérequis :** [PR-07](PR-07-voxel-palette.md)
+- `spk::Model3D::Blueprint` : définition immuable, Builder, `Element` polymorphes nommés, anchors, points d'attachement rigides et enfants structurels.
+- `spk::Model3D::ObjectHeadless` : instances Core mutables, articulations, cache de matrices globales, sous-objets attachés/détachés, copies profondes des occurrences et mouvements.
+- `spk::Model3D::Object<TGraphics>` : vues graphiques spécialisées, cache par `ElementNode`, `synchronize()` et `buildRenderSnapshot(builder, transform)`.
+- Concept `Model3D::ObjectGraphics` : `ElementType`, constructeur depuis `const ElementType&`, contribution au `RenderSnapshot`.
+- Tests Core/Graphics, y compris golden images 3D avec `ColorVolume`, `ColorView` et caméra, types définis seulement dans les tests.
 
-## Spécifications normatives
+## Contrats abandonnés et non livrés
 
-- [06-assemblies-scene.md](../06-assemblies-scene.md)
-- [10-contrats-et-validation.md](../10-contrats-et-validation.md)
-- [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
-- [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
+- Pas de `spk::Voxel::Assembly` mutable, `PartID`, reparentage de Parts, import par copie/expansion ni `VersionedTrait` propre à l'Assembly.
+- Pas de `Skeleton`, `Puppet`, `Model::View` ou `Assembly::Instance::View` dans l'API finale.
+- Pas de factory hétérogène automatiquement enregistrée ni de renderer de `Voxel::Volume` fourni.
+- Le mesher et la géométrie voxel existent, mais la vue associant `Voxel::Geometry` et `spk::Palette` relève de **PR-13** et son branchement sur Model3D de **PR-14**.
 
-## Périmètre exact à réaliser
+## Critère de clôture
 
-- [ ] Assembly, PartID, transform locales et relations parentales
-- [ ] add/remove/reparent
-- [ ] insertion par copie et expansion avec ancrage
-- [ ] partage des Models/Palettes
-- [ ] VersionedTrait indépendant.
-
-## Instructions techniques et intégration
-
-PartID monotones non réutilisés; réaffecter IDs uniquement à la copie importée; refuser cycles et auto-insertion; source jamais liée vivante; opération d'insertion garantie forte; calcul de pose locale cumulé, aucune propagation de ShadowMode.
-
-Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
-
-## Tests obligatoires
-
-- [ ] Source avec plusieurs racines ou vide
-- [ ] insertion deux fois IDs différents
-- [ ] reparentage garde ID
-- [ ] suppression sous-arbre
-- [ ] matrices non commutatives
-- [ ] source détruite n'affecte pas destination
-- [ ] erreur avant commit et version inchangée.
-
-**Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
-
-## Définition de terminé / critère de fusion
-
-Une Assembly articulée modifiable et copiable indépendamment.
-
-- [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
-- [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
-- [ ] La PR présente le périmètre, les tests réellement exécutés et les résultats, les screenshots/diffs si graphiques, et les limitations éventuelles.
-- [ ] Aucune fusion sans validation du propriétaire.
-
-## Hors périmètre
-
-Binding automatique des ombres, Engine Entity pour chaque membre.
-
-## Consigne de passation
-
-Confier **uniquement PR-08** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+Le socle articulé générique Core/Graphics est livré. Le rendu voxel spécialisé est expressément hors périmètre. Les futures PR doivent réutiliser l'architecture actuelle sans ressusciter l'ancienne Assembly.
