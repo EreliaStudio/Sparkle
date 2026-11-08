@@ -1,4 +1,4 @@
-#include "structure/puppet.hpp"
+#include "model3d/object_headless.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -25,10 +25,10 @@ namespace
 	}
 }
 
-namespace spk::Assembly
+namespace spk::Model3D
 {
 	AttachmentNode::AttachmentNode(
-		Puppet::ElementNode &owner, const Blueprint::Element::AttachmentPoint &definition) :
+		ObjectHeadless::ElementNode &owner, const Blueprint::Element::AttachmentPoint &definition) :
 		_owner(&owner),
 		_definition(&definition),
 		_transform(definition.transform())
@@ -42,12 +42,12 @@ namespace spk::Assembly
 		return *_definition;
 	}
 
-	Puppet::ElementNode &AttachmentNode::owner() noexcept
+	ObjectHeadless::ElementNode &AttachmentNode::owner() noexcept
 	{
 		return *_owner;
 	}
 
-	const Puppet::ElementNode &AttachmentNode::owner() const noexcept
+	const ObjectHeadless::ElementNode &AttachmentNode::owner() const noexcept
 	{
 		return *_owner;
 	}
@@ -102,7 +102,7 @@ namespace spk::Assembly
 		return _bound.size();
 	}
 
-	Puppet &AttachmentNode::_attachOwned(std::unique_ptr<Puppet> instance)
+	ObjectHeadless &AttachmentNode::_attachOwned(std::unique_ptr<ObjectHeadless> instance)
 	{
 		if (!instance || instance->parentAttachment() != nullptr)
 		{
@@ -117,25 +117,25 @@ namespace spk::Assembly
 			_bound.pop_back();
 			throw;
 		}
-		Puppet &result = *_bound.back();
+		ObjectHeadless &result = *_bound.back();
 		result._parentAttachment = this;
 		result._invalidateTransform();
 		return result;
 	}
 
-	Puppet &AttachmentNode::attach(const Blueprint &assembly)
+	ObjectHeadless &AttachmentNode::attach(const Blueprint &assembly)
 	{
-		return _attachOwned(std::make_unique<Puppet>(assembly));
+		return _attachOwned(std::make_unique<ObjectHeadless>(assembly));
 	}
 
-	Puppet &AttachmentNode::attach(const Puppet &instance)
+	ObjectHeadless &AttachmentNode::attach(const ObjectHeadless &instance)
 	{
-		return _attachOwned(std::make_unique<Puppet>(instance));
+		return _attachOwned(std::make_unique<ObjectHeadless>(instance));
 	}
 
-	Puppet &AttachmentNode::attach(Puppet &&instance)
+	ObjectHeadless &AttachmentNode::attach(ObjectHeadless &&instance)
 	{
-		for (const Puppet *ancestor = &_owner->instance(); ancestor != nullptr;)
+		for (const ObjectHeadless *ancestor = &_owner->instance(); ancestor != nullptr;)
 		{
 			if (ancestor == &instance)
 			{
@@ -144,10 +144,10 @@ namespace spk::Assembly
 			const AttachmentNode *parent = ancestor->parentAttachment();
 			ancestor = parent != nullptr ? &parent->owner().instance() : nullptr;
 		}
-		return _attachOwned(std::make_unique<Puppet>(std::move(instance)));
+		return _attachOwned(std::make_unique<ObjectHeadless>(std::move(instance)));
 	}
 
-	Puppet AttachmentNode::detach(Puppet &instance)
+	ObjectHeadless AttachmentNode::detach(ObjectHeadless &instance)
 	{
 		const auto it = std::ranges::find_if(_bound, [&instance](const auto &entry) {
 			return entry.get() == &instance;
@@ -159,7 +159,7 @@ namespace spk::Assembly
 		_owner->_removeChild(**it);
 		(*it)->_parentAttachment = nullptr;
 		(*it)->_invalidateTransform();
-		Puppet detached(std::move(**it));
+		ObjectHeadless detached(std::move(**it));
 		_bound.erase(it);
 		return detached;
 	}

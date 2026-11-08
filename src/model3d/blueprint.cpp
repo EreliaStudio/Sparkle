@@ -1,10 +1,10 @@
-#include "structure/blueprint.hpp"
+#include "model3d/blueprint.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
-namespace spk::Assembly
+namespace spk::Model3D
 {
 	struct Blueprint::Data
 	{
