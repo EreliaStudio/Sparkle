@@ -1,6 +1,6 @@
 # PR-11 — Attachments partagés et ressources GPU par Surface
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **PR en cours :** [#60 — Shared GPU attachments and per-Surface resource lifecycle](https://github.com/EreliaStudio/Sparkle/pull/60), ouverte en brouillon. Ne pas fusionner sans validation du propriétaire.
 >
 > **Branche source :** `impl/v0.1.4/11-gpu-attachments-surfaces`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
@@ -19,13 +19,14 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] Texture render-target 2D et profondeur cubemap
-- [ ] formats RGBA16F, SRGB8_ALPHA8 et Depth32F
-- [ ] Framebuffer avec Texture::Handle explicites partagés
-- [ ] depth-only et face explicite
-- [ ] resize non destructif
-- [ ] cycle Surface Ready/Releasing/Released
-- [ ] reclaim par tick.
+- [x] Texture render-target 2D et profondeur cubemap : description CPU et matérialisation différée
+- [x] Formats RGBA16F, SRGB8_ALPHA8 et Depth32F ; données CPU RGBA16F refusées
+- [x] Framebuffer fondé sur des Texture::Handle explicitement partageables
+- [x] Framebuffer depth-only et sélection de la face cubemap lors du binding GPU
+- [x] Resize historique non destructif ; refus des resizes incompatibles sur les attachments partagés
+- [x] Abonnement RAII à la fermeture Surface, notification synchrone et nettoyage dans l'ordre
+- [x] Reclaim par tick de Surface Ready avec makeCurrent explicite, même sans consommateur
+- [ ] CI Windows/Graphics et clang-format verts sur le commit final.
 
 ## Instructions techniques et intégration
 
@@ -35,13 +36,15 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Tests obligatoires
 
-- [ ] Deux FBO ayant exactement depth handle partagé
-- [ ] anciens State valides après resize
-- [ ] texture cubemap 6 faces carrées
-- [ ] capacité GL absente => Exception
-- [ ] deux surfaces sans partage native
-- [ ] reclaim sans consommateur
-- [ ] fermeture et callbacks exceptions suivis du clear.
+- [x] Deux FBO ayant exactement le même depth handle et la même texture native sur une Surface
+- [x] Anciens States valides après resize, dimensions et identités conservées
+- [x] Texture cubemap à six faces carrées et clear/lecture indépendante de chaque face
+- [x] Dimension au-delà de GL_MAX_TEXTURE_SIZE => Exception
+- [x] Deux Surfaces WGL indépendantes, lecture de pixels distincts à handles identiques
+- [ ] Test d'intégration dédié de reclaimReleased() pendant un tick sans consommateur (chemin implémenté)
+- [x] Fermeture et callbacks exceptions suivis du clear ; tests d'ordre d'état, native destruction et idempotence
+- [ ] Test instrumenté de l'ordre exact notification → clear GPU → destruction WGL
+- [ ] Test d'injection des limites GL_MAX_COLOR_ATTACHMENTS/GL_MAX_DRAW_BUFFERS et des formats indisponibles.
 
 **Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
 
@@ -61,3 +64,51 @@ GLsync spécialisé, allocation GPU sur thread Update, deuxième gestionnaire de
 ## Consigne de passation
 
 Confier **uniquement PR-11** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+## État d'implémentation de la PR #60 (9 novembre 2026)
+
+L'implémentation initiale a été poussée sur `impl/v0.1.4/11-gpu-attachments-surfaces`.
+Elle n'introduit ni `RenderTarget` autonome, ni nouveau gestionnaire de ressources GPU,
+ni modification du rendu des widgets. Les classes `GPUResourceCollection`, `GPUResource::State`
+et `GPUResource::Handle` sont conservées.
+
+### API effective
+
+- `Texture::createRenderTarget(Target, size, Format)` crée uniquement une description CPU.
+- `Texture::Format` expose `RGBA16F` et `SRGB8_ALPHA8` en complément de `Depth32F` existant.
+- `Framebuffer(size, vector<Texture::Handle>, optional<Texture::Handle>)` construit un framebuffer partageable.
+- `Framebuffer::activateFace(handle, Texture::CubeFace, context)` fixe explicitement une face pour l'activation native de profondeur cubemap, sans modifier le `Framebuffer::State`.
+- `Framebuffer::colorAttachmentHandle(index)` et `depthStencilAttachmentHandle()` exposent l'identité exacte des handles.
+- `Window::Surface::subscribeToDestruction(callback)` retourne un contrat RAII invalide après fermeture.
+
+### Immutabilité et durée de vie
+
+Le raccourci `Framebuffer(size, formats...)` garde son comportement de construction
+mais `resize()` construit désormais un nouveau `Framebuffer::State` et de nouveaux
+`Texture::State`; les anciens handles restent conservés par les snapshots.
+Le constructeur à handles partagés interdit le resize vers une taille différente.
+
+Une activation crée une instance native dans la `GPUResourceCollection` de la
+`Window::Surface` cible ; il n'y a ni partage de pixels entre contextes WGL,
+ni partage de framebuffer natif entre surfaces. Les faces cubemap sont sélectionnées
+par le contexte de rendu de l'activation, et non par mutation du State logique.
+
+À la fermeture, les abonnés sont notifiés une seule fois après `Releasing` ;
+la première exception de callback est retenue, les autres abonnés sont appelés,
+puis les ressources GPU et WGL sont nettoyées, `Released` est atteint et cette
+exception est relancée au seul appel explicite initial de `destroy()`.
+Le runtime libère également l'enregistrement logique de la Surface en cas d'échec
+d'un callback de destruction.
+
+### Validation et réserves
+
+Les TU CPU/OpenGL ajoutés vérifient les constructions partageables, les resizes,
+les formats, les six faces cubemap, la profondeur native partagée et l'isolation
+des pixels WGL. Les tests de fermeture couvrent également plusieurs abonnés,
+les exceptions, l'état terminal et les appels répétés.
+
+**La PR ne peut pas être considérée terminée avant validation de la CI finale.**
+Les résultats des jobs Debug/Release/Windows seront reportés dans la PR.
+Les tests d'instrumentation de reclaim sans consommateur, de fermeture avant
+clear GPU et d'injection explicite de limites GL restent à renforcer si la
+CI actuelle n'apporte pas ces garanties.
