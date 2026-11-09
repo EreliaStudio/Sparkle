@@ -1,7 +1,6 @@
 #include "rendering/command/scissor_render_command.hpp"
 
-#include <Windows.h>
-#include <gl/gl.h>
+#include <GL/glew.h>
 
 #include "core/context/render_context.hpp"
 
