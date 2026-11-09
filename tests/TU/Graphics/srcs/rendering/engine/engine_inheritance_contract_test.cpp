@@ -183,7 +183,7 @@ namespace
 		engine.addView("capture", &camera, {64, 64});
 		engine.refreshRenderSnapshot();
 		spk::Window::Surface surface{"engine-snapshot-test"};
-	spk::RenderContext context{surface};
+		spk::RenderContext context{surface};
 		engine.latestRenderSnapshot()->execute(context);
 		engine.removeView("capture");
 		engine.removeEntity(&cameraEntity);
@@ -445,7 +445,7 @@ TEST(EngineInheritanceContractTest, SnapshotCommandsSurviveSourceDetachment)
 
 	engine.removeEntity(&entity);
 	spk::Window::Surface surface{"engine-snapshot-test"};
-		spk::RenderContext context{surface};
+	spk::RenderContext context{surface};
 	snapshot->execute(context);
 	EXPECT_EQ(log, (std::vector<std::string>{"captured"}));
 }
