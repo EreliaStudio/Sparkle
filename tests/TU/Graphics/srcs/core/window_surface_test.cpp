@@ -58,6 +58,10 @@ namespace
 		}
 	};
 
+	void noOp()
+	{
+	}
+
 	[[nodiscard]] spk::Rect2D testGeometry()
 	{
 		return spk::Rect2D{
@@ -224,12 +228,12 @@ TEST(WindowSurfaceTest, LateSubscriptionsAreRejectedAndCallbacksCanResign)
 	inactive.resign();
 	auto active = surface.subscribeToDestruction([&] {
 		++calls;
-		EXPECT_THROW((void)surface.subscribeToDestruction([] {}), std::logic_error);
+		EXPECT_THROW((void)surface.subscribeToDestruction(noOp), std::logic_error);
 	});
 	surface.destroy();
 	EXPECT_EQ(calls, 1);
 	EXPECT_FALSE(active.isValid());
-	EXPECT_THROW((void)surface.subscribeToDestruction([] {}), std::logic_error);
+	EXPECT_THROW((void)surface.subscribeToDestruction(noOp), std::logic_error);
 	EXPECT_NO_THROW(surface.destroy());
 }
 
