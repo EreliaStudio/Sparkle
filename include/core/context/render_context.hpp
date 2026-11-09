@@ -5,7 +5,7 @@
 
 #include "core/window.hpp"
 #include "diagnostics/profiler.hpp"
-#include "graphics/opengl/texture.hpp"
+#include "graphics/opengl/texture_cube_face.hpp"
 
 namespace spk
 {
@@ -38,7 +38,7 @@ namespace spk
 
 	public:
 		Window::Surface *targetSurface;
-		std::optional<Texture::CubeFace> framebufferCubeFace = std::nullopt;
+		std::optional<TextureCubeFace> framebufferCubeFace = std::nullopt;
 		Profiler &profiler = Profiler::defaultProfiler();
 		ActiveProgram _activeProgram{};
 	};
