@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -13,6 +14,9 @@
 #include "exception.hpp"
 #include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "rendering/command/clear_render_command.hpp"
+#include "rendering/command/render_to_framebuffer_command.hpp"
+#include "rendering/render_snapshot.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
 namespace
@@ -24,6 +28,15 @@ namespace
 	[[nodiscard]] Texture target(spk::Vector2UInt size, Texture::Format format)
 	{
 		return Texture::createRenderTarget(Texture::Target::Texture2D, size, format);
+	}
+
+	[[nodiscard]] std::shared_ptr<const spk::RenderSnapshot> clearSnapshot(
+		spk::Color color,
+		spk::ClearRenderCommand::Mask mask)
+	{
+		spk::RenderSnapshot::Builder builder;
+		builder.renderPass({"clear", 0}).emplace<spk::ClearRenderCommand>(color, mask);
+		return std::make_shared<spk::RenderSnapshot>(builder.build());
 	}
 
 	class CpuTexture final : public Texture
@@ -169,6 +182,12 @@ TEST(SharedFramebufferTest, FixedCubeFacesHaveIndependentDepthPixels)
 		auto &framebuffer = framebuffers.back();
 		EXPECT_EQ(framebuffer.handle()->depthStencilAttachment()->face, face);
 		EXPECT_EQ(framebuffer.depthStencilAttachmentHandle()->identifier(), cube.handle().identifier());
+		glDepthMask(GL_TRUE);
+		glClearDepth(0.1 * (index + 1));
+		spk::RenderToFramebufferCommand(
+			framebuffer.handle(),
+			clearSnapshot({0, 0, 0, 1}, spk::ClearRenderCommand::Mask::Depth))
+			.execute(gl.renderContext());
 		framebuffer.activate(gl.renderContext());
 		EXPECT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GL_FRAMEBUFFER_COMPLETE);
 		GLint attachedFace = GL_NONE;
@@ -178,10 +197,6 @@ TEST(SharedFramebufferTest, FixedCubeFacesHaveIndependentDepthPixels)
 			GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE,
 			&attachedFace);
 		EXPECT_EQ(attachedFace, static_cast<GLint>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index));
-		glViewport(0, 0, 8, 8);
-		glDepthMask(GL_TRUE);
-		glClearDepth(0.1 * (index + 1));
-		glClear(GL_DEPTH_BUFFER_BIT);
 	}
 	cube.activate(gl.renderContext());
 	for (unsigned int index = 0; index < 6; ++index)
@@ -218,6 +233,12 @@ TEST(SharedFramebufferTest, CubemapColorFacesCanBeFramebufferAttachments)
 			spk::Vector2UInt{4, 4},
 			std::vector{Framebuffer::Attachment{cube.handle(), face}},
 			std::nullopt);
+		spk::RenderToFramebufferCommand(
+			framebuffers.back().handle(),
+			clearSnapshot(
+				{static_cast<float>(index) / 6.0f, 0.5f, 0.0f, 1.0f},
+				spk::ClearRenderCommand::Mask::Color))
+			.execute(gl.renderContext());
 		framebuffers.back().activate(gl.renderContext());
 		EXPECT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GL_FRAMEBUFFER_COMPLETE);
 		GLint attachedFace = GL_NONE;
@@ -227,9 +248,6 @@ TEST(SharedFramebufferTest, CubemapColorFacesCanBeFramebufferAttachments)
 			GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE,
 			&attachedFace);
 		EXPECT_EQ(attachedFace, static_cast<GLint>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index));
-		glViewport(0, 0, 4, 4);
-		glClearColor(static_cast<float>(index) / 6.0f, 0.5f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
 	}
 	cube.activate(gl.renderContext());
 	for (unsigned int index = 0; index < 6; ++index)
