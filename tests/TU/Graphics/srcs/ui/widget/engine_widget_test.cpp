@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/context/update_context.hpp"
+#include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
@@ -86,7 +87,7 @@ TEST(EngineWidgetTest, DefaultEngineIsNull)
 TEST(EngineWidgetTest, SetEngineRoundTripDoesNotTransferOwnership)
 {
 	spk::Widget parent("Parent", nullptr);
-	spk::EngineHeadless engine;
+	spk::Engine engine;
 	spk::EngineWidget widget("EngineWidget", &parent);
 	widget.setEngine(&engine);
 	EXPECT_EQ(widget.engine(), &engine);
@@ -108,7 +109,7 @@ TEST(EngineWidgetTest, GeometryCanBeChangedWithoutEngine)
 TEST(EngineWidgetTest, AttachingAndResizingPropagatesGeometry)
 {
 	spk::Widget parent("Parent", nullptr);
-	spk::EngineHeadless engine;
+	spk::Engine engine;
 	spk::EngineWidget widget("EngineWidget", &parent);
 	widget.setGeometry({.anchor = {12, 18}, .size = {320, 180}});
 	widget.setEngine(&engine);

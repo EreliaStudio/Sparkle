@@ -191,7 +191,7 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	log.clear();
 	snapshot.execute(context.renderContext());
 	EXPECT_EQ(log, (std::vector<int>{1, 2, 3}));
-	spk::EngineHeadless survivor;
+	spk::Engine survivor;
 	{
 		spk::EngineWidget temporary("Temporary", nullptr);
 		temporary.setEngine(&survivor);
