@@ -4,12 +4,29 @@
 #include <vector>
 
 #include "engine_view_test_utils.hpp"
+#include "rendering/engine/rendering_system.hpp"
+#include <functional>
+#include <optional>
 
 namespace
 {
 	using Fixture = sparkle_test::engine_view::Fixture;
 	using Layers = spk::EngineView::Layers;
 	using Context = spk::EngineView::CaptureContext;
+
+	class SystemProbe final : public spk::RenderingSystem
+	{
+	public:
+		std::size_t contributions = 0;
+		std::function<void(const Context &)> callback;
+
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &, const Context &ctx) override
+		{
+			++contributions;
+			if (callback)
+				callback(ctx);
+		}
+	};
 }
 
 TEST(EngineViewLayersTest, UnconfiguredFilterAdmitsUnlayeredContributor)
@@ -172,9 +189,9 @@ TEST(EngineViewLayersTest, RenderingSystemMayFilterInternalLayersExplicitly)
 	Fixture fixture;
 	auto &view = fixture.addView("view");
 	view.setLayers({"world"});
-	auto &probe = fixture.engine.addSystem<sparkle_test::engine_view::Probe>();
+	auto &probe = fixture.engine.addSystem<SystemProbe>();
 	bool selected = false;
-	probe.callback = [&](spk::RenderSnapshot::Builder &, const Context &ctx) {
+	probe.callback = [&](const Context &ctx) {
 		selected = ctx.isLayerCompatible({"world"}) && !ctx.isLayerCompatible({"ui"});
 	};
 	fixture.engine.refreshRenderSnapshot();
