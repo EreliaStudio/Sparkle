@@ -10,7 +10,6 @@
 namespace spk
 {
 	class RenderContextProgramAccess;
-	class RenderToFramebufferCommand;
 	template <typename TType>
 	class Uniform;
 
@@ -34,7 +33,6 @@ namespace spk
 		};
 
 		friend class RenderContextProgramAccess;
-		friend class RenderToFramebufferCommand;
 		template <typename TType>
 		friend class Uniform;
 
@@ -43,13 +41,11 @@ namespace spk
 		Profiler &profiler = Profiler::defaultProfiler();
 		ActiveProgram _activeProgram{};
 
-	private:
-		std::optional<Vector2UInt> _renderTargetSize;
+		std::optional<Vector2UInt> activeRenderTargetSize = std::nullopt;
 
-	public:
 		[[nodiscard]] Vector2UInt renderTargetSize() const
 		{
-			return _renderTargetSize.value_or(targetSurface->geometry().size);
+			return activeRenderTargetSize.value_or(targetSurface->geometry().size);
 		}
 	};
 }
