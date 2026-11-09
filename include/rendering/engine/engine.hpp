@@ -10,6 +10,7 @@
 
 #include "container/thread_safe_slot.hpp"
 #include "engine/engine_headless.hpp"
+#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "rendering/engine/engine_view.hpp"
 
 namespace spk
