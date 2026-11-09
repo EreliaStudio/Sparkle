@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 
 #include <array>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -16,16 +17,26 @@ namespace spk
 		class FramebufferBindingScope final
 		{
 		private:
+			RenderContext &_context;
+			std::optional<Vector2UInt> _previousSize;
 			GLint _drawFramebuffer = 0;
 			GLint _readFramebuffer = 0;
 			std::array<GLint, 4> _viewport{};
+			std::array<GLint, 4> _scissor{};
+			GLboolean _scissorEnabled = GL_FALSE;
 
 		public:
-			FramebufferBindingScope()
+			FramebufferBindingScope(RenderContext &context, Vector2UInt size) :
+				_context(context),
+				_previousSize(context.activeRenderTargetSize)
 			{
 				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &_drawFramebuffer);
 				glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &_readFramebuffer);
 				glGetIntegerv(GL_VIEWPORT, _viewport.data());
+				glGetIntegerv(GL_SCISSOR_BOX, _scissor.data());
+				_scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+				_context.activeRenderTargetSize = size;
+				glDisable(GL_SCISSOR_TEST);
 			}
 
 			~FramebufferBindingScope()
@@ -33,6 +44,16 @@ namespace spk
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(_drawFramebuffer));
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(_readFramebuffer));
 				glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
+				glScissor(_scissor[0], _scissor[1], _scissor[2], _scissor[3]);
+				if (_scissorEnabled == GL_TRUE)
+				{
+					glEnable(GL_SCISSOR_TEST);
+				}
+				else
+				{
+					glDisable(GL_SCISSOR_TEST);
+				}
+				_context.activeRenderTargetSize = _previousSize;
 			}
 
 			FramebufferBindingScope(const FramebufferBindingScope &) = delete;
@@ -54,9 +75,13 @@ namespace spk
 
 	void RenderToFramebufferCommand::execute(RenderContext &context) const
 	{
-		FramebufferBindingScope binding;
+		if (context.targetSurface == nullptr)
+		{
+			throw std::invalid_argument("Cannot render to a framebuffer without a target surface");
+		}
+		const Vector2UInt size = _framebuffer->size();
+		FramebufferBindingScope binding(context, size);
 		_framebuffer.activate(context);
-		const auto &size = _framebuffer->size();
 		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
 		_snapshot->execute(context);
 	}
