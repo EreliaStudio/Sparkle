@@ -7,7 +7,7 @@ namespace spk
 	class Transform3D;
 
 	class Entity3D : public Entity,
-					 public Registry<Entity3D, Engine *>::Object
+					 public Registry<Entity3D, EngineHeadless *>::Object
 	{
 	private:
 		Transform3D &_transform;

@@ -14,10 +14,10 @@ namespace spk
 {
 	template <typename TBehaviourType>
 		requires std::derived_from<TBehaviourType, Behaviour>
-	class ContainBehaviour : public Query<Entity, Engine *>::Operation
+	class ContainBehaviour : public Query<Entity, EngineHeadless *>::Operation
 	{
 	private:
-		using Context = Engine *;
+		using Context = EngineHeadless *;
 		using ElementSet = typename Query<Entity, Context>::ElementSet;
 
 		struct ContractSubscription

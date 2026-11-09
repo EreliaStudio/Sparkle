@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "engine/entity2d.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/registry.hpp"
@@ -57,17 +57,17 @@ TEST(Entity3DTest, PlainAnd2DParentsDoNotContributeA3DTransform)
 
 TEST(Entity3DTest, EngineContextControlsTypedEntityAndTransformRegistryMembership)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity3D entity("entity");
 	spk::Transform3D *transform = &entity.transform();
 
 	engine.addEntity(&entity);
-	EXPECT_TRUE((spk::Registry<spk::Entity3D, spk::Engine *>::instance().elements(&engine).contains(&entity)));
-	EXPECT_TRUE((spk::Registry<spk::Transform3D, spk::Engine *>::instance().elements(&engine).contains(transform)));
+	EXPECT_TRUE((spk::Registry<spk::Entity3D, spk::EngineHeadless *>::instance().elements(&engine).contains(&entity)));
+	EXPECT_TRUE((spk::Registry<spk::Transform3D, spk::EngineHeadless *>::instance().elements(&engine).contains(transform)));
 
 	engine.removeEntity(&entity);
-	EXPECT_FALSE((spk::Registry<spk::Entity3D, spk::Engine *>::instance().elements(&engine).contains(&entity)));
-	EXPECT_FALSE((spk::Registry<spk::Transform3D, spk::Engine *>::instance().elements(&engine).contains(transform)));
+	EXPECT_FALSE((spk::Registry<spk::Entity3D, spk::EngineHeadless *>::instance().elements(&engine).contains(&entity)));
+	EXPECT_FALSE((spk::Registry<spk::Transform3D, spk::EngineHeadless *>::instance().elements(&engine).contains(transform)));
 }
 
 TEST(Entity3DTest, TransformLivesForTheWholeEntityLifetime)
@@ -79,5 +79,5 @@ TEST(Entity3DTest, TransformLivesForTheWholeEntityLifetime)
 		EXPECT_EQ(transform->owner(), &entity);
 	}
 
-	EXPECT_FALSE((spk::Registry<spk::Transform3D, spk::Engine *>::instance().elements(nullptr).contains(transform)));
+	EXPECT_FALSE((spk::Registry<spk::Transform3D, spk::EngineHeadless *>::instance().elements(nullptr).contains(transform)));
 }

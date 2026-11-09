@@ -32,7 +32,7 @@ namespace spk
 
 		changeContext(parent->context());
 		_parentContextEditionContract = parent->subscribeToContextEdition(
-			[this](Engine *const &, Engine *const &newContext) {
+			[this](EngineHeadless *const &, EngineHeadless *const &newContext) {
 				changeContext(newContext);
 			});
 	}

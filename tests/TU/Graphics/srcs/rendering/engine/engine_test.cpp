@@ -1,20 +1,28 @@
 #include <gtest/gtest.h>
 
+#include <concepts>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "core/context/render_context.hpp"
 #include "core/context/update_context.hpp"
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "input/device_context.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
+#include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
-#include "rendering/engine/rendering_engine.hpp"
 #include "rendering/engine/rendering_entity.hpp"
 #include "rendering/engine/rendering_system.hpp"
 #include "rendering/render_command.hpp"
+
+static_assert(std::derived_from<spk::Engine, spk::EngineHeadless>);
+static_assert(std::derived_from<spk::RenderingComponent3D, spk::EngineView::Contributor>);
+static_assert(std::derived_from<spk::RenderingBehaviour3D, spk::EngineView::Contributor>);
+static_assert(std::derived_from<spk::RenderingEntity3D, spk::EngineView::Contributor>);
+static_assert(std::derived_from<spk::RenderingSystem, spk::EngineView::Contributor>);
 
 namespace
 {
@@ -74,7 +82,7 @@ namespace
 		{
 			if (renderLog != nullptr)
 			{
-				builder.renderPass(spk::RenderingEngine::SceneRenderPassKey)
+				builder.renderPass(spk::Engine::SceneRenderPassKey)
 					.emplace<MarkCommand>(*renderLog, _marker);
 			}
 		}
@@ -116,7 +124,6 @@ TEST(RenderingEngineTest, GraphicalExtensionsReuseTheCoreEngineObjects)
 	auto &system = engine.addSystem<ProbeSystem>("system");
 	engine.addEntity(&entity);
 
-	spk::RenderingEngine renderingEngine(&engine);
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
 	spk::UpdateContext updateContext{};
@@ -124,7 +131,7 @@ TEST(RenderingEngineTest, GraphicalExtensionsReuseTheCoreEngineObjects)
 		.keyboard = keyboard,
 		.mouse = mouse};
 
-	renderingEngine.updateState(updateContext, deviceContext);
+	engine.updateState(updateContext, deviceContext);
 
 	EXPECT_EQ(entity.deviceUpdates, 1u);
 	EXPECT_EQ(component.deviceUpdates, 1u);
@@ -144,13 +151,12 @@ TEST(RenderingEngineTest, EventsReachOnlyRenderingExtensions)
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
 	auto &system = engine.addSystem<ProbeSystem>("system");
 	engine.addEntity(&entity);
-	spk::RenderingEngine renderingEngine(&engine);
 
 	spk::Keyboard keyboard;
 	spk::KeyPressedRecord record{};
 	record.key = spk::Keyboard::A;
 	spk::KeyPressedEvent event(record, keyboard);
-	renderingEngine.dispatch(event);
+	engine.dispatch(event);
 
 	EXPECT_EQ(entity.keyEvents, 1u);
 	EXPECT_EQ(component.keyEvents, 1u);
@@ -173,9 +179,8 @@ TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 	behaviour.renderLog = &log;
 	system.renderLog = &log;
 
-	spk::RenderingEngine renderingEngine(&engine);
 	spk::RenderSnapshot::Builder builder;
-	renderingEngine.buildRenderSnapshot(builder);
+	engine.buildRenderSnapshot(builder);
 	spk::RenderContext renderContext{.targetSurface = nullptr};
 	builder.build().execute(renderContext);
 
@@ -207,19 +212,18 @@ TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
 		added = &engine.addSystem<MutatingSystem>("added");
 	};
 
-	spk::RenderingEngine renderingEngine(&engine);
 	spk::UpdateContext updateContext{};
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
 	spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
-	renderingEngine.updateState(updateContext, deviceContext);
+	engine.updateState(updateContext, deviceContext);
 
 	ASSERT_NE(added, nullptr);
 	EXPECT_TRUE(added->isActive());
 	EXPECT_EQ(controller.updates, 1u);
 	EXPECT_EQ(added->updates, 0u);
 
-	renderingEngine.updateState(updateContext, deviceContext);
+	engine.updateState(updateContext, deviceContext);
 	EXPECT_EQ(controller.updates, 2u);
 	EXPECT_EQ(added->updates, 1u);
 }
@@ -235,12 +239,11 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 	entity.deactivate();
 	system.deactivate();
 
-	spk::RenderingEngine renderingEngine(&engine);
 	spk::UpdateContext updateContext{};
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
 	spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
-	renderingEngine.updateState(updateContext, deviceContext);
+	engine.updateState(updateContext, deviceContext);
 
 	std::vector<std::string> log;
 	entity.renderLog = &log;
@@ -248,7 +251,7 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 	behaviour.renderLog = &log;
 	system.renderLog = &log;
 	spk::RenderSnapshot::Builder builder;
-	renderingEngine.buildRenderSnapshot(builder);
+	engine.buildRenderSnapshot(builder);
 	spk::RenderContext renderContext{.targetSurface = nullptr};
 	builder.build().execute(renderContext);
 
@@ -257,4 +260,15 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 	EXPECT_EQ(behaviour.deviceUpdates, 0u);
 	EXPECT_EQ(system.deviceUpdates, 0u);
 	EXPECT_TRUE(log.empty());
+}
+
+TEST(RenderingEngineTest, DerivedEngineSharesItsLogicalSystemsAndEntityTree)
+{
+	spk::Engine engine;
+	spk::EngineHeadless &base = engine;
+	ProbeEntity entity("entity");
+	base.addEntity(&entity);
+	EXPECT_EQ(entity.context(), &base);
+	EXPECT_EQ(entity.parent(), &base.root());
+	EXPECT_EQ(&base.root(), &engine.root());
 }

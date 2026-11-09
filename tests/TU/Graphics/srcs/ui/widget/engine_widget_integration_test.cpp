@@ -117,7 +117,7 @@ namespace
 			{
 				throw std::runtime_error("engine render failure");
 			}
-			builder.renderPass(spk::RenderingEngine::SceneRenderPassKey).emplace<Mark>(*log, 2);
+			builder.renderPass(spk::Engine::SceneRenderPassKey).emplace<Mark>(*log, 2);
 		}
 	};
 }
@@ -165,8 +165,8 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	widget.setGeometry({.anchor = {0, 0}, .size = {100, 100}});
 	widget.setEngine(engine.get());
 	spk::RenderSnapshot::Builder builder;
-	builder.renderPass({"before-scene", spk::RenderingEngine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
-	builder.renderPass({"after-scene", spk::RenderingEngine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
+	builder.renderPass({"before-scene", spk::Engine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
+	builder.renderPass({"after-scene", spk::Engine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
 	widget.buildRenderSnapshot(builder);
 	const auto snapshot = builder.build();
 	auto &context = sparkle_test::OpenGLTestContext::instance();

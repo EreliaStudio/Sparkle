@@ -2,10 +2,12 @@
 
 #include <chrono>
 #include <functional>
+#include <memory>
+#include <type_traits>
 
 #include "core/context/update_context.hpp"
 #include "engine/behaviour.hpp"
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/system.hpp"
 #include "engine/transform3d.hpp"
@@ -57,7 +59,7 @@ namespace
 
 TEST(CoreEngineTest, EntityBehaviourAndSystemShareOneHeadlessUpdateMechanism)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity3D entity("Server entity");
 	auto &behaviour = entity.addBehaviour<CountingBehaviour>();
 	auto &system = engine.addSystem<CountingSystem>();
@@ -79,7 +81,7 @@ TEST(CoreEngineTest, EntityBehaviourAndSystemShareOneHeadlessUpdateMechanism)
 
 TEST(CoreEngineTest, InactiveCoreObjectsDoNotUpdate)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity entity("Entity");
 	auto &behaviour = entity.addBehaviour<CountingBehaviour>();
 	auto &system = engine.addSystem<CountingSystem>();
@@ -97,7 +99,7 @@ TEST(CoreEngineTest, InactiveCoreObjectsDoNotUpdate)
 
 TEST(CoreEngineTest, SystemTraversalRemainsStableDuringMutation)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	auto &controller = engine.addSystem<CallbackSystem>();
 	auto &removed = engine.addSystem<CallbackSystem>();
 	CallbackSystem *added = nullptr;
@@ -128,7 +130,7 @@ TEST(CoreEngineTest, SystemTraversalRemainsStableDuringMutation)
 
 TEST(CoreEngineTest, GeometryAndContextStillPropagateWithoutGraphics)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity parent("Parent");
 	spk::Entity child("Child", &parent);
 	const spk::Rect2D geometry{
@@ -147,4 +149,25 @@ TEST(CoreEngineTest, GeometryAndContextStillPropagateWithoutGraphics)
 	engine.removeEntity(&parent);
 	EXPECT_EQ(parent.context(), nullptr);
 	EXPECT_EQ(child.context(), nullptr);
+}
+
+TEST(CoreEngineTest, PolymorphicDestructionReleasesDerivedEngine)
+{
+	static_assert(std::has_virtual_destructor_v<spk::EngineHeadless>);
+	bool derivedDestroyed = false;
+	struct DerivedEngine : spk::EngineHeadless
+	{
+		bool &destroyed;
+		explicit DerivedEngine(bool &flag) :
+			destroyed(flag)
+		{
+		}
+		~DerivedEngine() override
+		{
+			destroyed = true;
+		}
+	};
+	std::unique_ptr<spk::EngineHeadless> engine = std::make_unique<DerivedEngine>(derivedDestroyed);
+	engine.reset();
+	EXPECT_TRUE(derivedDestroyed);
 }

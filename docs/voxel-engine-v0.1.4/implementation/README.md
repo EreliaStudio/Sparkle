@@ -8,7 +8,7 @@ Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été
 
 | Fiche | Dépendances minimales (numéros de fiches) | Résultat attendu |
 |---|---|---|
-| [PR-01 — Shape, Definition et Cell](PR-01-voxel-foundations.md) | — | Constituer le modèle voxel public sans Engine et sans OpenGL. |
+| [PR-01 — Shape, Definition et Cell](PR-01-voxel-foundations.md) | — | Constituer le modèle voxel public sans EngineHeadless et sans OpenGL. |
 | [PR-02 — Volume dense et Builder](PR-02-voxel-volume.md) | 01 | Éditer une grille voxel puis publier des snapshots immuables. |
 | [PR-03 — Clipping directionnel et Occlusion::Cache](PR-03-occlusion-cache.md) | 01 | Fournir le clipping CPU commun et un cache de résultats facultatif. |
 | [PR-04 — Mesher et Geometry](PR-04-voxel-mesher-model.md) | 02, 03 | Produire `Voxel::Geometry` depuis `Volume` avec ou sans `Occlusion::Cache`. |
@@ -16,7 +16,7 @@ Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été
 | [PR-06 — Material multi-rôles, Texture et SpriteSheet](PR-06-materials-json.md) | 05 | Construire des Materials immuables via Builder ou JSON. |
 | [PR-07 — Palette et compatibilité Geometry](PR-07-voxel-palette.md) | 04, 06 | Créer des palettes immuables et vérifier les slots de `Voxel::Geometry`. |
 | [PR-08 — Model3D Blueprint et Object](PR-08-assembly-hierarchy.md) | — | Définir des hiérarchies immuables, leurs occurrences articulées et le cache de vues graphiques génériques. |
-| [PR-09 — RenderingEngine : Engine et Contributors](PR-09-rendering-engine-inheritance.md) | — | Moderniser l'API moteur graphique tout en préservant le moteur headless. |
+| [PR-09 — Engine : EngineHeadless et Contributors](PR-09-rendering-engine-inheritance.md) | — | Moderniser l'API moteur graphique tout en préservant le moteur headless. |
 | [PR-10 — EngineView, layers et sous-RenderSnapshots](PR-10-engineview-snapshot.md) | 09 | Construire des snapshots graphiques immuables ordonnés par vues. |
 | [PR-11 — Attachments partagés et ressources GPU par Surface](PR-11-gpu-attachments-surfaces.md) | — | Rendre sûrs Texture/Framebuffer versionnés et la récupération GPU en multifenêtres. |
 | [PR-12 — EngineWidget et première EngineView visible](PR-12-enginewidget-first-view.md) | 09, 10, 11 | Afficher une vue et sa sortie HDR finale dans un widget sans dessin voxel. |

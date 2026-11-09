@@ -2,14 +2,12 @@
 
 #include <functional>
 
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "rendering/engine/rendering_object_trait.hpp"
 
 namespace spk
 {
-	class RenderingEngine final : public EventDispatcher,
-								  public UpdatableByDeviceTrait,
-								  public RenderSnapshotContributorTrait
+	class Engine final : public EngineHeadless, public EventDispatcher, public UpdatableByDeviceTrait, public RenderSnapshotContributorTrait
 	{
 	public:
 		static inline const spk::RenderPass::Key SceneRenderPassKey{
@@ -20,13 +18,11 @@ namespace spk
 			.order = -200};
 
 	private:
-		Engine *_engine = nullptr;
-
 		void _visitEntity(
 			Entity &entity,
 			const std::function<void(RenderingObjectTrait &)> &callback) const;
 		void _visitObjects(
-			const std::function<void(RenderingObjectTrait &)> &callback) const;
+			const std::function<void(RenderingObjectTrait &)> &callback);
 
 		[[nodiscard]] bool _isAcceptingEvent() const override;
 		void _propagateEvent(
@@ -37,12 +33,9 @@ namespace spk
 		void _afterBuildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 
 	public:
-		explicit RenderingEngine(Engine *engine = nullptr);
+		Engine() = default;
 
-		void setEngine(Engine *engine) noexcept;
-		[[nodiscard]] Engine *engine() noexcept;
-		[[nodiscard]] const Engine *engine() const noexcept;
-
+		using EngineHeadless::updateState;
 		using RenderSnapshotContributorTrait::buildRenderSnapshot;
 		using UpdatableByDeviceTrait::updateState;
 	};

@@ -1,23 +1,23 @@
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 
 #include "core/context/update_context.hpp"
 
 namespace spk
 {
-	Engine::Engine() :
-		_root("Engine root")
+	EngineHeadless::EngineHeadless() :
+		_root("EngineHeadless root")
 	{
 		_root.changeContext(this);
 	}
 
-	Engine::~Engine()
+	EngineHeadless::~EngineHeadless()
 	{
 		while (!_root.children().empty())
 		{
 			_root.children().back()->clearParent();
 		}
 
-		Registry<Entity, Engine *> &entityRegistry = Registry<Entity, Engine *>::instance();
+		Registry<Entity, EngineHeadless *> &entityRegistry = Registry<Entity, EngineHeadless *>::instance();
 		while (!entityRegistry.elements(this).empty())
 		{
 			(*entityRegistry.elements(this).begin())->changeContext(nullptr);
@@ -29,7 +29,7 @@ namespace spk
 		}
 	}
 
-	void Engine::addEntity(Entity *entity)
+	void EngineHeadless::addEntity(Entity *entity)
 	{
 		if (entity == nullptr)
 		{
@@ -41,7 +41,7 @@ namespace spk
 		entity->setGeometry(_geometry);
 	}
 
-	void Engine::removeEntity(Entity *entity)
+	void EngineHeadless::removeEntity(Entity *entity)
 	{
 		if (entity == nullptr)
 		{
@@ -52,34 +52,34 @@ namespace spk
 		entity->changeContext(nullptr);
 	}
 
-	void Engine::removeSystem(System &system)
+	void EngineHeadless::removeSystem(System &system)
 	{
 		system.attach(nullptr);
 		unregisterSystem(system);
 	}
 
-	Entity &Engine::root() noexcept
+	Entity &EngineHeadless::root() noexcept
 	{
 		return _root;
 	}
 
-	const Entity &Engine::root() const noexcept
+	const Entity &EngineHeadless::root() const noexcept
 	{
 		return _root;
 	}
 
-	void Engine::handleGeometryChange(const spk::Rect2D &geometry)
+	void EngineHeadless::handleGeometryChange(const spk::Rect2D &geometry)
 	{
 		_geometry = geometry;
 		_root.setGeometry(_geometry);
 	}
 
-	const spk::Rect2D &Engine::geometry() const noexcept
+	const spk::Rect2D &EngineHeadless::geometry() const noexcept
 	{
 		return _geometry;
 	}
 
-	void Engine::updateState(UpdateContext &context)
+	void EngineHeadless::updateState(UpdateContext &context)
 	{
 		_root.updateState(context);
 

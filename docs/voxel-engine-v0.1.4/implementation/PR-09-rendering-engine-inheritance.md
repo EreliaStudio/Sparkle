@@ -1,4 +1,4 @@
-# PR-09 — RenderingEngine : Engine et Contributors
+# PR-09 — Engine : EngineHeadless et Contributors
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
@@ -18,8 +18,8 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] Engine destructeur virtuel
-- [ ] RenderingEngine dérivé au lieu d'adaptateur Engine*
+- [ ] EngineHeadless destructeur virtuel
+- [ ] Engine dérivé au lieu d'adaptateur EngineHeadless*
 - [ ] contributeurs EngineView
 - [ ] migration RenderingComponent/Behaviour/Entity/System
 - [ ] CameraComponent3D graphique
@@ -27,15 +27,15 @@
 
 ## Instructions techniques et intégration
 
-Conserver l'input, la propagation des événements et device et les systèmes existants; ne pas ajouter un autre moteur logique; Engine reste dans sparkle::core, RenderingEngine dans sparkle::sparkle; Widgets migrés en PR12.
+Conserver l'input, la propagation des événements et device et les systèmes existants; ne pas ajouter un autre moteur logique; EngineHeadless reste dans sparkle::core, Engine dans sparkle::sparkle; Widgets migrés en PR12.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
 ## Tests obligatoires
 
-- [ ] Engine seul compile sans OpenGL
+- [ ] EngineHeadless seul compile sans OpenGL
 - [ ] destruction polymorphe
-- [ ] tests existants Engine/RenderingEngine, propagation d'événements et activation
+- [ ] tests existants EngineHeadless/Engine, propagation d'événements et activation
 - [ ] code Color conservé via alias
 - [ ] API graphiques accessibles dans bon target.
 
@@ -52,7 +52,7 @@ Application logique headless et moteur graphique héritier coexistants.
 
 ## Hors périmètre
 
-conversion magique d'Engine existant, nouveau framework de scènes.
+conversion magique d'EngineHeadless existant, nouveau framework de scènes.
 
 ## Consigne de passation
 

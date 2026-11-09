@@ -2,15 +2,14 @@
 
 #include <string>
 
-#include "engine/engine.hpp"
 #include "input/device_context.hpp"
-#include "rendering/engine/rendering_engine.hpp"
+#include "rendering/engine/engine.hpp"
 #include "ui/widget.hpp"
 
 namespace spk
 {
 	/**
-	 * @brief Widget that forwards update and interaction events to an Engine.
+	 * @brief Widget that forwards updates and interaction events to a graphical Engine.
 	 *
 	 * The engine is not owned by the widget and must outlive it, or be detached
 	 * with setEngine(nullptr) before it is destroyed.
@@ -18,7 +17,7 @@ namespace spk
 	class EngineWidget : public Widget
 	{
 	private:
-		RenderingEngine _renderingEngine;
+		Engine *_engine = nullptr;
 
 		void _onGeometryChange() override;
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override;

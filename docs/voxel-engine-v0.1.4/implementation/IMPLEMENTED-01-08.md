@@ -40,7 +40,7 @@ Les golden tests OpenGL de PR-08 utilisent `ColorVolume`/`ColorView` **uniquemen
 
 ## Travaux futurs (non livrés dans PR-01..08)
 
-- PR-09 à PR-12 : cible `RenderingEngine`/`EngineView`, ressources GPU et affichage des vues.
+- PR-09 à PR-12 : cible `Engine`/`EngineView`, ressources GPU et affichage des vues.
 - **PR-13** : dessiner réellement une `Voxel::Geometry` avec `spk::Palette`, shaders et commandes GPU.
 - **PR-14** : brancher le rendu voxel sur les éléments articulés de `Model3D`, sans rebake lié aux rotations.
 - PR-15..26 : éclairage, ombres, transparence et intégration selon les fiches adaptées au code présent.

@@ -5,14 +5,14 @@
 
 namespace spk
 {
-	class Engine;
+	class EngineHeadless;
 
 	template <typename TType>
-	class FromRegistry final : public Union<TType, Engine *>
+	class FromRegistry final : public Union<TType, EngineHeadless *>
 	{
 	public:
 		FromRegistry() :
-			Union<TType, Engine *>(Registry<TType, Engine *>::instance())
+			Union<TType, EngineHeadless *>(Registry<TType, EngineHeadless *>::instance())
 		{
 		}
 	};

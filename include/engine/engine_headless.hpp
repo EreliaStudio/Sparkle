@@ -12,7 +12,7 @@ namespace spk
 {
 	struct UpdateContext;
 
-	class Engine : public SystemCollection
+	class EngineHeadless : public SystemCollection
 	{
 	private:
 		using SystemCollection::registerSystem;
@@ -22,8 +22,8 @@ namespace spk
 		spk::Rect2D _geometry{};
 
 	public:
-		Engine();
-		~Engine();
+		EngineHeadless();
+		virtual ~EngineHeadless();
 
 		void addEntity(Entity *entity);
 		void removeEntity(Entity *entity);

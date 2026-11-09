@@ -18,10 +18,10 @@
 namespace spk
 {
 	struct UpdateContext;
-	class Engine;
+	class EngineHeadless;
 
-	class Entity : public ContextualizableTrait<Engine *>,
-				   public Registry<Entity, Engine *>::Object,
+	class Entity : public ContextualizableTrait<EngineHeadless *>,
+				   public Registry<Entity, EngineHeadless *>::Object,
 				   public InherenceTrait<Entity>,
 				   public ActivableTrait,
 				   public NameTrait,
@@ -37,7 +37,7 @@ namespace spk
 		using ComponentCollection::unregisterComponent;
 
 		InherenceTrait<Entity>::OnParentEditionContract _parentEditionContract;
-		ContextualizableTrait<Engine *>::OnContextEditionContract _parentContextEditionContract;
+		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _parentContextEditionContract;
 
 		void _followParentContext(Entity *parent);
 		[[nodiscard]] bool _canUpdate() const override;

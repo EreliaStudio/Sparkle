@@ -8,7 +8,7 @@
 namespace spk
 {
 	class Component2D : public Component,
-						public Registry<Component2D, Engine *>::Object
+						public Registry<Component2D, EngineHeadless *>::Object
 	{
 	public:
 		Component2D(

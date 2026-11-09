@@ -48,7 +48,7 @@
 #include "engine/component3d.hpp"
 #include "engine/component_collection.hpp"
 #include "engine/contextualizable_trait.hpp"
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "engine/entity.hpp"
 #include "engine/entity2d.hpp"
 #include "engine/entity3d.hpp"

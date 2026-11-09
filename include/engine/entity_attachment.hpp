@@ -8,15 +8,15 @@
 
 namespace spk
 {
-	class Engine;
+	class EngineHeadless;
 	class Entity;
 
-	class EntityAttachment : public ContextualizableTrait<Engine *>,
+	class EntityAttachment : public ContextualizableTrait<EngineHeadless *>,
 							 public ActivableTrait,
 							 public NameTrait
 	{
 	private:
-		using OwnerContextualizableTrait = ContextualizableTrait<Engine *>;
+		using OwnerContextualizableTrait = ContextualizableTrait<EngineHeadless *>;
 
 		Entity *_owner = nullptr;
 		OwnerContextualizableTrait::OnContextEditionContract _onOwnerContextEditionContract;

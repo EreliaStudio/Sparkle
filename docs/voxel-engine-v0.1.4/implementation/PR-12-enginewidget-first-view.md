@@ -19,7 +19,7 @@
 ## Périmètre exact à réaliser
 
 - [ ] EngineWidget avec rôles Update/Render/Drawing configurables
-- [ ] référence RenderingEngine*
+- [ ] référence Engine*
 - [ ] choix view name main par défaut sans création
 - [ ] fond RGB
 - [ ] AmbientLight possédée avec intensité initiale 0
