@@ -187,7 +187,7 @@ namespace
 		EXPECT_EQ(context.targetSurface, &surface);
 		EXPECT_EQ(&context.activeRenderTarget.surface(), &surface);
 		EXPECT_EQ(context.activeRenderTarget.type(), spk::Window::Surface::RenderTarget::Type::Default);
-		EXPECT_EQ(context.renderTargetSize(), surface.geometry().size);
+		EXPECT_EQ(context.activeRenderTarget.size(), surface.geometry().size);
 	}
 
 	TEST(PublicTypesTest, UpdateContextExposesDurationAndInputReferenceMembers)
