@@ -25,9 +25,9 @@ namespace
 	using Framebuffer = spk::Framebuffer;
 	using CubeMap = spk::CubeMap;
 
-	[[nodiscard]] Texture target(spk::Vector2UInt size, Texture::Format format)
+	[[nodiscard]] Texture::Handle target(spk::Vector2UInt size, Texture::Format format)
 	{
-		return Texture::createRenderTarget(Texture::Target::Texture2D, size, format);
+		return Framebuffer::RenderAttachment::create2D(size, format).texture();
 	}
 
 	[[nodiscard]] std::shared_ptr<const spk::RenderSnapshot> clearSnapshot(
@@ -46,13 +46,24 @@ namespace
 	};
 }
 
+TEST(SharedFramebufferTest, RenderAttachmentReferencesSharedTextureWithoutCopyingPixelData)
+{
+	auto first = Framebuffer::RenderAttachment::create2D({8, 8}, Texture::Format::RGBA16F);
+	auto second = Framebuffer::RenderAttachment(first.texture());
+	EXPECT_EQ(first.texture().identifier(), second.texture().identifier());
+	EXPECT_EQ(first.texture()->size(), spk::Vector2UInt(8, 8));
+	EXPECT_EQ(first.texture()->contentSource(), Texture::ContentSource::RenderAttachment);
+	EXPECT_FALSE(first.face());
+	EXPECT_FALSE(second.face());
+}
+
 TEST(SharedFramebufferTest, ADepthHandleIsOwnedByBothFramebufferStates)
 {
 	auto depth = target({16, 12}, Texture::Format::Depth32F);
 	auto colorA = target({16, 12}, Texture::Format::RGBA16F);
 	auto colorB = target({16, 12}, Texture::Format::SRGB8_ALPHA8);
-	Framebuffer opaque({16, 12}, std::vector{colorA.handle()}, depth.handle());
-	Framebuffer transparent({16, 12}, std::vector{colorB.handle()}, depth.handle());
+	Framebuffer opaque({16, 12}, std::vector{colorA}, depth);
+	Framebuffer transparent({16, 12}, std::vector{colorB}, depth);
 
 	ASSERT_TRUE(opaque.depthStencilAttachmentHandle());
 	ASSERT_TRUE(transparent.depthStencilAttachmentHandle());
@@ -68,7 +79,7 @@ TEST(SharedFramebufferTest, ADepthHandleIsOwnedByBothFramebufferStates)
 TEST(SharedFramebufferTest, SharedAttachmentsCannotBeResizedImplicitly)
 {
 	auto depth = target({9, 9}, Texture::Format::Depth24);
-	Framebuffer framebuffer({9, 9}, std::vector<Texture::Handle>{}, depth.handle());
+	Framebuffer framebuffer({9, 9}, std::vector<Texture::Handle>{}, depth);
 	auto old = framebuffer.handle();
 	EXPECT_NO_THROW(framebuffer.resize({9, 9}));
 	EXPECT_THROW(framebuffer.resize({10, 10}), spk::Exception);
@@ -86,8 +97,8 @@ TEST(SharedFramebufferTest, LegacyResizePublishesIndependentStates)
 
 	EXPECT_NE(previous.identifier(), framebuffer.identifier());
 	EXPECT_EQ(previous->size(), spk::Vector2UInt(4, 3));
-	EXPECT_EQ(previous->colorAttachments()[0].texture.identifier(), previousColor.identifier());
-	EXPECT_EQ(previous->depthStencilAttachment()->texture.identifier(), previousDepth.identifier());
+	EXPECT_EQ(previous->colorAttachments()[0].texture().identifier(), previousColor.identifier());
+	EXPECT_EQ(previous->depthStencilAttachment()->texture().identifier(), previousDepth.identifier());
 	EXPECT_EQ(previousColor->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(previousDepth->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(framebuffer.colorAttachment(0).size(), spk::Vector2UInt(7, 5));
@@ -107,29 +118,27 @@ TEST(SharedFramebufferTest, RejectsMissingInvalidMismatchedAndDuplicateAttachmen
 
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector<Texture::Handle>{}, std::nullopt), spk::Exception);
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{missing}, std::nullopt), spk::Exception);
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{wrongSize.handle()}, std::nullopt), spk::Exception);
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{depth.handle()}, std::nullopt), spk::Exception);
+	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{wrongSize}, std::nullopt), spk::Exception);
+	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{depth}, std::nullopt), spk::Exception);
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{pixels.handle()}, std::nullopt), spk::Exception);
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle(), color.handle()}, std::nullopt), spk::Exception);
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, color.handle()), spk::Exception);
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, missing), spk::Exception);
-	EXPECT_NO_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, depth.handle()));
+	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color, color}, std::nullopt), spk::Exception);
+	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color}, color), spk::Exception);
+	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color}, missing), spk::Exception);
+	EXPECT_NO_THROW((void)Framebuffer({8, 8}, std::vector{color}, depth));
 	// Depth16 is not part of this API; a color texture cannot take the depth role.
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector<Texture::Handle>{}, color.handle()), spk::Exception);
+	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector<Texture::Handle>{}, color), spk::Exception);
 }
 
 TEST(SharedFramebufferTest, CubeMapProvidesOneResourceWithSixSquareFaces)
 {
 	using Target = Texture::Target;
 	using Format = Texture::Format;
-	EXPECT_THROW((void)Texture::createRenderTarget(Target::TextureCubeMap, {8, 9}, Format::Depth32F), spk::Exception);
-	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture3D, {8, 8}, Format::Depth32F), spk::Exception);
 	EXPECT_THROW((void)CubeMap(0), spk::Exception);
 	CubeMap cube(8, Format::Depth32F);
 	EXPECT_EQ(cube.faceSize(), 8u);
 	EXPECT_EQ(cube.format(), Format::Depth32F);
 	EXPECT_EQ(cube.handle()->target(), Target::TextureCubeMap);
-	EXPECT_EQ(cube.handle()->contentSource(), Texture::ContentSource::RenderTarget);
+	EXPECT_EQ(cube.handle()->contentSource(), Texture::ContentSource::RenderAttachment);
 	CubeMap color(8, Format::RGBA16F);
 	EXPECT_EQ(color.format(), Format::RGBA16F);
 }
@@ -142,8 +151,8 @@ TEST(SharedFramebufferTest, SharedDepthUsesTheSameNativeAttachmentOnOneSurface)
 	auto opaqueColor = target({8, 8}, Texture::Format::RGBA16F);
 	auto accum = target({8, 8}, Texture::Format::RGBA16F);
 	auto reveal = target({8, 8}, Texture::Format::GreyLevel);
-	Framebuffer opaque({8, 8}, std::vector{opaqueColor.handle()}, depth.handle());
-	Framebuffer wboit({8, 8}, std::vector{accum.handle(), reveal.handle()}, depth.handle());
+	Framebuffer opaque({8, 8}, std::vector{opaqueColor}, depth);
+	Framebuffer wboit({8, 8}, std::vector{accum, reveal}, depth);
 
 	const auto depthName = [](const Framebuffer &framebuffer, spk::RenderContext &context) {
 		framebuffer.activate(context);
@@ -177,10 +186,10 @@ TEST(SharedFramebufferTest, FixedCubeFacesHaveIndependentDepthPixels)
 		const auto face = static_cast<CubeMap::Face>(index);
 		framebuffers.emplace_back(
 			spk::Vector2UInt{8, 8},
-			std::vector<Framebuffer::Attachment>{},
-			Framebuffer::Attachment{cube.handle(), face});
+			std::vector<Framebuffer::RenderAttachment>{},
+			Framebuffer::RenderAttachment{cube.handle(), face});
 		auto &framebuffer = framebuffers.back();
-		EXPECT_EQ(framebuffer.handle()->depthStencilAttachment()->face, face);
+		EXPECT_EQ(framebuffer.handle()->depthStencilAttachment()->face(), face);
 		EXPECT_EQ(framebuffer.depthStencilAttachmentHandle()->identifier(), cube.handle().identifier());
 		glDepthMask(GL_TRUE);
 		glClearDepth(0.1 * (index + 1));
@@ -209,14 +218,14 @@ TEST(SharedFramebufferTest, FixedCubeFacesHaveIndependentDepthPixels)
 	EXPECT_THROW(
 		(void)Framebuffer(
 			{8, 8},
-			std::vector<Framebuffer::Attachment>{},
-			Framebuffer::Attachment{cube.handle(), static_cast<CubeMap::Face>(9)}),
+			std::vector<Framebuffer::RenderAttachment>{},
+			Framebuffer::RenderAttachment{cube.handle(), static_cast<CubeMap::Face>(9)}),
 		spk::Exception);
 	EXPECT_THROW(
 		(void)Framebuffer(
 			{8, 8},
-			std::vector<Framebuffer::Attachment>{},
-			Framebuffer::Attachment{target({8, 8}, Texture::Format::Depth32F).handle(), CubeMap::Face::PositiveX}),
+			std::vector<Framebuffer::RenderAttachment>{},
+			Framebuffer::RenderAttachment{target({8, 8}, Texture::Format::Depth32F), CubeMap::Face::PositiveX}),
 		spk::Exception);
 }
 
@@ -231,7 +240,7 @@ TEST(SharedFramebufferTest, CubemapColorFacesCanBeFramebufferAttachments)
 		const auto face = static_cast<CubeMap::Face>(index);
 		framebuffers.emplace_back(
 			spk::Vector2UInt{4, 4},
-			std::vector{Framebuffer::Attachment{cube.handle(), face}},
+			std::vector{Framebuffer::RenderAttachment{cube.handle(), face}},
 			std::nullopt);
 		spk::RenderToFramebufferCommand(
 			framebuffers.back().handle(),
@@ -271,7 +280,7 @@ TEST(SharedFramebufferTest, OversizedTexturesAreRejectedBySurfaceCapabilities)
 		GTEST_SKIP() << "The GPU limit cannot be exceeded within GLsizei";
 	}
 	auto color = target({static_cast<unsigned int>(maximum) + 1, 1}, Texture::Format::RGBA);
-	Framebuffer framebuffer(color.size(), std::vector{color.handle()}, std::nullopt);
+	Framebuffer framebuffer(color->size(), std::vector{color}, std::nullopt);
 	EXPECT_THROW(framebuffer.activate(gl.renderContext()), spk::Exception);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
@@ -282,14 +291,14 @@ TEST(SharedFramebufferTest, CpuHdrStorageAndInvalidTargetDimensionsAreRejected)
 	using Target = Texture::Target;
 	CpuTexture cpu;
 	EXPECT_THROW(cpu.setPixels(nullptr, {1, 1}, Format::RGBA16F), std::invalid_argument);
-	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture2D, {0, 1}, Format::RGBA16F), spk::Exception);
-	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture2D, {1, 0}, Format::SRGB8_ALPHA8), spk::Exception);
-	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture2D, {1, 1}, Format::Error), spk::Exception);
+	EXPECT_THROW((void)Framebuffer::RenderAttachment::create2D({0, 1}, Format::RGBA16F), spk::Exception);
+	EXPECT_THROW((void)Framebuffer::RenderAttachment::create2D({1, 0}, Format::SRGB8_ALPHA8), spk::Exception);
+	EXPECT_THROW((void)Framebuffer::RenderAttachment::create2D({1, 1}, Format::Error), spk::Exception);
 
-	auto hdr = Texture::createRenderTarget(Target::Texture2D, {8, 8}, Format::RGBA16F);
-	auto srgb = Texture::createRenderTarget(Target::Texture2D, {8, 8}, Format::SRGB8_ALPHA8);
-	EXPECT_EQ(hdr.handle()->contentSource(), Texture::ContentSource::RenderTarget);
-	EXPECT_EQ(srgb.handle()->contentSource(), Texture::ContentSource::RenderTarget);
+	auto hdr = Framebuffer::RenderAttachment::create2D({8, 8}, Format::RGBA16F);
+	auto srgb = Framebuffer::RenderAttachment::create2D({8, 8}, Format::SRGB8_ALPHA8);
+	EXPECT_EQ(hdr.texture()->contentSource(), Texture::ContentSource::RenderAttachment);
+	EXPECT_EQ(srgb.texture()->contentSource(), Texture::ContentSource::RenderAttachment);
 	EXPECT_EQ(Texture::formatDescriptor(Format::RGBA16F).internalFormat, GL_RGBA16F);
 	EXPECT_EQ(Texture::formatDescriptor(Format::SRGB8_ALPHA8).internalFormat, GL_SRGB8_ALPHA8);
 }
@@ -320,7 +329,7 @@ TEST(SharedFramebufferTest, ExcessColorAttachmentsAreRejectedByActualGlLimits)
 	std::vector<Texture::Handle> handles;
 	for (GLint index = 0; index <= limit; ++index)
 	{
-		handles.push_back(target({1, 1}, Texture::Format::RGBA).handle());
+		handles.push_back(target({1, 1}, Texture::Format::RGBA));
 	}
 	Framebuffer framebuffer({1, 1}, std::move(handles), std::nullopt);
 	EXPECT_THROW(framebuffer.activate(gl.renderContext()), spk::Exception);
