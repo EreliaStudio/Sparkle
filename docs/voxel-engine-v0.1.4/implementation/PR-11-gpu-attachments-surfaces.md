@@ -124,7 +124,7 @@ CI actuelle n'apporte pas ces garanties.
 capture une version immuable du framebuffer et un sous-snapshot. À l'exécution,
 la commande active la cible native propre à la Surface, ajuste le viewport à la
 taille capturée, exécute le sous-snapshot et restaure les bindings OpenGL de
-lecture/dessin et le viewport, y compris en cas d'exception imbriquée. Les
+lecture/dessin, le viewport, le scissor et les dimensions logiques de cible du `RenderContext`, y compris en cas d'exception imbriquée. Les
 opérations de clear appartiennent aux commandes du sous-snapshot
 (`ClearRenderCommand`) et ne sont pas imposées par la commande de cible.
 
@@ -137,3 +137,5 @@ restaurations de contexte, l'erreur imbriquée et le resize versionné.
 Aucune modification de `Window` n'est nécessaire. Le branchement automatique
 des sorties `EngineView` sur leurs propres cibles et sur `EngineWidget` reste
 l'intégration de la PR12 ; il n'y a pas de target implicite ajouté dans la PR11.
+
+Les commandes `ViewportRenderCommand` et `ScissorRenderCommand` utilisent la taille de la cible active pour convertir leurs coordonnées d'origine supérieure gauche, ce qui permet de les employer dans des snapshots imbriqués hors écran sans modifier `Window`.
