@@ -26,11 +26,11 @@ TEST(FramebufferTest, DefaultAttachmentsExposeRenderTargetTextures)
 	ASSERT_EQ(framebuffer.colorAttachmentCount(), 1u);
 	EXPECT_EQ(framebuffer.colorAttachment(0).size(), framebuffer.size());
 	EXPECT_EQ(framebuffer.colorAttachment(0).format(), spk::Texture::Format::RGBA);
-	EXPECT_TRUE(framebuffer.colorAttachment(0).isRenderTarget());
+	EXPECT_TRUE(framebuffer.colorAttachment(0).isRenderAttachment());
 	ASSERT_NE(framebuffer.depthStencilAttachment(), nullptr);
 	EXPECT_EQ(framebuffer.depthStencilAttachment()->size(), framebuffer.size());
 	EXPECT_EQ(framebuffer.depthStencilAttachment()->format(), spk::Texture::Format::Depth24Stencil8);
-	EXPECT_TRUE(framebuffer.depthStencilAttachment()->isRenderTarget());
+	EXPECT_TRUE(framebuffer.depthStencilAttachment()->isRenderAttachment());
 	EXPECT_THROW((void)framebuffer.colorAttachment(1), std::out_of_range);
 }
 
