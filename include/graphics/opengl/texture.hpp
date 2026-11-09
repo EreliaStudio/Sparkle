@@ -60,7 +60,6 @@ namespace spk
 			Error
 		};
 
-
 		enum class ContentSource
 		{
 			PixelData,
