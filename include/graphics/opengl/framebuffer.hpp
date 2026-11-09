@@ -46,6 +46,19 @@ namespace spk
 			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
+		public:
+			[[nodiscard]] const Vector2UInt &size() const noexcept
+			{
+				return _size;
+			}
+			[[nodiscard]] const std::vector<Texture::Handle> &colorAttachments() const noexcept
+			{
+				return _colorAttachments;
+			}
+			[[nodiscard]] const std::optional<Texture::Handle> &depthStencilAttachment() const noexcept
+			{
+				return _depthStencilAttachment;
+			}
 		};
 		using Handle = GPUResource::Handle<State>;
 
