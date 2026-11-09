@@ -11,6 +11,7 @@
 #include "graphics/opengl/texture.hpp"
 #include "math/matrix.hpp"
 #include "math/vector2.hpp"
+#include "rendering/engine/ambient_light.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/render_snapshot.hpp"
 
@@ -42,6 +43,7 @@ namespace spk
 			Matrix4x4 viewProjectionMatrix{};
 			std::optional<Layers> layers;
 			RGB backgroundColor{};
+			RGB ambientRGB{};
 			float exposure = 1.0f;
 			float targetFPS = 60.0f;
 			DetachedOutputPolicy detachedOutputPolicy = DetachedOutputPolicy::Invalid;
@@ -98,6 +100,7 @@ namespace spk
 		DetachedOutputPolicy _detachedOutputPolicy = DetachedOutputPolicy::Invalid;
 		Texture::Handle _fallbackTexture;
 		RGB _backgroundColor{};
+		AmbientLight _ambientLight;
 		float _exposure = 1.0f;
 		float _targetFPS = 60.0f;
 
@@ -130,6 +133,8 @@ namespace spk
 		[[nodiscard]] const Texture::Handle &fallbackTexture() const noexcept;
 		void setBackgroundColor(RGB color);
 		[[nodiscard]] RGB backgroundColor() const noexcept;
+		[[nodiscard]] AmbientLight &ambientLight() noexcept;
+		[[nodiscard]] const AmbientLight &ambientLight() const noexcept;
 		void setExposure(float exposure);
 		[[nodiscard]] float exposure() const noexcept;
 		void setTargetFPS(float fps);

@@ -197,3 +197,55 @@ TEST(EngineViewLifecycleTest, UnattachedCameraCannotResolveView)
 	spk::CameraComponent3D camera;
 	EXPECT_THROW(camera.view("missing"), spk::Exception);
 }
+ 
+TEST(EngineViewLifecycleTest, EveryViewOwnsAnIndependentAmbientLight)
+{
+	Fixture fixture;
+	auto &first = fixture.addView("first");
+	auto &second = fixture.addView("second");
+	EXPECT_NE(&first.ambientLight(), &second.ambientLight());
+	EXPECT_EQ(first.ambientLight().color(), (spk::RGB{1, 1, 1}));
+	EXPECT_FLOAT_EQ(first.ambientLight().intensity(), 0.0f);
+	first.ambientLight().setColor({0.2f, 0.4f, 0.8f});
+	first.ambientLight().setIntensity(4.0f);
+	EXPECT_EQ(first.ambientLight().contribution(), (spk::RGB{0.8f, 1.6f, 3.2f}));
+	EXPECT_EQ(second.ambientLight().contribution(), (spk::RGB{0, 0, 0}));
+}
+
+TEST(EngineViewLifecycleTest, AmbientInputValidationPreservesPreviousValues)
+{
+	Fixture fixture;
+	auto &ambient = fixture.addView("view").ambientLight();
+	ambient.setColor({0.3f, 0.4f, 0.5f});
+	ambient.setIntensity(2.0f);
+	EXPECT_THROW(ambient.setColor({-0.1f, 0.5f, 0.5f}), spk::Exception);
+	EXPECT_THROW(ambient.setColor({2.0f, 0.5f, 0.5f}), spk::Exception);
+	EXPECT_THROW(ambient.setIntensity(-1.0f), spk::Exception);
+	EXPECT_THROW(ambient.setIntensity(std::numeric_limits<float>::infinity()), spk::Exception);
+	EXPECT_THROW(ambient.setIntensity(std::numeric_limits<float>::quiet_NaN()), spk::Exception);
+	EXPECT_EQ(ambient.color(), (spk::RGB{0.3f, 0.4f, 0.5f}));
+	EXPECT_FLOAT_EQ(ambient.intensity(), 2.0f);
+}
+
+TEST(EngineViewLifecycleTest, AmbientContributionIsFrozenForEachViewCapture)
+{
+	Fixture fixture;
+	auto &first = fixture.addView("first");
+	fixture.addView("second");
+	first.ambientLight().setColor({0.2f, 0.5f, 0.8f});
+	first.ambientLight().setIntensity(2.0f);
+	auto &probe = fixture.engine.root().addBehaviour<sparkle_test::engine_view::Probe>();
+	std::vector<spk::RGB> captured;
+	probe.callback = [&](spk::RenderSnapshot::Builder &, const spk::EngineView::CaptureContext &context) {
+		captured.push_back(context.ambientRGB);
+	};
+	fixture.engine.refreshRenderSnapshot();
+	ASSERT_EQ(captured.size(), 2u);
+	EXPECT_EQ(captured[0], (spk::RGB{0.4f, 1.0f, 1.6f}));
+	EXPECT_EQ(captured[1], (spk::RGB{0, 0, 0}));
+	first.ambientLight().setIntensity(0.0f);
+	fixture.engine.refreshRenderSnapshot();
+	ASSERT_EQ(captured.size(), 4u);
+	EXPECT_EQ(captured[2], (spk::RGB{0, 0, 0}));
+	EXPECT_EQ(captured[3], (spk::RGB{0, 0, 0}));
+}

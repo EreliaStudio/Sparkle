@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <exception>
 #include <limits>
 #include <ranges>
 #include <string>
@@ -127,15 +128,19 @@ namespace spk
 
 	void Engine::removeView(const std::string &name)
 	{
-		std::lock_guard lock(_viewMutex);
-		const auto it = std::ranges::find_if(_views, [&name](const auto &view) {
-			return view->name() == name;
-		});
-		if (it == _views.end())
+		std::unique_ptr<EngineView> removed;
 		{
-			throw spk::Exception("Unknown EngineView [" + name + "]");
+			std::lock_guard lock(_viewMutex);
+			const auto it = std::ranges::find_if(_views, [&name](const auto &view) {
+				return view->name() == name;
+			});
+			if (it == _views.end())
+			{
+				throw spk::Exception("Unknown EngineView [" + name + "]");
+			}
+			removed = std::move(*it);
+			_views.erase(it);
 		}
-		_views.erase(it);
 	}
 
 	void Engine::setViewOrder(EngineView &view, std::optional<EngineView::Order> order)
@@ -196,7 +201,7 @@ namespace spk
 				if (key.name.empty() || key.name.starts_with("sparkle.") || reserved ||
 					key.order > EngineView::CompositionPassKey.order)
 				{
-					throw spk::Exception("EngineView [" + name + "]: invalid pass [" + key.name + "] at order " + std::to_string(key.order) + " (custom order <= 1999999, reserved keys forbidden)");
+					throw spk::Exception("EngineView [" + name + "]: invalid pass [" + key.name + "] at order " + std::to_string(key.order) + " (expected custom ranges [-2147483648,-1000001], [-999999,-2], [1,999999], [1000001,1999999] or exact system key)");
 				}
 			}
 			for (const auto &old : validated)
@@ -220,7 +225,14 @@ namespace spk
 		_visitObjects([&](EngineView::Contributor &contributor) {
 			if (contributor.canContribute() && context.isLayerCompatible(contributor.layers()))
 			{
-				contributor.buildViewRenderSnapshot(builder, context);
+				try
+				{
+					contributor.buildViewRenderSnapshot(builder, context);
+				}
+				catch (const std::exception &error)
+				{
+					throw spk::Exception("EngineView [" + context.name + "]: " + error.what(), std::current_exception());
+				}
 			}
 		});
 		_validateViewPasses(context.name, builder);

@@ -53,6 +53,7 @@ namespace spk
 		context.resolution = _resolution;
 		context.layers = _layers;
 		context.backgroundColor = _backgroundColor;
+		context.ambientRGB = _ambientLight.contribution();
 		context.exposure = _exposure;
 		context.targetFPS = _targetFPS;
 		context.detachedOutputPolicy = _detachedOutputPolicy;
@@ -164,6 +165,16 @@ namespace spk
 	RGB EngineView::backgroundColor() const noexcept
 	{
 		return _backgroundColor;
+	}
+
+	AmbientLight &EngineView::ambientLight() noexcept
+	{
+		return _ambientLight;
+	}
+
+	const AmbientLight &EngineView::ambientLight() const noexcept
+	{
+		return _ambientLight;
 	}
 
 	void EngineView::setExposure(float exposure)

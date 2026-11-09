@@ -190,3 +190,42 @@ TEST(EngineViewPassValidationTest, PendingKeyInspectionDoesNotModifyBuilder)
 	keys[0].name = "changed";
 	EXPECT_EQ(builder.passKeys()[0].name, "one");
 }
+ 
+TEST(EngineViewPassValidationTest, EachActiveViewStartsWithExactlyFiveSystemPasses)
+{
+	Fixture fixture;
+	fixture.addView("first");
+	fixture.addView("second");
+	auto &probe = fixture.engine.root().addBehaviour<sparkle_test::engine_view::Probe>();
+	probe.callback = [](spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) {
+		const auto keys = builder.passKeys();
+		ASSERT_EQ(keys.size(), 5u);
+		EXPECT_EQ(keys[0].name, spk::EngineView::ShadowPassKey.name);
+		EXPECT_EQ(keys[1].name, spk::EngineView::SkyboxPassKey.name);
+		EXPECT_EQ(keys[2].name, spk::EngineView::OpaquePassKey.name);
+		EXPECT_EQ(keys[3].name, spk::EngineView::WBOITPassKey.name);
+		EXPECT_EQ(keys[4].name, spk::EngineView::CompositionPassKey.name);
+	};
+	fixture.engine.refreshRenderSnapshot();
+	EXPECT_EQ(probe.contributions, 2u);
+}
+
+TEST(EngineViewPassValidationTest, BuilderKeyConflictExceptionIncludesViewName)
+{
+	Fixture fixture;
+	fixture.addView("diagnostic");
+	auto &probe = fixture.engine.root().addBehaviour<sparkle_test::engine_view::Probe>();
+	probe.callback = [](spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) {
+		builder.renderPass({"conflict", 12});
+		builder.renderPass({"conflict", 13});
+	};
+	try
+	{
+		fixture.engine.refreshRenderSnapshot();
+		FAIL();
+	}
+	catch (const spk::Exception &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("Engine"), std::string::npos);
+	}
+}
