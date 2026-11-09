@@ -13,7 +13,6 @@
 
 #include "asset/factory.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
-#include "graphics/opengl/texture_cube_face.hpp"
 #include "math/vector2.hpp"
 
 namespace spk
@@ -61,7 +60,6 @@ namespace spk
 			Error
 		};
 
-		using CubeFace = TextureCubeFace;
 
 		enum class ContentSource
 		{
