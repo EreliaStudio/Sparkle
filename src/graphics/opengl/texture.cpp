@@ -371,21 +371,44 @@ namespace spk
 			{
 				for (GLenum face = 0; face < 6; ++face)
 				{
-					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, descriptor.internalFormat,
-						static_cast<GLsizei>(_size.x), static_cast<GLsizei>(_size.y), 0,
-						descriptor.externalFormat, descriptor.elementType, nullptr);
+					glTexImage2D(
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+						0,
+						descriptor.internalFormat,
+						static_cast<GLsizei>(_size.x),
+						static_cast<GLsizei>(_size.y),
+						0,
+						descriptor.externalFormat,
+						descriptor.elementType,
+						nullptr);
 				}
 			}
 		}
 		else if (matches && pixels != nullptr)
 		{
-			glTexSubImage2D(target, 0, 0, 0, static_cast<GLsizei>(_size.x),
-				static_cast<GLsizei>(_size.y), descriptor.externalFormat, descriptor.elementType, pixels);
+			glTexSubImage2D(
+				target,
+				0,
+				0,
+				0,
+				static_cast<GLsizei>(_size.x),
+				static_cast<GLsizei>(_size.y),
+				descriptor.externalFormat,
+				descriptor.elementType,
+				pixels);
 		}
 		else if (!matches)
 		{
-			glTexImage2D(target, 0, descriptor.internalFormat, static_cast<GLsizei>(_size.x),
-				static_cast<GLsizei>(_size.y), 0, descriptor.externalFormat, descriptor.elementType, pixels);
+			glTexImage2D(
+				target,
+				0,
+				descriptor.internalFormat,
+				static_cast<GLsizei>(_size.x),
+				static_cast<GLsizei>(_size.y),
+				0,
+				descriptor.externalFormat,
+				descriptor.elementType,
+				pixels);
 		}
 		glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
 		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
