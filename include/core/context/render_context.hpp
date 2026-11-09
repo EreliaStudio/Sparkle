@@ -1,9 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
 
-#include "core/window.hpp"
+#include "core/window_surface_render_target.hpp"
 #include "diagnostics/profiler.hpp"
 #include "math/vector2.hpp"
 
@@ -41,11 +40,11 @@ namespace spk
 		Profiler &profiler = Profiler::defaultProfiler();
 		ActiveProgram _activeProgram{};
 
-		std::optional<Vector2UInt> activeRenderTargetSize = std::nullopt;
+		Window::Surface::RenderTarget activeRenderTarget{};
 
 		[[nodiscard]] Vector2UInt renderTargetSize() const
 		{
-			return activeRenderTargetSize ? *activeRenderTargetSize : targetSurface->geometry().size;
+			return activeRenderTarget.size(*targetSurface);
 		}
 	};
 }
