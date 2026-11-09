@@ -74,12 +74,13 @@ et `GPUResource::Handle` sont conservées.
 
 ### API effective
 
-- `Texture::createRenderTarget(Target, size, Format)` crée uniquement une description CPU.
+- `Framebuffer::RenderAttachment::create2D(size, format)` crée un descripteur léger contenant un `Texture::Handle` partageable. La création du stockage de texture reste interne à `Texture` ; `Texture::createRenderTarget()` n'est plus une API publique.
+- `Texture::ContentSource::RenderAttachment` et `Texture::isRenderAttachment()` distinguent les textures allouées pour des attachements du contenu pixel CPU.
 - `Texture::Format` expose `RGBA16F` et `SRGB8_ALPHA8` en complément de `Depth32F` existant.
 - `Framebuffer(size, vector<Texture::Handle>, optional<Texture::Handle>)` construit un framebuffer partageable.
 - `CubeMap(faceSize, format)` expose une ressource six faces, profondeur ou couleur, et `CubeMap::Face` (`PositiveX`, `NegativeX`, etc.).
-- `Framebuffer::Attachment{Texture::Handle, optional<CubeMap::Face>}` décrit une texture et, pour les cubemaps, la face **fixe** à attacher.
-- `Framebuffer(size, vector<Framebuffer::Attachment>, optional<Framebuffer::Attachment>)` capture les bindings, avec validation des faces, types, tailles et formats.
+- `Framebuffer::RenderAttachment(textureHandle, optionalFace)` associe un handle de texture à une éventuelle face de cubemap **fixe**, sans posséder de pixels ou de ressource GPU supplémentaire. Les méthodes `texture()` et `face()` exposent les informations.
+- `Framebuffer(size, vector<Framebuffer::RenderAttachment>, optional<Framebuffer::RenderAttachment>)` capture les bindings, avec validation des faces, types, tailles et formats.
 - Chaque face peut être liée à son propre `Framebuffer::State`, tout en conservant le même `CubeMap::Handle` natif sur une Surface.
 - Les constructeurs historiques utilisant les formats ou les `Texture::Handle` restent disponibles pour les textures 2D.
 - `Framebuffer::colorAttachmentHandle(index)` et `depthStencilAttachmentHandle()` exposent l'identité exacte des handles.
