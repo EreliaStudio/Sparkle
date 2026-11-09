@@ -18,7 +18,8 @@ namespace spk
 	class EngineWidget : public Widget
 	{
 	private:
-		RenderingEngine _renderingEngine;
+		Engine *_engine = nullptr;
+		RenderingEngine *_renderingEngine = nullptr;
 
 		void _onGeometryChange() override;
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override;
