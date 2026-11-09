@@ -41,8 +41,7 @@ namespace sparkle_test::engine_view
 		Callback callback;
 		std::size_t contributions = 0;
 
-		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder,
-									 const spk::EngineView::CaptureContext &context) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &context) override
 		{
 			++contributions;
 			if (callback)
@@ -70,18 +69,15 @@ namespace sparkle_test::engine_view
 			engine.removeEntity(&cameraEntity);
 		}
 
-		spk::EngineView &addView(const std::string &name,
-								std::optional<spk::EngineView::Order> order = std::nullopt)
+		spk::EngineView &addView(const std::string &name, std::optional<spk::EngineView::Order> order = std::nullopt)
 		{
 			return engine.addView(name, &camera, {128, 96}, order);
 		}
 
-		Probe &record(const std::string &label,
-					  spk::RenderPass::Key key = spk::EngineView::OpaquePassKey)
+		Probe &record(const std::string &label, spk::RenderPass::Key key = spk::EngineView::OpaquePassKey)
 		{
 			auto &probe = engine.root().addBehaviour<Probe>();
-			probe.callback = [this, label, key](spk::RenderSnapshot::Builder &builder,
-												const spk::EngineView::CaptureContext &context) {
+			probe.callback = [this, label, key](spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &context) {
 				builder.renderPass(key).emplace<RecordCommand>(log, context.name + ":" + label);
 			};
 			return probe;

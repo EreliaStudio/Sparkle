@@ -35,8 +35,7 @@ namespace spk
 		return _canContribute();
 	}
 
-	EngineView::EngineView(Engine &engine, std::string name, std::uint64_t identity,
-						   CameraComponent3D *camera, Vector2UInt resolution, std::optional<Order> order) :
+	EngineView::EngineView(Engine &engine, std::string name, std::uint64_t identity, CameraComponent3D *camera, Vector2UInt resolution, std::optional<Order> order) :
 		_engine(&engine),
 		_name(std::move(name)),
 		_identity(identity),
@@ -65,12 +64,30 @@ namespace spk
 		return context;
 	}
 
-	const std::string &EngineView::name() const noexcept { return _name; }
-	std::uint64_t EngineView::identity() const noexcept { return _identity; }
-	CameraComponent3D *EngineView::camera() const noexcept { return _camera; }
-	void EngineView::setCamera(CameraComponent3D *camera) noexcept { _camera = camera; }
-	void EngineView::detachCamera() noexcept { _camera = nullptr; }
-	Vector2UInt EngineView::resolution() const noexcept { return _resolution; }
+	const std::string &EngineView::name() const noexcept
+	{
+		return _name;
+	}
+	std::uint64_t EngineView::identity() const noexcept
+	{
+		return _identity;
+	}
+	CameraComponent3D *EngineView::camera() const noexcept
+	{
+		return _camera;
+	}
+	void EngineView::setCamera(CameraComponent3D *camera) noexcept
+	{
+		_camera = camera;
+	}
+	void EngineView::detachCamera() noexcept
+	{
+		_camera = nullptr;
+	}
+	Vector2UInt EngineView::resolution() const noexcept
+	{
+		return _resolution;
+	}
 
 	void EngineView::setResolution(Vector2UInt resolution)
 	{
@@ -81,7 +98,10 @@ namespace spk
 		_resolution = resolution;
 	}
 
-	std::optional<EngineView::Order> EngineView::order() const noexcept { return _order; }
+	std::optional<EngineView::Order> EngineView::order() const noexcept
+	{
+		return _order;
+	}
 
 	void EngineView::setOrder(std::optional<Order> order)
 	{
@@ -98,8 +118,14 @@ namespace spk
 		_layers.reset();
 	}
 
-	const std::optional<EngineView::Layers> &EngineView::layers() const noexcept { return _layers; }
-	EngineView::DetachedOutputPolicy EngineView::detachedOutputPolicy() const noexcept { return _detachedOutputPolicy; }
+	const std::optional<EngineView::Layers> &EngineView::layers() const noexcept
+	{
+		return _layers;
+	}
+	EngineView::DetachedOutputPolicy EngineView::detachedOutputPolicy() const noexcept
+	{
+		return _detachedOutputPolicy;
+	}
 
 	void EngineView::setDetachedOutputPolicy(DetachedOutputPolicy policy)
 	{
@@ -114,12 +140,20 @@ namespace spk
 		throw spk::Exception("EngineView [" + _name + "]: invalid detached output policy");
 	}
 
-	void EngineView::setFallbackTexture(Texture::Handle texture) noexcept { _fallbackTexture = std::move(texture); }
-	const Texture::Handle &EngineView::fallbackTexture() const noexcept { return _fallbackTexture; }
+	void EngineView::setFallbackTexture(Texture::Handle texture) noexcept
+	{
+		_fallbackTexture = std::move(texture);
+	}
+	const Texture::Handle &EngineView::fallbackTexture() const noexcept
+	{
+		return _fallbackTexture;
+	}
 
 	void EngineView::setBackgroundColor(RGB color)
 	{
-		const auto valid = [](float value) { return std::isfinite(value) && value >= 0.0f && value <= 1.0f; };
+		const auto valid = [](float value) {
+			return std::isfinite(value) && value >= 0.0f && value <= 1.0f;
+		};
 		if (!valid(color.r) || !valid(color.g) || !valid(color.b))
 		{
 			throw spk::Exception("EngineView [" + _name + "]: invalid background color");
@@ -127,7 +161,10 @@ namespace spk
 		_backgroundColor = color;
 	}
 
-	RGB EngineView::backgroundColor() const noexcept { return _backgroundColor; }
+	RGB EngineView::backgroundColor() const noexcept
+	{
+		return _backgroundColor;
+	}
 
 	void EngineView::setExposure(float exposure)
 	{
@@ -138,7 +175,10 @@ namespace spk
 		_exposure = exposure;
 	}
 
-	float EngineView::exposure() const noexcept { return _exposure; }
+	float EngineView::exposure() const noexcept
+	{
+		return _exposure;
+	}
 
 	void EngineView::setTargetFPS(float fps)
 	{
@@ -149,5 +189,8 @@ namespace spk
 		_targetFPS = fps;
 	}
 
-	float EngineView::targetFPS() const noexcept { return _targetFPS; }
+	float EngineView::targetFPS() const noexcept
+	{
+		return _targetFPS;
+	}
 }

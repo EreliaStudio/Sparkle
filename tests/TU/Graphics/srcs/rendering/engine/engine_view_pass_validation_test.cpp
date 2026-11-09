@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "exception.hpp"
 #include "engine_view_test_utils.hpp"
+#include "exception.hpp"
 
 namespace
 {
@@ -18,8 +18,7 @@ namespace
 		Fixture fixture;
 		fixture.addView("invalid");
 		auto &probe = fixture.engine.root().addBehaviour<sparkle_test::engine_view::Probe>();
-		probe.callback = [key](spk::RenderSnapshot::Builder &builder,
-							   const spk::EngineView::CaptureContext &) {
+		probe.callback = [key](spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) {
 			builder.renderPass(key);
 		};
 		EXPECT_THROW(fixture.engine.refreshRenderSnapshot(), spk::Exception);
@@ -29,9 +28,7 @@ namespace
 
 TEST(EngineViewPassValidationTest, AllFiveSystemKeysAreReservedExactly)
 {
-	const std::array keys{spk::EngineView::ShadowPassKey, spk::EngineView::SkyboxPassKey,
-						  spk::EngineView::OpaquePassKey, spk::EngineView::WBOITPassKey,
-						  spk::EngineView::CompositionPassKey};
+	const std::array keys{spk::EngineView::ShadowPassKey, spk::EngineView::SkyboxPassKey, spk::EngineView::OpaquePassKey, spk::EngineView::WBOITPassKey, spk::EngineView::CompositionPassKey};
 	EXPECT_EQ(keys[0].name, "sparkle.engineview.shadow");
 	EXPECT_EQ(keys[0].order, -1000000);
 	EXPECT_EQ(keys[1].name, "sparkle.engineview.skybox");
@@ -48,37 +45,29 @@ TEST(EngineViewPassValidationTest, SystemPassContributionsExecuteInFiveStageOrde
 {
 	Fixture fixture;
 	fixture.addView("view");
-	for (const auto &key : {spk::EngineView::CompositionPassKey, spk::EngineView::WBOITPassKey,
-							spk::EngineView::OpaquePassKey, spk::EngineView::SkyboxPassKey,
-							spk::EngineView::ShadowPassKey})
+	for (const auto &key : {spk::EngineView::CompositionPassKey, spk::EngineView::WBOITPassKey, spk::EngineView::OpaquePassKey, spk::EngineView::SkyboxPassKey, spk::EngineView::ShadowPassKey})
 	{
 		auto &probe = fixture.engine.root().addBehaviour<sparkle_test::engine_view::Probe>();
-		probe.callback = [&fixture, key](spk::RenderSnapshot::Builder &builder,
-										const spk::EngineView::CaptureContext &) {
+		probe.callback = [&fixture, key](spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) {
 			builder.renderPass(key).emplace<sparkle_test::engine_view::RecordCommand>(fixture.log, key.name);
 		};
 	}
 	fixture.engine.refreshRenderSnapshot();
 	fixture.executeLatest();
-	EXPECT_EQ(fixture.log, (std::vector<std::string>{
-		"sparkle.engineview.shadow", "sparkle.engineview.skybox",
-		"sparkle.engineview.opaque", "sparkle.engineview.wboit",
-		"sparkle.engineview.composition"}));
+	EXPECT_EQ(fixture.log, (std::vector<std::string>{"sparkle.engineview.shadow", "sparkle.engineview.skybox", "sparkle.engineview.opaque", "sparkle.engineview.wboit", "sparkle.engineview.composition"}));
 }
 
 TEST(EngineViewPassValidationTest, CustomPassBoundaryValuesAreInclusive)
 {
 	Fixture fixture;
 	fixture.addView("view");
-	const std::array<spk::RenderPass::Key, 8> keys{{
-		{"a", std::numeric_limits<std::int32_t>::min()},
-		{"b", -1000001}, {"c", -999999}, {"d", -2},
-		{"e", 1}, {"f", 999999}, {"g", 1000001}, {"h", 1999999}}};
+	const std::array<spk::RenderPass::Key, 8> keys{{{"a", std::numeric_limits<std::int32_t>::min()}, {"b", -1000001}, {"c", -999999}, {"d", -2}, {"e", 1}, {"f", 999999}, {"g", 1000001}, {"h", 1999999}}};
 	auto &probe = fixture.engine.root().addBehaviour<sparkle_test::engine_view::Probe>();
-	probe.callback = [&fixture, keys](spk::RenderSnapshot::Builder &builder,
-									  const spk::EngineView::CaptureContext &) {
+	probe.callback = [&fixture, keys](spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) {
 		for (const auto &key : keys)
+		{
 			builder.renderPass(key).emplace<sparkle_test::engine_view::RecordCommand>(fixture.log, key.name);
+		}
 	};
 	fixture.engine.refreshRenderSnapshot();
 	fixture.executeLatest();

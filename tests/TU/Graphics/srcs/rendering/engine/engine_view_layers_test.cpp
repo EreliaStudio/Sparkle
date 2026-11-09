@@ -24,7 +24,9 @@ namespace
 		{
 			++contributions;
 			if (callback)
+			{
 				callback(ctx);
+			}
 		}
 	};
 }

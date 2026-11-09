@@ -38,7 +38,9 @@ namespace spk
 		std::vector<RenderPass::Key> result;
 		result.reserve(_passes.size());
 		for (const auto &entry : _passes)
+		{
 			result.push_back(entry.key);
+		}
 		return result;
 	}
 

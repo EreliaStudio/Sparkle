@@ -101,8 +101,7 @@ namespace spk
 		float _exposure = 1.0f;
 		float _targetFPS = 60.0f;
 
-		EngineView(Engine &engine, std::string name, std::uint64_t identity,
-				   CameraComponent3D *camera, Vector2UInt resolution, std::optional<Order> order);
+		EngineView(Engine &engine, std::string name, std::uint64_t identity, CameraComponent3D *camera, Vector2UInt resolution, std::optional<Order> order);
 		[[nodiscard]] CaptureContext _capture() const;
 
 	public:

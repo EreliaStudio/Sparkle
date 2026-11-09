@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
 #include "core/context/update_context.hpp"
-#include "exception.hpp"
-#include "rendering/engine/rendering_behaviour.hpp"
-#include "rendering/engine/camera_component3d.hpp"
 #include "engine/entity3d.hpp"
+#include "exception.hpp"
+#include "rendering/engine/camera_component3d.hpp"
+#include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/render_command.hpp"
 #include "sparkle_test.hpp"
 #include "ui/widget/engine_widget.hpp"

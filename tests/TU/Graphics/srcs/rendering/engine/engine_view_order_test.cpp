@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "exception.hpp"
 #include "engine_view_test_utils.hpp"
+#include "exception.hpp"
 
 namespace
 {
@@ -50,9 +50,7 @@ TEST(EngineViewOrderTest, ExplicitViewsAlwaysPrecedeUnorderedViews)
 	fixture.addView("unordered-second");
 	fixture.addView("explicit-first", -2);
 	fixture.record("value");
-	EXPECT_EQ(capture(fixture), (std::vector<std::string>{
-		"explicit-first:value", "explicit-middle:value",
-		"unordered-first:value", "unordered-second:value"}));
+	EXPECT_EQ(capture(fixture), (std::vector<std::string>{"explicit-first:value", "explicit-middle:value", "unordered-first:value", "unordered-second:value"}));
 }
 
 TEST(EngineViewOrderTest, LatePriorityInsertionPrecedesEarlierUnorderedView)
@@ -122,8 +120,7 @@ TEST(EngineViewOrderTest, Int32MinAndMaxCanBeUsedTogether)
 	fixture.addView("maximum", std::numeric_limits<Order>::max());
 	fixture.addView("minimum", std::numeric_limits<Order>::min());
 	fixture.record("value");
-	EXPECT_EQ(capture(fixture), (std::vector<std::string>{
-		"minimum:value", "maximum:value", "unordered:value"}));
+	EXPECT_EQ(capture(fixture), (std::vector<std::string>{"minimum:value", "maximum:value", "unordered:value"}));
 }
 
 TEST(EngineViewOrderTest, HighestOrderRemainsBeforeUnorderedView)

@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "container/thread_safe_slot.hpp"
-#include "engine/engine_headless.hpp"
 #include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
+#include "engine/engine_headless.hpp"
 #include "rendering/engine/engine_view.hpp"
 
 namespace spk
@@ -52,8 +52,7 @@ namespace spk
 	public:
 		Engine() = default;
 
-		EngineView &addView(std::string name, CameraComponent3D *camera, Vector2UInt resolution,
-							std::optional<EngineView::Order> order = std::nullopt);
+		EngineView &addView(std::string name, CameraComponent3D *camera, Vector2UInt resolution, std::optional<EngineView::Order> order = std::nullopt);
 		[[nodiscard]] EngineView &view(const std::string &name);
 		[[nodiscard]] const EngineView &view(const std::string &name) const;
 		void removeView(const std::string &name);

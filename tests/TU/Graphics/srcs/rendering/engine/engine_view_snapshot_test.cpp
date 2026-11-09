@@ -5,8 +5,8 @@
 
 #include "core/context/update_context.hpp"
 #include "engine/transform3d.hpp"
-#include "exception.hpp"
 #include "engine_view_test_utils.hpp"
+#include "exception.hpp"
 
 namespace
 {
@@ -201,8 +201,7 @@ TEST(EngineViewSnapshotTest, HomonymousViewRecreationCannotRestoreOldCapture)
 	fixture.engine.refreshRenderSnapshot();
 	EXPECT_NE(fixture.engine.view("same").identity(), oldIdentity);
 	fixture.executeLatest();
-	EXPECT_EQ(fixture.log, (std::vector<std::string>{
-		std::to_string(fixture.engine.view("same").identity())}));
+	EXPECT_EQ(fixture.log, (std::vector<std::string>{std::to_string(fixture.engine.view("same").identity())}));
 }
 
 TEST(EngineViewSnapshotTest, TwoConsumersHoldTheSameImmutableSnapshot)

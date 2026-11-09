@@ -27,9 +27,9 @@ namespace spk
 		}
 
 	public:
+		using EngineView::Contributor::updateState;
 		using Entity::Entity;
 		using Entity::updateState;
-		using EngineView::Contributor::updateState;
 	};
 
 	class RenderingEntity2D : public Entity2D,
@@ -52,9 +52,9 @@ namespace spk
 		}
 
 	public:
+		using EngineView::Contributor::updateState;
 		using Entity2D::Entity2D;
 		using Entity2D::updateState;
-		using EngineView::Contributor::updateState;
 	};
 
 	class RenderingEntity3D : public Entity3D,
@@ -77,8 +77,8 @@ namespace spk
 		}
 
 	public:
+		using EngineView::Contributor::updateState;
 		using Entity3D::Entity3D;
 		using Entity3D::updateState;
-		using EngineView::Contributor::updateState;
 	};
 }

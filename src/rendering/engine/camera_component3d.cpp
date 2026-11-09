@@ -72,10 +72,14 @@ namespace spk
 	{
 		auto *engine = dynamic_cast<Engine *>(context());
 		if (engine == nullptr)
+		{
 			throw spk::Exception("CameraComponent3D is not attached to a graphical Engine");
+		}
 		EngineView &candidate = engine->view(name);
 		if (candidate.camera() != this)
+		{
 			throw spk::Exception("EngineView [" + name + "] is not attached to this camera");
+		}
 		return candidate;
 	}
 
@@ -83,10 +87,14 @@ namespace spk
 	{
 		auto *engine = dynamic_cast<const Engine *>(context());
 		if (engine == nullptr)
+		{
 			throw spk::Exception("CameraComponent3D is not attached to a graphical Engine");
+		}
 		const EngineView &candidate = engine->view(name);
 		if (candidate.camera() != this)
+		{
 			throw spk::Exception("EngineView [" + name + "] is not attached to this camera");
+		}
 		return candidate;
 	}
 

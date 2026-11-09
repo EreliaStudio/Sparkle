@@ -6,9 +6,9 @@
 #include <type_traits>
 #include <utility>
 
+#include "engine_view_test_utils.hpp"
 #include "exception.hpp"
 #include "rendering/engine/engine_view.hpp"
-#include "engine_view_test_utils.hpp"
 
 namespace
 {
