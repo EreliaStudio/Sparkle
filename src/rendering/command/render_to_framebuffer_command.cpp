@@ -63,10 +63,10 @@ namespace spk
 	RenderToFramebufferCommand::RenderToFramebufferCommand(
 		Framebuffer::Handle framebuffer,
 		std::shared_ptr<const RenderSnapshot> snapshot) :
-		_target(std::move(framebuffer)),
+		_framebuffer(std::move(framebuffer)),
 		_snapshot(std::move(snapshot))
 	{
-		if (!_snapshot)
+		if (!_framebuffer || !_snapshot)
 		{
 			throw std::invalid_argument("RenderToFramebufferCommand requires a framebuffer and a snapshot");
 		}
@@ -78,8 +78,9 @@ namespace spk
 		{
 			throw std::invalid_argument("Cannot render to a framebuffer without a target surface");
 		}
-		FramebufferBindingScope binding(context, _target);
-		_target.activate(context);
+		const Window::Surface::RenderTarget target(*context.targetSurface, _framebuffer);
+		FramebufferBindingScope binding(context, target);
+		target.activate(context);
 		const Vector2UInt size = context.renderTargetSize();
 		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
 		_snapshot->execute(context);
