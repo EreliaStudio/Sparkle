@@ -143,7 +143,7 @@ namespace spk
 
 			void setGeometry(const spk::Rect2D &geometry) noexcept;
 			[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
-			[[nodiscard]] RenderTarget defaultRenderTarget() const;
+			[[nodiscard]] RenderTarget defaultRenderTarget();
 
 			[[nodiscard]] GPUResourceCollection &_gpuResources();
 			void setProfiler(Profiler *profiler) noexcept;
