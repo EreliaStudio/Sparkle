@@ -19,10 +19,18 @@ namespace spk
 		class Instance;
 
 	public:
-		struct Attachment
+		class RenderAttachment final
 		{
-			Texture::Handle texture;
-			std::optional<CubeMap::Face> face = std::nullopt;
+		private:
+			Texture::Handle _texture;
+			std::optional<CubeMap::Face> _face;
+
+		public:
+			RenderAttachment(Texture::Handle texture, std::optional<CubeMap::Face> face = std::nullopt);
+
+			[[nodiscard]] static RenderAttachment create2D(const Vector2UInt &size, Texture::Format format);
+			[[nodiscard]] const Texture::Handle &texture() const noexcept;
+			[[nodiscard]] std::optional<CubeMap::Face> face() const noexcept;
 		};
 
 		class State final : public GPUResource::State
@@ -31,8 +39,8 @@ namespace spk
 
 		private:
 			Vector2UInt _size{0, 0};
-			std::vector<Attachment> _colorAttachments;
-			std::optional<Attachment> _depthStencilAttachment;
+			std::vector<RenderAttachment> _colorAttachments;
+			std::optional<RenderAttachment> _depthStencilAttachment;
 			bool _sharedAttachments = false;
 
 			void _validateCapabilities() const;
@@ -59,11 +67,11 @@ namespace spk
 			{
 				return _size;
 			}
-			[[nodiscard]] const std::vector<Attachment> &colorAttachments() const noexcept
+			[[nodiscard]] const std::vector<RenderAttachment> &colorAttachments() const noexcept
 			{
 				return _colorAttachments;
 			}
-			[[nodiscard]] const std::optional<Attachment> &depthStencilAttachment() const noexcept
+			[[nodiscard]] const std::optional<RenderAttachment> &depthStencilAttachment() const noexcept
 			{
 				return _depthStencilAttachment;
 			}
@@ -74,7 +82,6 @@ namespace spk
 		std::vector<Texture> _colorViews;
 		std::optional<Texture> _depthView;
 
-		[[nodiscard]] static Texture::Handle _makeAttachment(const Vector2UInt &size, Texture::Format format);
 		[[nodiscard]] static GLenum _depthAttachmentPoint(Texture::Format format);
 		static void _validateSize(const Vector2UInt &size);
 		void _validateAttachments() const;
@@ -93,8 +100,8 @@ namespace spk
 			std::optional<Texture::Handle> depthStencilAttachment);
 		explicit Framebuffer(
 			const Vector2UInt &size,
-			std::vector<Attachment> colorAttachments,
-			std::optional<Attachment> depthStencilAttachment);
+			std::vector<RenderAttachment> colorAttachments,
+			std::optional<RenderAttachment> depthStencilAttachment);
 
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
 		{
