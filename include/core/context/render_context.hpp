@@ -45,7 +45,7 @@ namespace spk
 
 		[[nodiscard]] Vector2UInt renderTargetSize() const
 		{
-			return activeRenderTargetSize.value_or(targetSurface->geometry().size);
+			return activeRenderTargetSize ? *activeRenderTargetSize : targetSurface->geometry().size;
 		}
 	};
 }
