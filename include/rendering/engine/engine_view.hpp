@@ -106,6 +106,8 @@ namespace spk
 		[[nodiscard]] CaptureContext _capture() const;
 
 	public:
+		~EngineView() = default;
+
 		EngineView(const EngineView &) = delete;
 		EngineView &operator=(const EngineView &) = delete;
 		EngineView(EngineView &&) = delete;
