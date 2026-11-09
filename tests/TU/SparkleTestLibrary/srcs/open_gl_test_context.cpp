@@ -35,7 +35,7 @@ namespace sparkle_test
 		spk::WinAPI::Window::Class windowClass{uniqueWindowClassName()};
 		spk::Window::Native native{"OpenGL test native window"};
 		spk::Window::Surface surface{"OpenGL test surface"};
-		spk::RenderContext renderContext{.targetSurface = &surface};
+		spk::RenderContext renderContext{surface};
 		spk::Framebuffer framebuffer{{FramebufferWidth, FramebufferHeight}};
 		std::thread::id ownerThread = std::this_thread::get_id();
 
