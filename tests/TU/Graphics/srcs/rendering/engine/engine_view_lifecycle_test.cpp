@@ -167,3 +167,33 @@ TEST(EngineViewLifecycleTest, AppearanceParameterSettersValidateWithoutPartialMu
 	EXPECT_FLOAT_EQ(view.exposure(), 2.0f);
 	EXPECT_FLOAT_EQ(view.targetFPS(), 120.0f);
 }
+
+TEST(EngineViewLifecycleTest, CameraCanRetrieveOnlyViewsThatReferenceIt)
+{
+	Fixture fixture;
+	auto &view = fixture.addView("monitor");
+	EXPECT_EQ(&fixture.camera.view("monitor"), &view);
+	EXPECT_EQ(&std::as_const(fixture.camera).view("monitor"), &view);
+	view.detachCamera();
+	EXPECT_THROW(fixture.camera.view("monitor"), spk::Exception);
+	view.setCamera(&fixture.camera);
+	EXPECT_EQ(&fixture.camera.view("monitor"), &view);
+}
+
+TEST(EngineViewLifecycleTest, CameraLookupRejectsUnknownOrWrongCamera)
+{
+	Fixture fixture;
+	fixture.addView("monitor");
+	spk::Entity3D otherEntity("other");
+	auto &otherCamera = otherEntity.addComponent<spk::CameraComponent3D>();
+	fixture.engine.addEntity(&otherEntity);
+	EXPECT_THROW(fixture.camera.view("missing"), spk::Exception);
+	EXPECT_THROW(otherCamera.view("monitor"), spk::Exception);
+	fixture.engine.removeEntity(&otherEntity);
+}
+
+TEST(EngineViewLifecycleTest, UnattachedCameraCannotResolveView)
+{
+	spk::CameraComponent3D camera;
+	EXPECT_THROW(camera.view("missing"), spk::Exception);
+}
