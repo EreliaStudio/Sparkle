@@ -155,9 +155,10 @@ namespace spk
 		{
 			throw std::invalid_argument("Cannot activate a GPU resource without a target surface");
 		}
-		if (context.targetSurface->lifeCycle() != Window::LifeCycle::Ready)
+		const auto lifeCycle = context.targetSurface->lifeCycle();
+		if (lifeCycle == Window::LifeCycle::Releasing || lifeCycle == Window::LifeCycle::Released)
 		{
-			throw spk::Exception("Cannot activate a GPU resource on a surface that is not Ready");
+			throw spk::Exception("Cannot activate a GPU resource on a closing or released surface");
 		}
 		try
 		{
