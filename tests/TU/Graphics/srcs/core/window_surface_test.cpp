@@ -245,8 +245,8 @@ TEST(WindowSurfaceTest, IndependentSurfacesNeverShareRenderTargetPixelContent)
 	spk::Window::Surface second("surface-independent-B");
 	first.create(firstFrame.native.window());
 	second.create(secondFrame.native.window());
-	spk::RenderContext firstContext{.targetSurface = &first};
-	spk::RenderContext secondContext{.targetSurface = &second};
+	spk::RenderContext firstContext{first};
+	spk::RenderContext secondContext{second};
 	spk::Framebuffer target({2, 2}, {spk::Texture::Format::RGBA}, std::nullopt);
 	const auto clear = [&](spk::Window::Surface &surface, spk::RenderContext &context, float red) {
 		surface.makeCurrent();
@@ -283,7 +283,7 @@ TEST(WindowSurfaceTest, IndependentSurfacesNeverShareRenderTargetPixelContent)
 TEST(WindowSurfaceTest, ReleasedSurfacesRejectHandleMaterialization)
 {
 	spk::Window::Surface surface("surface-released-resource");
-	spk::RenderContext context{.targetSurface = &surface};
+	spk::RenderContext context{surface};
 	auto target = spk::Texture::createRenderTarget(spk::Texture::Target::Texture2D, {4, 4}, spk::Texture::Format::RGBA);
 	surface.destroy();
 	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
