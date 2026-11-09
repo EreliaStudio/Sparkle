@@ -159,7 +159,7 @@ namespace spk
 		activate(context);
 	}
 
-	void Texture::_allocateRenderTarget(const Vector2UInt &size, Format format)
+	void Texture::_allocateRenderAttachment(const Vector2UInt &size, Format format)
 	{
 		const auto target = state<State>()._textureTarget;
 		if (target != Target::Texture2D && target != Target::TextureCubeMap)
@@ -185,7 +185,7 @@ namespace spk
 		content._pixels.clear();
 		content._size = size;
 		content._format = format;
-		content._contentSource = ContentSource::RenderTarget;
+		content._contentSource = ContentSource::RenderAttachment;
 		content._mipmap = Mipmap::Disable;
 	}
 
@@ -194,10 +194,10 @@ namespace spk
 	{
 	}
 
-	Texture Texture::createRenderTarget(Target target, const Vector2UInt &size, Format format)
+	Texture Texture::_createRenderAttachment(Target target, const Vector2UInt &size, Format format)
 	{
 		Texture result(target);
-		result._allocateRenderTarget(size, format);
+		result._allocateRenderAttachment(size, format);
 		result.validate();
 		return result;
 	}
@@ -331,7 +331,7 @@ namespace spk
 		const auto target = _openGLTarget(_textureTarget);
 		if (descriptor.internalFormat == GL_NONE ||
 			(_textureTarget != Target::Texture2D && _textureTarget != Target::TextureCubeMap) ||
-			(_textureTarget == Target::TextureCubeMap && _contentSource != ContentSource::RenderTarget))
+			(_textureTarget == Target::TextureCubeMap && _contentSource != ContentSource::RenderAttachment))
 		{
 			throw Exception("Unsupported Texture target or format during GPU synchronization");
 		}
@@ -347,7 +347,7 @@ namespace spk
 		{
 			throw Exception("Texture dimensions exceed this surface's OpenGL size limit");
 		}
-		if (_contentSource == ContentSource::RenderTarget)
+		if (_contentSource == ContentSource::RenderAttachment)
 		{
 			GLint supported = GL_NONE;
 			glGetInternalformativ(target, descriptor.internalFormat, GL_FRAMEBUFFER_RENDERABLE, 1, &supported);
@@ -524,9 +524,9 @@ namespace spk
 		return state<State>()._contentSource;
 	}
 
-	bool Texture::isRenderTarget() const noexcept
+	bool Texture::isRenderAttachment() const noexcept
 	{
-		return state<State>()._contentSource == ContentSource::RenderTarget;
+		return state<State>()._contentSource == ContentSource::RenderAttachment;
 	}
 
 	Texture::Mipmap Texture::mipmap() const noexcept
@@ -537,7 +537,7 @@ namespace spk
 	const std::vector<std::uint8_t> &Texture::pixels() const
 	{
 		const auto &content = state<State>();
-		if (content._contentSource == ContentSource::RenderTarget)
+		if (content._contentSource == ContentSource::RenderAttachment)
 		{
 			throw std::logic_error("Render-target textures do not expose CPU pixel data");
 		}
@@ -616,7 +616,7 @@ namespace spk
 	{
 		const auto base = size(), candidate = texture.size();
 		if (target() != Target::Texture2D || texture.target() != Target::Texture2D ||
-			isRenderTarget() || texture.isRenderTarget() || !isColorFormat(format()) || format() != texture.format() ||
+			isRenderAttachment() || texture.isRenderAttachment() || !isColorFormat(format()) || format() != texture.format() ||
 			base.x == 0 || base.y == 0 || candidate.x == 0 || candidate.y == 0 ||
 			std::uint64_t(base.x) * candidate.y != std::uint64_t(base.y) * candidate.x)
 		{
@@ -695,7 +695,7 @@ namespace spk
 	void Texture::saveAsPng(const std::filesystem::path &path) const
 	{
 		const auto &content = state<State>();
-		if (content._contentSource == ContentSource::RenderTarget || isColorFormat(content._format) == false)
+		if (content._contentSource == ContentSource::RenderAttachment || isColorFormat(content._format) == false)
 		{
 			throw std::logic_error("Only CPU color textures can be exported as PNG files");
 		}
