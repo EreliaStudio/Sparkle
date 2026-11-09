@@ -4,6 +4,7 @@
 #include <optional>
 #include <vector>
 
+#include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
 #include "graphics/opengl/texture.hpp"
 #include "math/vector2.hpp"
@@ -18,14 +19,20 @@ namespace spk
 		class Instance;
 
 	public:
+		struct Attachment
+		{
+			Texture::Handle texture;
+			std::optional<CubeMap::Face> face = std::nullopt;
+		};
+
 		class State final : public GPUResource::State
 		{
 			friend class Framebuffer;
 
 		private:
 			Vector2UInt _size{0, 0};
-			std::vector<Texture::Handle> _colorAttachments;
-			std::optional<Texture::Handle> _depthStencilAttachment;
+			std::vector<Attachment> _colorAttachments;
+			std::optional<Attachment> _depthStencilAttachment;
 			bool _sharedAttachments = false;
 
 			void _validateCapabilities() const;
@@ -33,7 +40,7 @@ namespace spk
 			void _attachDepth(Instance &instance, RenderContext &context) const;
 			void _configureDrawBuffers() const;
 			void _checkComplete() const;
-			[[nodiscard]] bool _hasCubeDepth() const noexcept;
+			[[nodiscard]] bool _hasCubeAttachment() const noexcept;
 
 		protected:
 			State() = default;
@@ -52,11 +59,11 @@ namespace spk
 			{
 				return _size;
 			}
-			[[nodiscard]] const std::vector<Texture::Handle> &colorAttachments() const noexcept
+			[[nodiscard]] const std::vector<Attachment> &colorAttachments() const noexcept
 			{
 				return _colorAttachments;
 			}
-			[[nodiscard]] const std::optional<Texture::Handle> &depthStencilAttachment() const noexcept
+			[[nodiscard]] const std::optional<Attachment> &depthStencilAttachment() const noexcept
 			{
 				return _depthStencilAttachment;
 			}
@@ -79,10 +86,15 @@ namespace spk
 			const Vector2UInt &size,
 			std::vector<Texture::Format> colorFormats = {Texture::Format::RGBA},
 			std::optional<Texture::Format> depthStencilFormat = Texture::Format::Depth24Stencil8);
+
 		explicit Framebuffer(
 			const Vector2UInt &size,
 			std::vector<Texture::Handle> colorAttachments,
 			std::optional<Texture::Handle> depthStencilAttachment);
+		explicit Framebuffer(
+			const Vector2UInt &size,
+			std::vector<Attachment> colorAttachments,
+			std::optional<Attachment> depthStencilAttachment);
 
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
 		{
@@ -100,7 +112,6 @@ namespace spk
 		{
 			return createHandle<State>();
 		}
-		static void activateFace(const Handle &handle, Texture::CubeFace face, RenderContext &context);
 		void resize(const Vector2UInt &size);
 
 		[[nodiscard]] const Vector2UInt &size() const noexcept;
@@ -108,6 +119,6 @@ namespace spk
 		[[nodiscard]] const Texture &colorAttachment(std::size_t index) const;
 		[[nodiscard]] const Texture *depthStencilAttachment() const noexcept;
 		[[nodiscard]] const Texture::Handle &colorAttachmentHandle(std::size_t index) const;
-		[[nodiscard]] const std::optional<Texture::Handle> &depthStencilAttachmentHandle() const noexcept;
+		[[nodiscard]] std::optional<Texture::Handle> depthStencilAttachmentHandle() const noexcept;
 	};
 }
