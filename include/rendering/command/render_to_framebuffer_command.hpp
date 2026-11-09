@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "graphics/opengl/framebuffer.hpp"
+#include "core/window_surface_render_target.hpp"
 #include "rendering/render_command.hpp"
 
 namespace spk
@@ -12,7 +12,7 @@ namespace spk
 	class RenderToFramebufferCommand final : public RenderCommand
 	{
 	private:
-		Framebuffer::Handle _framebuffer;
+		Window::Surface::RenderTarget _target;
 		std::shared_ptr<const RenderSnapshot> _snapshot;
 
 	public:
