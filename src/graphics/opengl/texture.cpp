@@ -120,7 +120,9 @@ namespace spk
 			return 3;
 		case Format::RGBA:
 		case Format::BGRA:
+		case Format::SRGB8_ALPHA8:
 			return 4;
+		case Format::RGBA16F:
 		case Format::Depth24:
 		case Format::Depth32F:
 		case Format::Depth24Stencil8:
@@ -159,21 +161,27 @@ namespace spk
 
 	void Texture::_allocateRenderTarget(const Vector2UInt &size, Format format)
 	{
-		_detachResolutions();
-		auto &content = state<State>();
-		if (content._textureTarget != Target::Texture2D)
+		const auto target = state<State>()._textureTarget;
+		if (target != Target::Texture2D && target != Target::TextureCubeMap)
 		{
-			throw std::logic_error("Render targets currently support Texture2D only");
+			throw Exception("Render targets require a Texture2D or TextureCubeMap");
 		}
-		if (size.x == 0 || size.y == 0)
+		if (size.x == 0 || size.y == 0 || size.x > std::numeric_limits<GLsizei>::max() ||
+			size.y > std::numeric_limits<GLsizei>::max())
 		{
-			throw std::invalid_argument("Render target size cannot be zero");
+			throw Exception("Render target dimensions must be nonzero and representable by OpenGL");
 		}
-		if (format == Format::Error)
+		if (target == Target::TextureCubeMap && (size.x != size.y || !isDepthFormat(format)))
 		{
-			throw std::invalid_argument("Render target format cannot be invalid");
+			throw Exception("Render target cubemap requires square faces and a depth format");
+		}
+		if (!isColorFormat(format) && !isDepthFormat(format) && !isDepthStencilFormat(format))
+		{
+			throw Exception("Unsupported render target format");
 		}
 
+		_detachResolutions();
+		auto &content = state<State>();
 		content._pixels.clear();
 		content._size = size;
 		content._format = format;
@@ -184,6 +192,14 @@ namespace spk
 	Texture::Texture(Target target) :
 		GPUResource(std::shared_ptr<GPUResource::State>(new State(target)))
 	{
+	}
+
+	Texture Texture::createRenderTarget(Target target, const Vector2UInt &size, Format format)
+	{
+		Texture result(target);
+		result._allocateRenderTarget(size, format);
+		result.validate();
+		return result;
 	}
 
 	void Texture::setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format)
@@ -307,91 +323,96 @@ namespace spk
 
 	void Texture::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
-		if (_textureTarget != Target::Texture2D)
-		{
-			throw std::logic_error("Texture synchronization currently supports Texture2D only");
-		}
 		if (_size.x == 0 || _size.y == 0 || _format == Format::Error)
 		{
-			throw std::logic_error("Cannot synchronize an empty Texture");
+			throw Exception("Cannot synchronize an empty Texture");
 		}
-
-		const TextureFormat descriptor = formatDescriptor(_format);
-		if (descriptor.internalFormat == GL_NONE || descriptor.externalFormat == GL_NONE || descriptor.elementType == GL_NONE)
+		const auto descriptor = formatDescriptor(_format);
+		const auto target = _openGLTarget(_textureTarget);
+		if (descriptor.internalFormat == GL_NONE ||
+			(_textureTarget != Target::Texture2D && _textureTarget != Target::TextureCubeMap) ||
+			(_textureTarget == Target::TextureCubeMap && _contentSource != ContentSource::RenderTarget))
 		{
-			throw std::logic_error("Texture format cannot be synchronized");
+			throw Exception("Unsupported Texture target or format during GPU synchronization");
 		}
-
 		auto &instance = static_cast<Instance &>(base);
-		const GLenum target = _openGLTarget(_textureTarget);
-
 		if (instance.target != 0 && instance.target != target)
 		{
-			throw std::logic_error("Texture received an incompatible GPU instance");
+			throw Exception("Texture received an incompatible GPU instance");
+		}
+		GLint maximum = 0;
+		glGetIntegerv(target == GL_TEXTURE_CUBE_MAP ? GL_MAX_CUBE_MAP_TEXTURE_SIZE : GL_MAX_TEXTURE_SIZE, &maximum);
+		if (_size.x > static_cast<unsigned int>(std::max(0, maximum)) ||
+			_size.y > static_cast<unsigned int>(std::max(0, maximum)))
+		{
+			throw Exception("Texture dimensions exceed this surface's OpenGL size limit");
+		}
+		if (_contentSource == ContentSource::RenderTarget)
+		{
+			GLint supported = GL_NONE;
+			glGetInternalformativ(target, descriptor.internalFormat, GL_FRAMEBUFFER_RENDERABLE, 1, &supported);
+			if (supported == GL_NONE || glGetError() != GL_NO_ERROR)
+			{
+				throw Exception("Texture render-target internal format is unsupported on this surface");
+			}
 		}
 
 		glBindTexture(target, instance.identifier);
-
-		const bool storageMatches =
-			instance.target == target &&
-			instance.size == _size &&
-			instance.internalFormat == descriptor.internalFormat;
-
-		GLint previousAlignment = 0;
-		glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousAlignment);
+		const bool matches = instance.target == target && instance.size == _size &&
+							 instance.internalFormat == descriptor.internalFormat;
+		GLint alignment = 0;
+		glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-		const void *pixels = _contentSource == ContentSource::PixelData && _pixels.empty() == false
-								 ? _pixels.data()
-								 : nullptr;
-
-		if (storageMatches)
+		const void *pixels = _contentSource == ContentSource::PixelData && !_pixels.empty() ? _pixels.data() : nullptr;
+		if (target == GL_TEXTURE_CUBE_MAP)
 		{
-			if (pixels != nullptr)
+			if (!matches)
 			{
-				glTexSubImage2D(
-					target,
-					0,
-					0,
-					0,
-					static_cast<GLsizei>(_size.x),
-					static_cast<GLsizei>(_size.y),
-					descriptor.externalFormat,
-					descriptor.elementType,
-					pixels);
+				for (GLenum face = 0; face < 6; ++face)
+				{
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, descriptor.internalFormat,
+						static_cast<GLsizei>(_size.x), static_cast<GLsizei>(_size.y), 0,
+						descriptor.externalFormat, descriptor.elementType, nullptr);
+				}
 			}
 		}
-		else
+		else if (matches && pixels != nullptr)
 		{
-			glTexImage2D(
-				target,
-				0,
-				descriptor.internalFormat,
-				static_cast<GLsizei>(_size.x),
-				static_cast<GLsizei>(_size.y),
-				0,
-				descriptor.externalFormat,
-				descriptor.elementType,
-				pixels);
-
-			instance.size = _size;
-			instance.internalFormat = descriptor.internalFormat;
-			instance.target = target;
+			glTexSubImage2D(target, 0, 0, 0, static_cast<GLsizei>(_size.x),
+				static_cast<GLsizei>(_size.y), descriptor.externalFormat, descriptor.elementType, pixels);
 		}
-
-		glPixelStorei(GL_UNPACK_ALIGNMENT, previousAlignment);
+		else if (!matches)
+		{
+			glTexImage2D(target, 0, descriptor.internalFormat, static_cast<GLsizei>(_size.x),
+				static_cast<GLsizei>(_size.y), 0, descriptor.externalFormat, descriptor.elementType, pixels);
+		}
+		glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
 		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
-
+		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		if (target == GL_TEXTURE_CUBE_MAP)
+		{
+			glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		}
 		if (_mipmap == Mipmap::Enable && _contentSource == ContentSource::PixelData)
 		{
-			const unsigned int maximumDimension = std::max(_size.x, _size.y);
-			glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(std::bit_width(maximumDimension) - 1));
+			glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(std::bit_width(std::max(_size.x, _size.y)) - 1));
 			glGenerateMipmap(target);
 		}
 		else
 		{
 			glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, 0);
 		}
+		if (glGetError() != GL_NO_ERROR)
+		{
+			throw Exception("OpenGL failed to allocate or synchronize Texture storage");
+		}
+		instance.size = _size;
+		instance.internalFormat = descriptor.internalFormat;
+		instance.target = target;
 	}
 
 	void Texture::State::_bind(GPUResource::Instance &base, RenderContext &) const
@@ -416,6 +437,10 @@ namespace spk
 			return {GL_R8, GL_RED, GL_UNSIGNED_BYTE, false, false};
 		case Format::DualChannel:
 			return {GL_RG8, GL_RG, GL_UNSIGNED_BYTE, false, false};
+		case Format::RGBA16F:
+			return {GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT, false, false};
+		case Format::SRGB8_ALPHA8:
+			return {GL_SRGB8_ALPHA8, GL_RGBA, GL_UNSIGNED_BYTE, false, false};
 		case Format::Depth24:
 			return {GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, true, false};
 		case Format::Depth32F:
@@ -438,6 +463,8 @@ namespace spk
 		case Format::BGRA:
 		case Format::GreyLevel:
 		case Format::DualChannel:
+		case Format::RGBA16F:
+		case Format::SRGB8_ALPHA8:
 			return true;
 		default:
 			return false;
