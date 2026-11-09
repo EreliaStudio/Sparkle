@@ -134,7 +134,9 @@ namespace spk
 		const bool cubeColor = std::any_of(
 			_colorAttachments.begin(),
 			_colorAttachments.end(),
-			[](const Attachment &attachment) { return attachment.face.has_value(); });
+			[](const Attachment &attachment) {
+				return attachment.face.has_value();
+			});
 		return cubeColor || (_depthStencilAttachment && _depthStencilAttachment->face.has_value());
 	}
 
