@@ -180,6 +180,7 @@ namespace
 	TEST(PublicTypesTest, RenderContextInitializesSurfaceBoundDefaultTarget)
 	{
 		static_assert(!std::is_default_constructible_v<spk::RenderContext>);
+		static_assert(!std::is_constructible_v<spk::RenderContext, spk::Window::Surface *>);
 		spk::Window::Surface surface("PublicTypesRenderContext");
 		const spk::RenderContext context{surface};
 
