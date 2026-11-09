@@ -3,7 +3,6 @@
 #include <GL/glew.h>
 
 #include <array>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -18,7 +17,7 @@ namespace spk
 		{
 		private:
 			RenderContext &_context;
-			std::optional<Vector2UInt> _previousSize;
+			Window::Surface::RenderTarget _previousTarget;
 			GLint _drawFramebuffer = 0;
 			GLint _readFramebuffer = 0;
 			std::array<GLint, 4> _viewport{};
@@ -26,16 +25,16 @@ namespace spk
 			GLboolean _scissorEnabled = GL_FALSE;
 
 		public:
-			FramebufferBindingScope(RenderContext &context, Vector2UInt size) :
+			FramebufferBindingScope(RenderContext &context, const Window::Surface::RenderTarget &target) :
 				_context(context),
-				_previousSize(context.activeRenderTargetSize)
+				_previousTarget(context.activeRenderTarget)
 			{
 				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &_drawFramebuffer);
 				glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &_readFramebuffer);
 				glGetIntegerv(GL_VIEWPORT, _viewport.data());
 				glGetIntegerv(GL_SCISSOR_BOX, _scissor.data());
 				_scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
-				_context.activeRenderTargetSize = size;
+				_context.activeRenderTarget = target;
 				glDisable(GL_SCISSOR_TEST);
 			}
 
@@ -53,7 +52,7 @@ namespace spk
 				{
 					glDisable(GL_SCISSOR_TEST);
 				}
-				_context.activeRenderTargetSize = _previousSize;
+				_context.activeRenderTarget = _previousTarget;
 			}
 
 			FramebufferBindingScope(const FramebufferBindingScope &) = delete;
@@ -64,10 +63,10 @@ namespace spk
 	RenderToFramebufferCommand::RenderToFramebufferCommand(
 		Framebuffer::Handle framebuffer,
 		std::shared_ptr<const RenderSnapshot> snapshot) :
-		_framebuffer(std::move(framebuffer)),
+		_target(std::move(framebuffer)),
 		_snapshot(std::move(snapshot))
 	{
-		if (!_framebuffer || !_snapshot)
+		if (!_snapshot)
 		{
 			throw std::invalid_argument("RenderToFramebufferCommand requires a framebuffer and a snapshot");
 		}
@@ -79,9 +78,9 @@ namespace spk
 		{
 			throw std::invalid_argument("Cannot render to a framebuffer without a target surface");
 		}
-		const Vector2UInt size = _framebuffer->size();
-		FramebufferBindingScope binding(context, size);
-		_framebuffer.activate(context);
+		FramebufferBindingScope binding(context, _target);
+		_target.activate(context);
+		const Vector2UInt size = context.renderTargetSize();
 		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
 		_snapshot->execute(context);
 	}
