@@ -177,11 +177,16 @@ namespace
 		EXPECT_FLOAT_EQ(value.after, 2.0f);
 	}
 
-	TEST(PublicTypesTest, RenderContextAggregateValueInitializationUsesNullTargetSurface)
+	TEST(PublicTypesTest, RenderContextInitializesSurfaceBoundDefaultTarget)
 	{
-		const spk::RenderContext context{};
+		static_assert(!std::is_default_constructible_v<spk::RenderContext>);
+		spk::Window::Surface surface("PublicTypesRenderContext");
+		const spk::RenderContext context{surface};
 
-		EXPECT_EQ(context.targetSurface, nullptr);
+		EXPECT_EQ(context.targetSurface, &surface);
+		EXPECT_EQ(&context.activeRenderTarget.surface(), &surface);
+		EXPECT_EQ(context.activeRenderTarget.type(), spk::Window::Surface::RenderTarget::Type::Default);
+		EXPECT_EQ(context.renderTargetSize(), surface.geometry().size);
 	}
 
 	TEST(PublicTypesTest, UpdateContextExposesDurationAndInputReferenceMembers)
