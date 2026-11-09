@@ -21,7 +21,7 @@ namespace
 
 int main()
 {
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	auto &system = engine.addSystem<DeviceSystem>();
 	spk::UpdateContext updateContext{
 		.time = std::chrono::steady_clock::duration{},

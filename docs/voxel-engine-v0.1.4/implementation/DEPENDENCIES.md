@@ -13,7 +13,7 @@ flowchart TD
   P05["05 Assets"] --> P06["06 Material"]
   P04 --> P07["07 Palette / Geometry"]
   P06 --> P07 --> P08["08 Model3D"]
-  P09["09 RenderingEngine"] --> P10["10 EngineView"]
+  P09["09 Engine"] --> P10["10 EngineView"]
   P11["11 GPU Targets"] --> P12["12 EngineWidget"]
   P10 --> P12
   P09 --> P12
@@ -55,7 +55,7 @@ flowchart TD
 
 **Chemin critique visible :** PR09 → PR10 et PR11 → PR12, puis PR04 + PR07 + PR12 → PR13. Il donne le fond d'une EngineView d'abord, puis un vrai voxel texturé.
 
-**Risques :** préserver l'input après le remplacement de RenderingEngine en PR09, l'immuabilité des anciens Handles au resize en PR11 et les transactions mutation+invalidation en PR18. Tester ces frontières dès les PR correspondantes.
+**Risques :** préserver l'input après le remplacement de Engine en PR09, l'immuabilité des anciens Handles au resize en PR11 et les transactions mutation+invalidation en PR18. Tester ces frontières dès les PR correspondantes.
 
 **Mode de collaboration :** une branche par fiche, créée **depuis la tête courante de `V0.1.4`** et ciblant **`V0.1.4`**. Fusionner d'abord les prérequis dans `V0.1.4` ; deux fiches indépendantes peuvent avancer en branches parallèles, à resynchroniser avant fusion. Ne jamais créer une branche sur une autre branche de développement, ni cibler `main` avec une des 26 PR. La PR #37 reste le regroupement final `V0.1.4` → `main`.
 

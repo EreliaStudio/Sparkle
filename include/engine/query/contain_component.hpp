@@ -14,10 +14,10 @@ namespace spk
 {
 	template <typename TComponentType>
 		requires std::derived_from<TComponentType, Component>
-	class ContainComponent : public Query<Entity, Engine *>::Operation
+	class ContainComponent : public Query<Entity, EngineHeadless *>::Operation
 	{
 	private:
-		using Context = Engine *;
+		using Context = EngineHeadless *;
 		using ElementSet = typename Query<Entity, Context>::ElementSet;
 
 		struct ContractSubscription

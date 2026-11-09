@@ -86,7 +86,7 @@ TEST(EngineWidgetTest, DefaultEngineIsNull)
 TEST(EngineWidgetTest, SetEngineRoundTripDoesNotTransferOwnership)
 {
 	spk::Widget parent("Parent", nullptr);
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::EngineWidget widget("EngineWidget", &parent);
 	widget.setEngine(&engine);
 	EXPECT_EQ(widget.engine(), &engine);
@@ -108,7 +108,7 @@ TEST(EngineWidgetTest, GeometryCanBeChangedWithoutEngine)
 TEST(EngineWidgetTest, AttachingAndResizingPropagatesGeometry)
 {
 	spk::Widget parent("Parent", nullptr);
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::EngineWidget widget("EngineWidget", &parent);
 	widget.setGeometry({.anchor = {12, 18}, .size = {320, 180}});
 	widget.setEngine(&engine);
@@ -135,7 +135,7 @@ TEST(EngineWidgetTest, NullEngineUpdateAndSnapshotAreNoOps)
 TEST(EngineWidgetTest, UpdateAndInteractionAreForwardedToAttachedEngine)
 {
 	spk::Widget parent("Parent", nullptr);
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	auto &behaviour = engine.root().addBehaviour<RecordingBehaviour>();
 	spk::EngineWidget widget("EngineWidget", &parent);
 	widget.setEngine(&engine);

@@ -7,18 +7,18 @@
 
 #include "core/context/render_context.hpp"
 #include "core/context/update_context.hpp"
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "input/device_context.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
-#include "rendering/engine/rendering_engine.hpp"
+#include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_entity.hpp"
 #include "rendering/engine/rendering_system.hpp"
 #include "rendering/render_command.hpp"
 
-static_assert(std::derived_from<spk::RenderingEngine, spk::Engine>);
+static_assert(std::derived_from<spk::Engine, spk::EngineHeadless>);
 static_assert(std::derived_from<spk::RenderingComponent3D, spk::EngineView::Contributor>);
 static_assert(std::derived_from<spk::RenderingBehaviour3D, spk::EngineView::Contributor>);
 static_assert(std::derived_from<spk::RenderingEntity3D, spk::EngineView::Contributor>);
@@ -82,7 +82,7 @@ namespace
 		{
 			if (renderLog != nullptr)
 			{
-				builder.renderPass(spk::RenderingEngine::SceneRenderPassKey)
+				builder.renderPass(spk::Engine::SceneRenderPassKey)
 					.emplace<MarkCommand>(*renderLog, _marker);
 			}
 		}
@@ -117,7 +117,7 @@ namespace
 
 TEST(RenderingEngineTest, GraphicalExtensionsReuseTheCoreEngineObjects)
 {
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	ProbeEntity entity("entity");
 	auto &component = entity.addComponent<ProbeComponent>("component");
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
@@ -145,7 +145,7 @@ TEST(RenderingEngineTest, GraphicalExtensionsReuseTheCoreEngineObjects)
 
 TEST(RenderingEngineTest, EventsReachOnlyRenderingExtensions)
 {
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	ProbeEntity entity("entity");
 	auto &component = entity.addComponent<ProbeComponent>("component");
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
@@ -166,7 +166,7 @@ TEST(RenderingEngineTest, EventsReachOnlyRenderingExtensions)
 
 TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 {
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	ProbeEntity entity("entity");
 	auto &component = entity.addComponent<ProbeComponent>("component");
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
@@ -195,7 +195,7 @@ TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 
 TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
 {
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	auto &controller = engine.addSystem<MutatingSystem>("controller");
 	auto &removed = engine.addSystem<MutatingSystem>("removed");
 	MutatingSystem *added = nullptr;
@@ -230,7 +230,7 @@ TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
 
 TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 {
-	spk::RenderingEngine engine;
+	spk::Engine engine;
 	ProbeEntity entity("entity");
 	auto &component = entity.addComponent<ProbeComponent>("component");
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
@@ -264,8 +264,8 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 
 TEST(RenderingEngineTest, DerivedEngineSharesItsLogicalSystemsAndEntityTree)
 {
-	spk::RenderingEngine engine;
-	spk::Engine &base = engine;
+	spk::Engine engine;
+	spk::EngineHeadless &base = engine;
 	ProbeEntity entity("entity");
 	base.addEntity(&entity);
 	EXPECT_EQ(entity.context(), &base);

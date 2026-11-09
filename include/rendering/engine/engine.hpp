@@ -2,15 +2,12 @@
 
 #include <functional>
 
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "rendering/engine/rendering_object_trait.hpp"
 
 namespace spk
 {
-	class RenderingEngine final : public Engine,
-								  public EventDispatcher,
-								  public UpdatableByDeviceTrait,
-								  public RenderSnapshotContributorTrait
+	class Engine final : public EngineHeadless, public EventDispatcher, public UpdatableByDeviceTrait, public RenderSnapshotContributorTrait
 	{
 	public:
 		static inline const spk::RenderPass::Key SceneRenderPassKey{
@@ -36,9 +33,9 @@ namespace spk
 		void _afterBuildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 
 	public:
-		RenderingEngine() = default;
+		Engine() = default;
 
-		using Engine::updateState;
+		using EngineHeadless::updateState;
 		using RenderSnapshotContributorTrait::buildRenderSnapshot;
 		using UpdatableByDeviceTrait::updateState;
 	};

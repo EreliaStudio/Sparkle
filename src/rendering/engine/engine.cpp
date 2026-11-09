@@ -1,4 +1,4 @@
-#include "rendering/engine/rendering_engine.hpp"
+#include "rendering/engine/engine.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -10,7 +10,7 @@
 
 namespace spk
 {
-	void RenderingEngine::_visitEntity(
+	void Engine::_visitEntity(
 		Entity &entity,
 		const std::function<void(RenderingObjectTrait &)> &callback) const
 	{
@@ -62,7 +62,7 @@ namespace spk
 		}
 	}
 
-	void RenderingEngine::_visitObjects(
+	void Engine::_visitObjects(
 		const std::function<void(RenderingObjectTrait &)> &callback)
 	{
 		_visitEntity(root(), callback);
@@ -74,12 +74,12 @@ namespace spk
 		});
 	}
 
-	bool RenderingEngine::_isAcceptingEvent() const
+	bool Engine::_isAcceptingEvent() const
 	{
 		return true;
 	}
 
-	void RenderingEngine::_propagateEvent(
+	void Engine::_propagateEvent(
 		const std::function<void(EventDispatcher *)> &callback)
 	{
 		_visitObjects([&callback](RenderingObjectTrait &object) {
@@ -87,12 +87,12 @@ namespace spk
 		});
 	}
 
-	bool RenderingEngine::_canUpdateByDevice() const
+	bool Engine::_canUpdateByDevice() const
 	{
 		return true;
 	}
 
-	void RenderingEngine::_afterUpdate(
+	void Engine::_afterUpdate(
 		UpdateContext &context,
 		DeviceContext &deviceContext)
 	{
@@ -101,12 +101,12 @@ namespace spk
 		});
 	}
 
-	bool RenderingEngine::_canBuildRenderSnapshot() const
+	bool Engine::_canBuildRenderSnapshot() const
 	{
 		return true;
 	}
 
-	void RenderingEngine::_afterBuildRenderSnapshot(
+	void Engine::_afterBuildRenderSnapshot(
 		RenderSnapshot::Builder &builder)
 	{
 		_visitObjects([&builder](RenderingObjectTrait &object) {

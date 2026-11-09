@@ -9,25 +9,25 @@ namespace spk
 	EngineWidget::EngineWidget(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
-		setTargetRenderPass(RenderingEngine::SceneRenderPassKey);
+		setTargetRenderPass(Engine::SceneRenderPassKey);
 	}
 
-	void EngineWidget::setEngine(Engine *engine) noexcept
+	void EngineWidget::setEngine(EngineHeadless *engine) noexcept
 	{
 		_engine = engine;
-		_renderingEngine = dynamic_cast<RenderingEngine *>(engine);
+		_renderingEngine = dynamic_cast<Engine *>(engine);
 		if (engine != nullptr)
 		{
 			engine->handleGeometryChange(geometry());
 		}
 	}
 
-	Engine *EngineWidget::engine() noexcept
+	EngineHeadless *EngineWidget::engine() noexcept
 	{
 		return _engine;
 	}
 
-	const Engine *EngineWidget::engine() const noexcept
+	const EngineHeadless *EngineWidget::engine() const noexcept
 	{
 		return _engine;
 	}

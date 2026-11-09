@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "container/query.hpp"
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "engine/query_operations.hpp"
 #include "engine/registry.hpp"
 #include "query/operations.hpp"
@@ -377,25 +377,25 @@ TEST(RegistryQueryTest, DestroyedQueryReleasesItsRegistrySubscriptions)
 
 TEST(RegistryQueryTest, ContainComponentSupportsTypeRegexPredicateAndReactiveEdits)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity matching("matching"), reactive("reactive"), empty("empty");
 	engine.addEntity(&matching);
 	engine.addEntity(&reactive);
 	engine.addEntity(&empty);
 	auto &component = matching.addComponent<QueryComponent>("selected-component", 42);
 
-	spk::Query<spk::Entity, spk::Engine *> byType;
+	spk::Query<spk::Entity, spk::EngineHeadless *> byType;
 	byType.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainComponent<QueryComponent>>();
 	EXPECT_TRUE(byType.elements(&engine).contains(&matching));
 	EXPECT_FALSE(byType.elements(&engine).contains(&empty));
 
-	spk::Query<spk::Entity, spk::Engine *> byName;
+	spk::Query<spk::Entity, spk::EngineHeadless *> byName;
 	byName.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainComponent<QueryComponent>>(std::regex("^selected"));
 	EXPECT_TRUE(byName.elements(&engine).contains(&matching));
 
-	spk::Query<spk::Entity, spk::Engine *> byPredicate;
+	spk::Query<spk::Entity, spk::EngineHeadless *> byPredicate;
 	byPredicate.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainComponent<QueryComponent>>([](QueryComponent *candidate) {
 			return candidate->value == 42;
@@ -412,25 +412,25 @@ TEST(RegistryQueryTest, ContainComponentSupportsTypeRegexPredicateAndReactiveEdi
 
 TEST(RegistryQueryTest, ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdits)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity matching("matching"), reactive("reactive"), empty("empty");
 	engine.addEntity(&matching);
 	engine.addEntity(&reactive);
 	engine.addEntity(&empty);
 	matching.addBehaviour<QueryBehaviour>("selected-behaviour", 42);
 
-	spk::Query<spk::Entity, spk::Engine *> byType;
+	spk::Query<spk::Entity, spk::EngineHeadless *> byType;
 	byType.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>();
 	EXPECT_TRUE(byType.elements(&engine).contains(&matching));
 	EXPECT_FALSE(byType.elements(&engine).contains(&empty));
 
-	spk::Query<spk::Entity, spk::Engine *> byName;
+	spk::Query<spk::Entity, spk::EngineHeadless *> byName;
 	byName.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("behaviour$"));
 	EXPECT_TRUE(byName.elements(&engine).contains(&matching));
 
-	spk::Query<spk::Entity, spk::Engine *> byPredicate;
+	spk::Query<spk::Entity, spk::EngineHeadless *> byPredicate;
 	byPredicate.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>([](QueryBehaviour *candidate) {
 			return candidate->value == 42;
@@ -446,16 +446,16 @@ TEST(RegistryQueryTest, ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdi
 
 TEST(RegistryQueryTest, AttachmentNameChangesInvalidateRegexQueries)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity entity("entity");
 	engine.addEntity(&entity);
 	auto &component = entity.addComponent<QueryComponent>("before");
 	auto &behaviour = entity.addBehaviour<QueryBehaviour>("before");
 
-	spk::Query<spk::Entity, spk::Engine *> componentQuery;
+	spk::Query<spk::Entity, spk::EngineHeadless *> componentQuery;
 	componentQuery.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainComponent<QueryComponent>>(std::regex("^after$"));
-	spk::Query<spk::Entity, spk::Engine *> behaviourQuery;
+	spk::Query<spk::Entity, spk::EngineHeadless *> behaviourQuery;
 	behaviourQuery.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("^after$"));
 	EXPECT_FALSE(componentQuery.elements(&engine).contains(&entity));

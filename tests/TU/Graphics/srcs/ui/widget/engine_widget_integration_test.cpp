@@ -117,7 +117,7 @@ namespace
 			{
 				throw std::runtime_error("engine render failure");
 			}
-			builder.renderPass(spk::RenderingEngine::SceneRenderPassKey).emplace<Mark>(*log, 2);
+			builder.renderPass(spk::Engine::SceneRenderPassKey).emplace<Mark>(*log, 2);
 		}
 	};
 }
@@ -125,7 +125,7 @@ namespace
 TEST(EngineWidgetIntegrationTest, EveryActiveAndPassiveEventHandlesInactiveNullAndReplacementStates)
 {
 	const std::vector<std::string> expected{"WindowResized", "WindowMoved", "WindowFocusGained", "WindowFocusLost", "MouseEntered", "MouseLeft", "MouseMoved", "MouseWheelScrolled", "MouseButtonPressed", "MouseButtonReleased", "MouseButtonDoubleClicked", "KeyPressed", "KeyReleased", "TextInput", "PassiveMouseMoved", "PassiveMouseButtonPressed", "PassiveKeyPressed", "PassiveKeyReleased"};
-	spk::RenderingEngine first, second;
+	spk::Engine first, second;
 	auto &a = first.root().addBehaviour<Events>();
 	auto &b = second.root().addBehaviour<Events>();
 	spk::EngineWidget widget("EngineWidget", nullptr);
@@ -157,7 +157,7 @@ TEST(EngineWidgetIntegrationTest, EveryActiveAndPassiveEventHandlesInactiveNullA
 TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachmentRespectLifetime)
 {
 	std::vector<int> log;
-	auto engine = std::make_unique<spk::RenderingEngine>();
+	auto engine = std::make_unique<spk::Engine>();
 	auto &behaviour = engine->root().addBehaviour<Rendering>();
 	behaviour.log = &log;
 	spk::EngineWidget widget("RenderingWidget", nullptr);
@@ -165,8 +165,8 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	widget.setGeometry({.anchor = {0, 0}, .size = {100, 100}});
 	widget.setEngine(engine.get());
 	spk::RenderSnapshot::Builder builder;
-	builder.renderPass({"before-scene", spk::RenderingEngine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
-	builder.renderPass({"after-scene", spk::RenderingEngine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
+	builder.renderPass({"before-scene", spk::Engine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
+	builder.renderPass({"after-scene", spk::Engine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
 	widget.buildRenderSnapshot(builder);
 	const auto snapshot = builder.build();
 	auto &context = sparkle_test::OpenGLTestContext::instance();
@@ -191,7 +191,7 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	log.clear();
 	snapshot.execute(context.renderContext());
 	EXPECT_EQ(log, (std::vector<int>{1, 2, 3}));
-	spk::Engine survivor;
+	spk::EngineHeadless survivor;
 	{
 		spk::EngineWidget temporary("Temporary", nullptr);
 		temporary.setEngine(&survivor);

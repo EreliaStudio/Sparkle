@@ -59,7 +59,7 @@
 #include "rendering/engine/engine_view.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
-#include "rendering/engine/rendering_engine.hpp"
+#include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_entity.hpp"
 #include "rendering/engine/rendering_object_trait.hpp"
 #include "rendering/engine/rendering_system.hpp"
