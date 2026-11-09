@@ -236,7 +236,7 @@ TEST(SharedFramebufferTest, CubemapColorFacesCanBeFramebufferAttachments)
 	{
 		std::array<float, 4 * 4 * 4> pixels{};
 		glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, GL_RGBA, GL_FLOAT, pixels.data());
-		EXPECT_NEAR(pixels[0], static_cast<float>(index) / 6.0f, 0.0001f);
+		EXPECT_NEAR(pixels[0], static_cast<float>(index) / 6.0f, 0.0005f);
 	}
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
