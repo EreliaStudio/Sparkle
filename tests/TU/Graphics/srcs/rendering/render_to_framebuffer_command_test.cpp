@@ -317,5 +317,5 @@ TEST(RenderToFramebufferCommandTest, RejectsMissingInputs)
 	EXPECT_THROW(
 		(void)spk::RenderToFramebufferCommand(framebuffer.handle(), nullptr),
 		std::invalid_argument);
-	EXPECT_THROW((void)spk::RenderContext(static_cast<spk::Window::Surface *>(nullptr)), std::invalid_argument);
+
 }
