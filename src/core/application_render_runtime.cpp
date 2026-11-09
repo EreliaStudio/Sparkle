@@ -173,27 +173,25 @@ namespace spk
 		{
 			return;
 		}
-		auto *entry = _tryGetSnapshotConsumer(identifier);
-		if (entry == nullptr)
+		if (auto *entry = _tryGetSnapshotConsumer(identifier))
 		{
-			return;
-		}
-
-		auto snapshot = entry->consumer.acquireLatest();
-		if (snapshot != nullptr && snapshot != entry->lastRenderedSnapshot)
-		{
-			entry->lastRenderedSnapshot = snapshot;
-			try
+			auto snapshot = entry->consumer.acquireLatest();
+			if (snapshot != nullptr && snapshot != entry->lastRenderedSnapshot)
 			{
-				_render(surface, *snapshot);
-			} catch (...)
-			{
-				throw spk::Exception(
-					"Exception while rendering window [" + identifier + "]",
-					std::current_exception());
+				entry->lastRenderedSnapshot = snapshot;
+				try
+				{
+					_render(surface, *snapshot);
+				} catch (...)
+				{
+					throw spk::Exception(
+						"Exception while rendering window [" + identifier + "]",
+						std::current_exception());
+				}
+				entry->isRequested->store(true, std::memory_order_relaxed);
 			}
-			entry->isRequested->store(true, std::memory_order_relaxed);
 		}
+		surface.makeCurrent();
 		surface._gpuResources().reclaimReleased();
 	}
 
