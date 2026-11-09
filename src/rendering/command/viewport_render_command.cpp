@@ -14,7 +14,7 @@ namespace spk
 
 	void ViewportRenderCommand::execute(RenderContext &renderContext) const
 	{
-		const GLint y = static_cast<GLint>(renderContext.targetSurface->geometry().size.y) - _viewport.y - static_cast<GLint>(_viewport.height);
+		const GLint y = static_cast<GLint>(renderContext.renderTargetSize().y) - _viewport.y - static_cast<GLint>(_viewport.height);
 
 		::glViewport(
 			static_cast<GLint>(_viewport.x),
