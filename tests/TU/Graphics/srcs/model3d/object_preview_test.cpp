@@ -11,9 +11,13 @@
 #include "graphics/color.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/uniform.hpp"
-#include "math/camera_3d.hpp"
+#include "engine/entity3d.hpp"
+#include "engine/transform3d.hpp"
 #include "model3d/object.hpp"
 #include "rendering/command/clear_render_command.hpp"
+#include "rendering/engine/camera_component3d.hpp"
+#include "rendering/engine/engine.hpp"
+#include "rendering/engine/rendering_component.hpp"
 #include "rendering/command/viewport_render_command.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
@@ -241,16 +245,55 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		character.attachment("torso", "rightHip").setRotation(rightLeg);
 	}
 
-	[[nodiscard]] spk::Camera3D previewCamera()
+	class CharacterRenderer final : public spk::RenderingComponent3D
 	{
-		spk::Camera3D camera;
-		camera.setPosition({3.0f, 2.0f, 7.2f});
-		camera.lookAt({0, -0.2f, 0});
-		camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
-		return camera;
-	}
+	private:
+		Character &_character;
+		const spk::CameraComponent3D &_camera;
 
-	[[nodiscard]] sparkle_test::FramebufferImage capture(Character &character, const spk::Camera3D &camera, const std::string &name)
+	protected:
+		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override
+		{
+			_character.buildRenderSnapshot(builder, _camera.viewProjectionMatrix());
+		}
+
+	public:
+		CharacterRenderer(Character &character, const spk::CameraComponent3D &camera) :
+			RenderingComponent3D("Character renderer"),
+			_character(character),
+			_camera(camera)
+		{
+		}
+	};
+
+	class PreviewScene final
+	{
+	private:
+		spk::Engine _engine;
+		spk::Entity3D _cameraEntity{"Preview camera"};
+		spk::Entity3D _characterEntity{"Preview character"};
+		spk::CameraComponent3D &_camera;
+
+	public:
+		explicit PreviewScene(Character &character) :
+			_camera(_cameraEntity.addComponent<spk::CameraComponent3D>("camera"))
+		{
+			const spk::Vector3 position{3.0f, 2.0f, 7.2f};
+			_cameraEntity.transform().place(position);
+			_cameraEntity.transform().setRotation(spk::Quaternion::lookAt(position, {0, -0.2f, 0}));
+			_camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+			_characterEntity.addComponent<CharacterRenderer>(character, _camera);
+			_engine.addEntity(&_cameraEntity);
+			_engine.addEntity(&_characterEntity);
+		}
+
+		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
+		{
+			_engine.buildRenderSnapshot(builder);
+		}
+	};
+
+	[[nodiscard]] sparkle_test::FramebufferImage capture(PreviewScene &scene, const std::string &name)
 	{
 		auto &context = sparkle_test::OpenGLTestContext::instance();
 		context.reset(ImageSize);
@@ -258,7 +301,7 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		auto &pass = builder.renderPass({"puppet-3d", 0});
 		pass.emplace<spk::ClearRenderCommand>(Background, spk::ClearRenderCommand::Mask::All);
 		pass.emplace<spk::ViewportRenderCommand>(spk::Rect2D{.anchor = {0, 0}, .size = ImageSize});
-		character.buildRenderSnapshot(builder, camera.viewProjectionMatrix());
+		scene.buildRenderSnapshot(builder);
 		builder.build().execute(context.renderContext());
 		context.save(sparkle_test::resultImagePath(GoldenCategory, name));
 		return context.capture();
@@ -309,7 +352,8 @@ TEST_P(Object3DGoldenTest, ArticulatedCharacterMatchesReference)
 	Character character(characterBlueprint());
 	poseCharacter(character, pose);
 	const auto name = poseName(pose);
-	const auto image = capture(character, previewCamera(), name);
+	PreviewScene scene(character);
+	const auto image = capture(scene, name);
 	EXPECT_EQ(character.graphicsCount(), 8u);
 	EXPECT_EQ(image.size.x, ImageSize.x);
 	EXPECT_EQ(image.size.y, ImageSize.y);
@@ -334,9 +378,9 @@ TEST(Object3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFollowsArm)
 	Character character(characterBlueprint());
 	auto &grip = character.attachment("rightHand", "grip");
 	spk::Model3D::ObjectHeadless &sword = grip.attach(swordBlueprint());
-	const auto camera = previewCamera();
+	PreviewScene scene(character);
 	const auto restingBlade = sword.element("swordBlade").globalTransform() * spk::Vector4{0, -0.96f, 0, 1};
-	const auto resting = capture(character, camera, "sword_resting");
+	const auto resting = capture(scene, "sword_resting");
 	EXPECT_EQ(character.graphicsCount(), 11u);
 	ASSERT_NE(character.graphics(sword.root()), nullptr);
 	const auto *hiltGraphics = character.graphics(sword.root());
@@ -344,7 +388,7 @@ TEST(Object3DGoldenTest, SwordAttachedToRightHandMatchesGoldensAndFollowsArm)
 
 	character.attachment("torso", "rightShoulder").setRotation(spk::Vector3{0, 0, 55});
 	const auto raisedBlade = sword.element("swordBlade").globalTransform() * spk::Vector4{0, -0.96f, 0, 1};
-	const auto raised = capture(character, camera, "sword_raised");
+	const auto raised = capture(scene, "sword_raised");
 	EXPECT_NE(resting.pixels, raised.pixels);
 	EXPECT_EQ(character.graphicsCount(), 11u);
 	EXPECT_EQ(character.graphics(sword.root()), hiltGraphics);
