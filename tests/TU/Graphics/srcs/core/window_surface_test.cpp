@@ -218,8 +218,7 @@ TEST(WindowSurfaceTest, LateSubscriptionsAreRejectedAndCallbacksCanResign)
 {
 	HiddenNativeWindow frame;
 	spk::Window::Surface surface("surface-closing-contracts");
-	EXPECT_THROW((void)surface.subscribeToDestruction([] {
-	}), std::logic_error);
+	EXPECT_THROW((void)surface.subscribeToDestruction(noOp), std::logic_error);
 	surface.create(frame.native.window());
 	int calls = 0;
 	auto inactive = surface.subscribeToDestruction([&] {
