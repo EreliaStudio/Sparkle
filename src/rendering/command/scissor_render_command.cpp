@@ -14,7 +14,7 @@ namespace spk
 
 	void ScissorRenderCommand::execute(RenderContext &renderContext) const
 	{
-		const GLint y = static_cast<GLint>(renderContext.targetSurface->geometry().size.y) - _scissor.y - static_cast<GLint>(_scissor.height);
+		const GLint y = static_cast<GLint>(renderContext.renderTargetSize().y) - _scissor.y - static_cast<GLint>(_scissor.height);
 
 		::glEnable(GL_SCISSOR_TEST);
 		::glScissor(
