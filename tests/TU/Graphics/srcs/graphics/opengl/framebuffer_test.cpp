@@ -131,12 +131,13 @@ TEST(FramebufferTest, ResizeReallocatesAttachmentsAndInvalidatesOnce)
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
 	spk::Framebuffer framebuffer({4, 3});
-	const auto generation = framebuffer.generation();
+	const auto original = framebuffer.handle();
 
 	framebuffer.resize({4, 3});
-	EXPECT_EQ(framebuffer.generation(), generation);
+	EXPECT_EQ(framebuffer.handle().identifier(), original.identifier());
 	framebuffer.resize({7, 5});
-	EXPECT_EQ(framebuffer.generation(), generation + 1);
+	EXPECT_NE(framebuffer.handle().identifier(), original.identifier());
+	EXPECT_EQ(original->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(framebuffer.size(), spk::Vector2UInt(7, 5));
 	EXPECT_EQ(framebuffer.colorAttachment(0).size(), framebuffer.size());
 	EXPECT_EQ(framebuffer.depthStencilAttachment()->size(), framebuffer.size());
