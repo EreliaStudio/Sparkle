@@ -228,8 +228,7 @@ namespace spk
 				try
 				{
 					contributor.buildViewRenderSnapshot(builder, context);
-				}
-				catch (const std::exception &error)
+				} catch (const std::exception &error)
 				{
 					throw spk::Exception("EngineView [" + context.name + "]: " + error.what(), std::current_exception());
 				}

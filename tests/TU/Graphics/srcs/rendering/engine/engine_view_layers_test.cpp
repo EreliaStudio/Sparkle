@@ -17,10 +17,11 @@ namespace
 	class SystemProbe final : public spk::RenderingSystem
 	{
 	public:
+		using ViewCaptureContext = spk::EngineView::CaptureContext;
 		std::size_t contributions = 0;
-		std::function<void(const Context &)> callback;
+		std::function<void(const ViewCaptureContext &)> callback;
 
-		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &, const Context &ctx) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &, const ViewCaptureContext &ctx) override
 		{
 			++contributions;
 			if (callback)

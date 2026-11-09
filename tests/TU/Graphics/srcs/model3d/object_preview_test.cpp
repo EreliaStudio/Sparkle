@@ -252,8 +252,7 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		Character &_character;
 
 	protected:
-		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder,
-			const spk::EngineView::CaptureContext &context) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &context) override
 		{
 			_character.buildRenderSnapshot(builder, context.viewProjectionMatrix);
 		}

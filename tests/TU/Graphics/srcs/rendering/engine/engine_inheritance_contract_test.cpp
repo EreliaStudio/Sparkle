@@ -150,7 +150,7 @@ namespace
 	class ThrowingSnapshotProbe final : public spk::RenderingBehaviour
 	{
 	protected:
-		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &, const spk::EngineView::CaptureContext &) override
 		{
 			throw std::logic_error("snapshot failure");
 		}

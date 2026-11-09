@@ -197,7 +197,7 @@ TEST(EngineViewLifecycleTest, UnattachedCameraCannotResolveView)
 	spk::CameraComponent3D camera;
 	EXPECT_THROW(camera.view("missing"), spk::Exception);
 }
- 
+
 TEST(EngineViewLifecycleTest, EveryViewOwnsAnIndependentAmbientLight)
 {
 	Fixture fixture;

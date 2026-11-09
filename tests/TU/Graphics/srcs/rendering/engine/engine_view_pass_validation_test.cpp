@@ -190,7 +190,7 @@ TEST(EngineViewPassValidationTest, PendingKeyInspectionDoesNotModifyBuilder)
 	keys[0].name = "changed";
 	EXPECT_EQ(builder.passKeys()[0].name, "one");
 }
- 
+
 TEST(EngineViewPassValidationTest, EachActiveViewStartsWithExactlyFiveSystemPasses)
 {
 	Fixture fixture;
@@ -223,8 +223,7 @@ TEST(EngineViewPassValidationTest, BuilderKeyConflictExceptionIncludesViewName)
 	{
 		fixture.engine.refreshRenderSnapshot();
 		FAIL();
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("Engine"), std::string::npos);
 	}
