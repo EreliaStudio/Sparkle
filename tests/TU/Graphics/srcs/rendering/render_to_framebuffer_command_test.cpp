@@ -95,15 +95,20 @@ TEST(RenderToFramebufferCommandTest, SurfaceRenderTargetDistinguishesNativeAndOf
 	gl.reset({80, 60});
 	const auto defaultTarget = gl.surface().defaultRenderTarget();
 	EXPECT_EQ(defaultTarget.type(), spk::Window::Surface::RenderTarget::Type::Default);
-	EXPECT_EQ(defaultTarget.size(gl.surface()), spk::Vector2UInt(80, 60));
+	EXPECT_EQ(defaultTarget.size(), spk::Vector2UInt(80, 60));
 	gl.setGeometry({.anchor = {0, 0}, .size = {48, 32}});
-	EXPECT_EQ(defaultTarget.size(gl.surface()), spk::Vector2UInt(48, 32));
+	EXPECT_EQ(defaultTarget.size(), spk::Vector2UInt(48, 32));
 	EXPECT_EQ(gl.renderContext().renderTargetSize(), spk::Vector2UInt(48, 32));
 
 	spk::Framebuffer framebuffer({8, 6}, {spk::Texture::Format::RGBA}, std::nullopt);
-	const spk::Window::Surface::RenderTarget offscreen(framebuffer.handle());
+	const spk::Window::Surface::RenderTarget offscreen(gl.surface(), framebuffer.handle());
 	EXPECT_EQ(offscreen.type(), spk::Window::Surface::RenderTarget::Type::Framebuffer);
-	EXPECT_EQ(offscreen.size(gl.surface()), spk::Vector2UInt(8, 6));
+	EXPECT_EQ(offscreen.size(), spk::Vector2UInt(8, 6));
+	EXPECT_EQ(&offscreen.surface(), &gl.surface());
+
+	spk::Window::Surface wrongSurface("ForeignTarget");
+	const spk::Window::Surface::RenderTarget foreign(wrongSurface, framebuffer.handle());
+	EXPECT_THROW(foreign.activate(gl.renderContext()), std::invalid_argument);
 
 	offscreen.activate(gl.renderContext());
 	GLint bound = 0;
@@ -205,7 +210,7 @@ TEST(RenderToFramebufferCommandTest, NestedCommandsRestorePreviouslyActiveOffscr
 	spk::Framebuffer previous({9, 7}, {spk::Texture::Format::RGBA}, std::nullopt);
 	spk::Framebuffer nested({4, 4}, {spk::Texture::Format::RGBA}, std::nullopt);
 	auto &context = gl.renderContext();
-	const spk::Window::Surface::RenderTarget previousTarget(previous.handle());
+	const spk::Window::Surface::RenderTarget previousTarget(gl.surface(), previous.handle());
 	previousTarget.activate(context);
 	context.activeRenderTarget = previousTarget;
 
@@ -312,6 +317,5 @@ TEST(RenderToFramebufferCommandTest, RejectsMissingInputs)
 	EXPECT_THROW(
 		(void)spk::RenderToFramebufferCommand(framebuffer.handle(), nullptr),
 		std::invalid_argument);
-	spk::RenderContext missingSurface{.targetSurface = nullptr};
-	EXPECT_THROW(spk::RenderToFramebufferCommand(framebuffer.handle(), snapshot).execute(missingSurface), std::invalid_argument);
+	EXPECT_THROW((void)spk::RenderContext(static_cast<spk::Window::Surface *>(nullptr)), std::invalid_argument);
 }
