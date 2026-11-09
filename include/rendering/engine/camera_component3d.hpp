@@ -19,19 +19,15 @@ namespace spk
 			[[nodiscard]] bool operator==(const WorldPose &) const = default;
 		};
 
-		struct ViewMatrices
-		{
-			Matrix4x4 view;
-			Matrix4x4 inverseView;
-		};
-
 		Camera3D _projection;
 		mutable std::optional<WorldPose> _cachedWorldPose;
-		mutable CachedData<ViewMatrices> _viewMatrices{[this] {
+		mutable CachedData<Matrix4x4> _view{[this] {
 			const WorldPose &pose = *_cachedWorldPose;
-			return ViewMatrices{
-				Matrix4x4::rotation(pose.rotation.conjugated()) * Matrix4x4::translation(-pose.position),
-				Matrix4x4::translation(pose.position) * Matrix4x4::rotation(pose.rotation)};
+			return Matrix4x4::rotation(pose.rotation.conjugated()) * Matrix4x4::translation(-pose.position);
+		}};
+		mutable CachedData<Matrix4x4> _inverseView{[this] {
+			const WorldPose &pose = *_cachedWorldPose;
+			return Matrix4x4::translation(pose.position) * Matrix4x4::rotation(pose.rotation);
 		}};
 
 		void _refreshViewCache() const;

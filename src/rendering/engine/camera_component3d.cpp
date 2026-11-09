@@ -21,7 +21,8 @@ namespace spk
 		}
 
 		_cachedWorldPose = pose;
-		_viewMatrices.invalidate();
+		_view.invalidate();
+		_inverseView.invalidate();
 	}
 
 	void CameraComponent3D::setProjectionMode(Camera3D::ProjectionMode mode)
@@ -52,13 +53,13 @@ namespace spk
 	const Matrix4x4 &CameraComponent3D::viewMatrix() const
 	{
 		_refreshViewCache();
-		return _viewMatrices.get().view;
+		return _view.get();
 	}
 
 	const Matrix4x4 &CameraComponent3D::inverseViewMatrix() const
 	{
 		_refreshViewCache();
-		return _viewMatrices.get().inverseView;
+		return _inverseView.get();
 	}
 
 	Matrix4x4 CameraComponent3D::viewProjectionMatrix() const

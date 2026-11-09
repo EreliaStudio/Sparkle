@@ -191,3 +191,29 @@ TEST(CameraComponent3DCacheTest, ReattachmentUsesNewWorldPose)
 	EXPECT_NEAR(camera.inverseViewMatrix()[3][0], 7.0f, Tolerance);
 	expectInversePair(camera);
 }
+
+TEST(CameraComponent3DCacheTest, ViewCanBeRefreshedIndependentlyBeforeInverseIsRead)
+{
+	spk::Entity3D entity("Camera");
+	auto &camera = entity.addComponent<spk::CameraComponent3D>();
+	const auto original = camera.viewMatrix();
+	entity.transform().place({4, -2, 1});
+
+	const auto &view = camera.viewMatrix();
+	EXPECT_NE(view[3][0], original[3][0]);
+	EXPECT_EQ(&camera.viewMatrix(), &view);
+	expectInversePair(camera);
+}
+
+TEST(CameraComponent3DCacheTest, InverseCanBeRefreshedIndependentlyBeforeViewIsRead)
+{
+	spk::Entity3D entity("Camera");
+	auto &camera = entity.addComponent<spk::CameraComponent3D>();
+	const auto original = camera.inverseViewMatrix();
+	entity.transform().place({-3, 5, 2});
+
+	const auto &inverse = camera.inverseViewMatrix();
+	EXPECT_NE(inverse[3][0], original[3][0]);
+	EXPECT_EQ(&camera.inverseViewMatrix(), &inverse);
+	expectInversePair(camera);
+}
