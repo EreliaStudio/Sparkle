@@ -13,6 +13,7 @@
 #include "core/context/render_context.hpp"
 #include "core/platform/window.hpp"
 #include "core/window.hpp"
+#include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Window::Surface>);
@@ -255,7 +256,10 @@ TEST(WindowSurfaceTest, IndependentSurfacesNeverShareRenderTargetPixelContent)
 		glClear(GL_COLOR_BUFFER_BIT);
 	};
 	clear(first, firstContext, 1.0f);
+	const HGLRC firstNativeContext = ::wglGetCurrentContext();
 	clear(second, secondContext, 0.0f);
+	const HGLRC secondNativeContext = ::wglGetCurrentContext();
+	EXPECT_NE(firstNativeContext, secondNativeContext);
 	std::array<unsigned char, 4> pixel{};
 	first.makeCurrent();
 	target.activate(firstContext);
@@ -267,9 +271,22 @@ TEST(WindowSurfaceTest, IndependentSurfacesNeverShareRenderTargetPixelContent)
 	EXPECT_EQ(pixel[0], 0);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	first.makeCurrent();
+	EXPECT_EQ(::wglGetCurrentContext(), firstNativeContext);
 	first._gpuResources().reclaimReleased();
 	second.makeCurrent();
+	EXPECT_EQ(::wglGetCurrentContext(), secondNativeContext);
 	second._gpuResources().reclaimReleased();
 	first.destroy();
 	second.destroy();
+}
+
+TEST(WindowSurfaceTest, NonReadySurfacesRejectHandleMaterialization)
+{
+	spk::Window::Surface surface("surface-not-ready");
+	spk::RenderContext context{.targetSurface = &surface};
+	auto target = spk::Texture::createRenderTarget(spk::Texture::Target::Texture2D, {4, 4}, spk::Texture::Format::RGBA);
+	EXPECT_THROW(target.handle().activate(context), spk::Exception);
+	surface.destroy();
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
+	EXPECT_THROW(target.handle().activate(context), spk::Exception);
 }
