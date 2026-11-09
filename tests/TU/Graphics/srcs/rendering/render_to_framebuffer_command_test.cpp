@@ -3,10 +3,12 @@
 #include <GL/glew.h>
 
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <vector>
 
+#include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/render_to_framebuffer_command.hpp"
