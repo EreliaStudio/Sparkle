@@ -20,7 +20,6 @@ namespace spk
 		class ActiveProgram
 		{
 			friend class RenderContextProgramAccess;
-		friend class RenderToFramebufferCommand;
 			template <typename TType>
 			friend class Uniform;
 
@@ -35,6 +34,7 @@ namespace spk
 		};
 
 		friend class RenderContextProgramAccess;
+		friend class RenderToFramebufferCommand;
 		template <typename TType>
 		friend class Uniform;
 
