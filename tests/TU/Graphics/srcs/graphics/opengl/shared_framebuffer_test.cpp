@@ -288,7 +288,6 @@ TEST(SharedFramebufferTest, OversizedTexturesAreRejectedBySurfaceCapabilities)
 TEST(SharedFramebufferTest, CpuHdrStorageAndInvalidTargetDimensionsAreRejected)
 {
 	using Format = Texture::Format;
-	using Target = Texture::Target;
 	CpuTexture cpu;
 	EXPECT_THROW(cpu.setPixels(nullptr, {1, 1}, Format::RGBA16F), std::invalid_argument);
 	EXPECT_THROW((void)Framebuffer::RenderAttachment::create2D({0, 1}, Format::RGBA16F), spk::Exception);
