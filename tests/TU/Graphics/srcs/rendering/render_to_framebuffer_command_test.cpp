@@ -63,7 +63,7 @@ namespace
 		void execute(spk::RenderContext &context) const override
 		{
 			TargetState state{
-				.size = context.renderTargetSize(),
+				.size = context.activeRenderTarget.size(),
 				.type = context.activeRenderTarget.type()};
 			glGetIntegerv(GL_VIEWPORT, state.viewport.data());
 			glGetIntegerv(GL_SCISSOR_BOX, state.scissor.data());
@@ -98,7 +98,7 @@ TEST(RenderToFramebufferCommandTest, SurfaceRenderTargetDistinguishesNativeAndOf
 	EXPECT_EQ(defaultTarget.size(), spk::Vector2UInt(80, 60));
 	gl.setGeometry({.anchor = {0, 0}, .size = {48, 32}});
 	EXPECT_EQ(defaultTarget.size(), spk::Vector2UInt(48, 32));
-	EXPECT_EQ(gl.renderContext().renderTargetSize(), spk::Vector2UInt(48, 32));
+	EXPECT_EQ(gl.renderContext().activeRenderTarget.size(), spk::Vector2UInt(48, 32));
 
 	spk::Framebuffer framebuffer({8, 6}, {spk::Texture::Format::RGBA}, std::nullopt);
 	const spk::Window::Surface::RenderTarget offscreen(gl.surface(), framebuffer.handle());
@@ -216,7 +216,7 @@ TEST(RenderToFramebufferCommandTest, NestedCommandsRestorePreviouslyActiveOffscr
 
 	spk::RenderToFramebufferCommand(nested.handle(), makeClearSnapshot({0, 0, 0, 1}))
 		.execute(context);
-	EXPECT_EQ(context.renderTargetSize(), spk::Vector2UInt(9, 7));
+	EXPECT_EQ(context.activeRenderTarget.size(), spk::Vector2UInt(9, 7));
 	EXPECT_EQ(context.activeRenderTarget.type(), spk::Window::Surface::RenderTarget::Type::Framebuffer);
 
 	spk::RenderSnapshot::Builder failing;
@@ -225,7 +225,7 @@ TEST(RenderToFramebufferCommandTest, NestedCommandsRestorePreviouslyActiveOffscr
 	EXPECT_THROW(
 		spk::RenderToFramebufferCommand(nested.handle(), failure).execute(context),
 		spk::Exception);
-	EXPECT_EQ(context.renderTargetSize(), spk::Vector2UInt(9, 7));
+	EXPECT_EQ(context.activeRenderTarget.size(), spk::Vector2UInt(9, 7));
 	GLint bound = 0;
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
 	EXPECT_GT(bound, 0);
