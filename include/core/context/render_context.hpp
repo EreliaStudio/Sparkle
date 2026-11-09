@@ -4,7 +4,6 @@
 
 #include "core/window_surface_render_target.hpp"
 #include "diagnostics/profiler.hpp"
-#include "math/vector2.hpp"
 
 namespace spk
 {
@@ -50,9 +49,5 @@ namespace spk
 		{
 		}
 
-		[[nodiscard]] Vector2UInt renderTargetSize() const
-		{
-			return activeRenderTarget.size();
-		}
 	};
 }
