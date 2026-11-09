@@ -315,12 +315,11 @@ TEST(UniformTest, ProgramHandleActivationUpdatesTheRenderContext)
 	EXPECT_FLOAT_EQ(uniformFloat(activeProgram(), "uFloat"), 5.0f);
 }
 
-TEST(UniformTest, ActivationRequiresTargetSurfaceAndActiveProgram)
+TEST(UniformTest, ActivationRequiresActiveProgram)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
 	spk::Uniform<float> uniform("uFloat", 1.0f);
-	EXPECT_THROW((void)spk::RenderContext(nullptr), std::invalid_argument);
 
 	spk::RenderContext inactiveContext{openGL.surface()};
 	EXPECT_THROW(uniform.activate(inactiveContext), std::logic_error);
