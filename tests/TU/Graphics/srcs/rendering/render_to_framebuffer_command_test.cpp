@@ -12,6 +12,8 @@
 #include "graphics/opengl/framebuffer.hpp"
 #include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/render_to_framebuffer_command.hpp"
+#include "rendering/command/scissor_render_command.hpp"
+#include "rendering/command/viewport_render_command.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
@@ -33,6 +35,35 @@ namespace
 			std::array<GLint, 5> state{};
 			glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, state.data());
 			glGetIntegerv(GL_VIEWPORT, state.data() + 1);
+			_states->push_back(state);
+		}
+	};
+
+	struct TargetState
+	{
+		spk::Vector2UInt size;
+		std::array<GLint, 4> viewport{};
+		std::array<GLint, 4> scissor{};
+		GLboolean scissorEnabled = GL_FALSE;
+	};
+
+	class InspectTargetCommand final : public spk::RenderCommand
+	{
+	private:
+		std::vector<TargetState> *_states;
+
+	public:
+		explicit InspectTargetCommand(std::vector<TargetState> &states) :
+			_states(&states)
+		{
+		}
+
+		void execute(spk::RenderContext &context) const override
+		{
+			TargetState state{.size = context.renderTargetSize()};
+			glGetIntegerv(GL_VIEWPORT, state.viewport.data());
+			glGetIntegerv(GL_SCISSOR_BOX, state.scissor.data());
+			state.scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
 			_states->push_back(state);
 		}
 	};
@@ -108,6 +139,8 @@ TEST(RenderToFramebufferCommandTest, NestedFailureRestoresReadDrawAndViewport)
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousName);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	glViewport(5, 6, 22, 23);
+	glScissor(7, 8, 9, 10);
+	glEnable(GL_SCISSOR_TEST);
 
 	spk::RenderSnapshot::Builder builder;
 	builder.renderPass({"failure", 0}).emplace<FailingFramebufferCommand>();
@@ -124,6 +157,59 @@ TEST(RenderToFramebufferCommandTest, NestedFailureRestoresReadDrawAndViewport)
 	EXPECT_EQ(draw, previousName);
 	EXPECT_EQ(read, 0);
 	EXPECT_EQ(viewport, (std::array<GLint, 4>{5, 6, 22, 23}));
+	std::array<GLint, 4> scissor{};
+	glGetIntegerv(GL_SCISSOR_BOX, scissor.data());
+	EXPECT_EQ(scissor, (std::array<GLint, 4>{7, 8, 9, 10}));
+	EXPECT_EQ(glIsEnabled(GL_SCISSOR_TEST), GL_TRUE);
+	EXPECT_FALSE(gl.renderContext().activeRenderTargetSize.has_value());
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+}
+
+TEST(RenderToFramebufferCommandTest, NestedTargetsUseTheirOwnDimensionsAndRestoreOuterScissor)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset();
+	spk::Framebuffer outer({8, 6}, {spk::Texture::Format::RGBA}, std::nullopt);
+	spk::Framebuffer inner({4, 4}, {spk::Texture::Format::RGBA}, std::nullopt);
+	std::vector<TargetState> states;
+
+	spk::RenderSnapshot::Builder child;
+	auto &childPass = child.renderPass({"child", 0});
+	childPass.emplace<spk::ViewportRenderCommand>(spk::Rect2D{.anchor = {0, 0}, .size = {4, 4}});
+	childPass.emplace<InspectTargetCommand>(states);
+	auto childSnapshot = std::make_shared<spk::RenderSnapshot>(child.build());
+
+	spk::RenderSnapshot::Builder parent;
+	auto &parentPass = parent.renderPass({"parent", 0});
+	parentPass.emplace<spk::ViewportRenderCommand>(spk::Rect2D{.anchor = {1, 1}, .size = {4, 3}});
+	parentPass.emplace<spk::ScissorRenderCommand>(spk::Rect2D{.anchor = {2, 1}, .size = {2, 2}});
+	parentPass.emplace<InspectTargetCommand>(states);
+	parentPass.emplace<spk::RenderToFramebufferCommand>(inner.handle(), childSnapshot);
+	parentPass.emplace<InspectTargetCommand>(states);
+
+	glScissor(11, 12, 13, 14);
+	glEnable(GL_SCISSOR_TEST);
+	spk::RenderToFramebufferCommand(outer.handle(), std::make_shared<spk::RenderSnapshot>(parent.build()))
+		.execute(gl.renderContext());
+
+	ASSERT_EQ(states.size(), 3u);
+	EXPECT_EQ(states[0].size, spk::Vector2UInt(8, 6));
+	EXPECT_EQ(states[0].viewport, (std::array<GLint, 4>{1, 2, 4, 3}));
+	EXPECT_EQ(states[0].scissor, (std::array<GLint, 4>{2, 3, 2, 2}));
+	EXPECT_EQ(states[0].scissorEnabled, GL_TRUE);
+	EXPECT_EQ(states[1].size, spk::Vector2UInt(4, 4));
+	EXPECT_EQ(states[1].viewport, (std::array<GLint, 4>{0, 0, 4, 4}));
+	EXPECT_EQ(states[1].scissorEnabled, GL_FALSE);
+	EXPECT_EQ(states[2].size, states[0].size);
+	EXPECT_EQ(states[2].viewport, states[0].viewport);
+	EXPECT_EQ(states[2].scissor, states[0].scissor);
+	EXPECT_EQ(states[2].scissorEnabled, GL_TRUE);
+
+	std::array<GLint, 4> scissor{};
+	glGetIntegerv(GL_SCISSOR_BOX, scissor.data());
+	EXPECT_EQ(scissor, (std::array<GLint, 4>{11, 12, 13, 14}));
+	EXPECT_EQ(glIsEnabled(GL_SCISSOR_TEST), GL_TRUE);
+	EXPECT_FALSE(gl.renderContext().activeRenderTargetSize.has_value());
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
@@ -157,4 +243,6 @@ TEST(RenderToFramebufferCommandTest, RejectsMissingInputs)
 	EXPECT_THROW(
 		(void)spk::RenderToFramebufferCommand(framebuffer.handle(), nullptr),
 		std::invalid_argument);
+	spk::RenderContext missingSurface{.targetSurface = nullptr};
+	EXPECT_THROW(spk::RenderToFramebufferCommand(framebuffer.handle(), snapshot).execute(missingSurface), std::invalid_argument);
 }
