@@ -51,7 +51,7 @@ namespace
 	static_assert(std::is_trivially_copyable_v<spk::Color>);
 	static_assert(std::is_aggregate_v<spk::ViewRegion>);
 	static_assert(std::is_trivially_copyable_v<spk::ViewRegion>);
-	static_assert(std::is_aggregate_v<spk::RenderContext>);
+	static_assert(!std::is_aggregate_v<spk::RenderContext>);
 	static_assert(std::is_aggregate_v<spk::UpdateContext>);
 	static_assert(std::is_trivially_copyable_v<spk::Padding<1>>);
 	static_assert(std::is_trivially_copyable_v<spk::Padding<4>>);
