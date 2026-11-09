@@ -18,14 +18,16 @@ namespace spk
 		};
 
 	private:
+		Surface *_surface;
 		std::optional<Framebuffer::Handle> _framebuffer;
 
 	public:
-		RenderTarget() = default;
-		explicit RenderTarget(Framebuffer::Handle framebuffer);
+		explicit RenderTarget(Surface &surface) noexcept;
+		RenderTarget(Surface &surface, Framebuffer::Handle framebuffer);
 
 		[[nodiscard]] Type type() const noexcept;
-		[[nodiscard]] Vector2UInt size(const Surface &surface) const;
+		[[nodiscard]] Surface &surface() const noexcept;
+		[[nodiscard]] Vector2UInt size() const noexcept;
 		void activate(RenderContext &context) const;
 	};
 }
