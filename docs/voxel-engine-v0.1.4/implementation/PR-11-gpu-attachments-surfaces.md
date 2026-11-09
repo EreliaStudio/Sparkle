@@ -77,7 +77,11 @@ et `GPUResource::Handle` sont conservées.
 - `Texture::createRenderTarget(Target, size, Format)` crée uniquement une description CPU.
 - `Texture::Format` expose `RGBA16F` et `SRGB8_ALPHA8` en complément de `Depth32F` existant.
 - `Framebuffer(size, vector<Texture::Handle>, optional<Texture::Handle>)` construit un framebuffer partageable.
-- `Framebuffer::activateFace(handle, Texture::CubeFace, context)` fixe explicitement une face pour l'activation native de profondeur cubemap, sans modifier le `Framebuffer::State`.
+- `CubeMap(faceSize, format)` expose une ressource six faces, profondeur ou couleur, et `CubeMap::Face` (`PositiveX`, `NegativeX`, etc.).
+- `Framebuffer::Attachment{Texture::Handle, optional<CubeMap::Face>}` décrit une texture et, pour les cubemaps, la face **fixe** à attacher.
+- `Framebuffer(size, vector<Framebuffer::Attachment>, optional<Framebuffer::Attachment>)` capture les bindings, avec validation des faces, types, tailles et formats.
+- Chaque face peut être liée à son propre `Framebuffer::State`, tout en conservant le même `CubeMap::Handle` natif sur une Surface.
+- Les constructeurs historiques utilisant les formats ou les `Texture::Handle` restent disponibles pour les textures 2D.
 - `Framebuffer::colorAttachmentHandle(index)` et `depthStencilAttachmentHandle()` exposent l'identité exacte des handles.
 - `Window::Surface::subscribeToDestruction(callback)` retourne un contrat RAII invalide après fermeture.
 
@@ -90,8 +94,7 @@ Le constructeur à handles partagés interdit le resize vers une taille différe
 
 Une activation crée une instance native dans la `GPUResourceCollection` de la
 `Window::Surface` cible ; il n'y a ni partage de pixels entre contextes WGL,
-ni partage de framebuffer natif entre surfaces. Les faces cubemap sont sélectionnées
-par le contexte de rendu de l'activation, et non par mutation du State logique.
+ni partage de framebuffer natif entre surfaces. Les faces cubemap sont choisies **lors de la construction des attachments**, immuablement dans le `Framebuffer::State`. L'activation n'utilise plus `Framebuffer::activateFace`, `TextureCubeFace` ni `RenderContext::framebufferCubeFace`. La sélection native intervient lors de la matérialisation GPU du framebuffer et n'est pas réajustée entre ses activations.
 
 À la fermeture, les abonnés sont notifiés une seule fois après `Releasing` ;
 la première exception de callback est retenue, les autres abonnés sont appelés,
@@ -103,7 +106,7 @@ d'un callback de destruction.
 ### Validation et réserves
 
 Les TU CPU/OpenGL ajoutés vérifient les constructions partageables, les resizes,
-les formats, les six faces cubemap, la profondeur native partagée et l'isolation
+les formats, les six faces cubemap (profondeur et couleur), la profondeur native partagée et l'isolation
 des pixels WGL. Les tests de fermeture couvrent également plusieurs abonnés,
 les exceptions, l'état terminal et les appels répétés.
 
@@ -112,3 +115,12 @@ Les résultats des jobs Debug/Release/Windows seront reportés dans la PR.
 Les tests d'instrumentation de reclaim sans consommateur, de fermeture avant
 clear GPU et d'injection explicite de limites GL restent à renforcer si la
 CI actuelle n'apporte pas ces garanties.
+
+
+### Séparation de l'orchestration du rendu
+
+La PR11 configure les attachments et les matérialise par Surface, sans introduire de
+`RenderToFramebufferCommand` à ce stade. Une future commande de rendu générique
+pourra capturer `Framebuffer::Handle` et ses sous-commandes ou son snapshot ; elle
+n'aura pas à porter de `CubeMap::Face`, déjà fixé dans le State du framebuffer.
+Aucune modification de `Window` n'est nécessaire pour sélectionner une face.
