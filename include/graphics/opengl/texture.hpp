@@ -33,6 +33,7 @@ namespace spk
 	class Texture : public GPUResource
 	{
 		friend class Framebuffer;
+		friend class CubeMap;
 		friend class Sampler;
 
 	public:
@@ -63,7 +64,7 @@ namespace spk
 		enum class ContentSource
 		{
 			PixelData,
-			RenderTarget
+			RenderAttachment
 		};
 
 		enum class Mipmap
@@ -164,7 +165,8 @@ namespace spk
 		[[nodiscard]] static std::size_t _checkedByteCount(const Vector2UInt &size, Format format);
 
 		void _bindToUnit(std::size_t bindingPoint, RenderContext &context) const;
-		void _allocateRenderTarget(const Vector2UInt &size, Format format);
+		void _allocateRenderAttachment(const Vector2UInt &size, Format format);
+		[[nodiscard]] static Texture _createRenderAttachment(Target target, const Vector2UInt &size, Format format);
 
 	protected:
 		void _cloneResolutions(Handle previous);
@@ -176,7 +178,6 @@ namespace spk
 
 	public:
 		explicit Texture(Target target = Target::Texture2D);
-		[[nodiscard]] static Texture createRenderTarget(Target target, const Vector2UInt &size, Format format);
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
 		{
 			auto result = std::make_unique<Texture>(*this);
@@ -197,7 +198,7 @@ namespace spk
 		[[nodiscard]] const Vector2UInt &size() const noexcept;
 		[[nodiscard]] Format format() const noexcept;
 		[[nodiscard]] ContentSource contentSource() const noexcept;
-		[[nodiscard]] bool isRenderTarget() const noexcept;
+		[[nodiscard]] bool isRenderAttachment() const noexcept;
 		[[nodiscard]] Mipmap mipmap() const noexcept;
 		[[nodiscard]] const std::vector<std::uint8_t> &pixels() const;
 
