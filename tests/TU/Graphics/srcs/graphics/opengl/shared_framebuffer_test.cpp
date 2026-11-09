@@ -42,7 +42,8 @@ TEST(SharedFramebufferTest, ADepthHandleIsOwnedByBothFramebufferStates)
 	ASSERT_TRUE(transparent.depthStencilAttachmentHandle());
 	EXPECT_EQ(opaque.depthStencilAttachmentHandle()->identifier(), depth.identifier());
 	EXPECT_EQ(transparent.depthStencilAttachmentHandle()->identifier(), depth.identifier());
-	EXPECT_EQ(std::addressof(opaque.depthStencilAttachmentHandle()->state()),
+	EXPECT_EQ(
+		std::addressof(opaque.depthStencilAttachmentHandle()->state()),
 		std::addressof(transparent.depthStencilAttachmentHandle()->state()));
 	EXPECT_EQ(opaque.colorAttachmentHandle(0)->format(), Texture::Format::RGBA16F);
 	EXPECT_EQ(transparent.colorAttachmentHandle(0)->format(), Texture::Format::SRGB8_ALPHA8);
@@ -129,8 +130,11 @@ TEST(SharedFramebufferTest, SharedDepthUsesTheSameNativeAttachmentOnOneSurface)
 	const auto depthName = [](const Framebuffer &framebuffer, spk::RenderContext &context) {
 		framebuffer.activate(context);
 		GLint name = 0;
-		glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-			GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &name);
+		glGetFramebufferAttachmentParameteriv(
+			GL_FRAMEBUFFER,
+			GL_DEPTH_ATTACHMENT,
+			GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
+			&name);
 		return name;
 	};
 	const GLint first = depthName(opaque, gl.renderContext());
@@ -155,8 +159,11 @@ TEST(SharedFramebufferTest, CubeFaceMustBeExplicitAndEachFaceHasSeparateDepthPix
 		Framebuffer::activateFace(framebuffer.handle(), face, gl.renderContext());
 		EXPECT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GL_FRAMEBUFFER_COMPLETE);
 		GLint attachedFace = GL_NONE;
-		glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-			GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE, &attachedFace);
+		glGetFramebufferAttachmentParameteriv(
+			GL_FRAMEBUFFER,
+			GL_DEPTH_ATTACHMENT,
+			GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE,
+			&attachedFace);
 		EXPECT_EQ(attachedFace, static_cast<GLint>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index));
 		glViewport(0, 0, 8, 8);
 		glDepthMask(GL_TRUE);
