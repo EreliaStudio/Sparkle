@@ -26,7 +26,7 @@ namespace spk
 
 	public:
 		explicit CubeMap(std::uint32_t faceSize, Texture::Format format = Texture::Format::Depth32F) :
-			_texture(Texture::createRenderTarget(Texture::Target::TextureCubeMap, {faceSize, faceSize}, format))
+			_texture(Texture::_createRenderAttachment(Texture::Target::TextureCubeMap, {faceSize, faceSize}, format))
 		{
 		}
 
