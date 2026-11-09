@@ -53,7 +53,7 @@ namespace spk
 		{
 			return GL_DEPTH_ATTACHMENT;
 		}
-		throw Exception("Framebuffer depth attachment requires a depth or depth-stencil format");
+		throw std::invalid_argument("Framebuffer depth attachment requires a depth or depth-stencil format");
 	}
 
 	void Framebuffer::_validateSize(const Vector2UInt &size)
