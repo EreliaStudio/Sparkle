@@ -95,12 +95,13 @@ namespace spk
 				throw Exception("Framebuffer depth attachment handle is invalid or already attached");
 			}
 			const auto &value = depth->state();
+			const bool invalidCube = value.target() == Texture::Target::TextureCubeMap &&
+								 (config._size.x != config._size.y || !Texture::isDepthFormat(value.format()));
 			if (value.contentSource() != Texture::ContentSource::RenderTarget ||
 				value.size() != config._size ||
 				(!Texture::isDepthFormat(value.format()) && !Texture::isDepthStencilFormat(value.format())) ||
 				(value.target() != Texture::Target::Texture2D && value.target() != Texture::Target::TextureCubeMap) ||
-				(value.target() == Texture::Target::TextureCubeMap &&
-					(config._size.x != config._size.y || !Texture::isDepthFormat(value.format()))))
+				invalidCube)
 			{
 				throw Exception("Framebuffer depth attachment has an incompatible format, target, size or content source");
 			}
@@ -172,8 +173,12 @@ namespace spk
 				glGetIntegerv(GL_TEXTURE_BINDING_2D, &value);
 				identifier = static_cast<GLuint>(value);
 			}
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index),
-				GL_TEXTURE_2D, identifier, 0);
+			glFramebufferTexture2D(
+				GL_FRAMEBUFFER,
+				GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index),
+				GL_TEXTURE_2D,
+				identifier,
+				0);
 		}
 		instance.colorAttachmentCount = _colorAttachments.size();
 	}
