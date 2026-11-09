@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "exception.hpp"
+#include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
@@ -18,6 +19,7 @@ namespace
 {
 	using Texture = spk::Texture;
 	using Framebuffer = spk::Framebuffer;
+	using CubeMap = spk::CubeMap;
 
 	[[nodiscard]] Texture target(spk::Vector2UInt size, Texture::Format format)
 	{
@@ -71,8 +73,8 @@ TEST(SharedFramebufferTest, LegacyResizePublishesIndependentStates)
 
 	EXPECT_NE(previous.identifier(), framebuffer.identifier());
 	EXPECT_EQ(previous->size(), spk::Vector2UInt(4, 3));
-	EXPECT_EQ(previous->colorAttachments()[0].identifier(), previousColor.identifier());
-	EXPECT_EQ(previous->depthStencilAttachment()->identifier(), previousDepth.identifier());
+	EXPECT_EQ(previous->colorAttachments()[0].texture.identifier(), previousColor.identifier());
+	EXPECT_EQ(previous->depthStencilAttachment()->texture.identifier(), previousDepth.identifier());
 	EXPECT_EQ(previousColor->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(previousDepth->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(framebuffer.colorAttachment(0).size(), spk::Vector2UInt(7, 5));
@@ -103,18 +105,20 @@ TEST(SharedFramebufferTest, RejectsMissingInvalidMismatchedAndDuplicateAttachmen
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector<Texture::Handle>{}, color.handle()), spk::Exception);
 }
 
-TEST(SharedFramebufferTest, CubeTargetsRequireSixSquareDepthFaces)
+TEST(SharedFramebufferTest, CubeMapProvidesOneResourceWithSixSquareFaces)
 {
 	using Target = Texture::Target;
 	using Format = Texture::Format;
 	EXPECT_THROW((void)Texture::createRenderTarget(Target::TextureCubeMap, {8, 9}, Format::Depth32F), spk::Exception);
-	EXPECT_THROW((void)Texture::createRenderTarget(Target::TextureCubeMap, {8, 8}, Format::RGBA), spk::Exception);
 	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture3D, {8, 8}, Format::Depth32F), spk::Exception);
-	auto cube = Texture::createRenderTarget(Target::TextureCubeMap, {8, 8}, Format::Depth32F);
-	EXPECT_EQ(cube.size(), spk::Vector2UInt(8, 8));
+	EXPECT_THROW((void)CubeMap(0), spk::Exception);
+	CubeMap cube(8, Format::Depth32F);
+	EXPECT_EQ(cube.faceSize(), 8u);
+	EXPECT_EQ(cube.format(), Format::Depth32F);
 	EXPECT_EQ(cube.handle()->target(), Target::TextureCubeMap);
-	EXPECT_TRUE(cube.isRenderTarget());
-	EXPECT_THROW((void)cube.pixels(), std::logic_error);
+	EXPECT_EQ(cube.handle()->contentSource(), Texture::ContentSource::RenderTarget);
+	CubeMap color(8, Format::RGBA16F);
+	EXPECT_EQ(color.format(), Format::RGBA16F);
 }
 
 TEST(SharedFramebufferTest, SharedDepthUsesTheSameNativeAttachmentOnOneSurface)
@@ -146,18 +150,26 @@ TEST(SharedFramebufferTest, SharedDepthUsesTheSameNativeAttachmentOnOneSurface)
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
-TEST(SharedFramebufferTest, CubeFaceMustBeExplicitAndEachFaceHasSeparateDepthPixels)
+TEST(SharedFramebufferTest, FixedCubeFacesHaveIndependentDepthPixels)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset();
-	auto cube = Texture::createRenderTarget(Texture::Target::TextureCubeMap, {8, 8}, Texture::Format::Depth32F);
-	Framebuffer framebuffer({8, 8}, std::vector<Texture::Handle>{}, cube.handle());
-	EXPECT_THROW(framebuffer.activate(gl.renderContext()), spk::Exception);
-
+	CubeMap cube(8, Texture::Format::Depth32F);
+	EXPECT_THROW(
+		(void)Framebuffer({8, 8}, std::vector<Texture::Handle>{}, cube.handle()),
+		spk::Exception);
+	std::vector<Framebuffer> framebuffers;
 	for (unsigned int index = 0; index < 6; ++index)
 	{
-		const auto face = static_cast<Texture::CubeFace>(index);
-		Framebuffer::activateFace(framebuffer.handle(), face, gl.renderContext());
+		const auto face = static_cast<CubeMap::Face>(index);
+		framebuffers.emplace_back(
+			spk::Vector2UInt{8, 8},
+			std::vector<Framebuffer::Attachment>{},
+			Framebuffer::Attachment{cube.handle(), face});
+		auto &framebuffer = framebuffers.back();
+		EXPECT_EQ(framebuffer.handle()->depthStencilAttachment()->face, face);
+		EXPECT_EQ(framebuffer.depthStencilAttachmentHandle()->identifier(), cube.handle().identifier());
+		framebuffer.activate(gl.renderContext());
 		EXPECT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GL_FRAMEBUFFER_COMPLETE);
 		GLint attachedFace = GL_NONE;
 		glGetFramebufferAttachmentParameteriv(
@@ -180,8 +192,53 @@ TEST(SharedFramebufferTest, CubeFaceMustBeExplicitAndEachFaceHasSeparateDepthPix
 	}
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	EXPECT_THROW(
-		Framebuffer::activateFace(framebuffer.handle(), static_cast<Texture::CubeFace>(9), gl.renderContext()),
+		(void)Framebuffer(
+			{8, 8},
+			std::vector<Framebuffer::Attachment>{},
+			Framebuffer::Attachment{cube.handle(), static_cast<CubeMap::Face>(9)}),
 		spk::Exception);
+	EXPECT_THROW(
+		(void)Framebuffer(
+			{8, 8},
+			std::vector<Framebuffer::Attachment>{},
+			Framebuffer::Attachment{target({8, 8}, Texture::Format::Depth32F).handle(), CubeMap::Face::PositiveX}),
+		spk::Exception);
+}
+
+TEST(SharedFramebufferTest, CubemapColorFacesCanBeFramebufferAttachments)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset();
+	CubeMap cube(4, Texture::Format::RGBA16F);
+	std::vector<Framebuffer> framebuffers;
+	for (unsigned int index = 0; index < 6; ++index)
+	{
+		const auto face = static_cast<CubeMap::Face>(index);
+		framebuffers.emplace_back(
+			spk::Vector2UInt{4, 4},
+			std::vector{Framebuffer::Attachment{cube.handle(), face}},
+			std::nullopt);
+		framebuffers.back().activate(gl.renderContext());
+		EXPECT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GL_FRAMEBUFFER_COMPLETE);
+		GLint attachedFace = GL_NONE;
+		glGetFramebufferAttachmentParameteriv(
+			GL_FRAMEBUFFER,
+			GL_COLOR_ATTACHMENT0,
+			GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE,
+			&attachedFace);
+		EXPECT_EQ(attachedFace, static_cast<GLint>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index));
+		glViewport(0, 0, 4, 4);
+		glClearColor(static_cast<float>(index) / 6.0f, 0.5f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	cube.activate(gl.renderContext());
+	for (unsigned int index = 0; index < 6; ++index)
+	{
+		std::array<float, 4 * 4 * 4> pixels{};
+		glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + index, 0, GL_RGBA, GL_FLOAT, pixels.data());
+		EXPECT_NEAR(pixels[0], static_cast<float>(index) / 6.0f, 0.0001f);
+	}
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
 TEST(SharedFramebufferTest, OversizedTexturesAreRejectedBySurfaceCapabilities)
