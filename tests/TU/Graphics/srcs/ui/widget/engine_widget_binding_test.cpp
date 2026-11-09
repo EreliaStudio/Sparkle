@@ -11,15 +11,9 @@
 
 namespace
 {
-	static_assert(std::is_same_v<
-		decltype(&spk::EngineWidget::setEngine),
-		void (spk::EngineWidget::*)(spk::Engine *) noexcept>);
-	static_assert(std::is_same_v<
-		decltype(std::declval<spk::EngineWidget &>().engine()),
-		spk::Engine *>);
-	static_assert(std::is_same_v<
-		decltype(std::declval<const spk::EngineWidget &>().engine()),
-		const spk::Engine *>);
+	static_assert(std::is_same_v<decltype(&spk::EngineWidget::setEngine), void (spk::EngineWidget::*)(spk::Engine *) noexcept>);
+	static_assert(std::is_same_v<decltype(std::declval<spk::EngineWidget &>().engine()), spk::Engine *>);
+	static_assert(std::is_same_v<decltype(std::declval<const spk::EngineWidget &>().engine()), const spk::Engine *>);
 	static_assert(!std::is_convertible_v<spk::EngineHeadless *, spk::Engine *>);
 
 	class WidgetKeyProbe final : public spk::RenderingBehaviour
