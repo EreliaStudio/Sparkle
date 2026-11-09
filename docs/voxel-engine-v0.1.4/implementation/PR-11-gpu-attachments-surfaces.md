@@ -23,6 +23,7 @@
 - [x] Formats RGBA16F, SRGB8_ALPHA8 et Depth32F ; données CPU RGBA16F refusées
 - [x] Framebuffer fondé sur des Texture::Handle explicitement partageables
 - [x] Framebuffer depth-only et sélection de la face cubemap lors du binding GPU
+- [x] RenderToFramebufferCommand imbriquée : target versionnée, viewport, restore exception-safe et clear via commandes
 - [x] Resize historique non destructif ; refus des resizes incompatibles sur les attachments partagés
 - [x] Abonnement RAII à la fermeture Surface, notification synchrone et nettoyage dans l'ordre
 - [x] Reclaim par tick de Surface Ready avec makeCurrent explicite, même sans consommateur
@@ -117,10 +118,22 @@ clear GPU et d'injection explicite de limites GL restent à renforcer si la
 CI actuelle n'apporte pas ces garanties.
 
 
-### Séparation de l'orchestration du rendu
+### Orchestration du rendu dans un framebuffer
 
-La PR11 configure les attachments et les matérialise par Surface, sans introduire de
-`RenderToFramebufferCommand` à ce stade. Une future commande de rendu générique
-pourra capturer `Framebuffer::Handle` et ses sous-commandes ou son snapshot ; elle
-n'aura pas à porter de `CubeMap::Face`, déjà fixé dans le State du framebuffer.
-Aucune modification de `Window` n'est nécessaire pour sélectionner une face.
+`RenderToFramebufferCommand(framebufferHandle, shared_ptr<const RenderSnapshot>)`
+capture une version immuable du framebuffer et un sous-snapshot. À l'exécution,
+la commande active la cible native propre à la Surface, ajuste le viewport à la
+taille capturée, exécute le sous-snapshot et restaure les bindings OpenGL de
+lecture/dessin et le viewport, y compris en cas d'exception imbriquée. Les
+opérations de clear appartiennent aux commandes du sous-snapshot
+(`ClearRenderCommand`) et ne sont pas imposées par la commande de cible.
+
+Les tests de rendu des six faces couleur et profondeur utilisent effectivement
+`RenderToFramebufferCommand`, avec un sous-snapshot comportant le clear.
+Un test d'intégration supplémentaire invoque la commande depuis un
+`RenderSnapshot::Builder` parent et vérifie la lecture des pixels ainsi que les
+restaurations de contexte, l'erreur imbriquée et le resize versionné.
+
+Aucune modification de `Window` n'est nécessaire. Le branchement automatique
+des sorties `EngineView` sur leurs propres cibles et sur `EngineWidget` reste
+l'intégration de la PR12 ; il n'y a pas de target implicite ajouté dans la PR11.
