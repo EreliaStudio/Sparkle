@@ -55,6 +55,8 @@
 #include "rendering/command/text_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
+#include "rendering/engine/camera_component3d.hpp"
+#include "rendering/engine/engine_view.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
 #include "rendering/engine/rendering_engine.hpp"

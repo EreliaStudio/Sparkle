@@ -23,7 +23,7 @@ namespace spk
 
 	public:
 		Engine();
-		~Engine();
+		virtual ~Engine();
 
 		void addEntity(Entity *entity);
 		void removeEntity(Entity *entity);

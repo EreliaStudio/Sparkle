@@ -7,7 +7,8 @@
 
 namespace spk
 {
-	class RenderingEngine final : public EventDispatcher,
+	class RenderingEngine final : public Engine,
+								  public EventDispatcher,
 								  public UpdatableByDeviceTrait,
 								  public RenderSnapshotContributorTrait
 	{
@@ -20,13 +21,11 @@ namespace spk
 			.order = -200};
 
 	private:
-		Engine *_engine = nullptr;
-
 		void _visitEntity(
 			Entity &entity,
 			const std::function<void(RenderingObjectTrait &)> &callback) const;
 		void _visitObjects(
-			const std::function<void(RenderingObjectTrait &)> &callback) const;
+			const std::function<void(RenderingObjectTrait &)> &callback);
 
 		[[nodiscard]] bool _isAcceptingEvent() const override;
 		void _propagateEvent(
@@ -37,12 +36,9 @@ namespace spk
 		void _afterBuildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 
 	public:
-		explicit RenderingEngine(Engine *engine = nullptr);
+		RenderingEngine() = default;
 
-		void setEngine(Engine *engine) noexcept;
-		[[nodiscard]] Engine *engine() noexcept;
-		[[nodiscard]] const Engine *engine() const noexcept;
-
+		using Engine::updateState;
 		using RenderSnapshotContributorTrait::buildRenderSnapshot;
 		using UpdatableByDeviceTrait::updateState;
 	};

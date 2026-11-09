@@ -10,26 +10,6 @@
 
 namespace spk
 {
-	RenderingEngine::RenderingEngine(Engine *engine) :
-		_engine(engine)
-	{
-	}
-
-	void RenderingEngine::setEngine(Engine *engine) noexcept
-	{
-		_engine = engine;
-	}
-
-	Engine *RenderingEngine::engine() noexcept
-	{
-		return _engine;
-	}
-
-	const Engine *RenderingEngine::engine() const noexcept
-	{
-		return _engine;
-	}
-
 	void RenderingEngine::_visitEntity(
 		Entity &entity,
 		const std::function<void(RenderingObjectTrait &)> &callback) const
@@ -83,15 +63,10 @@ namespace spk
 	}
 
 	void RenderingEngine::_visitObjects(
-		const std::function<void(RenderingObjectTrait &)> &callback) const
+		const std::function<void(RenderingObjectTrait &)> &callback)
 	{
-		if (_engine == nullptr)
-		{
-			return;
-		}
-
-		_visitEntity(_engine->root(), callback);
-		_engine->forEachSystem([&callback](System &system) {
+		_visitEntity(root(), callback);
+		forEachSystem([&callback](System &system) {
 			if (auto *rendering = dynamic_cast<RenderingObjectTrait *>(&system))
 			{
 				callback(*rendering);
@@ -101,7 +76,7 @@ namespace spk
 
 	bool RenderingEngine::_isAcceptingEvent() const
 	{
-		return _engine != nullptr;
+		return true;
 	}
 
 	void RenderingEngine::_propagateEvent(
@@ -114,7 +89,7 @@ namespace spk
 
 	bool RenderingEngine::_canUpdateByDevice() const
 	{
-		return _engine != nullptr;
+		return true;
 	}
 
 	void RenderingEngine::_afterUpdate(
@@ -128,7 +103,7 @@ namespace spk
 
 	bool RenderingEngine::_canBuildRenderSnapshot() const
 	{
-		return _engine != nullptr;
+		return true;
 	}
 
 	void RenderingEngine::_afterBuildRenderSnapshot(
