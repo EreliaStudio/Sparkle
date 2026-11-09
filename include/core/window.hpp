@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -7,6 +8,7 @@
 #include "math/rect2d.hpp"
 #include "type/focus_mode.hpp"
 
+#include "design_pattern/contract_provider.hpp"
 #include "diagnostics/profiler.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
 #include "graphics/opengl/gpu_resource_collection.hpp"
@@ -115,6 +117,11 @@ namespace spk
 		{
 			friend class GPUResource;
 
+		public:
+			using DestructionContract = ContractProvider<>::Contract;
+
+		private:
+
 		private:
 			struct Impl;
 			std::unique_ptr<Impl> _impl;
@@ -133,6 +140,7 @@ namespace spk
 			void destroy();
 			void makeCurrent();
 			void present();
+			[[nodiscard]] DestructionContract subscribeToDestruction(std::function<void()> callback);
 
 			void setGeometry(const spk::Rect2D &geometry) noexcept;
 			[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
