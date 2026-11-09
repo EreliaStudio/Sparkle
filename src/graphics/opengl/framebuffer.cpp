@@ -153,7 +153,7 @@ namespace spk
 		{
 			glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &maxCube);
 		}
-		const GLint limit = _hasCubeDepth() ? std::min(maxTexture, maxCube) : maxTexture;
+		const GLint limit = _hasCubeAttachment() ? std::min(maxTexture, maxCube) : maxTexture;
 		if (_size.x > static_cast<unsigned int>(std::max(0, limit)) ||
 			_size.y > static_cast<unsigned int>(std::max(0, limit)))
 		{
