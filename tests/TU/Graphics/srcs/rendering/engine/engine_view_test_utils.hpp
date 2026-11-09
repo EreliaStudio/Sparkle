@@ -90,7 +90,8 @@ namespace sparkle_test::engine_view
 			{
 				throw std::logic_error("No published snapshot");
 			}
-			spk::RenderContext context{.targetSurface = nullptr};
+			spk::Window::Surface surface{"engine-view-test"};
+			spk::RenderContext context{surface};
 			snapshot->execute(context);
 		}
 	};
