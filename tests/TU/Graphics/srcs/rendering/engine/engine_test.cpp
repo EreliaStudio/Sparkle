@@ -186,7 +186,8 @@ TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 	system.renderLog = &log;
 
 	engine.refreshRenderSnapshot();
-	spk::RenderContext renderContext{.targetSurface = nullptr};
+	spk::Window::Surface surface{"engine-snapshot-test"};
+	spk::RenderContext renderContext{surface};
 	engine.latestRenderSnapshot()->execute(renderContext);
 
 	EXPECT_EQ(
@@ -260,7 +261,8 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 	behaviour.renderLog = &log;
 	system.renderLog = &log;
 	engine.refreshRenderSnapshot();
-	spk::RenderContext renderContext{.targetSurface = nullptr};
+	spk::Window::Surface surface{"engine-snapshot-test"};
+	spk::RenderContext renderContext{surface};
 	engine.latestRenderSnapshot()->execute(renderContext);
 
 	EXPECT_EQ(entity.deviceUpdates, 0u);
