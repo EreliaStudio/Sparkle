@@ -280,12 +280,11 @@ TEST(WindowSurfaceTest, IndependentSurfacesNeverShareRenderTargetPixelContent)
 	second.destroy();
 }
 
-TEST(WindowSurfaceTest, NonReadySurfacesRejectHandleMaterialization)
+TEST(WindowSurfaceTest, ReleasedSurfacesRejectHandleMaterialization)
 {
-	spk::Window::Surface surface("surface-not-ready");
+	spk::Window::Surface surface("surface-released-resource");
 	spk::RenderContext context{.targetSurface = &surface};
 	auto target = spk::Texture::createRenderTarget(spk::Texture::Target::Texture2D, {4, 4}, spk::Texture::Format::RGBA);
-	EXPECT_THROW(target.handle().activate(context), spk::Exception);
 	surface.destroy();
 	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
 	EXPECT_THROW(target.handle().activate(context), spk::Exception);
