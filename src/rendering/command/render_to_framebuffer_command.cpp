@@ -81,7 +81,7 @@ namespace spk
 		const Window::Surface::RenderTarget target(*context.targetSurface, _framebuffer);
 		FramebufferBindingScope binding(context, target);
 		target.activate(context);
-		const Vector2UInt size = context.renderTargetSize();
+		const Vector2UInt size = context.activeRenderTarget.size();
 		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
 		_snapshot->execute(context);
 	}
