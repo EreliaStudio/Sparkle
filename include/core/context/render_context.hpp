@@ -1,13 +1,16 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include "core/window.hpp"
 #include "diagnostics/profiler.hpp"
+#include "math/vector2.hpp"
 
 namespace spk
 {
 	class RenderContextProgramAccess;
+	class RenderToFramebufferCommand;
 	template <typename TType>
 	class Uniform;
 
@@ -17,6 +20,7 @@ namespace spk
 		class ActiveProgram
 		{
 			friend class RenderContextProgramAccess;
+		friend class RenderToFramebufferCommand;
 			template <typename TType>
 			friend class Uniform;
 
@@ -38,5 +42,14 @@ namespace spk
 		Window::Surface *targetSurface;
 		Profiler &profiler = Profiler::defaultProfiler();
 		ActiveProgram _activeProgram{};
+
+	private:
+		std::optional<Vector2UInt> _renderTargetSize;
+
+	public:
+		[[nodiscard]] Vector2UInt renderTargetSize() const
+		{
+			return _renderTargetSize.value_or(targetSurface->geometry().size);
+		}
 	};
 }
