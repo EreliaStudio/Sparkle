@@ -52,10 +52,22 @@ namespace spk
 			BGRA,
 			GreyLevel,
 			DualChannel,
+			RGBA16F,
+			SRGB8_ALPHA8,
 			Depth24,
 			Depth32F,
 			Depth24Stencil8,
 			Error
+		};
+
+		enum class CubeFace : std::uint8_t
+		{
+			PositiveX,
+			NegativeX,
+			PositiveY,
+			NegativeY,
+			PositiveZ,
+			NegativeZ
 		};
 
 		enum class ContentSource
@@ -174,6 +186,7 @@ namespace spk
 
 	public:
 		explicit Texture(Target target = Target::Texture2D);
+		[[nodiscard]] static Texture createRenderTarget(Target target, const Vector2UInt &size, Format format);
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
 		{
 			auto result = std::make_unique<Texture>(*this);
