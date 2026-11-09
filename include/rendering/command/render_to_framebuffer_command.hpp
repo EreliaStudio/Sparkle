@@ -12,7 +12,7 @@ namespace spk
 	class RenderToFramebufferCommand final : public RenderCommand
 	{
 	private:
-		Window::Surface::RenderTarget _target;
+		Framebuffer::Handle _framebuffer;
 		std::shared_ptr<const RenderSnapshot> _snapshot;
 
 	public:
