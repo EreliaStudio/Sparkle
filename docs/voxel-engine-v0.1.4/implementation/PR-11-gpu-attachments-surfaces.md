@@ -134,19 +134,28 @@ Un test d'intégration supplémentaire invoque la commande depuis un
 restaurations de contexte, l'erreur imbriquée et le resize versionné.
 
 La classe `Window::Surface` déclare `RenderTarget` et expose
-`defaultRenderTarget()`. Ce type emploie soit le framebuffer natif 0
-(`Type::Default`, dimensions de `Surface::geometry()`), soit un
-`Framebuffer::Handle` immuable (`Type::Framebuffer`, dimensions capturées).
-Son implémentation se trouve dans le header graphique dédié
-`core/window_surface_render_target.hpp`, de manière à ne pas introduire
-de dépendance à GLEW dans `core/window.hpp`.
+`defaultRenderTarget()`. Chaque `RenderTarget` référence explicitement
+une `Window::Surface` précise (non propriétaire), soit pour le framebuffer
+natif 0 (`Type::Default`), soit pour un `Framebuffer::Handle` immuable
+(`Type::Framebuffer`). Son `size()` ne demande aucun paramètre :
+il lit la géométrie courante de sa Surface native ou la taille de l'état
+du framebuffer capturé. `activate(RenderContext&)` vérifie que la Surface
+du contexte correspond à celle de la cible.
 
-`RenderContext::activeRenderTarget` remplace `activeRenderTargetSize` :
-`renderTargetSize()` délègue au `RenderTarget` actif. La
-`RenderToFramebufferCommand` capture elle-même un `RenderTarget` et
-restaure la cible précédente dans sa garde RAII, tout en préservant
-séparément les anciens bindings natifs de lecture et dessin OpenGL.
-Cela conserve les rendus imbriqués et les surfaces redimensionnables.
+Le type concret est défini dans le header graphique
+`core/window_surface_render_target.hpp`, sans ajout de GLEW
+à `core/window.hpp`. `RenderContext` doit être construit avec une
+Surface valide ; il initialise automatiquement `activeRenderTarget`
+sur la cible native de cette Surface. `renderTargetSize()` délègue à
+`activeRenderTarget.size()`.
+
+Point essentiel pour les threads : `RenderToFramebufferCommand` ne
+capture **pas** de `RenderTarget` ni de pointeur vers une Surface.
+Elle ne capture que le `Framebuffer::Handle` partageable et son
+sous-snapshot ; un `RenderTarget(surface, handle)` est créé uniquement
+sur le thread de rendu, pendant `execute()`. Sa garde RAII restaure
+la cible logique précédente et les bindings OpenGL natifs de lecture
+et dessin même en cas d'échec imbriqué.
 
 Le branchement automatique des sorties `EngineView` sur leurs propres
 cibles et sur `EngineWidget` reste l'intégration de la PR12.
