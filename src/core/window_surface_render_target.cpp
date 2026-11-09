@@ -55,8 +55,8 @@ namespace spk
 		}
 	}
 
-	Window::Surface::RenderTarget Window::Surface::defaultRenderTarget() const
+	Window::Surface::RenderTarget Window::Surface::defaultRenderTarget()
 	{
-		return RenderTarget{const_cast<Surface &>(*this)};
+		return RenderTarget{*this};
 	}
 }
