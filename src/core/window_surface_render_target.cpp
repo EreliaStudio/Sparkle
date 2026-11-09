@@ -9,7 +9,13 @@
 
 namespace spk
 {
-	Window::Surface::RenderTarget::RenderTarget(Framebuffer::Handle framebuffer) :
+	Window::Surface::RenderTarget::RenderTarget(Surface &surface) noexcept :
+		_surface(&surface)
+	{
+	}
+
+	Window::Surface::RenderTarget::RenderTarget(Surface &surface, Framebuffer::Handle framebuffer) :
+		_surface(&surface),
 		_framebuffer(std::move(framebuffer))
 	{
 		if (!*_framebuffer)
@@ -23,16 +29,21 @@ namespace spk
 		return _framebuffer ? Type::Framebuffer : Type::Default;
 	}
 
-	Vector2UInt Window::Surface::RenderTarget::size(const Surface &surface) const
+	Window::Surface &Window::Surface::RenderTarget::surface() const noexcept
 	{
-		return _framebuffer ? (*_framebuffer)->size() : surface.geometry().size;
+		return *_surface;
+	}
+
+	Vector2UInt Window::Surface::RenderTarget::size() const noexcept
+	{
+		return _framebuffer ? (*_framebuffer)->size() : _surface->geometry().size;
 	}
 
 	void Window::Surface::RenderTarget::activate(RenderContext &context) const
 	{
-		if (context.targetSurface == nullptr)
+		if (context.targetSurface != _surface)
 		{
-			throw std::invalid_argument("Cannot activate a render target without a surface");
+			throw std::invalid_argument("RenderTarget belongs to a different surface");
 		}
 		if (_framebuffer)
 		{
@@ -46,6 +57,6 @@ namespace spk
 
 	Window::Surface::RenderTarget Window::Surface::defaultRenderTarget() const
 	{
-		return RenderTarget{};
+		return RenderTarget{const_cast<Surface &>(*this)};
 	}
 }
