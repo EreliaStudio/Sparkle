@@ -4,8 +4,8 @@
 #include <optional>
 
 #include "core/window.hpp"
-#include "graphics/opengl/texture.hpp"
 #include "diagnostics/profiler.hpp"
+#include "graphics/opengl/texture.hpp"
 
 namespace spk
 {
