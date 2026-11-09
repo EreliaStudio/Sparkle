@@ -1,7 +1,5 @@
 #include "internal/application_internal.hpp"
 
-#include <gl/gl.h>
-
 #include <utility>
 #include <variant>
 
