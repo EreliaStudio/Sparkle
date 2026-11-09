@@ -6,9 +6,9 @@
 #include <array>
 #include <atomic>
 #include <stdexcept>
-#include <vector>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "core/context/render_context.hpp"
 #include "core/platform/window.hpp"
@@ -214,10 +214,13 @@ TEST(WindowSurfaceTest, LateSubscriptionsAreRejectedAndCallbacksCanResign)
 {
 	HiddenNativeWindow frame;
 	spk::Window::Surface surface("surface-closing-contracts");
-	EXPECT_THROW((void)surface.subscribeToDestruction([] {}), std::logic_error);
+	EXPECT_THROW((void)surface.subscribeToDestruction([] {
+	}), std::logic_error);
 	surface.create(frame.native.window());
 	int calls = 0;
-	auto inactive = surface.subscribeToDestruction([&] { ++calls; });
+	auto inactive = surface.subscribeToDestruction([&] {
+		++calls;
+	});
 	inactive.resign();
 	auto active = surface.subscribeToDestruction([&] {
 		++calls;
