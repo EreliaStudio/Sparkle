@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "core/window_surface_render_target.hpp"
 #include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "rendering/command/clear_render_command.hpp"
@@ -42,6 +43,7 @@ namespace
 	struct TargetState
 	{
 		spk::Vector2UInt size;
+		spk::Window::Surface::RenderTarget::Type type;
 		std::array<GLint, 4> viewport{};
 		std::array<GLint, 4> scissor{};
 		GLboolean scissorEnabled = GL_FALSE;
@@ -60,7 +62,9 @@ namespace
 
 		void execute(spk::RenderContext &context) const override
 		{
-			TargetState state{.size = context.renderTargetSize()};
+			TargetState state{
+				.size = context.renderTargetSize(),
+				.type = context.activeRenderTarget.type()};
 			glGetIntegerv(GL_VIEWPORT, state.viewport.data());
 			glGetIntegerv(GL_SCISSOR_BOX, state.scissor.data());
 			state.scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
@@ -83,6 +87,32 @@ namespace
 		builder.renderPass({"clear", 0}).emplace<spk::ClearRenderCommand>(color, spk::ClearRenderCommand::Mask::Color);
 		return std::make_shared<spk::RenderSnapshot>(builder.build());
 	}
+}
+
+TEST(RenderToFramebufferCommandTest, SurfaceRenderTargetDistinguishesNativeAndOffscreen)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset({80, 60});
+	const auto defaultTarget = gl.surface().defaultRenderTarget();
+	EXPECT_EQ(defaultTarget.type(), spk::Window::Surface::RenderTarget::Type::Default);
+	EXPECT_EQ(defaultTarget.size(gl.surface()), spk::Vector2UInt(80, 60));
+	gl.setGeometry({.anchor = {0, 0}, .size = {48, 32}});
+	EXPECT_EQ(defaultTarget.size(gl.surface()), spk::Vector2UInt(48, 32));
+
+	spk::Framebuffer framebuffer({8, 6}, {spk::Texture::Format::RGBA}, std::nullopt);
+	const spk::Window::Surface::RenderTarget offscreen(framebuffer.handle());
+	EXPECT_EQ(offscreen.type(), spk::Window::Surface::RenderTarget::Type::Framebuffer);
+	EXPECT_EQ(offscreen.size(gl.surface()), spk::Vector2UInt(8, 6));
+
+	offscreen.activate(gl.renderContext());
+	GLint bound = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
+	EXPECT_GT(bound, 0);
+	defaultTarget.activate(gl.renderContext());
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
+	EXPECT_EQ(bound, 0);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
 }
 
 TEST(RenderToFramebufferCommandTest, RenderPassClearsTargetAndRestoresReadDrawAndViewport)
@@ -161,7 +191,9 @@ TEST(RenderToFramebufferCommandTest, NestedFailureRestoresReadDrawAndViewport)
 	glGetIntegerv(GL_SCISSOR_BOX, scissor.data());
 	EXPECT_EQ(scissor, (std::array<GLint, 4>{7, 8, 9, 10}));
 	EXPECT_EQ(glIsEnabled(GL_SCISSOR_TEST), GL_TRUE);
-	EXPECT_FALSE(gl.renderContext().activeRenderTargetSize.has_value());
+	EXPECT_EQ(
+		gl.renderContext().activeRenderTarget.type(),
+		spk::Window::Surface::RenderTarget::Type::Default);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
@@ -194,13 +226,16 @@ TEST(RenderToFramebufferCommandTest, NestedTargetsUseTheirOwnDimensionsAndRestor
 
 	ASSERT_EQ(states.size(), 3u);
 	EXPECT_EQ(states[0].size, spk::Vector2UInt(8, 6));
+	EXPECT_EQ(states[0].type, spk::Window::Surface::RenderTarget::Type::Framebuffer);
 	EXPECT_EQ(states[0].viewport, (std::array<GLint, 4>{1, 2, 4, 3}));
 	EXPECT_EQ(states[0].scissor, (std::array<GLint, 4>{2, 3, 2, 2}));
 	EXPECT_EQ(states[0].scissorEnabled, GL_TRUE);
 	EXPECT_EQ(states[1].size, spk::Vector2UInt(4, 4));
+	EXPECT_EQ(states[1].type, spk::Window::Surface::RenderTarget::Type::Framebuffer);
 	EXPECT_EQ(states[1].viewport, (std::array<GLint, 4>{0, 0, 4, 4}));
 	EXPECT_EQ(states[1].scissorEnabled, GL_FALSE);
 	EXPECT_EQ(states[2].size, states[0].size);
+	EXPECT_EQ(states[2].type, states[0].type);
 	EXPECT_EQ(states[2].viewport, states[0].viewport);
 	EXPECT_EQ(states[2].scissor, states[0].scissor);
 	EXPECT_EQ(states[2].scissorEnabled, GL_TRUE);
@@ -209,7 +244,9 @@ TEST(RenderToFramebufferCommandTest, NestedTargetsUseTheirOwnDimensionsAndRestor
 	glGetIntegerv(GL_SCISSOR_BOX, scissor.data());
 	EXPECT_EQ(scissor, (std::array<GLint, 4>{11, 12, 13, 14}));
 	EXPECT_EQ(glIsEnabled(GL_SCISSOR_TEST), GL_TRUE);
-	EXPECT_FALSE(gl.renderContext().activeRenderTargetSize.has_value());
+	EXPECT_EQ(
+		gl.renderContext().activeRenderTarget.type(),
+		spk::Window::Surface::RenderTarget::Type::Default);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
