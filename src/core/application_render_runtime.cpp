@@ -55,9 +55,7 @@ namespace spk
 		}
 		surface.makeCurrent();
 
-		spk::RenderContext context{
-			.targetSurface = &surface,
-			.profiler = surface.profiler()};
+		spk::RenderContext context{surface, surface.profiler()};
 
 		if (_renderFrameDuration == nullptr)
 		{
