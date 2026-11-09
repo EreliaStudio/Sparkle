@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
@@ -50,7 +51,7 @@ TEST(FramebufferTest, ConstructorRejectsInvalidSizesFormatsAndMissingAttachments
 		std::invalid_argument);
 	EXPECT_THROW(
 		(void)spk::Framebuffer({1, 1}, std::vector<Format>{}, std::nullopt),
-		std::invalid_argument);
+		spk::Exception);
 }
 
 TEST(FramebufferTest, ActivationCreatesCompleteMultipleColorFramebuffer)
