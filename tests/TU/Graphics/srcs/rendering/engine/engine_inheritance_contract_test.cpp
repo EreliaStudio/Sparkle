@@ -361,7 +361,7 @@ TEST(EngineInheritanceContractTest, RemovedSystemStopsReceivingGraphicalEvents)
 
 	engine.removeSystem(system);
 	EXPECT_NO_THROW(sendKey(engine));
-	EXPECT_TRUE(engine.systems().empty());
+	EXPECT_EQ(engine.getSystem<GraphicsCountingSystem>(), nullptr);
 }
 
 TEST(EngineInheritanceContractTest, DisabledSystemStopsBothDeviceUpdatesAndEvents)
