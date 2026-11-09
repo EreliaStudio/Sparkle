@@ -1,14 +1,19 @@
 #include <gtest/gtest.h>
 
+#include <GL/glew.h>
 #include <Windows.h>
 
+#include <array>
 #include <atomic>
 #include <stdexcept>
+#include <vector>
 #include <string>
 #include <type_traits>
 
+#include "core/context/render_context.hpp"
 #include "core/platform/window.hpp"
 #include "core/window.hpp"
+#include "graphics/opengl/framebuffer.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Window::Surface>);
 static_assert(!std::is_copy_assignable_v<spk::Window::Surface>);
@@ -166,4 +171,99 @@ TEST(WindowSurfaceTest, RepeatedSuccessfulCreateIsRejected)
 	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Ready);
 	EXPECT_NO_THROW(surface.makeCurrent());
 	surface.destroy();
+}
+
+TEST(WindowSurfaceTest, DestructionNotifiesEveryoneAndRethrowsFirstErrorAfterRelease)
+{
+	HiddenNativeWindow frame;
+	spk::Window::Surface surface("surface-closing-errors");
+	surface.create(frame.native.window());
+	surface.makeCurrent();
+	std::vector<int> events;
+	auto first = surface.subscribeToDestruction([&] {
+		EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Releasing);
+		events.push_back(1);
+	});
+	auto second = surface.subscribeToDestruction([&] {
+		events.push_back(2);
+		throw std::runtime_error("first subscriber error");
+	});
+	auto third = surface.subscribeToDestruction([&] {
+		events.push_back(3);
+		throw std::runtime_error("second subscriber error");
+	});
+	try
+	{
+		surface.destroy();
+		FAIL() << "Expected the first callback error";
+	} catch (const std::runtime_error &error)
+	{
+		EXPECT_STREQ(error.what(), "first subscriber error");
+	}
+	EXPECT_EQ(events, (std::vector<int>{1, 2, 3}));
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
+	EXPECT_EQ(::wglGetCurrentContext(), nullptr);
+	EXPECT_FALSE(first.isValid());
+	EXPECT_FALSE(second.isValid());
+	EXPECT_FALSE(third.isValid());
+	EXPECT_NO_THROW(surface.destroy());
+	EXPECT_EQ(events.size(), 3u);
+}
+
+TEST(WindowSurfaceTest, LateSubscriptionsAreRejectedAndCallbacksCanResign)
+{
+	HiddenNativeWindow frame;
+	spk::Window::Surface surface("surface-closing-contracts");
+	EXPECT_THROW((void)surface.subscribeToDestruction([] {}), std::logic_error);
+	surface.create(frame.native.window());
+	int calls = 0;
+	auto inactive = surface.subscribeToDestruction([&] { ++calls; });
+	inactive.resign();
+	auto active = surface.subscribeToDestruction([&] {
+		++calls;
+		EXPECT_THROW((void)surface.subscribeToDestruction([] {}), std::logic_error);
+	});
+	surface.destroy();
+	EXPECT_EQ(calls, 1);
+	EXPECT_FALSE(active.isValid());
+	EXPECT_THROW((void)surface.subscribeToDestruction([] {}), std::logic_error);
+	EXPECT_NO_THROW(surface.destroy());
+}
+
+TEST(WindowSurfaceTest, IndependentSurfacesNeverShareRenderTargetPixelContent)
+{
+	HiddenNativeWindow firstFrame;
+	HiddenNativeWindow secondFrame;
+	spk::Window::Surface first("surface-independent-A");
+	spk::Window::Surface second("surface-independent-B");
+	first.create(firstFrame.native.window());
+	second.create(secondFrame.native.window());
+	spk::RenderContext firstContext{.targetSurface = &first};
+	spk::RenderContext secondContext{.targetSurface = &second};
+	spk::Framebuffer target({2, 2}, {spk::Texture::Format::RGBA}, std::nullopt);
+	const auto clear = [&](spk::Window::Surface &surface, spk::RenderContext &context, float red) {
+		surface.makeCurrent();
+		target.activate(context);
+		glViewport(0, 0, 2, 2);
+		glClearColor(red, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	};
+	clear(first, firstContext, 1.0f);
+	clear(second, secondContext, 0.0f);
+	std::array<unsigned char, 4> pixel{};
+	first.makeCurrent();
+	target.activate(firstContext);
+	glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+	EXPECT_EQ(pixel[0], 255);
+	second.makeCurrent();
+	target.activate(secondContext);
+	glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+	EXPECT_EQ(pixel[0], 0);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	first.makeCurrent();
+	first._gpuResources().reclaimReleased();
+	second.makeCurrent();
+	second._gpuResources().reclaimReleased();
+	first.destroy();
+	second.destroy();
 }
