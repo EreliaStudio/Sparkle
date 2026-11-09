@@ -30,30 +30,35 @@ classDiagram
     +atRaw(position) uint32
     -grille compacte + registre partagé
   }
-  class Model {
+  class Geometry {
     +opaqueMesh()
     +transparentMesh()
+    +depthMesh()
     +materialSlots()
+    +isCompatible(palette) bool
     -données immuables partagées
   }
   class ShapeInstance {
     +triangles() const
   }
-  class OcclusionCache {
-    +find/store/clear
+  class OcclusionCacheAPI {
+    +get(key) Result
+    +clear()
   }
-  class VoxelMesher {
-    +bake(Volume) Model
-    +bind(OcclusionCache*) facultatif
+  class Mesher {
+    +bake(Volume) Geometry
+    +attachCache(cache)
   }
   Shape <-- Definition
   Definition <-- Cell
   Cell <-- Volume
   Shape *-- ShapeInstance : huit orientations
-  VoxelMesher ..> OcclusionCache : facultatif
-  Volume --> VoxelMesher
-  VoxelMesher --> Model
+  Mesher ..> OcclusionCacheAPI : facultatif
+  Volume --> Mesher
+  Mesher --> Geometry
 ```
+
+Dans ce diagramme, `OcclusionCacheAPI` représente `spk::Voxel::Occlusion::Cache` ; `Mesher` et `Geometry` sont dans le module Graphics, contrairement aux données voxel et à l’occlusion dans Core.
 
 ### 2.1 `spk::Voxel::Shape` : géométrie locale réutilisable
 
@@ -85,7 +90,7 @@ Chaque `Shape::Data` détient **huit `Shape::Instance` immuables** (`std::array<
 
 ### 2.2 `spk::Voxel::Definition` : sens des slots
 
-Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → `Definition::Slot`**, contenant un nom de slot sémantique destiné au Model et une opacité dans `[0,1]` (par défaut `1.0`). Elle ne contient pas de `Material` ; l'opacité est spécifique à chaque Definition et détermine l'occlusion.
+Une `Definition` immuable associe une `Shape` à une correspondance **slot géométrique de Shape → `Definition::Slot`**, contenant un nom de slot sémantique destiné à `Voxel::Geometry` et une opacité dans `[0,1]` (par défaut `1.0`). Elle ne contient pas de `Material` ; l'opacité est spécifique à chaque Definition et détermine l'occlusion.
 
 `Definition` utilise également des données immuables partagées (`shared_ptr<const Data>`) et conserve la durée de vie de sa Shape. Copier une Definition est léger. Une même Shape peut être réutilisée dans différentes Definitions pour produire des noms de slots sémantiques différents. Les huit `Shape::Instance` sont alors réellement communes à ces Definitions : le mapping sémantique est appliqué plus tard et ne modifie ni l'identité ni les polygones orientés de la Shape.
 

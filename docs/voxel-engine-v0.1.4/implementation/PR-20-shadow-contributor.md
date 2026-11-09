@@ -54,7 +54,7 @@ Contributor peut projeter n'importe quel Mesh opaque explicitement fourni par ut
 
 ## Hors périmètre
 
-shadows automatiques pour Assembly, cutout albedo, modes hérités.
+ombres automatiques issues de `Model3D::ObjectHeadless`, cutout albedo, modes hérités.
 
 ## Consigne de passation
 

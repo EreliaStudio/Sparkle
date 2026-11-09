@@ -180,12 +180,12 @@ namespace
 	{
 		using spk::JSON::Value;
 
-		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString("[1]")), std::runtime_error);
-		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString("[1,2,3]")), std::runtime_error);
-		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString(R"({"x":1})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector2::fromJSON(Value::fromString(R"({"x":"bad","y":2})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector2UInt::fromJSON(Value::fromString(R"({"x":-1,"y":2})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector2::fromJSON(Value::fromString("[1]")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector2::fromJSON(Value::fromString("[1,2,3]")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector2::fromJSON(Value::fromString(R"({"x":1})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector2::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector2::fromJSON(Value::fromString(R"({"x":"bad","y":2})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector2UInt::fromJSON(Value::fromString(R"({"x":-1,"y":2})")), std::runtime_error);
 		EXPECT_THROW(spk::Vector2(Value::fromString(R"({"x":1})")), std::runtime_error);
 	}
 

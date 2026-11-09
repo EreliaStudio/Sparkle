@@ -272,14 +272,14 @@ TEST(ObjectHeadlessTest, MovePreservesNodeAddressesAndOwners)
 	EXPECT_EQ(&sword.root(), swordRoot);
 	EXPECT_NEAR(sword.root().globalTransform()[3][0], transform[3][0], 0.0001f);
 	EXPECT_EQ(moved.root().children().size(), 2u);
-	EXPECT_THROW(original.root(), spk::Exception);
+	EXPECT_THROW((void)original.root(), spk::Exception);
 
 	spk::Model3D::ObjectHeadless replacement(swordAssembly());
 	replacement = std::move(moved);
 	EXPECT_EQ(&replacement.root(), root);
 	EXPECT_EQ(&replacement.element("arm"), arm);
 	EXPECT_EQ(&replacement.element("arm").instance(), &replacement);
-	EXPECT_THROW(moved.root(), spk::Exception);
+	EXPECT_THROW((void)moved.root(), spk::Exception);
 }
 
 TEST(ObjectHeadlessTest, AssignmentPreservesParentAttachmentAndRecomputesPose)
@@ -308,12 +308,12 @@ TEST(ObjectHeadlessTest, RejectsInvalidAttachmentsAndMoves)
 {
 	spk::Model3D::ObjectHeadless character(armAssembly());
 	auto &grip = character.attachment("body", "grip");
-	EXPECT_THROW(character.attachment("body", "missing"), spk::Exception);
-	EXPECT_THROW(character.element("missing"), spk::Exception);
-	EXPECT_THROW(grip.detach(character), spk::Exception);
+	EXPECT_THROW((void)character.attachment("body", "missing"), spk::Exception);
+	EXPECT_THROW((void)character.element("missing"), spk::Exception);
+	EXPECT_THROW((void)grip.detach(character), spk::Exception);
 	auto &sword = grip.attach(swordAssembly());
 	spk::Model3D::ObjectHeadless unrelated(swordAssembly());
-	EXPECT_THROW(grip.detach(unrelated), spk::Exception);
+	EXPECT_THROW((void)grip.detach(unrelated), spk::Exception);
 	EXPECT_THROW(grip.attach(std::move(sword)), spk::Exception);
 	EXPECT_THROW(grip.attach(std::move(character)), spk::Exception);
 	EXPECT_EQ(grip.attachedCount(), 1u);
@@ -368,7 +368,7 @@ TEST(ObjectHeadlessTest, CopiesAnAttachedInstanceAsIndependentRoot)
 	EXPECT_NEAR(copy.root().globalTransform()[3][0], 0.0f, 0.0001f);
 	EXPECT_NEAR(original.root().globalTransform()[3][0], attachedX, 0.0001f);
 	EXPECT_NEAR(copy.attachment("blade", "guard").rotationMatrix()[0][0], 0.0f, 0.0001f);
-	EXPECT_THROW(character.attachment("body", "shoulder").detach(original), spk::Exception);
+	EXPECT_THROW((void)character.attachment("body", "shoulder").detach(original), spk::Exception);
 	EXPECT_EQ(grip.attachedCount(), 1u);
 }
 

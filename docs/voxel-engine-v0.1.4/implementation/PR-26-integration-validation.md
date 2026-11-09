@@ -4,9 +4,9 @@
 >
 > **Branche source :** `impl/v0.1.4/26-integration-validation`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Vérifier collectivement toutes les fonctionnalités sans introduire une nouvelle architecture.
+**Objectif :** Vérifier collectivement toutes les fonctionnalités sans introduire une nouvelle architecture. La base articulaire validée est `Model3D`, et le résultat du mesher est `Voxel::Geometry` (voir [l'état consolidé](IMPLEMENTED-01-08.md)).
 
-**Prérequis :** [PR-04](PR-04-occlusion-cache.md), [PR-08](PR-08-assembly-hierarchy.md), [PR-14](PR-14-assembly-render.md), [PR-15](PR-15-material-view-source.md), [PR-16](PR-16-skybox-component.md), [PR-19](PR-19-forward-lighting.md), [PR-20](PR-20-shadow-contributor.md), [PR-21](PR-21-shadowresults-surfaces.md), [PR-22](PR-22-shadowmaps-spot-directional.md), [PR-23](PR-23-point-cubemaps.md), [PR-24](PR-24-point-shadow-budget.md), [PR-25](PR-25-wboit-hdr.md)
+**Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-08](PR-08-assembly-hierarchy.md), [PR-14](PR-14-assembly-render.md), [PR-15](PR-15-material-view-source.md), [PR-16](PR-16-skybox-component.md), [PR-19](PR-19-forward-lighting.md), [PR-20](PR-20-shadow-contributor.md), [PR-21](PR-21-shadowresults-surfaces.md), [PR-22](PR-22-shadowmaps-spot-directional.md), [PR-23](PR-23-point-cubemaps.md), [PR-24](PR-24-point-shadow-budget.md), [PR-25](PR-25-wboit-hdr.md)
 
 ## Spécifications normatives
 
@@ -24,7 +24,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] Scène intégrée Model/Assembly, deux vues, Materials de vues, Skybox, Ambient/Point/Spot/Directional, ShadowMap statique/dynamique, WBOIT, HDR/Reinhard, deux surfaces et cycles resize/fermeture
+- [ ] Scène intégrée `Model3D::Object` portant des géométries voxel rendues par PR-13/14, deux vues, Materials de vues, Skybox, Ambient/Point/Spot/Directional, ShadowMap statique/dynamique, WBOIT, HDR/Reinhard, deux surfaces et cycles resize/fermeture
 - [ ] documentation et packaging.
 
 ## Instructions techniques et intégration

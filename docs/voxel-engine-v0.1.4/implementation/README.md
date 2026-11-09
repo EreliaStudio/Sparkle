@@ -1,6 +1,6 @@
 # Sparkle v0.1.4 — Dossier de préparation des 26 PR
 
-Ce dossier contient **26 fiches de développement successives**, destinées à une IA implémenteuse. Ce sont des **plans**, pas des PR GitHub déjà créées. Aucun fichier C++ n'est modifié dans ce dossier.
+Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été fusionnées dans `V0.1.4`** ; leurs interfaces finales ont évolué. Les PR-09 à PR-26 sont à réaliser. Consulter [l'état consolidé des PR-01 à PR-08](IMPLEMENTED-01-08.md) avant de lancer une nouvelle PR.
 
 **Références :** [spécification normative](../../voxel-engine-v0.1.4-specification.md) · [PR documentaire #37](https://github.com/EreliaStudio/Sparkle/pull/37) · [dépendances](DEPENDENCIES.md) · [couverture des fonctionnalités](COVERAGE.md) · [prompt pour une IA](AI-HANDOFF.md).
 
@@ -10,18 +10,18 @@ Ce dossier contient **26 fiches de développement successives**, destinées à u
 |---|---|---|
 | [PR-01 — Shape, Definition et Cell](PR-01-voxel-foundations.md) | — | Constituer le modèle voxel public sans Engine et sans OpenGL. |
 | [PR-02 — Volume dense et Builder](PR-02-voxel-volume.md) | 01 | Éditer une grille voxel puis publier des snapshots immuables. |
-| [PR-03 — Clipping directionnel et OcclusionCache](PR-03-occlusion-cache.md) | 01 | Fournir le clipping CPU commun et un cache de résultats facultatif. |
-| [PR-04 — VoxelMesher, clipping et Model](PR-04-voxel-mesher-model.md) | 02, 03 | Produire un Model depuis Volume avec ou sans OcclusionCache. |
-| [PR-05 — AssetManager et AssetFactory typés](PR-05-asset-manager.md) | — | Charger et posséder des assets C++ génériques à identité stable. |
+| [PR-03 — Clipping directionnel et Occlusion::Cache](PR-03-occlusion-cache.md) | 01 | Fournir le clipping CPU commun et un cache de résultats facultatif. |
+| [PR-04 — Mesher et Geometry](PR-04-voxel-mesher-model.md) | 02, 03 | Produire `Voxel::Geometry` depuis `Volume` avec ou sans `Occlusion::Cache`. |
+| [PR-05 — Asset::Manager et Asset::Factory typés](PR-05-asset-manager.md) | — | Charger et posséder des assets C++ génériques à identité stable. |
 | [PR-06 — Material multi-rôles, Texture et SpriteSheet](PR-06-materials-json.md) | 05 | Construire des Materials immuables via Builder ou JSON. |
-| [PR-07 — VoxelPalette et compatibilité des Models](PR-07-voxel-palette.md) | 04, 06 | Associer les slots sémantiques de Models à des Materials sans rebake. |
-| [PR-08 — Voxel::Assembly par copie et expansion](PR-08-assembly-hierarchy.md) | 07 | Composer une hiérarchie de Parts animables sans Entity par Part. |
+| [PR-07 — Palette et compatibilité Geometry](PR-07-voxel-palette.md) | 04, 06 | Créer des palettes immuables et vérifier les slots de `Voxel::Geometry`. |
+| [PR-08 — Model3D Blueprint et Object](PR-08-assembly-hierarchy.md) | — | Définir des hiérarchies immuables, leurs occurrences articulées et le cache de vues graphiques génériques. |
 | [PR-09 — RenderingEngine : Engine et Contributors](PR-09-rendering-engine-inheritance.md) | — | Moderniser l'API moteur graphique tout en préservant le moteur headless. |
 | [PR-10 — EngineView, layers et sous-RenderSnapshots](PR-10-engineview-snapshot.md) | 09 | Construire des snapshots graphiques immuables ordonnés par vues. |
 | [PR-11 — Attachments partagés et ressources GPU par Surface](PR-11-gpu-attachments-surfaces.md) | — | Rendre sûrs Texture/Framebuffer versionnés et la récupération GPU en multifenêtres. |
 | [PR-12 — EngineWidget et première EngineView visible](PR-12-enginewidget-first-view.md) | 09, 10, 11 | Afficher une vue et sa sortie HDR finale dans un widget sans dessin voxel. |
-| [PR-13 — VoxelRenderingSystem et rendu de Model opaque](PR-13-voxel-render-first.md) | 04, 07, 10, 11, 12 | Dessiner un Model voxel texturé dans sa première EngineView. |
-| [PR-14 — AssemblyRenderingComponent et instancing articulé](PR-14-assembly-render.md) | 08, 13 | Afficher plusieurs Parts d'Assembly sans rémailler. |
+| [PR-13 — Premier rendu voxel opaque](PR-13-voxel-render-first.md) | 04, 07, 10, 11, 12 | Dessiner une `Voxel::Geometry` texturée avec sa palette dans une EngineView. |
+| [PR-14 — Rendu voxel articulé Model3D](PR-14-assembly-render.md) | 08, 13 | Afficher des éléments voxel articulés dans `Model3D::Object` sans rebake. |
 | [PR-15 — EngineView comme source de Material](PR-15-material-view-source.md) | 06, 10, 11, 12, 13 | Permettre l'usage de la sortie finale d'une EngineView par un Material dans une autre vue. |
 | [PR-16 — Skybox unlit à six Materials](PR-16-skybox-component.md) | 06, 10, 11, 12, 15 | Ajouter un Skybox générique comme composant RenderingComponent3D ordinaire. |
 | [PR-17 — Point, Spot, Directional et scores](PR-17-light-components.md) | 09 | Introduire les sources lumineuses directes et leur mathématique CPU. |
@@ -37,7 +37,7 @@ Ce dossier contient **26 fiches de développement successives**, destinées à u
 
 ## Règle Git — une branche indépendante par PR
 
-Chaque PR d'implémentation possède une **branche Git dédiée**, créée depuis la tête courante de `V0.1.4` **au moment de commencer** la fiche, et sa PR GitHub cible exclusivement `V0.1.4`.
+Chaque PR **restante** possède une **branche Git dédiée**, créée depuis la tête courante de `V0.1.4` **au moment de commencer** la fiche, et sa PR GitHub cible exclusivement `V0.1.4`.
 
 1. Pour PR-XX, créer `impl/v0.1.4/XX-nom-de-fiche` **depuis `V0.1.4`**, après fusion dans `V0.1.4` de tous ses prérequis. Ne pas créer les 26 branches en avance.
 2. Développer et tester sur cette branche, puis ouvrir une unique PR `impl/v0.1.4/XX-nom-de-fiche` → **`V0.1.4`**. Ne jamais committer l'implémentation directement sur `V0.1.4` ou `main`.
@@ -51,8 +51,8 @@ Chaque PR d'implémentation possède une **branche Git dédiée**, créée depui
 - Exécuter les tests CTest/GoogleTest pertinents en Debug et Release, Core Windows/Linux et Graphics Windows lorsque ces cibles sont touchées. Les images de référence nécessitent une revue humaine.
 - Réaliser une revue indépendante et obtenir accord du propriétaire pour chaque fusion.
 
-**Jalons :** PR01 huit Shape::Instance précalculées ; PR03 clipping et cache d'occlusion facultatif ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 Assembly articulée ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
+**Jalons :** PR01 huit Shape::Instance précalculées ; PR03 clipping et cache d'occlusion facultatif ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 rendu voxel articulé Model3D ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
 
 **Hors scope volontaire :** éviction automatique des caches de géométrie, raffinements adaptatifs d'ombres, Tiled Forward+, moteur de chunks, scheduling GPU global, optimisation SSBO incrémentale.
 
-**Ordre voxel révisé :** PR-01 crée les huit instances dans Shape ; PR-02 (Volume) et PR-03 (clipping + cache facultatif) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Model) attend les deux. Le Mesher sans cache recalcule seulement l'occlusion, jamais les orientations.
+**Ordre voxel révisé :** PR-01 crée les huit instances dans Shape ; PR-02 (Volume) et PR-03 (clipping + cache facultatif) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Geometry) attend les deux. Le Mesher sans cache recalcule seulement l'occlusion, jamais les orientations.

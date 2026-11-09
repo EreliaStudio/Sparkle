@@ -1,5 +1,7 @@
 # PR-02 — Volume dense et Builder
 
+> **État : livré dans `V0.1.4` (PR fusionnée).** Cette fiche conserve les étapes et checklists historiques. Les API finales et les décisions qui remplacent des éléments du plan figurent dans [IMPLEMENTED-01-08.md](IMPLEMENTED-01-08.md). Les cases non cochées ne désignent pas automatiquement du travail restant.
+
 > **PR GitHub active :** [Draft PR #41](https://github.com/EreliaStudio/Sparkle/pull/41). Ne pas fusionner sans validation du propriétaire.
 >
 > **Branche source :** `impl/v0.1.4/02-voxel-volume`, créée depuis `V0.1.4`. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
@@ -31,7 +33,7 @@ ID numérique externe stocké directement dans les 29 bits de chaque cellule, sa
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
-## Architecture validée : registres immuables et IDs directs
+## Architecture effectivement livrée : registres immuables et IDs directs
 
 - **`Shape::Registry`** associe `std::string → Shape`. `Shape::Builder` est construit sans argument et utilise `addFromJSON(value)` pour le chargement JSON, sans constructeur JSON. `Shape::Registry::Builder` hérite de `spk::JSON::Catalog<Shape, std::string>` et propose `add`, `load`, `build()`.
 - **`Definition::Registry`** associe `std::uint32_t → Definition` avec un ID 0 implicitement Air et des IDs explicites limités à 29 bits. `Definition::Registry::Builder` possède seulement un constructeur par défaut et reçoit les Shapes par `bind(shapes)` ; il hérite de `spk::JSON::Catalog<Definition, std::uint32_t>`, peut lier un Shape Registry, charger du JSON et publier un snapshot via `build()`.

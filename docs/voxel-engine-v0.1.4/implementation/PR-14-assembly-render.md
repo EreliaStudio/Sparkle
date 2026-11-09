@@ -1,59 +1,37 @@
-# PR-14 — AssemblyRenderingComponent et instancing articulé
+# PR-14 — Intégration du rendu voxel dans Model3D (à réaliser)
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
->
-> **Branche source :** `impl/v0.1.4/14-assembly-render`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche prévue :** `impl/v0.1.4/14-assembly-render` depuis la tête courante de `V0.1.4`, PR vers `V0.1.4`. Le nom de branche peut rester historique ; l'API ne doit pas l'être.
 
-**Objectif :** Afficher plusieurs Parts d'Assembly sans rémailler.
+**Objectif :** réutiliser le rendu voxel de PR-13 pour les éléments articulés de `Model3D::Object`, sans remailler lorsqu'un AttachmentPoint tourne.
 
-**Prérequis :** [PR-08](PR-08-assembly-hierarchy.md), [PR-13](PR-13-voxel-render-first.md)
+**Prérequis :** [PR-08 — Model3D](PR-08-assembly-hierarchy.md), [PR-13 — rendu voxel](PR-13-voxel-render-first.md).
 
-## Spécifications normatives
+## Spécifications
 
-- [06-assemblies-scene.md](../06-assemblies-scene.md)
-- [09-pipeline-gpu-transparence.md](../09-pipeline-gpu-transparence.md)
-- [07-vues-et-passes.md](../07-vues-et-passes.md)
-- [10-contrats-et-validation.md](../10-contrats-et-validation.md)
-- [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
-- [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
+- [Architecture actuelle Model3D](../06-assemblies-scene.md)
+- [GPU, buckets et instancing](../09-pipeline-gpu-transparence.md)
+- [État PR-01 à PR-08](IMPLEMENTED-01-08.md)
+- [Contrats de validation](../10-contrats-et-validation.md)
 
-## Périmètre exact à réaliser
+## Périmètre attendu
 
-- [ ] AssemblyRenderingComponent non propriétaire
-- [ ] capture des Parts et de leurs matrices
-- [ ] M_entityWorld * M_assembly * M_partAccumulate
-- [ ] regroupement de buckets compatibles dans VoxelRenderingSystem.
-
-## Instructions techniques et intégration
-
-Réutiliser le rendu PR13; chaque vue refait sa collecte; matrices capturées avant GPU; pas d'Entity par Part ni SSBO partagé entre deux snapshots; préserver layer du component et validation de compatibilité palette.
-
-Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
+- [ ] Définir un élément `Model3D::Blueprint::Element` portant ou référençant un `Voxel::Volume`, ou adapter un type utilisateur ; **`Voxel::Volume` n'hérite pas automatiquement de `Element`**.
+- [ ] Définir la vue graphique de cet élément respectant `Model3D::ObjectGraphics` ou une extension explicitement validée, et réutiliser les commandes voxel PR-13.
+- [ ] Capturer les transformations des `ElementNode` et sous-objets attachés avec la matrice commune fournie à `Object<TGraphics>::buildRenderSnapshot(builder, transform)`.
+- [ ] Mettre en cache les `Voxel::Geometry` indépendamment des poses ; nouvelle rotation = nouvelle matrice d'instance uniquement.
+- [ ] Configurer les palettes au niveau des occurrences graphiques, vérifier `Geometry::isCompatible`, et séparer les buckets lorsque nécessaire.
+- [ ] Conserver des snapshots graphiques autonomes, sans lire la pose mutable durant `RenderCommand::execute()`.
 
 ## Tests obligatoires
 
-- [ ] Golden bras/torse articulé
-- [ ] transformation parent + enfant non commutatives
-- [ ] reparentage
-- [ ] deux Parts même mesh à transforms différents
-- [ ] palette différente implique bucket distinct
-- [ ] anciennes captures inchangées.
-
-**Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
-
-## Définition de terminé / critère de fusion
-
-Une scène d'Assembly animée reste stable et instanciée.
-
-- [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
-- [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
-- [ ] La PR présente le périmètre, les tests réellement exécutés et les résultats, les screenshots/diffs si graphiques, et les limitations éventuelles.
-- [ ] Aucune fusion sans validation du propriétaire.
+- [ ] Golden 3D articulé avec **de vrais `Voxel::Volume`** (torse, bras, jambes, et objet attaché) ; comparer plusieurs poses.
+- [ ] Rotations parent/enfant non commutatives, et vérification que le même mesh est partagé entre deux occurrences.
+- [ ] Après rotation, aucun nouveau bake ; après remplacement de la géométrie, nouveau bake/capture nécessaires.
+- [ ] Deux palettes compatibles distinctes sur une même géométrie ; buckets séparés si atlas/mapping incompatibles.
+- [ ] Détachement/réattachement d'un sous-objet sans pixels fantômes ; anciens snapshots inchangés.
 
 ## Hors périmètre
 
-rebake sur animation, ombres liées automatiquement.
+Anciennes API `Voxel::Assembly`, `PartID`, reparentage par expansion, `AssemblyRenderingComponent` imposé, ombres automatiques, système d'animation temporelle.
 
-## Consigne de passation
-
-Confier **uniquement PR-14** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+**Définition de terminé :** une hiérarchie `Model3D` rend des voxels texturés articulés avec instancing et cache de géométrie.

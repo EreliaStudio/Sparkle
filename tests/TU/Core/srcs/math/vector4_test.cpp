@@ -172,12 +172,12 @@ namespace
 	TEST(Vector4Test, FromJSONRejectsInvalidNamedCoordinates)
 	{
 		using spk::JSON::Value;
-		EXPECT_THROW(spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":4,"k":5})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":"invalid"})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector4UInt::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":-4})")), std::runtime_error);
-		EXPECT_THROW(spk::Vector4::fromJSON(Value::fromString("[1,2,3]")), std::runtime_error);
-		EXPECT_THROW(spk::Vector4::fromJSON(Value::fromString("[1,2,3,4,5]")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":4,"k":5})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":"invalid"})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4UInt::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":-4})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString("[1,2,3]")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString("[1,2,3,4,5]")), std::runtime_error);
 		EXPECT_THROW((void)spk::Vector4(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
 	}
 
