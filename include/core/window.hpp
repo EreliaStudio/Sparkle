@@ -121,8 +121,6 @@ namespace spk
 			using DestructionContract = ContractProvider<>::Contract;
 
 		private:
-
-		private:
 			struct Impl;
 			std::unique_ptr<Impl> _impl;
 
