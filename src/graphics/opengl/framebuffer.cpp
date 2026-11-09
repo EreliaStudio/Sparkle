@@ -95,8 +95,8 @@ namespace spk
 				throw Exception("Framebuffer depth attachment handle is invalid or already attached");
 			}
 			const auto &value = depth->state();
-			const bool invalidCube = value.target() == Texture::Target::TextureCubeMap &&
-								 (config._size.x != config._size.y || !Texture::isDepthFormat(value.format()));
+			const bool cube = value.target() == Texture::Target::TextureCubeMap;
+			const bool invalidCube = cube && (config._size.x != config._size.y || !Texture::isDepthFormat(value.format()));
 			if (value.contentSource() != Texture::ContentSource::RenderTarget ||
 				value.size() != config._size ||
 				(!Texture::isDepthFormat(value.format()) && !Texture::isDepthStencilFormat(value.format())) ||
