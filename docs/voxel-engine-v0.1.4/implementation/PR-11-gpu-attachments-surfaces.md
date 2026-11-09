@@ -146,8 +146,7 @@ Le type concret est défini dans le header graphique
 `core/window_surface_render_target.hpp`, sans ajout de GLEW
 à `core/window.hpp`. `RenderContext` doit être construit avec une
 Surface valide ; il initialise automatiquement `activeRenderTarget`
-sur la cible native de cette Surface. `renderTargetSize()` délègue à
-`activeRenderTarget.size()`.
+sur la cible native de cette Surface. `activeRenderTarget.size()` expose directement la taille de la cible active.
 
 Point essentiel pour les threads : `RenderToFramebufferCommand` ne
 capture **pas** de `RenderTarget` ni de pointeur vers une Surface.
