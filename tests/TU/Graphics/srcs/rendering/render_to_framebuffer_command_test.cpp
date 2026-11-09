@@ -49,9 +49,7 @@ namespace
 	[[nodiscard]] std::shared_ptr<const spk::RenderSnapshot> makeClearSnapshot(spk::Color color)
 	{
 		spk::RenderSnapshot::Builder builder;
-		builder.renderPass({"clear", 0}).emplace<spk::ClearRenderCommand>(
-			color,
-			spk::ClearRenderCommand::Mask::Color);
+		builder.renderPass({"clear", 0}).emplace<spk::ClearRenderCommand>(color, spk::ClearRenderCommand::Mask::Color);
 		return std::make_shared<spk::RenderSnapshot>(builder.build());
 	}
 }
@@ -71,20 +69,15 @@ TEST(RenderToFramebufferCommandTest, RenderPassClearsTargetAndRestoresReadDrawAn
 
 	std::vector<std::array<GLint, 5>> states;
 	spk::RenderSnapshot::Builder nested;
-	nested.renderPass({"clear", 0}).emplace<spk::ClearRenderCommand>(
-		spk::Color{0.25f, 0.5f, 0.75f, 1.0f},
-		spk::ClearRenderCommand::Mask::Color);
+	nested.renderPass({"clear", 0}).emplace<spk::ClearRenderCommand>(spk::Color{0.25f, 0.5f, 0.75f, 1.0f}, spk::ClearRenderCommand::Mask::Color);
 	nested.renderPass({"inspect", 1}).emplace<InspectFramebufferCommand>(states);
 	spk::RenderSnapshot::Builder outer;
-	outer.renderPass({"offscreen", 0}).emplace<spk::RenderToFramebufferCommand>(
-		target.handle(),
-		std::make_shared<spk::RenderSnapshot>(nested.build()));
+	outer.renderPass({"offscreen", 0}).emplace<spk::RenderToFramebufferCommand>(target.handle(), std::make_shared<spk::RenderSnapshot>(nested.build()));
 	outer.build().execute(gl.renderContext());
 
 	ASSERT_EQ(states.size(), 1u);
 	EXPECT_GT(states[0][0], 0);
-	EXPECT_EQ((std::array<GLint, 4>{states[0][1], states[0][2], states[0][3], states[0][4]}),
-			  (std::array<GLint, 4>{0, 0, 4, 3}));
+	EXPECT_EQ((std::array<GLint, 4>{states[0][1], states[0][2], states[0][3], states[0][4]}), (std::array<GLint, 4>{0, 0, 4, 3}));
 	GLint draw = -1, read = -1;
 	std::array<GLint, 4> viewport{};
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
