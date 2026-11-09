@@ -48,6 +48,5 @@ namespace spk
 			activeRenderTarget(surface.defaultRenderTarget())
 		{
 		}
-
 	};
 }
