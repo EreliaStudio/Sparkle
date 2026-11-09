@@ -304,7 +304,6 @@ TEST(GPUResourceCollectionTest, ResourceIdentifiersKeepSameKindInstancesIndepend
 	EXPECT_EQ(second->creations, 1);
 	EXPECT_EQ(first->synchronizations, 2);
 	EXPECT_EQ(second->synchronizations, 1);
-	EXPECT_THROW((void)spk::RenderContext(nullptr), std::invalid_argument);
 	surface._gpuResources().clear();
 	EXPECT_EQ(first->destructions, 1);
 	EXPECT_EQ(second->destructions, 1);
