@@ -284,8 +284,8 @@ TEST(WindowSurfaceTest, ReleasedSurfacesRejectHandleMaterialization)
 {
 	spk::Window::Surface surface("surface-released-resource");
 	spk::RenderContext context{surface};
-	auto target = spk::Texture::createRenderTarget(spk::Texture::Target::Texture2D, {4, 4}, spk::Texture::Format::RGBA);
+	auto target = spk::Framebuffer::RenderAttachment::create2D({4, 4}, spk::Texture::Format::RGBA);
 	surface.destroy();
 	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
-	EXPECT_THROW(target.handle().activate(context), spk::Exception);
+	EXPECT_THROW(target.texture().activate(context), spk::Exception);
 }
