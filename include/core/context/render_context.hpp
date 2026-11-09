@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include "core/window.hpp"
+#include "graphics/opengl/texture.hpp"
 #include "diagnostics/profiler.hpp"
 
 namespace spk
@@ -36,6 +38,7 @@ namespace spk
 
 	public:
 		Window::Surface *targetSurface;
+		std::optional<Texture::CubeFace> framebufferCubeFace = std::nullopt;
 		Profiler &profiler = Profiler::defaultProfiler();
 		ActiveProgram _activeProgram{};
 	};
