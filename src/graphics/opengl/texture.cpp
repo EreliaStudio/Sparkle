@@ -171,9 +171,9 @@ namespace spk
 		{
 			throw Exception("Render target dimensions must be nonzero and representable by OpenGL");
 		}
-		if (target == Target::TextureCubeMap && (size.x != size.y || !isDepthFormat(format)))
+		if (target == Target::TextureCubeMap && size.x != size.y)
 		{
-			throw Exception("Render target cubemap requires square faces and a depth format");
+			throw Exception("Render target cubemap requires square faces");
 		}
 		if (!isColorFormat(format) && !isDepthFormat(format) && !isDepthStencilFormat(format))
 		{
