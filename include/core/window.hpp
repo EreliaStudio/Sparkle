@@ -118,6 +118,7 @@ namespace spk
 			friend class GPUResource;
 
 		public:
+			class RenderTarget;
 			using DestructionContract = ContractProvider<>::Contract;
 
 		private:
@@ -142,6 +143,7 @@ namespace spk
 
 			void setGeometry(const spk::Rect2D &geometry) noexcept;
 			[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
+			[[nodiscard]] RenderTarget defaultRenderTarget() const;
 
 			[[nodiscard]] GPUResourceCollection &_gpuResources();
 			void setProfiler(Profiler *profiler) noexcept;
