@@ -125,7 +125,7 @@ namespace
 TEST(EngineWidgetIntegrationTest, EveryActiveAndPassiveEventHandlesInactiveNullAndReplacementStates)
 {
 	const std::vector<std::string> expected{"WindowResized", "WindowMoved", "WindowFocusGained", "WindowFocusLost", "MouseEntered", "MouseLeft", "MouseMoved", "MouseWheelScrolled", "MouseButtonPressed", "MouseButtonReleased", "MouseButtonDoubleClicked", "KeyPressed", "KeyReleased", "TextInput", "PassiveMouseMoved", "PassiveMouseButtonPressed", "PassiveKeyPressed", "PassiveKeyReleased"};
-	spk::Engine first, second;
+	spk::RenderingEngine first, second;
 	auto &a = first.root().addBehaviour<Events>();
 	auto &b = second.root().addBehaviour<Events>();
 	spk::EngineWidget widget("EngineWidget", nullptr);
@@ -157,7 +157,7 @@ TEST(EngineWidgetIntegrationTest, EveryActiveAndPassiveEventHandlesInactiveNullA
 TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachmentRespectLifetime)
 {
 	std::vector<int> log;
-	auto engine = std::make_unique<spk::Engine>();
+	auto engine = std::make_unique<spk::RenderingEngine>();
 	auto &behaviour = engine->root().addBehaviour<Rendering>();
 	behaviour.log = &log;
 	spk::EngineWidget widget("RenderingWidget", nullptr);

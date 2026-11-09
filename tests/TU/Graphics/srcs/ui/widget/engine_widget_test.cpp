@@ -135,7 +135,7 @@ TEST(EngineWidgetTest, NullEngineUpdateAndSnapshotAreNoOps)
 TEST(EngineWidgetTest, UpdateAndInteractionAreForwardedToAttachedEngine)
 {
 	spk::Widget parent("Parent", nullptr);
-	spk::Engine engine;
+	spk::RenderingEngine engine;
 	auto &behaviour = engine.root().addBehaviour<RecordingBehaviour>();
 	spk::EngineWidget widget("EngineWidget", &parent);
 	widget.setEngine(&engine);
