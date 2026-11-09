@@ -37,9 +37,29 @@ namespace spk
 		}
 	};
 
-	Texture::Handle Framebuffer::_makeAttachment(const Vector2UInt &size, Texture::Format format)
+	Framebuffer::RenderAttachment::RenderAttachment(
+		Texture::Handle texture,
+		std::optional<CubeMap::Face> face) :
+		_texture(std::move(texture)),
+		_face(face)
 	{
-		return Texture::createRenderTarget(Texture::Target::Texture2D, size, format).handle();
+	}
+
+	Framebuffer::RenderAttachment Framebuffer::RenderAttachment::create2D(
+		const Vector2UInt &size,
+		Texture::Format format)
+	{
+		return RenderAttachment(Texture::_createRenderAttachment(Texture::Target::Texture2D, size, format).handle());
+	}
+
+	const Texture::Handle &Framebuffer::RenderAttachment::texture() const noexcept
+	{
+		return _texture;
+	}
+
+	std::optional<CubeMap::Face> Framebuffer::RenderAttachment::face() const noexcept
+	{
+		return _face;
 	}
 
 	GLenum Framebuffer::_depthAttachmentPoint(Texture::Format format)
@@ -77,8 +97,8 @@ namespace spk
 			throw Exception("Framebuffer requires at least one attachment");
 		}
 		std::unordered_set<GPUResource::Identifier> identities;
-		const auto validate = [&](const Attachment &attachment, bool color) {
-			const auto &texture = attachment.texture;
+		const auto validate = [&](const RenderAttachment &attachment, bool color) {
+			const auto &texture = attachment.texture();
 			if (!texture || !identities.insert(texture.identifier()).second)
 			{
 				throw Exception("Framebuffer attachment handle is missing or duplicated");
@@ -88,9 +108,9 @@ namespace spk
 			const bool formatValid = color ? Texture::isColorFormat(texture->format())
 										   : Texture::isDepthFormat(texture->format()) ||
 												 Texture::isDepthStencilFormat(texture->format());
-			const bool faceValid = cube == attachment.face.has_value() &&
-								   (!attachment.face || static_cast<unsigned int>(*attachment.face) < 6);
-			if (texture->contentSource() != Texture::ContentSource::RenderTarget ||
+			const bool faceValid = cube == attachment.face().has_value() &&
+								   (!attachment.face() || static_cast<unsigned int>(*attachment.face()) < 6);
+			if (texture->contentSource() != Texture::ContentSource::RenderAttachment ||
 				texture->size() != config._size || !targetValid || !formatValid || !faceValid)
 			{
 				throw Exception("Framebuffer attachment has an incompatible format, target, face or size");
@@ -113,12 +133,12 @@ namespace spk
 		colors.reserve(config._colorAttachments.size());
 		for (const auto &attachment : config._colorAttachments)
 		{
-			colors.push_back(Texture(attachment.texture, nullptr));
+			colors.push_back(Texture(attachment.texture(), nullptr));
 		}
 		std::optional<Texture> depth;
 		if (config._depthStencilAttachment)
 		{
-			depth = Texture(config._depthStencilAttachment->texture, nullptr);
+			depth = Texture(config._depthStencilAttachment->texture(), nullptr);
 		}
 		_colorViews = std::move(colors);
 		_depthView = std::move(depth);
@@ -134,10 +154,10 @@ namespace spk
 		const bool cubeColor = std::any_of(
 			_colorAttachments.begin(),
 			_colorAttachments.end(),
-			[](const Attachment &attachment) {
-				return attachment.face.has_value();
+			[](const RenderAttachment &attachment) {
+				return attachment.face().has_value();
 			});
-		return cubeColor || (_depthStencilAttachment && _depthStencilAttachment->face.has_value());
+		return cubeColor || (_depthStencilAttachment && _depthStencilAttachment->face().has_value());
 	}
 
 	void Framebuffer::State::_validateCapabilities() const
@@ -173,13 +193,13 @@ namespace spk
 			if (index < _colorAttachments.size())
 			{
 				const auto &attachment = _colorAttachments[index];
-				attachment.texture.activate(context);
+				attachment.texture().activate(context);
 				GLint value = 0;
-				glGetIntegerv(attachment.face ? GL_TEXTURE_BINDING_CUBE_MAP : GL_TEXTURE_BINDING_2D, &value);
+				glGetIntegerv(attachment.face() ? GL_TEXTURE_BINDING_CUBE_MAP : GL_TEXTURE_BINDING_2D, &value);
 				identifier = static_cast<GLuint>(value);
-				if (attachment.face)
+				if (attachment.face())
 				{
-					target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + static_cast<GLenum>(*attachment.face);
+					target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + static_cast<GLenum>(*attachment.face());
 				}
 			}
 			glFramebufferTexture2D(
@@ -204,13 +224,13 @@ namespace spk
 			return;
 		}
 		const auto &attachment = *_depthStencilAttachment;
-		attachment.texture.activate(context);
+		attachment.texture().activate(context);
 		GLint identifier = 0;
-		glGetIntegerv(attachment.face ? GL_TEXTURE_BINDING_CUBE_MAP : GL_TEXTURE_BINDING_2D, &identifier);
-		const GLenum target = attachment.face
-								  ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + static_cast<GLenum>(*attachment.face)
+		glGetIntegerv(attachment.face() ? GL_TEXTURE_BINDING_CUBE_MAP : GL_TEXTURE_BINDING_2D, &identifier);
+		const GLenum target = attachment.face()
+								  ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + static_cast<GLenum>(*attachment.face())
 								  : GL_TEXTURE_2D;
-		const GLenum point = _depthAttachmentPoint(attachment.texture->format());
+		const GLenum point = _depthAttachmentPoint(attachment.texture()->format());
 		glFramebufferTexture2D(GL_FRAMEBUFFER, point, target, static_cast<GLuint>(identifier), 0);
 		instance.depthAttachmentPoint = point;
 	}
@@ -288,12 +308,12 @@ namespace spk
 			{
 				throw std::invalid_argument("Framebuffer color attachment requires a color format");
 			}
-			config._colorAttachments.push_back({_makeAttachment(size, format), std::nullopt});
+			config._colorAttachments.push_back(RenderAttachment::create2D(size, format));
 		}
 		if (depthStencilFormat)
 		{
 			(void)_depthAttachmentPoint(*depthStencilFormat);
-			config._depthStencilAttachment = Attachment{_makeAttachment(size, *depthStencilFormat), std::nullopt};
+			config._depthStencilAttachment = RenderAttachment::create2D(size, *depthStencilFormat);
 		}
 		_validateAttachments();
 		_refreshViews();
@@ -315,7 +335,7 @@ namespace spk
 		}
 		if (depthStencilAttachment)
 		{
-			config._depthStencilAttachment = Attachment{std::move(*depthStencilAttachment), std::nullopt};
+			config._depthStencilAttachment = RenderAttachment{std::move(*depthStencilAttachment), std::nullopt};
 		}
 		config._sharedAttachments = true;
 		_validateAttachments();
@@ -325,8 +345,8 @@ namespace spk
 
 	Framebuffer::Framebuffer(
 		const Vector2UInt &size,
-		std::vector<Attachment> colorAttachments,
-		std::optional<Attachment> depthStencilAttachment) :
+		std::vector<RenderAttachment> colorAttachments,
+		std::optional<RenderAttachment> depthStencilAttachment) :
 		GPUResource(std::shared_ptr<State>(new State()))
 	{
 		auto &config = state<State>();
@@ -354,10 +374,10 @@ namespace spk
 		std::vector<Texture::Format> colors;
 		for (const auto &attachment : config._colorAttachments)
 		{
-			colors.push_back(attachment.texture->format());
+			colors.push_back(attachment.texture()->format());
 		}
 		const auto depth = config._depthStencilAttachment
-							   ? std::optional<Texture::Format>(config._depthStencilAttachment->texture->format())
+							   ? std::optional<Texture::Format>(config._depthStencilAttachment->texture()->format())
 							   : std::nullopt;
 		Framebuffer replacement(size, std::move(colors), depth);
 		*this = std::move(replacement);
@@ -385,12 +405,12 @@ namespace spk
 
 	const Texture::Handle &Framebuffer::colorAttachmentHandle(std::size_t index) const
 	{
-		return state<State>()._colorAttachments.at(index).texture;
+		return state<State>()._colorAttachments.at(index).texture();
 	}
 
 	std::optional<Texture::Handle> Framebuffer::depthStencilAttachmentHandle() const noexcept
 	{
 		const auto &attachment = state<State>()._depthStencilAttachment;
-		return attachment ? std::optional<Texture::Handle>(attachment->texture) : std::nullopt;
+		return attachment ? std::optional<Texture::Handle>(attachment->texture()) : std::nullopt;
 	}
 }
