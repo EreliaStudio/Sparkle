@@ -98,6 +98,7 @@ TEST(RenderToFramebufferCommandTest, SurfaceRenderTargetDistinguishesNativeAndOf
 	EXPECT_EQ(defaultTarget.size(gl.surface()), spk::Vector2UInt(80, 60));
 	gl.setGeometry({.anchor = {0, 0}, .size = {48, 32}});
 	EXPECT_EQ(defaultTarget.size(gl.surface()), spk::Vector2UInt(48, 32));
+	EXPECT_EQ(gl.renderContext().renderTargetSize(), spk::Vector2UInt(48, 32));
 
 	spk::Framebuffer framebuffer({8, 6}, {spk::Texture::Format::RGBA}, std::nullopt);
 	const spk::Window::Surface::RenderTarget offscreen(framebuffer.handle());
@@ -195,6 +196,37 @@ TEST(RenderToFramebufferCommandTest, NestedFailureRestoresReadDrawAndViewport)
 		gl.renderContext().activeRenderTarget.type(),
 		spk::Window::Surface::RenderTarget::Type::Default);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+}
+
+TEST(RenderToFramebufferCommandTest, NestedCommandsRestorePreviouslyActiveOffscreenTarget)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset();
+	spk::Framebuffer previous({9, 7}, {spk::Texture::Format::RGBA}, std::nullopt);
+	spk::Framebuffer nested({4, 4}, {spk::Texture::Format::RGBA}, std::nullopt);
+	auto &context = gl.renderContext();
+	const spk::Window::Surface::RenderTarget previousTarget(previous.handle());
+	previousTarget.activate(context);
+	context.activeRenderTarget = previousTarget;
+
+	spk::RenderToFramebufferCommand(nested.handle(), makeClearSnapshot({0, 0, 0, 1}))
+		.execute(context);
+	EXPECT_EQ(context.renderTargetSize(), spk::Vector2UInt(9, 7));
+	EXPECT_EQ(context.activeRenderTarget.type(), spk::Window::Surface::RenderTarget::Type::Framebuffer);
+
+	spk::RenderSnapshot::Builder failing;
+	failing.renderPass({"failure", 0}).emplace<FailingFramebufferCommand>();
+	const auto failure = std::make_shared<spk::RenderSnapshot>(failing.build());
+	EXPECT_THROW(
+		spk::RenderToFramebufferCommand(nested.handle(), failure).execute(context),
+		spk::Exception);
+	EXPECT_EQ(context.renderTargetSize(), spk::Vector2UInt(9, 7));
+	GLint bound = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
+	EXPECT_GT(bound, 0);
+
+	context.activeRenderTarget = gl.surface().defaultRenderTarget();
+	gl.reset();
 }
 
 TEST(RenderToFramebufferCommandTest, NestedTargetsUseTheirOwnDimensionsAndRestoreOuterScissor)
