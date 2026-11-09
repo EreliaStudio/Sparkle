@@ -8,9 +8,11 @@
 #include "core/context/render_context.hpp"
 #include "core/context/update_context.hpp"
 #include "engine/engine_headless.hpp"
+#include "engine/entity3d.hpp"
 #include "input/device_context.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
+#include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
@@ -77,12 +79,12 @@ namespace
 			++keyEvents;
 		}
 
-		void _buildRenderSnapshot(
-			spk::RenderSnapshot::Builder &builder) override
+		void buildViewRenderSnapshot(
+			spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) override
 		{
 			if (renderLog != nullptr)
 			{
-				builder.renderPass(spk::Engine::SceneRenderPassKey)
+				builder.renderPass(spk::EngineView::OpaquePassKey)
 					.emplace<MarkCommand>(*renderLog, _marker);
 			}
 		}
@@ -167,6 +169,10 @@ TEST(RenderingEngineTest, EventsReachOnlyRenderingExtensions)
 TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 {
 	spk::Engine engine;
+	spk::Entity3D cameraEntity("camera");
+	auto &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+	engine.addEntity(&cameraEntity);
+	engine.addView("test", &camera, {64, 64});
 	ProbeEntity entity("entity");
 	auto &component = entity.addComponent<ProbeComponent>("component");
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
@@ -179,10 +185,9 @@ TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 	behaviour.renderLog = &log;
 	system.renderLog = &log;
 
-	spk::RenderSnapshot::Builder builder;
-	engine.buildRenderSnapshot(builder);
+	engine.refreshRenderSnapshot();
 	spk::RenderContext renderContext{.targetSurface = nullptr};
-	builder.build().execute(renderContext);
+	engine.latestRenderSnapshot()->execute(renderContext);
 
 	EXPECT_EQ(
 		log,
@@ -231,6 +236,10 @@ TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
 TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 {
 	spk::Engine engine;
+	spk::Entity3D cameraEntity("camera");
+	auto &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+	engine.addEntity(&cameraEntity);
+	engine.addView("test", &camera, {64, 64});
 	ProbeEntity entity("entity");
 	auto &component = entity.addComponent<ProbeComponent>("component");
 	auto &behaviour = entity.addBehaviour<ProbeBehaviour>("behaviour");
@@ -250,10 +259,9 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 	component.renderLog = &log;
 	behaviour.renderLog = &log;
 	system.renderLog = &log;
-	spk::RenderSnapshot::Builder builder;
-	engine.buildRenderSnapshot(builder);
+	engine.refreshRenderSnapshot();
 	spk::RenderContext renderContext{.targetSurface = nullptr};
-	builder.build().execute(renderContext);
+	engine.latestRenderSnapshot()->execute(renderContext);
 
 	EXPECT_EQ(entity.deviceUpdates, 0u);
 	EXPECT_EQ(component.deviceUpdates, 0u);

@@ -3,6 +3,8 @@
 #include <stdexcept>
 
 #include "engine/transform3d.hpp"
+#include "exception.hpp"
+#include "rendering/engine/engine.hpp"
 
 namespace spk
 {
@@ -66,4 +68,34 @@ namespace spk
 	{
 		return projectionMatrix() * viewMatrix();
 	}
+	EngineView &CameraComponent3D::view(const std::string &name)
+	{
+		auto *engine = dynamic_cast<Engine *>(context());
+		if (engine == nullptr)
+		{
+			throw spk::Exception("CameraComponent3D is not attached to a graphical Engine");
+		}
+		EngineView &candidate = engine->view(name);
+		if (candidate.camera() != this)
+		{
+			throw spk::Exception("EngineView [" + name + "] is not attached to this camera");
+		}
+		return candidate;
+	}
+
+	const EngineView &CameraComponent3D::view(const std::string &name) const
+	{
+		auto *engine = dynamic_cast<const Engine *>(context());
+		if (engine == nullptr)
+		{
+			throw spk::Exception("CameraComponent3D is not attached to a graphical Engine");
+		}
+		const EngineView &candidate = engine->view(name);
+		if (candidate.camera() != this)
+		{
+			throw spk::Exception("EngineView [" + name + "] is not attached to this camera");
+		}
+		return candidate;
+	}
+
 }

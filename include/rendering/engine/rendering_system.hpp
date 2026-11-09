@@ -1,12 +1,12 @@
 #pragma once
 
 #include "engine/system.hpp"
-#include "rendering/engine/rendering_object_trait.hpp"
+#include "rendering/engine/engine_view.hpp"
 
 namespace spk
 {
 	class RenderingSystem : public System,
-							public RenderingObjectTrait
+							public EngineView::Contributor
 	{
 	protected:
 		[[nodiscard]] bool _isAcceptingEvent() const override
@@ -19,13 +19,13 @@ namespace spk
 			return isActive();
 		}
 
-		[[nodiscard]] bool _canBuildRenderSnapshot() const override
+		[[nodiscard]] bool _canContribute() const override
 		{
 			return isActive();
 		}
 
 	public:
-		using RenderingObjectTrait::updateState;
+		using EngineView::Contributor::updateState;
 		using System::System;
 		using System::updateState;
 	};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 
 #include "container/cached_data.hpp"
 #include "engine/component3d.hpp"
@@ -8,6 +9,8 @@
 
 namespace spk
 {
+	class EngineView;
+
 	class CameraComponent3D : public Component3D
 	{
 	private:
@@ -44,5 +47,8 @@ namespace spk
 		[[nodiscard]] const Matrix4x4 &viewMatrix() const;
 		[[nodiscard]] const Matrix4x4 &inverseViewMatrix() const;
 		[[nodiscard]] Matrix4x4 viewProjectionMatrix() const;
+
+		[[nodiscard]] EngineView &view(const std::string &name);
+		[[nodiscard]] const EngineView &view(const std::string &name) const;
 	};
 }

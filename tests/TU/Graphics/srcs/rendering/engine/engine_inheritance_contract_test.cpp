@@ -15,6 +15,7 @@
 #include "input/device_context.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
+#include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
@@ -137,11 +138,11 @@ namespace
 		std::string label;
 
 	protected:
-		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) override
 		{
 			if (output != nullptr)
 			{
-				builder.renderPass(spk::Engine::SceneRenderPassKey).emplace<LogCommand>(*output, label);
+				builder.renderPass(spk::EngineView::OpaquePassKey).emplace<LogCommand>(*output, label);
 			}
 		}
 	};
@@ -149,7 +150,7 @@ namespace
 	class ThrowingSnapshotProbe final : public spk::RenderingBehaviour
 	{
 	protected:
-		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &, const spk::EngineView::CaptureContext &) override
 		{
 			throw std::logic_error("snapshot failure");
 		}
@@ -176,10 +177,15 @@ namespace
 
 	void runSnapshot(spk::Engine &engine)
 	{
-		spk::RenderSnapshot::Builder builder;
-		engine.buildRenderSnapshot(builder);
+		spk::Entity3D cameraEntity("camera");
+		auto &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+		engine.addEntity(&cameraEntity);
+		engine.addView("capture", &camera, {64, 64});
+		engine.refreshRenderSnapshot();
 		spk::RenderContext context{.targetSurface = nullptr};
-		builder.build().execute(context);
+		engine.latestRenderSnapshot()->execute(context);
+		engine.removeView("capture");
+		engine.removeEntity(&cameraEntity);
 	}
 }
 
@@ -429,13 +435,16 @@ TEST(EngineInheritanceContractTest, SnapshotCommandsSurviveSourceDetachment)
 	probe.output = &log;
 	probe.label = "captured";
 	engine.addEntity(&entity);
-	spk::RenderSnapshot::Builder builder;
-	engine.buildRenderSnapshot(builder);
-	auto snapshot = builder.build();
+	spk::Entity3D cameraEntity("camera");
+	auto &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+	engine.addEntity(&cameraEntity);
+	engine.addView("capture", &camera, {64, 64});
+	engine.refreshRenderSnapshot();
+	auto snapshot = engine.latestRenderSnapshot();
 
 	engine.removeEntity(&entity);
 	spk::RenderContext context{.targetSurface = nullptr};
-	snapshot.execute(context);
+	snapshot->execute(context);
 	EXPECT_EQ(log, (std::vector<std::string>{"captured"}));
 }
 
@@ -443,9 +452,11 @@ TEST(EngineInheritanceContractTest, SnapshotExceptionsPropagateToCaller)
 {
 	spk::Engine engine;
 	engine.root().addBehaviour<ThrowingSnapshotProbe>();
-	spk::RenderSnapshot::Builder builder;
-
-	EXPECT_THROW(engine.buildRenderSnapshot(builder), std::logic_error);
+	spk::Entity3D cameraEntity("camera");
+	auto &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+	engine.addEntity(&cameraEntity);
+	engine.addView("capture", &camera, {64, 64});
+	EXPECT_THROW(engine.refreshRenderSnapshot(), spk::Exception);
 }
 
 TEST(EngineInheritanceContractTest, DeactivatedContributorsAreExcludedFromSnapshots)
