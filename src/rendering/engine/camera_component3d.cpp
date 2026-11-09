@@ -6,6 +6,24 @@
 
 namespace spk
 {
+	void CameraComponent3D::_refreshViewCache() const
+	{
+		if (owner() == nullptr)
+		{
+			throw std::logic_error("CameraComponent3D requires an Entity3D owner");
+		}
+
+		const Transform3D &transform = owner()->transform();
+		const WorldPose pose{transform.position(ReferenceFrame::World), transform.rotation(ReferenceFrame::World)};
+		if (_cachedWorldPose == pose)
+		{
+			return;
+		}
+
+		_cachedWorldPose = pose;
+		_viewMatrices.invalidate();
+	}
+
 	void CameraComponent3D::setProjectionMode(Camera3D::ProjectionMode mode)
 	{
 		_projection.setProjectionMode(mode);
@@ -31,18 +49,16 @@ namespace spk
 		return _projection.projectionMatrix();
 	}
 
-	Matrix4x4 CameraComponent3D::viewMatrix() const
+	const Matrix4x4 &CameraComponent3D::viewMatrix() const
 	{
-		if (owner() == nullptr)
-		{
-			throw std::logic_error("CameraComponent3D requires an Entity3D owner");
-		}
+		_refreshViewCache();
+		return _viewMatrices.get().view;
+	}
 
-		const Transform3D &transform = owner()->transform();
-		const Vector3 &position = transform.position(ReferenceFrame::World);
-		const Quaternion &rotation = transform.rotation(ReferenceFrame::World);
-		return Matrix4x4::rotation(rotation.conjugated()) *
-			   Matrix4x4::translation(-position.x, -position.y, -position.z);
+	const Matrix4x4 &CameraComponent3D::inverseViewMatrix() const
+	{
+		_refreshViewCache();
+		return _viewMatrices.get().inverseView;
 	}
 
 	Matrix4x4 CameraComponent3D::viewProjectionMatrix() const
