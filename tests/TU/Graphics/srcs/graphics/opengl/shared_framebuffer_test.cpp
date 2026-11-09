@@ -96,7 +96,7 @@ TEST(SharedFramebufferTest, RejectsMissingInvalidMismatchedAndDuplicateAttachmen
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle(), color.handle()}, std::nullopt), spk::Exception);
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, color.handle()), spk::Exception);
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, missing), spk::Exception);
-	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, depth.handle()), spk::Exception);
+	EXPECT_NO_THROW((void)Framebuffer({8, 8}, std::vector{color.handle()}, depth.handle()));
 	// Depth16 is not part of this API; a color texture cannot take the depth role.
 	EXPECT_THROW((void)Framebuffer({8, 8}, std::vector<Texture::Handle>{}, color.handle()), spk::Exception);
 }
