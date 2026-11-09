@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <functional>
+#include <memory>
+#include <type_traits>
 
 #include "core/context/update_context.hpp"
 #include "engine/behaviour.hpp"
@@ -147,4 +149,25 @@ TEST(CoreEngineTest, GeometryAndContextStillPropagateWithoutGraphics)
 	engine.removeEntity(&parent);
 	EXPECT_EQ(parent.context(), nullptr);
 	EXPECT_EQ(child.context(), nullptr);
+}
+
+TEST(CoreEngineTest, PolymorphicDestructionReleasesDerivedEngine)
+{
+	static_assert(std::has_virtual_destructor_v<spk::Engine>);
+	bool derivedDestroyed = false;
+	struct DerivedEngine : spk::Engine
+	{
+		bool &destroyed;
+		explicit DerivedEngine(bool &flag) :
+			destroyed(flag)
+		{
+		}
+		~DerivedEngine() override
+		{
+			destroyed = true;
+		}
+	};
+	std::unique_ptr<spk::Engine> engine = std::make_unique<DerivedEngine>(derivedDestroyed);
+	engine.reset();
+	EXPECT_TRUE(derivedDestroyed);
 }
