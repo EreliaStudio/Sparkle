@@ -2,6 +2,7 @@
 
 #include <GL/glew.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -196,6 +197,57 @@ TEST(SharedFramebufferTest, OversizedTexturesAreRejectedBySurfaceCapabilities)
 	}
 	auto color = target({static_cast<unsigned int>(maximum) + 1, 1}, Texture::Format::RGBA);
 	Framebuffer framebuffer(color.size(), std::vector{color.handle()}, std::nullopt);
+	EXPECT_THROW(framebuffer.activate(gl.renderContext()), spk::Exception);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+}
+
+TEST(SharedFramebufferTest, CpuHdrStorageAndInvalidTargetDimensionsAreRejected)
+{
+	using Format = Texture::Format;
+	using Target = Texture::Target;
+	CpuTexture cpu;
+	EXPECT_THROW(cpu.setPixels(nullptr, {1, 1}, Format::RGBA16F), std::invalid_argument);
+	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture2D, {0, 1}, Format::RGBA16F), spk::Exception);
+	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture2D, {1, 0}, Format::SRGB8_ALPHA8), spk::Exception);
+	EXPECT_THROW((void)Texture::createRenderTarget(Target::Texture2D, {1, 1}, Format::Error), spk::Exception);
+
+	auto hdr = Texture::createRenderTarget(Target::Texture2D, {8, 8}, Format::RGBA16F);
+	auto srgb = Texture::createRenderTarget(Target::Texture2D, {8, 8}, Format::SRGB8_ALPHA8);
+	EXPECT_EQ(hdr.handle()->contentSource(), Texture::ContentSource::RenderTarget);
+	EXPECT_EQ(srgb.handle()->contentSource(), Texture::ContentSource::RenderTarget);
+	EXPECT_EQ(Texture::formatDescriptor(Format::RGBA16F).internalFormat, GL_RGBA16F);
+	EXPECT_EQ(Texture::formatDescriptor(Format::SRGB8_ALPHA8).internalFormat, GL_SRGB8_ALPHA8);
+}
+
+TEST(SharedFramebufferTest, FailedResizePreservesPreviouslyCapturedVersions)
+{
+	Framebuffer framebuffer({8, 8}, {Texture::Format::RGBA16F}, Texture::Format::Depth32F);
+	auto oldFramebuffer = framebuffer.handle();
+	auto oldColor = framebuffer.colorAttachmentHandle(0);
+	auto oldDepth = *framebuffer.depthStencilAttachmentHandle();
+	EXPECT_THROW(framebuffer.resize({0, 9}), std::invalid_argument);
+	EXPECT_EQ(framebuffer.handle().identifier(), oldFramebuffer.identifier());
+	EXPECT_EQ(framebuffer.colorAttachmentHandle(0).identifier(), oldColor.identifier());
+	EXPECT_EQ(framebuffer.depthStencilAttachmentHandle()->identifier(), oldDepth.identifier());
+	EXPECT_EQ(oldFramebuffer->size(), spk::Vector2UInt(8, 8));
+}
+
+TEST(SharedFramebufferTest, ExcessColorAttachmentsAreRejectedByActualGlLimits)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset();
+	GLint maxDraw = 0;
+	GLint maxColors = 0;
+	glGetIntegerv(GL_MAX_DRAW_BUFFERS, &maxDraw);
+	glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColors);
+	const auto limit = std::min(maxDraw, maxColors);
+	ASSERT_GT(limit, 0);
+	std::vector<Texture::Handle> handles;
+	for (GLint index = 0; index <= limit; ++index)
+	{
+		handles.push_back(target({1, 1}, Texture::Format::RGBA).handle());
+	}
+	Framebuffer framebuffer({1, 1}, std::move(handles), std::nullopt);
 	EXPECT_THROW(framebuffer.activate(gl.renderContext()), spk::Exception);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
