@@ -69,8 +69,7 @@ Confier **uniquement PR-11** à l'IA. Les détails locaux (signatures C++, choix
 ## État d'implémentation de la PR #60 (9 novembre 2026)
 
 L'implémentation initiale a été poussée sur `impl/v0.1.4/11-gpu-attachments-surfaces`.
-Elle n'introduit ni `RenderTarget` autonome, ni nouveau gestionnaire de ressources GPU,
-ni modification du rendu des widgets. Les classes `GPUResourceCollection`, `GPUResource::State`
+Elle n'introduit ni gestionnaire supplémentaire de ressources GPU, ni modification du rendu des widgets. La destination de rendu est désormais représentée par le petit type logique `Window::Surface::RenderTarget` (aucun nouveau framebuffer natif n'est alloué pour la fenêtre). Les classes `GPUResourceCollection`, `GPUResource::State`
 et `GPUResource::Handle` sont conservées.
 
 ### API effective
@@ -124,7 +123,7 @@ CI actuelle n'apporte pas ces garanties.
 capture une version immuable du framebuffer et un sous-snapshot. À l'exécution,
 la commande active la cible native propre à la Surface, ajuste le viewport à la
 taille capturée, exécute le sous-snapshot et restaure les bindings OpenGL de
-lecture/dessin, le viewport, le scissor et les dimensions logiques de cible du `RenderContext`, y compris en cas d'exception imbriquée. Les
+lecture/dessin, le viewport, le scissor et la précédente valeur de `RenderContext::activeRenderTarget`, y compris en cas d'exception imbriquée. Les
 opérations de clear appartiennent aux commandes du sous-snapshot
 (`ClearRenderCommand`) et ne sont pas imposées par la commande de cible.
 
@@ -134,8 +133,22 @@ Un test d'intégration supplémentaire invoque la commande depuis un
 `RenderSnapshot::Builder` parent et vérifie la lecture des pixels ainsi que les
 restaurations de contexte, l'erreur imbriquée et le resize versionné.
 
-Aucune modification de `Window` n'est nécessaire. Le branchement automatique
-des sorties `EngineView` sur leurs propres cibles et sur `EngineWidget` reste
-l'intégration de la PR12 ; il n'y a pas de target implicite ajouté dans la PR11.
+La classe `Window::Surface` déclare `RenderTarget` et expose
+`defaultRenderTarget()`. Ce type emploie soit le framebuffer natif 0
+(`Type::Default`, dimensions de `Surface::geometry()`), soit un
+`Framebuffer::Handle` immuable (`Type::Framebuffer`, dimensions capturées).
+Son implémentation se trouve dans le header graphique dédié
+`core/window_surface_render_target.hpp`, de manière à ne pas introduire
+de dépendance à GLEW dans `core/window.hpp`.
+
+`RenderContext::activeRenderTarget` remplace `activeRenderTargetSize` :
+`renderTargetSize()` délègue au `RenderTarget` actif. La
+`RenderToFramebufferCommand` capture elle-même un `RenderTarget` et
+restaure la cible précédente dans sa garde RAII, tout en préservant
+séparément les anciens bindings natifs de lecture et dessin OpenGL.
+Cela conserve les rendus imbriqués et les surfaces redimensionnables.
+
+Le branchement automatique des sorties `EngineView` sur leurs propres
+cibles et sur `EngineWidget` reste l'intégration de la PR12.
 
 Les commandes `ViewportRenderCommand` et `ScissorRenderCommand` utilisent la taille de la cible active pour convertir leurs coordonnées d'origine supérieure gauche, ce qui permet de les employer dans des snapshots imbriqués hors écran sans modifier `Window`.
