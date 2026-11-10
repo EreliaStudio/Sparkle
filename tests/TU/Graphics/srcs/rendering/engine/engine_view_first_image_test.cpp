@@ -7,8 +7,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <stdexcept>
-#include <utility>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/context/render_context.hpp"
@@ -179,9 +179,8 @@ TEST(EngineViewFirstImageTest, ReinhardMatchesReferenceHDRValuesOnGPU)
 	auto &contributor = scene.engine.root().addBehaviour<HDRContributor>();
 	spk::EngineWidget widget("render", nullptr, spk::EngineWidget::Type::Render);
 	prepare(widget, scene.engine, {{0, 0}, ImageSize});
-	for (const auto &[hdr, exposure] : {std::pair{0.0f, 1.0f}, std::pair{1.0f, 1.0f},
-									  std::pair{2.0f, 1.0f}, std::pair{4.0f, 1.0f},
-									  std::pair{2.0f, 2.0f}})
+	const std::array<std::pair<float, float>, 5> cases{{{0.0f, 1.0f}, {1.0f, 1.0f}, {2.0f, 1.0f}, {4.0f, 1.0f}, {2.0f, 2.0f}}};
+	for (const auto &[hdr, exposure] : cases)
 	{
 		contributor.value = hdr;
 		scene.view.setExposure(exposure);
