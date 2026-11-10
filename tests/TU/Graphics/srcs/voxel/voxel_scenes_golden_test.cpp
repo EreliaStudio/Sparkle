@@ -212,7 +212,7 @@ namespace
 		ASSERT_TRUE(visible) << name << ": rendered image is empty";
 		if (!std::filesystem::exists(expected))
 		{
-			GTEST_SKIP() << "Reference requires visual approval: " << expected << "; actual: " << actual;
+			FAIL() << "Missing approved voxel golden: " << expected << "; actual: " << actual;
 		}
 		const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
 		const auto comparison = sparkle_test::compareImages(actual, expected, diff);

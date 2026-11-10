@@ -177,7 +177,7 @@ namespace
 		}
 		else
 		{
-			GTEST_SKIP() << "Voxel reference image not approved yet: " << expected
+			FAIL() << "Missing approved voxel golden: " << expected
 						 << "; actual OpenGL result: " << actual;
 		}
 	}
