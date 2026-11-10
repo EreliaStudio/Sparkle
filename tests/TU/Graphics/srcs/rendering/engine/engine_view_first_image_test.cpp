@@ -15,6 +15,7 @@
 #include "engine/entity3d.hpp"
 #include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/state.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
@@ -302,5 +303,61 @@ TEST(EngineViewFirstImageTest, RenderingRestoresUIRasterAndFramebufferState)
 	EXPECT_EQ(glIsEnabled(GL_CULL_FACE), GL_FALSE);
 	EXPECT_EQ(glIsEnabled(GL_BLEND), GL_FALSE);
 	EXPECT_EQ(mask, (std::array<GLboolean, 4>{GL_TRUE, GL_FALSE, GL_TRUE, GL_FALSE}));
+	gl.reset();
+}
+
+TEST(EngineViewFirstImageTest, SRGBFinalTextureAndLinearUIPresentationMatch)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	scene.view.setBackgroundColor({1.0f, 1.0f, 1.0f});
+	scene.view.setExposure(1.0f);
+	spk::EngineWidget widget("srgb", nullptr);
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
+	capture(widget).execute(gl.renderContext());
+
+	const auto displayed = gl.capture();
+	const auto finalPixel = readFinal(scene.view);
+	const int expected = encodedReinhard(1.0f, 1.0f);
+	for (int channel = 0; channel < 3; ++channel)
+	{
+		EXPECT_NEAR(finalPixel[channel], expected, 1);
+		EXPECT_NEAR(displayed.pixel({32, 32})[channel], expected, 2);
+	}
+	EXPECT_EQ(displayed.pixel({32, 32})[3], 255);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
+}
+
+TEST(OpenGLStateTest, ScopedStateRestoresCustomizedRasterAndBlendConfiguration)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	using State = spk::OpenGL::State;
+	auto original = State::capture();
+	{
+		State::Scope restore;
+		auto depth = State::DepthTest{};
+		depth.comparison = State::Comparison::Greater;
+		depth.write = false;
+		depth.clear = 0.25;
+		depth.apply();
+		auto blending = State::Blend::disabled();
+		blending.attachments[0].enabled = true;
+		blending.attachments[0].equationRGB = State::BlendEquation::Maximum;
+		blending.apply();
+		auto changed = State::capture();
+		EXPECT_EQ(changed.depthTest.comparison, State::Comparison::Greater);
+		EXPECT_FALSE(changed.depthTest.write);
+		EXPECT_EQ(changed.blend.attachments[0].equationRGB, State::BlendEquation::Maximum);
+	}
+	const auto restored = State::capture();
+	EXPECT_EQ(restored.depthTest.comparison, original.depthTest.comparison);
+	EXPECT_EQ(restored.depthTest.write, original.depthTest.write);
+	EXPECT_EQ(restored.blend.attachments[0].equationRGB, original.blend.attachments[0].equationRGB);
+	EXPECT_EQ(restored.blend.attachments[0].enabled, original.blend.attachments[0].enabled);
+	EXPECT_EQ(restored.bindings.drawFramebuffer, original.bindings.drawFramebuffer);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
 }
