@@ -586,11 +586,11 @@ void main()
 		}
 	};
 
-	void prepareRoomWidget(spk::EngineWidget &widget, spk::Engine &engine)
+	void prepareRoomWidget(spk::EngineWidget &widget, spk::Engine &engine, spk::Vector2UInt displaySize = RoomImageSize)
 	{
 		widget.setEngine(&engine);
 		widget.setViewName("room");
-		widget.setGeometry({.anchor = {0, 0}, .size = RoomImageSize});
+		widget.setGeometry({.anchor = {0, 0}, .size = displaySize});
 		widget.activate();
 	}
 
@@ -697,5 +697,37 @@ TEST(EngineViewModel3DRoomGoldenTest, CapturedAmbientAndExposureRemainImmutable)
 	captureRoomWidget(consumer).execute(gl.renderContext());
 	const auto secondImage = gl.capture();
 	EXPECT_NE(firstImage.pixels, secondImage.pixels);
+	gl.reset();
+}
+
+TEST(EngineViewModel3DRoomGoldenTest, ExistingRoomOutputScalesToLargerDestination)
+{
+	constexpr spk::Vector2UInt destination{640, 480};
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(RoomImageSize);
+	RoomEngineScene scene;
+	scene.view.ambientLight().setIntensity(1.0f);
+
+	spk::EngineWidget producer("room-producer", nullptr, spk::EngineWidget::Type::Render);
+	prepareRoomWidget(producer, scene.engine);
+	captureRoomWidget(producer).execute(gl.renderContext());
+
+	const auto originalOutput = scene.view.output()->latest(gl.surface());
+	ASSERT_TRUE(originalOutput);
+	EXPECT_EQ(originalOutput->size(), RoomImageSize);
+	const auto publishedSnapshot = scene.engine.latestRenderSnapshot();
+
+	gl.reset(destination);
+	spk::EngineWidget display("room-large-destination", nullptr, spk::EngineWidget::Type::Draw);
+	prepareRoomWidget(display, scene.engine, destination);
+	captureRoomWidget(display).execute(gl.renderContext());
+
+	EXPECT_EQ(scene.view.resolution(), RoomImageSize);
+	EXPECT_EQ(scene.engine.latestRenderSnapshot(), publishedSnapshot);
+	EXPECT_EQ(scene.view.output()->latest(gl.surface()).identifier(), originalOutput.identifier());
+	const auto image = gl.capture();
+	EXPECT_EQ(image.size, destination);
+	EXPECT_EQ(image.pixel({320, 240})[3], 255);
+	expectRoomGolden("neutral_white_ambient_large_destination");
 	gl.reset();
 }
