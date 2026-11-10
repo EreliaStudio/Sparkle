@@ -256,6 +256,9 @@ TEST(EngineViewFirstImageTest, DetachedOutputPoliciesAndAbsentView)
 	EXPECT_FALSE(scene.view.output()->latest(gl.surface()));
 	scene.view.setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::KeepLastFrame);
 	EXPECT_EQ(scene.view.output()->latest(gl.surface()).identifier(), previous.identifier());
+	auto emptyOutput = std::make_shared<spk::EngineView::Output>();
+	emptyOutput->setDetached(true, spk::EngineView::DetachedOutputPolicy::KeepLastFrame, {});
+	EXPECT_THROW((void)emptyOutput->latest(gl.surface()), spk::Exception);
 	const auto fallback = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::SRGB8_ALPHA8).texture();
 	scene.view.setFallbackTexture(fallback);
 	scene.view.setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::DefaultTexture);

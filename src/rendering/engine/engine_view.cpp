@@ -48,6 +48,10 @@ namespace spk
 			return _fallback;
 		}
 		const auto it = _frames.find(&surface);
+		if (_detached && _policy == DetachedOutputPolicy::KeepLastFrame && it == _frames.end())
+		{
+			throw spk::Exception("EngineView: no last valid frame on this Surface");
+		}
 		return it == _frames.end() ? Texture::Handle{} : it->second.texture;
 	}
 
