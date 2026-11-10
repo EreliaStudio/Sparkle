@@ -3,8 +3,10 @@
 #include <GL/glew.h>
 
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,6 +32,28 @@
 namespace
 {
 	constexpr spk::Vector2UInt ImageSize{160, 120};
+
+	class TestAtlas final : public spk::Texture
+	{
+	public:
+		TestAtlas()
+		{
+			std::array<std::uint8_t, 8 * 8 * 4> pixels{};
+			for (std::size_t y = 0; y < 8; ++y)
+			{
+				for (std::size_t x = 0; x < 8; ++x)
+				{
+					const auto offset = (y * 8 + x) * 4;
+					pixels[offset] = x < 4 ? 255 : 0;
+					pixels[offset + 1] = y < 4 ? 255 : 0;
+					pixels[offset + 2] = x >= 4 ? 255 : 0;
+					pixels[offset + 3] = 255;
+				}
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {8, 8}, Format::RGBA);
+			validate();
+		}
+	};
 
 	[[nodiscard]] spk::Voxel::Geometry cubeGeometry()
 	{
@@ -135,6 +159,16 @@ namespace
 		const auto image = gl.capture();
 		EXPECT_EQ(image.size, ImageSize);
 		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		bool hasVisiblePixel = false;
+		for (std::uint32_t y = 0; y < ImageSize.y && !hasVisiblePixel; ++y)
+		{
+			for (std::uint32_t x = 0; x < ImageSize.x && !hasVisiblePixel; ++x)
+			{
+				const auto pixel = image.pixel({x, y});
+				hasVisiblePixel = pixel[0] > 20 || pixel[1] > 20 || pixel[2] > 20;
+			}
+		}
+		EXPECT_TRUE(hasVisiblePixel) << "Voxel renderer produced an entirely black image: " << name;
 		if (std::filesystem::exists(expected))
 		{
 			const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
@@ -152,6 +186,7 @@ namespace
 	{
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		gl.reset(ImageSize);
+		ASSERT_GT(scene.bucketCount(), 0u);
 		spk::EngineWidget widget("voxel", nullptr);
 		widget.setEngine(&scene.engine);
 		widget.setGeometry({.anchor = {0, 0}, .size = ImageSize});
@@ -174,7 +209,7 @@ TEST(VoxelRendererTest, RealVolumeBakesOpaqueGeometryAndSharesItsMesh)
 
 TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidBinding)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
 	spk::Voxel::Renderer renderer;
 	renderer.bind(palette);
@@ -195,7 +230,7 @@ TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidB
 
 TEST(VoxelRendererTest, BucketsCombineMatchingPaletteAndSeparateDifferentMaterials)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	const auto geometry = cubeGeometry();
 	const auto first = makePalette(atlas, spk::Texture::Section::whole);
 	const auto second = makePalette(atlas, {{0.5f, 0.0f}, {0.5f, 0.5f}});
@@ -209,7 +244,7 @@ TEST(VoxelRendererTest, BucketsCombineMatchingPaletteAndSeparateDifferentMateria
 
 TEST(VoxelRendererTest, InvalidScaleIsRejectedBeforeSnapshotPublication)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	Scene scene;
 	const auto geometry = cubeGeometry();
 	auto &renderer = scene.add(
@@ -231,7 +266,7 @@ TEST(VoxelRendererTest, InstancedCommandUsesStd430AndRebindsSsboAfterThirdParty)
 	static_assert(sizeof(spk::DrawVoxelBucketCommand::MaterialData) == 16);
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(ImageSize);
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
 	spk::DrawVoxelBucketCommand command(
 		cubeGeometry(),
@@ -261,7 +296,7 @@ TEST(VoxelRendererTest, InstancedCommandUsesStd430AndRebindsSsboAfterThirdParty)
 
 TEST(VoxelRendererGoldenTest, CubeTextured)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	Scene scene;
 	scene.add(cubeGeometry(), makePalette(atlas, spk::Texture::Section::whole), {});
 	renderScene(scene, "cube_textured");
@@ -269,7 +304,7 @@ TEST(VoxelRendererGoldenTest, CubeTextured)
 
 TEST(VoxelRendererGoldenTest, CubeWithRotation)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	Scene scene;
 	scene.add(cubeGeometry(), makePalette(atlas, spk::Texture::Section::whole), {}, {0, 45, 22});
 	renderScene(scene, "cube_rotated");
@@ -277,7 +312,7 @@ TEST(VoxelRendererGoldenTest, CubeWithRotation)
 
 TEST(VoxelRendererGoldenTest, TwoInstancesShareGeometry)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	Scene scene;
 	const auto geometry = cubeGeometry();
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
@@ -289,7 +324,7 @@ TEST(VoxelRendererGoldenTest, TwoInstancesShareGeometry)
 
 TEST(VoxelRendererGoldenTest, DifferentPalettesStayIndependent)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	Scene scene;
 	const auto geometry = cubeGeometry();
 	scene.add(geometry, makePalette(atlas, spk::Texture::Section::whole), {-1, 0, 0});
@@ -300,7 +335,7 @@ TEST(VoxelRendererGoldenTest, DifferentPalettesStayIndependent)
 
 TEST(VoxelRendererGoldenTest, VoxelRoomThroughEngineWidget)
 {
-	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
+	TestAtlas atlas;
 	Scene scene;
 	const auto geometry = cubeGeometry();
 	const auto stone = makePalette(atlas, spk::Texture::Section::whole);
