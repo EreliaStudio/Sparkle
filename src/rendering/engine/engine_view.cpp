@@ -9,6 +9,32 @@
 
 namespace spk
 {
+	std::shared_ptr<EngineView::Output::Targets> EngineView::Output::acquireTargets(Vector2UInt resolution)
+	{
+		std::lock_guard lock(_mutex);
+		for (const auto &target : _targets)
+		{
+			if (target.use_count() == 1 && target->resolution == resolution)
+			{
+				return target;
+			}
+		}
+		std::erase_if(_targets, [&resolution](const auto &target) {
+			return target.use_count() == 1 && target->resolution != resolution;
+		});
+		using Attachment = Framebuffer::RenderAttachment;
+		const auto hdr = Attachment::create2D(resolution, Texture::Format::RGBA16F);
+		const auto depth = Attachment::create2D(resolution, Texture::Format::Depth24Stencil8);
+		const auto accumulation = Attachment::create2D(resolution, Texture::Format::RGBA16F);
+		const auto revealage = Attachment::create2D(resolution, Texture::Format::GreyLevel);
+		Framebuffer opaque(resolution, std::vector<Texture::Handle>{hdr.texture()}, depth.texture());
+		Framebuffer transparent(resolution, std::vector<Texture::Handle>{accumulation.texture(), revealage.texture()}, depth.texture());
+		auto target = std::make_shared<Targets>(Targets{resolution, hdr.texture(), depth.texture(),
+			accumulation.texture(), revealage.texture(), opaque.handle(), transparent.handle()});
+		_targets.push_back(target);
+		return target;
+	}
+
 	void EngineView::Output::_discard(Window::Surface *surface) noexcept
 	{
 		std::lock_guard lock(_mutex);
