@@ -8,8 +8,8 @@
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/state.hpp"
-#include "graphics/opengl/uniform.hpp"
 #include "graphics/opengl/texture.hpp"
+#include "graphics/opengl/uniform.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
 
 namespace spk
