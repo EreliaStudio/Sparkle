@@ -17,6 +17,7 @@
 #include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
+#include "rendering/engine/engine_view.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
