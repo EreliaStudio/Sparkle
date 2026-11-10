@@ -15,6 +15,8 @@
 
 namespace spk
 {
+	class RenderCommand;
+
 	class Engine final : public EngineHeadless, public EventDispatcher, public UpdatableByDeviceTrait, public RenderSnapshotContributorTrait
 	{
 	public:
@@ -38,7 +40,7 @@ namespace spk
 		void _visitObjects(const std::function<void(EngineView::Contributor &)> &callback);
 		[[nodiscard]] EngineView *_findView(const std::string &name) const noexcept;
 		[[nodiscard]] std::vector<ViewCapture> _captureViews() const;
-		[[nodiscard]] RenderSnapshot _buildViewSnapshot(const EngineView::CaptureContext &context);
+		[[nodiscard]] std::unique_ptr<const RenderCommand> _buildViewCommand(const EngineView::CaptureContext &context);
 		[[nodiscard]] bool _commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot);
 		static void _validateViewPasses(const std::string &name, const RenderSnapshot::Builder &builder);
 
@@ -55,6 +57,7 @@ namespace spk
 		EngineView &addView(std::string name, CameraComponent3D *camera, Vector2UInt resolution, std::optional<EngineView::Order> order = std::nullopt);
 		[[nodiscard]] EngineView &view(const std::string &name);
 		[[nodiscard]] const EngineView &view(const std::string &name) const;
+		[[nodiscard]] std::shared_ptr<EngineView::Output> viewOutput(const std::string &name) const;
 		void removeView(const std::string &name);
 		void setViewOrder(EngineView &view, std::optional<EngineView::Order> order);
 		void refreshRenderSnapshot();

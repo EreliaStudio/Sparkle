@@ -1,12 +1,15 @@
 #include "rendering/command/draw_texture_mesh_render_command.hpp"
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/program.hpp"
+#include "graphics/opengl/state.hpp"
 #include "graphics/opengl/texture.hpp"
+#include "graphics/opengl/uniform.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
 
 namespace spk
@@ -24,9 +27,10 @@ namespace spk
 		}();
 		return *program;
 	}
-	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(Texture::Handle texture, TextureMesh2D mesh) :
+	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(Texture::Handle texture, TextureMesh2D mesh, bool presentSRGB) :
 		_mesh(std::move(mesh)),
-		_sampler(TextureSamplerBindingPoint)
+		_sampler(TextureSamplerBindingPoint),
+		_presentSRGB(presentSRGB)
 	{
 		if (!texture)
 		{
@@ -36,8 +40,8 @@ namespace spk
 		_sampler.validate();
 	}
 
-	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh) :
-		DrawTextureMeshRenderCommand(texture ? texture->handle() : Texture::Handle{}, std::move(mesh))
+	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh, bool presentSRGB) :
+		DrawTextureMeshRenderCommand(texture ? texture->handle() : Texture::Handle{}, std::move(mesh), presentSRGB)
 	{
 	}
 	void DrawTextureMeshRenderCommand::execute(RenderContext &context) const
@@ -46,8 +50,15 @@ namespace spk
 		{
 			return;
 		}
+		const bool srgbTarget = _presentSRGB && OpenGL::State::ColorOutput::destinationIsSRGB();
+		std::optional<OpenGL::State::ColorOutput::SRGBScope> encoding;
+		if (_presentSRGB)
+		{
+			encoding.emplace(srgbTarget);
+		}
 		auto &p = _sharedProgram();
 		p.activate(context);
+		Uniform<bool>("uEncodeSRGB", _presentSRGB && !srgbTarget).activate(context);
 		_sampler.activate(context);
 		_mesh.layout().activate(context);
 		p.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());

@@ -1,12 +1,10 @@
 #include "rendering/command/render_to_framebuffer_command.hpp"
 
-#include <GL/glew.h>
-
-#include <array>
 #include <stdexcept>
 #include <utility>
 
 #include "core/context/render_context.hpp"
+#include "graphics/opengl/state.hpp"
 #include "rendering/render_snapshot.hpp"
 
 namespace spk
@@ -16,42 +14,21 @@ namespace spk
 		class FramebufferBindingScope final
 		{
 		private:
+			OpenGL::State::Scope _openGLState;
 			RenderContext &_context;
 			Window::Surface::RenderTarget _previousTarget;
-			GLint _drawFramebuffer = 0;
-			GLint _readFramebuffer = 0;
-			std::array<GLint, 4> _viewport{};
-			std::array<GLint, 4> _scissor{};
-			GLboolean _scissorEnabled = GL_FALSE;
 
 		public:
 			FramebufferBindingScope(RenderContext &context, const Window::Surface::RenderTarget &target) :
 				_context(context),
 				_previousTarget(context.activeRenderTarget)
 			{
-				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &_drawFramebuffer);
-				glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &_readFramebuffer);
-				glGetIntegerv(GL_VIEWPORT, _viewport.data());
-				glGetIntegerv(GL_SCISSOR_BOX, _scissor.data());
-				_scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
 				_context.activeRenderTarget = target;
-				glDisable(GL_SCISSOR_TEST);
+				OpenGL::State::Scissor{.enabled = false}.apply();
 			}
 
 			~FramebufferBindingScope()
 			{
-				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(_drawFramebuffer));
-				glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(_readFramebuffer));
-				glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
-				glScissor(_scissor[0], _scissor[1], _scissor[2], _scissor[3]);
-				if (_scissorEnabled == GL_TRUE)
-				{
-					glEnable(GL_SCISSOR_TEST);
-				}
-				else
-				{
-					glDisable(GL_SCISSOR_TEST);
-				}
 				_context.activeRenderTarget = _previousTarget;
 			}
 
@@ -82,7 +59,7 @@ namespace spk
 		FramebufferBindingScope binding(context, target);
 		target.activate(context);
 		const Vector2UInt size = context.activeRenderTarget.size();
-		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
+		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply();
 		_snapshot->execute(context);
 	}
 }

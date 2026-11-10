@@ -10,6 +10,10 @@
 #include <vector>
 
 #include "exception.hpp"
+#include "graphics/opengl/framebuffer.hpp"
+#include "rendering/command/engine_view_composition_command.hpp"
+#include "rendering/command/engine_view_pass_command.hpp"
+#include "rendering/command/execute_engine_view_command.hpp"
 #include "rendering/command/execute_snapshot_render_command.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
@@ -126,6 +130,16 @@ namespace spk
 		return const_cast<Engine *>(this)->view(name);
 	}
 
+	std::shared_ptr<EngineView::Output> Engine::viewOutput(const std::string &name) const
+	{
+		std::lock_guard lock(_viewMutex);
+		if (const auto *result = _findView(name))
+		{
+			return result->output();
+		}
+		return {};
+	}
+
 	void Engine::removeView(const std::string &name)
 	{
 		std::unique_ptr<EngineView> removed;
@@ -215,13 +229,20 @@ namespace spk
 		}
 	}
 
-	RenderSnapshot Engine::_buildViewSnapshot(const EngineView::CaptureContext &context)
+	std::unique_ptr<const RenderCommand> Engine::_buildViewCommand(const EngineView::CaptureContext &context)
 	{
+		const auto targets = context.output->acquireTargets(context.resolution);
+		const auto finalImage = Framebuffer::RenderAttachment::create2D(
+			context.resolution, Texture::Format::SRGB8_ALPHA8);
+		Framebuffer composed(context.resolution, std::vector<Texture::Handle>{finalImage.texture()}, std::nullopt);
+
 		RenderSnapshot::Builder builder;
-		for (const auto &key : {EngineView::ShadowPassKey, EngineView::SkyboxPassKey, EngineView::OpaquePassKey, EngineView::WBOITPassKey, EngineView::CompositionPassKey})
-		{
-			builder.renderPass(key);
-		}
+		using Phase = EngineViewPassCommand::Phase;
+		builder.renderPass(EngineView::ShadowPassKey).emplace<EngineViewPassCommand>(targets->opaque, Phase::Shadow, context.backgroundColor);
+		builder.renderPass(EngineView::SkyboxPassKey).emplace<EngineViewPassCommand>(targets->opaque, Phase::Skybox, context.backgroundColor);
+		builder.renderPass(EngineView::OpaquePassKey).emplace<EngineViewPassCommand>(targets->opaque, Phase::Opaque, context.backgroundColor);
+		builder.renderPass(EngineView::WBOITPassKey).emplace<EngineViewPassCommand>(targets->transparent, Phase::WBOIT, context.backgroundColor);
+		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewPassCommand>(composed.handle(), Phase::Composition, context.backgroundColor);
 		_visitObjects([&](EngineView::Contributor &contributor) {
 			if (contributor.canContribute() && context.isLayerCompatible(contributor.layers()))
 			{
@@ -235,7 +256,10 @@ namespace spk
 			}
 		});
 		_validateViewPasses(context.name, builder);
-		return builder.build();
+		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(targets->hdr, targets->accumulation, targets->revealage, context.resolution, context.exposure);
+		auto snapshot = std::make_shared<const RenderSnapshot>(builder.build());
+		return std::make_unique<ExecuteEngineViewCommand>(
+			std::move(snapshot), context.output, targets, finalImage.texture());
 	}
 
 	bool Engine::_commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot)
@@ -265,8 +289,7 @@ namespace spk
 			{
 				for (const auto &capture : captures)
 				{
-					auto snapshot = std::make_shared<const RenderSnapshot>(_buildViewSnapshot(capture.context));
-					pass.emplace<ExecuteSnapshotRenderCommand>(std::move(snapshot));
+					pass.append(_buildViewCommand(capture.context));
 				}
 			} catch (...)
 			{
