@@ -89,7 +89,7 @@ namespace spk
 		{
 			if (auto output = _engine->viewOutput(_viewName))
 			{
-				builder.renderPass(targetRenderPass()).emplace<DrawEngineViewCommand>(std::move(output), Rect2D{{0, 0}, geometry().size});
+				builder.renderPass(targetRenderPass()).emplace<DrawEngineViewCommand>(std::move(output), Rect2D{.anchor = {0, 0}, .size = geometry().size});
 			}
 		}
 	}
