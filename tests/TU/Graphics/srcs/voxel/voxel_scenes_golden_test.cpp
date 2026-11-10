@@ -778,7 +778,6 @@ namespace
 		EXPECT_GT(geometry.depthMesh().indexCount(), 0u);
 	}
 
-
 	TEST(VoxelSceneFunctionalTest, SwordGripConnectsToLoweredHand)
 	{
 		Builder builder({11, 16, 5});
