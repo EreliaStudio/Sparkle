@@ -817,6 +817,8 @@ TEST(EngineViewModel3DRoomGoldenTest, CyanTransparentBoxUsesWBOITWithOpaqueDepth
 	captureRoomWidget(widget).execute(gl.renderContext());
 	const auto transparent = gl.capture();
 	EXPECT_NE(opaque.pixels, transparent.pixels);
+	EXPECT_NE(transparent.pixel({148, 110}), opaque.pixel({148, 110}));
+	EXPECT_EQ(transparent.pixel({170, 110}), opaque.pixel({170, 110}));
 	EXPECT_EQ(transparent.pixel({160, 120})[3], 255);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	expectRoomGolden("cyan_glass_wboit");
