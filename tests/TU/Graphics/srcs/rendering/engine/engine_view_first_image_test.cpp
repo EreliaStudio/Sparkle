@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <stdexcept>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -141,7 +143,8 @@ TEST(EngineViewFirstImageTest, BlackEmptyViewProducesOpaquePixelsAndGolden)
 	spk::EngineWidget widget("view", nullptr);
 	prepare(widget, scene.engine, {{0, 0}, ImageSize});
 	capture(widget).execute(gl.renderContext());
-	const auto pixel = gl.capture().pixel({32, 32});
+	const auto image = gl.capture();
+	const auto pixel = image.pixel({32, 32});
 	EXPECT_EQ(pixel[0], 0);
 	EXPECT_EQ(pixel[1], 0);
 	EXPECT_EQ(pixel[2], 0);
@@ -159,7 +162,8 @@ TEST(EngineViewFirstImageTest, CustomBackgroundAndExposureProduceOpaqueGolden)
 	spk::EngineWidget widget("view", nullptr);
 	prepare(widget, scene.engine, {{0, 0}, ImageSize});
 	capture(widget).execute(gl.renderContext());
-	const auto pixel = gl.capture().pixel({32, 32});
+	const auto image = gl.capture();
+	const auto pixel = image.pixel({32, 32});
 	EXPECT_EQ(pixel[0], 255);
 	EXPECT_EQ(pixel[1], 0);
 	EXPECT_EQ(pixel[2], 0);
@@ -209,7 +213,8 @@ TEST(EngineViewFirstImageTest, RenderOnlyAndDrawOnlyAreIndependentOnOneSurface)
 	const auto published = scene.engine.latestRenderSnapshot();
 	capture(consumer).execute(gl.renderContext());
 	EXPECT_EQ(scene.engine.latestRenderSnapshot(), published);
-	const auto pixel = gl.capture().pixel({32, 32});
+	const auto image = gl.capture();
+	const auto pixel = image.pixel({32, 32});
 	EXPECT_EQ(pixel[0], 255);
 	EXPECT_EQ(pixel[3], 255);
 }
@@ -279,7 +284,10 @@ TEST(EngineViewFirstImageTest, RenderingRestoresUIRasterAndFramebufferState)
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_BLEND);
 	glColorMask(GL_TRUE, GL_FALSE, GL_TRUE, GL_FALSE);
-	capture(widget).execute(gl.renderContext());
+	scene.engine.refreshRenderSnapshot();
+	spk::RenderSnapshot::Builder builder;
+	scene.engine.buildRenderSnapshot(builder);
+	builder.build().execute(gl.renderContext());
 	std::array<GLint, 4> viewport{}, scissor{};
 	std::array<GLboolean, 4> mask{};
 	glGetIntegerv(GL_VIEWPORT, viewport.data());
