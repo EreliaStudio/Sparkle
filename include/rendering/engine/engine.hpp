@@ -15,6 +15,8 @@
 
 namespace spk
 {
+	class RenderCommand;
+
 	class Engine final : public EngineHeadless, public EventDispatcher, public UpdatableByDeviceTrait, public RenderSnapshotContributorTrait
 	{
 	public:
@@ -38,7 +40,7 @@ namespace spk
 		void _visitObjects(const std::function<void(EngineView::Contributor &)> &callback);
 		[[nodiscard]] EngineView *_findView(const std::string &name) const noexcept;
 		[[nodiscard]] std::vector<ViewCapture> _captureViews() const;
-		[[nodiscard]] RenderSnapshot _buildViewSnapshot(const EngineView::CaptureContext &context);
+		[[nodiscard]] std::unique_ptr<const RenderCommand> _buildViewCommand(const EngineView::CaptureContext &context);
 		[[nodiscard]] bool _commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot);
 		static void _validateViewPasses(const std::string &name, const RenderSnapshot::Builder &builder);
 
