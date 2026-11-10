@@ -20,11 +20,11 @@
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/engine_view.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
-#include "ui/widget/engine_widget.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 #include "sparkle_test/paths.hpp"
+#include "ui/widget/engine_widget.hpp"
 
 namespace
 {
@@ -437,7 +437,6 @@ INSTANTIATE_TEST_SUITE_P(
 		return poseName(info.param);
 	});
 
-
 namespace
 {
 	constexpr spk::Vector2UInt RoomImageSize{320, 240};
@@ -683,15 +682,19 @@ TEST(EngineViewModel3DRoomGoldenTest, CapturedAmbientAndExposureRemainImmutable)
 	spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
 	prepareRoomWidget(producer, scene.engine);
 	auto first = captureRoomWidget(producer);
+	spk::EngineWidget consumer("consumer", nullptr, spk::EngineWidget::Type::Draw);
+	prepareRoomWidget(consumer, scene.engine);
 	scene.view.ambientLight().setColor({1.0f, 0.2f, 0.2f});
 	scene.view.setExposure(2.0f);
 	first.execute(gl.renderContext());
+	captureRoomWidget(consumer).execute(gl.renderContext());
 	const auto before = scene.view.output()->latest(gl.surface());
 	ASSERT_TRUE(before);
 	EXPECT_EQ(before->size(), RoomImageSize);
 	const auto firstImage = gl.capture();
 	gl.reset(RoomImageSize);
 	captureRoomWidget(producer).execute(gl.renderContext());
+	captureRoomWidget(consumer).execute(gl.renderContext());
 	const auto secondImage = gl.capture();
 	EXPECT_NE(firstImage.pixels, secondImage.pixels);
 	gl.reset();
