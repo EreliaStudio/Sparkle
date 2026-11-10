@@ -12,6 +12,7 @@
 #include "core/window.hpp"
 #include "design_pattern/trait/updatable_by_device_trait.hpp"
 #include "graphics/color.hpp"
+#include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/texture.hpp"
 #include "math/matrix.hpp"
 #include "math/vector2.hpp"
@@ -38,6 +39,18 @@ namespace spk
 
 		class Output final : public std::enable_shared_from_this<Output>
 		{
+		public:
+			struct Targets
+			{
+				Vector2UInt resolution;
+				Texture::Handle hdr;
+				Texture::Handle depth;
+				Texture::Handle accumulation;
+				Texture::Handle revealage;
+				Framebuffer::Handle opaque;
+				Framebuffer::Handle transparent;
+			};
+
 		private:
 			struct SurfaceFrame
 			{
@@ -47,6 +60,7 @@ namespace spk
 
 			mutable std::mutex _mutex;
 			std::unordered_map<Window::Surface *, SurfaceFrame> _frames;
+			std::vector<std::shared_ptr<Targets>> _targets;
 			DetachedOutputPolicy _policy = DetachedOutputPolicy::Invalid;
 			Texture::Handle _fallback;
 			bool _detached = false;
@@ -54,6 +68,7 @@ namespace spk
 			void _discard(Window::Surface *surface) noexcept;
 
 		public:
+			[[nodiscard]] std::shared_ptr<Targets> acquireTargets(Vector2UInt resolution);
 			void publish(Window::Surface &surface, Texture::Handle texture);
 			[[nodiscard]] Texture::Handle latest(Window::Surface &surface) const;
 			void setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback);
