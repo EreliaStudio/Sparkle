@@ -1,7 +1,10 @@
 #include "voxel/renderer.hpp"
 
+#include <cstdint>
+#include <limits>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "exception.hpp"
 
@@ -46,32 +49,60 @@ namespace spk::Voxel
 		}
 	}
 
+	std::vector<std::uint32_t> Renderer::_resolveRemap(const Geometry &geometry, const spk::Palette &palette)
+	{
+		_validate(geometry, palette);
+		std::vector<std::uint32_t> remap(geometry.materialSlots().size());
+		std::uint32_t paletteIndex = 0;
+		for (const auto &[name, material] : palette.materials())
+		{
+			(void)material;
+			const auto found = geometry.materialIndices().find(name);
+			if (found != geometry.materialIndices().end())
+			{
+				remap[found->second] = paletteIndex;
+			}
+			if (paletteIndex == std::numeric_limits<std::uint32_t>::max())
+			{
+				throw spk::Exception("Voxel Renderer: too many palette materials");
+			}
+			++paletteIndex;
+		}
+		return remap;
+	}
+
 	void Renderer::bind(Geometry geometry)
 	{
+		std::vector<std::uint32_t> remap;
 		if (_palette)
 		{
-			_validate(geometry, *_palette);
+			remap = _resolveRemap(geometry, *_palette);
 		}
 		_geometry = std::move(geometry);
+		_materialRemap = std::move(remap);
 	}
 
 	void Renderer::bind(spk::Palette palette)
 	{
+		std::vector<std::uint32_t> remap;
 		if (_geometry)
 		{
-			_validate(*_geometry, palette);
+			remap = _resolveRemap(*_geometry, palette);
 		}
 		_palette = std::move(palette);
+		_materialRemap = std::move(remap);
 	}
 
 	void Renderer::clearGeometry() noexcept
 	{
 		_geometry.reset();
+		_materialRemap.clear();
 	}
 
 	void Renderer::clearPalette() noexcept
 	{
 		_palette.reset();
+		_materialRemap.clear();
 	}
 
 	const Geometry *Renderer::geometry() const noexcept
@@ -82,5 +113,10 @@ namespace spk::Voxel
 	const spk::Palette *Renderer::palette() const noexcept
 	{
 		return _palette ? &*_palette : nullptr;
+	}
+
+	const std::vector<std::uint32_t> &Renderer::materialRemap() const noexcept
+	{
+		return _materialRemap;
 	}
 }
