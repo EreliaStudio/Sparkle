@@ -306,7 +306,7 @@ namespace spk::OpenGL
 		for (GLuint index = 0; index < count; ++index)
 		{
 			glActiveTexture(GL_TEXTURE0 + index);
-			result.textureUnits.push_back({static_cast<std::uint32_t>(integer(GL_TEXTURE_BINDING_2D)), static_cast<std::uint32_t>(indexedInteger(GL_SAMPLER_BINDING, index))});
+			result.textureUnits.push_back({static_cast<std::uint32_t>(integer(GL_TEXTURE_BINDING_2D)), static_cast<std::uint32_t>(integer(GL_SAMPLER_BINDING))});
 		}
 		glActiveTexture(GL_TEXTURE0 + result.activeTexture);
 		return result;
