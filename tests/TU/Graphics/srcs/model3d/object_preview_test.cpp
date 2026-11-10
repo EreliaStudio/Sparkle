@@ -590,11 +590,11 @@ void main()
 
 		static void _appendGlass(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &context, int count)
 		{
-			const ColorVolume blue("blueGlass", {0.12f, 0.77f, 0.96f, 0.48f}, {0.0f, -0.15f, 1.45f}, {2.25f, 2.35f, 0.06f});
+			const ColorVolume blue("blueGlass", {0.12f, 0.77f, 0.96f, 0.48f}, {-0.35f, -0.2f, 1.45f}, {1.8f, 3.5f, 0.06f});
 			builder.renderPass(spk::EngineView::WBOITPassKey).emplace<RoomTransparentVolumeCommand>(blue, context.viewProjectionMatrix, context.ambientRGB);
 			if (count > 1)
 			{
-				const ColorVolume amber("amberGlass", {0.96f, 0.30f, 0.10f, 0.35f}, {0.55f, -0.08f, 1.9f}, {1.8f, 2.4f, 0.06f});
+				const ColorVolume amber("amberGlass", {0.96f, 0.30f, 0.10f, 0.35f}, {-0.45f, -0.08f, 1.9f}, {1.4f, 2.8f, 0.06f});
 				builder.renderPass(spk::EngineView::WBOITPassKey).emplace<RoomTransparentVolumeCommand>(amber, context.viewProjectionMatrix, context.ambientRGB);
 			}
 		}
