@@ -14,6 +14,7 @@ uniform mat4 uViewProjection;
 
 layout(location = 0) out vec2 vertexUV;
 layout(location = 1) flat out uint materialIndex;
+layout(location = 2) out vec3 worldNormal;
 
 void main()
 {
@@ -21,4 +22,5 @@ void main()
 	gl_Position = uViewProjection * model * vec4(inPosition, 1.0);
 	vertexUV = inUV;
 	materialIndex = inMaterialIndex;
+	worldNormal = normalize(mat3(model) * inNormal);
 }
