@@ -13,14 +13,14 @@ namespace spk
 	ExecuteEngineViewCommand::ExecuteEngineViewCommand(
 		std::shared_ptr<const RenderSnapshot> snapshot,
 		std::shared_ptr<EngineView::Output> publisher,
-		Framebuffer::Handle opaqueTarget,
+		std::shared_ptr<EngineView::Output::Targets> targets,
 		Texture::Handle finalTexture) :
 		_snapshot(std::move(snapshot)),
 		_publisher(std::move(publisher)),
-		_opaqueTarget(std::move(opaqueTarget)),
+		_targets(std::move(targets)),
 		_finalTexture(std::move(finalTexture))
 	{
-		if (!_snapshot || !_publisher || !_opaqueTarget || !_finalTexture)
+		if (!_snapshot || !_publisher || !_targets || !_finalTexture)
 		{
 			throw std::invalid_argument("ExecuteEngineViewCommand requires a captured view and targets");
 		}
@@ -33,7 +33,7 @@ namespace spk
 			_snapshot->execute(context);
 			return;
 		}
-		RenderToFramebufferCommand(_opaqueTarget, _snapshot).execute(context);
+		RenderToFramebufferCommand(_targets->opaque, _snapshot).execute(context);
 		if (glGetError() != GL_NO_ERROR)
 		{
 			throw std::runtime_error("EngineView rendering failed before publishing its final image");
