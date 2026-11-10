@@ -1,0 +1,31 @@
+name: PR13 one-shot formatting
+on:
+  push:
+    branches:
+      - impl/v0.1.4/13-voxel-render-first
+    paths:
+      - .github/workflows/pr13-format-once.yml
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install clang-format==21.1.0
+      - name: Format generated golden test C++
+        run: clang-format --style=file -i tests/TU/Graphics/srcs/voxel/voxel_scenes_golden_test.cpp
+      - name: Push formatting only
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tests/TU/Graphics/srcs/voxel/voxel_scenes_golden_test.cpp
+            git commit -m "style(voxel): clang-format expanded golden scenes"
+            git push origin HEAD:impl/v0.1.4/13-voxel-render-first
+          fi
