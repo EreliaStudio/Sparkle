@@ -1,0 +1,296 @@
+#include <gtest/gtest.h>
+
+#include <GL/glew.h>
+
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#include "core/context/render_context.hpp"
+#include "engine/entity3d.hpp"
+#include "exception.hpp"
+#include "graphics/opengl/framebuffer.hpp"
+#include "rendering/engine/camera_component3d.hpp"
+#include "rendering/engine/engine.hpp"
+#include "rendering/engine/rendering_behaviour.hpp"
+#include "rendering/render_command.hpp"
+#include "rendering/render_snapshot.hpp"
+#include "sparkle_test/image_comparison.hpp"
+#include "sparkle_test/open_gl_test_context.hpp"
+#include "sparkle_test/paths.hpp"
+#include "ui/widget/engine_widget.hpp"
+
+namespace
+{
+	constexpr spk::Vector2UInt ImageSize{64, 64};
+
+	struct HDRClear final : spk::RenderCommand
+	{
+		float intensity;
+
+		explicit HDRClear(float value) :
+			intensity(value)
+		{
+		}
+
+		void execute(spk::RenderContext &) const override
+		{
+			const GLfloat value[]{intensity, intensity, intensity, 1.0f};
+			glClearBufferfv(GL_COLOR, 0, value);
+		}
+	};
+
+	struct HDRContributor final : spk::RenderingBehaviour
+	{
+		float value = 0.0f;
+
+		void buildViewRenderSnapshot(
+			spk::RenderSnapshot::Builder &builder,
+			const spk::EngineView::CaptureContext &) override
+		{
+			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<HDRClear>(value);
+		}
+	};
+
+	struct Scene
+	{
+		spk::Engine engine;
+		spk::Entity3D cameraEntity{"camera"};
+		spk::CameraComponent3D &camera;
+		spk::EngineView &view;
+
+		Scene() :
+			camera(cameraEntity.addComponent<spk::CameraComponent3D>()),
+			view(_initialize())
+		{
+		}
+
+		spk::EngineView &_initialize()
+		{
+			engine.addEntity(&cameraEntity);
+			return engine.addView("main", &camera, ImageSize);
+		}
+
+		~Scene()
+		{
+			engine.removeEntity(&cameraEntity);
+		}
+	};
+
+	void prepare(spk::EngineWidget &widget, spk::Engine &engine, spk::Rect2D geometry)
+	{
+		widget.setEngine(&engine);
+		widget.setGeometry(geometry);
+		widget.activate();
+	}
+
+	[[nodiscard]] spk::RenderSnapshot capture(spk::EngineWidget &widget)
+	{
+		spk::RenderSnapshot::Builder builder;
+		widget.buildRenderSnapshot(builder);
+		return builder.build();
+	}
+
+	[[nodiscard]] std::array<std::uint8_t, 4> readFinal(spk::EngineView &view)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		auto handle = view.output()->latest(gl.surface());
+		if (!handle)
+		{
+			throw std::runtime_error("No final EngineView texture on test surface");
+		}
+		spk::Framebuffer target(handle->size(), std::vector<spk::Texture::Handle>{handle}, std::nullopt);
+		target.activate(gl.renderContext());
+		std::array<std::uint8_t, 4> pixel{};
+		glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+		return pixel;
+	}
+
+	[[nodiscard]] int encodedReinhard(float hdr, float exposure)
+	{
+		const double x = static_cast<double>(hdr) * exposure;
+		const double linear = x / (1.0 + x);
+		const double srgb = linear <= 0.0031308
+								? linear * 12.92
+								: 1.055 * std::pow(linear, 1.0 / 2.4) - 0.055;
+		return static_cast<int>(std::round(srgb * 255.0));
+	}
+
+	void expectGolden(const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto category = std::filesystem::path("rendering/engine/empty_view");
+		const auto actual = sparkle_test::resultImagePath(category, name);
+		const auto expected = sparkle_test::expectedImagePath(category, name);
+		const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
+		gl.save(actual);
+		ASSERT_TRUE(std::filesystem::exists(expected)) << expected;
+		const auto comparison = sparkle_test::compareImages(actual, expected, diff);
+		EXPECT_TRUE(comparison.matches) << "Pixel differences: " << comparison.differentPixelCount;
+	}
+}
+
+TEST(EngineViewFirstImageTest, BlackEmptyViewProducesOpaquePixelsAndGolden)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	spk::EngineWidget widget("view", nullptr);
+	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	capture(widget).execute(gl.renderContext());
+	const auto pixel = gl.capture().pixel({32, 32});
+	EXPECT_EQ(pixel[0], 0);
+	EXPECT_EQ(pixel[1], 0);
+	EXPECT_EQ(pixel[2], 0);
+	EXPECT_EQ(pixel[3], 255);
+	expectGolden("black");
+}
+
+TEST(EngineViewFirstImageTest, CustomBackgroundAndExposureProduceOpaqueGolden)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	scene.view.setBackgroundColor({1.0f, 0.0f, 0.0f});
+	scene.view.setExposure(1.0e10f);
+	spk::EngineWidget widget("view", nullptr);
+	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	capture(widget).execute(gl.renderContext());
+	const auto pixel = gl.capture().pixel({32, 32});
+	EXPECT_EQ(pixel[0], 255);
+	EXPECT_EQ(pixel[1], 0);
+	EXPECT_EQ(pixel[2], 0);
+	EXPECT_EQ(pixel[3], 255);
+	expectGolden("custom_red");
+}
+
+TEST(EngineViewFirstImageTest, ReinhardMatchesReferenceHDRValuesOnGPU)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	auto &contributor = scene.engine.root().addBehaviour<HDRContributor>();
+	spk::EngineWidget widget("render", nullptr, spk::EngineWidget::Type::Render);
+	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	for (const auto &[hdr, exposure] : {std::pair{0.0f, 1.0f}, std::pair{1.0f, 1.0f},
+									  std::pair{2.0f, 1.0f}, std::pair{4.0f, 1.0f},
+									  std::pair{2.0f, 2.0f}})
+	{
+		contributor.value = hdr;
+		scene.view.setExposure(exposure);
+		capture(widget).execute(gl.renderContext());
+		const auto color = readFinal(scene.view);
+		EXPECT_NEAR(color[0], encodedReinhard(hdr, exposure), 1);
+		EXPECT_NEAR(color[1], encodedReinhard(hdr, exposure), 1);
+		EXPECT_NEAR(color[2], encodedReinhard(hdr, exposure), 1);
+		EXPECT_EQ(color[3], 255);
+		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	}
+	gl.reset();
+}
+
+TEST(EngineViewFirstImageTest, RenderOnlyAndDrawOnlyAreIndependentOnOneSurface)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	scene.view.setBackgroundColor({1.0f, 0.0f, 0.0f});
+	scene.view.setExposure(1.0e10f);
+	spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
+	prepare(producer, scene.engine, {{0, 0}, ImageSize});
+	capture(producer).execute(gl.renderContext());
+	ASSERT_TRUE(scene.view.output()->latest(gl.surface()));
+	gl.reset(ImageSize);
+	spk::EngineWidget consumer("consumer", nullptr, spk::EngineWidget::Type::Draw);
+	prepare(consumer, scene.engine, {{0, 0}, ImageSize});
+	const auto published = scene.engine.latestRenderSnapshot();
+	capture(consumer).execute(gl.renderContext());
+	EXPECT_EQ(scene.engine.latestRenderSnapshot(), published);
+	const auto pixel = gl.capture().pixel({32, 32});
+	EXPECT_EQ(pixel[0], 255);
+	EXPECT_EQ(pixel[3], 255);
+}
+
+TEST(EngineViewFirstImageTest, ResolutionChangesKeepOlderRenderSnapshotsAndHandles)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	spk::EngineWidget widget("producer", nullptr, spk::EngineWidget::Type::Render);
+	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	auto oldSnapshot = capture(widget);
+	oldSnapshot.execute(gl.renderContext());
+	const auto previous = scene.view.output()->latest(gl.surface());
+	ASSERT_TRUE(previous);
+	EXPECT_EQ(previous->size(), ImageSize);
+	scene.view.setResolution({32, 32});
+	auto newSnapshot = capture(widget);
+	newSnapshot.execute(gl.renderContext());
+	const auto updated = scene.view.output()->latest(gl.surface());
+	ASSERT_TRUE(updated);
+	EXPECT_NE(previous.identifier(), updated.identifier());
+	EXPECT_EQ(updated->size(), (spk::Vector2UInt{32, 32}));
+	oldSnapshot.execute(gl.renderContext());
+	EXPECT_EQ(scene.view.output()->latest(gl.surface()).identifier(), previous.identifier());
+	gl.reset();
+}
+
+TEST(EngineViewFirstImageTest, DetachedOutputPoliciesAndAbsentView)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	spk::EngineWidget widget("producer", nullptr, spk::EngineWidget::Type::Render);
+	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	capture(widget).execute(gl.renderContext());
+	const auto previous = scene.view.output()->latest(gl.surface());
+	ASSERT_TRUE(previous);
+	scene.view.detachCamera();
+	EXPECT_FALSE(scene.view.output()->latest(gl.surface()));
+	scene.view.setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::KeepLastFrame);
+	EXPECT_EQ(scene.view.output()->latest(gl.surface()).identifier(), previous.identifier());
+	const auto fallback = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::SRGB8_ALPHA8).texture();
+	scene.view.setFallbackTexture(fallback);
+	scene.view.setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::DefaultTexture);
+	EXPECT_EQ(scene.view.output()->latest(gl.surface()).identifier(), fallback.identifier());
+	spk::EngineWidget missing("missing", nullptr, spk::EngineWidget::Type::Draw);
+	prepare(missing, scene.engine, {{0, 0}, ImageSize});
+	missing.setViewName("absent");
+	EXPECT_NO_THROW(capture(missing).execute(gl.renderContext()));
+	EXPECT_THROW((void)scene.engine.view("absent"), spk::Exception);
+	gl.reset();
+}
+
+TEST(EngineViewFirstImageTest, RenderingRestoresUIRasterAndFramebufferState)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	spk::EngineWidget widget("producer", nullptr, spk::EngineWidget::Type::Render);
+	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	glViewport(3, 4, 21, 19);
+	glScissor(5, 6, 11, 12);
+	glEnable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+	glColorMask(GL_TRUE, GL_FALSE, GL_TRUE, GL_FALSE);
+	capture(widget).execute(gl.renderContext());
+	std::array<GLint, 4> viewport{}, scissor{};
+	std::array<GLboolean, 4> mask{};
+	glGetIntegerv(GL_VIEWPORT, viewport.data());
+	glGetIntegerv(GL_SCISSOR_BOX, scissor.data());
+	glGetBooleanv(GL_COLOR_WRITEMASK, mask.data());
+	EXPECT_EQ(viewport, (std::array<GLint, 4>{3, 4, 21, 19}));
+	EXPECT_EQ(scissor, (std::array<GLint, 4>{5, 6, 11, 12}));
+	EXPECT_EQ(glIsEnabled(GL_SCISSOR_TEST), GL_TRUE);
+	EXPECT_EQ(glIsEnabled(GL_DEPTH_TEST), GL_FALSE);
+	EXPECT_EQ(glIsEnabled(GL_CULL_FACE), GL_FALSE);
+	EXPECT_EQ(glIsEnabled(GL_BLEND), GL_FALSE);
+	EXPECT_EQ(mask, (std::array<GLboolean, 4>{GL_TRUE, GL_FALSE, GL_TRUE, GL_FALSE}));
+	gl.reset();
+}
