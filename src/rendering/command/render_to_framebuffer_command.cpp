@@ -1,7 +1,5 @@
 #include "rendering/command/render_to_framebuffer_command.hpp"
 
-#include <GL/glew.h>
-
 #include <stdexcept>
 #include <utility>
 
@@ -61,7 +59,7 @@ namespace spk
 		FramebufferBindingScope binding(context, target);
 		target.activate(context);
 		const Vector2UInt size = context.activeRenderTarget.size();
-		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
+		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply();
 		_snapshot->execute(context);
 	}
 }
