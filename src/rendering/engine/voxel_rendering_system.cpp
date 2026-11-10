@@ -21,11 +21,13 @@ namespace spk::Voxel
 		{
 			Geometry geometry;
 			spk::Palette palette;
+			std::vector<std::uint32_t> materialRemap;
 			std::vector<spk::Matrix4x4> matrices;
 
-			Bucket(const Geometry &source, const spk::Palette &appearance) :
+			Bucket(const Geometry &source, const spk::Palette &appearance, const std::vector<std::uint32_t> &remap) :
 				geometry(source),
-				palette(appearance)
+				palette(appearance),
+				materialRemap(remap)
 			{
 			}
 		};
@@ -71,13 +73,13 @@ namespace spk::Voxel
 			const Key key{
 				geometry.opaqueMesh().layout().vertexBuffer().identifier(),
 				reinterpret_cast<std::uintptr_t>(&renderer->palette()->materials())};
-			auto [entry, inserted] = buckets.try_emplace(key, geometry, *renderer->palette());
+			auto [entry, inserted] = buckets.try_emplace(key, geometry, *renderer->palette(), renderer->materialRemap());
 			entry->second.matrices.push_back(transform.modelMatrix());
 		}
 		for (auto &[key, bucket] : buckets)
 		{
 			(void)key;
-			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelBucketCommand>(bucket.geometry, bucket.palette, std::move(bucket.matrices), context.viewProjectionMatrix);
+			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelBucketCommand>(bucket.geometry, bucket.palette, std::move(bucket.materialRemap), std::move(bucket.matrices), context.viewProjectionMatrix);
 		}
 	}
 }
