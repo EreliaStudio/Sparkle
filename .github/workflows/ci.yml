@@ -380,17 +380,30 @@ jobs:
             compiler: cl
           - os: ubuntu-24.04
             compiler: g++
+    env:
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
         with:
           arch: x64
+      - name: Install sccache for MSVC Release
+        if: runner.os == 'Windows' && matrix.configuration == 'Release'
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Configure GitHub Actions cache credentials
+        if: runner.os == 'Windows' && matrix.configuration == 'Release'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: Configure with MSVC
         if: runner.os == 'Windows'
         run: >-
           cmake -S . -B build/compiler-compat -G Ninja
           -DCMAKE_CXX_COMPILER=cl
+          -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.configuration == 'Release' && 'sccache' || '' }}
           -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -414,7 +427,17 @@ jobs:
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Compile Core and Graphics suites with MSVC
         if: runner.os == 'Windows'
-        run: cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
+        run: |
+          $timer = [System.Diagnostics.Stopwatch]::StartNew()
+          cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
+          $buildExitCode = $LASTEXITCODE
+          $timer.Stop()
+          $seconds = [math]::Round($timer.Elapsed.TotalSeconds, 1)
+          "MSVC ${{ matrix.configuration }} compile: $seconds seconds" >> $env:GITHUB_STEP_SUMMARY
+          if ($buildExitCode -ne 0) { exit $buildExitCode }
+      - name: Report sccache statistics
+        if: always() && runner.os == 'Windows' && matrix.configuration == 'Release'
+        run: sccache --show-stats
       - name: Compile Core suite with GCC
         if: runner.os == 'Linux'
         run: cmake --build build/compiler-compat --target SparkleCoreTestSuite --parallel 4
