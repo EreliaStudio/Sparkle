@@ -14,14 +14,14 @@ namespace spk
 	private:
 		std::shared_ptr<const RenderSnapshot> _snapshot;
 		std::shared_ptr<EngineView::Output> _publisher;
-		Framebuffer::Handle _opaqueTarget;
+		std::shared_ptr<EngineView::Output::Targets> _targets;
 		Texture::Handle _finalTexture;
 
 	public:
 		ExecuteEngineViewCommand(
 			std::shared_ptr<const RenderSnapshot> snapshot,
 			std::shared_ptr<EngineView::Output> publisher,
-			Framebuffer::Handle opaqueTarget,
+			std::shared_ptr<EngineView::Output::Targets> targets,
 			Texture::Handle finalTexture);
 
 		void execute(RenderContext &context) const override;
