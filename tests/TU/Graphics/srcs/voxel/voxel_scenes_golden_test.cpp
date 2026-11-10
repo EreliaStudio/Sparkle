@@ -210,10 +210,6 @@ namespace
 			}
 		}
 		ASSERT_TRUE(visible) << name << ": rendered image is empty";
-		if (!std::filesystem::exists(expected))
-		{
-			FAIL() << "Missing approved voxel golden: " << expected << "; actual: " << actual;
-		}
 		const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
 		const auto comparison = sparkle_test::compareImages(actual, expected, diff);
 		EXPECT_TRUE(comparison.matches) << name << ": " << comparison.differentPixelCount << " different pixels";

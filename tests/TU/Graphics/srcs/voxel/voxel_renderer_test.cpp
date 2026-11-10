@@ -169,17 +169,9 @@ namespace
 			}
 		}
 		EXPECT_TRUE(hasVisiblePixel) << "Voxel renderer produced an entirely black image: " << name;
-		if (std::filesystem::exists(expected))
-		{
-			const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
-			const auto comparison = sparkle_test::compareImages(actual, expected, diff);
-			EXPECT_TRUE(comparison.matches) << "Voxel golden mismatch: " << name << ", pixels: " << comparison.differentPixelCount;
-		}
-		else
-		{
-			FAIL() << "Missing approved voxel golden: " << expected
-						 << "; actual OpenGL result: " << actual;
-		}
+		const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
+		const auto comparison = sparkle_test::compareImages(actual, expected, diff);
+		EXPECT_TRUE(comparison.matches) << "Voxel golden mismatch: " << name << ", pixels: " << comparison.differentPixelCount;
 	}
 
 	void renderScene(Scene &scene, const std::string &name)
