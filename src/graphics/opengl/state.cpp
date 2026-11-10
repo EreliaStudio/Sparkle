@@ -134,6 +134,13 @@ namespace spk::OpenGL
 		return result;
 	}
 
+	State::Blend State::Blend::disabled()
+	{
+		Blend result;
+		result.attachments.resize(drawBufferCount());
+		return result;
+	}
+
 	void State::Blend::apply() const noexcept
 	{
 		glBlendColor(constantColor[0], constantColor[1], constantColor[2], constantColor[3]);
@@ -226,6 +233,14 @@ namespace spk::OpenGL
 		return result;
 	}
 
+	State::ColorOutput State::ColorOutput::writable(bool framebufferSRGB)
+	{
+		ColorOutput result;
+		result.framebufferSRGB = framebufferSRGB;
+		result.masks.resize(drawBufferCount(), {true, true, true, true});
+		return result;
+	}
+
 	void State::ColorOutput::apply() const noexcept
 	{
 		toggle(GL_FRAMEBUFFER_SRGB, framebufferSRGB);
@@ -236,6 +251,21 @@ namespace spk::OpenGL
 			glColorMaski(index, mask[0] ? GL_TRUE : GL_FALSE, mask[1] ? GL_TRUE : GL_FALSE,
 				mask[2] ? GL_TRUE : GL_FALSE, mask[3] ? GL_TRUE : GL_FALSE);
 		}
+	}
+
+	void State::Clear::color(std::uint32_t attachment, const std::array<float, 4> &rgba) noexcept
+	{
+		glClearBufferfv(GL_COLOR, static_cast<GLint>(attachment), rgba.data());
+	}
+
+	void State::Clear::depth(float value) noexcept
+	{
+		glClearBufferfv(GL_DEPTH, 0, &value);
+	}
+
+	void State::Clear::stencil(int value) noexcept
+	{
+		glClearBufferiv(GL_STENCIL, 0, &value);
 	}
 
 	State::Bindings State::Bindings::capture()
