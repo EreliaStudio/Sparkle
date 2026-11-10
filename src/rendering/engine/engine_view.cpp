@@ -9,6 +9,56 @@
 
 namespace spk
 {
+	void EngineView::Output::_discard(Window::Surface *surface) noexcept
+	{
+		std::lock_guard lock(_mutex);
+		_frames.erase(surface);
+	}
+
+	void EngineView::Output::publish(Window::Surface &surface, Texture::Handle texture)
+	{
+		if (!texture)
+		{
+			throw spk::Exception("Cannot publish an empty EngineView output");
+		}
+		std::lock_guard lock(_mutex);
+		auto &frame = _frames[&surface];
+		if (!frame.destruction)
+		{
+			const std::weak_ptr<Output> weak = weak_from_this();
+			frame.destruction = surface.subscribeToDestruction([weak, key = &surface] {
+				if (const auto output = weak.lock())
+				{
+					output->_discard(key);
+				}
+			});
+		}
+		frame.texture = std::move(texture);
+	}
+
+	Texture::Handle EngineView::Output::latest(Window::Surface &surface) const
+	{
+		std::lock_guard lock(_mutex);
+		if (_detached && _policy == DetachedOutputPolicy::Invalid)
+		{
+			return {};
+		}
+		if (_detached && _policy == DetachedOutputPolicy::DefaultTexture)
+		{
+			return _fallback;
+		}
+		const auto it = _frames.find(&surface);
+		return it == _frames.end() ? Texture::Handle{} : it->second.texture;
+	}
+
+	void EngineView::Output::setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback)
+	{
+		std::lock_guard lock(_mutex);
+		_detached = detached;
+		_policy = policy;
+		_fallback = std::move(fallback);
+	}
+
 	bool EngineView::CaptureContext::isLayerCompatible(const Layers &candidate) const
 	{
 		if (!layers)
@@ -43,12 +93,14 @@ namespace spk
 		_resolution(resolution),
 		_order(order)
 	{
+		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
 
 	EngineView::CaptureContext EngineView::_capture() const
 	{
 		CaptureContext context;
 		context.name = _name;
+		context.output = _output;
 		context.identity = _identity;
 		context.resolution = _resolution;
 		context.layers = _layers;
@@ -73,6 +125,11 @@ namespace spk
 	{
 		return _identity;
 	}
+	std::shared_ptr<EngineView::Output> EngineView::output() const noexcept
+	{
+		return _output;
+	}
+
 	CameraComponent3D *EngineView::camera() const noexcept
 	{
 		return _camera;
@@ -80,10 +137,11 @@ namespace spk
 	void EngineView::setCamera(CameraComponent3D *camera) noexcept
 	{
 		_camera = camera;
+		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
 	void EngineView::detachCamera() noexcept
 	{
-		_camera = nullptr;
+		setCamera(nullptr);
 	}
 	Vector2UInt EngineView::resolution() const noexcept
 	{
@@ -136,6 +194,7 @@ namespace spk
 		case DetachedOutputPolicy::KeepLastFrame:
 		case DetachedOutputPolicy::DefaultTexture:
 			_detachedOutputPolicy = policy;
+			_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 			return;
 		}
 		throw spk::Exception("EngineView [" + _name + "]: invalid detached output policy");
@@ -144,6 +203,7 @@ namespace spk
 	void EngineView::setFallbackTexture(Texture::Handle texture) noexcept
 	{
 		_fallbackTexture = std::move(texture);
+		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
 	const Texture::Handle &EngineView::fallbackTexture() const noexcept
 	{
