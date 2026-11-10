@@ -557,13 +557,13 @@ namespace
 		}
 		if (pose == Pose::Sword)
 		{
-			put(builder, 9, 5, 2, Block::Wood);
-			put(builder, 9, 6, 2, Block::Wood);
-			put(builder, 9, 7, 2, Block::Gold);
-			put(builder, 10, 7, 2, Block::Gold);
-			for (std::uint32_t y = 8; y <= 14; ++y)
+			put(builder, 8, 4, 2, Block::Wood);
+			put(builder, 7, 3, 2, Block::Gold);
+			put(builder, 8, 3, 2, Block::Gold);
+			put(builder, 9, 3, 2, Block::Gold);
+			for (std::uint32_t y = 0; y < 3; ++y)
 			{
-				put(builder, 9, y, 2, Block::Metal);
+				put(builder, 8, y, 2, Block::Metal);
 			}
 		}
 	}
@@ -789,12 +789,12 @@ namespace
 		};
 		EXPECT_EQ(material(8, 5), "skin");
 		EXPECT_EQ(material(8, 9), "cloth");
-		EXPECT_EQ(material(9, 5), "wood");
-		EXPECT_EQ(material(9, 6), "wood");
-		EXPECT_EQ(material(9, 7), "gold");
-		EXPECT_EQ(material(10, 7), "gold");
-		EXPECT_EQ(material(9, 8), "metal");
-		EXPECT_EQ(material(9, 14), "metal");
+		EXPECT_EQ(material(8, 4), "wood");
+		EXPECT_EQ(material(7, 3), "gold");
+		EXPECT_EQ(material(8, 3), "gold");
+		EXPECT_EQ(material(9, 3), "gold");
+		EXPECT_EQ(material(8, 2), "metal");
+		EXPECT_EQ(material(8, 0), "metal");
 	}
 
 	TEST(VoxelSceneFunctionalTest, DistinctPalettesKeepSharedMesh)
