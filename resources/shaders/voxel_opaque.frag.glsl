@@ -11,6 +11,11 @@ layout(std430) readonly buffer Materials
 	MaterialSection sections[];
 };
 
+layout(std430) readonly buffer MaterialRemap
+{
+	uint paletteIndices[];
+};
+
 uniform sampler2D uAlbedo;
 
 layout(location = 0) in vec2 vertexUV;
@@ -20,7 +25,7 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-	MaterialSection section = sections[materialIndex];
+	MaterialSection section = sections[paletteIndices[materialIndex]];
 	vec2 uv = section.anchor + vertexUV * section.size;
 	vec4 albedo = texture(uAlbedo, uv);
 	if (albedo.a <= 0.0)
