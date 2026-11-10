@@ -11,47 +11,74 @@ namespace spk::OpenGL
 	public:
 		enum class Comparison : std::uint32_t
 		{
-			Never = 0x0200, Less = 0x0201, Equal = 0x0202, LessEqual = 0x0203,
-			Greater = 0x0204, NotEqual = 0x0205, GreaterEqual = 0x0206, Always = 0x0207
+			Never = 0x0200,
+			Less = 0x0201,
+			Equal = 0x0202,
+			LessEqual = 0x0203,
+			Greater = 0x0204,
+			NotEqual = 0x0205,
+			GreaterEqual = 0x0206,
+			Always = 0x0207
 		};
 
 		enum class BlendFactor : std::uint32_t
 		{
-			Zero = 0, One = 1, SourceColor = 0x0300, OneMinusSourceColor = 0x0301,
-			SourceAlpha = 0x0302, OneMinusSourceAlpha = 0x0303,
-			DestinationAlpha = 0x0304, OneMinusDestinationAlpha = 0x0305,
-			DestinationColor = 0x0306, OneMinusDestinationColor = 0x0307,
-			SourceAlphaSaturate = 0x0308, ConstantColor = 0x8001,
-			OneMinusConstantColor = 0x8002, ConstantAlpha = 0x8003,
+			Zero = 0,
+			One = 1,
+			SourceColor = 0x0300,
+			OneMinusSourceColor = 0x0301,
+			SourceAlpha = 0x0302,
+			OneMinusSourceAlpha = 0x0303,
+			DestinationAlpha = 0x0304,
+			OneMinusDestinationAlpha = 0x0305,
+			DestinationColor = 0x0306,
+			OneMinusDestinationColor = 0x0307,
+			SourceAlphaSaturate = 0x0308,
+			ConstantColor = 0x8001,
+			OneMinusConstantColor = 0x8002,
+			ConstantAlpha = 0x8003,
 			OneMinusConstantAlpha = 0x8004
 		};
 
 		enum class BlendEquation : std::uint32_t
 		{
-			Add = 0x8006, Subtract = 0x800A, ReverseSubtract = 0x800B,
-			Minimum = 0x8007, Maximum = 0x8008
+			Add = 0x8006,
+			Subtract = 0x800A,
+			ReverseSubtract = 0x800B,
+			Minimum = 0x8007,
+			Maximum = 0x8008
 		};
 
 		enum class StencilOperation : std::uint32_t
 		{
-			Zero = 0, Keep = 0x1E00, Replace = 0x1E01,
-			Increment = 0x1E02, Decrement = 0x1E03, Invert = 0x150A,
-			IncrementWrap = 0x8507, DecrementWrap = 0x8508
+			Zero = 0,
+			Keep = 0x1E00,
+			Replace = 0x1E01,
+			Increment = 0x1E02,
+			Decrement = 0x1E03,
+			Invert = 0x150A,
+			IncrementWrap = 0x8507,
+			DecrementWrap = 0x8508
 		};
 
 		enum class Culling : std::uint32_t
 		{
-			Front = 0x0404, Back = 0x0405, Both = 0x0408
+			Front = 0x0404,
+			Back = 0x0405,
+			Both = 0x0408
 		};
 
 		enum class Winding : std::uint32_t
 		{
-			Clockwise = 0x0900, CounterClockwise = 0x0901
+			Clockwise = 0x0900,
+			CounterClockwise = 0x0901
 		};
 
 		enum class PolygonMode : std::uint32_t
 		{
-			Point = 0x1B00, Line = 0x1B01, Fill = 0x1B02
+			Point = 0x1B00,
+			Line = 0x1B01,
+			Fill = 0x1B02
 		};
 
 		struct DepthTest
