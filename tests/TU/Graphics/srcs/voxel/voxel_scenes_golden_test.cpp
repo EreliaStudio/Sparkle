@@ -543,24 +543,28 @@ namespace
 			put(builder, x, 11, 4, Block::Dark);
 		}
 		put(builder, 5, 10, 4, Block::Brick);
-		const auto leftStart = pose == Pose::LeftArmRaised || pose == Pose::BothArmsRaised ? 9u : 5u;
-		const auto rightStart = pose == Pose::BothArmsRaised ? 9u : 5u;
+		const bool leftRaised = pose == Pose::LeftArmRaised || pose == Pose::BothArmsRaised;
+		const bool rightRaised = pose == Pose::BothArmsRaised;
+		const auto leftStart = leftRaised ? 9u : 5u;
+		const auto rightStart = rightRaised ? 9u : 5u;
 		for (std::uint32_t y = leftStart; y < leftStart + 5; ++y)
 		{
-			put(builder, 2, y, 2, y == leftStart ? Block::Cloth : Block::Skin);
+			put(builder, 2, y, 2, y == (leftRaised ? leftStart : leftStart + 4) ? Block::Cloth : Block::Skin);
 		}
 		for (std::uint32_t y = rightStart; y < rightStart + 5; ++y)
 		{
-			put(builder, 8, y, 2, y == rightStart ? Block::Cloth : Block::Skin);
+			put(builder, 8, y, 2, y == (rightRaised ? rightStart : rightStart + 4) ? Block::Cloth : Block::Skin);
 		}
 		if (pose == Pose::Sword)
 		{
-			put(builder, 9, 8, 2, Block::Wood);
-			for (std::uint32_t y = 9; y <= 14; ++y)
+			put(builder, 9, 5, 2, Block::Wood);
+			put(builder, 9, 6, 2, Block::Wood);
+			put(builder, 9, 7, 2, Block::Gold);
+			put(builder, 10, 7, 2, Block::Gold);
+			for (std::uint32_t y = 8; y <= 14; ++y)
 			{
 				put(builder, 9, y, 2, Block::Metal);
 			}
-			put(builder, 10, 9, 2, Block::Gold);
 		}
 	}
 
@@ -772,6 +776,26 @@ namespace
 		ASSERT_GT(geometry.opaqueMesh().indexCount(), 0u);
 		EXPECT_TRUE(geometry.transparentMesh().empty());
 		EXPECT_GT(geometry.depthMesh().indexCount(), 0u);
+	}
+
+
+	TEST(VoxelSceneFunctionalTest, SwordGripConnectsToLoweredHand)
+	{
+		Builder builder({11, 16, 5});
+		builder.bind(registry());
+		fillCharacter(builder, Pose::Sword);
+		const auto volume = builder.build();
+		const auto material = [&](std::uint32_t x, std::uint32_t y) -> std::string {
+			return volume.at({x, y, 2}).definition().slot("side").name;
+		};
+		EXPECT_EQ(material(8, 5), "skin");
+		EXPECT_EQ(material(8, 9), "cloth");
+		EXPECT_EQ(material(9, 5), "wood");
+		EXPECT_EQ(material(9, 6), "wood");
+		EXPECT_EQ(material(9, 7), "gold");
+		EXPECT_EQ(material(10, 7), "gold");
+		EXPECT_EQ(material(9, 8), "metal");
+		EXPECT_EQ(material(9, 14), "metal");
 	}
 
 	TEST(VoxelSceneFunctionalTest, DistinctPalettesKeepSharedMesh)
