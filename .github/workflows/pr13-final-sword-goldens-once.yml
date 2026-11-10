@@ -1,0 +1,44 @@
+name: PR13 one-time sword golden references
+on:
+  push:
+    branches:
+      - impl/v0.1.4/13-voxel-render-first
+    paths:
+      - .github/workflows/pr13-final-sword-goldens-once.yml
+permissions:
+  actions: read
+  contents: write
+jobs:
+  import-verified-captures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/13-voxel-render-first
+          persist-credentials: true
+      - name: Download tested graphics Debug output
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 42896347028 --repo EreliaStudio/Sparkle -n graphics-unit-tests-Debug -D captured
+      - name: Check captured PNGs and update two golden references
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=captured/tests/TU/Graphics/results/rendering/voxel-scenes
+          dst=tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes
+          echo "a7446cb7ca03c5f7ee655c6004692cc22e0a1b373146f6dea64adcb9abe92835  $src/character_with_sword.png" | sha256sum -c -
+          echo "9befcef00ad0d8a65f3fdba3c2cd5de56c37a766486e7fc00734e179e97f1407  $src/room_inside_character.png" | sha256sum -c -
+          cp "$src/character_with_sword.png" "$dst/character_with_sword.png"
+          cp "$src/room_inside_character.png" "$dst/room_inside_character.png"
+      - name: Commit verified real OpenGL goldens
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes/character_with_sword.png
+          git add tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes/room_inside_character.png
+          git diff --cached --exit-code && { echo "No golden changes" >&2; exit 1; } || test $? -eq 1
+          git commit -m "test(voxel): approve hand-aligned sword golden images"
+          git push origin HEAD:impl/v0.1.4/13-voxel-render-first
