@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
@@ -17,20 +18,22 @@ static_assert(std::is_move_constructible_v<spk::Framebuffer>);
 static_assert(std::is_copy_assignable_v<spk::Framebuffer>);
 static_assert(std::is_move_assignable_v<spk::Framebuffer>);
 
-TEST(FramebufferTest, DefaultAttachmentsExposeRenderTargetTextures)
+TEST(FramebufferTest, DefaultAttachmentsExposeTextureHandles)
 {
 	spk::Framebuffer framebuffer({16, 12});
 
 	EXPECT_EQ(framebuffer.size(), spk::Vector2UInt(16, 12));
 	ASSERT_EQ(framebuffer.colorAttachmentCount(), 1u);
-	EXPECT_EQ(framebuffer.colorAttachment(0).size(), framebuffer.size());
-	EXPECT_EQ(framebuffer.colorAttachment(0).format(), spk::Texture::Format::RGBA);
-	EXPECT_TRUE(framebuffer.colorAttachment(0).isRenderTarget());
-	ASSERT_NE(framebuffer.depthStencilAttachment(), nullptr);
-	EXPECT_EQ(framebuffer.depthStencilAttachment()->size(), framebuffer.size());
-	EXPECT_EQ(framebuffer.depthStencilAttachment()->format(), spk::Texture::Format::Depth24Stencil8);
-	EXPECT_TRUE(framebuffer.depthStencilAttachment()->isRenderTarget());
-	EXPECT_THROW((void)framebuffer.colorAttachment(1), std::out_of_range);
+	const auto &color = framebuffer.colorAttachmentHandle(0);
+	EXPECT_EQ(color->size(), framebuffer.size());
+	EXPECT_EQ(color->format(), spk::Texture::Format::RGBA);
+	EXPECT_EQ(color->contentSource(), spk::Texture::ContentSource::RenderAttachment);
+	const auto depth = framebuffer.depthStencilAttachmentHandle();
+	ASSERT_TRUE(depth);
+	EXPECT_EQ((*depth)->size(), framebuffer.size());
+	EXPECT_EQ((*depth)->format(), spk::Texture::Format::Depth24Stencil8);
+	EXPECT_EQ((*depth)->contentSource(), spk::Texture::ContentSource::RenderAttachment);
+	EXPECT_THROW((void)framebuffer.colorAttachmentHandle(1), std::out_of_range);
 }
 
 TEST(FramebufferTest, ConstructorRejectsInvalidSizesFormatsAndMissingAttachments)
@@ -50,7 +53,7 @@ TEST(FramebufferTest, ConstructorRejectsInvalidSizesFormatsAndMissingAttachments
 		std::invalid_argument);
 	EXPECT_THROW(
 		(void)spk::Framebuffer({1, 1}, std::vector<Format>{}, std::nullopt),
-		std::invalid_argument);
+		spk::Exception);
 }
 
 TEST(FramebufferTest, ActivationCreatesCompleteMultipleColorFramebuffer)
@@ -131,18 +134,21 @@ TEST(FramebufferTest, ResizeReallocatesAttachmentsAndInvalidatesOnce)
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
 	spk::Framebuffer framebuffer({4, 3});
-	const auto generation = framebuffer.generation();
+	const auto original = framebuffer.handle();
 
 	framebuffer.resize({4, 3});
-	EXPECT_EQ(framebuffer.generation(), generation);
+	EXPECT_EQ(framebuffer.handle().identifier(), original.identifier());
 	framebuffer.resize({7, 5});
-	EXPECT_EQ(framebuffer.generation(), generation + 1);
+	EXPECT_NE(framebuffer.handle().identifier(), original.identifier());
+	EXPECT_EQ(original->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(framebuffer.size(), spk::Vector2UInt(7, 5));
-	EXPECT_EQ(framebuffer.colorAttachment(0).size(), framebuffer.size());
-	EXPECT_EQ(framebuffer.depthStencilAttachment()->size(), framebuffer.size());
+	EXPECT_EQ(framebuffer.colorAttachmentHandle(0)->size(), framebuffer.size());
+	const auto depth = framebuffer.depthStencilAttachmentHandle();
+	ASSERT_TRUE(depth);
+	EXPECT_EQ((*depth)->size(), framebuffer.size());
 
 	framebuffer.activate(openGL.renderContext());
-	framebuffer.colorAttachment(0).activate(openGL.renderContext());
+	framebuffer.colorAttachmentHandle(0).activate(openGL.renderContext());
 	GLint width = 0;
 	GLint height = 0;
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
@@ -156,12 +162,12 @@ TEST(FramebufferTest, MoveConstructionPreservesResourceAndAttachments)
 {
 	spk::Framebuffer source({3, 2}, {spk::Texture::Format::RGB}, std::nullopt);
 	const auto identifier = source.identifier();
-	const auto colorIdentifier = source.colorAttachment(0).identifier();
+	const auto colorIdentifier = source.colorAttachmentHandle(0).identifier();
 
 	spk::Framebuffer moved(std::move(source));
 
 	EXPECT_EQ(moved.identifier(), identifier);
 	EXPECT_EQ(moved.size(), spk::Vector2UInt(3, 2));
 	ASSERT_EQ(moved.colorAttachmentCount(), 1u);
-	EXPECT_EQ(moved.colorAttachment(0).identifier(), colorIdentifier);
+	EXPECT_EQ(moved.colorAttachmentHandle(0).identifier(), colorIdentifier);
 }
