@@ -105,6 +105,7 @@ namespace spk::OpenGL
 			std::array<float, 4> constantColor{0, 0, 0, 0};
 
 			[[nodiscard]] static Blend capture();
+			[[nodiscard]] static Blend disabled();
 			void apply() const noexcept;
 		};
 
@@ -148,7 +149,15 @@ namespace spk::OpenGL
 			bool framebufferSRGB = false;
 
 			[[nodiscard]] static ColorOutput capture();
+			[[nodiscard]] static ColorOutput writable(bool framebufferSRGB = false);
 			void apply() const noexcept;
+		};
+
+		struct Clear
+		{
+			static void color(std::uint32_t attachment, const std::array<float, 4> &rgba) noexcept;
+			static void depth(float value = 1.0f) noexcept;
+			static void stencil(int value = 0) noexcept;
 		};
 
 		struct Bindings
