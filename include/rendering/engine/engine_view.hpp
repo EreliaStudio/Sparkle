@@ -1,11 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
+#include <mutex>
+#include <unordered_map>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "core/event/event_dispatcher.hpp"
+#include "core/window.hpp"
 #include "design_pattern/trait/updatable_by_device_trait.hpp"
 #include "graphics/color.hpp"
 #include "graphics/opengl/texture.hpp"
@@ -32,9 +36,33 @@ namespace spk
 			DefaultTexture
 		};
 
+		class Output final : public std::enable_shared_from_this<Output>
+		{
+		private:
+			struct SurfaceFrame
+			{
+				Texture::Handle texture;
+				Window::Surface::DestructionContract destruction;
+			};
+
+			mutable std::mutex _mutex;
+			std::unordered_map<Window::Surface *, SurfaceFrame> _frames;
+			DetachedOutputPolicy _policy = DetachedOutputPolicy::Invalid;
+			Texture::Handle _fallback;
+			bool _detached = false;
+
+			void _discard(Window::Surface *surface) noexcept;
+
+		public:
+			void publish(Window::Surface &surface, Texture::Handle texture);
+			[[nodiscard]] Texture::Handle latest(Window::Surface &surface) const;
+			void setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback);
+		};
+
 		struct CaptureContext
 		{
 			std::string name;
+			std::shared_ptr<Output> output;
 			std::uint64_t identity = 0;
 			Vector2UInt resolution{};
 			Matrix4x4 projectionMatrix{};
@@ -101,6 +129,7 @@ namespace spk
 		Texture::Handle _fallbackTexture;
 		RGB _backgroundColor{};
 		AmbientLight _ambientLight;
+		std::shared_ptr<Output> _output = std::make_shared<Output>();
 		float _exposure = 1.0f;
 		float _targetFPS = 60.0f;
 
@@ -117,6 +146,7 @@ namespace spk
 
 		[[nodiscard]] const std::string &name() const noexcept;
 		[[nodiscard]] std::uint64_t identity() const noexcept;
+		[[nodiscard]] std::shared_ptr<Output> output() const noexcept;
 		[[nodiscard]] CameraComponent3D *camera() const noexcept;
 		void setCamera(CameraComponent3D *camera) noexcept;
 		void detachCamera() noexcept;
