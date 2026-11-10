@@ -4,6 +4,7 @@
 
 #include "exception.hpp"
 #include "rendering/command/draw_engine_view_command.hpp"
+#include "rendering/command/viewport_uniform_render_command.hpp"
 
 #include "core/context/update_context.hpp"
 
@@ -82,6 +83,7 @@ namespace spk
 		{
 			_engine->refreshRenderSnapshot();
 			_engine->buildRenderSnapshot(builder);
+			builder.renderPass(targetRenderPass()).emplace<ViewportUniformRenderCommand>(viewRegion().viewport);
 		}
 		if (_type.has(Type::Draw))
 		{
