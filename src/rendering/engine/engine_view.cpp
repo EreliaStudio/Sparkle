@@ -29,8 +29,7 @@ namespace spk
 		const auto revealage = Attachment::create2D(resolution, Texture::Format::GreyLevel);
 		Framebuffer opaque(resolution, std::vector<Texture::Handle>{hdr.texture()}, depth.texture());
 		Framebuffer transparent(resolution, std::vector<Texture::Handle>{accumulation.texture(), revealage.texture()}, depth.texture());
-		auto target = std::make_shared<Targets>(Targets{resolution, hdr.texture(), depth.texture(),
-			accumulation.texture(), revealage.texture(), opaque.handle(), transparent.handle()});
+		auto target = std::make_shared<Targets>(Targets{resolution, hdr.texture(), depth.texture(), accumulation.texture(), revealage.texture(), opaque.handle(), transparent.handle()});
 		_targets.push_back(target);
 		return target;
 	}
