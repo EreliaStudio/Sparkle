@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "exception.hpp"
+#include "rendering/command/draw_engine_view_command.hpp"
 
 #include "core/context/update_context.hpp"
 
@@ -73,10 +74,22 @@ namespace spk
 
 	void EngineWidget::_buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (_engine != nullptr && _type.has(Type::Render))
+		if (_engine == nullptr)
+		{
+			return;
+		}
+		if (_type.has(Type::Render))
 		{
 			_engine->refreshRenderSnapshot();
 			_engine->buildRenderSnapshot(builder);
+		}
+		if (_type.has(Type::Draw))
+		{
+			if (auto output = _engine->viewOutput(_viewName))
+			{
+				builder.renderPass(targetRenderPass()).emplace<DrawEngineViewCommand>(
+					std::move(output), Rect2D{{0, 0}, geometry().size});
+			}
 		}
 	}
 
