@@ -623,6 +623,8 @@ namespace
 		InteriorCorner,
 		InteriorWallClose,
 		InteriorWindow,
+		CameraInsideWall,
+		CameraInsideFloor,
 		InsideCharacter,
 		ExteriorCharacters,
 		TwoPalettes,
@@ -669,6 +671,12 @@ namespace
 		case RoomView::InteriorWindow:
 			scene.lookAt({-3, -1, 0}, {-6, 0, 0});
 			break;
+		case RoomView::CameraInsideWall:
+			scene.lookAt({5.95f, -1.25f, -0.75f}, {-1.5f, -2.5f, -4.5f});
+			break;
+		case RoomView::CameraInsideFloor:
+			scene.lookAt({0.1f, -3.75f, -0.2f}, {0.0f, -1.8f, -5.0f});
+			break;
 		case RoomView::InsideCharacter:
 			scene.add(character(Pose::Sword), appearance, {-5.5f * CharacterScale, -floor + 1, -2.5f * CharacterScale}, {}, CharacterEntityScale);
 			scene.lookAt({2.0f, -0.5f, 8.0f}, {0.0f, -1.5f, 0.0f});
@@ -691,7 +699,7 @@ namespace
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_meshes", RoomView::SharedMeshes}), [](const ::testing::TestParamInfo<RoomCase> &info) {
+		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"camera_inside_wall", RoomView::CameraInsideWall}, RoomCase{"camera_inside_floor", RoomView::CameraInsideFloor}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_meshes", RoomView::SharedMeshes}), [](const ::testing::TestParamInfo<RoomCase> &info) {
 			return std::string(info.param.name);
 		});
 
@@ -703,6 +711,22 @@ namespace
 		});
 		EXPECT_EQ(geometry.opaqueMesh().indexCount(), 60u);
 		EXPECT_EQ(geometry.depthMesh().indexCount(), 60u);
+	}
+
+	TEST(VoxelSceneFunctionalTest, FloorCullsSharedFacesBetweenAdjacentVoxels)
+	{
+		const auto geometry = bake({3, 1, 3}, [](Builder &builder) {
+			for (std::uint32_t x = 0; x < 3; ++x)
+			{
+				for (std::uint32_t z = 0; z < 3; ++z)
+				{
+					put(builder, x, 0, z, Block::Stone);
+				}
+			}
+		});
+		constexpr std::uint32_t ExposedFaces = 3 * 3 * 2 + 3 * 4;
+		EXPECT_EQ(geometry.opaqueMesh().indexCount(), ExposedFaces * 6);
+		EXPECT_EQ(geometry.depthMesh().indexCount(), ExposedFaces * 6);
 	}
 
 	TEST(VoxelSceneFunctionalTest, RoomMeshCullsInternalCellBoundaries)
