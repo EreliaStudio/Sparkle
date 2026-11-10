@@ -17,8 +17,8 @@
 #include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
-#include "rendering/engine/engine_view.hpp"
 #include "rendering/engine/engine.hpp"
+#include "rendering/engine/engine_view.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "ui/widget/engine_widget.hpp"
 #include "rendering/render_snapshot.hpp"
@@ -440,259 +440,259 @@ INSTANTIATE_TEST_SUITE_P(
 
 namespace
 {
-    constexpr spk::Vector2UInt RoomImageSize{320, 240};
-    constexpr const char *RoomGoldenCategory = "rendering/engine/model3d_room";
+	constexpr spk::Vector2UInt RoomImageSize{320, 240};
+	constexpr const char *RoomGoldenCategory = "rendering/engine/model3d_room";
 
-    class RoomColorVolumeCommand final : public spk::RenderCommand
-    {
-    private:
-        spk::TextureMesh3D _mesh;
-        spk::Matrix4x4 _transform;
-        spk::Vector4 _linearColor;
+	class RoomColorVolumeCommand final : public spk::RenderCommand
+	{
+	private:
+		spk::TextureMesh3D _mesh;
+		spk::Matrix4x4 _transform;
+		spk::Vector4 _linearColor;
 
-        [[nodiscard]] static spk::Program &_program()
-        {
-            static spk::Program result(
-                R"(#version 430 core
+		[[nodiscard]] static spk::Program &_program()
+		{
+			static spk::Program result(
+				R"(#version 430 core
 layout(location = 0) in vec3 aPosition;
 uniform mat4 uTransform;
 void main()
 {
-    gl_Position = uTransform * vec4(aPosition, 1.0);
+	gl_Position = uTransform * vec4(aPosition, 1.0);
 }
 )",
-                R"(#version 430 core
+				R"(#version 430 core
 uniform vec4 uColor;
 layout(location = 0) out vec4 fragColor;
 void main()
 {
-    fragColor = uColor;
+	fragColor = uColor;
 }
 )");
-            return result;
-        }
+			return result;
+		}
 
-    public:
-        RoomColorVolumeCommand(const ColorVolume &volume, spk::Matrix4x4 transform, spk::RGB ambient) :
-            _mesh(createBox(volume)),
-            _transform(transform),
-            _linearColor{
-                volume.color.r * ambient.r,
-                volume.color.g * ambient.g,
-                volume.color.b * ambient.b,
-                1.0f}
-        {
-        }
+	public:
+		RoomColorVolumeCommand(const ColorVolume &volume, spk::Matrix4x4 transform, spk::RGB ambient) :
+			_mesh(createBox(volume)),
+			_transform(transform),
+			_linearColor{
+				volume.color.r * ambient.r,
+				volume.color.g * ambient.g,
+				volume.color.b * ambient.b,
+				1.0f}
+		{
+		}
 
-        void execute(spk::RenderContext &context) const override
-        {
-            auto &program = _program();
-            program.activate(context);
-            spk::Uniform<spk::Matrix4x4>("uTransform", _transform).activate(context);
-            spk::Uniform<spk::Vector4>("uColor", _linearColor).activate(context);
-            _mesh.layout().activate(context);
-            program.render(spk::Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
-        }
-    };
+		void execute(spk::RenderContext &context) const override
+		{
+			auto &program = _program();
+			program.activate(context);
+			spk::Uniform<spk::Matrix4x4>("uTransform", _transform).activate(context);
+			spk::Uniform<spk::Vector4>("uColor", _linearColor).activate(context);
+			_mesh.layout().activate(context);
+			program.render(spk::Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+		}
+	};
 
-    class RoomColorContributor final : public spk::RenderingBehaviour
-    {
-    private:
-        Character &_character;
+	class RoomColorContributor final : public spk::RenderingBehaviour
+	{
+	private:
+		Character &_character;
 
-        static void _append(
-            spk::RenderSnapshot::Builder &builder,
-            const ColorVolume &volume,
-            const spk::Matrix4x4 &transform,
-            spk::RGB ambient)
-        {
-            builder.renderPass(spk::EngineView::OpaquePassKey)
-                .emplace<RoomColorVolumeCommand>(volume, transform, ambient);
-        }
+		static void _append(
+			spk::RenderSnapshot::Builder &builder,
+			const ColorVolume &volume,
+			const spk::Matrix4x4 &transform,
+			spk::RGB ambient)
+		{
+			builder.renderPass(spk::EngineView::OpaquePassKey)
+				.emplace<RoomColorVolumeCommand>(volume, transform, ambient);
+		}
 
-        static void _appendCharacter(
-            spk::RenderSnapshot::Builder &builder,
-            const spk::Model3D::Attachable &node,
-            const spk::Matrix4x4 &viewProjection,
-            spk::RGB ambient)
-        {
-            if (const auto *element = dynamic_cast<const spk::Model3D::ObjectHeadless::ElementNode *>(&node))
-            {
-                if (const auto *volume = dynamic_cast<const ColorVolume *>(&element->definition()))
-                {
-                    _append(builder, *volume, viewProjection * element->globalTransform(), ambient);
-                }
-            }
-            for (const auto *child : node.children())
-            {
-                _appendCharacter(builder, *child, viewProjection, ambient);
-            }
-        }
+		static void _appendCharacter(
+			spk::RenderSnapshot::Builder &builder,
+			const spk::Model3D::Attachable &node,
+			const spk::Matrix4x4 &viewProjection,
+			spk::RGB ambient)
+		{
+			if (const auto *element = dynamic_cast<const spk::Model3D::ObjectHeadless::ElementNode *>(&node))
+			{
+				if (const auto *volume = dynamic_cast<const ColorVolume *>(&element->definition()))
+				{
+					_append(builder, *volume, viewProjection * element->globalTransform(), ambient);
+				}
+			}
+			for (const auto *child : node.children())
+			{
+				_appendCharacter(builder, *child, viewProjection, ambient);
+			}
+		}
 
-        static void _appendRoom(
-            spk::RenderSnapshot::Builder &builder,
-            const spk::EngineView::CaptureContext &context)
-        {
-            const ColorVolume floor("floor", {0.37f, 0.38f, 0.44f, 1.0f}, {0, -1.97f, 0}, {5.6f, 0.16f, 5.6f});
-            const ColorVolume backWall("backWall", {0.28f, 0.39f, 0.47f, 1.0f}, {0, 0, -2.7f}, {5.6f, 4.2f, 0.15f});
-            const ColorVolume leftWall("leftWall", {0.42f, 0.48f, 0.40f, 1.0f}, {-2.7f, 0, 0}, {0.15f, 4.2f, 5.6f});
-            _append(builder, floor, context.viewProjectionMatrix, context.ambientRGB);
-            _append(builder, backWall, context.viewProjectionMatrix, context.ambientRGB);
-            _append(builder, leftWall, context.viewProjectionMatrix, context.ambientRGB);
-        }
+		static void _appendRoom(
+			spk::RenderSnapshot::Builder &builder,
+			const spk::EngineView::CaptureContext &context)
+		{
+			const ColorVolume floor("floor", {0.37f, 0.38f, 0.44f, 1.0f}, {0, -1.97f, 0}, {5.6f, 0.16f, 5.6f});
+			const ColorVolume backWall("backWall", {0.28f, 0.39f, 0.47f, 1.0f}, {0, 0, -2.7f}, {5.6f, 4.2f, 0.15f});
+			const ColorVolume leftWall("leftWall", {0.42f, 0.48f, 0.40f, 1.0f}, {-2.7f, 0, 0}, {0.15f, 4.2f, 5.6f});
+			_append(builder, floor, context.viewProjectionMatrix, context.ambientRGB);
+			_append(builder, backWall, context.viewProjectionMatrix, context.ambientRGB);
+			_append(builder, leftWall, context.viewProjectionMatrix, context.ambientRGB);
+		}
 
-    public:
-        explicit RoomColorContributor(Character &character) :
-            _character(character)
-        {
-        }
+	public:
+		explicit RoomColorContributor(Character &character) :
+			_character(character)
+		{
+		}
 
-        void buildViewRenderSnapshot(
-            spk::RenderSnapshot::Builder &builder,
-            const spk::EngineView::CaptureContext &context) override
-        {
-            _appendRoom(builder, context);
-            _appendCharacter(builder, _character, context.viewProjectionMatrix, context.ambientRGB);
-        }
-    };
+		void buildViewRenderSnapshot(
+			spk::RenderSnapshot::Builder &builder,
+			const spk::EngineView::CaptureContext &context) override
+		{
+			_appendRoom(builder, context);
+			_appendCharacter(builder, _character, context.viewProjectionMatrix, context.ambientRGB);
+		}
+	};
 
-    struct RoomEngineScene
-    {
-        spk::Engine engine;
-        spk::Entity3D cameraEntity{"Room camera"};
-        spk::CameraComponent3D &camera;
-        Character character{characterBlueprint()};
-        spk::EngineView &view;
+	struct RoomEngineScene
+	{
+		spk::Engine engine;
+		spk::Entity3D cameraEntity{"Room camera"};
+		spk::CameraComponent3D &camera;
+		Character character{characterBlueprint()};
+		spk::EngineView &view;
 
-        RoomEngineScene() :
-            camera(cameraEntity.addComponent<spk::CameraComponent3D>()),
-            view(_initialize())
-        {
-            engine.root().addBehaviour<RoomColorContributor>(character);
-        }
+		RoomEngineScene() :
+			camera(cameraEntity.addComponent<spk::CameraComponent3D>()),
+			view(_initialize())
+		{
+			engine.root().addBehaviour<RoomColorContributor>(character);
+		}
 
-        spk::EngineView &_initialize()
-        {
-            const spk::Vector3 eye{3.0f, 2.0f, 7.2f};
-            cameraEntity.transform().place(eye);
-            cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
-            camera.setPerspective(0.78f, static_cast<float>(RoomImageSize.x) / RoomImageSize.y, 0.1f, 30.0f);
-            engine.addEntity(&cameraEntity);
-            return engine.addView("room", &camera, RoomImageSize);
-        }
+		spk::EngineView &_initialize()
+		{
+			const spk::Vector3 eye{3.0f, 2.0f, 7.2f};
+			cameraEntity.transform().place(eye);
+			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+			camera.setPerspective(0.78f, static_cast<float>(RoomImageSize.x) / RoomImageSize.y, 0.1f, 30.0f);
+			engine.addEntity(&cameraEntity);
+			return engine.addView("room", &camera, RoomImageSize);
+		}
 
-        ~RoomEngineScene()
-        {
-            engine.removeEntity(&cameraEntity);
-        }
-    };
+		~RoomEngineScene()
+		{
+			engine.removeEntity(&cameraEntity);
+		}
+	};
 
-    void prepareRoomWidget(spk::EngineWidget &widget, spk::Engine &engine)
-    {
-        widget.setEngine(&engine);
-        widget.setViewName("room");
-        widget.setGeometry({.anchor = {0, 0}, .size = RoomImageSize});
-        widget.activate();
-    }
+	void prepareRoomWidget(spk::EngineWidget &widget, spk::Engine &engine)
+	{
+		widget.setEngine(&engine);
+		widget.setViewName("room");
+		widget.setGeometry({.anchor = {0, 0}, .size = RoomImageSize});
+		widget.activate();
+	}
 
-    [[nodiscard]] spk::RenderSnapshot captureRoomWidget(spk::EngineWidget &widget)
-    {
-        spk::RenderSnapshot::Builder builder;
-        widget.buildRenderSnapshot(builder);
-        return builder.build();
-    }
+	[[nodiscard]] spk::RenderSnapshot captureRoomWidget(spk::EngineWidget &widget)
+	{
+		spk::RenderSnapshot::Builder builder;
+		widget.buildRenderSnapshot(builder);
+		return builder.build();
+	}
 
-    void expectRoomGolden(const char *name)
-    {
-        auto &gl = sparkle_test::OpenGLTestContext::instance();
-        const std::filesystem::path category(RoomGoldenCategory);
-        const auto actual = sparkle_test::resultImagePath(category, name);
-        const auto expected = sparkle_test::expectedImagePath(category, name);
-        const auto difference = sparkle_test::resultImagePath(category, std::string(name) + "_difference");
-        gl.save(actual);
-        ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing reviewed golden: " << expected << "; rendered: " << actual;
-        sparkle_test::ImageComparisonOptions tolerance;
-        tolerance.rgbTolerance = 3;
-        tolerance.alphaTolerance = 0;
-        const auto result = sparkle_test::compareImages(actual, expected, difference, tolerance, false);
-        EXPECT_EQ(result.actualWidth, result.expectedWidth);
-        EXPECT_EQ(result.actualHeight, result.expectedHeight);
-        EXPECT_LE(result.differentPixelCount, 50u) << "Room golden mismatch: " << name << "; diff: " << difference;
-    }
+	void expectRoomGolden(const char *name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const std::filesystem::path category(RoomGoldenCategory);
+		const auto actual = sparkle_test::resultImagePath(category, name);
+		const auto expected = sparkle_test::expectedImagePath(category, name);
+		const auto difference = sparkle_test::resultImagePath(category, std::string(name) + "_difference");
+		gl.save(actual);
+		ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing reviewed golden: " << expected << "; rendered: " << actual;
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 3;
+		tolerance.alphaTolerance = 0;
+		const auto result = sparkle_test::compareImages(actual, expected, difference, tolerance, false);
+		EXPECT_EQ(result.actualWidth, result.expectedWidth);
+		EXPECT_EQ(result.actualHeight, result.expectedHeight);
+		EXPECT_LE(result.differentPixelCount, 50u) << "Room golden mismatch: " << name << "; diff: " << difference;
+	}
 }
 
 TEST(EngineViewModel3DRoomGoldenTest, NeutralCharacterWallsAndWhiteAmbient)
 {
-    auto &gl = sparkle_test::OpenGLTestContext::instance();
-    gl.reset(RoomImageSize);
-    RoomEngineScene scene;
-    scene.view.ambientLight().setIntensity(1.0f);
-    spk::EngineWidget widget("room", nullptr);
-    prepareRoomWidget(widget, scene.engine);
-    captureRoomWidget(widget).execute(gl.renderContext());
-    ASSERT_TRUE(scene.view.output()->latest(gl.surface()));
-    EXPECT_EQ(gl.capture().pixel({160, 120})[3], 255);
-    expectRoomGolden("neutral_white_ambient");
-    gl.reset();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(RoomImageSize);
+	RoomEngineScene scene;
+	scene.view.ambientLight().setIntensity(1.0f);
+	spk::EngineWidget widget("room", nullptr);
+	prepareRoomWidget(widget, scene.engine);
+	captureRoomWidget(widget).execute(gl.renderContext());
+	ASSERT_TRUE(scene.view.output()->latest(gl.surface()));
+	EXPECT_EQ(gl.capture().pixel({160, 120})[3], 255);
+	expectRoomGolden("neutral_white_ambient");
+	gl.reset();
 }
 
 TEST(EngineViewModel3DRoomGoldenTest, RaisedArmWallsWarmAmbientAndExposure)
 {
-    auto &gl = sparkle_test::OpenGLTestContext::instance();
-    gl.reset(RoomImageSize);
-    RoomEngineScene scene;
-    scene.character.attachment("torso", "leftShoulder").setRotation(spk::Vector3{0, 0, -95});
-    scene.view.ambientLight().setColor({1.0f, 0.55f, 0.3f});
-    scene.view.ambientLight().setIntensity(1.2f);
-    scene.view.setExposure(1.6f);
-    spk::EngineWidget widget("room", nullptr);
-    prepareRoomWidget(widget, scene.engine);
-    captureRoomWidget(widget).execute(gl.renderContext());
-    EXPECT_EQ(gl.capture().pixel({160, 120})[3], 255);
-    expectRoomGolden("raised_arm_warm_ambient");
-    gl.reset();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(RoomImageSize);
+	RoomEngineScene scene;
+	scene.character.attachment("torso", "leftShoulder").setRotation(spk::Vector3{0, 0, -95});
+	scene.view.ambientLight().setColor({1.0f, 0.55f, 0.3f});
+	scene.view.ambientLight().setIntensity(1.2f);
+	scene.view.setExposure(1.6f);
+	spk::EngineWidget widget("room", nullptr);
+	prepareRoomWidget(widget, scene.engine);
+	captureRoomWidget(widget).execute(gl.renderContext());
+	EXPECT_EQ(gl.capture().pixel({160, 120})[3], 255);
+	expectRoomGolden("raised_arm_warm_ambient");
+	gl.reset();
 }
 
 TEST(EngineViewModel3DRoomGoldenTest, PublishedRoomIsReusableByDrawOnlyWidget)
 {
-    auto &gl = sparkle_test::OpenGLTestContext::instance();
-    gl.reset(RoomImageSize);
-    RoomEngineScene scene;
-    scene.view.ambientLight().setIntensity(1.0f);
-    spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
-    prepareRoomWidget(producer, scene.engine);
-    captureRoomWidget(producer).execute(gl.renderContext());
-    const auto published = scene.engine.latestRenderSnapshot();
-    ASSERT_TRUE(scene.view.output()->latest(gl.surface()));
-    gl.reset(RoomImageSize);
-    spk::EngineWidget consumer("consumer", nullptr, spk::EngineWidget::Type::Draw);
-    prepareRoomWidget(consumer, scene.engine);
-    captureRoomWidget(consumer).execute(gl.renderContext());
-    EXPECT_EQ(scene.engine.latestRenderSnapshot(), published);
-    EXPECT_EQ(gl.capture().pixel({160, 120})[3], 255);
-    expectRoomGolden("neutral_white_ambient");
-    gl.reset();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(RoomImageSize);
+	RoomEngineScene scene;
+	scene.view.ambientLight().setIntensity(1.0f);
+	spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
+	prepareRoomWidget(producer, scene.engine);
+	captureRoomWidget(producer).execute(gl.renderContext());
+	const auto published = scene.engine.latestRenderSnapshot();
+	ASSERT_TRUE(scene.view.output()->latest(gl.surface()));
+	gl.reset(RoomImageSize);
+	spk::EngineWidget consumer("consumer", nullptr, spk::EngineWidget::Type::Draw);
+	prepareRoomWidget(consumer, scene.engine);
+	captureRoomWidget(consumer).execute(gl.renderContext());
+	EXPECT_EQ(scene.engine.latestRenderSnapshot(), published);
+	EXPECT_EQ(gl.capture().pixel({160, 120})[3], 255);
+	expectRoomGolden("neutral_white_ambient");
+	gl.reset();
 }
 
 TEST(EngineViewModel3DRoomGoldenTest, CapturedAmbientAndExposureRemainImmutable)
 {
-    auto &gl = sparkle_test::OpenGLTestContext::instance();
-    gl.reset(RoomImageSize);
-    RoomEngineScene scene;
-    scene.view.ambientLight().setIntensity(1.0f);
-    spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
-    prepareRoomWidget(producer, scene.engine);
-    auto first = captureRoomWidget(producer);
-    scene.view.ambientLight().setColor({1.0f, 0.2f, 0.2f});
-    scene.view.setExposure(2.0f);
-    first.execute(gl.renderContext());
-    const auto before = scene.view.output()->latest(gl.surface());
-    ASSERT_TRUE(before);
-    EXPECT_EQ(before->size(), RoomImageSize);
-    const auto firstImage = gl.capture();
-    gl.reset(RoomImageSize);
-    captureRoomWidget(producer).execute(gl.renderContext());
-    const auto secondImage = gl.capture();
-    EXPECT_NE(firstImage.pixels, secondImage.pixels);
-    gl.reset();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(RoomImageSize);
+	RoomEngineScene scene;
+	scene.view.ambientLight().setIntensity(1.0f);
+	spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
+	prepareRoomWidget(producer, scene.engine);
+	auto first = captureRoomWidget(producer);
+	scene.view.ambientLight().setColor({1.0f, 0.2f, 0.2f});
+	scene.view.setExposure(2.0f);
+	first.execute(gl.renderContext());
+	const auto before = scene.view.output()->latest(gl.surface());
+	ASSERT_TRUE(before);
+	EXPECT_EQ(before->size(), RoomImageSize);
+	const auto firstImage = gl.capture();
+	gl.reset(RoomImageSize);
+	captureRoomWidget(producer).execute(gl.renderContext());
+	const auto secondImage = gl.capture();
+	EXPECT_NE(firstImage.pixels, secondImage.pixels);
+	gl.reset();
 }
