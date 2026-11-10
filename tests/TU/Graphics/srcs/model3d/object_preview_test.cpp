@@ -588,19 +588,14 @@ void main()
 			_append(builder, leftWall, context.viewProjectionMatrix, context.ambientRGB);
 		}
 
-		static void _appendGlass(spk::RenderSnapshot::Builder &builder,
-			const spk::EngineView::CaptureContext &context, int count)
+		static void _appendGlass(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &context, int count)
 		{
-			const ColorVolume blue("blueGlass", {0.12f, 0.77f, 0.96f, 0.48f},
-				{0.0f, -0.15f, 1.45f}, {2.25f, 2.35f, 0.06f});
-			builder.renderPass(spk::EngineView::WBOITPassKey).emplace<RoomTransparentVolumeCommand>(
-				blue, context.viewProjectionMatrix, context.ambientRGB);
+			const ColorVolume blue("blueGlass", {0.12f, 0.77f, 0.96f, 0.48f}, {0.0f, -0.15f, 1.45f}, {2.25f, 2.35f, 0.06f});
+			builder.renderPass(spk::EngineView::WBOITPassKey).emplace<RoomTransparentVolumeCommand>(blue, context.viewProjectionMatrix, context.ambientRGB);
 			if (count > 1)
 			{
-				const ColorVolume amber("amberGlass", {0.96f, 0.30f, 0.10f, 0.35f},
-					{0.55f, -0.08f, 1.9f}, {1.8f, 2.4f, 0.06f});
-				builder.renderPass(spk::EngineView::WBOITPassKey).emplace<RoomTransparentVolumeCommand>(
-					amber, context.viewProjectionMatrix, context.ambientRGB);
+				const ColorVolume amber("amberGlass", {0.96f, 0.30f, 0.10f, 0.35f}, {0.55f, -0.08f, 1.9f}, {1.8f, 2.4f, 0.06f});
+				builder.renderPass(spk::EngineView::WBOITPassKey).emplace<RoomTransparentVolumeCommand>(amber, context.viewProjectionMatrix, context.ambientRGB);
 			}
 		}
 
