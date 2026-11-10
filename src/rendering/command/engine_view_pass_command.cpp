@@ -1,11 +1,10 @@
 #include "rendering/command/engine_view_pass_command.hpp"
 
-#include <GL/glew.h>
-
 #include <stdexcept>
 #include <utility>
 
 #include "core/context/render_context.hpp"
+#include "graphics/opengl/state.hpp"
 
 namespace spk
 {
@@ -27,57 +26,56 @@ namespace spk
 		target.activate(context);
 		context.activeRenderTarget = target;
 		const auto size = target.size();
-		glViewport(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y));
-		glDisable(GL_SCISSOR_TEST);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDisable(GL_FRAMEBUFFER_SRGB);
+		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply();
+		OpenGL::State::Scissor{.enabled = false}.apply();
+		OpenGL::State::ColorOutput::writable(_phase == Phase::Composition).apply();
+		OpenGL::State::StencilTest{.enabled = false}.apply();
 	}
 
 	void EngineViewPassCommand::_configurePhase() const
 	{
+		using State = OpenGL::State;
+		State::Rasterization raster;
+		State::DepthTest depth;
+		auto blend = State::Blend::disabled();
 		switch (_phase)
 		{
 		case Phase::Shadow:
-			glDepthMask(GL_TRUE);
 			break;
 		case Phase::Skybox:
-		{
-			const GLfloat background[]{_background.r, _background.g, _background.b, 1.0f};
-			glDisable(GL_BLEND);
-			glDisable(GL_DEPTH_TEST);
-			glDisable(GL_CULL_FACE);
-			glDepthMask(GL_TRUE);
-			glClearBufferfv(GL_COLOR, 0, background);
-			glClear(GL_DEPTH_BUFFER_BIT);
+			raster.cullEnabled = false;
+			depth.enabled = false;
 			break;
-		}
 		case Phase::Opaque:
-			glDisable(GL_BLEND);
-			glEnable(GL_DEPTH_TEST);
-			glDepthMask(GL_TRUE);
 			break;
 		case Phase::WBOIT:
-		{
-			const GLfloat zero[]{0.0f, 0.0f, 0.0f, 0.0f};
-			const GLfloat one[]{1.0f, 1.0f, 1.0f, 1.0f};
-			glClearBufferfv(GL_COLOR, 0, zero);
-			glClearBufferfv(GL_COLOR, 1, one);
-			glEnable(GL_DEPTH_TEST);
-			glDepthMask(GL_FALSE);
-			glEnablei(GL_BLEND, 0);
-			glEnablei(GL_BLEND, 1);
-			glBlendFunci(0, GL_ONE, GL_ONE);
-			glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+			depth.write = false;
+			blend.attachments[0] = {.enabled = true, .sourceRGB = State::BlendFactor::One,
+				.destinationRGB = State::BlendFactor::One, .sourceAlpha = State::BlendFactor::One,
+				.destinationAlpha = State::BlendFactor::One};
+			blend.attachments[1] = {.enabled = true, .sourceRGB = State::BlendFactor::Zero,
+				.destinationRGB = State::BlendFactor::OneMinusSourceColor,
+				.sourceAlpha = State::BlendFactor::Zero,
+				.destinationAlpha = State::BlendFactor::OneMinusSourceColor};
+			break;
+		case Phase::Composition:
+			raster.cullEnabled = false;
+			depth.enabled = false;
+			depth.write = false;
 			break;
 		}
-		case Phase::Composition:
-			glDisable(GL_DEPTH_TEST);
-			glDepthMask(GL_FALSE);
-			glDisable(GL_BLEND);
-			glDisablei(GL_BLEND, 1);
-			glDisable(GL_CULL_FACE);
-			glEnable(GL_FRAMEBUFFER_SRGB);
-			break;
+		raster.apply();
+		depth.apply();
+		blend.apply();
+		if (_phase == Phase::Skybox)
+		{
+			State::Clear::color(0, {_background.r, _background.g, _background.b, 1.0f});
+			State::Clear::depth();
+		}
+		if (_phase == Phase::WBOIT)
+		{
+			State::Clear::color(0, {0, 0, 0, 0});
+			State::Clear::color(1, {1, 1, 1, 1});
 		}
 	}
 
