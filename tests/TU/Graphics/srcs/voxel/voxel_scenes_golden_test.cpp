@@ -609,10 +609,20 @@ namespace
 		}
 	}
 
-	[[nodiscard]] spk::Voxel::Geometry room(std::uint32_t width, std::uint32_t height)
+	[[nodiscard]] spk::Voxel::Geometry room(std::uint32_t width, std::uint32_t height, bool raisedFloor = false)
 	{
 		return bake({width, height, width}, [&](Builder &builder) {
 			fillRoom(builder, width, height);
+			if (raisedFloor)
+			{
+				for (std::uint32_t x = 3; x + 3 < width; x += 2)
+				{
+					for (std::uint32_t z = 3; z + 3 < width; z += 2)
+					{
+						put(builder, x, 1, z, (x + z) % 4 == 0 ? Block::Grass : Block::Stone);
+					}
+				}
+			}
 		});
 	}
 
@@ -625,6 +635,7 @@ namespace
 		InteriorWindow,
 		CameraInsideWall,
 		CameraInsideFloor,
+		CameraFloorGrazing,
 		InsideCharacter,
 		ExteriorCharacters,
 		TwoPalettes,
@@ -649,7 +660,8 @@ namespace
 		const bool tall = param.view == RoomView::InsideCharacter;
 		const auto width = tall ? 19u : 13u;
 		const auto height = tall ? 12u : 8u;
-		const auto geometry = room(width, height);
+		const bool raisedFloor = param.view == RoomView::CameraInsideFloor || param.view == RoomView::CameraFloorGrazing;
+		const auto geometry = room(width, height, raisedFloor);
 		const float center = static_cast<float>(width) / 2;
 		const float floor = static_cast<float>(height) / 2;
 		const auto appearance = palette(atlas);
@@ -675,7 +687,10 @@ namespace
 			scene.lookAt({5.95f, -1.25f, -0.75f}, {-1.5f, -2.5f, -4.5f});
 			break;
 		case RoomView::CameraInsideFloor:
-			scene.lookAt({0.1f, -3.75f, -0.2f}, {0.0f, -1.8f, -5.0f});
+			scene.lookAt({0.1f, -3.75f, -0.2f}, {0.0f, -2.45f, -4.5f});
+			break;
+		case RoomView::CameraFloorGrazing:
+			scene.lookAt({0.1f, -2.78f, -0.2f}, {0.0f, -2.95f, -5.0f});
 			break;
 		case RoomView::InsideCharacter:
 			scene.add(character(Pose::Sword), appearance, {-5.5f * CharacterScale, -floor + 1, -2.5f * CharacterScale}, {}, CharacterEntityScale);
@@ -699,7 +714,7 @@ namespace
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"camera_inside_wall", RoomView::CameraInsideWall}, RoomCase{"camera_inside_floor", RoomView::CameraInsideFloor}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_meshes", RoomView::SharedMeshes}), [](const ::testing::TestParamInfo<RoomCase> &info) {
+		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"camera_inside_wall", RoomView::CameraInsideWall}, RoomCase{"camera_inside_floor", RoomView::CameraInsideFloor}, RoomCase{"camera_floor_grazing", RoomView::CameraFloorGrazing}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_meshes", RoomView::SharedMeshes}), [](const ::testing::TestParamInfo<RoomCase> &info) {
 			return std::string(info.param.name);
 		});
 

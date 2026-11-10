@@ -10,7 +10,7 @@ EXPECTED = {
     "VoxelShapeGoldenTest": 16,
     "VoxelArrangementGoldenTest": 16,
     "VoxelCharacterGoldenTest": 5,
-    "VoxelRoomGoldenTest": 9,
+    "VoxelRoomGoldenTest": 12,
 }
 
 
