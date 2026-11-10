@@ -241,6 +241,35 @@ namespace spk::OpenGL
 		return result;
 	}
 
+	bool State::ColorOutput::destinationIsSRGB() noexcept
+	{
+		const auto attachment = integer(GL_DRAW_FRAMEBUFFER_BINDING) == 0 ? GL_BACK_LEFT : GL_COLOR_ATTACHMENT0;
+		GLint encoding = GL_LINEAR;
+		glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, attachment, GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, &encoding);
+		return encoding == GL_SRGB;
+	}
+
+	bool State::ColorOutput::srgbEnabled() noexcept
+	{
+		return OpenGL::enabled(GL_FRAMEBUFFER_SRGB);
+	}
+
+	void State::ColorOutput::setSRGB(bool enabled) noexcept
+	{
+		toggle(GL_FRAMEBUFFER_SRGB, enabled);
+	}
+
+	State::ColorOutput::SRGBScope::SRGBScope(bool enable) noexcept :
+		_previous(ColorOutput::srgbEnabled())
+	{
+		ColorOutput::setSRGB(enable);
+	}
+
+	State::ColorOutput::SRGBScope::~SRGBScope()
+	{
+		ColorOutput::setSRGB(_previous);
+	}
+
 	void State::ColorOutput::apply() const noexcept
 	{
 		toggle(GL_FRAMEBUFFER_SRGB, framebufferSRGB);
