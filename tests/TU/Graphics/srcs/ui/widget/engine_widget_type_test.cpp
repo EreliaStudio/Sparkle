@@ -7,6 +7,7 @@
 
 #include "core/context/update_context.hpp"
 #include "engine/entity3d.hpp"
+#include "exception.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/render_snapshot.hpp"
