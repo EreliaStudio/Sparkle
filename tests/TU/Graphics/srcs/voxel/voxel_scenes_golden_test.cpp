@@ -61,11 +61,13 @@ namespace
 		return spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/voxel_test_atlas.png");
 	}
 
-	[[nodiscard]] spk::Texture::Section section(std::size_t index)
+	[[nodiscard]] spk::Texture::Section section(std::size_t index, spk::Vector2UInt textureSize)
 	{
 		const float x = static_cast<float>(index % 4) * 0.25f;
 		const float y = static_cast<float>(index / 4) * 0.25f;
-		return {{x, y}, {0.25f, 0.25f}};
+		const float insetX = 0.5f / static_cast<float>(textureSize.x);
+		const float insetY = 0.5f / static_cast<float>(textureSize.y);
+		return {{x + insetX, y + insetY}, {0.25f - 2 * insetX, 0.25f - 2 * insetY}};
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Image &atlas, bool alternate = false)
@@ -77,7 +79,7 @@ namespace
 		{
 			spk::Material::Builder material;
 			const auto index = alternate ? (Tiles[i] + 3) % 16 : Tiles[i];
-			material.add("albedo", atlas, section(index));
+			material.add("albedo", atlas, section(index, atlas.size()));
 			builder.setMaterial(MaterialNames[i], material.build());
 		}
 		return builder.build();
@@ -296,37 +298,44 @@ namespace
 	{
 		constexpr std::array<Horizontal, 4> Orientations{
 			Horizontal::XPositive, Horizontal::ZPositive, Horizontal::XNegative, Horizontal::ZNegative};
-		put(builder, 2, 1, 2, Block::Stone);
 		switch (arrangement)
 		{
 		case Arrangement::AdjacentCubes:
+			put(builder, 2, 1, 2, Block::Stone);
 			put(builder, 3, 1, 2, Block::Brick);
 			break;
 		case Arrangement::CubesWithGap:
+			put(builder, 2, 1, 2, Block::Stone);
 			put(builder, 4, 1, 2, Block::Brick);
 			break;
 		case Arrangement::CubeAgainstSlab:
+			put(builder, 2, 1, 2, Block::Stone);
 			put(builder, 3, 1, 2, Block::Slab);
 			break;
 		case Arrangement::CubeAgainstSlope:
+			put(builder, 2, 1, 2, Block::Stone);
 			put(builder, 3, 1, 2, Block::Slope);
 			break;
 		case Arrangement::CubeAgainstStair:
+			put(builder, 2, 1, 2, Block::Stone);
 			put(builder, 3, 1, 2, Block::Stair);
 			break;
 		case Arrangement::SlopesInterlocked:
+			put(builder, 2, 1, 2, Block::Stone);
 			for (std::uint32_t i = 0; i < 4; ++i)
 			{
 				put(builder, 1 + i, 2, 2, Block::Slope, Orientations[i]);
 			}
 			break;
 		case Arrangement::StairsFourDirections:
+			put(builder, 2, 1, 2, Block::Stone);
 			for (std::uint32_t i = 0; i < 4; ++i)
 			{
 				put(builder, 1 + i, 2, 2, Block::Stair, Orientations[i]);
 			}
 			break;
 		case Arrangement::SlabsStacked:
+			put(builder, 2, 1, 2, Block::Stone);
 			put(builder, 2, 2, 2, Block::Slab);
 			put(builder, 2, 3, 2, Block::Slab, Horizontal::XPositive, Vertical::YNegative);
 			break;
@@ -342,11 +351,12 @@ namespace
 		case Arrangement::Staircase:
 			for (std::uint32_t x = 0; x < 8; ++x)
 			{
-				for (std::uint32_t y = 0; y < x / 2; ++y)
+				const auto level = (x + (x % 2)) / 2;
+				for (std::uint32_t y = 0; y < level; ++y)
 				{
 					put(builder, x, y, 2, Block::Brick);
 				}
-				put(builder, x, x / 2, 2, x % 2 == 0 ? Block::Stair : Block::Slab);
+				put(builder, x, level, 2, x % 2 == 0 ? Block::Stair : Block::Slab);
 			}
 			break;
 		case Arrangement::PitchedRoof:
@@ -361,7 +371,7 @@ namespace
 					}
 					else
 					{
-						put(builder, x, 2, z, Block::Slab);
+						put(builder, x, 2, z, Block::Slab, Horizontal::XPositive, Vertical::YNegative);
 					}
 				}
 			}
@@ -394,7 +404,14 @@ namespace
 					}
 					if (x > 0 && x < 7 && z > 0 && z < 7)
 					{
-						put(builder, x, 5, z, x == 1 || x == 6 ? Block::Slope : Block::Slab);
+						if (x == 1 || x == 6)
+						{
+							put(builder, x, 5, z, Block::Slope, x == 1 ? Horizontal::XPositive : Horizontal::XNegative);
+						}
+						else
+						{
+							put(builder, x, 5, z, Block::Slab, Horizontal::XPositive, Vertical::YNegative);
+						}
 					}
 				}
 			}
@@ -581,13 +598,13 @@ namespace
 			return std::string(info.param.name);
 		});
 
-	void fillRoom(Builder &builder, std::uint32_t width, std::uint32_t height)
+	void fillRoom(Builder &builder, std::uint32_t width, std::uint32_t height, bool stoneHouse = false)
 	{
 		for (std::uint32_t x = 0; x < width; ++x)
 		{
 			for (std::uint32_t z = 0; z < width; ++z)
 			{
-				put(builder, x, 0, z, (x + z) % 2 == 0 ? Block::Stone : Block::Brick);
+				put(builder, x, 0, z, stoneHouse ? Block::Wood : ((x + z) % 2 == 0 ? Block::Stone : Block::Brick));
 				if ((x == 0 || x + 1 == width || z == 0 || z + 1 == width))
 				{
 					for (std::uint32_t y = 1; y < height; ++y)
@@ -597,22 +614,22 @@ namespace
 						const bool window = x == 0 && z >= 3 && z <= 5 && y >= 2 && y <= 4;
 						if (!door && !window)
 						{
-							put(builder, x, y, z, Block::Brick);
+							put(builder, x, y, z, stoneHouse ? Block::Stone : Block::Brick);
 						}
 					}
 				}
 				if ((x + z) % 3 == 0 && x != 0 && z != 0 && x + 1 != width && z + 1 != width)
 				{
-					put(builder, x, height - 1, z, Block::Wood);
+					put(builder, x, height - 1, z, stoneHouse ? Block::Grass : Block::Wood);
 				}
 			}
 		}
 	}
 
-	[[nodiscard]] spk::Voxel::Geometry room(std::uint32_t width, std::uint32_t height, bool raisedFloor = false)
+	[[nodiscard]] spk::Voxel::Geometry room(std::uint32_t width, std::uint32_t height, bool raisedFloor = false, bool stoneHouse = false)
 	{
 		return bake({width, height, width}, [&](Builder &builder) {
-			fillRoom(builder, width, height);
+			fillRoom(builder, width, height, stoneHouse);
 			if (raisedFloor)
 			{
 				for (std::uint32_t x = 3; x + 3 < width; x += 2)
@@ -639,7 +656,7 @@ namespace
 		InsideCharacter,
 		ExteriorCharacters,
 		TwoPalettes,
-		SharedMeshes
+		SharedPaletteDifferentHouses
 	};
 
 	struct RoomCase
@@ -705,16 +722,21 @@ namespace
 			scene.add(geometry, palette(atlas, true), {center + 1, -floor, -center});
 			scene.lookAt({23, 14, 25}, {4, 0, 0});
 			break;
-		case RoomView::SharedMeshes:
-			scene.add(geometry, appearance, {center + 1, -floor, -center});
+		case RoomView::SharedPaletteDifferentHouses:
+		{
+			const auto secondHouse = room(width, height, false, true);
+			ASSERT_NE(geometry.opaqueMesh().layout().vertexBuffer().identifier(), secondHouse.opaqueMesh().layout().vertexBuffer().identifier());
+			ASSERT_NE(geometry.materialSlots().size(), secondHouse.materialSlots().size());
+			scene.add(secondHouse, appearance, {center + 1, -floor, -center});
 			scene.lookAt({23, 14, 25}, {4, 0, 0});
 			break;
+		}
 		}
 		render(scene, std::string("room_") + param.name);
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"camera_inside_wall", RoomView::CameraInsideWall}, RoomCase{"camera_inside_floor", RoomView::CameraInsideFloor}, RoomCase{"camera_floor_grazing", RoomView::CameraFloorGrazing}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_meshes", RoomView::SharedMeshes}), [](const ::testing::TestParamInfo<RoomCase> &info) {
+		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"camera_inside_wall", RoomView::CameraInsideWall}, RoomCase{"camera_inside_floor", RoomView::CameraInsideFloor}, RoomCase{"camera_floor_grazing", RoomView::CameraFloorGrazing}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_palette_different_houses", RoomView::SharedPaletteDifferentHouses}), [](const ::testing::TestParamInfo<RoomCase> &info) {
 			return std::string(info.param.name);
 		});
 
