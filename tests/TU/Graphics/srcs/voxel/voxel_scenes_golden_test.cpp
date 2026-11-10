@@ -726,7 +726,7 @@ namespace
 		{
 			const auto secondHouse = room(width, height, false, true);
 			ASSERT_NE(geometry.opaqueMesh().layout().vertexBuffer().identifier(), secondHouse.opaqueMesh().layout().vertexBuffer().identifier());
-			ASSERT_NE(geometry.materialSlots().size(), secondHouse.materialSlots().size());
+			ASSERT_NE(geometry.materialSlots().front().name, secondHouse.materialSlots().front().name);
 			scene.add(secondHouse, appearance, {center + 1, -floor, -center});
 			scene.lookAt({23, 14, 25}, {4, 0, 0});
 			break;

@@ -345,6 +345,15 @@ TEST(VoxelRendererTest, InstancedCommandUsesStd430AndRebindsSsboAfterThirdParty)
 		spk::Matrix4x4::identity());
 	EXPECT_EQ(command.instanceCount(), 2u);
 	command.execute(gl.renderContext());
+	GLint sampler = 0;
+	glGetIntegeri_v(GL_SAMPLER_BINDING, 0, &sampler);
+	ASSERT_GT(sampler, 0);
+	GLint minFilter = 0;
+	GLint magFilter = 0;
+	glGetSamplerParameteriv(static_cast<GLuint>(sampler), GL_TEXTURE_MIN_FILTER, &minFilter);
+	glGetSamplerParameteriv(static_cast<GLuint>(sampler), GL_TEXTURE_MAG_FILTER, &magFilter);
+	EXPECT_EQ(minFilter, GL_NEAREST);
+	EXPECT_EQ(magFilter, GL_NEAREST);
 	GLint first = 0;
 	GLint material = 0;
 	GLint remap = 0;

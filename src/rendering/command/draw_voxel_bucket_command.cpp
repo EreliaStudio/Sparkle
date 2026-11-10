@@ -71,7 +71,7 @@ namespace spk
 		_instances(InstanceBinding, 0, sizeof(InstanceData)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
-		_albedo(AlbedoUnit),
+		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
 		_viewProjection(viewProjection),
 		_instanceCount(matrices.size())
 	{
