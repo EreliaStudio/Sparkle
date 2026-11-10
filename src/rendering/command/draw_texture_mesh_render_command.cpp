@@ -1,6 +1,7 @@
 #include "rendering/command/draw_texture_mesh_render_command.hpp"
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -50,7 +51,11 @@ namespace spk
 			return;
 		}
 		const bool srgbTarget = _presentSRGB && OpenGL::State::ColorOutput::destinationIsSRGB();
-		OpenGL::State::ColorOutput::SRGBScope encoding(srgbTarget);
+		std::optional<OpenGL::State::ColorOutput::SRGBScope> encoding;
+		if (_presentSRGB)
+		{
+			encoding.emplace(srgbTarget);
+		}
 		auto &p = _sharedProgram();
 		p.activate(context);
 		Uniform<bool>("uEncodeSRGB", _presentSRGB && !srgbTarget).activate(context);
