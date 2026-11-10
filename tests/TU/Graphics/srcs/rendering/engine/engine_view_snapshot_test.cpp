@@ -15,7 +15,8 @@ namespace
 
 	void execute(const std::shared_ptr<const spk::RenderSnapshot> &snapshot)
 	{
-		spk::RenderContext context{.targetSurface = nullptr};
+		spk::Window::Surface surface{"engine-view-snapshot-test"};
+		spk::RenderContext context{surface};
 		snapshot->execute(context);
 	}
 }
