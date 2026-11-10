@@ -15,11 +15,8 @@
 #include "graphics/opengl/uniform.hpp"
 #include "model3d/object.hpp"
 #include "rendering/command/clear_render_command.hpp"
-#include "rendering/command/execute_snapshot_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
-#include "rendering/engine/engine.hpp"
-#include "rendering/engine/rendering_component.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
@@ -246,52 +243,27 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 		character.attachment("torso", "rightHip").setRotation(rightLeg);
 	}
 
-	class CharacterRenderer final : public spk::RenderingComponent3D
-	{
-	private:
-		Character &_character;
-
-	protected:
-		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &context) override
-		{
-			_character.buildRenderSnapshot(builder, context.viewProjectionMatrix);
-		}
-
-	public:
-		explicit CharacterRenderer(Character &character) :
-			RenderingComponent3D("Character renderer"),
-			_character(character)
-		{
-		}
-	};
-
 	class PreviewScene final
 	{
 	private:
-		spk::Engine _engine;
 		spk::Entity3D _cameraEntity{"Preview camera"};
-		spk::Entity3D _characterEntity{"Preview character"};
 		spk::CameraComponent3D &_camera;
+		Character &_character;
 
 	public:
 		explicit PreviewScene(Character &character) :
-			_camera(_cameraEntity.addComponent<spk::CameraComponent3D>("camera"))
+			_camera(_cameraEntity.addComponent<spk::CameraComponent3D>("camera")),
+			_character(character)
 		{
 			const spk::Vector3 position{3.0f, 2.0f, 7.2f};
 			_cameraEntity.transform().place(position);
 			_cameraEntity.transform().setRotation(spk::Quaternion::lookAt(position, {0, -0.2f, 0}));
 			_camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
-			_characterEntity.addComponent<CharacterRenderer>(character);
-			_engine.addEntity(&_cameraEntity);
-			_engine.addEntity(&_characterEntity);
-			_engine.addView("preview", &_camera, ImageSize);
 		}
 
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 		{
-			_engine.refreshRenderSnapshot();
-			builder.renderPass({"puppet-3d", 0})
-				.emplace<spk::ExecuteSnapshotRenderCommand>(_engine.latestRenderSnapshot());
+			_character.buildRenderSnapshot(builder, _camera.viewProjectionMatrix());
 		}
 	};
 
