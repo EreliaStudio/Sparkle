@@ -52,20 +52,14 @@ namespace
 	using Builder = spk::Voxel::Volume::Builder;
 
 	constexpr std::array<const char *, 13> MaterialNames{
-		"stone", "slab", "slope", "stair", "brick", "skin", "cloth",
-		"hair", "metal", "dark", "grass", "wood", "gold"};
+		"stone", "slab", "slope", "stair", "brick", "skin", "cloth", "hair", "metal", "dark", "grass", "wood", "gold"};
 
 	class PatternAtlas final : public spk::Texture
 	{
 	public:
 		PatternAtlas()
 		{
-			constexpr std::array<std::array<std::uint8_t, 3>, 16> Colors{{
-				{161, 166, 175}, {179, 179, 185}, {181, 169, 152}, {180, 155, 124},
-				{166, 79, 67}, {247, 189, 136}, {46, 125, 196}, {73, 46, 35},
-				{210, 222, 231}, {45, 48, 61}, {86, 156, 82}, {139, 99, 54},
-				{238, 188, 56}, {105, 81, 155}, {54, 151, 151}, {241, 236, 213}
-			}};
+			constexpr std::array<std::array<std::uint8_t, 3>, 16> Colors{{{161, 166, 175}, {179, 179, 185}, {181, 169, 152}, {180, 155, 124}, {166, 79, 67}, {247, 189, 136}, {46, 125, 196}, {73, 46, 35}, {210, 222, 231}, {45, 48, 61}, {86, 156, 82}, {139, 99, 54}, {238, 188, 56}, {105, 81, 155}, {54, 151, 151}, {241, 236, 213}}};
 			std::array<std::uint8_t, 32 * 32 * 4> pixels{};
 			for (std::size_t y = 0; y < 32; ++y)
 			{
@@ -111,8 +105,7 @@ namespace
 	[[nodiscard]] spk::Voxel::Shape shape(const char *name)
 	{
 		spk::Voxel::Shape::Builder builder;
-		builder.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (std::string(name) + ".json")));
+		builder.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (std::string(name) + ".json")));
 		return builder.build();
 	}
 
@@ -148,9 +141,7 @@ namespace
 	}
 
 	void put(
-		Builder &builder, std::uint32_t x, std::uint32_t y, std::uint32_t z,
-		Block block, Horizontal horizontal = Horizontal::XPositive,
-		Vertical vertical = Vertical::YPositive)
+		Builder &builder, std::uint32_t x, std::uint32_t y, std::uint32_t z, Block block, Horizontal horizontal = Horizontal::XPositive, Vertical vertical = Vertical::YPositive)
 	{
 		builder.set({x, y, z}, static_cast<std::uint32_t>(block), horizontal, vertical);
 	}
@@ -292,25 +283,9 @@ namespace
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		AllShapeOrientations, VoxelShapeGoldenTest,
-		::testing::Values(
-			ShapeCase{"cube_front", Block::Stone},
-			ShapeCase{"cube_yaw", Block::Stone, Horizontal::XPositive, Vertical::YPositive, {0, 45, 0}},
-			ShapeCase{"cube_tilt", Block::Stone, Horizontal::XPositive, Vertical::YPositive, {25, 40, -15}},
-			ShapeCase{"slab_lower", Block::Slab},
-			ShapeCase{"slab_inverted", Block::Slab, Horizontal::XPositive, Vertical::YNegative},
-			ShapeCase{"slope_east", Block::Slope},
-			ShapeCase{"slope_north", Block::Slope, Horizontal::ZPositive},
-			ShapeCase{"slope_west", Block::Slope, Horizontal::XNegative},
-			ShapeCase{"slope_south", Block::Slope, Horizontal::ZNegative},
-			ShapeCase{"slope_inverted", Block::Slope, Horizontal::XPositive, Vertical::YNegative},
-			ShapeCase{"stair_east", Block::Stair},
-			ShapeCase{"stair_north", Block::Stair, Horizontal::ZPositive},
-			ShapeCase{"stair_west", Block::Stair, Horizontal::XNegative},
-			ShapeCase{"stair_south", Block::Stair, Horizontal::ZNegative},
-			ShapeCase{"stair_inverted", Block::Stair, Horizontal::XPositive, Vertical::YNegative},
-			ShapeCase{"stair_rotated", Block::Stair, Horizontal::ZPositive, Vertical::YPositive, {12, 31, 0}}),
-		[](const ::testing::TestParamInfo<ShapeCase> &info) { return std::string(info.param.name); });
+		AllShapeOrientations, VoxelShapeGoldenTest, ::testing::Values(ShapeCase{"cube_front", Block::Stone}, ShapeCase{"cube_yaw", Block::Stone, Horizontal::XPositive, Vertical::YPositive, {0, 45, 0}}, ShapeCase{"cube_tilt", Block::Stone, Horizontal::XPositive, Vertical::YPositive, {25, 40, -15}}, ShapeCase{"slab_lower", Block::Slab}, ShapeCase{"slab_inverted", Block::Slab, Horizontal::XPositive, Vertical::YNegative}, ShapeCase{"slope_east", Block::Slope}, ShapeCase{"slope_north", Block::Slope, Horizontal::ZPositive}, ShapeCase{"slope_west", Block::Slope, Horizontal::XNegative}, ShapeCase{"slope_south", Block::Slope, Horizontal::ZNegative}, ShapeCase{"slope_inverted", Block::Slope, Horizontal::XPositive, Vertical::YNegative}, ShapeCase{"stair_east", Block::Stair}, ShapeCase{"stair_north", Block::Stair, Horizontal::ZPositive}, ShapeCase{"stair_west", Block::Stair, Horizontal::XNegative}, ShapeCase{"stair_south", Block::Stair, Horizontal::ZNegative}, ShapeCase{"stair_inverted", Block::Stair, Horizontal::XPositive, Vertical::YNegative}, ShapeCase{"stair_rotated", Block::Stair, Horizontal::ZPositive, Vertical::YPositive, {12, 31, 0}}), [](const ::testing::TestParamInfo<ShapeCase> &info) {
+			return std::string(info.param.name);
+		});
 
 	enum class Arrangement
 	{
@@ -341,8 +316,7 @@ namespace
 	void buildSmall(Builder &builder, Arrangement arrangement)
 	{
 		constexpr std::array<Horizontal, 4> Orientations{
-			Horizontal::XPositive, Horizontal::ZPositive,
-			Horizontal::XNegative, Horizontal::ZNegative};
+			Horizontal::XPositive, Horizontal::ZPositive, Horizontal::XNegative, Horizontal::ZNegative};
 		put(builder, 2, 1, 2, Block::Stone);
 		switch (arrangement)
 		{
@@ -527,25 +501,9 @@ namespace
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		OcclusionAndTerrain, VoxelArrangementGoldenTest,
-		::testing::Values(
-			ArrangementCase{"adjacent_cubes", Arrangement::AdjacentCubes},
-			ArrangementCase{"cubes_with_gap", Arrangement::CubesWithGap},
-			ArrangementCase{"cube_against_slab", Arrangement::CubeAgainstSlab},
-			ArrangementCase{"cube_against_slope", Arrangement::CubeAgainstSlope},
-			ArrangementCase{"cube_against_stair", Arrangement::CubeAgainstStair},
-			ArrangementCase{"slopes_interlocked", Arrangement::SlopesInterlocked},
-			ArrangementCase{"stairs_four_directions", Arrangement::StairsFourDirections},
-			ArrangementCase{"slabs_stacked", Arrangement::SlabsStacked},
-			ArrangementCase{"staircase", Arrangement::Staircase},
-			ArrangementCase{"pitched_roof", Arrangement::PitchedRoof},
-			ArrangementCase{"stone_arch", Arrangement::StoneArch},
-			ArrangementCase{"mixed_pavilion", Arrangement::MixedPavilion},
-			ArrangementCase{"checkerboard_floor", Arrangement::CheckerboardFloor},
-			ArrangementCase{"layered_terrain", Arrangement::LayeredTerrain},
-			ArrangementCase{"windowed_wall", Arrangement::WindowedWall},
-			ArrangementCase{"maze_overhead", Arrangement::MazeOverhead}),
-		[](const ::testing::TestParamInfo<ArrangementCase> &info) { return std::string(info.param.name); });
+		OcclusionAndTerrain, VoxelArrangementGoldenTest, ::testing::Values(ArrangementCase{"adjacent_cubes", Arrangement::AdjacentCubes}, ArrangementCase{"cubes_with_gap", Arrangement::CubesWithGap}, ArrangementCase{"cube_against_slab", Arrangement::CubeAgainstSlab}, ArrangementCase{"cube_against_slope", Arrangement::CubeAgainstSlope}, ArrangementCase{"cube_against_stair", Arrangement::CubeAgainstStair}, ArrangementCase{"slopes_interlocked", Arrangement::SlopesInterlocked}, ArrangementCase{"stairs_four_directions", Arrangement::StairsFourDirections}, ArrangementCase{"slabs_stacked", Arrangement::SlabsStacked}, ArrangementCase{"staircase", Arrangement::Staircase}, ArrangementCase{"pitched_roof", Arrangement::PitchedRoof}, ArrangementCase{"stone_arch", Arrangement::StoneArch}, ArrangementCase{"mixed_pavilion", Arrangement::MixedPavilion}, ArrangementCase{"checkerboard_floor", Arrangement::CheckerboardFloor}, ArrangementCase{"layered_terrain", Arrangement::LayeredTerrain}, ArrangementCase{"windowed_wall", Arrangement::WindowedWall}, ArrangementCase{"maze_overhead", Arrangement::MazeOverhead}), [](const ::testing::TestParamInfo<ArrangementCase> &info) {
+			return std::string(info.param.name);
+		});
 
 	enum class Pose
 	{
@@ -612,7 +570,9 @@ namespace
 
 	[[nodiscard]] spk::Voxel::Geometry character(Pose pose)
 	{
-		return bake({11, 16, 5}, [pose](Builder &builder) { fillCharacter(builder, pose); });
+		return bake({11, 16, 5}, [pose](Builder &builder) {
+			fillCharacter(builder, pose);
+		});
 	}
 
 	struct CharacterCase
@@ -638,14 +598,9 @@ namespace
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		CharacterPoses, VoxelCharacterGoldenTest,
-		::testing::Values(
-			CharacterCase{"neutral", Pose::Neutral},
-			CharacterCase{"left_arm_raised", Pose::LeftArmRaised},
-			CharacterCase{"both_arms_raised", Pose::BothArmsRaised},
-			CharacterCase{"walking", Pose::Walking},
-			CharacterCase{"with_sword", Pose::Sword}),
-		[](const ::testing::TestParamInfo<CharacterCase> &info) { return std::string(info.param.name); });
+		CharacterPoses, VoxelCharacterGoldenTest, ::testing::Values(CharacterCase{"neutral", Pose::Neutral}, CharacterCase{"left_arm_raised", Pose::LeftArmRaised}, CharacterCase{"both_arms_raised", Pose::BothArmsRaised}, CharacterCase{"walking", Pose::Walking}, CharacterCase{"with_sword", Pose::Sword}), [](const ::testing::TestParamInfo<CharacterCase> &info) {
+			return std::string(info.param.name);
+		});
 
 	void fillRoom(Builder &builder, std::uint32_t width, std::uint32_t height)
 	{
@@ -659,7 +614,7 @@ namespace
 					for (std::uint32_t y = 1; y < height; ++y)
 					{
 						const bool door = z + 1 == width && x >= width / 2 - 1 &&
-							x <= width / 2 + 1 && y <= 3;
+										  x <= width / 2 + 1 && y <= 3;
 						const bool window = x == 0 && z >= 3 && z <= 5 && y >= 2 && y <= 4;
 						if (!door && !window)
 						{
@@ -757,18 +712,9 @@ namespace
 	}
 
 	INSTANTIATE_TEST_SUITE_P(
-		OutsideAndInsideCameras, VoxelRoomGoldenTest,
-		::testing::Values(
-			RoomCase{"exterior", RoomView::Exterior},
-			RoomCase{"interior_center", RoomView::InteriorCenter},
-			RoomCase{"interior_corner", RoomView::InteriorCorner},
-			RoomCase{"interior_wall_close", RoomView::InteriorWallClose},
-			RoomCase{"interior_window", RoomView::InteriorWindow},
-			RoomCase{"inside_character", RoomView::InsideCharacter},
-			RoomCase{"exterior_characters", RoomView::ExteriorCharacters},
-			RoomCase{"two_palettes", RoomView::TwoPalettes},
-			RoomCase{"shared_meshes", RoomView::SharedMeshes}),
-		[](const ::testing::TestParamInfo<RoomCase> &info) { return std::string(info.param.name); });
+		OutsideAndInsideCameras, VoxelRoomGoldenTest, ::testing::Values(RoomCase{"exterior", RoomView::Exterior}, RoomCase{"interior_center", RoomView::InteriorCenter}, RoomCase{"interior_corner", RoomView::InteriorCorner}, RoomCase{"interior_wall_close", RoomView::InteriorWallClose}, RoomCase{"interior_window", RoomView::InteriorWindow}, RoomCase{"inside_character", RoomView::InsideCharacter}, RoomCase{"exterior_characters", RoomView::ExteriorCharacters}, RoomCase{"two_palettes", RoomView::TwoPalettes}, RoomCase{"shared_meshes", RoomView::SharedMeshes}), [](const ::testing::TestParamInfo<RoomCase> &info) {
+			return std::string(info.param.name);
+		});
 
 	TEST(VoxelSceneFunctionalTest, AdjacentCubesCullBothInternalFaces)
 	{
