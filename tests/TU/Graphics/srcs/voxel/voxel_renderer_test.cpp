@@ -34,8 +34,7 @@ namespace
 	[[nodiscard]] spk::Voxel::Geometry cubeGeometry()
 	{
 		spk::Voxel::Shape::Builder shapes;
-		shapes.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+		shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
 		const auto shape = shapes.build();
 		spk::Voxel::Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
@@ -85,8 +84,10 @@ namespace
 		}
 
 		spk::Voxel::Renderer &add(
-			const spk::Voxel::Geometry &geometry, const spk::Palette &palette,
-			spk::Vector3 position, spk::Vector3 rotation = {})
+			const spk::Voxel::Geometry &geometry,
+			const spk::Palette &palette,
+			spk::Vector3 position,
+			spk::Vector3 rotation = {})
 		{
 			auto entity = std::make_unique<spk::Entity3D>("voxel");
 			entity->transform().place(position);
@@ -138,8 +139,7 @@ namespace
 		{
 			const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
 			const auto comparison = sparkle_test::compareImages(actual, expected, diff);
-			EXPECT_TRUE(comparison.matches) << "Voxel golden mismatch: " << name
-											 << ", pixels: " << comparison.differentPixelCount;
+			EXPECT_TRUE(comparison.matches) << "Voxel golden mismatch: " << name << ", pixels: " << comparison.differentPixelCount;
 		}
 		else
 		{
@@ -178,8 +178,7 @@ TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidB
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
 	spk::Voxel::Renderer renderer;
 	renderer.bind(palette);
-	const spk::Voxel::Geometry invalid(
-		{}, {}, {}, {{"missingOne", 1.0f}, {"missingTwo", 1.0f}});
+	const spk::Voxel::Geometry invalid({}, {}, {}, {{"missingOne", 1.0f}, {"missingTwo", 1.0f}});
 	try
 	{
 		renderer.bind(invalid);
@@ -217,8 +216,8 @@ TEST(VoxelRendererTest, InvalidScaleIsRejectedBeforeSnapshotPublication)
 	auto &renderer = scene.add(
 		geometry, makePalette(atlas, spk::Texture::Section::whole), {}, {});
 	auto &transform = renderer.owner()->transform();
-	for (const spk::Vector3 scale : std::array<spk::Vector3, 3>{{
-			 {0.0f, 1.0f, 1.0f}, {-1.0f, 1.0f, 1.0f}, {1.0f, 2.0f, 1.0f}}})
+	const spk::Vector3 rejectedScales[] = {{0.0f, 1.0f, 1.0f}, {-1.0f, 1.0f, 1.0f}, {1.0f, 2.0f, 1.0f}};
+	for (const spk::Vector3 &scale : rejectedScales)
 	{
 		transform.rescale(scale);
 		EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
@@ -236,7 +235,8 @@ TEST(VoxelRendererTest, InstancedCommandUsesStd430AndRebindsSsboAfterThirdParty)
 	spk::Image atlas = spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/default_iconset.png");
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
 	spk::DrawVoxelBucketCommand command(
-		cubeGeometry(), palette,
+		cubeGeometry(),
+		palette,
 		{spk::Matrix4x4::identity(), spk::Matrix4x4::translation(2, 0, 0)},
 		spk::Matrix4x4::identity());
 	EXPECT_EQ(command.instanceCount(), 2u);

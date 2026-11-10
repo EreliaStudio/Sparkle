@@ -68,8 +68,9 @@ namespace spk::Voxel
 			}
 			const auto &transform = renderer->owner()->transform();
 			validateScale(transform.scale(spk::ReferenceFrame::World));
-			const Key key{geometry.opaqueMesh().layout().vertexBuffer().identifier(),
-						  reinterpret_cast<std::uintptr_t>(&renderer->palette()->materials())};
+			const Key key{
+				geometry.opaqueMesh().layout().vertexBuffer().identifier(),
+				reinterpret_cast<std::uintptr_t>(&renderer->palette()->materials())};
 			auto [entry, inserted] = buckets.try_emplace(key, geometry, *renderer->palette());
 			entry->second.matrices.push_back(transform.modelMatrix());
 		}
@@ -77,7 +78,10 @@ namespace spk::Voxel
 		{
 			(void)key;
 			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelBucketCommand>(
-				bucket.geometry, bucket.palette, std::move(bucket.matrices), context.viewProjectionMatrix);
+				bucket.geometry,
+				bucket.palette,
+				std::move(bucket.matrices),
+				context.viewProjectionMatrix);
 		}
 	}
 }

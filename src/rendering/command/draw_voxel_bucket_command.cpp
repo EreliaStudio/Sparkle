@@ -65,8 +65,10 @@ namespace spk
 	}
 
 	DrawVoxelBucketCommand::DrawVoxelBucketCommand(
-		Voxel::Geometry geometry, const Palette &palette,
-		std::vector<Matrix4x4> matrices, Matrix4x4 viewProjection) :
+		Voxel::Geometry geometry,
+		const Palette &palette,
+		std::vector<Matrix4x4> matrices,
+		Matrix4x4 viewProjection) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
 		_instances(InstanceBinding, 0, sizeof(InstanceData)),

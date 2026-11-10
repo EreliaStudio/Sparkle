@@ -45,8 +45,10 @@ namespace spk
 
 	public:
 		DrawVoxelBucketCommand(
-			Voxel::Geometry geometry, const Palette &palette,
-			std::vector<Matrix4x4> matrices, Matrix4x4 viewProjection);
+			Voxel::Geometry geometry,
+			const Palette &palette,
+			std::vector<Matrix4x4> matrices,
+			Matrix4x4 viewProjection);
 
 		[[nodiscard]] std::size_t instanceCount() const noexcept;
 		void execute(RenderContext &context) const override;
