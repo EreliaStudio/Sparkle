@@ -150,6 +150,11 @@ namespace spk::OpenGL
 
 			[[nodiscard]] static ColorOutput capture();
 			[[nodiscard]] static ColorOutput writable(bool framebufferSRGB = false);
+			[[nodiscard]] static bool destinationIsSRGB() noexcept;
+			[[nodiscard]] static bool srgbEnabled() noexcept;
+			static void setSRGB(bool enabled) noexcept;
+
+			class SRGBScope;
 			void apply() const noexcept;
 		};
 
@@ -192,6 +197,18 @@ namespace spk::OpenGL
 		void apply() const noexcept;
 
 		class Scope;
+	};
+
+	class State::ColorOutput::SRGBScope final
+	{
+	private:
+		bool _previous;
+
+	public:
+		explicit SRGBScope(bool enable) noexcept;
+		~SRGBScope();
+		SRGBScope(const SRGBScope &) = delete;
+		SRGBScope &operator=(const SRGBScope &) = delete;
 	};
 
 	class State::Scope final
