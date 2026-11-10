@@ -237,9 +237,9 @@ namespace spk
 		const auto accumulation = Attachment::create2D(context.resolution, Texture::Format::RGBA16F);
 		const auto revealage = Attachment::create2D(context.resolution, Texture::Format::RGBA16F);
 		const auto finalImage = Attachment::create2D(context.resolution, Texture::Format::SRGB8_ALPHA8);
-		Framebuffer opaque(context.resolution, {hdr.texture()}, depth.texture());
-		Framebuffer transparent(context.resolution, {accumulation.texture(), revealage.texture()}, depth.texture());
-		Framebuffer composed(context.resolution, {finalImage.texture()}, std::nullopt);
+		Framebuffer opaque(context.resolution, std::vector<Texture::Handle>{hdr.texture()}, depth.texture());
+		Framebuffer transparent(context.resolution, std::vector<Texture::Handle>{accumulation.texture(), revealage.texture()}, depth.texture());
+		Framebuffer composed(context.resolution, std::vector<Texture::Handle>{finalImage.texture()}, std::nullopt);
 
 		RenderSnapshot::Builder builder;
 		using Phase = EngineViewPassCommand::Phase;
