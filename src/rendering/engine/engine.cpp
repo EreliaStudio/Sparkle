@@ -231,22 +231,17 @@ namespace spk
 
 	std::unique_ptr<const RenderCommand> Engine::_buildViewCommand(const EngineView::CaptureContext &context)
 	{
-		using Attachment = Framebuffer::RenderAttachment;
-		const auto hdr = Attachment::create2D(context.resolution, Texture::Format::RGBA16F);
-		const auto depth = Attachment::create2D(context.resolution, Texture::Format::Depth24Stencil8);
-		const auto accumulation = Attachment::create2D(context.resolution, Texture::Format::RGBA16F);
-		const auto revealage = Attachment::create2D(context.resolution, Texture::Format::RGBA16F);
-		const auto finalImage = Attachment::create2D(context.resolution, Texture::Format::SRGB8_ALPHA8);
-		Framebuffer opaque(context.resolution, std::vector<Texture::Handle>{hdr.texture()}, depth.texture());
-		Framebuffer transparent(context.resolution, std::vector<Texture::Handle>{accumulation.texture(), revealage.texture()}, depth.texture());
+		const auto targets = context.output->acquireTargets(context.resolution);
+		const auto finalImage = Framebuffer::RenderAttachment::create2D(
+			context.resolution, Texture::Format::SRGB8_ALPHA8);
 		Framebuffer composed(context.resolution, std::vector<Texture::Handle>{finalImage.texture()}, std::nullopt);
 
 		RenderSnapshot::Builder builder;
 		using Phase = EngineViewPassCommand::Phase;
-		builder.renderPass(EngineView::ShadowPassKey).emplace<EngineViewPassCommand>(opaque.handle(), Phase::Shadow, context.backgroundColor);
-		builder.renderPass(EngineView::SkyboxPassKey).emplace<EngineViewPassCommand>(opaque.handle(), Phase::Skybox, context.backgroundColor);
-		builder.renderPass(EngineView::OpaquePassKey).emplace<EngineViewPassCommand>(opaque.handle(), Phase::Opaque, context.backgroundColor);
-		builder.renderPass(EngineView::WBOITPassKey).emplace<EngineViewPassCommand>(transparent.handle(), Phase::WBOIT, context.backgroundColor);
+		builder.renderPass(EngineView::ShadowPassKey).emplace<EngineViewPassCommand>(targets->opaque, Phase::Shadow, context.backgroundColor);
+		builder.renderPass(EngineView::SkyboxPassKey).emplace<EngineViewPassCommand>(targets->opaque, Phase::Skybox, context.backgroundColor);
+		builder.renderPass(EngineView::OpaquePassKey).emplace<EngineViewPassCommand>(targets->opaque, Phase::Opaque, context.backgroundColor);
+		builder.renderPass(EngineView::WBOITPassKey).emplace<EngineViewPassCommand>(targets->transparent, Phase::WBOIT, context.backgroundColor);
 		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewPassCommand>(composed.handle(), Phase::Composition, context.backgroundColor);
 		_visitObjects([&](EngineView::Contributor &contributor) {
 			if (contributor.canContribute() && context.isLayerCompatible(contributor.layers()))
@@ -261,10 +256,10 @@ namespace spk
 			}
 		});
 		_validateViewPasses(context.name, builder);
-		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(hdr.texture(), accumulation.texture(), revealage.texture(), context.resolution, context.exposure);
+		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(targets->hdr, targets->accumulation, targets->revealage, context.resolution, context.exposure);
 		auto snapshot = std::make_shared<const RenderSnapshot>(builder.build());
 		return std::make_unique<ExecuteEngineViewCommand>(
-			std::move(snapshot), context.output, opaque.handle(), finalImage.texture());
+			std::move(snapshot), context.output, targets, finalImage.texture());
 	}
 
 	bool Engine::_commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot)
