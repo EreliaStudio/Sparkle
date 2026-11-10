@@ -1,5 +1,6 @@
 #include "voxel/geometry.hpp"
 
+#include <limits>
 #include <utility>
 
 #include "exception.hpp"
@@ -24,9 +25,19 @@ namespace spk::Voxel
 		Geometry::SurfaceMesh opaque,
 		Geometry::SurfaceMesh translucent,
 		spk::ShadowMap::Mesh depth,
-		std::vector<Definition::Slot> slots) :
-		_data(std::make_shared<const Data>(std::move(opaque), std::move(translucent), std::move(depth), std::move(slots)))
+		std::vector<Definition::Slot> slots)
 	{
+		MaterialIndices indices;
+		for (std::size_t index = 0; index < slots.size(); ++index)
+		{
+			if (index > std::numeric_limits<std::uint32_t>::max() ||
+				!indices.emplace(slots[index].name, static_cast<std::uint32_t>(index)).second)
+			{
+				throw spk::Exception("Voxel Geometry: duplicate or invalid material index");
+			}
+		}
+		_data = std::make_shared<const Data>(
+			Data{std::move(opaque), std::move(translucent), std::move(depth), std::move(slots), std::move(indices)});
 	}
 
 	const Geometry::SurfaceMesh &Geometry::opaqueMesh() const noexcept
@@ -47,6 +58,11 @@ namespace spk::Voxel
 	const std::vector<Definition::Slot> &Geometry::materialSlots() const noexcept
 	{
 		return _data->slots;
+	}
+
+	const Geometry::MaterialIndices &Geometry::materialIndices() const noexcept
+	{
+		return _data->materialIndices;
 	}
 
 	bool Geometry::isCompatible(const spk::Palette &palette) const noexcept
