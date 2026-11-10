@@ -78,7 +78,6 @@ namespace spk::OpenGL
 	{
 		DepthTest result;
 		result.enabled = OpenGL::enabled(GL_DEPTH_TEST);
-		result.write = glIsEnabled(GL_DEPTH_WRITEMASK) == GL_TRUE;
 		result.comparison = static_cast<Comparison>(integer(GL_DEPTH_FUNC));
 		glGetDoublev(GL_DEPTH_CLEAR_VALUE, &result.clear);
 		glGetDoublev(GL_DEPTH_RANGE, result.range.data());
