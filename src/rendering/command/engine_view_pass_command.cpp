@@ -50,13 +50,8 @@ namespace spk
 			break;
 		case Phase::WBOIT:
 			depth.write = false;
-			blend.attachments[0] = {.enabled = true, .sourceRGB = State::BlendFactor::One,
-				.destinationRGB = State::BlendFactor::One, .sourceAlpha = State::BlendFactor::One,
-				.destinationAlpha = State::BlendFactor::One};
-			blend.attachments[1] = {.enabled = true, .sourceRGB = State::BlendFactor::Zero,
-				.destinationRGB = State::BlendFactor::OneMinusSourceColor,
-				.sourceAlpha = State::BlendFactor::Zero,
-				.destinationAlpha = State::BlendFactor::OneMinusSourceColor};
+			blend.attachments[0] = {.enabled = true, .sourceRGB = State::BlendFactor::One, .destinationRGB = State::BlendFactor::One, .sourceAlpha = State::BlendFactor::One, .destinationAlpha = State::BlendFactor::One};
+			blend.attachments[1] = {.enabled = true, .sourceRGB = State::BlendFactor::Zero, .destinationRGB = State::BlendFactor::OneMinusSourceColor, .sourceAlpha = State::BlendFactor::Zero, .destinationAlpha = State::BlendFactor::OneMinusSourceColor};
 			break;
 		case Phase::Composition:
 			raster.cullEnabled = false;
