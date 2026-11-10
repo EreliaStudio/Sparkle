@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "graphics/opengl/program.hpp"
@@ -28,6 +29,7 @@ namespace spk
 
 		static constexpr std::size_t InstanceBinding = 0;
 		static constexpr std::size_t MaterialBinding = 1;
+		static constexpr std::size_t MaterialRemapBinding = 2;
 		static constexpr std::size_t AlbedoUnit = 0;
 
 	private:
@@ -35,18 +37,20 @@ namespace spk
 		Program _program;
 		ShaderStorageBuffer _instances;
 		ShaderStorageBuffer _materials;
+		ShaderStorageBuffer _materialRemap;
 		Sampler _albedo;
 		Matrix4x4 _viewProjection;
 		std::size_t _instanceCount;
 
 		[[nodiscard]] static Program &_sharedProgram();
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
-			const Voxel::Geometry &geometry, const Palette &palette, Texture::Handle &atlas);
+			const Palette &palette, Texture::Handle &atlas);
 
 	public:
 		DrawVoxelBucketCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,
+			std::vector<std::uint32_t> materialRemap,
 			std::vector<Matrix4x4> matrices,
 			Matrix4x4 viewProjection);
 
