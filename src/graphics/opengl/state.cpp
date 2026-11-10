@@ -155,8 +155,7 @@ namespace spk::OpenGL
 			{
 				glDisablei(GL_BLEND, index);
 			}
-			glBlendFuncSeparatei(index, native(attachment.sourceRGB), native(attachment.destinationRGB),
-				native(attachment.sourceAlpha), native(attachment.destinationAlpha));
+			glBlendFuncSeparatei(index, native(attachment.sourceRGB), native(attachment.destinationRGB), native(attachment.sourceAlpha), native(attachment.destinationAlpha));
 			glBlendEquationSeparatei(index, native(attachment.equationRGB), native(attachment.equationAlpha));
 		}
 	}
@@ -227,8 +226,7 @@ namespace spk::OpenGL
 		{
 			std::array<GLboolean, 4> mask{};
 			glGetBooleani_v(GL_COLOR_WRITEMASK, index, mask.data());
-			result.masks.push_back({mask[0] == GL_TRUE, mask[1] == GL_TRUE,
-				mask[2] == GL_TRUE, mask[3] == GL_TRUE});
+			result.masks.push_back({mask[0] == GL_TRUE, mask[1] == GL_TRUE, mask[2] == GL_TRUE, mask[3] == GL_TRUE});
 		}
 		return result;
 	}
@@ -277,8 +275,7 @@ namespace spk::OpenGL
 		for (GLuint index = 0; index < masks.size(); ++index)
 		{
 			const auto &mask = masks[index];
-			glColorMaski(index, mask[0] ? GL_TRUE : GL_FALSE, mask[1] ? GL_TRUE : GL_FALSE,
-				mask[2] ? GL_TRUE : GL_FALSE, mask[3] ? GL_TRUE : GL_FALSE);
+			glColorMaski(index, mask[0] ? GL_TRUE : GL_FALSE, mask[1] ? GL_TRUE : GL_FALSE, mask[2] ? GL_TRUE : GL_FALSE, mask[3] ? GL_TRUE : GL_FALSE);
 		}
 	}
 
@@ -310,9 +307,7 @@ namespace spk::OpenGL
 		for (GLuint index = 0; index < count; ++index)
 		{
 			glActiveTexture(GL_TEXTURE0 + index);
-			result.textureUnits.push_back({
-				static_cast<std::uint32_t>(integer(GL_TEXTURE_BINDING_2D)),
-				static_cast<std::uint32_t>(indexedInteger(GL_SAMPLER_BINDING, index))});
+			result.textureUnits.push_back({static_cast<std::uint32_t>(integer(GL_TEXTURE_BINDING_2D)), static_cast<std::uint32_t>(indexedInteger(GL_SAMPLER_BINDING, index))});
 		}
 		glActiveTexture(GL_TEXTURE0 + result.activeTexture);
 		return result;
