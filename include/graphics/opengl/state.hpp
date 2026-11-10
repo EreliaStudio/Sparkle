@@ -141,7 +141,7 @@ namespace spk::OpenGL
 			bool cullEnabled = true;
 			Culling cull = Culling::Back;
 			Winding frontWinding = Winding::CounterClockwise;
-			std::array<PolygonMode, 2> polygonMode{PolygonMode::Fill, PolygonMode::Fill};
+			PolygonMode polygonMode = PolygonMode::Fill;
 			bool polygonOffsetEnabled = false;
 			float polygonOffsetFactor = 0;
 			float polygonOffsetUnits = 0;
