@@ -29,7 +29,8 @@ namespace spk
 		const auto texture = _output->latest(*context.targetSurface);
 		if (texture)
 		{
-			ImageRenderCommand(texture, Texture::Section::whole, _rectangle).execute(context);
+			ImageRenderCommand(
+				texture, Texture::Section({0.0f, 1.0f}, {1.0f, -1.0f}), _rectangle).execute(context);
 		}
 	}
 }
