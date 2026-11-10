@@ -126,6 +126,16 @@ namespace spk
 		return const_cast<Engine *>(this)->view(name);
 	}
 
+	std::shared_ptr<EngineView::Output> Engine::viewOutput(const std::string &name) const
+	{
+		std::lock_guard lock(_viewMutex);
+		if (const auto *result = _findView(name))
+		{
+			return result->output();
+		}
+		return {};
+	}
+
 	void Engine::removeView(const std::string &name)
 	{
 		std::unique_ptr<EngineView> removed;
