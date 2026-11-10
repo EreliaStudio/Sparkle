@@ -55,6 +55,7 @@ namespace spk
 		EngineView &addView(std::string name, CameraComponent3D *camera, Vector2UInt resolution, std::optional<EngineView::Order> order = std::nullopt);
 		[[nodiscard]] EngineView &view(const std::string &name);
 		[[nodiscard]] const EngineView &view(const std::string &name) const;
+		[[nodiscard]] std::shared_ptr<EngineView::Output> viewOutput(const std::string &name) const;
 		void removeView(const std::string &name);
 		void setViewOrder(EngineView &view, std::optional<EngineView::Order> order);
 		void refreshRenderSnapshot();
