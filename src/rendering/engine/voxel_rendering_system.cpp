@@ -1,5 +1,6 @@
 #include "voxel/rendering_system.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <map>
