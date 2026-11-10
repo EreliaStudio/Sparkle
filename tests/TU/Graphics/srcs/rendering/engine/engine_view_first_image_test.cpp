@@ -141,7 +141,7 @@ TEST(EngineViewFirstImageTest, BlackEmptyViewProducesOpaquePixelsAndGolden)
 	gl.reset(ImageSize);
 	Scene scene;
 	spk::EngineWidget widget("view", nullptr);
-	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	capture(widget).execute(gl.renderContext());
 	const auto image = gl.capture();
 	const auto pixel = image.pixel({32, 32});
@@ -160,7 +160,7 @@ TEST(EngineViewFirstImageTest, CustomBackgroundAndExposureProduceOpaqueGolden)
 	scene.view.setBackgroundColor({1.0f, 0.0f, 0.0f});
 	scene.view.setExposure(1.0e10f);
 	spk::EngineWidget widget("view", nullptr);
-	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	capture(widget).execute(gl.renderContext());
 	const auto image = gl.capture();
 	const auto pixel = image.pixel({32, 32});
@@ -178,7 +178,7 @@ TEST(EngineViewFirstImageTest, ReinhardMatchesReferenceHDRValuesOnGPU)
 	Scene scene;
 	auto &contributor = scene.engine.root().addBehaviour<HDRContributor>();
 	spk::EngineWidget widget("render", nullptr, spk::EngineWidget::Type::Render);
-	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	const std::array<std::pair<float, float>, 5> cases{{{0.0f, 1.0f}, {1.0f, 1.0f}, {2.0f, 1.0f}, {4.0f, 1.0f}, {2.0f, 2.0f}}};
 	for (const auto &[hdr, exposure] : cases)
 	{
@@ -203,12 +203,12 @@ TEST(EngineViewFirstImageTest, RenderOnlyAndDrawOnlyAreIndependentOnOneSurface)
 	scene.view.setBackgroundColor({1.0f, 0.0f, 0.0f});
 	scene.view.setExposure(1.0e10f);
 	spk::EngineWidget producer("producer", nullptr, spk::EngineWidget::Type::Render);
-	prepare(producer, scene.engine, {{0, 0}, ImageSize});
+	prepare(producer, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	capture(producer).execute(gl.renderContext());
 	ASSERT_TRUE(scene.view.output()->latest(gl.surface()));
 	gl.reset(ImageSize);
 	spk::EngineWidget consumer("consumer", nullptr, spk::EngineWidget::Type::Draw);
-	prepare(consumer, scene.engine, {{0, 0}, ImageSize});
+	prepare(consumer, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	const auto published = scene.engine.latestRenderSnapshot();
 	capture(consumer).execute(gl.renderContext());
 	EXPECT_EQ(scene.engine.latestRenderSnapshot(), published);
@@ -224,7 +224,7 @@ TEST(EngineViewFirstImageTest, ResolutionChangesKeepOlderRenderSnapshotsAndHandl
 	gl.reset(ImageSize);
 	Scene scene;
 	spk::EngineWidget widget("producer", nullptr, spk::EngineWidget::Type::Render);
-	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	auto oldSnapshot = capture(widget);
 	oldSnapshot.execute(gl.renderContext());
 	const auto previous = scene.view.output()->latest(gl.surface());
@@ -248,7 +248,7 @@ TEST(EngineViewFirstImageTest, DetachedOutputPoliciesAndAbsentView)
 	gl.reset(ImageSize);
 	Scene scene;
 	spk::EngineWidget widget("producer", nullptr, spk::EngineWidget::Type::Render);
-	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	capture(widget).execute(gl.renderContext());
 	const auto previous = scene.view.output()->latest(gl.surface());
 	ASSERT_TRUE(previous);
@@ -261,7 +261,7 @@ TEST(EngineViewFirstImageTest, DetachedOutputPoliciesAndAbsentView)
 	scene.view.setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::DefaultTexture);
 	EXPECT_EQ(scene.view.output()->latest(gl.surface()).identifier(), fallback.identifier());
 	spk::EngineWidget missing("missing", nullptr, spk::EngineWidget::Type::Draw);
-	prepare(missing, scene.engine, {{0, 0}, ImageSize});
+	prepare(missing, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	missing.setViewName("absent");
 	EXPECT_NO_THROW(capture(missing).execute(gl.renderContext()));
 	EXPECT_THROW((void)scene.engine.view("absent"), spk::Exception);
@@ -274,7 +274,7 @@ TEST(EngineViewFirstImageTest, RenderingRestoresUIRasterAndFramebufferState)
 	gl.reset(ImageSize);
 	Scene scene;
 	spk::EngineWidget widget("producer", nullptr, spk::EngineWidget::Type::Render);
-	prepare(widget, scene.engine, {{0, 0}, ImageSize});
+	prepare(widget, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
 	glViewport(3, 4, 21, 19);
 	glScissor(5, 6, 11, 12);
 	glEnable(GL_SCISSOR_TEST);
