@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
-#include <unordered_map>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "core/event/event_dispatcher.hpp"
