@@ -217,8 +217,8 @@ TEST(VoxelRendererTest, InvalidScaleIsRejectedBeforeSnapshotPublication)
 	auto &renderer = scene.add(
 		geometry, makePalette(atlas, spk::Texture::Section::whole), {}, {});
 	auto &transform = renderer.owner()->transform();
-	for (const spk::Vector3 scale : std::array<spk::Vector3, 3>{
-			 {0.0f, 1.0f, 1.0f}, {-1.0f, 1.0f, 1.0f}, {1.0f, 2.0f, 1.0f}})
+	for (const spk::Vector3 scale : std::array<spk::Vector3, 3>{{
+			 {0.0f, 1.0f, 1.0f}, {-1.0f, 1.0f, 1.0f}, {1.0f, 2.0f, 1.0f}}})
 	{
 		transform.rescale(scale);
 		EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
