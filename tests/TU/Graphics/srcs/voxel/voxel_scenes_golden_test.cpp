@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "container/json/object.hpp"
-#include "graphics/image.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
+#include "graphics/image.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/render_snapshot.hpp"
@@ -56,8 +56,7 @@ namespace
 
 	[[nodiscard]] spk::Image loadAtlas()
 	{
-		return spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) /
-			"textures/voxel_test_atlas.png");
+		return spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) / "textures/voxel_test_atlas.png");
 	}
 
 	[[nodiscard]] spk::Texture::Section section(std::size_t index)
