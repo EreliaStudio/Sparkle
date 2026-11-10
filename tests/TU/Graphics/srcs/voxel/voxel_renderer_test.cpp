@@ -55,15 +55,16 @@ namespace
 		}
 	};
 
-	[[nodiscard]] spk::Voxel::Geometry cubeGeometry()
+	[[nodiscard]] spk::Voxel::Geometry namedGeometry(const std::string &shapeName, const std::string &materialName)
 	{
 		spk::Voxel::Shape::Builder shapes;
-		shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+		shapes.addFromJSON(spk::JSON::Value::loadFromFile(
+			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
 		const auto shape = shapes.build();
 		spk::Voxel::Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
 		{
-			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{"stone", 1.0f});
+			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{materialName, 1.0f});
 		}
 		spk::Voxel::Definition::Registry::Builder registry;
 		registry.add(1, spk::Voxel::Definition(shape, std::move(mapping)));
@@ -73,6 +74,11 @@ namespace
 		return spk::Voxel::Mesher().bake(volume.build());
 	}
 
+	[[nodiscard]] spk::Voxel::Geometry cubeGeometry()
+	{
+		return namedGeometry("cube", "stone");
+	}
+
 	[[nodiscard]] spk::Palette makePalette(const spk::Texture &atlas, spk::Texture::Section section)
 	{
 		spk::Material::Builder material;
@@ -80,6 +86,20 @@ namespace
 		spk::Voxel::Palette::Builder palette;
 		palette.setMaterial("stone", material.build());
 		return palette.build();
+	}
+
+	[[nodiscard]] spk::Palette sharedPalette(const spk::Texture &atlas)
+	{
+		spk::Voxel::Palette::Builder builder;
+		for (const auto &[name, section] : std::array<std::pair<const char *, spk::Texture::Section>, 2>{
+				{{"stone", {{0.0f, 0.0f}, {0.5f, 0.5f}}},
+				 {"wood", {{0.5f, 0.0f}, {0.5f, 0.5f}}}}})
+		{
+			spk::Material::Builder material;
+			material.add("albedo", atlas, section);
+			builder.setMaterial(name, material.build());
+		}
+		return builder.build();
 	}
 
 	struct Scene
@@ -174,7 +194,7 @@ namespace
 		EXPECT_TRUE(comparison.matches) << "Voxel golden mismatch: " << name << ", pixels: " << comparison.differentPixelCount;
 	}
 
-	void renderScene(Scene &scene, const std::string &name)
+	void drawScene(Scene &scene)
 	{
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		gl.reset(ImageSize);
@@ -184,6 +204,11 @@ namespace
 		widget.setGeometry({.anchor = {0, 0}, .size = ImageSize});
 		widget.activate();
 		capturedWidget(widget).execute(gl.renderContext());
+	}
+
+	void renderScene(Scene &scene, const std::string &name)
+	{
+		drawScene(scene);
 		saveAndCheck(name);
 	}
 }
@@ -218,6 +243,7 @@ TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidB
 	}
 	EXPECT_EQ(renderer.geometry(), nullptr);
 	EXPECT_NE(renderer.palette(), nullptr);
+	EXPECT_TRUE(renderer.materialRemap().empty());
 }
 
 TEST(VoxelRendererTest, BucketsCombineMatchingPaletteAndSeparateDifferentMaterials)
@@ -232,6 +258,58 @@ TEST(VoxelRendererTest, BucketsCombineMatchingPaletteAndSeparateDifferentMateria
 	EXPECT_EQ(scene.bucketCount(), 1u);
 	scene.add(geometry, second, {0, 0, -2});
 	EXPECT_EQ(scene.bucketCount(), 2u);
+}
+
+TEST(VoxelRendererTest, DistinctMeshesResolveLocalZeroToDifferentSharedPaletteIndices)
+{
+	TestAtlas atlas;
+	const auto palette = sharedPalette(atlas);
+	const auto stone = namedGeometry("cube", "stone");
+	const auto wood = namedGeometry("slab", "wood");
+	ASSERT_EQ(stone.materialIndices().at("stone"), 0u);
+	ASSERT_EQ(wood.materialIndices().at("wood"), 0u);
+	spk::Voxel::Renderer renderer;
+	renderer.bind(stone);
+	renderer.bind(palette);
+	ASSERT_EQ(renderer.materialRemap().size(), 1u);
+	EXPECT_EQ(renderer.materialRemap()[0], 0u);
+	renderer.bind(wood);
+	ASSERT_EQ(renderer.materialRemap().size(), 1u);
+	EXPECT_EQ(renderer.materialRemap()[0], 1u);
+	EXPECT_THROW(renderer.bind(namedGeometry("cube", "missing")), spk::Exception);
+	ASSERT_NE(renderer.geometry(), nullptr);
+	EXPECT_EQ(renderer.geometry()->materialIndices().at("wood"), 0u);
+	EXPECT_EQ(renderer.materialRemap()[0], 1u);
+}
+
+TEST(VoxelRendererTest, DifferentMeshesSharingOnePaletteRenderDistinctMaterials)
+{
+	TestAtlas atlas;
+	const auto palette = sharedPalette(atlas);
+	Scene scene;
+	auto &first = scene.add(namedGeometry("cube", "stone"), palette, {-1.0f, 0, 0});
+	auto &second = scene.add(namedGeometry("slab", "wood"), palette, {1.0f, 0, 0});
+	ASSERT_EQ(scene.bucketCount(), 2u);
+	EXPECT_EQ(first.materialRemap().at(0), 0u);
+	EXPECT_EQ(second.materialRemap().at(0), 1u);
+	drawScene(scene);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto image = gl.capture();
+	std::size_t yellowPixels = 0;
+	std::size_t cyanPixels = 0;
+	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
+		{
+			const auto pixel = image.pixel({x, y});
+			yellowPixels += pixel[0] > pixel[2] + 35 && pixel[1] > pixel[2] + 35;
+			cyanPixels += pixel[2] > pixel[0] + 35 && pixel[1] > pixel[0] + 35;
+		}
+	}
+	EXPECT_GT(yellowPixels, 30u);
+	EXPECT_GT(cyanPixels, 30u);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.save(sparkle_test::resultImagePath("rendering/voxel", "shared_palette_distinct_meshes"));
 }
 
 TEST(VoxelRendererTest, InvalidScaleIsRejectedBeforeSnapshotPublication)
@@ -263,25 +341,33 @@ TEST(VoxelRendererTest, InstancedCommandUsesStd430AndRebindsSsboAfterThirdParty)
 	spk::DrawVoxelBucketCommand command(
 		cubeGeometry(),
 		palette,
+		{0u},
 		{spk::Matrix4x4::identity(), spk::Matrix4x4::translation(2, 0, 0)},
 		spk::Matrix4x4::identity());
 	EXPECT_EQ(command.instanceCount(), 2u);
 	command.execute(gl.renderContext());
 	GLint first = 0;
 	GLint material = 0;
+	GLint remap = 0;
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &first);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &material);
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &remap);
 	EXPECT_GT(first, 0);
 	EXPECT_GT(material, 0);
+	EXPECT_GT(remap, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 	command.execute(gl.renderContext());
 	GLint rebound = 0;
 	GLint reboundMaterial = 0;
+	GLint reboundRemap = 0;
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &rebound);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &reboundMaterial);
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &reboundRemap);
 	EXPECT_EQ(rebound, first);
 	EXPECT_EQ(reboundMaterial, material);
+	EXPECT_EQ(reboundRemap, remap);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
 }
