@@ -5,12 +5,12 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <span>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "container/json/object.hpp"
+#include "graphics/image.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "rendering/engine/camera_component3d.hpp"
@@ -54,31 +54,11 @@ namespace
 	constexpr std::array<const char *, 13> MaterialNames{
 		"stone", "slab", "slope", "stair", "brick", "skin", "cloth", "hair", "metal", "dark", "grass", "wood", "gold"};
 
-	class PatternAtlas final : public spk::Texture
+	[[nodiscard]] spk::Image loadAtlas()
 	{
-	public:
-		PatternAtlas()
-		{
-			constexpr std::array<std::array<std::uint8_t, 3>, 16> Colors{{{161, 166, 175}, {179, 179, 185}, {181, 169, 152}, {180, 155, 124}, {166, 79, 67}, {247, 189, 136}, {46, 125, 196}, {73, 46, 35}, {210, 222, 231}, {45, 48, 61}, {86, 156, 82}, {139, 99, 54}, {238, 188, 56}, {105, 81, 155}, {54, 151, 151}, {241, 236, 213}}};
-			std::array<std::uint8_t, 32 * 32 * 4> pixels{};
-			for (std::size_t y = 0; y < 32; ++y)
-			{
-				for (std::size_t x = 0; x < 32; ++x)
-				{
-					const auto &color = Colors[(y / 8) * 4 + x / 8];
-					const auto offset = (y * 32 + x) * 4;
-					const float shade = (x % 8 == 0 || y % 8 == 0) ? 0.78f : 1.0f;
-					for (std::size_t channel = 0; channel < 3; ++channel)
-					{
-						pixels[offset + channel] = static_cast<std::uint8_t>(color[channel] * shade);
-					}
-					pixels[offset + 3] = 255;
-				}
-			}
-			setPixels(std::span<const std::uint8_t>(pixels), {32, 32}, Format::RGBA);
-			validate();
-		}
-	};
+		return spk::Image::open(std::filesystem::path(SPARKLE_TEST_RESOURCES_DIR) /
+			"textures/voxel_test_atlas.png");
+	}
 
 	[[nodiscard]] spk::Texture::Section section(std::size_t index)
 	{
@@ -87,7 +67,7 @@ namespace
 		return {{x, y}, {0.25f, 0.25f}};
 	}
 
-	[[nodiscard]] spk::Palette palette(const PatternAtlas &atlas, bool alternate = false)
+	[[nodiscard]] spk::Palette palette(const spk::Image &atlas, bool alternate = false)
 	{
 		constexpr std::array<std::size_t, 13> Tiles{
 			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -264,14 +244,14 @@ namespace
 		spk::Vector3 rotation{};
 	};
 
-	class VoxelShapeGoldenTest final : public ::testing::TestWithParam<ShapeCase>
+	class VoxelShapeGoldenTest : public ::testing::TestWithParam<ShapeCase>
 	{
 	};
 
 	TEST_P(VoxelShapeGoldenTest, RendersShapeThroughEngineView)
 	{
 		const auto &param = GetParam();
-		PatternAtlas atlas;
+		auto atlas = loadAtlas();
 		Scene scene;
 		scene.lookAt({2.8f, 2.1f, 4.0f}, {0, 0, 0});
 		const auto geometry = bake({1, 1, 1}, [&](Builder &builder) {
@@ -484,14 +464,14 @@ namespace
 		});
 	}
 
-	class VoxelArrangementGoldenTest final : public ::testing::TestWithParam<ArrangementCase>
+	class VoxelArrangementGoldenTest : public ::testing::TestWithParam<ArrangementCase>
 	{
 	};
 
 	TEST_P(VoxelArrangementGoldenTest, RendersComplexOcclusion)
 	{
 		const auto &param = GetParam();
-		PatternAtlas atlas;
+		auto atlas = loadAtlas();
 		Scene scene;
 		scene.lookAt({11, 9, 13}, {0, -0.5f, 0});
 		const auto geometry = arrangementGeometry(param.arrangement);
@@ -581,14 +561,14 @@ namespace
 		Pose pose;
 	};
 
-	class VoxelCharacterGoldenTest final : public ::testing::TestWithParam<CharacterCase>
+	class VoxelCharacterGoldenTest : public ::testing::TestWithParam<CharacterCase>
 	{
 	};
 
 	TEST_P(VoxelCharacterGoldenTest, RendersProgrammaticCharacter)
 	{
 		const auto &param = GetParam();
-		PatternAtlas atlas;
+		auto atlas = loadAtlas();
 		Scene scene;
 		scene.lookAt({14, 12, 25}, {0, 0, 0});
 		const auto model = character(param.pose);
@@ -656,14 +636,14 @@ namespace
 		RoomView view;
 	};
 
-	class VoxelRoomGoldenTest final : public ::testing::TestWithParam<RoomCase>
+	class VoxelRoomGoldenTest : public ::testing::TestWithParam<RoomCase>
 	{
 	};
 
 	TEST_P(VoxelRoomGoldenTest, RendersVoxelRoomWithCameraOcclusion)
 	{
 		const auto &param = GetParam();
-		PatternAtlas atlas;
+		auto atlas = loadAtlas();
 		Scene scene;
 		const bool tall = param.view == RoomView::InsideCharacter;
 		const auto width = tall ? 19u : 13u;
@@ -736,7 +716,7 @@ namespace
 
 	TEST(VoxelSceneFunctionalTest, DistinctPalettesKeepSharedMesh)
 	{
-		PatternAtlas atlas;
+		auto atlas = loadAtlas();
 		const auto geometry = character(Pose::Neutral);
 		const auto a = palette(atlas);
 		const auto b = palette(atlas, true);
