@@ -58,8 +58,7 @@ namespace
 	[[nodiscard]] spk::Voxel::Geometry namedGeometry(const std::string &shapeName, const std::string &materialName)
 	{
 		spk::Voxel::Shape::Builder shapes;
-		shapes.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
+		shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
 		const auto shape = shapes.build();
 		spk::Voxel::Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
@@ -92,8 +91,8 @@ namespace
 	{
 		spk::Voxel::Palette::Builder builder;
 		for (const auto &[name, section] : std::array<std::pair<const char *, spk::Texture::Section>, 2>{
-				{{"stone", {{0.0f, 0.0f}, {0.5f, 0.5f}}},
-				 {"wood", {{0.5f, 0.0f}, {0.5f, 0.5f}}}}})
+				 {{"stone", {{0.0f, 0.0f}, {0.5f, 0.5f}}},
+				  {"wood", {{0.5f, 0.0f}, {0.5f, 0.5f}}}}})
 		{
 			spk::Material::Builder material;
 			material.add("albedo", atlas, section);
