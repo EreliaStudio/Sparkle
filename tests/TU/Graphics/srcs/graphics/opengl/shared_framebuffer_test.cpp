@@ -101,7 +101,7 @@ TEST(SharedFramebufferTest, LegacyResizePublishesIndependentStates)
 	EXPECT_EQ(previous->depthStencilAttachment()->texture().identifier(), previousDepth.identifier());
 	EXPECT_EQ(previousColor->size(), spk::Vector2UInt(4, 3));
 	EXPECT_EQ(previousDepth->size(), spk::Vector2UInt(4, 3));
-	EXPECT_EQ(framebuffer.colorAttachment(0).size(), spk::Vector2UInt(7, 5));
+	EXPECT_EQ(framebuffer.colorAttachmentHandle(0)->size(), spk::Vector2UInt(7, 5));
 	EXPECT_NE(framebuffer.colorAttachmentHandle(0).identifier(), previousColor.identifier());
 	EXPECT_NE(framebuffer.depthStencilAttachmentHandle()->identifier(), previousDepth.identifier());
 }

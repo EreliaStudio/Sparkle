@@ -44,6 +44,7 @@ namespace spk
 			bool _sharedAttachments = false;
 
 			void _validateCapabilities() const;
+			static void _attach(GLenum point, const RenderAttachment &attachment, RenderContext &context);
 			void _attachColors(Instance &instance, RenderContext &context) const;
 			void _attachDepth(Instance &instance, RenderContext &context) const;
 			void _configureDrawBuffers() const;
@@ -79,13 +80,14 @@ namespace spk
 		using Handle = GPUResource::Handle<State>;
 
 	private:
-		std::vector<Texture> _colorViews;
-		std::optional<Texture> _depthView;
-
 		[[nodiscard]] static GLenum _depthAttachmentPoint(Texture::Format format);
 		static void _validateSize(const Vector2UInt &size);
 		void _validateAttachments() const;
-		void _refreshViews();
+		void _initialize(
+			const Vector2UInt &size,
+			std::vector<RenderAttachment> colors,
+			std::optional<RenderAttachment> depth,
+			bool shared);
 
 	public:
 		Framebuffer();
@@ -123,8 +125,6 @@ namespace spk
 
 		[[nodiscard]] const Vector2UInt &size() const noexcept;
 		[[nodiscard]] std::size_t colorAttachmentCount() const noexcept;
-		[[nodiscard]] const Texture &colorAttachment(std::size_t index) const;
-		[[nodiscard]] const Texture *depthStencilAttachment() const noexcept;
 		[[nodiscard]] const Texture::Handle &colorAttachmentHandle(std::size_t index) const;
 		[[nodiscard]] std::optional<Texture::Handle> depthStencilAttachmentHandle() const noexcept;
 	};

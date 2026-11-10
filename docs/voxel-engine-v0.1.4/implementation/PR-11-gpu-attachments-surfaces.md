@@ -83,7 +83,7 @@ et `GPUResource::Handle` sont conservées.
 - `Framebuffer(size, vector<Framebuffer::RenderAttachment>, optional<Framebuffer::RenderAttachment>)` capture les bindings, avec validation des faces, types, tailles et formats.
 - Chaque face peut être liée à son propre `Framebuffer::State`, tout en conservant le même `CubeMap::Handle` natif sur une Surface.
 - Les constructeurs historiques utilisant les formats ou les `Texture::Handle` restent disponibles pour les textures 2D.
-- `Framebuffer::colorAttachmentHandle(index)` et `depthStencilAttachmentHandle()` exposent l'identité exacte des handles.
+- `Framebuffer::colorAttachmentHandle(index)` et `depthStencilAttachmentHandle()` exposent directement les handles sans vues `Texture` intermédiaires. Les anciens accès `colorAttachment()` et `depthStencilAttachment()` sont supprimés ; les trois constructeurs partagent l'initialisation et l'attachement OpenGL 2D/cubemap est centralisé.
 - `Window::Surface::subscribeToDestruction(callback)` retourne un contrat RAII invalide après fermeture.
 
 ### Immutabilité et durée de vie
