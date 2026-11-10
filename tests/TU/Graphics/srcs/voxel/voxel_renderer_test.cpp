@@ -183,8 +183,7 @@ TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidB
 	{
 		renderer.bind(invalid);
 		FAIL() << "Expected a descriptive missing-slot exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		const std::string message = error.what();
 		EXPECT_NE(message.find("missingOne"), std::string::npos);
