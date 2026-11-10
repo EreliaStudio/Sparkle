@@ -168,7 +168,7 @@ namespace spk::OpenGL
 		result.frontWinding = static_cast<Winding>(integer(GL_FRONT_FACE));
 		std::array<GLint, 2> mode{};
 		glGetIntegerv(GL_POLYGON_MODE, mode.data());
-		result.polygonMode = {static_cast<PolygonMode>(mode[0]), static_cast<PolygonMode>(mode[1])};
+		result.polygonMode = static_cast<PolygonMode>(mode[0]);
 		result.polygonOffsetEnabled = OpenGL::enabled(GL_POLYGON_OFFSET_FILL);
 		glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &result.polygonOffsetFactor);
 		glGetFloatv(GL_POLYGON_OFFSET_UNITS, &result.polygonOffsetUnits);
@@ -182,8 +182,7 @@ namespace spk::OpenGL
 		toggle(GL_CULL_FACE, cullEnabled);
 		glCullFace(native(cull));
 		glFrontFace(native(frontWinding));
-		glPolygonMode(GL_FRONT, native(polygonMode[0]));
-		glPolygonMode(GL_BACK, native(polygonMode[1]));
+		glPolygonMode(GL_FRONT_AND_BACK, native(polygonMode));
 		toggle(GL_POLYGON_OFFSET_FILL, polygonOffsetEnabled);
 		glPolygonOffset(polygonOffsetFactor, polygonOffsetUnits);
 		toggle(GL_MULTISAMPLE, multisampleEnabled);
