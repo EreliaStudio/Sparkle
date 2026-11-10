@@ -28,6 +28,8 @@
 namespace
 {
 	constexpr spk::Vector2UInt ImageSize{320, 240};
+	constexpr float CharacterScale = 0.5f;
+	constexpr spk::Vector3 CharacterEntityScale{CharacterScale, CharacterScale, CharacterScale};
 	constexpr const char *GoldenCategory = "rendering/voxel-scenes";
 
 	enum class Block : std::uint32_t
@@ -167,11 +169,13 @@ namespace
 			const spk::Voxel::Geometry &geometry,
 			const spk::Palette &appearance,
 			spk::Vector3 position,
-			spk::Vector3 rotation = {})
+			spk::Vector3 rotation = {},
+			spk::Vector3 scale = {1.0f, 1.0f, 1.0f})
 		{
 			auto entity = std::make_unique<spk::Entity3D>("voxel scene object");
 			entity->transform().place(position);
 			entity->transform().setEulerRotation(rotation);
+			entity->transform().rescale(scale);
 			auto &renderer = entity->addComponent<spk::Voxel::Renderer>();
 			renderer.bind(geometry);
 			renderer.bind(appearance);
@@ -565,10 +569,10 @@ namespace
 		const auto &param = GetParam();
 		auto atlas = loadAtlas();
 		Scene scene;
-		scene.lookAt({14, 12, 25}, {0, 0, 0});
+		scene.lookAt({8, 7, 14}, {0, 0, 0});
 		const auto model = character(param.pose);
 		ASSERT_GT(model.opaqueMesh().indexCount(), 0u);
-		scene.add(model, palette(atlas), {-5.5f, -7.5f, -2.5f});
+		scene.add(model, palette(atlas), {-5.5f * CharacterScale, -7.5f * CharacterScale, -2.5f * CharacterScale}, {}, CharacterEntityScale);
 		render(scene, std::string("character_") + param.name);
 	}
 
@@ -642,7 +646,7 @@ namespace
 		Scene scene;
 		const bool tall = param.view == RoomView::InsideCharacter;
 		const auto width = tall ? 19u : 13u;
-		const auto height = tall ? 18u : 8u;
+		const auto height = tall ? 12u : 8u;
 		const auto geometry = room(width, height);
 		const float center = static_cast<float>(width) / 2;
 		const float floor = static_cast<float>(height) / 2;
@@ -666,13 +670,13 @@ namespace
 			scene.lookAt({-3, -1, 0}, {-6, 0, 0});
 			break;
 		case RoomView::InsideCharacter:
-			scene.add(character(Pose::Sword), appearance, {-5.5f, -floor + 1, -2.5f});
-			scene.lookAt({1, 0, 6}, {0, 0, 0});
+			scene.add(character(Pose::Sword), appearance, {-5.5f * CharacterScale, -floor + 1, -2.5f * CharacterScale}, {}, CharacterEntityScale);
+			scene.lookAt({2.0f, -0.5f, 8.0f}, {0.0f, -1.5f, 0.0f});
 			break;
 		case RoomView::ExteriorCharacters:
-			scene.add(character(Pose::Neutral), appearance, {-13.5f, -floor + 1, -2.5f});
-			scene.add(character(Pose::LeftArmRaised), appearance, {2.5f, -floor + 1, -2.5f});
-			scene.lookAt({23, 13, 25}, {0, 1, 0});
+			scene.add(character(Pose::Neutral), appearance, {-9.0f, -floor, 7.5f}, {}, CharacterEntityScale);
+			scene.add(character(Pose::LeftArmRaised), appearance, {4.0f, -floor, 7.5f}, {}, CharacterEntityScale);
+			scene.lookAt({19.0f, 11.0f, 25.0f}, {0.0f, 0.0f, 4.0f});
 			break;
 		case RoomView::TwoPalettes:
 			scene.add(geometry, palette(atlas, true), {center + 1, -floor, -center});
