@@ -58,6 +58,28 @@ namespace
 		}
 	};
 
+	struct KnownWBOITBuffers final : spk::RenderCommand
+	{
+		void execute(spk::RenderContext &) const override
+		{
+			const GLfloat accumulated[]{0.5f, 0.0f, 0.0f, 0.25f};
+			const GLfloat revealage[]{0.75f, 0.75f, 0.75f, 0.75f};
+			glClearBufferfv(GL_COLOR, 0, accumulated);
+			glClearBufferfv(GL_COLOR, 1, revealage);
+		}
+	};
+
+	struct KnownWBOITContributor final : spk::RenderingBehaviour
+	{
+		void buildViewRenderSnapshot(
+			spk::RenderSnapshot::Builder &builder,
+			const spk::EngineView::CaptureContext &) override
+		{
+			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<HDRClear>(1.0f);
+			builder.renderPass(spk::EngineView::WBOITPassKey).emplace<KnownWBOITBuffers>();
+		}
+	};
+
 	struct Scene
 	{
 		spk::Engine engine;
@@ -360,4 +382,37 @@ TEST(OpenGLStateTest, ScopedStateRestoresCustomizedRasterAndBlendConfiguration)
 	EXPECT_EQ(restored.bindings.drawFramebuffer, original.bindings.drawFramebuffer);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
+}
+
+TEST(EngineViewFirstImageTest, HDRAndWBOITComposeBeforeSingleReinhard)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	(void)scene.engine.root().addBehaviour<KnownWBOITContributor>();
+	spk::EngineWidget producer("wboit", nullptr, spk::EngineWidget::Type::Render);
+	prepare(producer, scene.engine, {.anchor = {0, 0}, .size = ImageSize});
+	capture(producer).execute(gl.renderContext());
+	const auto pixel = readFinal(scene.view);
+	EXPECT_NEAR(pixel[0], encodedReinhard(1.25f, 1.0f), 2);
+	EXPECT_NEAR(pixel[1], encodedReinhard(0.75f, 1.0f), 2);
+	EXPECT_NEAR(pixel[2], encodedReinhard(0.75f, 1.0f), 2);
+	EXPECT_EQ(pixel[3], 255);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
+}
+
+TEST(EngineViewFirstImageTest, ReusesIntermediateTargetsOnlyWhenNoSnapshotLeasesThem)
+{
+	Scene scene;
+	auto output = scene.view.output();
+	auto first = output->acquireTargets(ImageSize);
+	const auto original = first->opaque.identifier();
+	auto concurrent = output->acquireTargets(ImageSize);
+	EXPECT_NE(concurrent->opaque.identifier(), original);
+	first.reset();
+	auto reused = output->acquireTargets(ImageSize);
+	EXPECT_EQ(reused->opaque.identifier(), original);
+	const auto differentResolution = output->acquireTargets({32, 32});
+	EXPECT_NE(differentResolution->opaque.identifier(), reused->opaque.identifier());
 }
