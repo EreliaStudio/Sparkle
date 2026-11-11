@@ -796,7 +796,7 @@ namespace
 	{
 		const auto atlas = loadAtlas();
 		const auto opacity = [&](std::uint32_t tile, std::uint32_t x, std::uint32_t y) {
-			return atlas.pixel({(tile % 4) * 16 + x, (tile / 4) * 16 + y})[3];
+			return atlas.pixels().at((((tile / 4) * 16 + y) * atlas.size().x + (tile % 4) * 16 + x) * 4 + 3);
 		};
 		EXPECT_GT(opacity(13, 8, 13), 0);
 		EXPECT_GT(opacity(16, 8, 3), 0);
