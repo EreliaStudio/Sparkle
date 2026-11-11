@@ -3,6 +3,8 @@
 #include <string>
 #include <utility>
 
+#include "voxel/renderer.hpp"
+
 namespace spk::Voxel
 {
 	ModelRenderer::ModelRenderer(const std::string &name, spk::Entity3D *owner) :
@@ -17,10 +19,14 @@ namespace spk::Voxel
 
 	void ModelRenderer::bind(spk::Palette palette)
 	{
-		_defaultPalette = std::move(palette);
 		if (_model)
 		{
 			_model->synchronize();
+			_validatePalette(*_model, palette);
+		}
+		_defaultPalette = std::move(palette);
+		if (_model)
+		{
 			_applyPalette(*_model, true);
 		}
 	}
@@ -53,6 +59,21 @@ namespace spk::Voxel
 		for (const auto *child : node.children())
 		{
 			_applyPalette(*child, replace);
+		}
+	}
+
+	void ModelRenderer::_validatePalette(const spk::Model3D::Attachable &node, const spk::Palette &palette)
+	{
+		if (const auto *element = dynamic_cast<const Model::ElementNode *>(&node))
+		{
+			if (const auto *graphics = _model->graphics(*element))
+			{
+				(void)Renderer::resolveMaterialRemap(graphics->geometry(), palette);
+			}
+		}
+		for (const auto *child : node.children())
+		{
+			_validatePalette(*child, palette);
 		}
 	}
 

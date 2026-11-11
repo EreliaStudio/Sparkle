@@ -21,6 +21,7 @@ namespace spk::Voxel
 		std::optional<spk::Palette> _defaultPalette;
 
 		void _applyPalette(const spk::Model3D::Attachable &node, bool replace);
+		void _validatePalette(const spk::Model3D::Attachable &node, const spk::Palette &palette);
 		void _prepare();
 
 	public:

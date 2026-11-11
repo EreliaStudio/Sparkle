@@ -21,7 +21,8 @@ namespace spk::Voxel
 		for (const Renderer *renderer : spk::Registry<Renderer, spk::EngineHeadless *>::instance().elements(engine()))
 		{
 			if (!renderer->canContribute() || !context.isLayerCompatible(renderer->layers()) ||
-				renderer->owner() == nullptr || renderer->geometry() == nullptr || renderer->palette() == nullptr)
+				renderer->owner() == nullptr || renderer->geometry() == nullptr || renderer->palette() == nullptr ||
+				renderer->geometry()->opaqueMesh().empty())
 			{
 				continue;
 			}
