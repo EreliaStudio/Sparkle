@@ -240,7 +240,7 @@ namespace
 			return builder.renderPass(spk::EngineView::OpaquePassKey).commandCount();
 		}
 
-		[[nodiscard]] spk::Image capture()
+		[[nodiscard]] sparkle_test::FramebufferImage capture()
 		{
 			auto &gl = sparkle_test::OpenGLTestContext::instance();
 			gl.reset(ImageSize);
