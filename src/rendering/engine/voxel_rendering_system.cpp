@@ -2,36 +2,17 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
-#include <map>
-#include <utility>
-#include <vector>
 
 #include "engine/reference_frame.hpp"
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
-#include "rendering/command/draw_voxel_bucket_command.hpp"
+#include "rendering/command/draw_voxel_command.hpp"
 #include "voxel/renderer.hpp"
 
 namespace spk::Voxel
 {
 	namespace
 	{
-		struct Bucket
-		{
-			Geometry geometry;
-			spk::Palette palette;
-			std::vector<std::uint32_t> materialRemap;
-			std::vector<spk::Matrix4x4> matrices;
-
-			Bucket(const Geometry &source, const spk::Palette &appearance, const std::vector<std::uint32_t> &remap) :
-				geometry(source),
-				palette(appearance),
-				materialRemap(remap)
-			{
-			}
-		};
-
 		void validateScale(const spk::Vector3 &scale)
 		{
 			const auto valid = [](float a, float b) {
@@ -54,8 +35,6 @@ namespace spk::Voxel
 		spk::RenderSnapshot::Builder &builder,
 		const spk::EngineView::CaptureContext &context)
 	{
-		using Key = std::pair<std::uint64_t, std::uintptr_t>;
-		std::map<Key, Bucket> buckets;
 		for (const Renderer *renderer : spk::Registry<Renderer, spk::EngineHeadless *>::instance().elements(engine()))
 		{
 			if (!renderer->canContribute() || !context.isLayerCompatible(renderer->layers()) ||
@@ -70,16 +49,9 @@ namespace spk::Voxel
 			}
 			const auto &transform = renderer->owner()->transform();
 			validateScale(transform.scale(spk::ReferenceFrame::World));
-			const Key key{
-				geometry.opaqueMesh().layout().vertexBuffer().identifier(),
-				reinterpret_cast<std::uintptr_t>(&renderer->palette()->materials())};
-			auto [entry, inserted] = buckets.try_emplace(key, geometry, *renderer->palette(), renderer->materialRemap());
-			entry->second.matrices.push_back(transform.modelMatrix());
+			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelCommand>(
+				geometry, *renderer->palette(), renderer->materialRemap(), transform.modelMatrix(), context.viewProjectionMatrix);
 		}
-		for (auto &[key, bucket] : buckets)
-		{
-			(void)key;
-			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelBucketCommand>(bucket.geometry, bucket.palette, std::move(bucket.materialRemap), std::move(bucket.matrices), context.viewProjectionMatrix);
-		}
+
 	}
 }

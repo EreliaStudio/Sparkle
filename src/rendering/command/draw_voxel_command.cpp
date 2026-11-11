@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <stdexcept>
 #include <utility>
 
 #include "exception.hpp"
@@ -13,13 +12,12 @@
 
 namespace spk
 {
-	Program &DrawVoxelBucketCommand::_sharedProgram()
+	Program &DrawVoxelCommand::_sharedProgram()
 	{
 		static Program result = [] {
 			Program program(
 				std::string(resources::text("shaders/voxel_opaque.vert.glsl")),
 				std::string(resources::text("shaders/voxel_opaque.frag.glsl")));
-			program.bindShaderStorageBlock("Instances", InstanceBinding);
 			program.bindShaderStorageBlock("Materials", MaterialBinding);
 			program.bindShaderStorageBlock("MaterialRemap", MaterialRemapBinding);
 			program.bindSampler("uAlbedo", AlbedoUnit);
@@ -28,7 +26,7 @@ namespace spk
 		return result;
 	}
 
-	std::vector<DrawVoxelBucketCommand::MaterialData> DrawVoxelBucketCommand::_resolveMaterials(
+	std::vector<DrawVoxelCommand::MaterialData> DrawVoxelCommand::_resolveMaterials(
 		const Palette &palette, Texture::Handle &atlas)
 	{
 		std::vector<MaterialData> result;
@@ -50,34 +48,20 @@ namespace spk
 		return result;
 	}
 
-	DrawVoxelBucketCommand::DrawVoxelBucketCommand(
+	DrawVoxelCommand::DrawVoxelCommand(
 		Voxel::Geometry geometry,
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
-		std::vector<Matrix4x4> matrices,
+		Matrix4x4 model,
 		Matrix4x4 viewProjection) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
-		_instances(InstanceBinding, 0, sizeof(InstanceData)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
 		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
 		_viewProjection(viewProjection),
-		_instanceCount(matrices.size())
+		_model(model)
 	{
-		if (_instanceCount == 0)
-		{
-			throw spk::Exception("Voxel draw: empty instance bucket");
-		}
-		std::vector<InstanceData> packed;
-		packed.reserve(matrices.size());
-		for (const Matrix4x4 &matrix : matrices)
-		{
-			packed.push_back({matrix});
-		}
-		_instances.resize(packed.size());
-		_instances.setDynamicData(std::span<const InstanceData>(packed));
-		_instances.validate();
 		Texture::Handle atlas;
 		const auto materials = _resolveMaterials(palette, atlas);
 		if (materialRemap.size() != _geometry.materialSlots().size())
@@ -105,12 +89,7 @@ namespace spk
 		_albedo.validate();
 	}
 
-	std::size_t DrawVoxelBucketCommand::instanceCount() const noexcept
-	{
-		return _instanceCount;
-	}
-
-	void DrawVoxelBucketCommand::execute(RenderContext &context) const
+	void DrawVoxelCommand::execute(RenderContext &context) const
 	{
 		if (_geometry.opaqueMesh().empty())
 		{
@@ -121,12 +100,12 @@ namespace spk
 		OpenGL::State::Rasterization{}.apply();
 		_program.activate(context);
 		Uniform<Matrix4x4>("uViewProjection", _viewProjection).activate(context);
-		_instances.activate(context);
+		Uniform<Matrix4x4>("uModel", _model).activate(context);
 		_materials.activate(context);
 		_materialRemap.activate(context);
 		_albedo.activate(context);
 		const auto &mesh = _geometry.opaqueMesh();
 		mesh.layout().activate(context);
-		_program.renderInstanced(Program::Primitive::Triangles, mesh.indexType(), 0, mesh.indexCount(), _instanceCount);
+		_program.render(Program::Primitive::Triangles, mesh.indexType(), 0, mesh.indexCount());
 	}
 }
