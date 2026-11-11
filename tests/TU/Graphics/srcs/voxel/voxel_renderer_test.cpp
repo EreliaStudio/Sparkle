@@ -245,7 +245,7 @@ TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidB
 	EXPECT_TRUE(renderer.materialRemap().empty());
 }
 
-TEST(VoxelRendererTest, EachRenderableCreatesAnIndependentDrawCommand)
+TEST(VoxelRendererTest, MatchingSnapshotsBatchAndDifferentPalettesSeparate)
 {
 	TestAtlas atlas;
 	const auto geometry = cubeGeometry();
@@ -254,9 +254,9 @@ TEST(VoxelRendererTest, EachRenderableCreatesAnIndependentDrawCommand)
 	Scene scene;
 	scene.add(geometry, first, {-1, 0, 0});
 	scene.add(geometry, first, {1, 0, 0});
-	EXPECT_EQ(scene.commandCount(), 2u);
+	EXPECT_EQ(scene.commandCount(), 1u);
 	scene.add(geometry, second, {0, 0, -2});
-	EXPECT_EQ(scene.commandCount(), 3u);
+	EXPECT_EQ(scene.commandCount(), 2u);
 }
 
 TEST(VoxelRendererTest, DistinctMeshesResolveLocalZeroToDifferentSharedPaletteIndices)
@@ -279,6 +279,47 @@ TEST(VoxelRendererTest, DistinctMeshesResolveLocalZeroToDifferentSharedPaletteIn
 	ASSERT_NE(renderer.geometry(), nullptr);
 	EXPECT_EQ(renderer.geometry()->materialIndices().at("wood"), 0u);
 	EXPECT_EQ(renderer.materialRemap()[0], 1u);
+}
+
+TEST(VoxelRendererTest, SharedMeshWithDifferentSlotMappingsDoesNotBatch)
+{
+	TestAtlas atlas;
+	const auto appearance = sharedPalette(atlas);
+	const auto stone = cubeGeometry();
+	const spk::Voxel::Geometry wood(stone.opaqueMesh(), {}, {}, {{"wood", 1.0f}});
+	Scene scene;
+	scene.add(stone, appearance, {-1, 0, 0});
+	scene.add(wood, appearance, {1, 0, 0});
+	EXPECT_EQ(scene.commandCount(), 2u);
+}
+
+TEST(VoxelRendererTest, InstanceMatricesAreUploadedInStd430Order)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	TestAtlas atlas;
+	const std::vector<spk::Matrix4x4> models{
+		spk::Matrix4x4::translation(1.0f, 2.0f, 3.0f),
+		spk::Matrix4x4::translation(-4.0f, 5.0f, 6.0f)};
+	spk::DrawVoxelCommand command(
+		cubeGeometry(), makePalette(atlas, spk::Texture::Section::whole),
+		{0u}, models, spk::Matrix4x4::identity());
+	command.execute(gl.renderContext());
+
+	GLint instances = 0;
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &instances);
+	ASSERT_GT(instances, 0);
+	GLint64 size = 0;
+	glGetNamedBufferParameteri64v(static_cast<GLuint>(instances), GL_BUFFER_SIZE, &size);
+	EXPECT_EQ(size, static_cast<GLint64>(models.size() * sizeof(spk::Matrix4x4)));
+	std::array<spk::Matrix4x4, 2> uploaded{};
+	glGetNamedBufferSubData(static_cast<GLuint>(instances), 0, sizeof(uploaded), uploaded.data());
+	EXPECT_EQ(uploaded[0][3][0], 1.0f);
+	EXPECT_EQ(uploaded[0][3][1], 2.0f);
+	EXPECT_EQ(uploaded[1][3][0], -4.0f);
+	EXPECT_EQ(uploaded[1][3][2], 6.0f);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
 }
 
 TEST(VoxelRendererTest, DifferentMeshesSharingOnePaletteRenderDistinctMaterials)
@@ -351,19 +392,26 @@ TEST(VoxelRendererTest, SingleDrawCommandRebindsMaterialBuffersAfterThirdParty)
 	glGetSamplerParameteriv(static_cast<GLuint>(sampler), GL_TEXTURE_MAG_FILTER, &magFilter);
 	EXPECT_EQ(minFilter, GL_NEAREST);
 	EXPECT_EQ(magFilter, GL_NEAREST);
+	GLint instances = 0;
 	GLint material = 0;
 	GLint remap = 0;
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &instances);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &material);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &remap);
+	EXPECT_GT(instances, 0);
 	EXPECT_GT(material, 0);
 	EXPECT_GT(remap, 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 	command.execute(gl.renderContext());
+	GLint reboundInstances = 0;
 	GLint reboundMaterial = 0;
 	GLint reboundRemap = 0;
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &reboundInstances);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &reboundMaterial);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &reboundRemap);
+	EXPECT_EQ(reboundInstances, instances);
 	EXPECT_EQ(reboundMaterial, material);
 	EXPECT_EQ(reboundRemap, remap);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
@@ -386,7 +434,7 @@ TEST(VoxelRendererGoldenTest, CubeWithRotation)
 	renderScene(scene, "cube_rotated");
 }
 
-TEST(VoxelRendererGoldenTest, DistinctDrawCommandsShareGeometry)
+TEST(VoxelRendererGoldenTest, SharedGeometryRendersWithInstancing)
 {
 	TestAtlas atlas;
 	Scene scene;
@@ -394,7 +442,7 @@ TEST(VoxelRendererGoldenTest, DistinctDrawCommandsShareGeometry)
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
 	scene.add(geometry, palette, {-1, 0, 0}, {0, 20, 0});
 	scene.add(geometry, palette, {1, 0, 0}, {0, -20, 0});
-	EXPECT_EQ(scene.commandCount(), 2u);
+	EXPECT_EQ(scene.commandCount(), 1u);
 	renderScene(scene, "shared_mesh_instanced");
 }
 

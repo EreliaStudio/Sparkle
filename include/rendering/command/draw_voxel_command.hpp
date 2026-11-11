@@ -29,23 +29,30 @@ namespace spk
 		static_assert(offsetof(MaterialData, uvSize) == 8);
 		static_assert(std::is_standard_layout_v<MaterialData>);
 
+		static constexpr std::size_t InstanceBinding = 0;
 		static constexpr std::size_t MaterialBinding = 1;
 		static constexpr std::size_t MaterialRemapBinding = 2;
 		static constexpr std::size_t AlbedoUnit = 0;
 
 		Voxel::Geometry _geometry;
 		Program _program;
+		ShaderStorageBuffer _instances;
 		ShaderStorageBuffer _materials;
 		ShaderStorageBuffer _materialRemap;
 		Sampler _albedo;
 		Matrix4x4 _viewProjection;
-		Matrix4x4 _model;
 
 		[[nodiscard]] static Program &_sharedProgram();
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
 			const Palette &palette, Texture::Handle &atlas);
 
 	public:
+		DrawVoxelCommand(
+			Voxel::Geometry geometry,
+			const Palette &palette,
+			std::vector<std::uint32_t> materialRemap,
+			std::vector<Matrix4x4> models,
+			Matrix4x4 viewProjection);
 		DrawVoxelCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,

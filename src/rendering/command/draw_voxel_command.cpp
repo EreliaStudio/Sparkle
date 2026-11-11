@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <utility>
+#include <vector>
 
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
@@ -18,6 +19,7 @@ namespace spk
 			Program program(
 				std::string(resources::text("shaders/voxel_opaque.vert.glsl")),
 				std::string(resources::text("shaders/voxel_opaque.frag.glsl")));
+			program.bindShaderStorageBlock("Instances", InstanceBinding);
 			program.bindShaderStorageBlock("Materials", MaterialBinding);
 			program.bindShaderStorageBlock("MaterialRemap", MaterialRemapBinding);
 			program.bindSampler("uAlbedo", AlbedoUnit);
@@ -54,14 +56,29 @@ namespace spk
 		std::vector<std::uint32_t> materialRemap,
 		Matrix4x4 model,
 		Matrix4x4 viewProjection) :
+		DrawVoxelCommand(
+			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, viewProjection)
+	{
+	}
+
+	DrawVoxelCommand::DrawVoxelCommand(
+		Voxel::Geometry geometry,
+		const Palette &palette,
+		std::vector<std::uint32_t> materialRemap,
+		std::vector<Matrix4x4> models,
+		Matrix4x4 viewProjection) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
+		_instances(InstanceBinding, 0, sizeof(Matrix4x4)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
 		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
-		_viewProjection(viewProjection),
-		_model(model)
+		_viewProjection(viewProjection)
 	{
+		if (models.empty())
+		{
+			throw spk::Exception("Voxel draw: at least one instance is required");
+		}
 		Texture::Handle atlas;
 		const auto materials = _resolveMaterials(palette, atlas);
 		if (materialRemap.size() != _geometry.materialSlots().size())
@@ -81,6 +98,9 @@ namespace spk
 		_materials.resize(materials.size());
 		_materials.setDynamicData(std::span<const MaterialData>(materials));
 		_materials.validate();
+		_instances.resize(models.size());
+		_instances.setDynamicData(std::span<const Matrix4x4>(models));
+		_instances.validate();
 		if (!atlas)
 		{
 			throw spk::Exception("Voxel draw: no albedo atlas");
@@ -100,12 +120,13 @@ namespace spk
 		OpenGL::State::Rasterization{}.apply(context);
 		_program.activate(context);
 		Uniform<Matrix4x4>("uViewProjection", _viewProjection).activate(context);
-		Uniform<Matrix4x4>("uModel", _model).activate(context);
+		_instances.activate(context);
 		_materials.activate(context);
 		_materialRemap.activate(context);
 		_albedo.activate(context);
 		const auto &mesh = _geometry.opaqueMesh();
 		mesh.layout().activate(context);
-		_program.render(Program::Primitive::Triangles, mesh.indexType(), 0, mesh.indexCount());
+		_program.renderInstanced(
+			Program::Primitive::Triangles, mesh.indexType(), 0, mesh.indexCount(), _instances.dynamicElementCount());
 	}
 }
