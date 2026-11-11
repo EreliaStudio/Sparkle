@@ -62,17 +62,17 @@ namespace
 
 	[[nodiscard]] spk::Texture::Section section(std::size_t index, spk::Vector2UInt textureSize)
 	{
-		const float x = static_cast<float>(index % 4) * 0.25f;
-		const float y = static_cast<float>(index / 4) * 0.25f;
-		const float insetX = 0.5f / static_cast<float>(textureSize.x);
-		const float insetY = 0.5f / static_cast<float>(textureSize.y);
-		return {{x + insetX, y + insetY}, {0.25f - 2 * insetX, 0.25f - 2 * insetY}};
+		const float x = static_cast<float>(index % 4) * 16.0f;
+		const float y = static_cast<float>(index / 4) * 16.0f;
+		const spk::Vector2 anchor{(x + 0.5f) / static_cast<float>(textureSize.x), (y + 0.5f) / static_cast<float>(textureSize.y)};
+		const spk::Vector2 size{15.0f / static_cast<float>(textureSize.x), 15.0f / static_cast<float>(textureSize.y)};
+		return {anchor, size};
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Image &atlas, bool alternate = false)
 	{
 		constexpr std::array<std::size_t, 16> Tiles{
-			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 17, 18};
 		spk::Voxel::Palette::Builder builder;
 		for (std::size_t i = 0; i < MaterialNames.size(); ++i)
 		{
@@ -798,13 +798,14 @@ namespace
 		const auto opacity = [&](std::uint32_t tile, std::uint32_t x, std::uint32_t y) {
 			return atlas.pixel({(tile % 4) * 16 + x, (tile / 4) * 16 + y})[3];
 		};
-		EXPECT_GT(opacity(13, 8, 3), 0);
-		EXPECT_EQ(opacity(13, 8, 13), 0);
-		EXPECT_GT(opacity(14, 12, 8), 0);
-		EXPECT_EQ(opacity(14, 3, 8), 0);
-		EXPECT_GT(opacity(15, 3, 3), 0);
-		EXPECT_EQ(opacity(15, 3, 12), 0);
-		EXPECT_GT(opacity(15, 12, 12), 0);
+		EXPECT_GT(opacity(13, 8, 13), 0);
+		EXPECT_GT(opacity(16, 8, 3), 0);
+		EXPECT_EQ(opacity(16, 8, 13), 0);
+		EXPECT_GT(opacity(17, 12, 8), 0);
+		EXPECT_EQ(opacity(17, 3, 8), 0);
+		EXPECT_GT(opacity(18, 3, 3), 0);
+		EXPECT_EQ(opacity(18, 3, 12), 0);
+		EXPECT_GT(opacity(18, 12, 12), 0);
 	}
 
 	TEST(VoxelSceneFunctionalTest, AdjacentCubesCullBothInternalFaces)
