@@ -28,7 +28,7 @@ namespace spk
 		const auto size = target.size();
 		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply(context);
 		OpenGL::State::Scissor{.enabled = false}.apply(context);
-		OpenGL::State::ColorOutput::writable(_phase == Phase::Composition).apply(context);
+		OpenGL::State::ColorOutput::writable(context, _phase == Phase::Composition).apply(context);
 		OpenGL::State::StencilTest{.enabled = false}.apply(context);
 	}
 

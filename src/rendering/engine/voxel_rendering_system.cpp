@@ -50,8 +50,8 @@ namespace spk::Voxel
 			const auto &transform = renderer->owner()->transform();
 			validateScale(transform.scale(spk::ReferenceFrame::World));
 			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelCommand>(
-				geometry, *renderer->palette(), renderer->materialRemap(), transform.modelMatrix(), context.viewProjectionMatrix);
+				geometry, *renderer->palette(), renderer->materialRemap(), transform.modelMatrix(),
+				context.viewProjectionMatrix);
 		}
-
 	}
 }

@@ -1,4 +1,4 @@
-#include "rendering/command/draw_voxel_bucket_command.hpp"
+#include "rendering/command/draw_voxel_command.hpp"
 
 #include <cstddef>
 #include <cstdint>
