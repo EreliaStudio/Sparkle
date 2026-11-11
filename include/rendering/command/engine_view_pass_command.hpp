@@ -26,7 +26,7 @@ namespace spk
 		RGB _background;
 
 		void _configureTarget(RenderContext &context) const;
-		void _configurePhase() const;
+		void _configurePhase(RenderContext &context) const;
 
 	public:
 		EngineViewPassCommand(Framebuffer::Handle target, Phase phase, RGB background);

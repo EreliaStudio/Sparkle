@@ -20,11 +20,12 @@ namespace spk
 
 		public:
 			FramebufferBindingScope(RenderContext &context, const Window::Surface::RenderTarget &target) :
+				_openGLState(context),
 				_context(context),
 				_previousTarget(context.activeRenderTarget)
 			{
 				_context.activeRenderTarget = target;
-				OpenGL::State::Scissor{.enabled = false}.apply();
+				OpenGL::State::Scissor{.enabled = false}.apply(context);
 			}
 
 			~FramebufferBindingScope()
@@ -59,7 +60,7 @@ namespace spk
 		FramebufferBindingScope binding(context, target);
 		target.activate(context);
 		const Vector2UInt size = context.activeRenderTarget.size();
-		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply();
+		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply(context);
 		_snapshot->execute(context);
 	}
 }

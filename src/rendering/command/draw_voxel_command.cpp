@@ -95,9 +95,9 @@ namespace spk
 		{
 			return;
 		}
-		OpenGL::State::DepthTest{}.apply();
-		OpenGL::State::Blend::disabled().apply();
-		OpenGL::State::Rasterization{}.apply();
+		OpenGL::State::DepthTest{}.apply(context);
+		OpenGL::State::Blend::disabled(context).apply(context);
+		OpenGL::State::Rasterization{}.apply(context);
 		_program.activate(context);
 		Uniform<Matrix4x4>("uViewProjection", _viewProjection).activate(context);
 		Uniform<Matrix4x4>("uModel", _model).activate(context);

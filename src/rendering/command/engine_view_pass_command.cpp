@@ -26,18 +26,18 @@ namespace spk
 		target.activate(context);
 		context.activeRenderTarget = target;
 		const auto size = target.size();
-		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply();
-		OpenGL::State::Scissor{.enabled = false}.apply();
-		OpenGL::State::ColorOutput::writable(_phase == Phase::Composition).apply();
-		OpenGL::State::StencilTest{.enabled = false}.apply();
+		OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply(context);
+		OpenGL::State::Scissor{.enabled = false}.apply(context);
+		OpenGL::State::ColorOutput::writable(_phase == Phase::Composition).apply(context);
+		OpenGL::State::StencilTest{.enabled = false}.apply(context);
 	}
 
-	void EngineViewPassCommand::_configurePhase() const
+	void EngineViewPassCommand::_configurePhase(RenderContext &context) const
 	{
 		using State = OpenGL::State;
 		State::Rasterization raster;
 		State::DepthTest depth;
-		auto blend = State::Blend::disabled();
+		auto blend = State::Blend::disabled(context);
 		switch (_phase)
 		{
 		case Phase::Shadow:
@@ -59,18 +59,18 @@ namespace spk
 			depth.write = false;
 			break;
 		}
-		raster.apply();
-		depth.apply();
-		blend.apply();
+		raster.apply(context);
+		depth.apply(context);
+		blend.apply(context);
 		if (_phase == Phase::Skybox)
 		{
-			State::Clear::color(0, {_background.r, _background.g, _background.b, 1.0f});
-			State::Clear::depth();
+			State::Clear::color(context, 0, {_background.r, _background.g, _background.b, 1.0f});
+			State::Clear::depth(context);
 		}
 		if (_phase == Phase::WBOIT)
 		{
-			State::Clear::color(0, {0, 0, 0, 0});
-			State::Clear::color(1, {1, 1, 1, 1});
+			State::Clear::color(context, 0, {0, 0, 0, 0});
+			State::Clear::color(context, 1, {1, 1, 1, 1});
 		}
 	}
 
@@ -81,6 +81,6 @@ namespace spk
 			return;
 		}
 		_configureTarget(context);
-		_configurePhase();
+		_configurePhase(context);
 	}
 }
