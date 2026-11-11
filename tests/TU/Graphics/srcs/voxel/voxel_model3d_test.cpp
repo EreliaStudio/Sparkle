@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -65,14 +66,13 @@ namespace
 		spk::Voxel::Shape::Builder shapes;
 		shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
 		spk::Voxel::Definition::SlotMapping mapping;
-		for (const auto &slot : shapes.build().slots())
+		const auto shape = shapes.build();
+		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{"stone", 1.0f});
 		}
 		spk::Voxel::Definition::Registry::Builder registry;
-		spk::Voxel::Shape::Builder shapeBuilder;
-		shapeBuilder.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
-		registry.add(1, spk::Voxel::Definition(shapeBuilder.build(), std::move(mapping)));
+		registry.add(1, spk::Voxel::Definition(shape, std::move(mapping)));
 		spk::Voxel::Volume::Builder builder(dimensions);
 		builder.bind(registry.build());
 		for (std::uint32_t x = 0; x < dimensions.x; ++x)
@@ -91,9 +91,11 @@ namespace
 	[[nodiscard]] spk::Palette palette(const spk::Texture &atlas, bool alternate = false)
 	{
 		spk::Material::Builder material;
-		const spk::Texture::Section section = alternate
-			? spk::Texture::Section{{0.5f, 0.0f}, {0.5f, 1.0f}}
-			: spk::Texture::Section{{0.0f, 0.0f}, {0.5f, 1.0f}};
+		spk::Texture::Section section{{0.0f, 0.0f}, {0.5f, 1.0f}};
+		if (alternate)
+		{
+			section = {{0.5f, 0.0f}, {0.5f, 1.0f}};
+		}
 		material.add("albedo", atlas, section);
 		spk::Voxel::Palette::Builder builder;
 		builder.setMaterial("stone", material.build());
@@ -148,11 +150,16 @@ namespace
 	{
 		switch (pose)
 		{
-		case Pose::Neutral: return "neutral";
-		case Pose::LeftArm: return "left_arm_raised";
-		case Pose::BothArms: return "both_arms_raised";
-		case Pose::Walking: return "walking";
-		case Pose::Sword: return "sword";
+		case Pose::Neutral:
+			return "neutral";
+		case Pose::LeftArm:
+			return "left_arm_raised";
+		case Pose::BothArms:
+			return "both_arms_raised";
+		case Pose::Walking:
+			return "walking";
+		case Pose::Sword:
+			return "sword";
 		}
 		return "unknown";
 	}
