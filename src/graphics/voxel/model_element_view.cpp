@@ -4,8 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "rendering/command/draw_voxel_command.hpp"
-#include "rendering/engine/engine_view.hpp"
+#include "exception.hpp"
 #include "voxel/mesher.hpp"
 #include "voxel/renderer.hpp"
 
@@ -78,13 +77,9 @@ namespace spk::Voxel
 		spk::RenderSnapshot::Builder &builder,
 		const spk::Matrix4x4 &model)
 	{
-		if (!_palette || _geometry().opaqueMesh().empty())
-		{
-			return;
-		}
-		builder.renderPass(spk::EngineView::OpaquePassKey)
-			.emplace<spk::DrawVoxelCommand>(
-				_geometry(), *_palette, _materialRemap, model, spk::Matrix4x4::identity());
+		(void)builder;
+		(void)model;
+		throw spk::Exception("Voxel ModelElementView requires an EngineView capture batch");
 	}
 
 	void ModelElementView::buildRenderSnapshot(

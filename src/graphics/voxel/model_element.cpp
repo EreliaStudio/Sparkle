@@ -13,12 +13,6 @@ namespace spk::Voxel
 	{
 	}
 
-	void ModelElement::setVolume(Volume volume)
-	{
-		_volume = std::move(volume);
-		_geometry.reset();
-	}
-
 	const Volume &ModelElement::volume() const noexcept
 	{
 		return _volume;

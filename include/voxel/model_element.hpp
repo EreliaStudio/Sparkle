@@ -20,7 +20,6 @@ namespace spk::Voxel
 		ModelElement(ModelElement &&) noexcept = default;
 		ModelElement &operator=(ModelElement &&) = delete;
 
-		void setVolume(Volume volume);
 		[[nodiscard]] const Volume &volume() const noexcept;
 		[[nodiscard]] const Geometry &geometry() const;
 	};
