@@ -53,9 +53,7 @@ namespace
 	using Vertical = spk::Voxel::Cell::VerticalOrientation;
 	using Builder = spk::Voxel::Volume::Builder;
 
-	constexpr std::array<const char *, 16> MaterialNames{
-		"stone", "slab", "slope", "stair", "brick", "skin", "cloth", "hair", "metal", "dark", "grass", "wood", "gold",
-		"slab-profile", "slope-profile", "stair-profile"};
+	constexpr std::array<const char *, 16> MaterialNames{"stone", "slab", "slope", "stair", "brick", "skin", "cloth", "hair", "metal", "dark", "grass", "wood", "gold", "slab-profile", "slope-profile", "stair-profile"};
 
 	[[nodiscard]] spk::Image loadAtlas()
 	{
