@@ -240,17 +240,23 @@ namespace
 			return builder.renderPass(spk::EngineView::OpaquePassKey).commandCount();
 		}
 
-		[[nodiscard]] sparkle_test::FramebufferImage capture()
+		[[nodiscard]] spk::RenderSnapshot snapshot()
 		{
-			auto &gl = sparkle_test::OpenGLTestContext::instance();
-			gl.reset(ImageSize);
 			spk::EngineWidget widget("model", nullptr);
 			widget.setEngine(&engine);
 			widget.setGeometry({.anchor = {0, 0}, .size = ImageSize});
 			widget.activate();
 			spk::RenderSnapshot::Builder builder;
 			widget.buildRenderSnapshot(builder);
-			builder.build().execute(gl.renderContext());
+			return builder.build();
+		}
+
+		[[nodiscard]] sparkle_test::FramebufferImage capture()
+		{
+			auto &gl = sparkle_test::OpenGLTestContext::instance();
+			gl.reset(ImageSize);
+			auto frame = snapshot();
+			frame.execute(gl.renderContext());
 			return gl.capture();
 		}
 
@@ -366,6 +372,31 @@ TEST(VoxelModel3DTest, DynamicSwordAttachmentAndParentRotationAreCaptured)
 	EXPECT_EQ(grip.attachedCount(), 0u);
 	EXPECT_EQ(scene.commands(), count);
 	EXPECT_EQ(model.graphicsCount(), 7u);
+}
+
+TEST(VoxelModel3DTest, DetachedSwordLeavesNoPixelsAndCannotChangeAnOldSnapshot)
+{
+	TestAtlas atlas;
+	Scene scene;
+	auto &renderer = scene.addModel(characterBlueprint(), palette(atlas));
+	const auto baseline = scene.capture();
+	auto &grip = renderer.model()->attachment("rightHand", "grip");
+	auto &sword = grip.attach(swordBlueprint());
+	auto attachedSnapshot = scene.snapshot();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	attachedSnapshot.execute(gl.renderContext());
+	const auto withSword = gl.capture();
+	EXPECT_NE(withSword.pixels, baseline.pixels);
+
+	spk::Model3D::ObjectHeadless detached = grip.detach(sword);
+	const auto afterDetach = scene.capture();
+	EXPECT_EQ(afterDetach.pixels, baseline.pixels);
+
+	gl.reset(ImageSize);
+	attachedSnapshot.execute(gl.renderContext());
+	EXPECT_EQ(gl.capture().pixels, withSword.pixels);
+	gl.reset();
 }
 
 TEST(VoxelModel3DTest, LayersAndInvalidScaleApplyToModels)
