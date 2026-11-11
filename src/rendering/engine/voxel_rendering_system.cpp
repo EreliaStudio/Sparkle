@@ -104,10 +104,12 @@ namespace spk::Voxel
 		}
 		for (auto &bucket : buckets)
 		{
-			builder.renderPass(spk::EngineView::OpaquePassKey)
-				.emplace<spk::DrawVoxelCommand>(
-					std::move(bucket.geometry), bucket.palette, std::move(bucket.materialRemap),
-					std::move(bucket.models), context.viewProjectionMatrix);
+			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelCommand>(
+				std::move(bucket.geometry),
+				bucket.palette,
+				std::move(bucket.materialRemap),
+				std::move(bucket.models),
+				context.viewProjectionMatrix);
 		}
 	}
 }

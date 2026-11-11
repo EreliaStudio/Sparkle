@@ -302,8 +302,11 @@ TEST(VoxelRendererTest, InstanceMatricesAreUploadedInStd430Order)
 		spk::Matrix4x4::translation(1.0f, 2.0f, 3.0f),
 		spk::Matrix4x4::translation(-4.0f, 5.0f, 6.0f)};
 	spk::DrawVoxelCommand command(
-		cubeGeometry(), makePalette(atlas, spk::Texture::Section::whole),
-		{0u}, models, spk::Matrix4x4::identity());
+		cubeGeometry(),
+		makePalette(atlas, spk::Texture::Section::whole),
+		{0u},
+		models,
+		spk::Matrix4x4::identity());
 	command.execute(gl.renderContext());
 
 	GLint instances = 0;
