@@ -344,6 +344,24 @@ TEST(VoxelModel3DTest, ReplacingVolumeDoesNotMutatePreviousGeometry)
 	EXPECT_EQ(view->geometry().opaqueMesh().layout().vertexBuffer().identifier(), oldId);
 }
 
+TEST(VoxelModel3DTest, IncompatiblePaletteSwapPreservesThePreviousBindings)
+{
+	TestAtlas atlas;
+	Scene scene;
+	auto &renderer = scene.addModel(characterBlueprint(), palette(atlas));
+	const auto &model = *renderer.model();
+	const auto *head = model.graphics(model.element("head"));
+	ASSERT_NE(head, nullptr);
+	ASSERT_NE(head->palette(), nullptr);
+	const auto *previous = &head->palette()->materials();
+	const auto commands = scene.commands();
+
+	EXPECT_THROW(renderer.bind(spk::Palette{}), spk::Exception);
+	ASSERT_NE(head->palette(), nullptr);
+	EXPECT_EQ(&head->palette()->materials(), previous);
+	EXPECT_EQ(scene.commands(), commands);
+}
+
 TEST(VoxelModel3DTest, DynamicSwordAttachmentAndParentRotationAreCaptured)
 {
 	TestAtlas atlas;
