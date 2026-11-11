@@ -49,7 +49,7 @@ namespace spk::Voxel
 		}
 	}
 
-	std::vector<std::uint32_t> Renderer::_resolveRemap(const Geometry &geometry, const spk::Palette &palette)
+	std::vector<std::uint32_t> Renderer::resolveMaterialRemap(const Geometry &geometry, const spk::Palette &palette)
 	{
 		_validate(geometry, palette);
 		std::vector<std::uint32_t> remap(geometry.materialSlots().size());
@@ -76,7 +76,7 @@ namespace spk::Voxel
 		std::vector<std::uint32_t> remap;
 		if (_palette)
 		{
-			remap = _resolveRemap(geometry, *_palette);
+			remap = resolveMaterialRemap(geometry, *_palette);
 		}
 		_geometry = std::move(geometry);
 		_materialRemap = std::move(remap);
@@ -87,7 +87,7 @@ namespace spk::Voxel
 		std::vector<std::uint32_t> remap;
 		if (_geometry)
 		{
-			remap = _resolveRemap(*_geometry, palette);
+			remap = resolveMaterialRemap(*_geometry, palette);
 		}
 		_palette = std::move(palette);
 		_materialRemap = std::move(remap);

@@ -20,10 +20,11 @@ namespace spk::Voxel
 		std::vector<std::uint32_t> _materialRemap;
 
 		static void _validate(const Geometry &geometry, const spk::Palette &palette);
-		[[nodiscard]] static std::vector<std::uint32_t> _resolveRemap(
-			const Geometry &geometry, const spk::Palette &palette);
 
 	public:
+		[[nodiscard]] static std::vector<std::uint32_t> resolveMaterialRemap(
+			const Geometry &geometry, const spk::Palette &palette);
+
 		explicit Renderer(const std::string &name = "Voxel renderer", spk::Entity3D *owner = nullptr);
 
 		void bind(Geometry geometry);

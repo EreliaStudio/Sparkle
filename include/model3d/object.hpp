@@ -85,6 +85,26 @@ namespace spk::Model3D
 			}
 		}
 
+		template <typename TCapture>
+		void _collect(
+			const Attachable &node,
+			RenderSnapshot::Builder &builder,
+			const Matrix4x4 &transform,
+			TCapture &capture)
+		{
+			if (const auto *element = dynamic_cast<const ElementNode *>(&node))
+			{
+				if (TGraphics *graphics = _prepare(*element); graphics != nullptr)
+				{
+					graphics->buildRenderSnapshot(builder, transform * element->globalTransform(), capture);
+				}
+			}
+			for (const Attachable *child : node.children())
+			{
+				_collect(*child, builder, transform, capture);
+			}
+		}
+
 		void _nextGeneration()
 		{
 			if (_generation == std::numeric_limits<std::uint64_t>::max())
@@ -199,6 +219,17 @@ namespace spk::Model3D
 			const Matrix4x4 &transform = Matrix4x4::identity())
 		{
 			_refresh(&builder, transform);
+		}
+
+		template <typename TCapture>
+		void buildRenderSnapshot(
+			RenderSnapshot::Builder &builder,
+			const Matrix4x4 &transform,
+			TCapture &capture)
+		{
+			_nextGeneration();
+			_collect(*this, builder, transform, capture);
+			_prune();
 		}
 	};
 }
