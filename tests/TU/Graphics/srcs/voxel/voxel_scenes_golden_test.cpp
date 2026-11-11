@@ -604,7 +604,7 @@ namespace
 
 	constexpr spk::Vector3 RightHandAttachment{8.5f, 5.5f, 2.5f};
 	constexpr spk::Vector3 WeaponForwardRotation{90.0f, 0.0f, 0.0f};
-	constexpr spk::Vector3 GripOrigin{-1.5f, -0.5f, -0.5f};
+	constexpr spk::Vector3 GripOrigin{-1.5f, 0.5f, -0.5f};
 
 	spk::Voxel::Renderer &attachSwordToHand(
 		Scene &scene,
@@ -890,10 +890,12 @@ namespace
 		const auto tip = point(8.5f);
 		EXPECT_NEAR(grip.x, 1 + RightHandAttachment.x * CharacterScale, 1.0e-4f);
 		EXPECT_NEAR(grip.y, -2 + RightHandAttachment.y * CharacterScale, 1.0e-4f);
-		EXPECT_NEAR(grip.z, 3 + RightHandAttachment.z * CharacterScale, 1.0e-4f);
+		EXPECT_NEAR(grip.z, 3 + (RightHandAttachment.z + 1.0f) * CharacterScale, 1.0e-4f);
 		EXPECT_NEAR(tip.x, grip.x, 1.0e-4f);
 		EXPECT_NEAR(tip.y, grip.y, 1.0e-4f);
 		EXPECT_NEAR(tip.z - grip.z, 8.0f * CharacterScale, 1.0e-4f);
+		const auto handleBack = point(0.0f);
+		EXPECT_NEAR(handleBack.z, 3 + (RightHandAttachment.z + 0.5f) * CharacterScale, 1.0e-4f);
 		characterRenderer.owner()->transform().move({2, 0, 0});
 		EXPECT_NEAR(point(0.5f).x, grip.x + 2.0f, 1.0e-4f);
 	}
