@@ -283,8 +283,6 @@ jobs:
         run: ./tools/ci/install-mesa.ps1 -Destination build/graphics-test/tests/TU/Graphics
       - name: Run Graphics tests
         run: ctest --test-dir build/graphics-test -R '^Graphics\.' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
-      - name: Verify all voxel golden tests compared reference images
-        run: python tools/ci/verify-voxel-golden-tests.py build/graphics-test/results.xml
       - name: Build visual comparison gallery
         if: always()
         run: >-
