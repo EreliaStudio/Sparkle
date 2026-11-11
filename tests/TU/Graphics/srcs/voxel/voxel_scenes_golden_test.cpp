@@ -794,6 +794,21 @@ namespace
 			return std::string(info.param.name);
 		});
 
+	TEST(VoxelSceneFunctionalTest, ShapeProfileTilesContainOnlyTheirVisibleSilhouettes)
+	{
+		const auto atlas = loadAtlas();
+		const auto opacity = [&](std::uint32_t tile, std::uint32_t x, std::uint32_t y) {
+			return atlas.pixel({(tile % 4) * 16 + x, (tile / 4) * 16 + y})[3];
+		};
+		EXPECT_GT(opacity(13, 8, 3), 0);
+		EXPECT_EQ(opacity(13, 8, 13), 0);
+		EXPECT_GT(opacity(14, 12, 8), 0);
+		EXPECT_EQ(opacity(14, 3, 8), 0);
+		EXPECT_GT(opacity(15, 3, 3), 0);
+		EXPECT_EQ(opacity(15, 3, 12), 0);
+		EXPECT_GT(opacity(15, 12, 12), 0);
+	}
+
 	TEST(VoxelSceneFunctionalTest, AdjacentCubesCullBothInternalFaces)
 	{
 		const auto geometry = bake({2, 1, 1}, [](Builder &builder) {
