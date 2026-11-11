@@ -42,7 +42,6 @@ namespace spk
 		static constexpr std::size_t MaterialRemapBinding = 2;
 		static constexpr std::size_t AlbedoUnit = 0;
 
-	private:
 		Voxel::Geometry _geometry;
 		Program _program;
 		ShaderStorageBuffer _instances;
