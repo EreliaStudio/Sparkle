@@ -357,24 +357,24 @@ TEST(OpenGLStateTest, ScopedStateRestoresCustomizedRasterAndBlendConfiguration)
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(ImageSize);
 	using State = spk::OpenGL::State;
-	auto original = State::capture();
+	auto original = State::capture(gl.renderContext());
 	{
-		State::Scope restore;
+		State::Scope restore(gl.renderContext());
 		auto depth = State::DepthTest{};
 		depth.comparison = State::Comparison::Greater;
 		depth.write = false;
 		depth.clear = 0.25;
-		depth.apply();
-		auto blending = State::Blend::disabled();
+		depth.apply(gl.renderContext());
+		auto blending = State::Blend::disabled(gl.renderContext());
 		blending.attachments[0].enabled = true;
 		blending.attachments[0].equationRGB = State::BlendEquation::Maximum;
-		blending.apply();
-		auto changed = State::capture();
+		blending.apply(gl.renderContext());
+		auto changed = State::capture(gl.renderContext());
 		EXPECT_EQ(changed.depthTest.comparison, State::Comparison::Greater);
 		EXPECT_FALSE(changed.depthTest.write);
 		EXPECT_EQ(changed.blend.attachments[0].equationRGB, State::BlendEquation::Maximum);
 	}
-	const auto restored = State::capture();
+	const auto restored = State::capture(gl.renderContext());
 	EXPECT_EQ(restored.depthTest.comparison, original.depthTest.comparison);
 	EXPECT_EQ(restored.depthTest.write, original.depthTest.write);
 	EXPECT_EQ(restored.blend.attachments[0].equationRGB, original.blend.attachments[0].equationRGB);

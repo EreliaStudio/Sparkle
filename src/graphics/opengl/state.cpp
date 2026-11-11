@@ -74,7 +74,7 @@ namespace spk::OpenGL
 		}
 	}
 
-	State::DepthTest State::DepthTest::capture()
+	State::DepthTest State::DepthTest::capture(RenderContext &)
 	{
 		DepthTest result;
 		result.enabled = OpenGL::enabled(GL_DEPTH_TEST);
@@ -87,7 +87,7 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	void State::DepthTest::apply() const noexcept
+	void State::DepthTest::apply(RenderContext &) const noexcept
 	{
 		toggle(GL_DEPTH_TEST, enabled);
 		glDepthFunc(native(comparison));
@@ -96,7 +96,7 @@ namespace spk::OpenGL
 		glDepthRange(range[0], range[1]);
 	}
 
-	State::StencilTest State::StencilTest::capture()
+	State::StencilTest State::StencilTest::capture(RenderContext &)
 	{
 		StencilTest result;
 		result.enabled = OpenGL::enabled(GL_STENCIL_TEST);
@@ -106,7 +106,7 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	void State::StencilTest::apply() const noexcept
+	void State::StencilTest::apply(RenderContext &) const noexcept
 	{
 		toggle(GL_STENCIL_TEST, enabled);
 		glClearStencil(clear);
@@ -114,7 +114,7 @@ namespace spk::OpenGL
 		applyStencilFace(GL_BACK, back);
 	}
 
-	State::Blend State::Blend::capture()
+	State::Blend State::Blend::capture(RenderContext &)
 	{
 		Blend result;
 		glGetFloatv(GL_BLEND_COLOR, result.constantColor.data());
@@ -134,14 +134,14 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	State::Blend State::Blend::disabled()
+	State::Blend State::Blend::disabled(RenderContext &)
 	{
 		Blend result;
 		result.attachments.resize(drawBufferCount());
 		return result;
 	}
 
-	void State::Blend::apply() const noexcept
+	void State::Blend::apply(RenderContext &) const noexcept
 	{
 		glBlendColor(constantColor[0], constantColor[1], constantColor[2], constantColor[3]);
 		for (GLuint index = 0; index < attachments.size(); ++index)
@@ -160,7 +160,7 @@ namespace spk::OpenGL
 		}
 	}
 
-	State::Rasterization State::Rasterization::capture()
+	State::Rasterization State::Rasterization::capture(RenderContext &)
 	{
 		Rasterization result;
 		result.cullEnabled = OpenGL::enabled(GL_CULL_FACE);
@@ -177,7 +177,7 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	void State::Rasterization::apply() const noexcept
+	void State::Rasterization::apply(RenderContext &) const noexcept
 	{
 		toggle(GL_CULL_FACE, cullEnabled);
 		glCullFace(native(cull));
@@ -189,7 +189,7 @@ namespace spk::OpenGL
 		toggle(GL_SAMPLE_ALPHA_TO_COVERAGE, sampleAlphaToCoverageEnabled);
 	}
 
-	State::Scissor State::Scissor::capture()
+	State::Scissor State::Scissor::capture(RenderContext &)
 	{
 		Scissor result;
 		result.enabled = OpenGL::enabled(GL_SCISSOR_TEST);
@@ -197,25 +197,25 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	void State::Scissor::apply() const noexcept
+	void State::Scissor::apply(RenderContext &) const noexcept
 	{
 		toggle(GL_SCISSOR_TEST, enabled);
 		glScissor(rectangle[0], rectangle[1], rectangle[2], rectangle[3]);
 	}
 
-	State::Viewport State::Viewport::capture()
+	State::Viewport State::Viewport::capture(RenderContext &)
 	{
 		Viewport result;
 		glGetIntegerv(GL_VIEWPORT, result.rectangle.data());
 		return result;
 	}
 
-	void State::Viewport::apply() const noexcept
+	void State::Viewport::apply(RenderContext &) const noexcept
 	{
 		glViewport(rectangle[0], rectangle[1], rectangle[2], rectangle[3]);
 	}
 
-	State::ColorOutput State::ColorOutput::capture()
+	State::ColorOutput State::ColorOutput::capture(RenderContext &)
 	{
 		ColorOutput result;
 		glGetFloatv(GL_COLOR_CLEAR_VALUE, result.clear.data());
@@ -230,7 +230,7 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	State::ColorOutput State::ColorOutput::writable(bool framebufferSRGB)
+	State::ColorOutput State::ColorOutput::writable(RenderContext &, bool framebufferSRGB)
 	{
 		ColorOutput result;
 		result.framebufferSRGB = framebufferSRGB;
@@ -238,7 +238,7 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	bool State::ColorOutput::destinationIsSRGB() noexcept
+	bool State::ColorOutput::destinationIsSRGB(RenderContext &) noexcept
 	{
 		const auto attachment = integer(GL_DRAW_FRAMEBUFFER_BINDING) == 0 ? GL_BACK_LEFT : GL_COLOR_ATTACHMENT0;
 		GLint encoding = GL_LINEAR;
@@ -246,28 +246,29 @@ namespace spk::OpenGL
 		return encoding == GL_SRGB;
 	}
 
-	bool State::ColorOutput::srgbEnabled() noexcept
+	bool State::ColorOutput::srgbEnabled(RenderContext &) noexcept
 	{
 		return OpenGL::enabled(GL_FRAMEBUFFER_SRGB);
 	}
 
-	void State::ColorOutput::setSRGB(bool enabled) noexcept
+	void State::ColorOutput::setSRGB(RenderContext &, bool enabled) noexcept
 	{
 		toggle(GL_FRAMEBUFFER_SRGB, enabled);
 	}
 
-	State::ColorOutput::SRGBScope::SRGBScope(bool enable) noexcept :
-		_previous(ColorOutput::srgbEnabled())
+	State::ColorOutput::SRGBScope::SRGBScope(RenderContext &context, bool enable) noexcept :
+		_context(context),
+		_previous(ColorOutput::srgbEnabled(context))
 	{
-		ColorOutput::setSRGB(enable);
+		ColorOutput::setSRGB(context, enable);
 	}
 
 	State::ColorOutput::SRGBScope::~SRGBScope()
 	{
-		ColorOutput::setSRGB(_previous);
+		ColorOutput::setSRGB(_context, _previous);
 	}
 
-	void State::ColorOutput::apply() const noexcept
+	void State::ColorOutput::apply(RenderContext &) const noexcept
 	{
 		toggle(GL_FRAMEBUFFER_SRGB, framebufferSRGB);
 		glClearColor(clear[0], clear[1], clear[2], clear[3]);
@@ -278,22 +279,22 @@ namespace spk::OpenGL
 		}
 	}
 
-	void State::Clear::color(std::uint32_t attachment, const std::array<float, 4> &rgba) noexcept
+	void State::Clear::color(RenderContext &, std::uint32_t attachment, const std::array<float, 4> &rgba) noexcept
 	{
 		glClearBufferfv(GL_COLOR, static_cast<GLint>(attachment), rgba.data());
 	}
 
-	void State::Clear::depth(float value) noexcept
+	void State::Clear::depth(RenderContext &, float value) noexcept
 	{
 		glClearBufferfv(GL_DEPTH, 0, &value);
 	}
 
-	void State::Clear::stencil(int value) noexcept
+	void State::Clear::stencil(RenderContext &, int value) noexcept
 	{
 		glClearBufferiv(GL_STENCIL, 0, &value);
 	}
 
-	State::Bindings State::Bindings::capture()
+	State::Bindings State::Bindings::capture(RenderContext &)
 	{
 		Bindings result;
 		result.drawFramebuffer = static_cast<std::uint32_t>(integer(GL_DRAW_FRAMEBUFFER_BINDING));
@@ -312,7 +313,7 @@ namespace spk::OpenGL
 		return result;
 	}
 
-	void State::Bindings::apply() const noexcept
+	void State::Bindings::apply(RenderContext &) const noexcept
 	{
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
@@ -327,39 +328,40 @@ namespace spk::OpenGL
 		glActiveTexture(GL_TEXTURE0 + activeTexture);
 	}
 
-	State State::capture()
+	State State::capture(RenderContext &context)
 	{
 		State result;
-		result.depthTest = DepthTest::capture();
-		result.stencilTest = StencilTest::capture();
-		result.blend = Blend::capture();
-		result.rasterization = Rasterization::capture();
-		result.scissor = Scissor::capture();
-		result.viewport = Viewport::capture();
-		result.colorOutput = ColorOutput::capture();
-		result.bindings = Bindings::capture();
+		result.depthTest = DepthTest::capture(context);
+		result.stencilTest = StencilTest::capture(context);
+		result.blend = Blend::capture(context);
+		result.rasterization = Rasterization::capture(context);
+		result.scissor = Scissor::capture(context);
+		result.viewport = Viewport::capture(context);
+		result.colorOutput = ColorOutput::capture(context);
+		result.bindings = Bindings::capture(context);
 		return result;
 	}
 
-	void State::apply() const noexcept
+	void State::apply(RenderContext &context) const noexcept
 	{
-		bindings.apply();
-		depthTest.apply();
-		stencilTest.apply();
-		blend.apply();
-		rasterization.apply();
-		scissor.apply();
-		viewport.apply();
-		colorOutput.apply();
+		bindings.apply(context);
+		depthTest.apply(context);
+		stencilTest.apply(context);
+		blend.apply(context);
+		rasterization.apply(context);
+		scissor.apply(context);
+		viewport.apply(context);
+		colorOutput.apply(context);
 	}
 
-	State::Scope::Scope() :
-		_previous(State::capture())
+	State::Scope::Scope(RenderContext &context) :
+		_context(context),
+		_previous(State::capture(context))
 	{
 	}
 
 	State::Scope::~Scope()
 	{
-		_previous.apply();
+		_previous.apply(_context);
 	}
 }

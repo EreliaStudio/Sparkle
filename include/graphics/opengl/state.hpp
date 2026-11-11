@@ -4,6 +4,11 @@
 #include <cstdint>
 #include <vector>
 
+namespace spk
+{
+	struct RenderContext;
+}
+
 namespace spk::OpenGL
 {
 	class State final
@@ -89,8 +94,8 @@ namespace spk::OpenGL
 			double clear = 1.0;
 			std::array<double, 2> range{0.0, 1.0};
 
-			[[nodiscard]] static DepthTest capture();
-			void apply() const noexcept;
+			[[nodiscard]] static DepthTest capture(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct StencilTest
@@ -111,8 +116,8 @@ namespace spk::OpenGL
 			Face front{};
 			Face back{};
 
-			[[nodiscard]] static StencilTest capture();
-			void apply() const noexcept;
+			[[nodiscard]] static StencilTest capture(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct Blend
@@ -131,9 +136,9 @@ namespace spk::OpenGL
 			std::vector<Attachment> attachments;
 			std::array<float, 4> constantColor{0, 0, 0, 0};
 
-			[[nodiscard]] static Blend capture();
-			[[nodiscard]] static Blend disabled();
-			void apply() const noexcept;
+			[[nodiscard]] static Blend capture(RenderContext &context);
+			[[nodiscard]] static Blend disabled(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct Rasterization
@@ -148,8 +153,8 @@ namespace spk::OpenGL
 			bool multisampleEnabled = true;
 			bool sampleAlphaToCoverageEnabled = false;
 
-			[[nodiscard]] static Rasterization capture();
-			void apply() const noexcept;
+			[[nodiscard]] static Rasterization capture(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct Scissor
@@ -157,16 +162,16 @@ namespace spk::OpenGL
 			bool enabled = false;
 			std::array<int, 4> rectangle{0, 0, 0, 0};
 
-			[[nodiscard]] static Scissor capture();
-			void apply() const noexcept;
+			[[nodiscard]] static Scissor capture(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct Viewport
 		{
 			std::array<int, 4> rectangle{0, 0, 0, 0};
 
-			[[nodiscard]] static Viewport capture();
-			void apply() const noexcept;
+			[[nodiscard]] static Viewport capture(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct ColorOutput
@@ -175,21 +180,21 @@ namespace spk::OpenGL
 			std::array<float, 4> clear{0, 0, 0, 0};
 			bool framebufferSRGB = false;
 
-			[[nodiscard]] static ColorOutput capture();
-			[[nodiscard]] static ColorOutput writable(bool framebufferSRGB = false);
-			[[nodiscard]] static bool destinationIsSRGB() noexcept;
-			[[nodiscard]] static bool srgbEnabled() noexcept;
-			static void setSRGB(bool enabled) noexcept;
+			[[nodiscard]] static ColorOutput capture(RenderContext &context);
+			[[nodiscard]] static ColorOutput writable(RenderContext &context, bool framebufferSRGB = false);
+			[[nodiscard]] static bool destinationIsSRGB(RenderContext &context) noexcept;
+			[[nodiscard]] static bool srgbEnabled(RenderContext &context) noexcept;
+			static void setSRGB(RenderContext &context, bool enabled) noexcept;
 
 			class SRGBScope;
-			void apply() const noexcept;
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		struct Clear
 		{
-			static void color(std::uint32_t attachment, const std::array<float, 4> &rgba) noexcept;
-			static void depth(float value = 1.0f) noexcept;
-			static void stencil(int value = 0) noexcept;
+			static void color(RenderContext &context, std::uint32_t attachment, const std::array<float, 4> &rgba) noexcept;
+			static void depth(RenderContext &context, float value = 1.0f) noexcept;
+			static void stencil(RenderContext &context, int value = 0) noexcept;
 		};
 
 		struct Bindings
@@ -207,8 +212,8 @@ namespace spk::OpenGL
 			std::uint32_t activeTexture = 0;
 			std::vector<TextureUnit> textureUnits;
 
-			[[nodiscard]] static Bindings capture();
-			void apply() const noexcept;
+			[[nodiscard]] static Bindings capture(RenderContext &context);
+			void apply(RenderContext &context) const noexcept;
 		};
 
 		DepthTest depthTest;
@@ -220,8 +225,8 @@ namespace spk::OpenGL
 		ColorOutput colorOutput;
 		Bindings bindings;
 
-		[[nodiscard]] static State capture();
-		void apply() const noexcept;
+		[[nodiscard]] static State capture(RenderContext &context);
+		void apply(RenderContext &context) const noexcept;
 
 		class Scope;
 	};
@@ -229,10 +234,11 @@ namespace spk::OpenGL
 	class State::ColorOutput::SRGBScope final
 	{
 	private:
+		RenderContext &_context;
 		bool _previous;
 
 	public:
-		explicit SRGBScope(bool enable) noexcept;
+		explicit SRGBScope(RenderContext &context, bool enable) noexcept;
 		~SRGBScope();
 		SRGBScope(const SRGBScope &) = delete;
 		SRGBScope &operator=(const SRGBScope &) = delete;
@@ -241,10 +247,11 @@ namespace spk::OpenGL
 	class State::Scope final
 	{
 	private:
+		RenderContext &_context;
 		State _previous;
 
 	public:
-		Scope();
+		explicit Scope(RenderContext &context);
 		~Scope();
 		Scope(const Scope &) = delete;
 		Scope &operator=(const Scope &) = delete;

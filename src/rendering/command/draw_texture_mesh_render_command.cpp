@@ -50,11 +50,11 @@ namespace spk
 		{
 			return;
 		}
-		const bool srgbTarget = _presentSRGB && OpenGL::State::ColorOutput::destinationIsSRGB();
+		const bool srgbTarget = _presentSRGB && OpenGL::State::ColorOutput::destinationIsSRGB(context);
 		std::optional<OpenGL::State::ColorOutput::SRGBScope> encoding;
 		if (_presentSRGB)
 		{
-			encoding.emplace(srgbTarget);
+			encoding.emplace(context, srgbTarget);
 		}
 		auto &p = _sharedProgram();
 		p.activate(context);

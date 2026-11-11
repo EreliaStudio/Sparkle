@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "geometry/mesh.hpp"
@@ -16,6 +18,8 @@ namespace spk::Voxel
 	class Geometry final
 	{
 	public:
+		using MaterialIndices = std::unordered_map<std::string, std::uint32_t>;
+
 		struct Vertex
 		{
 			spk::Vector3 position;
@@ -41,6 +45,7 @@ namespace spk::Voxel
 			SurfaceMesh translucent;
 			spk::ShadowMap::Mesh depth;
 			std::vector<Definition::Slot> slots;
+			MaterialIndices materialIndices;
 		};
 
 		std::shared_ptr<const Data> _data;
@@ -57,6 +62,7 @@ namespace spk::Voxel
 		[[nodiscard]] const SurfaceMesh &transparentMesh() const noexcept;
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
+		[[nodiscard]] const MaterialIndices &materialIndices() const noexcept;
 		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 	};
