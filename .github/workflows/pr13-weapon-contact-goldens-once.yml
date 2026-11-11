@@ -1,0 +1,44 @@
+name: PR13 one-time contact golden approval
+on:
+  push:
+    branches:
+      - impl/v0.1.4/13-voxel-render-first
+    paths:
+      - .github/workflows/pr13-weapon-contact-goldens-once.yml
+permissions:
+  actions: read
+  contents: write
+jobs:
+  import-reviewed-weapon-captures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/13-voxel-render-first
+          persist-credentials: true
+      - name: Download actual OpenGL captures from graphics CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 43092337194 --repo EreliaStudio/Sparkle -n graphics-unit-tests-Debug -D captured
+      - name: Verify captures and update golden PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=captured/tests/TU/Graphics/results/rendering/voxel-scenes
+          dst=tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes
+          echo "6f56fa356ccdfc34b514b035204214a3becfdf6cc635b62ca83900660624be09  $src/character_with_sword.png" | sha256sum -c -
+          echo "b728d7f8f6aa3574750cfcb94bbe23adf7ae017eff216628a9e7346bdecd8178  $src/room_inside_character.png" | sha256sum -c -
+          cp "$src/character_with_sword.png" "$dst/character_with_sword.png"
+          cp "$src/room_inside_character.png" "$dst/room_inside_character.png"
+      - name: Commit verified OpenGL golden references
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes/character_with_sword.png
+          git add tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes/room_inside_character.png
+          git diff --cached --quiet && { echo "No golden image changes" >&2; exit 1; } || test $? -eq 1
+          git commit -m "test(voxel): approve non-overlapping sword grip golden images"
+          git push origin HEAD:impl/v0.1.4/13-voxel-render-first
