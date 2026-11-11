@@ -331,8 +331,6 @@ TEST(VoxelRendererTest, InvalidScaleIsRejectedBeforeSnapshotPublication)
 
 TEST(VoxelRendererTest, InstancedCommandUsesStd430AndRebindsSsboAfterThirdParty)
 {
-	static_assert(sizeof(spk::DrawVoxelBucketCommand::InstanceData) == 64);
-	static_assert(sizeof(spk::DrawVoxelBucketCommand::MaterialData) == 16);
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(ImageSize);
 	TestAtlas atlas;

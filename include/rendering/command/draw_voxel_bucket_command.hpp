@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #include <vector>
 
 #include "graphics/opengl/program.hpp"
@@ -15,7 +16,7 @@ namespace spk
 {
 	class DrawVoxelBucketCommand final : public RenderCommand
 	{
-	public:
+	private:
 		struct alignas(16) InstanceData
 		{
 			Matrix4x4 model;
@@ -26,6 +27,15 @@ namespace spk
 			Vector2 uvAnchor;
 			Vector2 uvSize;
 		};
+
+		static_assert(sizeof(InstanceData) == 64);
+		static_assert(alignof(InstanceData) == 16);
+		static_assert(offsetof(InstanceData, model) == 0);
+		static_assert(sizeof(MaterialData) == 16);
+		static_assert(alignof(MaterialData) == 8);
+		static_assert(offsetof(MaterialData, uvAnchor) == 0);
+		static_assert(offsetof(MaterialData, uvSize) == 8);
+		static_assert(std::is_standard_layout_v<MaterialData>);
 
 		static constexpr std::size_t InstanceBinding = 0;
 		static constexpr std::size_t MaterialBinding = 1;

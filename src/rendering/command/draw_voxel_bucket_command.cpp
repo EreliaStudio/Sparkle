@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <span>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 
 #include "exception.hpp"
@@ -14,15 +13,6 @@
 
 namespace spk
 {
-	static_assert(sizeof(DrawVoxelBucketCommand::InstanceData) == 64);
-	static_assert(alignof(DrawVoxelBucketCommand::InstanceData) == 16);
-	static_assert(offsetof(DrawVoxelBucketCommand::InstanceData, model) == 0);
-	static_assert(sizeof(DrawVoxelBucketCommand::MaterialData) == 16);
-	static_assert(alignof(DrawVoxelBucketCommand::MaterialData) == 8);
-	static_assert(offsetof(DrawVoxelBucketCommand::MaterialData, uvAnchor) == 0);
-	static_assert(offsetof(DrawVoxelBucketCommand::MaterialData, uvSize) == 8);
-	static_assert(std::is_standard_layout_v<DrawVoxelBucketCommand::MaterialData>);
-
 	Program &DrawVoxelBucketCommand::_sharedProgram()
 	{
 		static Program result = [] {
