@@ -78,7 +78,37 @@ namespace
 			EXPECT_FALSE(first == second);
 			EXPECT_TRUE(first == Shape(first));
 			EXPECT_EQ(first.instance().triangles().size(), fixture.triangleCount);
-			EXPECT_EQ(first.slots().size(), 3u);
+			EXPECT_EQ(first.slots().size(), std::string(fixture.name) == "cube" ? 3u : 4u);
+		}
+	}
+
+	TEST(VoxelShapeFixtureTest, ProfileUVsFollowTheWholeShapeWithoutSeams)
+	{
+		for (const char *name : {"slab", "slope", "stair"})
+		{
+			SCOPED_TRACE(name);
+			const auto json = fixtureJSON(name);
+			const auto &polygons = json.at("polygons").asArray();
+			std::size_t profileCount = 0;
+			for (const auto &polygon : polygons)
+			{
+				if (polygon.at("slot").as<std::string>() != "profile")
+				{
+					continue;
+				}
+				++profileCount;
+				for (const auto &vertex : polygon.at("vertices").asArray())
+				{
+					const auto &position = vertex.at("position").asArray();
+					const auto &uv = vertex.at("uv").asArray();
+					EXPECT_NEAR(uv[1].as<double>(), position[1].as<double>(), 1.0e-6);
+					if (std::string(name) != "slab")
+					{
+						EXPECT_NEAR(uv[0].as<double>(), position[0].as<double>(), 1.0e-6);
+					}
+				}
+			}
+			EXPECT_EQ(profileCount, std::string(name) == "slope" ? 2u : 4u);
 		}
 	}
 

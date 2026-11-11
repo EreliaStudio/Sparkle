@@ -53,8 +53,9 @@ namespace
 	using Vertical = spk::Voxel::Cell::VerticalOrientation;
 	using Builder = spk::Voxel::Volume::Builder;
 
-	constexpr std::array<const char *, 13> MaterialNames{
-		"stone", "slab", "slope", "stair", "brick", "skin", "cloth", "hair", "metal", "dark", "grass", "wood", "gold"};
+	constexpr std::array<const char *, 16> MaterialNames{
+		"stone", "slab", "slope", "stair", "brick", "skin", "cloth", "hair", "metal", "dark", "grass", "wood", "gold",
+		"slab-profile", "slope-profile", "stair-profile"};
 
 	[[nodiscard]] spk::Image loadAtlas()
 	{
@@ -72,13 +73,13 @@ namespace
 
 	[[nodiscard]] spk::Palette palette(const spk::Image &atlas, bool alternate = false)
 	{
-		constexpr std::array<std::size_t, 13> Tiles{
-			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+		constexpr std::array<std::size_t, 16> Tiles{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 		spk::Voxel::Palette::Builder builder;
 		for (std::size_t i = 0; i < MaterialNames.size(); ++i)
 		{
 			spk::Material::Builder material;
-			const auto index = alternate ? (Tiles[i] + 3) % 16 : Tiles[i];
+			const auto index = alternate && i < 13 ? (Tiles[i] + 3) % 16 : Tiles[i];
 			material.add("albedo", atlas, section(index, atlas.size()));
 			builder.setMaterial(MaterialNames[i], material.build());
 		}
@@ -93,12 +94,12 @@ namespace
 	}
 
 	[[nodiscard]] spk::Voxel::Definition definition(
-		const spk::Voxel::Shape &shape, const char *material)
+		const spk::Voxel::Shape &shape, const char *material, const char *profileMaterial = nullptr)
 	{
 		spk::Voxel::Definition::SlotMapping mapping;
 		for (const auto &slot : shape.slots())
 		{
-			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{material, 1.0f});
+			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{slot.name == "profile" ? profileMaterial : material, 1.0f});
 		}
 		return {shape, std::move(mapping)};
 	}
@@ -108,9 +109,9 @@ namespace
 		const auto cube = shape("cube");
 		spk::Voxel::Definition::Registry::Builder builder;
 		builder.add(1, definition(cube, "stone"));
-		builder.add(2, definition(shape("slab"), "slab"));
-		builder.add(3, definition(shape("slope"), "slope"));
-		builder.add(4, definition(shape("stair"), "stair"));
+		builder.add(2, definition(shape("slab"), "slab", "slab-profile"));
+		builder.add(3, definition(shape("slope"), "slope", "slope-profile"));
+		builder.add(4, definition(shape("stair"), "stair", "stair-profile"));
 		builder.add(5, definition(cube, "brick"));
 		builder.add(6, definition(cube, "skin"));
 		builder.add(7, definition(cube, "cloth"));
