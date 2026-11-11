@@ -90,15 +90,20 @@ namespace
 
 	[[nodiscard]] spk::Palette palette(const spk::Texture &atlas, bool alternate = false)
 	{
-		spk::Material::Builder material;
-		spk::Texture::Section section{{0.0f, 0.0f}, {0.5f, 1.0f}};
+		spk::Voxel::Palette::Builder builder;
+		spk::Texture::Section stone{{0.0f, 0.0f}, {0.5f, 1.0f}};
 		if (alternate)
 		{
-			section = {{0.5f, 0.0f}, {0.5f, 1.0f}};
+			stone = {{0.5f, 0.0f}, {0.5f, 1.0f}};
 		}
-		material.add("albedo", atlas, section);
-		spk::Voxel::Palette::Builder builder;
-		builder.setMaterial("stone", material.build());
+		const auto add = [&builder, &atlas](const char *name, spk::Texture::Section section) {
+			spk::Material::Builder material;
+			material.add("albedo", atlas, section);
+			builder.setMaterial(name, material.build());
+		};
+		add("stone", stone);
+		add("wood", {{0.0f, 0.0f}, {0.5f, 0.5f}});
+		add("metal", {{0.5f, 0.5f}, {0.5f, 0.5f}});
 		return builder.build();
 	}
 
@@ -119,7 +124,7 @@ namespace
 		rightArm.addAttachmentPoint("wrist", {0.5f, 0, 0.5f});
 		auto &hand = rightArm.attach<spk::Voxel::ModelElement>("wrist", "rightHand", volume({1, 1, 1}));
 		hand.setAnchor({-0.5f, -1.0f, -0.5f});
-		hand.addAttachmentPoint("grip", {0.5f, 0, 0.5f}, spk::Quaternion::fromEuler({0, 0, 90}));
+		hand.addAttachmentPoint("grip", {0.5f, 0, 0.5f}, spk::Quaternion::fromEuler({0, 0, -90}));
 		torso.addAttachmentPoint("leftHip", {0.5f, 0, 1});
 		torso.addAttachmentPoint("rightHip", {2.5f, 0, 1});
 		auto &leftLeg = torso.attach<spk::Voxel::ModelElement>("leftHip", "leftLeg", volume({1, 3, 1}));
@@ -129,11 +134,40 @@ namespace
 		return builder.build();
 	}
 
+	[[nodiscard]] spk::Voxel::Volume swordVolume()
+	{
+		spk::Voxel::Shape::Builder shapes;
+		shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+		const auto shape = shapes.build();
+		spk::Voxel::Definition::Registry::Builder registry;
+		for (const auto &[id, material] : std::array<std::pair<std::uint32_t, const char *>, 2>{{{1, "wood"}, {2, "metal"}}})
+		{
+			spk::Voxel::Definition::SlotMapping mapping;
+			for (const auto &slot : shape.slots())
+			{
+				mapping.emplace(slot.name, spk::Voxel::Definition::Slot{material, 1.0f});
+			}
+			registry.add(id, spk::Voxel::Definition(shape, std::move(mapping)));
+		}
+		spk::Voxel::Volume::Builder builder({3, 6, 1});
+		builder.bind(registry.build());
+		builder.set({1, 0, 0}, 1);
+		for (std::uint32_t x = 0; x < 3; ++x)
+		{
+			builder.set({x, 1, 0}, 1);
+		}
+		for (std::uint32_t y = 2; y < 6; ++y)
+		{
+			builder.set({1, y, 0}, 2);
+		}
+		return builder.build();
+	}
+
 	[[nodiscard]] Blueprint swordBlueprint()
 	{
 		Blueprint::Builder builder;
-		auto &sword = builder.setRoot<spk::Voxel::ModelElement>("sword", volume({1, 4, 1}));
-		sword.setAnchor({-0.5f, 0, -0.5f});
+		auto &sword = builder.setRoot<spk::Voxel::ModelElement>("sword", swordVolume());
+		sword.setAnchor({-1.5f, 0, -0.5f});
 		return builder.build();
 	}
 
@@ -362,6 +396,37 @@ TEST(VoxelModel3DTest, IncompatiblePaletteSwapPreservesThePreviousBindings)
 	EXPECT_EQ(scene.commands(), commands);
 }
 
+TEST(VoxelModel3DTest, NestedRotationsPreserveNonCommutativeOrderAndMeshIdentity)
+{
+	TestAtlas atlas;
+	Scene scene;
+	auto &renderer = scene.addModel(characterBlueprint(), palette(atlas));
+	auto &model = *renderer.model();
+	model.synchronize();
+	const auto &hand = model.element("rightHand");
+	const auto *graphics = model.graphics(hand);
+	ASSERT_NE(graphics, nullptr);
+	const auto mesh = graphics->geometry().opaqueMesh().layout().vertexBuffer().identifier();
+
+	model.attachment("torso", "rightShoulder").setRotation(spk::Vector3{0, 0, 48});
+	const auto &wrist = model.attachment("rightArm", "wrist");
+	model.attachment("rightArm", "wrist").setRotation(spk::Vector3{38, 0, 0});
+
+	const spk::Vector4 probe{0, -1, 0, 1};
+	const auto actual = hand.globalTransform() * probe;
+	const auto parent = model.element("rightArm").globalTransform();
+	const auto expected = parent * wrist.transform() * hand.definition().anchor() * probe;
+	const auto reversed = wrist.transform() * parent * hand.definition().anchor() * probe;
+	EXPECT_NEAR(actual.x, expected.x, 0.0001f);
+	EXPECT_NEAR(actual.y, expected.y, 0.0001f);
+	EXPECT_NEAR(actual.z, expected.z, 0.0001f);
+	EXPECT_GT(std::abs(actual.x - reversed.x) + std::abs(actual.y - reversed.y) + std::abs(actual.z - reversed.z), 0.5f);
+
+	model.synchronize();
+	EXPECT_EQ(model.graphics(hand), graphics);
+	EXPECT_EQ(graphics->geometry().opaqueMesh().layout().vertexBuffer().identifier(), mesh);
+}
+
 TEST(VoxelModel3DTest, DynamicSwordAttachmentAndParentRotationAreCaptured)
 {
 	TestAtlas atlas;
@@ -371,6 +436,10 @@ TEST(VoxelModel3DTest, DynamicSwordAttachmentAndParentRotationAreCaptured)
 	const auto count = scene.commands();
 	auto &grip = model.attachment("rightHand", "grip");
 	spk::Model3D::ObjectHeadless &sword = grip.attach(swordBlueprint());
+	const auto handAxis = model.element("rightHand").globalTransform() * spk::Vector4{0, 1, 0, 0};
+	const auto swordAxis = sword.root().globalTransform() * spk::Vector4{0, 1, 0, 0};
+	EXPECT_NEAR(handAxis.x * swordAxis.x + handAxis.y * swordAxis.y + handAxis.z * swordAxis.z, 0.0f, 0.0001f);
+	EXPECT_GT(swordAxis.x, 0.99f);
 	EXPECT_EQ(scene.commands(), count + 1);
 	const auto &hand = model.element("rightHand");
 	const auto expected = hand.globalTransform() * grip.transform() * sword.root().definition().anchor();
