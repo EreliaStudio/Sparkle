@@ -1,0 +1,61 @@
+name: PR13 one-time shape profile golden approval
+on:
+  push:
+    branches:
+      - impl/v0.1.4/13-voxel-render-first
+    paths:
+      - .github/workflows/pr13-profile-goldens-once.yml
+permissions:
+  actions: read
+  contents: write
+jobs:
+  approve-verified-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/13-voxel-render-first
+          persist-credentials: true
+      - name: Download real OpenGL captures from successful test execution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 43080912222 --repo EreliaStudio/Sparkle -n graphics-unit-tests-Debug -D captured
+      - name: Verify and import only changed voxel scene references
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=captured/tests/TU/Graphics/results/rendering/voxel-scenes
+          dst=tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes
+          echo "3dc5e8ea8e0527c91a2d7ce8f0d2a866f80ee6fedacfe222e8d6987ea716f41e  $src/shapes_stair_west.png" | sha256sum -c -
+          echo "0f07c7ea09f9f1761165ecb5e312ce686a88d816820bc32a212dfa275ce9a619  $src/shapes_slope_west.png" | sha256sum -c -
+          echo "b0f587b4afd822ea1b392b7a1445b6fdb1d2245f0bd5a7aaedd505b91135674c  $src/shapes_slab_lower.png" | sha256sum -c -
+          shopt -s nullglob
+          images=("$src"/*.png)
+          count=0
+          for image in "${images[@]}"; do
+            name=$(basename "$image")
+            [[ "$name" == *_difference.png ]] && continue
+            case "$name" in
+              shapes_slab_*|shapes_slope_*|shapes_stair_*|arrangement_*) ;;
+              *) echo "Unexpected capture: $name" >&2; exit 1 ;;
+            esac
+            test -f "$dst/$name"
+            cp "$image" "$dst/$name"
+            ((count+=1))
+          done
+          test "$count" -eq 22
+          echo "Updated $count reviewed shape and arrangement golden images"
+      - name: Commit verified OpenGL screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/TU/Graphics/resources/expectedImages/rendering/voxel-scenes
+          if git diff --cached --quiet; then
+            echo "No changes to golden images" >&2
+            exit 1
+          fi
+          git diff --cached --stat
+          git commit -m "test(voxel): approve continuous-profile golden captures"
+          git push origin HEAD:impl/v0.1.4/13-voxel-render-first
