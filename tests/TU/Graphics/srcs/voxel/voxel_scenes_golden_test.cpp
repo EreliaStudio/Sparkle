@@ -172,7 +172,8 @@ namespace
 			const spk::Palette &appearance,
 			spk::Vector3 position,
 			spk::Vector3 rotation = {},
-			spk::Vector3 scale = {1.0f, 1.0f, 1.0f})
+			spk::Vector3 scale = {1.0f, 1.0f, 1.0f},
+			spk::Entity3D *parent = nullptr)
 		{
 			auto entity = std::make_unique<spk::Entity3D>("voxel scene object");
 			entity->transform().place(position);
@@ -181,9 +182,26 @@ namespace
 			auto &renderer = entity->addComponent<spk::Voxel::Renderer>();
 			renderer.bind(geometry);
 			renderer.bind(appearance);
-			engine.addEntity(entity.get());
+			if (parent == nullptr)
+			{
+				engine.addEntity(entity.get());
+			}
+			else
+			{
+				entity->setParent(*parent);
+			}
 			entities.emplace_back(std::move(entity));
 			return renderer;
+		}
+
+		spk::Entity3D &addJoint(spk::Entity3D &parent, spk::Vector3 position, spk::Vector3 rotation)
+		{
+			auto joint = std::make_unique<spk::Entity3D>("Right-hand weapon articulation", &parent);
+			joint->transform().place(position);
+			joint->transform().setEulerRotation(rotation);
+			auto &result = *joint;
+			entities.emplace_back(std::move(joint));
+			return result;
 		}
 
 		~Scene()
@@ -555,17 +573,6 @@ namespace
 		{
 			put(builder, 8, y, 2, y == (rightRaised ? rightStart : rightStart + 4) ? Block::Cloth : Block::Skin);
 		}
-		if (pose == Pose::Sword)
-		{
-			put(builder, 8, 4, 2, Block::Wood);
-			put(builder, 7, 3, 2, Block::Gold);
-			put(builder, 8, 3, 2, Block::Gold);
-			put(builder, 9, 3, 2, Block::Gold);
-			for (std::uint32_t y = 0; y < 3; ++y)
-			{
-				put(builder, 8, y, 2, Block::Metal);
-			}
-		}
 	}
 
 	[[nodiscard]] spk::Voxel::Geometry character(Pose pose)
@@ -573,6 +580,40 @@ namespace
 		return bake({11, 16, 5}, [pose](Builder &builder) {
 			fillCharacter(builder, pose);
 		});
+	}
+
+	void fillSword(Builder &builder)
+	{
+		put(builder, 1, 0, 0, Block::Wood);
+		put(builder, 1, 1, 0, Block::Wood);
+		for (std::uint32_t x = 0; x < 3; ++x)
+		{
+			put(builder, x, 2, 0, Block::Gold);
+		}
+		for (std::uint32_t y = 3; y < 9; ++y)
+		{
+			put(builder, 1, y, 0, Block::Metal);
+		}
+	}
+
+	[[nodiscard]] spk::Voxel::Geometry sword()
+	{
+		return bake({3, 9, 1}, [](Builder &builder) {
+			fillSword(builder);
+		});
+	}
+
+	constexpr spk::Vector3 RightHandAttachment{8.5f, 5.5f, 2.5f};
+	constexpr spk::Vector3 WeaponForwardRotation{90.0f, 0.0f, 0.0f};
+	constexpr spk::Vector3 GripOrigin{-1.5f, -0.5f, -0.5f};
+
+	spk::Voxel::Renderer &attachSwordToHand(
+		Scene &scene,
+		spk::Voxel::Renderer &characterRenderer,
+		const spk::Palette &appearance)
+	{
+		auto &joint = scene.addJoint(*characterRenderer.owner(), RightHandAttachment, WeaponForwardRotation);
+		return scene.add(sword(), appearance, GripOrigin, {}, {1.0f, 1.0f, 1.0f}, &joint);
 	}
 
 	struct CharacterCase
@@ -593,7 +634,12 @@ namespace
 		scene.lookAt({8, 7, 14}, {0, 0, 0});
 		const auto model = character(param.pose);
 		ASSERT_GT(model.opaqueMesh().indexCount(), 0u);
-		scene.add(model, palette(atlas), {-5.5f * CharacterScale, -7.5f * CharacterScale, -2.5f * CharacterScale}, {}, CharacterEntityScale);
+		const auto appearance = palette(atlas);
+		auto &renderer = scene.add(model, appearance, {-5.5f * CharacterScale, -7.5f * CharacterScale, -2.5f * CharacterScale}, {}, CharacterEntityScale);
+		if (param.pose == Pose::Sword)
+		{
+			attachSwordToHand(scene, renderer, appearance);
+		}
 		render(scene, std::string("character_") + param.name);
 	}
 
@@ -714,9 +760,12 @@ namespace
 			scene.lookAt({0.1f, -2.78f, -0.2f}, {0.0f, -2.95f, -5.0f});
 			break;
 		case RoomView::InsideCharacter:
-			scene.add(character(Pose::Sword), appearance, {-5.5f * CharacterScale, -floor + 1, -2.5f * CharacterScale}, {}, CharacterEntityScale);
+		{
+			auto &renderer = scene.add(character(Pose::Sword), appearance, {-5.5f * CharacterScale, -floor + 1, -2.5f * CharacterScale}, {}, CharacterEntityScale);
+			attachSwordToHand(scene, renderer, appearance);
 			scene.lookAt({2.0f, -0.5f, 8.0f}, {0.0f, -1.5f, 0.0f});
 			break;
+		}
 		case RoomView::ExteriorCharacters:
 			scene.add(character(Pose::Neutral), appearance, {-9.0f, -floor, 7.5f}, {}, CharacterEntityScale);
 			scene.add(character(Pose::LeftArmRaised), appearance, {4.0f, -floor, 7.5f}, {}, CharacterEntityScale);
@@ -778,25 +827,61 @@ namespace
 		EXPECT_GT(geometry.depthMesh().indexCount(), 0u);
 	}
 
-	TEST(VoxelSceneFunctionalTest, SwordGripConnectsToLoweredHand)
+	TEST(VoxelSceneFunctionalTest, SwordIsVerticalInItsOwnGeometry)
+	{
+		Builder builder({3, 9, 1});
+		builder.bind(registry());
+		fillSword(builder);
+		const auto volume = builder.build();
+		const auto material = [&](std::uint32_t x, std::uint32_t y) {
+			return volume.at({x, y, 0}).definition().slot("side").name;
+		};
+		EXPECT_EQ(material(1, 0), "wood");
+		EXPECT_EQ(material(1, 1), "wood");
+		EXPECT_EQ(material(0, 2), "gold");
+		EXPECT_EQ(material(1, 2), "gold");
+		EXPECT_EQ(material(2, 2), "gold");
+		EXPECT_EQ(material(1, 3), "metal");
+		EXPECT_EQ(material(1, 8), "metal");
+	}
+
+	TEST(VoxelSceneFunctionalTest, SwordIsNotEmbeddedInCharacter)
 	{
 		Builder builder({11, 16, 5});
 		builder.bind(registry());
 		fillCharacter(builder, Pose::Sword);
 		const auto volume = builder.build();
-		const auto material = [&](std::uint32_t x, std::uint32_t y) -> std::string {
-			return volume.at({x, y, 2}).definition().slot("side").name;
-		};
-		EXPECT_EQ(material(8, 5), "skin");
-		EXPECT_EQ(material(8, 9), "cloth");
-		EXPECT_EQ(material(8, 4), "wood");
-		EXPECT_EQ(material(7, 3), "gold");
-		EXPECT_EQ(material(8, 3), "gold");
-		EXPECT_EQ(material(9, 3), "gold");
-		EXPECT_EQ(material(8, 2), "metal");
-		EXPECT_EQ(material(8, 0), "metal");
+		EXPECT_EQ(volume.at({8, 5, 2}).definition().slot("side").name, "skin");
+		EXPECT_TRUE(volume.at({8, 4, 2}).isAir());
+		EXPECT_TRUE(volume.at({8, 3, 2}).isAir());
+		EXPECT_TRUE(volume.at({9, 3, 2}).isAir());
 	}
 
+	TEST(VoxelSceneFunctionalTest, HandArticulationOrientsAndFollowsCharacter)
+	{
+		auto atlas = loadAtlas();
+		Scene scene;
+		const auto appearance = palette(atlas);
+		auto &characterRenderer = scene.add(character(Pose::Sword), appearance, {1, -2, 3}, {}, CharacterEntityScale);
+		auto &weaponRenderer = attachSwordToHand(scene, characterRenderer, appearance);
+		auto *weaponEntity = weaponRenderer.owner();
+		ASSERT_NE(weaponEntity, nullptr);
+		ASSERT_NE(weaponEntity->parent(), nullptr);
+		EXPECT_EQ(weaponEntity->parent()->parent(), characterRenderer.owner());
+		const auto point = [&](float y) {
+			return weaponEntity->transform().modelMatrix() * spk::Vector4{1.5f, y, 0.5f, 1.0f};
+		};
+		const auto grip = point(0.5f);
+		const auto tip = point(8.5f);
+		EXPECT_NEAR(grip.x, 1 + RightHandAttachment.x * CharacterScale, 1.0e-4f);
+		EXPECT_NEAR(grip.y, -2 + RightHandAttachment.y * CharacterScale, 1.0e-4f);
+		EXPECT_NEAR(grip.z, 3 + RightHandAttachment.z * CharacterScale, 1.0e-4f);
+		EXPECT_NEAR(tip.x, grip.x, 1.0e-4f);
+		EXPECT_NEAR(tip.y, grip.y, 1.0e-4f);
+		EXPECT_NEAR(tip.z - grip.z, 8.0f * CharacterScale, 1.0e-4f);
+		characterRenderer.owner()->transform().move({2, 0, 0});
+		EXPECT_NEAR(point(0.5f).x, grip.x + 2.0f, 1.0e-4f);
+	}
 	TEST(VoxelSceneFunctionalTest, DistinctPalettesKeepSharedMesh)
 	{
 		auto atlas = loadAtlas();
