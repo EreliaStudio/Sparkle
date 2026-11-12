@@ -87,7 +87,7 @@ namespace spk
 			[[nodiscard]] bool operator!=(const Section &other) const noexcept;
 		};
 
-		class State final : public GPUResource::State
+		class State : public GPUResource::State
 		{
 			friend class Texture;
 
@@ -109,6 +109,7 @@ namespace spk
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
+		protected:
 			explicit State(Target target) :
 				_textureTarget(target)
 			{
