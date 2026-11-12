@@ -44,6 +44,7 @@ namespace spk
 
 		[[nodiscard]] Camera3D::ProjectionMode projectionMode() const noexcept;
 		[[nodiscard]] const Matrix4x4 &projectionMatrix() const noexcept;
+		[[nodiscard]] Camera3D captureCamera() const;
 		[[nodiscard]] const Matrix4x4 &viewMatrix() const;
 		[[nodiscard]] const Matrix4x4 &inverseViewMatrix() const;
 		[[nodiscard]] Matrix4x4 viewProjectionMatrix() const;

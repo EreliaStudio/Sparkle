@@ -10,7 +10,13 @@ layout(std430) readonly buffer Instances
 	mat4 models[];
 };
 
-uniform mat4 uViewProjection;
+layout(std140, binding = 1) uniform CameraData
+{
+	mat4 uProjection;
+	mat4 uView;
+	mat4 uInverseView;
+	mat4 uViewProjection;
+};
 
 layout(location = 0) out vec2 vertexUV;
 layout(location = 1) flat out uint materialIndex;

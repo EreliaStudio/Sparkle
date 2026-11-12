@@ -14,6 +14,7 @@
 #include "graphics/color.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/texture.hpp"
+#include "math/camera_3d.hpp"
 #include "math/matrix.hpp"
 #include "math/vector2.hpp"
 #include "rendering/engine/ambient_light.hpp"
@@ -100,6 +101,7 @@ namespace spk
 			std::shared_ptr<Output> output;
 			std::uint64_t identity = 0;
 			Vector2UInt resolution{};
+			Camera3D cameraSnapshot;
 			Matrix4x4 projectionMatrix{};
 			Matrix4x4 viewMatrix{};
 			Matrix4x4 inverseViewMatrix{};

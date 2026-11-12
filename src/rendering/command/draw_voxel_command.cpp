@@ -9,7 +9,6 @@
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/state.hpp"
-#include "graphics/opengl/uniform.hpp"
 
 namespace spk
 {
@@ -54,10 +53,9 @@ namespace spk
 		Voxel::Geometry geometry,
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
-		Matrix4x4 model,
-		Matrix4x4 viewProjection) :
+		Matrix4x4 model) :
 		DrawVoxelCommand(
-			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, viewProjection)
+			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model})
 	{
 	}
 
@@ -65,15 +63,13 @@ namespace spk
 		Voxel::Geometry geometry,
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
-		std::vector<Matrix4x4> models,
-		Matrix4x4 viewProjection) :
+		std::vector<Matrix4x4> models) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
 		_instances(InstanceBinding, 0, sizeof(Matrix4x4)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
-		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
-		_viewProjection(viewProjection)
+		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled)
 	{
 		if (models.empty())
 		{
@@ -119,7 +115,6 @@ namespace spk
 		OpenGL::State::Blend::disabled(context).apply(context);
 		OpenGL::State::Rasterization{}.apply(context);
 		_program.activate(context);
-		Uniform<Matrix4x4>("uViewProjection", _viewProjection).activate(context);
 		_instances.activate(context);
 		_materials.activate(context);
 		_materialRemap.activate(context);
