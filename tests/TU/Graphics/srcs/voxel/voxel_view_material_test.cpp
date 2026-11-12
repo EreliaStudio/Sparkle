@@ -82,7 +82,7 @@ namespace
 	[[nodiscard]] spk::Palette appearance(const spk::EngineView &view)
 	{
 		spk::Material::Builder material;
-		material.add("albedo", view);
+		material.add("albedo", view.texture());
 		spk::Voxel::Palette::Builder palette;
 		palette.setMaterial("screen", material.build());
 		return palette.build();
@@ -194,25 +194,19 @@ namespace
 	}
 }
 
-TEST(VoxelViewMaterialTest, MaterialPreservesIdentityThroughResizeAndDoesNotRebindHomonyms)
+TEST(VoxelViewMaterialTest, MaterialUsesOrdinaryTextureHandleAcrossResize)
 {
 	Scene scene;
 	spk::Material::Builder builder;
-	builder.add("albedo", *scene.producer);
+	builder.add("albedo", scene.producer->texture());
 	const auto material = builder.build();
 	const auto *binding = material.find("albedo");
 	ASSERT_NE(binding, nullptr);
-	EXPECT_TRUE(binding->isViewSource());
-	EXPECT_TRUE(binding->valid());
-	const auto identity = binding->viewIdentity;
+	ASSERT_TRUE(binding->texture);
+	const auto identifier = binding->texture.identifier();
 	scene.producer->setResolution({80, 60});
-	EXPECT_EQ(binding->viewIdentity, identity);
-	EXPECT_EQ(binding->viewOutput.lock(), scene.producer->output());
-	scene.engine.removeView("securityCamera");
-	auto &replacement = scene.engine.addView("securityCamera", &scene.camera, ImageSize, -10);
-	EXPECT_NE(replacement.identity(), identity);
-	EXPECT_NE(binding->viewOutput.lock(), replacement.output());
-	EXPECT_FALSE(binding->valid());
+	EXPECT_EQ(binding->texture.identifier(), identifier);
+	EXPECT_EQ(scene.producer->texture().handle().identifier(), identifier);
 }
 
 TEST(VoxelViewMaterialTest, MaterialBuilderPreservesStaticTexturesAndRejectsDuplicates)
@@ -221,69 +215,57 @@ TEST(VoxelViewMaterialTest, MaterialBuilderPreservesStaticTexturesAndRejectsDupl
 	RedAtlas atlas;
 	spk::Material::Builder material;
 	material.add("albedo", atlas);
-	EXPECT_THROW(material.add("albedo", *scene.producer), spk::Exception);
+	EXPECT_THROW(material.add("albedo", scene.producer->texture()), spk::Exception);
 	const auto built = material.build();
 	ASSERT_NE(built.find("albedo"), nullptr);
-	EXPECT_FALSE(built.find("albedo")->isViewSource());
 	EXPECT_EQ(built.find("albedo")->texture.identifier(), atlas.handle().identifier());
 }
 
-TEST(VoxelViewMaterialTest, InvalidProducerOrderRetainsLastPublishedSnapshot)
+TEST(VoxelViewMaterialTest, RecreatedViewHasDistinctTextureIdentity)
 {
 	Scene scene;
-	RedAtlas atlas;
-	scene.configure(atlas);
-	const auto old = scene.capture();
-	ASSERT_NE(old, nullptr);
-	scene.consumer->setOrder(-20);
-	EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
-	EXPECT_EQ(scene.engine.latestRenderSnapshot(), old);
-}
-
-TEST(VoxelViewMaterialTest, SelfReferenceAndCyclesAreRejectedBeforePublication)
-{
-	Scene scene;
-	RedAtlas atlas;
-	scene.configure(atlas);
-	auto &self = scene.add("cube", appearance(*scene.producer), "security");
-	EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
-	self.setLayers({"unused"});
-	const auto old = scene.capture();
-	auto &other = scene.add("cube", appearance(*scene.consumer), "security");
-	EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
-	EXPECT_EQ(scene.engine.latestRenderSnapshot(), old);
-	other.setLayers({"unused"});
-	EXPECT_NO_THROW(scene.engine.refreshRenderSnapshot());
-}
-
-TEST(VoxelViewMaterialTest, RemovedAndRecreatedProducerDoesNotRebindMaterial)
-{
-	Scene scene;
-	RedAtlas atlas;
-	scene.configure(atlas);
-	const auto old = scene.capture();
+	spk::Material::Builder material;
+	material.add("albedo", scene.producer->texture());
+	const auto old = material.build();
+	const auto identifier = old.find("albedo")->texture.identifier();
 	scene.engine.removeView("securityCamera");
 	auto &replacement = scene.engine.addView("securityCamera", &scene.camera, ImageSize, -10);
-	replacement.setLayers({"security"});
-	EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
-	EXPECT_EQ(scene.engine.latestRenderSnapshot(), old);
+	EXPECT_NE(replacement.texture().handle().identifier(), identifier);
+	EXPECT_EQ(old.find("albedo")->texture.identifier(), identifier);
 }
 
-TEST(VoxelViewMaterialTest, CapturedOutputCannotBeReadFromAnUnproducedSurface)
+TEST(VoxelViewMaterialTest, ConsumerRequiresAProducedSourceOnFirstFrame)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(ImageSize);
 	Scene scene;
-	auto source = scene.producer->output();
-	auto attachment = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::SRGB8_ALPHA8);
-	auto expected = attachment.texture();
-	spk::EngineView::Source resolved{spk::EngineView::Source::Kind::Produced, source, expected};
-	auto &first = gl.surface();
-	spk::Window::Surface second{"second surface"};
-	EXPECT_THROW((void)resolved.onSurface(first), spk::Exception);
-	source->publish(first, expected);
-	EXPECT_EQ(resolved.onSurface(first).identifier(), expected.identifier());
-	EXPECT_THROW((void)resolved.onSurface(second), spk::Exception);
+	RedAtlas atlas;
+	scene.configure(atlas);
+	scene.consumer->setOrder(-20);
+	const auto snapshot = scene.capture();
+	EXPECT_THROW(snapshot->execute(gl.renderContext()), spk::Exception);
+	gl.reset();
+}
+
+TEST(VoxelViewMaterialTest, DetachedOutputPoliciesReuseExistingOutputBehavior)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	RedAtlas atlas;
+	scene.configure(atlas);
+	scene.capture()->execute(gl.renderContext());
+	const auto frame = scene.producer->output()->latest(gl.surface());
+	ASSERT_TRUE(frame);
+	scene.producer->detachCamera();
+	EXPECT_FALSE(scene.producer->output()->latest(gl.surface()));
+	scene.producer->setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::KeepLastFrame);
+	EXPECT_EQ(scene.producer->output()->latest(gl.surface()).identifier(), frame.identifier());
+	spk::Window::Surface second{"last frame second"};
+	EXPECT_THROW((void)scene.producer->output()->latest(second), spk::Exception);
+	scene.producer->setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::DefaultTexture);
+	scene.producer->setFallbackTexture(atlas.handle());
+	EXPECT_EQ(scene.producer->output()->latest(second).identifier(), atlas.handle().identifier());
 	gl.reset();
 }
 
@@ -323,36 +305,6 @@ TEST(VoxelViewMaterialTest, FirstFrameAlsoProducesBothViewsOnIndependentSurface)
 	EXPECT_TRUE(scene.producer->output()->latest(gl.surface()));
 	EXPECT_TRUE(scene.consumer->output()->latest(gl.surface()));
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
-	gl.reset();
-}
-
-TEST(VoxelViewMaterialTest, DetachedPoliciesAreExplicitAndKeepLastFrameIsSurfaceScoped)
-{
-	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	gl.reset(ImageSize);
-	Scene scene;
-	RedAtlas atlas;
-	scene.configure(atlas);
-	const auto old = scene.capture();
-	scene.producer->detachCamera();
-	EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
-	EXPECT_EQ(scene.engine.latestRenderSnapshot(), old);
-	scene.producer->setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::KeepLastFrame);
-	EXPECT_NO_THROW(scene.engine.refreshRenderSnapshot());
-	auto &first = gl.surface();
-	spk::Window::Surface second{"last frame second"};
-	spk::EngineView::Source last{spk::EngineView::Source::Kind::KeepLastFrame, scene.producer->output(), {}};
-	EXPECT_THROW((void)last.onSurface(first), spk::Exception);
-	auto frame = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::SRGB8_ALPHA8).texture();
-	scene.producer->output()->publish(first, frame);
-	EXPECT_EQ(last.onSurface(first).identifier(), frame.identifier());
-	EXPECT_THROW((void)last.onSurface(second), spk::Exception);
-	scene.producer->setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::DefaultTexture);
-	EXPECT_THROW(scene.engine.refreshRenderSnapshot(), spk::Exception);
-	scene.producer->setFallbackTexture(atlas.handle());
-	EXPECT_NO_THROW(scene.engine.refreshRenderSnapshot());
-	spk::EngineView::Source fallback{spk::EngineView::Source::Kind::DefaultTexture, scene.producer->output(), atlas.handle()};
-	EXPECT_EQ(fallback.onSurface(second).identifier(), atlas.handle().identifier());
 	gl.reset();
 }
 
