@@ -106,7 +106,7 @@ namespace
 			consumer = &engine.addView("main", &camera, ImageSize, 10);
 			producer->setLayers({"security"});
 			consumer->setLayers({"main"});
-			(void)engine.addSystem<spk::Voxel::RenderingSystem>();
+			engine.addSystem<spk::Voxel::RenderingSystem>().setLayers({"security", "main"});
 		}
 
 		~Scene()
