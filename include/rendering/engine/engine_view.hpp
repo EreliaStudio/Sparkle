@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -72,24 +71,28 @@ namespace spk
 			[[nodiscard]] std::shared_ptr<Targets> acquireTargets(Vector2UInt resolution);
 			void publish(Window::Surface &surface, Texture::Handle texture);
 			[[nodiscard]] Texture::Handle latest(Window::Surface &surface) const;
-			[[nodiscard]] Texture::Handle latestFrame(Window::Surface &surface) const;
 			void setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback);
 		};
 
-		struct Source
+
+		class Texture final : public spk::Texture
 		{
-			enum class Kind
+		private:
+			class State final : public spk::Texture::State
 			{
-				Produced,
-				KeepLastFrame,
-				DefaultTexture
+			private:
+				std::weak_ptr<Output> _output;
+
+				[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override;
+				void _synchronize(GPUResource::Instance &, RenderContext &) const override;
+				void _bind(GPUResource::Instance &, RenderContext &context) const override;
+
+			public:
+				explicit State(std::weak_ptr<Output> output);
 			};
 
-			Kind kind = Kind::Produced;
-			std::shared_ptr<Output> output;
-			Texture::Handle texture;
-
-			[[nodiscard]] Texture::Handle onSurface(Window::Surface &surface) const;
+		public:
+			explicit Texture(std::weak_ptr<Output> output);
 		};
 
 		struct CaptureContext
@@ -97,8 +100,6 @@ namespace spk
 			std::string name;
 			std::shared_ptr<Output> output;
 			std::uint64_t identity = 0;
-			bool active = false;
-			std::function<Source(const std::shared_ptr<Output> &, std::uint64_t)> resolveSource;
 			Vector2UInt resolution{};
 			Matrix4x4 projectionMatrix{};
 			Matrix4x4 viewMatrix{};
@@ -165,6 +166,7 @@ namespace spk
 		RGB _backgroundColor{};
 		AmbientLight _ambientLight;
 		std::shared_ptr<Output> _output = std::make_shared<Output>();
+		Texture _texture{_output};
 		float _exposure = 1.0f;
 		float _targetFPS = 60.0f;
 
@@ -182,6 +184,7 @@ namespace spk
 		[[nodiscard]] const std::string &name() const noexcept;
 		[[nodiscard]] std::uint64_t identity() const noexcept;
 		[[nodiscard]] std::shared_ptr<Output> output() const noexcept;
+		[[nodiscard]] const Texture &texture() const noexcept;
 		[[nodiscard]] CameraComponent3D *camera() const noexcept;
 		void setCamera(CameraComponent3D *camera) noexcept;
 		void detachCamera() noexcept;
