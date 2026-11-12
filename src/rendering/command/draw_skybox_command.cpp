@@ -21,14 +21,7 @@ namespace spk
 			Vector3 up;
 		};
 
-		constexpr std::array<FaceGeometry, 6> CubeFaces{{
-			{{1, 0, 0}, {0, 0, -1}, {0, 1, 0}},
-			{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
-			{{0, 1, 0}, {1, 0, 0}, {0, 0, 1}},
-			{{0, -1, 0}, {1, 0, 0}, {0, 0, -1}},
-			{{0, 0, 1}, {-1, 0, 0}, {0, 1, 0}},
-			{{0, 0, -1}, {1, 0, 0}, {0, 1, 0}}
-		}};
+		constexpr std::array<FaceGeometry, 6> CubeFaces{{{{1, 0, 0}, {0, 0, -1}, {0, 1, 0}}, {{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}}, {{0, 1, 0}, {1, 0, 0}, {0, 0, 1}}, {{0, -1, 0}, {1, 0, 0}, {0, 0, -1}}, {{0, 0, 1}, {-1, 0, 0}, {0, 1, 0}}, {{0, 0, -1}, {1, 0, 0}, {0, 1, 0}}}};
 
 		void addFace(TextureMesh3D::Builder &builder, const FaceGeometry &face, Texture::Section section)
 		{

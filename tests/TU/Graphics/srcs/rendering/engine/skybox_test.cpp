@@ -40,10 +40,7 @@ namespace
 	public:
 		Atlas()
 		{
-			constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{
-				{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}},
-				{{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}
-			}};
+			constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}}, {{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}}};
 			std::array<std::uint8_t, 12 * 2 * 4> pixels{};
 			for (std::size_t y = 0; y < 2; ++y)
 			{
@@ -120,8 +117,7 @@ namespace
 		void addOpaqueCubes(const Atlas &atlas)
 		{
 			spk::Voxel::Shape::Builder shapes;
-			shapes.addFromJSON(spk::JSON::Value::loadFromFile(
-				std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+			shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
 			auto shape = shapes.build();
 			spk::Voxel::Definition::SlotMapping mapping;
 			for (const auto &slot : shape.slots())
@@ -174,8 +170,7 @@ namespace
 		framebuffer.activate(gl.renderContext());
 		std::array<std::uint8_t, 4> pixel{};
 		glReadPixels(
-			static_cast<GLint>(output->size().x / 2), static_cast<GLint>(output->size().y / 2),
-			1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+			static_cast<GLint>(output->size().x / 2), static_cast<GLint>(output->size().y / 2), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
 		return pixel;
 	}
 
@@ -343,11 +338,7 @@ TEST(SkyboxGPU, SixFacesAndCameraRotationUseRealOpenGL)
 	Atlas atlas;
 	Scene scene;
 	populate(scene.skybox, atlas);
-	const std::array<std::pair<const char *, spk::Vector3>, 6> views{{
-		{"negative_z", {0, 0, 0}}, {"positive_x", {0, -90, 0}},
-		{"negative_x", {0, 90, 0}}, {"positive_y", {-90, 0, 0}},
-		{"negative_y", {90, 0, 0}}, {"positive_z", {0, 180, 0}}
-	}};
+	const std::array<std::pair<const char *, spk::Vector3>, 6> views{{{"negative_z", {0, 0, 0}}, {"positive_x", {0, -90, 0}}, {"negative_x", {0, 90, 0}}, {"positive_y", {-90, 0, 0}}, {"negative_y", {90, 0, 0}}, {"positive_z", {0, 180, 0}}}};
 	for (const auto &[name, orientation] : views)
 	{
 		scene.cameraEntity.transform().setEulerRotation(orientation);
