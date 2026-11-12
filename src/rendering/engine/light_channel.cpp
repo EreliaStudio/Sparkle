@@ -218,8 +218,7 @@ namespace spk::Light
 				_ready.notify_all();
 				return fresh;
 			}
-		}
-		catch (...)
+		} catch (...)
 		{
 			{
 				std::lock_guard lock(_mutex);

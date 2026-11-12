@@ -6,15 +6,14 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <vector>
 #include <unordered_map>
-
-#include "engine/transform3d.hpp"
-#include "light/contributor.hpp"
+#include <vector>
 
 #include "container/thread_safe_slot.hpp"
 #include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "engine/engine_headless.hpp"
+#include "engine/transform3d.hpp"
+#include "light/contributor.hpp"
 #include "rendering/engine/engine_view.hpp"
 
 namespace spk

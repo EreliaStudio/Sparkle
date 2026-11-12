@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <barrier>
-#include <functional>
 #include <cmath>
+#include <functional>
 #include <future>
 #include <limits>
 #include <memory>
