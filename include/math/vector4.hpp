@@ -109,6 +109,14 @@ namespace spk
 		{
 			return {x / v.x, y / v.y, z / v.z, w / v.w};
 		}
+		[[nodiscard]] constexpr TVector4 operator*(TType scalar) const
+		{
+			return {x * scalar, y * scalar, z * scalar, w * scalar};
+		}
+		[[nodiscard]] constexpr TVector3<TType> xyz() const
+		{
+			return {x, y, z};
+		}
 		constexpr TVector4 &operator+=(const TVector4 &v)
 		{
 			x += v.x;

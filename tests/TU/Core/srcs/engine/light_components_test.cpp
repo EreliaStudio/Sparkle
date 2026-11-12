@@ -170,6 +170,21 @@ TEST(CoreLightTest, NormalizedFrustumCullsSphereAndFiniteCone)
 	EXPECT_TRUE(frustum.intersectsSphere({0.0f, 0.0f, -0.95f}, 0.1f));
 	EXPECT_FALSE(frustum.intersectsSphere({25.0f, 0.0f, -5.0f}, 1.0f));
 
+	// An identity clip matrix describes the six inward planes of [-1, 1]^3.
+	const auto unitCube = spk::Light::Frustum::fromViewProjection(spk::Matrix4x4::identity());
+	const std::array<spk::Vector3, 6> normals = {
+		spk::Vector3{1.0f, 0.0f, 0.0f},
+		spk::Vector3{-1.0f, 0.0f, 0.0f},
+		spk::Vector3{0.0f, 1.0f, 0.0f},
+		spk::Vector3{0.0f, -1.0f, 0.0f},
+		spk::Vector3{0.0f, 0.0f, 1.0f},
+		spk::Vector3{0.0f, 0.0f, -1.0f}};
+	for (std::size_t i = 0; i < normals.size(); ++i)
+	{
+		EXPECT_EQ(unitCube.planes()[i].normal, normals[i]);
+		EXPECT_FLOAT_EQ(unitCube.planes()[i].offset, 1.0f);
+	}
+
 	spk::Entity3D entity("cone");
 	auto &spot = entity.addComponent<spk::Light::Spot>();
 	spot.setRange(4.0f);

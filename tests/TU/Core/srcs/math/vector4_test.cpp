@@ -39,6 +39,17 @@ namespace
 		EXPECT_EQ(spk::Vector4Int(value), spk::Vector4Int(1, 2, 3, 1));
 	}
 
+	TEST(Vector4Test, ScalarMultiplicationAndXyzProjection)
+	{
+		const spk::Vector4 value{1.5f, -2.0f, 3.0f, 4.0f};
+		EXPECT_EQ(value * 2.0f, spk::Vector4(3.0f, -4.0f, 6.0f, 8.0f));
+		EXPECT_EQ(value.xyz(), spk::Vector3(1.5f, -2.0f, 3.0f));
+
+		const spk::TVector4<double> promoted(value);
+		EXPECT_EQ(promoted * -0.5, (spk::TVector4<double>{-0.75, 1.0, -1.5, -2.0}));
+		EXPECT_EQ(promoted.xyz(), (spk::TVector3<double>{1.5, -2.0, 3.0}));
+	}
+
 	TEST(Vector4Test, ConstructsFromVector2AndVector3)
 	{
 		const spk::Vector2Int xy{2, -3};

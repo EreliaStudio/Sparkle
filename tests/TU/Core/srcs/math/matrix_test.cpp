@@ -62,6 +62,24 @@ namespace
 		EXPECT_NEAR(perspective[3][2], -2.2f, Tolerance);
 	}
 
+	TEST(MatrixTest, FourByFourRowsReadLogicalRowsFromColumnMajorStorage)
+	{
+		spk::Matrix4x4 matrix;
+		for (std::size_t column = 0; column < 4; ++column)
+		{
+			for (std::size_t row = 0; row < 4; ++row)
+			{
+				matrix[column][row] = static_cast<float>(10 * column + row);
+			}
+		}
+
+		EXPECT_EQ(matrix.row(0), spk::Vector4(0.0f, 10.0f, 20.0f, 30.0f));
+		EXPECT_EQ(matrix.row(1), spk::Vector4(1.0f, 11.0f, 21.0f, 31.0f));
+		EXPECT_EQ(matrix.row(2), spk::Vector4(2.0f, 12.0f, 22.0f, 32.0f));
+		EXPECT_EQ(matrix.row(3), spk::Vector4(3.0f, 13.0f, 23.0f, 33.0f));
+		EXPECT_THROW((void)matrix.row(4), std::out_of_range);
+	}
+
 	TEST(MatrixTest, DefaultConstructionZeroInitializesEveryElement)
 	{
 		const spk::Matrix<3, 2> matrix;

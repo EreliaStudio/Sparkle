@@ -23,29 +23,24 @@ namespace spk::Light
 
 		for (std::size_t i = 0; i < result._planes.size(); ++i)
 		{
-			const int coordinate = coordinates[i];
-			const double sign = signs[i];
-			const double x = static_cast<double>(m[0][3]) + sign * m[0][coordinate];
-			const double y = static_cast<double>(m[1][3]) + sign * m[1][coordinate];
-			const double z = static_cast<double>(m[2][3]) + sign * m[2][coordinate];
-			const double d = static_cast<double>(m[3][3]) + sign * m[3][coordinate];
-			const double length = std::hypot(std::hypot(x, y), z);
+			// Promote before arithmetic: summing large float rows must not overflow.
+			const TVector4<double> coefficients =
+				TVector4<double>(m.row(3)) + TVector4<double>(m.row(coordinates[i])) * signs[i];
+			const double length = coefficients.xyz().length();
 
-			if (!std::isfinite(length) || length <= 0.0 || !std::isfinite(d))
+			if (!std::isfinite(length) || length <= 0.0 || !std::isfinite(coefficients.w))
 			{
 				throw spk::Exception("Cannot extract normalized planes from the camera matrix");
 			}
 
-			const double nx = x / length;
-			const double ny = y / length;
-			const double nz = z / length;
-			const double nd = d / length;
-			if (!std::isfinite(nd) || std::abs(nd) > std::numeric_limits<float>::max())
+			const TVector3<double> normal = coefficients.xyz() / TVector3<double>{length, length, length};
+			const double offset = coefficients.w / length;
+			if (!std::isfinite(offset) || std::abs(offset) > std::numeric_limits<float>::max())
 			{
 				throw spk::Exception("Camera frustum plane is outside the representable range");
 			}
 
-			result._planes[i] = {{static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz)}, static_cast<float>(nd)};
+			result._planes[i] = {Vector3(normal), static_cast<float>(offset)};
 		}
 		return result;
 	}
