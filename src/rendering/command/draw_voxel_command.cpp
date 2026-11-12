@@ -9,7 +9,6 @@
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/state.hpp"
-#include "rendering/command/camera_uniform_render_command.hpp"
 
 namespace spk
 {
@@ -19,7 +18,6 @@ namespace spk
 			Program program(
 				std::string(resources::text("shaders/voxel_opaque.vert.glsl")),
 				std::string(resources::text("shaders/voxel_opaque.frag.glsl")));
-			program.bindUniformBlock("CameraData", CameraUniformRenderCommand::BindingPoint);
 			program.bindShaderStorageBlock("Instances", InstanceBinding);
 			program.bindShaderStorageBlock("Materials", MaterialBinding);
 			program.bindShaderStorageBlock("MaterialRemap", MaterialRemapBinding);

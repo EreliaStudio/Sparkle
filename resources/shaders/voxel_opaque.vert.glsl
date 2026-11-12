@@ -10,7 +10,7 @@ layout(std430) readonly buffer Instances
 	mat4 models[];
 };
 
-layout(std140) uniform CameraData
+layout(std140, binding = 1) uniform CameraData
 {
 	mat4 uProjection;
 	mat4 uView;

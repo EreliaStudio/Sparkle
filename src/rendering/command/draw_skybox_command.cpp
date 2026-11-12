@@ -8,7 +8,6 @@
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/state.hpp"
-#include "rendering/command/camera_uniform_render_command.hpp"
 
 namespace spk
 {
@@ -53,7 +52,6 @@ namespace spk
 			Program program(
 				std::string(resources::text("shaders/skybox.vert.glsl")),
 				std::string(resources::text("shaders/skybox.frag.glsl")));
-			program.bindUniformBlock("CameraData", CameraUniformRenderCommand::BindingPoint);
 			program.bindSampler("uAlbedo", 0);
 			return program;
 		}();

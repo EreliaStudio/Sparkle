@@ -4,7 +4,7 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUV;
 
-layout(std140) uniform CameraData
+layout(std140, binding = 1) uniform CameraData
 {
 	mat4 uProjection;
 	mat4 uView;
