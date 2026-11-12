@@ -142,13 +142,19 @@ namespace spk
 	void Engine::_onEntityChanged(const Entity &entity)
 	{
 		const auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance().elements(this);
+		bool affectsLights = false;
 		for (const Light::Contributor *light : lights)
 		{
 			if (light->owner() != nullptr && _isDescendantOf(light->owner(), &entity))
 			{
-				_invalidateAllLightChannels();
+				affectsLights = true;
 				break;
 			}
+		}
+		if (affectsLights)
+		{
+			_invalidateAllLightChannels();
+			return;
 		}
 
 		std::lock_guard lock(_viewMutex);
@@ -357,9 +363,26 @@ namespace spk
 		}
 		for (auto &capture : captures)
 		{
-			capture.context.lightSelection = capture.context.lightChannel->acquire(
-				capture.context.cameraSnapshot, capture.context.captureOrdinal);
+			if (capture.context.lightChannel->isClosed())
+			{
+				continue;
+			}
+			try
+			{
+				capture.context.lightSelection = capture.context.lightChannel->acquire(
+					capture.context.cameraSnapshot, capture.context.captureOrdinal);
+			}
+			catch (...)
+			{
+				if (!capture.context.lightChannel->isClosed())
+				{
+					throw;
+				}
+			}
 		}
+		std::erase_if(captures, [](const ViewCapture &capture) {
+			return capture.context.lightChannel->isClosed();
+		});
 		std::ranges::stable_sort(captures, [](const ViewCapture &a, const ViewCapture &b) {
 			if (a.order && b.order)
 			{
