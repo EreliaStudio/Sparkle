@@ -14,6 +14,7 @@
 #include "graphics/color.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/texture.hpp"
+#include "light/channel.hpp"
 #include "math/camera_3d.hpp"
 #include "math/matrix.hpp"
 #include "math/vector2.hpp"
@@ -100,6 +101,9 @@ namespace spk
 			std::string name;
 			std::shared_ptr<Output> output;
 			std::uint64_t identity = 0;
+			std::uint64_t captureOrdinal = 0;
+			std::shared_ptr<Light::Channel> lightChannel;
+			std::shared_ptr<const Light::Selection> lightSelection;
 			Vector2UInt resolution{};
 			Camera3D cameraSnapshot;
 			Matrix4x4 projectionMatrix{};
@@ -166,6 +170,7 @@ namespace spk
 		Texture::Handle _fallbackTexture;
 		RGB _backgroundColor{};
 		AmbientLight _ambientLight;
+		std::shared_ptr<Light::Channel> _lightChannel;
 		std::shared_ptr<Output> _output = std::make_shared<Output>();
 		Texture _texture{_output};
 		float _exposure = 1.0f;
@@ -186,6 +191,8 @@ namespace spk
 		[[nodiscard]] std::uint64_t identity() const noexcept;
 		[[nodiscard]] std::shared_ptr<Output> output() const noexcept;
 		[[nodiscard]] const Texture &texture() const noexcept;
+		[[nodiscard]] Light::Channel &lightChannel() noexcept;
+		[[nodiscard]] const Light::Channel &lightChannel() const noexcept;
 		[[nodiscard]] CameraComponent3D *camera() const noexcept;
 		void setCamera(CameraComponent3D *camera) noexcept;
 		void detachCamera() noexcept;

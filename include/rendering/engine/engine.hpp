@@ -24,6 +24,8 @@ namespace spk
 		static inline const RenderPass::Key PreSceneRenderPassKey{"engine.PreScene", -200};
 
 	private:
+		friend class Light::Channel;
+
 		struct ViewCapture
 		{
 			std::uint64_t identity;
@@ -34,12 +36,14 @@ namespace spk
 		mutable std::mutex _viewMutex;
 		std::vector<std::unique_ptr<EngineView>> _views;
 		std::uint64_t _nextViewIdentity = 1;
+		std::uint64_t _nextCaptureOrdinal = 0;
 		ThreadSafeSlot<RenderSnapshot> _renderSnapshot;
 
 		void _visitEntity(Entity &entity, const std::function<void(EngineView::Contributor &)> &callback) const;
 		void _visitObjects(const std::function<void(EngineView::Contributor &)> &callback);
 		[[nodiscard]] EngineView *_findView(const std::string &name) const noexcept;
-		[[nodiscard]] std::vector<ViewCapture> _captureViews() const;
+		[[nodiscard]] std::vector<ViewCapture> _captureViews();
+		[[nodiscard]] std::vector<Light::Selection::Entry> _captureLightCandidates(const Camera3D &camera) const;
 		[[nodiscard]] std::unique_ptr<const RenderCommand> _buildViewCommand(const EngineView::CaptureContext &context);
 		[[nodiscard]] bool _commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot);
 		static void _validateViewPasses(const std::string &name, const RenderSnapshot::Builder &builder);
@@ -53,6 +57,7 @@ namespace spk
 
 	public:
 		Engine() = default;
+		~Engine() override;
 
 		EngineView &addView(std::string name, CameraComponent3D *camera, Vector2UInt resolution, std::optional<EngineView::Order> order = std::nullopt);
 		[[nodiscard]] EngineView &view(const std::string &name);

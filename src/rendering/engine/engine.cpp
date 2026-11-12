@@ -11,6 +11,10 @@
 
 #include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "light/directional.hpp"
+#include "light/frustum.hpp"
+#include "light/point.hpp"
+#include "light/spot.hpp"
 #include "rendering/command/engine_view_composition_command.hpp"
 #include "rendering/command/engine_view_pass_command.hpp"
 #include "rendering/command/execute_engine_view_command.hpp"
@@ -22,6 +26,15 @@
 
 namespace spk
 {
+	Engine::~Engine()
+	{
+		std::lock_guard lock(_viewMutex);
+		for (const auto &view : _views)
+		{
+			view->_lightChannel->close();
+		}
+	}
+
 	void Engine::_visitEntity(Entity &entity, const std::function<void(EngineView::Contributor &)> &callback) const
 	{
 		if (auto *rendering = dynamic_cast<EngineView::Contributor *>(&entity))
@@ -152,6 +165,7 @@ namespace spk
 			{
 				throw spk::Exception("Unknown EngineView [" + name + "]");
 			}
+			(*it)->_lightChannel->close();
 			removed = std::move(*it);
 			_views.erase(it);
 		}
@@ -177,16 +191,30 @@ namespace spk
 		view._order = order;
 	}
 
-	std::vector<Engine::ViewCapture> Engine::_captureViews() const
+	std::vector<Engine::ViewCapture> Engine::_captureViews()
 	{
-		std::lock_guard lock(_viewMutex);
 		std::vector<ViewCapture> captures;
+		{
+			std::lock_guard lock(_viewMutex);
+			if (_nextCaptureOrdinal == std::numeric_limits<std::uint64_t>::max())
+			{
+				throw spk::Exception("Engine capture ordinal exhausted");
+			}
+			const std::uint64_t ordinal = ++_nextCaptureOrdinal;
 		for (const auto &view : _views)
 		{
 			if (view->camera() != nullptr)
 			{
-				captures.push_back({view->identity(), view->order(), view->_capture()});
+				auto context = view->_capture();
+				context.captureOrdinal = ordinal;
+				captures.push_back({view->identity(), view->order(), std::move(context)});
 			}
+		}
+		}
+		for (auto &capture : captures)
+		{
+			capture.context.lightSelection = capture.context.lightChannel->acquire(
+				capture.context.cameraSnapshot, capture.context.captureOrdinal);
 		}
 		std::ranges::stable_sort(captures, [](const ViewCapture &a, const ViewCapture &b) {
 			if (a.order && b.order)
@@ -196,6 +224,59 @@ namespace spk
 			return a.order.has_value() && !b.order.has_value();
 		});
 		return captures;
+	}
+
+	std::vector<Light::Selection::Entry> Engine::_captureLightCandidates(const Camera3D &camera) const
+	{
+		// The current mutable scene API uses modify-then-notify; concurrent edits
+		// must be coordinated by the application.
+		const Light::Frustum frustum = Light::Frustum::fromViewProjection(camera.viewProjectionMatrix());
+		std::vector<Light::Selection::Entry> candidates;
+		const auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance().elements(
+			const_cast<Engine *>(this));
+		candidates.reserve(lights.size());
+		for (const Light::Contributor *light : lights)
+		{
+			if (light == nullptr || light->registrationOrder() == 0 || !light->isEffectivelyActive() || light->owner() == nullptr)
+			{
+				continue;
+			}
+			Light::Selection::Entry entry;
+			entry.registrationOrder = light->registrationOrder();
+			entry.color = light->color();
+			entry.intensity = light->intensity();
+			entry.priorityWeight = light->priorityWeight();
+			entry.castsShadows = light->castsShadows();
+			entry.shadowResolution = light->shadowResolution();
+			if (const auto *point = dynamic_cast<const Light::Point *>(light))
+			{
+				entry.type = Light::Selection::Type::Point;
+				entry.position = point->worldPosition();
+				entry.range = point->range();
+				entry.score = point->priorityScore(frustum, camera.position());
+			}
+			else if (const auto *spot = dynamic_cast<const Light::Spot *>(light))
+			{
+				entry.type = Light::Selection::Type::Spot;
+				entry.position = spot->worldPosition();
+				entry.direction = spot->worldDirection();
+				entry.range = spot->range();
+				entry.angle = spot->angle();
+				entry.score = spot->priorityScore(frustum, camera.position());
+			}
+			else if (const auto *directional = dynamic_cast<const Light::Directional *>(light))
+			{
+				entry.type = Light::Selection::Type::Directional;
+				entry.direction = directional->worldDirection();
+				entry.shadowDistance = directional->shadowDistance();
+			}
+			else
+			{
+				continue;
+			}
+			candidates.push_back(entry);
+		}
+		return candidates;
 	}
 
 	void Engine::_validateViewPasses(const std::string &name, const RenderSnapshot::Builder &builder)
@@ -259,7 +340,8 @@ namespace spk
 		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(targets->hdr, targets->accumulation, targets->revealage, context.resolution, context.exposure);
 		auto snapshot = std::make_shared<const RenderSnapshot>(builder.build());
 		return std::make_unique<ExecuteEngineViewCommand>(
-			std::move(snapshot), context.output, targets, finalImage.texture(), context.cameraSnapshot);
+			std::move(snapshot), context.output, targets, finalImage.texture(), context.cameraSnapshot,
+			context.lightChannel, context.lightSelection);
 	}
 
 	bool Engine::_commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot)

@@ -210,13 +210,13 @@ namespace spk::Light
 					}
 					_history = std::move(newHistory);
 					_lastAdmission = nextAdmission;
-					_published = std::move(fresh);
+					_published = fresh;
 					_publishedGeneration = observedGeneration;
 					_resetNext = false;
 					_building = false;
 				}
 				_ready.notify_all();
-				return current();
+				return fresh;
 			}
 		}
 		catch (...)

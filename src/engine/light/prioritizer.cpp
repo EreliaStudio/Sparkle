@@ -41,9 +41,10 @@ namespace spk::Light
 			return a.registrationOrder < b.registrationOrder;
 		};
 		std::ranges::sort(candidates, stronger);
-		for (std::size_t index = 1; index < candidates.size(); ++index)
+		std::unordered_set<std::uint64_t> uniqueOrdinals;
+		for (const auto &candidate : candidates)
 		{
-			if (candidates[index - 1].registrationOrder == candidates[index].registrationOrder)
+			if (!uniqueOrdinals.insert(candidate.registrationOrder).second)
 			{
 				throw spk::Exception("Light::Prioritizer received duplicate registration ordinals");
 			}
@@ -84,7 +85,7 @@ namespace spk::Light
 			}
 
 			// The weakest is the lowest score, breaking ties against the newest light.
-			const auto weakest = std::ranges::min_element(retained, stronger);
+			const auto weakest = std::ranges::max_element(retained, stronger);
 			if (static_cast<double>(candidate.score) >
 				static_cast<double>(weakest->score) * (1.0 + static_cast<double>(hysteresis)))
 			{

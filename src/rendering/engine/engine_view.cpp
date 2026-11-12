@@ -156,7 +156,8 @@ namespace spk
 		_identity(identity),
 		_camera(camera),
 		_resolution(resolution),
-		_order(order)
+		_order(order),
+		_lightChannel(std::make_shared<Light::Channel>(engine))
 	{
 		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
@@ -167,6 +168,7 @@ namespace spk
 		context.name = _name;
 		context.output = _output;
 		context.identity = _identity;
+		context.lightChannel = _lightChannel;
 		context.resolution = _resolution;
 		context.layers = _layers;
 		context.backgroundColor = _backgroundColor;
@@ -201,12 +203,26 @@ namespace spk
 		return _texture;
 	}
 
+	Light::Channel &EngineView::lightChannel() noexcept
+	{
+		return *_lightChannel;
+	}
+
+	const Light::Channel &EngineView::lightChannel() const noexcept
+	{
+		return *_lightChannel;
+	}
+
 	CameraComponent3D *EngineView::camera() const noexcept
 	{
 		return _camera;
 	}
 	void EngineView::setCamera(CameraComponent3D *camera) noexcept
 	{
+		if (_camera != camera)
+		{
+			_lightChannel->invalidate();
+		}
 		_camera = camera;
 		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
