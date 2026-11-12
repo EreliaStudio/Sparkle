@@ -104,10 +104,7 @@ namespace spk::Light
 	{
 		const Vector3 apex = worldPosition();
 		const Vector3 axis = worldDirection();
-		return apex + Vector3{
-			axis.x * _sphereCenterOffset,
-			axis.y * _sphereCenterOffset,
-			axis.z * _sphereCenterOffset};
+		return apex + Vector3{axis.x * _sphereCenterOffset, axis.y * _sphereCenterOffset, axis.z * _sphereCenterOffset};
 	}
 
 	float Spot::angularAttenuation(const Vector3 &toReceiver) const
@@ -122,10 +119,7 @@ namespace spk::Light
 			return 1.0f;
 		}
 		const Vector3 axis = worldDirection();
-		const double cosToReceiver =
-			(static_cast<double>(axis.x) * toReceiver.x +
-			 static_cast<double>(axis.y) * toReceiver.y +
-			 static_cast<double>(axis.z) * toReceiver.z) / norm;
+		const double cosToReceiver = (static_cast<double>(axis.x) * toReceiver.x + static_cast<double>(axis.y) * toReceiver.y + static_cast<double>(axis.z) * toReceiver.z) / norm;
 		const double cosEdge = std::cos(static_cast<double>(_angle));
 		const double t = std::clamp((cosToReceiver - cosEdge) / (1.0 - cosEdge), 0.0, 1.0);
 		return static_cast<float>(3.0 * t * t - 2.0 * t * t * t);
@@ -146,10 +140,7 @@ namespace spk::Light
 
 		const Vector3 apex = worldPosition();
 		const Vector3 axis = worldDirection();
-		const Vector3 center = apex + Vector3{
-			axis.x * _sphereCenterOffset,
-			axis.y * _sphereCenterOffset,
-			axis.z * _sphereCenterOffset};
+		const Vector3 center = apex + Vector3{axis.x * _sphereCenterOffset, axis.y * _sphereCenterOffset, axis.z * _sphereCenterOffset};
 		return frustum.intersectsSphere(center, _sphereRadius) &&
 			   frustum.intersectsCone(apex, axis, _range, _baseRadius);
 	}

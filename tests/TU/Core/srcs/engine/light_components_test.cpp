@@ -73,10 +73,7 @@ TEST(CoreLightTest, InvalidSharedParametersPreserveStateAndNoIntensityCeiling)
 {
 	spk::Light::Point point;
 	const spk::RGB previousColor = point.color();
-	for (spk::RGB color : {spk::RGB{-0.01f, 0.0f, 0.0f},
-						 spk::RGB{0.0f, 1.01f, 0.0f},
-						 spk::RGB{0.0f, 0.0f, Infinity},
-						 spk::RGB{NaN, 0.0f, 0.0f}})
+	for (spk::RGB color : {spk::RGB{-0.01f, 0.0f, 0.0f}, spk::RGB{0.0f, 1.01f, 0.0f}, spk::RGB{0.0f, 0.0f, Infinity}, spk::RGB{NaN, 0.0f, 0.0f}})
 	{
 		EXPECT_THROW(point.setColor(color), spk::Exception);
 		EXPECT_EQ(point.color(), previousColor);

@@ -2,10 +2,8 @@
 
 #include <cmath>
 
-#include "engine/entity3d.hpp"
-#include "engine/transform3d.hpp"
-#include "exception.hpp"
 #include "engine/light/local_light_math.hpp"
+#include "exception.hpp"
 
 namespace spk::Light
 {
