@@ -1,6 +1,8 @@
 #pragma once
 
 #include <optional>
+
+#include "design_pattern/contract_provider.hpp"
 #include <string>
 
 #include "container/cached_data.hpp"
@@ -23,6 +25,7 @@ namespace spk
 		};
 
 		Camera3D _projection;
+		ContractProvider<> _onProjectionEdition;
 		mutable std::optional<WorldPose> _cachedWorldPose;
 		mutable CachedData<Matrix4x4> _view{[this] {
 			const WorldPose &pose = *_cachedWorldPose;
@@ -36,7 +39,9 @@ namespace spk
 		void _refreshViewCache() const;
 
 	public:
+		using OnProjectionEditionContract = ContractProvider<>::Contract;
 		using Component3D::Component3D;
+		[[nodiscard]] OnProjectionEditionContract subscribeToProjectionEdition(ContractProvider<>::callback_type callback);
 
 		void setProjectionMode(Camera3D::ProjectionMode mode);
 		void setPerspective(float fieldOfView, float aspectRatio, float nearPlane, float farPlane);

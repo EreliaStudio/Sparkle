@@ -1,6 +1,7 @@
 #include "rendering/engine/camera_component3d.hpp"
 
 #include <stdexcept>
+#include <utility>
 
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
@@ -8,6 +9,11 @@
 
 namespace spk
 {
+	CameraComponent3D::OnProjectionEditionContract CameraComponent3D::subscribeToProjectionEdition(ContractProvider<>::callback_type callback)
+	{
+		return _onProjectionEdition.subscribe(std::move(callback));
+	}
+
 	void CameraComponent3D::_refreshViewCache() const
 	{
 		if (owner() == nullptr)
@@ -29,17 +35,33 @@ namespace spk
 
 	void CameraComponent3D::setProjectionMode(Camera3D::ProjectionMode mode)
 	{
-		_projection.setProjectionMode(mode);
+		if (_projection.projectionMode() != mode)
+		{
+			_projection.setProjectionMode(mode);
+			_onProjectionEdition.trigger();
+		}
 	}
 
 	void CameraComponent3D::setPerspective(float fieldOfView, float aspectRatio, float nearPlane, float farPlane)
 	{
+		const Matrix4x4 before = _projection.projectionMatrix();
+		const auto mode = _projection.projectionMode();
 		_projection.setPerspective(fieldOfView, aspectRatio, nearPlane, farPlane);
+		if (mode != _projection.projectionMode() || before != _projection.projectionMatrix())
+		{
+			_onProjectionEdition.trigger();
+		}
 	}
 
 	void CameraComponent3D::setOrthographic(float left, float right, float bottom, float top, float nearPlane, float farPlane)
 	{
+		const Matrix4x4 before = _projection.projectionMatrix();
+		const auto mode = _projection.projectionMode();
 		_projection.setOrthographic(left, right, bottom, top, nearPlane, farPlane);
+		if (mode != _projection.projectionMode() || before != _projection.projectionMatrix())
+		{
+			_onProjectionEdition.trigger();
+		}
 	}
 
 	Camera3D::ProjectionMode CameraComponent3D::projectionMode() const noexcept

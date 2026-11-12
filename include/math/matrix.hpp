@@ -59,6 +59,21 @@ namespace spk
 			}
 			return result;
 		}
+		[[nodiscard]] constexpr bool operator==(const Matrix &other) const noexcept
+		{
+			for (std::size_t column = 0; column < SizeX; ++column)
+			{
+				for (std::size_t row = 0; row < SizeY; ++row)
+				{
+					if ((*this)[column][row] != other[column][row])
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
 		[[nodiscard]] constexpr Matrix operator*(const Matrix &other) const
 			requires(SizeX == SizeY)
 		{

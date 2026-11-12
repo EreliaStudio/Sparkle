@@ -159,6 +159,16 @@ namespace spk
 		_order(order),
 		_lightChannel(std::make_shared<Light::Channel>(engine))
 	{
+		if (_camera != nullptr)
+		{
+			std::weak_ptr<Light::Channel> weak = _lightChannel;
+			_cameraProjectionContract = _camera->subscribeToProjectionEdition([weak] {
+				if (const auto channel = weak.lock())
+				{
+					channel->invalidate();
+				}
+			});
+		}
 		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
 
@@ -217,16 +227,29 @@ namespace spk
 	{
 		return _camera;
 	}
-	void EngineView::setCamera(CameraComponent3D *camera) noexcept
+	void EngineView::setCamera(CameraComponent3D *camera)
 	{
-		if (_camera != camera)
+		if (_camera == camera)
 		{
-			_lightChannel->invalidate();
+			return;
 		}
+		CameraComponent3D::OnProjectionEditionContract subscription;
+		if (camera != nullptr)
+		{
+			std::weak_ptr<Light::Channel> weak = _lightChannel;
+			subscription = camera->subscribeToProjectionEdition([weak] {
+				if (const auto channel = weak.lock())
+				{
+					channel->invalidate();
+				}
+			});
+		}
+		_lightChannel->invalidate();
+		_cameraProjectionContract = std::move(subscription);
 		_camera = camera;
 		_output->setDetached(_camera == nullptr, _detachedOutputPolicy, _fallbackTexture);
 	}
-	void EngineView::detachCamera() noexcept
+	void EngineView::detachCamera()
 	{
 		setCamera(nullptr);
 	}

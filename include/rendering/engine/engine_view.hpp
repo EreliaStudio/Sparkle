@@ -163,6 +163,7 @@ namespace spk
 		const std::string _name;
 		const std::uint64_t _identity;
 		CameraComponent3D *_camera;
+		CameraComponent3D::OnProjectionEditionContract _cameraProjectionContract;
 		Vector2UInt _resolution;
 		std::optional<Order> _order;
 		std::optional<Layers> _layers;
@@ -194,8 +195,8 @@ namespace spk
 		[[nodiscard]] Light::Channel &lightChannel() noexcept;
 		[[nodiscard]] const Light::Channel &lightChannel() const noexcept;
 		[[nodiscard]] CameraComponent3D *camera() const noexcept;
-		void setCamera(CameraComponent3D *camera) noexcept;
-		void detachCamera() noexcept;
+		void setCamera(CameraComponent3D *camera);
+		void detachCamera();
 		[[nodiscard]] Vector2UInt resolution() const noexcept;
 		void setResolution(Vector2UInt resolution);
 		[[nodiscard]] std::optional<Order> order() const noexcept;
