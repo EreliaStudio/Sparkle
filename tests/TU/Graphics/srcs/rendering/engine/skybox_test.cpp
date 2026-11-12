@@ -95,7 +95,7 @@ namespace
 
 		Scene()
 		{
-			camera.setPerspective(0.88f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 40.0f);
+			camera.setPerspective(1.65f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 40.0f);
 			engine.addEntity(&cameraEntity);
 			engine.addEntity(&skyEntity);
 			view = &engine.addView("main", &camera, ImageSize);
@@ -350,6 +350,9 @@ TEST(SkyboxGPU, SixFacesAndCameraRotationUseRealOpenGL)
 		render(scene, captured);
 		golden(std::string("face_") + name);
 	}
+	scene.cameraEntity.transform().setEulerRotation({30.0f, -45.0f, 0.0f});
+	render(scene, scene.capture());
+	golden("three_face_corner_uv");
 	gl.reset();
 }
 
