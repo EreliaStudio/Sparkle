@@ -248,17 +248,20 @@ TEST(VoxelViewMaterialTest, RemovedAndRecreatedProducerDoesNotRebindMaterial)
 
 TEST(VoxelViewMaterialTest, CapturedOutputCannotBeReadFromAnUnproducedSurface)
 {
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
 	Scene scene;
 	auto source = scene.producer->output();
 	auto attachment = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::SRGB8_ALPHA8);
 	auto expected = attachment.texture();
 	spk::EngineView::Source resolved{spk::EngineView::Source::Kind::Produced, source, expected};
-	spk::Window::Surface first{"first surface"};
+	auto &first = gl.surface();
 	spk::Window::Surface second{"second surface"};
 	EXPECT_THROW((void)resolved.onSurface(first), spk::Exception);
 	source->publish(first, expected);
 	EXPECT_EQ(resolved.onSurface(first).identifier(), expected.identifier());
 	EXPECT_THROW((void)resolved.onSurface(second), spk::Exception);
+	gl.reset();
 }
 
 TEST(VoxelViewMaterialTest, FirstFrameAlsoProducesBothViewsOnIndependentSurface)
@@ -302,6 +305,8 @@ TEST(VoxelViewMaterialTest, FirstFrameAlsoProducesBothViewsOnIndependentSurface)
 
 TEST(VoxelViewMaterialTest, DetachedPoliciesAreExplicitAndKeepLastFrameIsSurfaceScoped)
 {
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
 	Scene scene;
 	RedAtlas atlas;
 	scene.configure(atlas);
@@ -311,7 +316,7 @@ TEST(VoxelViewMaterialTest, DetachedPoliciesAreExplicitAndKeepLastFrameIsSurface
 	EXPECT_EQ(scene.engine.latestRenderSnapshot(), old);
 	scene.producer->setDetachedOutputPolicy(spk::EngineView::DetachedOutputPolicy::KeepLastFrame);
 	EXPECT_NO_THROW(scene.engine.refreshRenderSnapshot());
-	spk::Window::Surface first{"last frame first"};
+	auto &first = gl.surface();
 	spk::Window::Surface second{"last frame second"};
 	spk::EngineView::Source last{spk::EngineView::Source::Kind::KeepLastFrame, scene.producer->output(), {}};
 	EXPECT_THROW((void)last.onSurface(first), spk::Exception);
@@ -325,6 +330,7 @@ TEST(VoxelViewMaterialTest, DetachedPoliciesAreExplicitAndKeepLastFrameIsSurface
 	EXPECT_NO_THROW(scene.engine.refreshRenderSnapshot());
 	spk::EngineView::Source fallback{spk::EngineView::Source::Kind::DefaultTexture, scene.producer->output(), atlas.handle()};
 	EXPECT_EQ(fallback.onSurface(second).identifier(), atlas.handle().identifier());
+	gl.reset();
 }
 
 TEST(VoxelViewMaterialTest, FirstFrameDisplaysSecondaryViewThroughRealVoxelMeshing)
