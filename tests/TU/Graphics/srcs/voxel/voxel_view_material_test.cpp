@@ -91,23 +91,34 @@ namespace
 	struct Scene
 	{
 		spk::Engine engine;
-		spk::Entity3D cameraEntity{"security camera"};
+		spk::Entity3D cameraEntity{"main camera"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+		spk::Entity3D securityCameraEntity{"security camera"};
+		spk::CameraComponent3D &securityCamera = securityCameraEntity.addComponent<spk::CameraComponent3D>();
 		spk::EngineView *producer = nullptr;
 		spk::EngineView *consumer = nullptr;
 		std::vector<std::unique_ptr<spk::Entity3D>> entities;
 
+		static void configureCamera(
+			spk::Entity3D &entity, spk::CameraComponent3D &camera, spk::Vector3 eye)
+		{
+			entity.transform().place(eye);
+			entity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+			camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+		}
+
 		Scene()
 		{
-			const spk::Vector3 eye{2.8f, 1.9f, 4.0f};
-			cameraEntity.transform().place(eye);
-			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
-			camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+			configureCamera(cameraEntity, camera, {2.8f, 1.9f, 4.0f});
+			configureCamera(securityCameraEntity, securityCamera, {1.8f, 1.5f, 3.2f});
 			engine.addEntity(&cameraEntity);
-			producer = &engine.addView("securityCamera", &camera, ImageSize, -10);
+			engine.addEntity(&securityCameraEntity);
+			producer = &engine.addView("securityCamera", &securityCamera, ImageSize, -10);
 			consumer = &engine.addView("main", &camera, ImageSize, 10);
 			producer->setLayers({"security"});
 			consumer->setLayers({"main"});
+			producer->setBackgroundColor({0.1f, 0.16f, 0.23f});
+			consumer->setBackgroundColor({0.01f, 0.02f, 0.035f});
 			engine.addSystem<spk::Voxel::RenderingSystem>().setLayers({"security", "main"});
 		}
 
@@ -117,6 +128,7 @@ namespace
 			{
 				engine.removeEntity(entity.get());
 			}
+			engine.removeEntity(&securityCameraEntity);
 			engine.removeEntity(&cameraEntity);
 		}
 
@@ -144,7 +156,7 @@ namespace
 		void configure(const spk::Texture &atlas)
 		{
 			add("cube", appearance(atlas), "security");
-			add("slab", appearance(*producer), "main", {-1.3f, 1.0f, 0.0f}, {90.0f, 0.0f, 0.0f}, {2.6f, 0.2f, 2.0f});
+			add("slab", appearance(*producer), "main", {-1.25f, 1.25f, 0.0f}, {90.0f, 0.0f, 0.0f}, {2.5f, 2.5f, 2.5f});
 		}
 
 		[[nodiscard]] std::shared_ptr<const spk::RenderSnapshot> capture()
