@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <barrier>
+#include <functional>
 #include <cmath>
 #include <future>
 #include <limits>
@@ -21,6 +22,19 @@
 
 namespace
 {
+	struct SelectionProbe : spk::RenderingBehaviour
+	{
+		std::function<void(const spk::EngineView::CaptureContext &)> callback;
+
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &, const spk::EngineView::CaptureContext &context) override
+		{
+			if (callback)
+			{
+				callback(context);
+			}
+		}
+	};
+
 	struct Scene
 	{
 		spk::Engine engine;
@@ -216,16 +230,23 @@ TEST(GraphicsLightChannel, PreviousSnapshotOwnsSelectionAndChannelAfterViewRemov
 	scene.addLight<spk::Light::Directional>();
 	std::shared_ptr<spk::Light::Channel> capturedChannel;
 	std::shared_ptr<const spk::Light::Selection> capturedSelection;
-	auto &observer = scene.engine.root().addBehaviour<spk::RenderingBehaviour>();
-	(void)observer;
-	// A published RenderSnapshot also keeps its captured Channel and Selection.
+	auto &observer = scene.engine.root().addBehaviour<SelectionProbe>();
+	observer.callback = [&](const spk::EngineView::CaptureContext &context) {
+		capturedChannel = context.lightChannel;
+		capturedSelection = context.lightSelection;
+	};
 	scene.engine.refreshRenderSnapshot();
 	const auto historical = scene.engine.latestRenderSnapshot();
 	ASSERT_NE(historical, nullptr);
 	const auto retained = view.lightChannel().current();
 	ASSERT_NE(retained, nullptr);
+	ASSERT_EQ(capturedChannel.get(), &view.lightChannel());
+	ASSERT_EQ(capturedSelection.get(), retained.get());
 	scene.engine.removeView("main");
+	EXPECT_TRUE(capturedChannel->isClosed());
 	EXPECT_EQ(retained->directional.size(), 1u);
+	EXPECT_EQ(capturedSelection->directional.size(), 1u);
+	EXPECT_THROW(capturedChannel->acquire(scene.camera.captureCamera(), 100), spk::Exception);
 	EXPECT_NE(scene.engine.latestRenderSnapshot(), nullptr);
 	scene.engine.refreshRenderSnapshot();
 	EXPECT_NE(scene.engine.latestRenderSnapshot(), nullptr);
@@ -236,10 +257,11 @@ TEST(GraphicsLightChannel, ConcurrentReadersShareOneCurrentSelection)
 	Scene scene;
 	auto &view = scene.addView("main");
 	scene.addLight<spk::Light::Point>();
+	const spk::Camera3D camera = scene.camera.captureCamera();
 	std::barrier start(3);
 	auto consumer = [&] {
 		start.arrive_and_wait();
-		return view.lightChannel().acquire(scene.camera.captureCamera(), 42);
+		return view.lightChannel().acquire(camera, 42);
 	};
 	auto left = std::async(std::launch::async, consumer);
 	auto right = std::async(std::launch::async, consumer);
