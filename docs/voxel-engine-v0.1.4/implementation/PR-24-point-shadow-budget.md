@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-18](PR-18-light-channel.md), [PR-21](PR-21-shadowresults-surfaces.md), [PR-22](PR-22-shadowmaps-spot-directional.md), [PR-23](PR-23-point-cubemaps.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+Le budget porte sur la reconstruction de shadow maps par Surface/EngineView, non sur les occurrences de `Voxel::Renderer`, leurs buckets ou les poses. Ne pas modifier l'instancing ni reconstruire les meshes de PR13 ; conserver les snapshots historiques.
+
 ## Spécifications normatives
 
 - [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)

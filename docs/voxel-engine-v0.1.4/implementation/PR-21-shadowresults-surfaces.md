@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-18](PR-18-light-channel.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+Les surfaces, handles GPU et `EngineView::Output` sont déjà mis en place depuis PR10–13. Ajouter uniquement l'admission, la publication et l'isolation des résultats d'ombres : aucun deuxième output EngineView, gestionnaire GPU ou renderer voxel. La PR14 n'est pas un prérequis.
+
 ## Spécifications normatives
 
 - [07-vues-et-passes.md](../07-vues-et-passes.md)

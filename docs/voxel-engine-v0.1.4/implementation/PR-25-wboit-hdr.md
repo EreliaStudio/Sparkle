@@ -1,12 +1,16 @@
-# PR-25 — WBOIT MRT et composition HDR complète
+# PR-25 — Dessin voxel translucide sur WBOIT/HDR existants
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
 > **Branche source :** `impl/v0.1.4/25-wboit-hdr`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Afficher des surfaces translucides avec une seule passe de géométrie et HDR jusqu'à la sortie.
+**Objectif :** Rendre les faces voxel translucides dans la passe WBOIT et la chaîne HDR **déjà présentes depuis PR12**, en réutilisant `Voxel::Renderer` de PR13.
 
 **Prérequis :** [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md), [PR-13](PR-13-voxel-render-first.md), [PR-19](PR-19-forward-lighting.md)
+
+## Adaptation à la baseline PR13 (obligatoire)
+
+**PR12 a déjà livré HDR, attachments WBOIT, passes et composition/tone mapping EngineView ; PR13 a déjà livré `DrawVoxelCommand`, palettes, remap et instances opaques.** Cette fiche ajoute essentiellement le dessin de `Voxel::Geometry::transparentMesh()` dans la passe WBOIT existante avec les mêmes occurrences et lumières PR19. Pas de second WBOIT, de seconde composition HDR ou de renderer alternatif.
 
 ## Spécifications normatives
 
@@ -19,7 +23,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] Mesh translucent, MRT accumulation RGBA16F et reveal R8, depth partagé opaque read-only pour translucent, poids fixe w=1+7*(1-z), blending par attachement, composition opaque*T+accum.rgb/accum.a*(1-T), Reinhard, sRGB final.
+- [ ] Capturer le `transparentMesh()` déjà produit dans `Voxel::Geometry`, les matrices d'instances, palettes et remap du pipeline PR13 ; ajouter la commande/shader translucide sur **les MRT, attachments, depth, blending WBOIT et composition HDR/Reinhard/sRGB existants** sans les réimplémenter. Préserver le poids w=1+7*(1-z) et les équations de composition.
 
 ## Instructions techniques et intégration
 
@@ -29,7 +33,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Tests obligatoires
 
-- [ ] Golden 0,1,2 couches et ordre
+- [ ] Golden voxels texturés 0,1,2 couches et ordre, avec non-régression des golden images opaques PR13
 - [ ] z=0,0.5,1 => w=8,4.5,1
 - [ ] alpha 0 skip, alpha 1 T=0
 - [ ] opaque cache translucent arrière
@@ -41,7 +45,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Définition de terminé / critère de fusion
 
-Transparence colorée stable sur sortie EngineView et consommation via Material.
+Transparence voxel colorée dans `EngineView` en conservant la composition générique HDR existante ; les tests PR13 opaques restent inchangés.
 
 - [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
 - [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
