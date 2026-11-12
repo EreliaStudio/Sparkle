@@ -1,0 +1,40 @@
+name: PR16 temporary clang-format
+
+on:
+  push:
+    branches:
+      - impl/v0.1.4/16-skybox-component
+    paths:
+      - .github/workflows/pr16-temporary-format.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install clang-format==21.1.0
+      - name: Format PR16 source files
+        run: |
+          clang-format --style=file -i \
+            include/sparkle_graphics.hpp \
+            include/rendering/engine/skybox.hpp \
+            src/rendering/engine/skybox.cpp \
+            include/rendering/command/draw_skybox_command.hpp \
+            src/rendering/command/draw_skybox_command.cpp \
+            tests/TU/Graphics/srcs/rendering/engine/skybox_test.cpp
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add include/sparkle_graphics.hpp include/rendering/engine/skybox.hpp \
+            src/rendering/engine/skybox.cpp include/rendering/command/draw_skybox_command.hpp \
+            src/rendering/command/draw_skybox_command.cpp \
+            tests/TU/Graphics/srcs/rendering/engine/skybox_test.cpp
+          if ! git diff --cached --quiet; then
+            git commit -m "PR16: apply repository clang-format 21"
+            git push origin HEAD:refs/heads/impl/v0.1.4/16-skybox-component
+          fi
