@@ -436,7 +436,7 @@ TEST(VoxelViewMaterialGoldenTest, SecurityCameraTextureUpdatesAfterCameraMovemen
 	BlueAtlas blue;
 	Scene scene;
 	scene.configure(red);
-	scene.add("cube", appearance(blue), "security", {0.75f, -0.4f, -0.25f}, {}, {0.55f, 0.7f, 0.55f});
+	scene.add("cube", appearance(blue), "security", {0.75f, -0.4f, -0.25f}, {}, {0.65f, 0.65f, 0.65f});
 
 	const auto textureIdentifier = scene.producer->texture().handle().identifier();
 	drawMain(scene);
