@@ -89,7 +89,6 @@ namespace spk
 		_fallback = std::move(fallback);
 	}
 
-
 	EngineView::Texture::State::State(std::weak_ptr<Output> output) :
 		spk::Texture::State(spk::Texture::Target::Texture2D),
 		_output(std::move(output))
