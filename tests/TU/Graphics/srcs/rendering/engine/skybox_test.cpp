@@ -38,7 +38,7 @@ namespace
 
 	[[nodiscard]] spk::SpriteSheet loadAtlas()
 	{
-		return spk::SpriteSheet::open(sparkle_test::resourcesDirectory() / "rendering/skybox/atlas.png", {6, 1});
+		return spk::SpriteSheet::open(sparkle_test::resourcesDirectory() / "textures/skybox/atlas.png", {6, 1});
 	}
 
 	[[nodiscard]] spk::Material material(const spk::Texture &texture, const spk::Texture::Section &section)
@@ -195,10 +195,7 @@ TEST(SkyboxTest, AtlasFixtureLoadsFromDisk)
 		const auto &pixels = atlas.pixels();
 		return std::array<std::uint8_t, 4>{pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3]};
 	};
-	constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{
-		{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}},
-		{{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}
-	}};
+	constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}}, {{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}}};
 	for (std::size_t face = 0; face < spk::Skybox::FaceCount; ++face)
 	{
 		const auto color = colors[face];
@@ -417,6 +414,7 @@ TEST(SkyboxGPU, AmbientLightChangesDoNotAffectSkyColors)
 TEST(SkyboxGPU, EarlierProducerViewCanSupplyAllSixMaterials)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto atlas = loadAtlas();
 	Scene scene;
 	auto &producer = scene.engine.addView("producer", &scene.camera, ImageSize, -10);
 	producer.setBackgroundColor({0.6f, 0.2f, 0.1f});
