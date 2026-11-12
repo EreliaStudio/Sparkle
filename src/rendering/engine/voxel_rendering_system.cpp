@@ -110,7 +110,8 @@ namespace spk::Voxel
 				bucket.palette,
 				std::move(bucket.materialRemap),
 				std::move(bucket.models),
-				context.viewProjectionMatrix);
+				context.viewProjectionMatrix,
+				&context);
 		}
 	}
 }

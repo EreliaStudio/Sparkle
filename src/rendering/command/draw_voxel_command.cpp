@@ -29,23 +29,38 @@ namespace spk
 	}
 
 	std::vector<DrawVoxelCommand::MaterialData> DrawVoxelCommand::_resolveMaterials(
-		const Palette &palette, Texture::Handle &atlas)
+		const Palette &palette, Texture::Handle &atlas, std::optional<EngineView::Source> &source,
+		const EngineView::CaptureContext *context)
 	{
 		std::vector<MaterialData> result;
 		result.reserve(palette.materials().size());
+		const Material::Binding *first = nullptr;
 		for (const auto &[name, material] : palette.materials())
 		{
 			const auto *binding = material.find("albedo");
-			if (binding == nullptr || !binding->texture)
+			if (binding == nullptr || !binding->valid())
 			{
 				throw spk::Exception("Voxel draw: missing albedo for '" + name + "'");
 			}
-			if (atlas && atlas.identifier() != binding->texture.identifier())
+			if (first != nullptr && !first->sameSource(*binding))
 			{
 				throw spk::Exception("Voxel draw: inconsistent albedo atlases");
 			}
-			atlas = binding->texture;
+			first = binding;
 			result.push_back({binding->section.anchor, binding->section.size});
+		}
+		if (first != nullptr && first->isViewSource())
+		{
+			const auto output = first->viewOutput.lock();
+			if (!output || context == nullptr || !context->resolveSource)
+			{
+				throw spk::Exception("Voxel draw: EngineView source requires a valid capture");
+			}
+			source = context->resolveSource(output, first->viewIdentity);
+		}
+		else if (first != nullptr)
+		{
+			atlas = first->texture;
 		}
 		return result;
 	}
@@ -55,9 +70,10 @@ namespace spk
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
 		Matrix4x4 model,
-		Matrix4x4 viewProjection) :
+		Matrix4x4 viewProjection,
+		const EngineView::CaptureContext *context) :
 		DrawVoxelCommand(
-			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, viewProjection)
+			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, viewProjection, context)
 	{
 	}
 
@@ -66,7 +82,8 @@ namespace spk
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
 		std::vector<Matrix4x4> models,
-		Matrix4x4 viewProjection) :
+		Matrix4x4 viewProjection,
+		const EngineView::CaptureContext *context) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
 		_instances(InstanceBinding, 0, sizeof(Matrix4x4)),
@@ -80,7 +97,7 @@ namespace spk
 			throw spk::Exception("Voxel draw: at least one instance is required");
 		}
 		Texture::Handle atlas;
-		const auto materials = _resolveMaterials(palette, atlas);
+		const auto materials = _resolveMaterials(palette, atlas, _viewAlbedo, context);
 		if (materialRemap.size() != _geometry.materialSlots().size())
 		{
 			throw spk::Exception("Voxel draw: material remap has an unexpected size");
@@ -101,7 +118,7 @@ namespace spk
 		_instances.resize(models.size());
 		_instances.setDynamicData(std::span<const Matrix4x4>(models));
 		_instances.validate();
-		if (!atlas)
+		if (!atlas && !_viewAlbedo)
 		{
 			throw spk::Exception("Voxel draw: no albedo atlas");
 		}
@@ -123,7 +140,21 @@ namespace spk
 		_instances.activate(context);
 		_materials.activate(context);
 		_materialRemap.activate(context);
-		_albedo.activate(context);
+		if (_viewAlbedo)
+		{
+			if (context.targetSurface == nullptr)
+			{
+				throw spk::Exception("Voxel draw: EngineView albedo requires a Surface");
+			}
+			Sampler resolved(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled);
+			resolved.setTexture(_viewAlbedo->onSurface(*context.targetSurface));
+			resolved.validate();
+			resolved.activate(context);
+		}
+		else
+		{
+			_albedo.activate(context);
+		}
 		const auto &mesh = _geometry.opaqueMesh();
 		mesh.layout().activate(context);
 		_program.renderInstanced(
