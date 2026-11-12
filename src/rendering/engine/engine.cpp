@@ -371,8 +371,7 @@ namespace spk
 			{
 				capture.context.lightSelection = capture.context.lightChannel->acquire(
 					capture.context.cameraSnapshot, capture.context.captureOrdinal);
-			}
-			catch (...)
+			} catch (...)
 			{
 				if (!capture.context.lightChannel->isClosed())
 				{
