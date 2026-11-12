@@ -2,7 +2,9 @@
 
 #include <GL/glew.h>
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -30,7 +32,7 @@
 
 namespace
 {
-	constexpr spk::Vector2UInt ImageSize{160, 120};
+	constexpr spk::Vector2UInt ImageSize{320, 240};
 
 	class RedAtlas final : public spk::Texture
 	{
@@ -97,7 +99,7 @@ namespace
 
 		Scene()
 		{
-			const spk::Vector3 eye{3.0f, 2.4f, 5.0f};
+			const spk::Vector3 eye{2.8f, 1.9f, 4.0f};
 			cameraEntity.transform().place(eye);
 			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
 			camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
@@ -118,9 +120,18 @@ namespace
 			engine.removeEntity(&cameraEntity);
 		}
 
-		spk::Voxel::Renderer &add(const std::string &shape, const spk::Palette &palette, const std::string &layer)
+		spk::Voxel::Renderer &add(
+			const std::string &shape,
+			const spk::Palette &palette,
+			const std::string &layer,
+			spk::Vector3 position = {-0.5f, -0.5f, -0.5f},
+			spk::Vector3 rotation = {},
+			spk::Vector3 scale = {1.0f, 1.0f, 1.0f})
 		{
 			auto entity = std::make_unique<spk::Entity3D>("voxel monitor");
+			entity->transform().place(position);
+			entity->transform().setEulerRotation(rotation);
+			entity->transform().rescale(scale);
 			auto &renderer = entity->addComponent<spk::Voxel::Renderer>();
 			renderer.bind(geometry(shape));
 			renderer.bind(palette);
@@ -133,7 +144,7 @@ namespace
 		void configure(const spk::Texture &atlas)
 		{
 			add("cube", appearance(atlas), "security");
-			add("slab", appearance(*producer), "main");
+			add("slab", appearance(*producer), "main", {-1.3f, 1.0f, 0.0f}, {90.0f, 0.0f, 0.0f}, {2.6f, 0.2f, 2.0f});
 		}
 
 		[[nodiscard]] std::shared_ptr<const spk::RenderSnapshot> capture()
@@ -348,6 +359,35 @@ TEST(VoxelViewMaterialTest, FirstFrameDisplaysSecondaryViewThroughRealVoxelMeshi
 	EXPECT_GT(pixel[0], pixel[2]);
 	EXPECT_GT(pixel[0], 25u);
 	EXPECT_EQ(pixel[3], 255);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
+}
+
+TEST(VoxelViewMaterialTest, SourceSrgbIsDecodedOnceBeforeVoxelLighting)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+	scene.producer->setBackgroundColor({1.0f, 1.0f, 1.0f});
+	scene.add("cube", appearance(*scene.producer), "main");
+	const auto snapshot = scene.capture();
+	snapshot->execute(gl.renderContext());
+	const auto final = scene.consumer->output()->latest(gl.surface());
+	ASSERT_TRUE(final);
+	spk::Framebuffer target(final->size(), std::vector<spk::Texture::Handle>{final}, std::nullopt);
+	target.activate(gl.renderContext());
+	std::vector<std::uint8_t> pixels(ImageSize.x * ImageSize.y * 4);
+	glReadPixels(0, 0, ImageSize.x, ImageSize.y, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+	int brightest = 0;
+	for (std::size_t i = 0; i < pixels.size(); i += 4)
+	{
+		brightest = std::max(brightest, static_cast<int>(pixels[i]));
+	}
+	const float lightY = 0.85f / std::sqrt(0.35f * 0.35f + 0.85f * 0.85f + 0.45f * 0.45f);
+	const float hdr = 0.5f * (0.38f + 0.62f * lightY);
+	const float linear = hdr / (1.0f + hdr);
+	const float encoded = (1.055f * std::pow(linear, 1.0f / 2.4f) - 0.055f) * 255.0f;
+	EXPECT_NEAR(brightest, encoded, 6);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
 }
