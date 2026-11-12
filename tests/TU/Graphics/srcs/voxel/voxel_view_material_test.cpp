@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "container/json/object.hpp"
+#include "core/platform/window.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
@@ -258,6 +259,45 @@ TEST(VoxelViewMaterialTest, CapturedOutputCannotBeReadFromAnUnproducedSurface)
 	source->publish(first, expected);
 	EXPECT_EQ(resolved.onSurface(first).identifier(), expected.identifier());
 	EXPECT_THROW((void)resolved.onSurface(second), spk::Exception);
+}
+
+TEST(VoxelViewMaterialTest, FirstFrameAlsoProducesBothViewsOnIndependentSurface)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	RedAtlas atlas;
+	Scene scene;
+	scene.configure(atlas);
+	const auto snapshot = scene.capture();
+	spk::WinAPI::Window::Class windowClass("Sparkle_SecondaryVoxelViewSource");
+	spk::Window::Native native("secondary material native");
+	spk::Window::Surface surface("secondary material surface");
+	spk::WinAPI::Window::CreationInfo creation;
+	creation.title = "Sparkle material source test";
+	creation.width = static_cast<int>(ImageSize.x);
+	creation.height = static_cast<int>(ImageSize.y);
+	creation.visible = false;
+	native.window().create(windowClass, creation);
+	surface.create(native.window());
+	surface.setGeometry({.anchor = {0, 0}, .size = ImageSize});
+	surface.makeCurrent();
+	spk::RenderContext context{surface};
+	snapshot->execute(context);
+	const auto produced = scene.producer->output()->latest(surface);
+	const auto consumed = scene.consumer->output()->latest(surface);
+	ASSERT_TRUE(produced);
+	ASSERT_TRUE(consumed);
+	EXPECT_EQ(consumed->size(), ImageSize);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	EXPECT_FALSE(scene.producer->output()->latest(gl.surface()));
+	surface.destroy();
+	native.window().destroy();
+	gl.makeCurrent();
+	snapshot->execute(gl.renderContext());
+	EXPECT_TRUE(scene.producer->output()->latest(gl.surface()));
+	EXPECT_TRUE(scene.consumer->output()->latest(gl.surface()));
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
 }
 
 TEST(VoxelViewMaterialTest, DetachedPoliciesAreExplicitAndKeepLastFrameIsSurfaceScoped)
