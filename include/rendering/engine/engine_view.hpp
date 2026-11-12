@@ -74,7 +74,6 @@ namespace spk
 			void setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback);
 		};
 
-
 		class Texture final : public spk::Texture
 		{
 		private:
