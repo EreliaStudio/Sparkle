@@ -1,13 +1,11 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "container/thread_safe_slot.hpp"
@@ -31,10 +29,7 @@ namespace spk
 			std::uint64_t identity;
 			std::optional<EngineView::Order> order;
 			EngineView::CaptureContext context;
-			Texture::Handle finalTexture;
 		};
-
-		using ViewDependencies = std::vector<std::pair<std::size_t, std::size_t>>;
 
 		mutable std::mutex _viewMutex;
 		std::vector<std::unique_ptr<EngineView>> _views;
@@ -45,22 +40,7 @@ namespace spk
 		void _visitObjects(const std::function<void(EngineView::Contributor &)> &callback);
 		[[nodiscard]] EngineView *_findView(const std::string &name) const noexcept;
 		[[nodiscard]] std::vector<ViewCapture> _captureViews() const;
-		[[nodiscard]] std::unique_ptr<const RenderCommand> _buildViewCommand(
-			const EngineView::CaptureContext &context, Texture::Handle finalTexture);
-		static void _allocateViewOutputs(std::vector<ViewCapture> &captures);
-		[[nodiscard]] static EngineView::Source _detachedSource(const EngineView::CaptureContext &context);
-		[[nodiscard]] static EngineView::Source _sourceFromView(
-			const std::vector<ViewCapture> &captures,
-			ViewDependencies &dependencies,
-			std::size_t consumer,
-			const std::shared_ptr<EngineView::Output> &output,
-			std::uint64_t identity);
-		void _appendViewCommands(
-			RenderPass &pass, const std::vector<ViewCapture> &captures, ViewDependencies &dependencies);
-		static void _visitViewDependency(
-			std::size_t index, const ViewDependencies &dependencies, std::vector<int> &states);
-		static void _validateViewDependencies(std::size_t count, const ViewDependencies &dependencies);
-		void _prepareViewCommands(RenderSnapshot::Builder &builder, std::vector<ViewCapture> &captures);
+		[[nodiscard]] std::unique_ptr<const RenderCommand> _buildViewCommand(const EngineView::CaptureContext &context);
 		[[nodiscard]] bool _commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot);
 		static void _validateViewPasses(const std::string &name, const RenderSnapshot::Builder &builder);
 
