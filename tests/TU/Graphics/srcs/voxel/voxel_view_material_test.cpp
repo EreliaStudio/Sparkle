@@ -52,7 +52,6 @@ namespace
 		}
 	};
 
-
 	class BlueAtlas final : public spk::Texture
 	{
 	public:
@@ -459,10 +458,10 @@ TEST(VoxelViewMaterialGoldenTest, SecurityCameraTextureUpdatesAfterCameraMovemen
 	std::size_t changedPixels = 0;
 	for (std::size_t index = 0; index < before.pixels.size(); index += 4)
 	{
-		const auto difference = std::abs(static_cast<int>(before.pixels[index]) - static_cast<int>(after.pixels[index])) +
-			std::abs(static_cast<int>(before.pixels[index + 1]) - static_cast<int>(after.pixels[index + 1])) +
-			std::abs(static_cast<int>(before.pixels[index + 2]) - static_cast<int>(after.pixels[index + 2]));
-		changedPixels += difference > 30;
+		const int red = std::abs(static_cast<int>(before.pixels[index]) - static_cast<int>(after.pixels[index]));
+		const int green = std::abs(static_cast<int>(before.pixels[index + 1]) - static_cast<int>(after.pixels[index + 1]));
+		const int blue = std::abs(static_cast<int>(before.pixels[index + 2]) - static_cast<int>(after.pixels[index + 2]));
+		changedPixels += red + green + blue > 30;
 	}
 	EXPECT_GT(changedPixels, 250u);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
