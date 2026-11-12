@@ -144,7 +144,7 @@ TEST(CoreLightTest, RadialSmoothstepAndAngularSmoothstep)
 	EXPECT_FLOAT_EQ(point.attenuation(2.0f), 0.5f);
 	EXPECT_FLOAT_EQ(point.attenuation(4.0f), 0.0f);
 	EXPECT_FLOAT_EQ(point.attenuation(5.0f), 0.0f);
-	EXPECT_THROW(point.attenuation(-1.0f), spk::Exception);
+	EXPECT_THROW(static_cast<void>(point.attenuation(-1.0f)), spk::Exception);
 	EXPECT_FLOAT_EQ(spot.attenuation(2.0f, {0.0f, 0.0f, -1.0f}), 0.5f);
 	EXPECT_NEAR(spot.angularAttenuation({0.0f, 0.0f, -1.0f}), 1.0f, 1e-6f);
 	EXPECT_NEAR(spot.angularAttenuation({1.0f, 0.0f, 0.0f}), 0.0f, 1e-6f);
@@ -202,7 +202,7 @@ TEST(CoreLightTest, PriorityScoresHonorRangeIntensityColorAndVisibility)
 	point.setPriorityWeight(2.0f);
 	EXPECT_NEAR(point.priorityScore(frustum, camera), 8.0f * initial, 1e-5f);
 	EXPECT_TRUE(std::isfinite(point.priorityScore(frustum, entity.transform().position())));
-	EXPECT_THROW(point.priorityScore(frustum, camera, 0.0f), spk::Exception);
+	EXPECT_THROW(static_cast<void>(point.priorityScore(frustum, camera, 0.0f)), spk::Exception);
 
 	point.deactivate();
 	EXPECT_FLOAT_EQ(point.priorityScore(frustum, camera), 0.0f);
@@ -305,7 +305,7 @@ TEST(CoreLightTest, RegistrationOrdinalsAreStableAndEngineLocal)
 	EXPECT_EQ(pointA.registrationOrder(), 4u);
 	engineB.addEntity(&first);
 	EXPECT_EQ(pointA.registrationOrder(), 1u);
-	EXPECT_FALSE(spk::Registry<spk::Light::Contributor, spk::EngineHeadless *>::instance().elements(&engineA).contains(&pointA));
+	EXPECT_FALSE(registered.contains(&pointA));
 	engineB.removeEntity(&first);
 	engineA.addEntity(&first);
 	EXPECT_EQ(pointA.registrationOrder(), 5u);
@@ -320,5 +320,5 @@ TEST(CoreLightTest, OrdinalExhaustionIsCheckedWithoutWrapping)
 	constexpr std::uint64_t maximum = std::numeric_limits<std::uint64_t>::max();
 	EXPECT_EQ(spk::Light::detail::nextRegistrationOrder(0), 1u);
 	EXPECT_EQ(spk::Light::detail::nextRegistrationOrder(maximum - 1), maximum);
-	EXPECT_THROW(spk::Light::detail::nextRegistrationOrder(maximum), spk::Exception);
+	EXPECT_THROW(static_cast<void>(spk::Light::detail::nextRegistrationOrder(maximum)), spk::Exception);
 }

@@ -79,8 +79,7 @@ namespace spk::Light
 									  static_cast<double>(plane.normal.y) * unitAxis.y +
 									  static_cast<double>(plane.normal.z) * unitAxis.z;
 			const double perpendicular = std::sqrt(std::max(0.0, 1.0 - projection * projection));
-			const double support = std::max(0.0, static_cast<double>(length) * projection +
-													   static_cast<double>(baseRadius) * perpendicular);
+			const double support = std::max(0.0, static_cast<double>(length) * projection + static_cast<double>(baseRadius) * perpendicular);
 			if (plane.signedDistance(apex) + support < 0.0)
 			{
 				return false;
