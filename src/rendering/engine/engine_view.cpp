@@ -80,6 +80,35 @@ namespace spk
 		return it == _frames.end() ? Texture::Handle{} : it->second.texture;
 	}
 
+	Texture::Handle EngineView::Output::latestFrame(Window::Surface &surface) const
+	{
+		std::lock_guard lock(_mutex);
+		const auto it = _frames.find(&surface);
+		return it == _frames.end() ? Texture::Handle{} : it->second.texture;
+	}
+
+	Texture::Handle EngineView::Source::onSurface(Window::Surface &surface) const
+	{
+		if (kind == Kind::DefaultTexture)
+		{
+			if (texture)
+			{
+				return texture;
+			}
+			throw spk::Exception("EngineView: default output texture is missing");
+		}
+		const auto frame = output ? output->latestFrame(surface) : Texture::Handle{};
+		if (kind == Kind::KeepLastFrame && frame)
+		{
+			return frame;
+		}
+		if (kind == Kind::Produced && frame && frame.identifier() == texture.identifier())
+		{
+			return texture;
+		}
+		throw spk::Exception("EngineView: requested output was not produced on this Surface");
+	}
+
 	void EngineView::Output::setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback)
 	{
 		std::lock_guard lock(_mutex);
@@ -131,6 +160,7 @@ namespace spk
 		context.name = _name;
 		context.output = _output;
 		context.identity = _identity;
+		context.active = _camera != nullptr;
 		context.resolution = _resolution;
 		context.layers = _layers;
 		context.backgroundColor = _backgroundColor;
@@ -139,10 +169,13 @@ namespace spk
 		context.targetFPS = _targetFPS;
 		context.detachedOutputPolicy = _detachedOutputPolicy;
 		context.fallbackTexture = _fallbackTexture;
-		context.projectionMatrix = _camera->projectionMatrix();
-		context.viewMatrix = _camera->viewMatrix();
-		context.inverseViewMatrix = _camera->inverseViewMatrix();
-		context.viewProjectionMatrix = context.projectionMatrix * context.viewMatrix;
+		if (_camera != nullptr)
+		{
+			context.projectionMatrix = _camera->projectionMatrix();
+			context.viewMatrix = _camera->viewMatrix();
+			context.inverseViewMatrix = _camera->inverseViewMatrix();
+			context.viewProjectionMatrix = context.projectionMatrix * context.viewMatrix;
+		}
 		return context;
 	}
 

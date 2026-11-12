@@ -18,7 +18,7 @@ namespace spk::Voxel
 	void Renderer::_validate(const Geometry &geometry, const spk::Palette &palette)
 	{
 		std::string missing;
-		spk::GPUResource::Identifier atlas = 0;
+		const spk::Material::Binding *atlas = nullptr;
 		for (const auto &slot : geometry.materialSlots())
 		{
 			const auto *material = palette.find(slot.name);
@@ -32,16 +32,15 @@ namespace spk::Voxel
 				continue;
 			}
 			const auto *albedo = material->find("albedo");
-			if (albedo == nullptr || !albedo->texture)
+			if (albedo == nullptr || !albedo->valid())
 			{
 				throw spk::Exception("Voxel Renderer: slot '" + slot.name + "' has no valid albedo");
 			}
-			const auto id = albedo->texture.identifier();
-			if (atlas != 0 && atlas != id)
+			if (atlas != nullptr && !atlas->sameSource(*albedo))
 			{
 				throw spk::Exception("Voxel Renderer: incompatible albedo atlases");
 			}
-			atlas = id;
+			atlas = albedo;
 		}
 		if (!missing.empty())
 		{

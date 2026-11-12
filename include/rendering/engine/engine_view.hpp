@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -71,7 +72,24 @@ namespace spk
 			[[nodiscard]] std::shared_ptr<Targets> acquireTargets(Vector2UInt resolution);
 			void publish(Window::Surface &surface, Texture::Handle texture);
 			[[nodiscard]] Texture::Handle latest(Window::Surface &surface) const;
+			[[nodiscard]] Texture::Handle latestFrame(Window::Surface &surface) const;
 			void setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback);
+		};
+
+		struct Source
+		{
+			enum class Kind
+			{
+				Produced,
+				KeepLastFrame,
+				DefaultTexture
+			};
+
+			Kind kind = Kind::Produced;
+			std::shared_ptr<Output> output;
+			Texture::Handle texture;
+
+			[[nodiscard]] Texture::Handle onSurface(Window::Surface &surface) const;
 		};
 
 		struct CaptureContext
@@ -79,6 +97,8 @@ namespace spk
 			std::string name;
 			std::shared_ptr<Output> output;
 			std::uint64_t identity = 0;
+			bool active = false;
+			std::function<Source(const std::shared_ptr<Output> &, std::uint64_t)> resolveSource;
 			Vector2UInt resolution{};
 			Matrix4x4 projectionMatrix{};
 			Matrix4x4 viewMatrix{};

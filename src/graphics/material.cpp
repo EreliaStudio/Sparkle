@@ -70,6 +70,15 @@ namespace spk
 		_textures.emplace(role, Binding{texture.handle(), section});
 	}
 
+	void Material::Builder::add(const std::string &role, const EngineView &view, Texture::Section section)
+	{
+		if (!validRole(role) || _textures.contains(role) || !validSection(section))
+		{
+			throw Exception("Material: invalid or duplicate view-source role '" + role + "'");
+		}
+		_textures.emplace(role, Binding{{}, section, view.output(), view.identity()});
+	}
+
 	void Material::Builder::add(const std::string &role, const SpriteSheet &sheet, const Vector2UInt &sprite)
 	{
 		try
