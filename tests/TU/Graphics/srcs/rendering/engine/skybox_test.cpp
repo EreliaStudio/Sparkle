@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,6 +15,7 @@
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
+#include "graphics/image.hpp"
 #include "graphics/material.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "rendering/engine/engine.hpp"
@@ -35,32 +35,10 @@ namespace
 	constexpr spk::Vector2UInt ImageSize{192, 144};
 	using Face = spk::Skybox::Face;
 
-	class Atlas final : public spk::Texture
+	[[nodiscard]] spk::Image loadAtlas()
 	{
-	public:
-		Atlas()
-		{
-			constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}}, {{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}}};
-			std::array<std::uint8_t, 96 * 16 * 4> pixels{};
-			for (std::size_t y = 0; y < 16; ++y)
-			{
-				for (std::size_t x = 0; x < 96; ++x)
-				{
-					const auto color = colors[x / 16];
-					const bool white = x % 16 < 4 && y < 4;
-					const bool black = x % 16 >= 12 && y >= 12;
-					const auto at = (y * 96 + x) * 4;
-					for (std::size_t channel = 0; channel < 3; ++channel)
-					{
-						pixels[at + channel] = white ? 255 : (black ? 0 : color[channel]);
-					}
-					pixels[at + 3] = 255;
-				}
-			}
-			setPixels(std::span<const std::uint8_t>(pixels), {96, 16}, Format::RGBA);
-			validate();
-		}
-	};
+		return spk::Image::open(sparkle_test::resourcesDirectory() / "rendering/skybox/atlas.png");
+	}
 
 	[[nodiscard]] spk::Texture::Section region(std::size_t index)
 	{
@@ -117,7 +95,7 @@ namespace
 			return engine.latestRenderSnapshot();
 		}
 
-		void addOpaqueCubes(const Atlas &atlas)
+		void addOpaqueCubes(const spk::Texture &atlas)
 		{
 			spk::Voxel::Shape::Builder shapes;
 			shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
@@ -210,9 +188,19 @@ namespace
 	}
 }
 
+TEST(SkyboxTest, AtlasFixtureLoadsFromDisk)
+{
+	const auto atlas = loadAtlas();
+	EXPECT_EQ(atlas.size(), spk::Vector2UInt(96, 16));
+	EXPECT_EQ(atlas.format(), spk::Texture::Format::RGBA);
+	ASSERT_EQ(atlas.pixels().size(), 96u * 16u * 4u);
+	EXPECT_EQ(atlas.pixels()[0], 255);
+	EXPECT_EQ(atlas.pixels()[3], 255);
+}
+
 TEST(SkyboxTest, SixSeparateMaterialsPreserveSharedTextureIdentityAndSections)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	spk::Skybox skybox;
 	populate(skybox, atlas);
 	for (std::size_t i = 0; i < spk::Skybox::FaceCount; ++i)
@@ -230,7 +218,7 @@ TEST(SkyboxTest, SixSeparateMaterialsPreserveSharedTextureIdentityAndSections)
 
 TEST(SkyboxTest, MissingAlbedoOrIncompleteFacesFailBeforePublication)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	const auto previous = scene.capture();
@@ -260,7 +248,7 @@ TEST(SkyboxTest, InvalidFaceIsRejected)
 
 TEST(SkyboxTest, InvalidUVSectionIsRejectedByOrdinaryMaterialBuilder)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	spk::Material::Builder builder;
 	EXPECT_THROW(builder.add("albedo", atlas, {{0.9f, 0.0f}, {0.2f, 1.0f}}), spk::Exception);
 	EXPECT_THROW(builder.add("albedo", atlas, {{0.0f, 0.0f}, {0.0f, 1.0f}}), spk::Exception);
@@ -268,7 +256,7 @@ TEST(SkyboxTest, InvalidUVSectionIsRejectedByOrdinaryMaterialBuilder)
 
 TEST(SkyboxTest, DisabledEntityAndComponentDoNotContribute)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	scene.skyEntity.deactivate();
 	EXPECT_NO_THROW((void)scene.capture());
@@ -283,7 +271,7 @@ TEST(SkyboxTest, DisabledEntityAndComponentDoNotContribute)
 
 TEST(SkyboxTest, FiltersWorkIndependentlyForSeveralEngineViews)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	scene.skybox.setLayers({"sky"});
 	scene.view->setLayers({"other"});
@@ -298,7 +286,7 @@ TEST(SkyboxTest, FiltersWorkIndependentlyForSeveralEngineViews)
 
 TEST(SkyboxTest, RemovingComponentOnlyAffectsLaterCaptures)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	const auto old = scene.capture();
@@ -310,7 +298,7 @@ TEST(SkyboxTest, RemovingComponentOnlyAffectsLaterCaptures)
 
 TEST(SkyboxTest, SkyboxNeverContributesToShadowOpaqueOrLightingPasses)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	spk::Skybox skybox;
 	populate(skybox, atlas);
 	spk::EngineView::CaptureContext context;
@@ -323,7 +311,7 @@ TEST(SkyboxTest, SkyboxNeverContributesToShadowOpaqueOrLightingPasses)
 
 TEST(SkyboxTest, ViewTextureUsesUnmodifiedMaterialApiAndHasDistinctIdentity)
 {
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	auto &producer = scene.engine.addView("producer", &scene.camera, ImageSize, -10);
 	for (std::size_t i = 0; i < spk::Skybox::FaceCount; ++i)
@@ -339,7 +327,7 @@ TEST(SkyboxTest, ViewTextureUsesUnmodifiedMaterialApiAndHasDistinctIdentity)
 TEST(SkyboxGPU, SixFacesAndCameraRotationUseRealOpenGL)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	const std::array<std::pair<const char *, spk::Vector3>, 6> views{{{"negative_z", {0, 0, 0}}, {"positive_x", {0, -90, 0}}, {"negative_x", {0, 90, 0}}, {"positive_y", {-90, 0, 0}}, {"negative_y", {90, 0, 0}}, {"positive_z", {0, 180, 0}}}};
@@ -359,7 +347,7 @@ TEST(SkyboxGPU, SixFacesAndCameraRotationUseRealOpenGL)
 TEST(SkyboxGPU, CameraTranslationDoesNotCauseParallaxAndRotationChangesImage)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	render(scene, scene.capture());
@@ -378,7 +366,7 @@ TEST(SkyboxGPU, CameraTranslationDoesNotCauseParallaxAndRotationChangesImage)
 TEST(SkyboxGPU, TwoOpaqueVoxelObjectsAppearInFrontOfSky)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	render(scene, scene.capture());
@@ -393,7 +381,7 @@ TEST(SkyboxGPU, TwoOpaqueVoxelObjectsAppearInFrontOfSky)
 TEST(SkyboxGPU, AmbientLightChangesDoNotAffectSkyColors)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	scene.view->ambientLight().setIntensity(0.0f);
@@ -431,7 +419,7 @@ TEST(SkyboxGPU, EarlierProducerViewCanSupplyAllSixMaterials)
 TEST(SkyboxGPU, RemovalRestoresViewBackgroundButOldSnapshotStillRenders)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	scene.view->setBackgroundColor({0.1f, 0.1f, 0.1f});
@@ -453,7 +441,7 @@ TEST(SkyboxGPU, RemovalRestoresViewBackgroundButOldSnapshotStillRenders)
 TEST(SkyboxGPU, DisablingSkyboxAlsoRestoresBackgroundOnNextCapture)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
-	Atlas atlas;
+	const auto atlas = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, atlas);
 	const auto previous = scene.capture();
