@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -15,9 +16,9 @@
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
-#include "graphics/image.hpp"
 #include "graphics/material.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/sprite_sheet.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/skybox.hpp"
 #include "rendering/render_snapshot.hpp"
@@ -35,29 +36,23 @@ namespace
 	constexpr spk::Vector2UInt ImageSize{192, 144};
 	using Face = spk::Skybox::Face;
 
-	[[nodiscard]] spk::Image loadAtlas()
+	[[nodiscard]] spk::SpriteSheet loadAtlas()
 	{
-		return spk::Image::open(sparkle_test::resourcesDirectory() / "rendering/skybox/atlas.png");
+		return spk::SpriteSheet::open(sparkle_test::resourcesDirectory() / "rendering/skybox/atlas.png", {6, 1});
 	}
 
-	[[nodiscard]] spk::Texture::Section region(std::size_t index)
-	{
-		constexpr float width = 1.0f / 6.0f;
-		return {{static_cast<float>(index) * width, 0.0f}, {width, 1.0f}};
-	}
-
-	[[nodiscard]] spk::Material material(const spk::Texture &texture, std::size_t index)
+	[[nodiscard]] spk::Material material(const spk::Texture &texture, const spk::Texture::Section &section)
 	{
 		spk::Material::Builder builder;
-		builder.add("albedo", texture, region(index));
+		builder.add("albedo", texture, section);
 		return builder.build();
 	}
 
-	void populate(spk::Skybox &skybox, const spk::Texture &texture)
+	void populate(spk::Skybox &skybox, const spk::SpriteSheet &atlas)
 	{
 		for (std::size_t i = 0; i < spk::Skybox::FaceCount; ++i)
 		{
-			skybox.setMaterial(static_cast<Face>(i), material(texture, i));
+			skybox.setMaterial(static_cast<Face>(i), material(atlas, atlas.sprite(i)));
 		}
 	}
 
@@ -95,7 +90,7 @@ namespace
 			return engine.latestRenderSnapshot();
 		}
 
-		void addOpaqueCubes(const spk::Texture &atlas)
+		void addOpaqueCubes(const spk::SpriteSheet &atlas)
 		{
 			spk::Voxel::Shape::Builder shapes;
 			shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
@@ -112,7 +107,7 @@ namespace
 			volume.set({0, 0, 0}, 1);
 			const auto geometry = spk::Voxel::Mesher().bake(volume.build());
 			spk::Voxel::Palette::Builder appearance;
-			appearance.setMaterial("stone", material(atlas, 3));
+			appearance.setMaterial("stone", material(atlas, atlas.sprite(3)));
 			const auto palette = appearance.build();
 			engine.addSystem<spk::Voxel::RenderingSystem>();
 			for (const spk::Vector3 &location : {spk::Vector3{-0.8f, -0.5f, -3.0f}, spk::Vector3{0.5f, -0.4f, -4.0f}})
@@ -191,11 +186,35 @@ namespace
 TEST(SkyboxTest, AtlasFixtureLoadsFromDisk)
 {
 	const auto atlas = loadAtlas();
-	EXPECT_EQ(atlas.size(), spk::Vector2UInt(96, 16));
+	EXPECT_EQ(atlas.nbSprite(), spk::Vector2UInt(6, 1));
+	EXPECT_EQ(atlas.size(), spk::Vector2UInt(192, 32));
 	EXPECT_EQ(atlas.format(), spk::Texture::Format::RGBA);
-	ASSERT_EQ(atlas.pixels().size(), 96u * 16u * 4u);
-	EXPECT_EQ(atlas.pixels()[0], 255);
-	EXPECT_EQ(atlas.pixels()[3], 255);
+	ASSERT_EQ(atlas.pixels().size(), 192u * 32u * 4u);
+	const auto pixel = [&atlas](std::size_t face, std::size_t x, std::size_t y) {
+		const auto offset = ((y * atlas.size().x) + (face * 32 + x)) * 4;
+		const auto &pixels = atlas.pixels();
+		return std::array<std::uint8_t, 4>{pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3]};
+	};
+	constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{
+		{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}},
+		{{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}
+	}};
+	for (std::size_t face = 0; face < spk::Skybox::FaceCount; ++face)
+	{
+		const auto color = colors[face];
+		const auto dark = [&color](std::size_t channel) {
+			return static_cast<std::uint8_t>(std::lround(static_cast<float>(color[channel]) * 0.32f));
+		};
+		EXPECT_EQ(pixel(face, 0, 16), (std::array<std::uint8_t, 4>{dark(0), dark(1), dark(2), 255}));
+		EXPECT_EQ(pixel(face, 2, 16), pixel(face, 0, 16));
+		EXPECT_EQ(pixel(face, 3, 16), (std::array<std::uint8_t, 4>{color[0], color[1], color[2], 255}));
+		EXPECT_EQ(pixel(face, 10, 10), (std::array<std::uint8_t, 4>{255, 0, 255, 255}));
+		EXPECT_EQ(pixel(face, 12, 10), pixel(face, 10, 10));
+		EXPECT_EQ(pixel(face, 13, 10), (std::array<std::uint8_t, 4>{0, 0, 0, 255}));
+		EXPECT_EQ(pixel(face, 10, 13), pixel(face, 13, 10));
+		EXPECT_EQ(pixel(face, 21, 21), pixel(face, 3, 16));
+		EXPECT_EQ(atlas.sprite(face).size, spk::Vector2(1.0f / 6.0f, 1.0f));
+	}
 }
 
 TEST(SkyboxTest, SixSeparateMaterialsPreserveSharedTextureIdentityAndSections)
@@ -208,7 +227,7 @@ TEST(SkyboxTest, SixSeparateMaterialsPreserveSharedTextureIdentityAndSections)
 		const auto *binding = skybox.material(static_cast<Face>(i)).find("albedo");
 		ASSERT_NE(binding, nullptr);
 		EXPECT_EQ(binding->texture.identifier(), atlas.handle().identifier());
-		EXPECT_EQ(binding->section, region(i));
+		EXPECT_EQ(binding->section, atlas.sprite(i));
 	}
 	spk::RenderSnapshot::Builder builder;
 	skybox.buildViewRenderSnapshot(builder, {});
@@ -229,12 +248,12 @@ TEST(SkyboxTest, MissingAlbedoOrIncompleteFacesFailBeforePublication)
 
 TEST(SkyboxTest, DifferentTextureStatesFailEvenWithIdenticalPixels)
 {
-	Atlas first;
-	Atlas second;
+	const auto first = loadAtlas();
+	const auto second = loadAtlas();
 	Scene scene;
 	populate(scene.skybox, first);
 	const auto stable = scene.capture();
-	scene.skybox.setMaterial(Face::NegativeY, material(second, 3));
+	scene.skybox.setMaterial(Face::NegativeY, material(second, second.sprite(3)));
 	EXPECT_THROW((void)scene.capture(), spk::Exception);
 	EXPECT_EQ(scene.engine.latestRenderSnapshot(), stable);
 }
@@ -316,11 +335,11 @@ TEST(SkyboxTest, ViewTextureUsesUnmodifiedMaterialApiAndHasDistinctIdentity)
 	auto &producer = scene.engine.addView("producer", &scene.camera, ImageSize, -10);
 	for (std::size_t i = 0; i < spk::Skybox::FaceCount; ++i)
 	{
-		scene.skybox.setMaterial(static_cast<Face>(i), material(producer.texture(), i));
+		scene.skybox.setMaterial(static_cast<Face>(i), material(producer.texture(), atlas.sprite(i)));
 	}
 	const auto first = scene.skybox.material(Face::PositiveX).find("albedo")->texture.identifier();
 	EXPECT_EQ(first, producer.texture().handle().identifier());
-	scene.skybox.setMaterial(Face::NegativeY, material(atlas, 3));
+	scene.skybox.setMaterial(Face::NegativeY, material(atlas, atlas.sprite(3)));
 	EXPECT_THROW((void)scene.capture(), spk::Exception);
 }
 
@@ -406,7 +425,7 @@ TEST(SkyboxGPU, EarlierProducerViewCanSupplyAllSixMaterials)
 	scene.skybox.setLayers({"consumer"});
 	for (std::size_t i = 0; i < spk::Skybox::FaceCount; ++i)
 	{
-		scene.skybox.setMaterial(static_cast<Face>(i), material(producer.texture(), i));
+		scene.skybox.setMaterial(static_cast<Face>(i), material(producer.texture(), atlas.sprite(i)));
 	}
 	render(scene, scene.capture());
 	const auto pixel = finalPixel(*scene.view);
