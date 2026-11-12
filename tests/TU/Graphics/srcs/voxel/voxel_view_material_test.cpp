@@ -55,12 +55,13 @@ namespace
 		shapes.addFromJSON(spk::JSON::Value::loadFromFile(
 			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
 		spk::Voxel::Definition::SlotMapping mapping;
-		for (const auto &slot : shapes.build().slots())
+		const auto shape = shapes.build();
+		for (const auto &slot : shape.slots())
 		{
 			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{"screen", 1.0f});
 		}
 		spk::Voxel::Definition::Registry::Builder registry;
-		registry.add(1, spk::Voxel::Definition(shapes.build(), std::move(mapping)));
+		registry.add(1, spk::Voxel::Definition(shape, std::move(mapping)));
 		spk::Voxel::Volume::Builder volume({1, 1, 1});
 		volume.bind(registry.build());
 		volume.set({0, 0, 0}, 1);
