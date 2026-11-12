@@ -46,6 +46,11 @@ namespace spk
 		Matrix4x4 _viewProjection;
 
 		[[nodiscard]] static Program &_sharedProgram();
+		static void _resolveAlbedo(
+			const Material::Binding *binding,
+			Texture::Handle &atlas,
+			std::optional<EngineView::Source> &source,
+			const EngineView::CaptureContext *context);
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
 			const Palette &palette,
 			Texture::Handle &atlas,

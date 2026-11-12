@@ -28,6 +28,29 @@ namespace spk
 		return result;
 	}
 
+	void DrawVoxelCommand::_resolveAlbedo(
+		const Material::Binding *binding,
+		Texture::Handle &atlas,
+		std::optional<EngineView::Source> &source,
+		const EngineView::CaptureContext *context)
+	{
+		if (binding == nullptr)
+		{
+			return;
+		}
+		if (!binding->isViewSource())
+		{
+			atlas = binding->texture;
+			return;
+		}
+		const auto output = binding->viewOutput.lock();
+		if (!output || context == nullptr || !context->resolveSource)
+		{
+			throw spk::Exception("Voxel draw: EngineView source requires a valid capture");
+		}
+		source = context->resolveSource(output, binding->viewIdentity);
+	}
+
 	std::vector<DrawVoxelCommand::MaterialData> DrawVoxelCommand::_resolveMaterials(
 		const Palette &palette,
 		Texture::Handle &atlas,
@@ -51,19 +74,7 @@ namespace spk
 			first = binding;
 			result.push_back({binding->section.anchor, binding->section.size});
 		}
-		if (first != nullptr && first->isViewSource())
-		{
-			const auto output = first->viewOutput.lock();
-			if (!output || context == nullptr || !context->resolveSource)
-			{
-				throw spk::Exception("Voxel draw: EngineView source requires a valid capture");
-			}
-			source = context->resolveSource(output, first->viewIdentity);
-		}
-		else if (first != nullptr)
-		{
-			atlas = first->texture;
-		}
+		_resolveAlbedo(first, atlas, source, context);
 		return result;
 	}
 
