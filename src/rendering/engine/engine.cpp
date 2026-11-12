@@ -277,94 +277,138 @@ namespace spk
 		return true;
 	}
 
+	void Engine::_allocateViewOutputs(std::vector<ViewCapture> &captures)
+	{
+		for (auto &capture : captures)
+		{
+			if (!capture.context.active)
+			{
+				continue;
+			}
+			capture.finalTexture =
+				Framebuffer::RenderAttachment::create2D(capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
+		}
+	}
+
+	EngineView::Source Engine::_detachedSource(const EngineView::CaptureContext &context)
+	{
+		using Policy = EngineView::DetachedOutputPolicy;
+		using Kind = EngineView::Source::Kind;
+		switch (context.detachedOutputPolicy)
+		{
+		case Policy::Invalid:
+			throw spk::Exception("Material references an invalid detached EngineView");
+		case Policy::KeepLastFrame:
+			return {Kind::KeepLastFrame, context.output, {}};
+		case Policy::DefaultTexture:
+			if (!context.fallbackTexture)
+			{
+				throw spk::Exception("Detached EngineView has no configured default texture");
+			}
+			return {Kind::DefaultTexture, context.output, context.fallbackTexture};
+		}
+		throw spk::Exception("Unsupported detached EngineView output policy");
+	}
+
+	EngineView::Source Engine::_sourceFromView(
+		const std::vector<ViewCapture> &captures,
+		ViewDependencies &dependencies,
+		std::size_t consumer,
+		const std::shared_ptr<EngineView::Output> &output,
+		std::uint64_t identity)
+	{
+		const auto found = std::ranges::find_if(captures, [&](const ViewCapture &candidate) {
+			return candidate.identity == identity && candidate.context.output == output;
+		});
+		if (found == captures.end())
+		{
+			throw spk::Exception("Material references an unavailable EngineView incarnation");
+		}
+		if (!found->context.active)
+		{
+			return _detachedSource(found->context);
+		}
+		dependencies.emplace_back(consumer, std::distance(captures.begin(), found));
+		return {EngineView::Source::Kind::Produced, output, found->finalTexture};
+	}
+
+	void Engine::_appendViewCommands(
+		RenderPass &pass, const std::vector<ViewCapture> &captures, ViewDependencies &dependencies)
+	{
+		for (std::size_t index = 0; index < captures.size(); ++index)
+		{
+			const auto &capture = captures[index];
+			if (!capture.context.active)
+			{
+				continue;
+			}
+			auto context = capture.context;
+			context.resolveSource = [&captures, &dependencies, index](
+										const std::shared_ptr<EngineView::Output> &output, std::uint64_t identity) {
+				return _sourceFromView(captures, dependencies, index, output, identity);
+			};
+			pass.append(_buildViewCommand(context, capture.finalTexture));
+		}
+	}
+
+	void Engine::_visitViewDependency(
+		std::size_t index, const ViewDependencies &dependencies, std::vector<int> &states)
+	{
+		if (states[index] == 1)
+		{
+			throw spk::Exception("Circular EngineView material dependency");
+		}
+		if (states[index] == 2)
+		{
+			return;
+		}
+		states[index] = 1;
+		for (const auto &[consumer, producer] : dependencies)
+		{
+			if (consumer == index)
+			{
+				_visitViewDependency(producer, dependencies, states);
+			}
+		}
+		states[index] = 2;
+	}
+
+	void Engine::_validateViewDependencies(std::size_t count, const ViewDependencies &dependencies)
+	{
+		std::vector<int> states(count, 0);
+		for (std::size_t index = 0; index < count; ++index)
+		{
+			_visitViewDependency(index, dependencies, states);
+		}
+		for (const auto &[consumer, producer] : dependencies)
+		{
+			if (producer >= consumer)
+			{
+				throw spk::Exception("EngineView producer must render before its consumer");
+			}
+		}
+	}
+
+	void Engine::_prepareViewCommands(RenderSnapshot::Builder &builder, std::vector<ViewCapture> &captures)
+	{
+		_allocateViewOutputs(captures);
+		ViewDependencies dependencies;
+		auto &pass = builder.renderPass({"sparkle.engine.views", 0});
+		_appendViewCommands(pass, captures, dependencies);
+		_validateViewDependencies(captures.size(), dependencies);
+	}
+
 	void Engine::refreshRenderSnapshot()
 	{
 		for (int attempt = 0; attempt < 16; ++attempt)
 		{
 			auto captures = _captureViews();
-			std::vector<std::pair<std::size_t, std::size_t>> dependencies;
 			RenderSnapshot::Builder builder;
-			auto &pass = builder.renderPass({"sparkle.engine.views", 0});
 			try
 			{
-				for (auto &capture : captures)
-				{
-					if (capture.context.active)
-					{
-						capture.finalTexture = Framebuffer::RenderAttachment::create2D(capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
-					}
-				}
-				for (std::size_t index = 0; index < captures.size(); ++index)
-				{
-					auto &capture = captures[index];
-					if (!capture.context.active)
-					{
-						continue;
-					}
-					auto context = capture.context;
-					context.resolveSource = [&](const std::shared_ptr<EngineView::Output> &output, std::uint64_t identity) {
-						const auto found = std::ranges::find_if(captures, [&](const ViewCapture &candidate) {
-							return candidate.identity == identity && candidate.context.output == output;
-						});
-						if (found == captures.end())
-						{
-							throw spk::Exception("Material references an unavailable EngineView incarnation");
-						}
-						const auto producer = static_cast<std::size_t>(std::distance(captures.begin(), found));
-						if (found->context.active)
-						{
-							dependencies.emplace_back(index, producer);
-							return EngineView::Source{EngineView::Source::Kind::Produced, output, found->finalTexture};
-						}
-						switch (found->context.detachedOutputPolicy)
-						{
-						case EngineView::DetachedOutputPolicy::Invalid:
-							throw spk::Exception("Material references an invalid detached EngineView");
-						case EngineView::DetachedOutputPolicy::KeepLastFrame:
-							return EngineView::Source{EngineView::Source::Kind::KeepLastFrame, output, {}};
-						case EngineView::DetachedOutputPolicy::DefaultTexture:
-							if (!found->context.fallbackTexture)
-							{
-								throw spk::Exception("Detached EngineView has no configured default texture");
-							}
-							return EngineView::Source{EngineView::Source::Kind::DefaultTexture, output, found->context.fallbackTexture};
-						}
-						throw spk::Exception("Unsupported detached EngineView output policy");
-					};
-					pass.append(_buildViewCommand(context, capture.finalTexture));
-				}
-				std::vector<int> states(captures.size(), 0);
-				std::function<void(std::size_t)> visit = [&](std::size_t index) {
-					if (states[index] == 1)
-					{
-						throw spk::Exception("Circular EngineView material dependency");
-					}
-					if (states[index] == 2)
-					{
-						return;
-					}
-					states[index] = 1;
-					for (const auto &[consumer, producer] : dependencies)
-					{
-						if (consumer == index)
-						{
-							visit(producer);
-						}
-					}
-					states[index] = 2;
-				};
-				for (std::size_t index = 0; index < captures.size(); ++index)
-				{
-					visit(index);
-				}
-				for (const auto &[consumer, producer] : dependencies)
-				{
-					if (producer >= consumer)
-					{
-						throw spk::Exception("EngineView producer must render before its consumer");
-					}
-				}
-			} catch (...)
+				_prepareViewCommands(builder, captures);
+			}
+			catch (...)
 			{
 				throw spk::Exception("Engine failed to build view snapshots", std::current_exception());
 			}
@@ -376,7 +420,7 @@ namespace spk
 		throw spk::Exception("EngineView collection changed repeatedly during capture");
 	}
 
-	std::shared_ptr<const RenderSnapshot> Engine::latestRenderSnapshot() const noexcept
+		std::shared_ptr<const RenderSnapshot> Engine::latestRenderSnapshot() const noexcept
 	{
 		return _renderSnapshot.acquireLatest();
 	}
