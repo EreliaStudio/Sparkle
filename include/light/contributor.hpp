@@ -11,12 +11,6 @@
 
 namespace spk::Light
 {
-	namespace detail
-	{
-		// Checked increment, independently testable without exhausting a live EngineHeadless.
-		[[nodiscard]] std::uint64_t nextRegistrationOrder(std::uint64_t previous);
-	}
-
 	class Contributor : public Component3D,
 						public Registry<Contributor, EngineHeadless *>::Object
 	{
@@ -63,6 +57,7 @@ namespace spk::Light
 		void setShadowResolution(std::uint32_t resolution);
 		// Zero denotes no current engine registration.
 		[[nodiscard]] std::uint64_t registrationOrder() const noexcept;
+		[[nodiscard]] static std::uint64_t nextRegistrationOrder(std::uint64_t previous);
 		[[nodiscard]] OnEditionContract subscribeToEdition(OnEditionCallback callback);
 	};
 }

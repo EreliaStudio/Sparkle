@@ -11,7 +11,7 @@
 
 namespace spk::Light
 {
-	std::uint64_t detail::nextRegistrationOrder(std::uint64_t previous)
+	std::uint64_t Contributor::nextRegistrationOrder(std::uint64_t previous)
 	{
 		if (previous == std::numeric_limits<std::uint64_t>::max())
 		{

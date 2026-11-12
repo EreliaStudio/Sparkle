@@ -14,7 +14,7 @@ namespace spk
 			this,
 			[this](EngineHeadless *const &, Light::Contributor *light) {
 				const std::scoped_lock lock(_lightRegistrationMutex);
-				const std::uint64_t nextOrder = Light::detail::nextRegistrationOrder(_lastLightRegistrationOrder);
+				const std::uint64_t nextOrder = Light::Contributor::nextRegistrationOrder(_lastLightRegistrationOrder);
 				light->_setRegistrationOrder(nextOrder);
 				_lastLightRegistrationOrder = nextOrder;
 			});

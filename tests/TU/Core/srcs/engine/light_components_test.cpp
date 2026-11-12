@@ -318,7 +318,7 @@ TEST(CoreLightTest, RegistrationOrdinalsAreStableAndEngineLocal)
 TEST(CoreLightTest, OrdinalExhaustionIsCheckedWithoutWrapping)
 {
 	constexpr std::uint64_t maximum = std::numeric_limits<std::uint64_t>::max();
-	EXPECT_EQ(spk::Light::detail::nextRegistrationOrder(0), 1u);
-	EXPECT_EQ(spk::Light::detail::nextRegistrationOrder(maximum - 1), maximum);
-	EXPECT_THROW(static_cast<void>(spk::Light::detail::nextRegistrationOrder(maximum)), spk::Exception);
+	EXPECT_EQ(spk::Light::Contributor::nextRegistrationOrder(0), 1u);
+	EXPECT_EQ(spk::Light::Contributor::nextRegistrationOrder(maximum - 1), maximum);
+	EXPECT_THROW(static_cast<void>(spk::Light::Contributor::nextRegistrationOrder(maximum)), spk::Exception);
 }
