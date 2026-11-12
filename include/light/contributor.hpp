@@ -11,6 +11,12 @@
 
 namespace spk::Light
 {
+	namespace detail
+	{
+		// Checked increment, independently testable without exhausting a live EngineHeadless.
+		[[nodiscard]] std::uint64_t nextRegistrationOrder(std::uint64_t previous);
+	}
+
 	class Contributor : public Component3D,
 						public Registry<Contributor, EngineHeadless *>::Object
 	{

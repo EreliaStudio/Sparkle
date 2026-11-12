@@ -11,6 +11,15 @@
 
 namespace spk::Light
 {
+	std::uint64_t detail::nextRegistrationOrder(std::uint64_t previous)
+	{
+		if (previous == std::numeric_limits<std::uint64_t>::max())
+		{
+			throw spk::Exception("EngineHeadless direct-light registration ordinal exhausted");
+		}
+		return previous + 1;
+	}
+
 	Contributor::Contributor(const std::string &name, bool castShadows) :
 		Component3D(name),
 		_castsShadows(castShadows)

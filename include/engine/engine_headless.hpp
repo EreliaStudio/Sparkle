@@ -1,7 +1,9 @@
 #pragma once
 
 #include <concepts>
+#include <cstdint>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include "engine/entity.hpp"
@@ -10,6 +12,10 @@
 
 namespace spk
 {
+	namespace Light
+	{
+		class Contributor;
+	}
 	struct UpdateContext;
 
 	class EngineHeadless : public SystemCollection
@@ -20,6 +26,9 @@ namespace spk
 
 		Entity _root;
 		spk::Rect2D _geometry{};
+		std::mutex _lightRegistrationMutex;
+		std::uint64_t _lastLightRegistrationOrder = 0;
+		Registry<Light::Contributor, EngineHeadless *>::OnEditionContract _lightAdditionContract;
 
 	public:
 		EngineHeadless();

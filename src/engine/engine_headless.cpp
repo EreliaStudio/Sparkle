@@ -1,12 +1,23 @@
 #include "engine/engine_headless.hpp"
 
 #include "core/context/update_context.hpp"
+#include "light/contributor.hpp"
+
+#include <mutex>
 
 namespace spk
 {
 	EngineHeadless::EngineHeadless() :
 		_root("EngineHeadless root")
 	{
+		_lightAdditionContract = Registry<Light::Contributor, EngineHeadless *>::instance().subscribeToAddition(
+			this,
+			[this](EngineHeadless *const &, Light::Contributor *light) {
+				const std::scoped_lock lock(_lightRegistrationMutex);
+				const std::uint64_t nextOrder = Light::detail::nextRegistrationOrder(_lastLightRegistrationOrder);
+				light->_setRegistrationOrder(nextOrder);
+				_lastLightRegistrationOrder = nextOrder;
+			});
 		_root.changeContext(this);
 	}
 
