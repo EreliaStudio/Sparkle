@@ -44,6 +44,7 @@
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
 #include "model3d/object.hpp"
+#include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/draw_color_mesh_render_command.hpp"
 #include "rendering/command/draw_font_render_command.hpp"

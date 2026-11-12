@@ -71,7 +71,7 @@ namespace spk
 
 	void Skybox::buildViewRenderSnapshot(
 		RenderSnapshot::Builder &builder,
-		const EngineView::CaptureContext &context)
+		const EngineView::CaptureContext &)
 	{
 		const auto captured = _resolve();
 		builder.renderPass(EngineView::SkyboxPassKey).emplace<DrawSkyboxCommand>(captured.albedo, captured.sections, context.projectionMatrix, context.viewMatrix);

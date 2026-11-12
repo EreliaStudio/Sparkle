@@ -379,6 +379,24 @@ TEST(SkyboxGPU, CameraTranslationDoesNotCauseParallaxAndRotationChangesImage)
 	gl.reset();
 }
 
+TEST(SkyboxGPU, AnOldSnapshotKeepsItsOriginalCameraAfterNewCapture)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto atlas = loadAtlas();
+	Scene scene;
+	populate(scene.skybox, atlas);
+	const auto previous = scene.capture();
+	render(scene, previous);
+	const auto original = gl.capture().pixels;
+	scene.cameraEntity.transform().setEulerRotation({0, -90, 0});
+	const auto changed = scene.capture();
+	render(scene, changed);
+	EXPECT_NE(gl.capture().pixels, original);
+	render(scene, previous);
+	EXPECT_EQ(gl.capture().pixels, original);
+	gl.reset();
+}
+
 TEST(SkyboxGPU, TwoOpaqueVoxelObjectsAppearInFrontOfSky)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();

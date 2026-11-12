@@ -8,7 +8,7 @@
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/state.hpp"
-#include "graphics/opengl/uniform.hpp"
+#include "rendering/command/camera_uniform_render_command.hpp"
 
 namespace spk
 {
@@ -53,6 +53,7 @@ namespace spk
 			Program program(
 				std::string(resources::text("shaders/skybox.vert.glsl")),
 				std::string(resources::text("shaders/skybox.frag.glsl")));
+			program.bindUniformBlock("CameraData", CameraUniformRenderCommand::BindingPoint);
 			program.bindSampler("uAlbedo", 0);
 			return program;
 		}();
@@ -70,24 +71,15 @@ namespace spk
 		return std::move(builder).build();
 	}
 
-	DrawSkyboxCommand::DrawSkyboxCommand(
-		Texture::Handle albedo,
-		const Sections &sections,
-		Matrix4x4 projection,
-		Matrix4x4 view) :
+	DrawSkyboxCommand::DrawSkyboxCommand(Texture::Handle albedo, const Sections &sections) :
 		_mesh(_buildMesh(sections)),
 		_program(_sharedProgram()),
-		_albedo(0, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
-		_projection(projection),
-		_viewRotation(view)
+		_albedo(0, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled)
 	{
 		if (!albedo)
 		{
 			throw spk::Exception("Skybox draw requires a valid albedo");
 		}
-		_viewRotation[3][0] = 0.0f;
-		_viewRotation[3][1] = 0.0f;
-		_viewRotation[3][2] = 0.0f;
 		_albedo.setTexture(std::move(albedo));
 		_albedo.validate();
 	}
@@ -99,8 +91,6 @@ namespace spk
 		OpenGL::State::Rasterization{.cullEnabled = false}.apply(context);
 		OpenGL::State::Blend::disabled(context).apply(context);
 		_program.activate(context);
-		Uniform<Matrix4x4>("uProjection", _projection).activate(context);
-		Uniform<Matrix4x4>("uViewRotation", _viewRotation).activate(context);
 		_albedo.activate(context);
 		_mesh.layout().activate(context);
 		_program.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());

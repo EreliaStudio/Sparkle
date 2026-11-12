@@ -40,7 +40,6 @@ namespace spk
 		ShaderStorageBuffer _materials;
 		ShaderStorageBuffer _materialRemap;
 		Sampler _albedo;
-		Matrix4x4 _viewProjection;
 
 		[[nodiscard]] static Program &_sharedProgram();
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
@@ -51,14 +50,12 @@ namespace spk
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
-			std::vector<Matrix4x4> models,
-			Matrix4x4 viewProjection);
+			std::vector<Matrix4x4> models);
 		DrawVoxelCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
-			Matrix4x4 model,
-			Matrix4x4 viewProjection);
+			Matrix4x4 model);
 
 		void execute(RenderContext &context) const override;
 	};

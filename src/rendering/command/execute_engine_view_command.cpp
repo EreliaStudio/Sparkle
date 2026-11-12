@@ -14,11 +14,13 @@ namespace spk
 		std::shared_ptr<const RenderSnapshot> snapshot,
 		std::shared_ptr<EngineView::Output> publisher,
 		std::shared_ptr<EngineView::Output::Targets> targets,
-		Texture::Handle finalTexture) :
+		Texture::Handle finalTexture,
+		CameraData camera) :
 		_snapshot(std::move(snapshot)),
 		_publisher(std::move(publisher)),
 		_targets(std::move(targets)),
-		_finalTexture(std::move(finalTexture))
+		_finalTexture(std::move(finalTexture)),
+		_camera(std::move(camera))
 	{
 		if (!_snapshot || !_publisher || !_targets || !_finalTexture)
 		{
@@ -33,6 +35,7 @@ namespace spk
 			_snapshot->execute(context);
 			return;
 		}
+		_camera.execute(context);
 		RenderToFramebufferCommand(_targets->opaque, _snapshot).execute(context);
 		if (glGetError() != GL_NO_ERROR)
 		{

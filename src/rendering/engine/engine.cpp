@@ -259,7 +259,8 @@ namespace spk
 		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(targets->hdr, targets->accumulation, targets->revealage, context.resolution, context.exposure);
 		auto snapshot = std::make_shared<const RenderSnapshot>(builder.build());
 		return std::make_unique<ExecuteEngineViewCommand>(
-			std::move(snapshot), context.output, targets, finalImage.texture());
+			std::move(snapshot), context.output, targets, finalImage.texture(),
+			CameraData{context.projectionMatrix, context.viewMatrix, context.inverseViewMatrix, context.viewProjectionMatrix});
 	}
 
 	bool Engine::_commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot)
