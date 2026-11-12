@@ -4,6 +4,7 @@
 #include <cmath>
 #include <utility>
 
+#include "core/context/render_context.hpp"
 #include "exception.hpp"
 #include "rendering/engine/engine.hpp"
 
@@ -80,41 +81,48 @@ namespace spk
 		return it == _frames.end() ? Texture::Handle{} : it->second.texture;
 	}
 
-	Texture::Handle EngineView::Output::latestFrame(Window::Surface &surface) const
-	{
-		std::lock_guard lock(_mutex);
-		const auto it = _frames.find(&surface);
-		return it == _frames.end() ? Texture::Handle{} : it->second.texture;
-	}
-
-	Texture::Handle EngineView::Source::onSurface(Window::Surface &surface) const
-	{
-		if (kind == Kind::DefaultTexture)
-		{
-			if (texture)
-			{
-				return texture;
-			}
-			throw spk::Exception("EngineView: default output texture is missing");
-		}
-		const auto frame = output ? output->latestFrame(surface) : Texture::Handle{};
-		if (kind == Kind::KeepLastFrame && frame)
-		{
-			return frame;
-		}
-		if (kind == Kind::Produced && frame && frame.identifier() == texture.identifier())
-		{
-			return texture;
-		}
-		throw spk::Exception("EngineView: requested output was not produced on this Surface");
-	}
-
 	void EngineView::Output::setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback)
 	{
 		std::lock_guard lock(_mutex);
 		_detached = detached;
 		_policy = policy;
 		_fallback = std::move(fallback);
+	}
+
+
+	EngineView::Texture::State::State(std::weak_ptr<Output> output) :
+		spk::Texture::State(spk::Texture::Target::Texture2D),
+		_output(std::move(output))
+	{
+	}
+
+	std::unique_ptr<GPUResource::State> EngineView::Texture::State::_clone() const
+	{
+		return std::make_unique<State>(_output);
+	}
+
+	void EngineView::Texture::State::_synchronize(GPUResource::Instance &, RenderContext &) const
+	{
+	}
+
+	void EngineView::Texture::State::_bind(GPUResource::Instance &, RenderContext &context) const
+	{
+		const auto output = _output.lock();
+		if (!output)
+		{
+			throw spk::Exception("EngineView texture source no longer exists");
+		}
+		const auto source = output->latest(*context.targetSurface);
+		if (!source)
+		{
+			throw spk::Exception("EngineView texture has no available frame on this Surface");
+		}
+		source.activate(context);
+	}
+
+	EngineView::Texture::Texture(std::weak_ptr<Output> output)
+	{
+		_setState(std::make_shared<State>(std::move(output)));
 	}
 
 	bool EngineView::CaptureContext::isLayerCompatible(const Layers &candidate) const
@@ -160,7 +168,6 @@ namespace spk
 		context.name = _name;
 		context.output = _output;
 		context.identity = _identity;
-		context.active = _camera != nullptr;
 		context.resolution = _resolution;
 		context.layers = _layers;
 		context.backgroundColor = _backgroundColor;
@@ -169,13 +176,10 @@ namespace spk
 		context.targetFPS = _targetFPS;
 		context.detachedOutputPolicy = _detachedOutputPolicy;
 		context.fallbackTexture = _fallbackTexture;
-		if (_camera != nullptr)
-		{
-			context.projectionMatrix = _camera->projectionMatrix();
-			context.viewMatrix = _camera->viewMatrix();
-			context.inverseViewMatrix = _camera->inverseViewMatrix();
-			context.viewProjectionMatrix = context.projectionMatrix * context.viewMatrix;
-		}
+		context.projectionMatrix = _camera->projectionMatrix();
+		context.viewMatrix = _camera->viewMatrix();
+		context.inverseViewMatrix = _camera->inverseViewMatrix();
+		context.viewProjectionMatrix = context.projectionMatrix * context.viewMatrix;
 		return context;
 	}
 
@@ -190,6 +194,11 @@ namespace spk
 	std::shared_ptr<EngineView::Output> EngineView::output() const noexcept
 	{
 		return _output;
+	}
+
+	const EngineView::Texture &EngineView::texture() const noexcept
+	{
+		return _texture;
 	}
 
 	CameraComponent3D *EngineView::camera() const noexcept
