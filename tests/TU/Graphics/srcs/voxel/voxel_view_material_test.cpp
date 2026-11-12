@@ -52,6 +52,25 @@ namespace
 		}
 	};
 
+
+	class BlueAtlas final : public spk::Texture
+	{
+	public:
+		BlueAtlas()
+		{
+			std::array<std::uint8_t, 4 * 4 * 4> pixels{};
+			for (std::size_t offset = 0; offset < pixels.size(); offset += 4)
+			{
+				pixels[offset] = 20;
+				pixels[offset + 1] = 90;
+				pixels[offset + 2] = 255;
+				pixels[offset + 3] = 255;
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {4, 4}, Format::RGBA);
+			validate();
+		}
+	};
+
 	[[nodiscard]] spk::Voxel::Geometry geometry(const std::string &shapeName)
 	{
 		spk::Voxel::Shape::Builder shapes;
@@ -407,5 +426,45 @@ TEST(VoxelViewMaterialGoldenTest, SecurityCameraVoxelScreenAfterResolutionChange
 	scene.producer->setResolution({80, 60});
 	drawMain(scene);
 	saveGolden("security_camera_voxel_screen_resized");
+	gl.reset();
+}
+
+TEST(VoxelViewMaterialGoldenTest, SecurityCameraTextureUpdatesAfterCameraMovement)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	RedAtlas red;
+	BlueAtlas blue;
+	Scene scene;
+	scene.configure(red);
+	scene.add("cube", appearance(blue), "security", {0.75f, -0.4f, -0.25f}, {}, {0.55f, 0.7f, 0.55f});
+
+	const auto textureIdentifier = scene.producer->texture().handle().identifier();
+	drawMain(scene);
+	const auto before = gl.capture();
+	const auto firstFrame = scene.producer->output()->latest(gl.surface());
+	ASSERT_TRUE(firstFrame);
+	saveGolden("security_camera_before_movement");
+
+	Scene::configureCamera(scene.securityCameraEntity, scene.securityCamera, {-2.7f, 1.3f, 2.6f});
+	drawMain(scene);
+	const auto after = gl.capture();
+	const auto secondFrame = scene.producer->output()->latest(gl.surface());
+	ASSERT_TRUE(secondFrame);
+	saveGolden("security_camera_after_movement");
+
+	EXPECT_NE(firstFrame.identifier(), secondFrame.identifier());
+	EXPECT_EQ(scene.producer->texture().handle().identifier(), textureIdentifier);
+	ASSERT_EQ(before.pixels.size(), after.pixels.size());
+	std::size_t changedPixels = 0;
+	for (std::size_t index = 0; index < before.pixels.size(); index += 4)
+	{
+		const auto difference = std::abs(static_cast<int>(before.pixels[index]) - static_cast<int>(after.pixels[index])) +
+			std::abs(static_cast<int>(before.pixels[index + 1]) - static_cast<int>(after.pixels[index + 1])) +
+			std::abs(static_cast<int>(before.pixels[index + 2]) - static_cast<int>(after.pixels[index + 2]));
+		changedPixels += difference > 30;
+	}
+	EXPECT_GT(changedPixels, 250u);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
 }
