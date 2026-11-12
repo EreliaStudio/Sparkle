@@ -2,10 +2,7 @@
 
 #include <algorithm>
 #include <array>
-#include <cstddef>
 #include <exception>
-#include <functional>
-#include <iterator>
 #include <limits>
 #include <ranges>
 #include <string>
@@ -186,7 +183,10 @@ namespace spk
 		std::vector<ViewCapture> captures;
 		for (const auto &view : _views)
 		{
-			captures.push_back({view->identity(), view->order(), view->_capture(), {}});
+			if (view->camera() != nullptr)
+			{
+				captures.push_back({view->identity(), view->order(), view->_capture()});
+			}
 		}
 		std::ranges::stable_sort(captures, [](const ViewCapture &a, const ViewCapture &b) {
 			if (a.order && b.order)
@@ -229,11 +229,12 @@ namespace spk
 		}
 	}
 
-	std::unique_ptr<const RenderCommand> Engine::_buildViewCommand(
-		const EngineView::CaptureContext &context, Texture::Handle finalTexture)
+	std::unique_ptr<const RenderCommand> Engine::_buildViewCommand(const EngineView::CaptureContext &context)
 	{
 		const auto targets = context.output->acquireTargets(context.resolution);
-		Framebuffer composed(context.resolution, std::vector<Texture::Handle>{finalTexture}, std::nullopt);
+		const auto finalImage = Framebuffer::RenderAttachment::create2D(
+			context.resolution, Texture::Format::SRGB8_ALPHA8);
+		Framebuffer composed(context.resolution, std::vector<Texture::Handle>{finalImage.texture()}, std::nullopt);
 
 		RenderSnapshot::Builder builder;
 		using Phase = EngineViewPassCommand::Phase;
@@ -258,7 +259,7 @@ namespace spk
 		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(targets->hdr, targets->accumulation, targets->revealage, context.resolution, context.exposure);
 		auto snapshot = std::make_shared<const RenderSnapshot>(builder.build());
 		return std::make_unique<ExecuteEngineViewCommand>(
-			std::move(snapshot), context.output, targets, std::move(finalTexture));
+			std::move(snapshot), context.output, targets, finalImage.texture());
 	}
 
 	bool Engine::_commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot)
@@ -277,134 +278,19 @@ namespace spk
 		return true;
 	}
 
-	void Engine::_allocateViewOutputs(std::vector<ViewCapture> &captures)
-	{
-		for (auto &capture : captures)
-		{
-			if (!capture.context.active)
-			{
-				continue;
-			}
-			capture.finalTexture = Framebuffer::RenderAttachment::create2D(capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
-		}
-	}
-
-	EngineView::Source Engine::_detachedSource(const EngineView::CaptureContext &context)
-	{
-		using Policy = EngineView::DetachedOutputPolicy;
-		using Kind = EngineView::Source::Kind;
-		switch (context.detachedOutputPolicy)
-		{
-		case Policy::Invalid:
-			throw spk::Exception("Material references an invalid detached EngineView");
-		case Policy::KeepLastFrame:
-			return {Kind::KeepLastFrame, context.output, {}};
-		case Policy::DefaultTexture:
-			if (!context.fallbackTexture)
-			{
-				throw spk::Exception("Detached EngineView has no configured default texture");
-			}
-			return {Kind::DefaultTexture, context.output, context.fallbackTexture};
-		}
-		throw spk::Exception("Unsupported detached EngineView output policy");
-	}
-
-	EngineView::Source Engine::_sourceFromView(
-		const std::vector<ViewCapture> &captures,
-		ViewDependencies &dependencies,
-		std::size_t consumer,
-		const std::shared_ptr<EngineView::Output> &output,
-		std::uint64_t identity)
-	{
-		const auto found = std::ranges::find_if(captures, [&](const ViewCapture &candidate) {
-			return candidate.identity == identity && candidate.context.output == output;
-		});
-		if (found == captures.end())
-		{
-			throw spk::Exception("Material references an unavailable EngineView incarnation");
-		}
-		if (!found->context.active)
-		{
-			return _detachedSource(found->context);
-		}
-		dependencies.emplace_back(consumer, std::distance(captures.begin(), found));
-		return {EngineView::Source::Kind::Produced, output, found->finalTexture};
-	}
-
-	void Engine::_appendViewCommands(
-		RenderPass &pass, const std::vector<ViewCapture> &captures, ViewDependencies &dependencies)
-	{
-		for (std::size_t index = 0; index < captures.size(); ++index)
-		{
-			const auto &capture = captures[index];
-			if (!capture.context.active)
-			{
-				continue;
-			}
-			auto context = capture.context;
-			context.resolveSource = [&captures, &dependencies, index](const std::shared_ptr<EngineView::Output> &output, std::uint64_t identity) {
-				return _sourceFromView(captures, dependencies, index, output, identity);
-			};
-			pass.append(_buildViewCommand(context, capture.finalTexture));
-		}
-	}
-
-	void Engine::_visitViewDependency(
-		std::size_t index, const ViewDependencies &dependencies, std::vector<int> &states)
-	{
-		if (states[index] == 1)
-		{
-			throw spk::Exception("Circular EngineView material dependency");
-		}
-		if (states[index] == 2)
-		{
-			return;
-		}
-		states[index] = 1;
-		for (const auto &[consumer, producer] : dependencies)
-		{
-			if (consumer == index)
-			{
-				_visitViewDependency(producer, dependencies, states);
-			}
-		}
-		states[index] = 2;
-	}
-
-	void Engine::_validateViewDependencies(std::size_t count, const ViewDependencies &dependencies)
-	{
-		std::vector<int> states(count, 0);
-		for (std::size_t index = 0; index < count; ++index)
-		{
-			_visitViewDependency(index, dependencies, states);
-		}
-		for (const auto &[consumer, producer] : dependencies)
-		{
-			if (producer >= consumer)
-			{
-				throw spk::Exception("EngineView producer must render before its consumer");
-			}
-		}
-	}
-
-	void Engine::_prepareViewCommands(RenderSnapshot::Builder &builder, std::vector<ViewCapture> &captures)
-	{
-		_allocateViewOutputs(captures);
-		ViewDependencies dependencies;
-		auto &pass = builder.renderPass({"sparkle.engine.views", 0});
-		_appendViewCommands(pass, captures, dependencies);
-		_validateViewDependencies(captures.size(), dependencies);
-	}
-
 	void Engine::refreshRenderSnapshot()
 	{
 		for (int attempt = 0; attempt < 16; ++attempt)
 		{
 			auto captures = _captureViews();
 			RenderSnapshot::Builder builder;
+			auto &pass = builder.renderPass({"sparkle.engine.views", 0});
 			try
 			{
-				_prepareViewCommands(builder, captures);
+				for (const auto &capture : captures)
+				{
+					pass.append(_buildViewCommand(capture.context));
+				}
 			} catch (...)
 			{
 				throw spk::Exception("Engine failed to build view snapshots", std::current_exception());
