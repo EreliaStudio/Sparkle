@@ -41,20 +41,23 @@ namespace
 		Atlas()
 		{
 			constexpr std::array<std::array<std::uint8_t, 3>, 6> colors{{{{255, 32, 32}}, {{32, 255, 32}}, {{32, 32, 255}}, {{255, 255, 32}}, {{255, 32, 255}}, {{32, 255, 255}}}};
-			std::array<std::uint8_t, 12 * 2 * 4> pixels{};
-			for (std::size_t y = 0; y < 2; ++y)
+			std::array<std::uint8_t, 96 * 16 * 4> pixels{};
+			for (std::size_t y = 0; y < 16; ++y)
 			{
-				for (std::size_t x = 0; x < 12; ++x)
+				for (std::size_t x = 0; x < 96; ++x)
 				{
-					const auto color = colors[x / 2];
-					const auto at = (y * 12 + x) * 4;
-					pixels[at] = color[0];
-					pixels[at + 1] = color[1];
-					pixels[at + 2] = color[2];
+					const auto color = colors[x / 16];
+					const bool white = x % 16 < 4 && y < 4;
+					const bool black = x % 16 >= 12 && y >= 12;
+					const auto at = (y * 96 + x) * 4;
+					for (std::size_t channel = 0; channel < 3; ++channel)
+					{
+						pixels[at + channel] = white ? 255 : (black ? 0 : color[channel]);
+					}
 					pixels[at + 3] = 255;
 				}
 			}
-			setPixels(std::span<const std::uint8_t>(pixels), {12, 2}, Format::RGBA);
+			setPixels(std::span<const std::uint8_t>(pixels), {96, 16}, Format::RGBA);
 			validate();
 		}
 	};
