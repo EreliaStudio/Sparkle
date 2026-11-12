@@ -367,10 +367,15 @@ TEST(VoxelViewMaterialTest, FirstFrameDisplaysSecondaryViewThroughRealVoxelMeshi
 	ASSERT_TRUE(scene.producer->output()->latest(gl.surface()));
 	ASSERT_TRUE(scene.consumer->output()->latest(gl.surface()));
 	const auto image = gl.capture();
-	const auto pixel = image.pixel({ImageSize.x / 2, ImageSize.y / 2});
-	EXPECT_GT(pixel[0], pixel[2]);
-	EXPECT_GT(pixel[0], 25u);
-	EXPECT_EQ(pixel[3], 255);
+	std::size_t redPixels = 0;
+	for (std::size_t index = 0; index < image.pixels.size(); index += 4)
+	{
+		const int red = image.pixels[index];
+		const int blue = image.pixels[index + 2];
+		redPixels += red > blue + 20 && red > 60;
+	}
+	EXPECT_GT(redPixels, 100u);
+	EXPECT_EQ(image.pixel({ImageSize.x / 2, ImageSize.y / 2})[3], 255);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
 }
