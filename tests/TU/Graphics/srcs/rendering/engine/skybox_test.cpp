@@ -181,6 +181,27 @@ namespace
 		const auto result = sparkle_test::compareImages(actual, expected, difference);
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " pixel differences";
 	}
+
+	void expectMarkerAboveFaceCenter()
+	{
+		const auto image = sparkle_test::OpenGLTestContext::instance().capture();
+		std::size_t markerPixels = 0;
+		std::size_t markerY = 0;
+		for (std::uint32_t y = 0; y < image.size.y; ++y)
+		{
+			for (std::uint32_t x = 0; x < image.size.x; ++x)
+			{
+				const auto *pixel = image.pixel({x, y});
+				if (pixel[0] > 150 && pixel[1] < 16 && pixel[2] > 150)
+				{
+					++markerPixels;
+					markerY += y;
+				}
+			}
+		}
+		ASSERT_GT(markerPixels, 0u) << "Missing magenta UV orientation marker";
+		EXPECT_LT(markerY, markerPixels * (image.size.y / 2)) << "Skybox face UVs are vertically inverted";
+	}
 }
 
 TEST(SkyboxTest, AtlasFixtureLoadsFromDisk)
@@ -352,6 +373,7 @@ TEST(SkyboxGPU, SixFacesAndCameraRotationUseRealOpenGL)
 		scene.cameraEntity.transform().setEulerRotation(orientation);
 		const auto captured = scene.capture();
 		render(scene, captured);
+		expectMarkerAboveFaceCenter();
 		golden(std::string("face_") + name);
 	}
 	scene.cameraEntity.transform().setEulerRotation({30.0f, -45.0f, 0.0f});

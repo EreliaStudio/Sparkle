@@ -29,10 +29,10 @@ namespace spk
 				return section.anchor + Vector2{x * section.size.x, y * section.size.y};
 			};
 			const Vector3 normal = -face.center;
-			const auto first = builder.addVertex({face.center - face.right + face.up, normal, at(0, 1)});
-			(void)builder.addVertex({face.center - face.right - face.up, normal, at(0, 0)});
-			(void)builder.addVertex({face.center + face.right - face.up, normal, at(1, 0)});
-			(void)builder.addVertex({face.center + face.right + face.up, normal, at(1, 1)});
+			const auto first = builder.addVertex({face.center - face.right + face.up, normal, at(0, 0)});
+			(void)builder.addVertex({face.center - face.right - face.up, normal, at(0, 1)});
+			(void)builder.addVertex({face.center + face.right - face.up, normal, at(1, 1)});
+			(void)builder.addVertex({face.center + face.right + face.up, normal, at(1, 0)});
 			const bool inward = face.right.cross(face.up).dot(normal) > 0.0f;
 			if (inward)
 			{
