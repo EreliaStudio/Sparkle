@@ -26,6 +26,150 @@
 
 namespace spk
 {
+	Engine::Engine()
+	{
+		auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance();
+		_lightAddition = lights.subscribeToAddition(this, [this](EngineHeadless *const &, Light::Contributor *light) {
+			_trackLight(*light);
+			_invalidateAllLightChannels();
+		});
+		_lightRemoval = lights.subscribeToRemoval(this, [this](EngineHeadless *const &, Light::Contributor *light) {
+			_lightContracts.erase(light);
+			_invalidateAllLightChannels();
+		});
+		for (Light::Contributor *light : lights.elements(this))
+		{
+			_trackLight(*light);
+		}
+
+		auto &transforms = Registry<Transform3D, EngineHeadless *>::instance();
+		_transformAddition = transforms.subscribeToAddition(this, [this](EngineHeadless *const &, Transform3D *transform) {
+			_trackTransform(*transform);
+			_onTransformChanged(*transform);
+		});
+		_transformRemoval = transforms.subscribeToRemoval(this, [this](EngineHeadless *const &, Transform3D *transform) {
+			_transformContracts.erase(transform);
+			_invalidateAllLightChannels();
+		});
+		for (Transform3D *transform : transforms.elements(this))
+		{
+			_trackTransform(*transform);
+		}
+
+		auto &entities = Registry<Entity, EngineHeadless *>::instance();
+		_entityAddition = entities.subscribeToAddition(this, [this](EngineHeadless *const &, Entity *entity) {
+			_trackEntity(*entity);
+		});
+		_entityRemoval = entities.subscribeToRemoval(this, [this](EngineHeadless *const &, Entity *entity) {
+			_entityContracts.erase(entity);
+		});
+		for (Entity *entity : entities.elements(this))
+		{
+			_trackEntity(*entity);
+		}
+	}
+
+	void Engine::_trackLight(Light::Contributor &light)
+	{
+		if (_lightContracts.contains(&light))
+		{
+			return;
+		}
+		LightContracts contracts;
+		contracts.edition = light.subscribeToEdition([this](const Light::Contributor &) {
+			_invalidateAllLightChannels();
+		});
+		contracts.activation = light.subscribeToActivation([this] {
+			_invalidateAllLightChannels();
+		});
+		contracts.deactivation = light.subscribeToDeactivation([this] {
+			_invalidateAllLightChannels();
+		});
+		_lightContracts.emplace(&light, std::move(contracts));
+	}
+
+	void Engine::_trackTransform(Transform3D &transform)
+	{
+		if (_transformContracts.contains(&transform))
+		{
+			return;
+		}
+		_transformContracts.emplace(&transform, transform.subscribeToEdition([this](const Transform3D &changed) {
+			_onTransformChanged(changed);
+		}));
+	}
+
+	void Engine::_trackEntity(Entity &entity)
+	{
+		if (_entityContracts.contains(&entity))
+		{
+			return;
+		}
+		EntityContracts contracts;
+		contracts.activation = entity.subscribeToActivation([this, &entity] {
+			_onEntityChanged(entity);
+		});
+		contracts.deactivation = entity.subscribeToDeactivation([this, &entity] {
+			_onEntityChanged(entity);
+		});
+		contracts.parent = entity.subscribeToParentEdition([this, &entity](const Entity *) {
+			_onEntityChanged(entity);
+		});
+		_entityContracts.emplace(&entity, std::move(contracts));
+	}
+
+	bool Engine::_isDescendantOf(const Entity *candidate, const Entity *ancestor) noexcept
+	{
+		for (const Entity *current = candidate; current != nullptr; current = current->parent())
+		{
+			if (current == ancestor)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void Engine::_invalidateAllLightChannels()
+	{
+		std::lock_guard lock(_viewMutex);
+		for (const auto &view : _views)
+		{
+			view->_lightChannel->invalidate();
+		}
+	}
+
+	void Engine::_onEntityChanged(const Entity &entity)
+	{
+		const auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance().elements(this);
+		for (const Light::Contributor *light : lights)
+		{
+			if (light->owner() != nullptr && _isDescendantOf(light->owner(), &entity))
+			{
+				_invalidateAllLightChannels();
+				break;
+			}
+		}
+
+		std::lock_guard lock(_viewMutex);
+		for (const auto &view : _views)
+		{
+			if (view->camera() != nullptr && view->camera()->owner() != nullptr &&
+				_isDescendantOf(view->camera()->owner(), &entity))
+			{
+				view->_lightChannel->invalidate();
+			}
+		}
+	}
+
+	void Engine::_onTransformChanged(const Transform3D &transform)
+	{
+		if (transform.owner() != nullptr)
+		{
+			_onEntityChanged(*transform.owner());
+		}
+	}
+
 	Engine::~Engine()
 	{
 		std::lock_guard lock(_viewMutex);
