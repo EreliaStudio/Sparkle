@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-12](PR-12-enginewidget-first-view.md), [PR-13](PR-13-voxel-render-first.md), [PR-17](PR-17-light-components.md), [PR-18](PR-18-light-channel.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+**Étendre** `Voxel::RenderingSystem`, `DrawVoxelCommand` et les shaders opaques de PR13 (SSBO instances/Materials/remap) avec la sélection de lumières PR18. Ne pas créer un second renderer/bucket manager. `EngineView::AmbientLight`, le HDR, l'exposition et Reinhard existent depuis PR10–12 ; les réutiliser et couvrir les golden images PR13 inchangées.
+
 ## Spécifications normatives
 
 - [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)
@@ -33,7 +37,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 
 ## Tests obligatoires
 
-- [ ] Golden un modèle sous Ambient seul puis Point/Spot/Directional
+- [ ] Golden une scène `Voxel::Renderer` PR13 sous Ambient seul puis Point/Spot/Directional, mêmes meshes
 - [ ] score/Top-N influence vue mais non une liste par objet
 - [ ] portée/angle/intensité
 - [ ] ambiance autre vue indépendante

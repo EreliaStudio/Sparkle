@@ -4,9 +4,13 @@
 >
 > **Branche source :** `impl/v0.1.4/26-integration-validation`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
 
-**Objectif :** Vérifier collectivement toutes les fonctionnalités sans introduire une nouvelle architecture. La base articulaire validée est `Model3D`, et le résultat du mesher est `Voxel::Geometry` (voir [l'état consolidé](IMPLEMENTED-01-08.md)).
+**Objectif :** Vérifier collectivement les fonctionnalités en conservant la base de rendu voxel **`Voxel::Geometry` + `Voxel::Renderer` + transformations ECS (PR13)**. `Model3D` PR08 reste générique et distinct de cette voie de production.
 
-**Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-08](PR-08-assembly-hierarchy.md), [PR-14](PR-14-assembly-render.md), [PR-15](PR-15-material-view-source.md), [PR-16](PR-16-skybox-component.md), [PR-19](PR-19-forward-lighting.md), [PR-20](PR-20-shadow-contributor.md), [PR-21](PR-21-shadowresults-surfaces.md), [PR-22](PR-22-shadowmaps-spot-directional.md), [PR-23](PR-23-point-cubemaps.md), [PR-24](PR-24-point-shadow-budget.md), [PR-25](PR-25-wboit-hdr.md)
+**Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-13](PR-13-voxel-render-first.md), [PR-15](PR-15-material-view-source.md), [PR-16](PR-16-skybox-component.md), [PR-19](PR-19-forward-lighting.md), [PR-20](PR-20-shadow-contributor.md), [PR-21](PR-21-shadowresults-surfaces.md), [PR-22](PR-22-shadowmaps-spot-directional.md), [PR-23](PR-23-point-cubemaps.md), [PR-24](PR-24-point-shadow-budget.md), [PR-25](PR-25-wboit-hdr.md)
+
+## Adaptation à la baseline PR13 (obligatoire)
+
+**La scène intégrée utilise `Voxel::Renderer` sur `Entity3D`**, y compris parties mobiles/armes attachées par parenté ECS, et la chaîne PR13. `Model3D::Blueprint` reste une API générique PR08, mais n'est pas une entrée du renderer voxel et **PR14 n'est pas un prérequis**. Vérifier les nouvelles fonctionnalités PR15–25 sur le rendu existant et conserver les goldens PR13.
 
 ## Spécifications normatives
 
@@ -24,7 +28,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] Scène intégrée `Model3D::Object` portant des géométries voxel rendues par PR-13/14, deux vues, Materials de vues, Skybox, Ambient/Point/Spot/Directional, ShadowMap statique/dynamique, WBOIT, HDR/Reinhard, deux surfaces et cycles resize/fermeture
+- [ ] Scène intégrée de volumes maillés en `Voxel::Geometry` avec `Voxel::Renderer` sur des `Entity3D` (dont parties parentées/armes via ECS), deux vues, Materials de vues, Skybox, Ambient/Point/Spot/Directional, casters `ShadowMap::Contributor` explicites (Static/Dynamic), voxel translucide WBOIT, HDR/Reinhard, deux surfaces et cycles resize/fermeture
 - [ ] documentation et packaging.
 
 ## Instructions techniques et intégration
@@ -36,7 +40,7 @@ Avant de coder, inspecter la forme **actuelle** des classes, constructions, test
 ## Tests obligatoires
 
 - [ ] Debug/Release et Core Windows/Linux
-- [ ] Golden-image scene intégrée revues humain
+- [ ] Golden-image de scène voxel ECS intégrée revues humain ; toutes les références PR13 restent valables
 - [ ] 2 fenêtres séparées et ordre de budget
 - [ ] resize/suppression de vues, vie GPU et snapshots en vol
 - [ ] compatibilité tests v0.1.3

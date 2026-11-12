@@ -6,7 +6,7 @@
 
 Le rendu 3D utilise le **Forward classique** avec sélection globale de lumières par EngineView. Aucun culling lumineux GPU par tile n’est requis.
 
-Un programme décrit des géométries élémentaires indépendantes de toute texture, les assemble en cellules d'un volume, puis construit un modèle maillé. Il choisit séparément les matériaux à utiliser et les associations de palettes. Les modèles peuvent être affichés directement ou composés en hiérarchies articulées. Le système de rendu rassemble les occurrences actives pour créer des commandes graphiques instanciées.
+Un programme décrit des géométries élémentaires indépendantes de toute texture, les assemble en cellules d'un volume, puis construit un modèle maillé. Il choisit séparément les matériaux et les palettes. **Depuis PR13**, des composants `Voxel::Renderer` sur des `Entity3D` avec parenting ECS composent des objets articulables par transformation ; le système de rendu collecte leurs occurrences en commandes instanciées. `Model3D` PR08 reste une bibliothèque générique distincte.
 
 **Q-TECH-002 — convention des longueurs (option B validée).** Dans la spécification Sparkle, les distances et longueurs spatiales s'expriment en **`U` (« unit », unité de monde générique)**. `1 U` n'a **aucune équivalence imposée** en mètres, centimètres ou autre mesure du monde réel ; chaque application choisit librement son échelle et doit garder ses coordonnées et distances cohérentes. Les translations et positions 3D, dimensions géométriques de meshes, portées lumineuses et distances caméra, plans de projection proche/lointain et paramètres de distance des ombres suivent cette convention. Les indices de cellule d'un volume voxel ne deviennent pas automatiquement des longueurs : seules leurs positions/dimensions spatiales une fois définies dans le monde sont exprimées en `U`. Les angles, facteurs sans dimension, pixels, texels, UV, tailles de buffers et profondeur GPU normalisée **ne se mesurent pas en `U`**. La notation `U` est **documentaire** : aucun nouveau type C++ d'unité ni conversion métrique implicite n'est requis.
 
@@ -19,11 +19,11 @@ flowchart LR
   Cache["Voxel::Occlusion::Cache"] -. facultatif .-> Mesher
   Material["spk::Material"] --> Palette["spk::Palette"]
   Palette --> Validation["Geometry::isCompatible"]
-  Geometry --> VoxelRender["PR-13 : rendu voxel futur"]
-  Palette --> VoxelRender
-  Blueprint["Model3D::Blueprint"] --> Headless["Model3D::ObjectHeadless"]
-  Headless --> Graphics["Model3D::Object<TGraphics>"] --> Snapshot["RenderSnapshot"]
-  VoxelRender -. PR14 .-> Graphics
+  Geometry --> VoxelRender["Voxel::Renderer / RenderingSystem (PR13)"]
+  Palette --> VoxelRender --> Snapshot["RenderSnapshot / EngineView"]
+  Blueprint["Model3D::Blueprint (PR08, indépendant)"] --> Headless["Model3D::ObjectHeadless"]
+  Headless --> Graphics["Model3D::Object<TGraphics> : vues génériques"]
+  Graphics --> Snapshot
 ```
 
 **Contrats effectivement livrés :**
@@ -32,7 +32,7 @@ flowchart LR
 - `Voxel::Mesher::bake(volume)` produit une `Voxel::Geometry` sans palette ni RenderCommand. `Geometry::isCompatible(palette)` vérifie ses slots.
 - `spk::Material` et `spk::Palette` sont indépendants de la géométrie ; `Voxel::Palette::Builder` vérifie l'albedo et l'atlas partagé.
 - `Model3D::Blueprint` décrit la structure immuable ; `ObjectHeadless` anime les attaches ; `Object<TGraphics>` génère les contributions graphiques génériques.
-- PR-09 à PR-12 préparent les EngineView et surfaces ; PR-13 dessinera les volumes ; PR-14 les intégrera dans la hiérarchie Model3D.
+- PR09–12 ont livré EngineView, surfaces et HDR/WBOIT générique. PR13 a livré le rendu voxel opaque texturé instancié avec `Voxel::Renderer`. PR14 a été retirée : aucun binding automatique `Model3D::Blueprint` → `Voxel::Renderer` en v0.1.4.
 
 ### Exemple de parcours utilisateur
 
@@ -59,5 +59,9 @@ if (!geometry.isCompatible(palette))
 {
     throw spk::Exception("Palette incompatible avec la géométrie");
 }
-// La liaison palette/occurrence et le dessin GPU sont prévus en PR-13/14.
+// Le rendu GPU existe depuis PR13 :
+// auto &renderer = entity.addComponent<spk::Voxel::Renderer>();
+// renderer.bind(geometry);
+// renderer.bind(palette);
+// Ajouter également spk::Voxel::RenderingSystem à l'Engine graphique.
 ```

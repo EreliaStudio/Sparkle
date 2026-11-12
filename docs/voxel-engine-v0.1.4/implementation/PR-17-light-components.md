@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-09](PR-09-rendering-engine-inheritance.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+Les objets voxel de la scène sont des `Entity3D` portant des `Voxel::Renderer` ; leurs transformations ECS suffisent. Les composants lumineux sont indépendants de `Model3D::Blueprint` : ne pas ajouter une seconde hiérarchie de scène ni un nouveau système de rendu voxel.
+
 ## Spécifications normatives
 
 - [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)

@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-06](PR-06-materials-json.md), [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md), [PR-13](PR-13-voxel-render-first.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+`EngineView::Output`, les textures finales tone-mappées et `Voxel::Renderer` existent déjà. Cette fiche ajoute uniquement la capacité des `Material` à référencer une sortie de vue avec les garanties de durée de vie et d'ordre des vues. Utiliser un objet voxel PR13 comme consommateur dans les tests ; **aucun renderer ou pipeline de rendu supplémentaire**.
+
 ## Spécifications normatives
 
 - [04-materiaux-textures-palettes.md](../04-materiaux-textures-palettes.md)

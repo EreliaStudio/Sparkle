@@ -24,11 +24,12 @@ Les copies d'ObjectHeadless dupliquent les états mutables et les sous-objets to
 `synchronize()` maintient un cache de vues par ElementNode. `buildRenderSnapshot(builder, transform)` synchronise et demande à chaque vue retenue de contribuer avec sa matrice cumulée. Une rotation ne recrée pas les vues.
 Un Object<TGraphics> utilise une seule spécialisation graphique. La ViewFactory hétérogène et l'auto-enregistrement sont des travaux futurs, non livrés par PR-08.
 
-### 6.4 Applications voxel futures
+### 6.4 Frontière entre Model3D générique et voxel PR13
 
-`Voxel::Volume` ne dérive pas lui-même de `Blueprint::Element`. Une classe d'élément dérivée pourra embarquer ou référencer un Volume ; ce type spécialisé de production n'existe pas encore.
-Les golden tests PR-08 utilisent `ColorVolume` et `ColorView` déclarés localement pour dessiner un personnage articulé et son épée. Ils valident Model3D et OpenGL, pas un renderer voxel de production.
-**PR-13** doit réaliser le rendu de `Voxel::Geometry` avec `spk::Palette`, atlas et commandes GPU. **PR-14** doit relier ce rendu aux occurrences articulées `Model3D` sans rebake lors de rotations.
-Les composants ECS, couches de filtrage, ombres et passes d'EngineView sont des objectifs des PR suivantes. Aucun `ModelRenderingComponent` ni `AssemblyRenderingComponent` des anciens plans n'est déjà implémenté.
+`Voxel::Volume` ne dérive pas de `Model3D::Blueprint::Element`. Les golden tests `ColorVolume`/`ColorView` de PR08 valident la hiérarchie `Model3D` générique et OpenGL, **pas** le pipeline voxel de production.
+
+PR13 a livré `Voxel::Mesher` → `Voxel::Geometry`, `spk::Palette`, `Voxel::Renderer` et `Voxel::RenderingSystem`. Les pièces voxel peuvent être composées à travers des `Entity3D` parentées et leurs `Transform3D`. Dans ses golden tests, les poses de personnages sont préparées comme volumes/géométries distincts ; l'épée est attachée par parenting ECS.
+
+**Décision après PR13 : PR14 retirée.** Aucun lien obligatoire `Model3D::Blueprint` → voxel renderer, aucune vue `ModelElementView` ou `Voxel::ModelRenderer` supplémentaire. Les API de PR08 restent disponibles pour d'autres usages graphiques. Les PR suivantes éclairent le même renderer voxel et lient leurs meshes d'ombres explicitement via `ShadowMap::Contributor`. Voir [PR14 retirée](implementation/PR-14-assembly-render.md).
 
 [État consolidé des PR-01 à PR-08](implementation/IMPLEMENTED-01-08.md)

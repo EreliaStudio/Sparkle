@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-17](PR-17-light-components.md), [PR-18](PR-18-light-channel.md), [PR-19](PR-19-forward-lighting.md), [PR-20](PR-20-shadow-contributor.md), [PR-21](PR-21-shadowresults-surfaces.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+Les meshes de profondeur sont fournis **explicitement** par `ShadowMap::Contributor`/`MeshInstance` PR20. `Voxel::Geometry::depthMesh()` peut fournir les données, mais ni le mesher ni `Voxel::Renderer` ne créent une passe d'ombres implicite. Étendre le même pipeline de lumières PR19 et préserver les draws opaques PR13.
+
 ## Spécifications normatives
 
 - [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)
@@ -27,7 +31,7 @@
 
 ## Instructions techniques et intégration
 
-Mesher visuel ne fournit jamais la passe d'ombres; le rendu depth n'a pas UV/alpha; movement Dynamic ne rebake que finale; géométrie historique de carte gardée avec matrices/projections; ancienne carte compatible en attendant; lumière éclaire sans ombre si pas de carte.
+Le mesher produit déjà `Voxel::Geometry::depthMesh()` mais ne contribue jamais automatiquement à la passe d'ombres ; le rendu depth n'a pas UV/alpha; movement Dynamic ne rebake que finale; géométrie historique de carte gardée avec matrices/projections; ancienne carte compatible en attendant; lumière éclaire sans ombre si pas de carte.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 

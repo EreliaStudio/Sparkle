@@ -38,7 +38,7 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 
 ## État de l'implémentation
 
-Les PR-01 à PR-08 sont fusionnées dans `V0.1.4`. Les API actuelles sont décrites dans [l'état consolidé](voxel-engine-v0.1.4/implementation/IMPLEMENTED-01-08.md). Les chapitres concernant PR-09 à PR-26 exposent des objectifs futurs, non des fonctionnalités existantes.
+Les PR01–PR13 sont fusionnées dans `V0.1.4`. **PR13 fournit le renderer voxel ECS de référence ; PR14 (adaptateur `Model3D`/voxel) est retirée ; PR15–PR26 sont les travaux futurs.** Voir [PR13 livrée](voxel-engine-v0.1.4/implementation/PR-13-voxel-render-first.md), [décision PR14](voxel-engine-v0.1.4/implementation/PR-14-assembly-render.md) et [état PR01–08](voxel-engine-v0.1.4/implementation/IMPLEMENTED-01-08.md).
 
 ## Préparation de l'implémentation
 

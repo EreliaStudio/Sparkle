@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-04](PR-04-voxel-mesher-model.md), [PR-09](PR-09-rendering-engine-inheritance.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+`Voxel::Geometry::depthMesh()` et `ShadowMap::Mesh` existent déjà dans la base. Construire `ShadowMap::Contributor` et ses bindings explicites en réutilisant ces classes, **sans caster implicite généré par `Voxel::Renderer`**. Les matrices proviennent des `Entity3D`/`Transform3D` ou de collections fournies explicitement par le jeu ; pas de couplage obligatoire à `Model3D` ni à PR14.
+
 ## Spécifications normatives
 
 - [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)
@@ -19,7 +23,7 @@
 
 ## Périmètre exact à réaliser
 
-- [ ] ShadowMap::Mesh position seule et factory extracteur si non déjà livrée PR03
+- [ ] Réutiliser `ShadowMap::Mesh` position seule et son extracteur existant, ne compléter que les fonctions manquantes
 - [ ] MeshInstance
 - [ ] MeshFilter collection + baseTransform
 - [ ] ShadowMode None/Static/Dynamic

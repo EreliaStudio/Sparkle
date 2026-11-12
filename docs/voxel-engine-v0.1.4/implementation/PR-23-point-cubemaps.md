@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-17](PR-17-light-components.md), [PR-21](PR-21-shadowresults-surfaces.md), [PR-22](PR-22-shadowmaps-spot-directional.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+L'extension cubemap utilise les casters `ShadowMap::MeshInstance` explicites, les ressources GPU par Surface PR11 et les résultats PR21. Aucun couplage direct avec `Model3D` et aucun nouveau renderer voxel ne sont requis.
+
 ## Spécifications normatives
 
 - [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)

@@ -1,37 +1,23 @@
-# PR-14 — Intégration du rendu voxel dans Model3D (à réaliser)
+# PR-14 — Retirée du plan v0.1.4 (intégration voxel/Model3D)
 
-> **Branche prévue :** `impl/v0.1.4/14-assembly-render` depuis la tête courante de `V0.1.4`, PR vers `V0.1.4`. Le nom de branche peut rester historique ; l'API ne doit pas l'être.
+> **Décision du 12 novembre 2026, après fusion de PR13.** Cette fiche reste consultable à titre historique : **pas de livraison PR14 prévue pour v0.1.4**.
 
-**Objectif :** réutiliser le rendu voxel de PR-13 pour les éléments articulés de `Model3D::Object`, sans remailler lorsqu'un AttachmentPoint tourne.
+## Pourquoi retirer cette PR ?
 
-**Prérequis :** [PR-08 — Model3D](PR-08-assembly-hierarchy.md), [PR-13 — rendu voxel](PR-13-voxel-render-first.md).
+[PR13 (#63)](https://github.com/EreliaStudio/Sparkle/pull/63) a déjà livré le chemin de production : `Voxel::Geometry`, `spk::Palette`, `Voxel::Renderer`, `Voxel::RenderingSystem`, `DrawVoxelCommand`, instancing, transformations d'`Entity3D`, EngineView et golden tests.
 
-## Spécifications
+Les parties d'un personnage et son arme peuvent être composées à l'aide des transformations et de la parenté ECS. Déplacer ou tourner un renderer réutilise son mesh sans rebake. **Un second chemin de rendu n'est pas nécessaire.**
 
-- [Architecture actuelle Model3D](../06-assemblies-scene.md)
-- [GPU, buckets et instancing](../09-pipeline-gpu-transparence.md)
-- [État PR-01 à PR-08](IMPLEMENTED-01-08.md)
-- [Contrats de validation](../10-contrats-et-validation.md)
+## Limites explicites
 
-## Périmètre attendu
+- `Model3D::Blueprint`, `ObjectHeadless` et `Object<TGraphics>` (PR08) restent des API génériques disponibles, indépendantes du renderer voxel.
+- **PR13 ne prend pas directement un `Model3D::Blueprint` en entrée.** Il rend `Voxel::Geometry` avec palette par `Voxel::Renderer` ; ne pas confondre les deux API.
+- Les golden tests PR13 construisent certaines **poses du personnage comme volumes/géométries distincts** et attachent l'épée avec des parents ECS. Il ne s'agit ni d'un animateur à keyframes ni du rendu direct de joints `Model3D`.
+- Ne pas introduire `Voxel::ModelElement`, `ModelElementView`, `ModelRenderer`, `RenderBatch` ou une deuxième architecture de rendu dans les PR15–PR26.
+- PR19 étend le rendu opaque pour les lumières ; PR20–24 ajoutent des shadows explicitement configurées ; PR25 apporte les draws voxel translucides dans le WBOIT/HDR existant ; PR26 valide le tout.
 
-- [ ] Définir un élément `Model3D::Blueprint::Element` portant ou référençant un `Voxel::Volume`, ou adapter un type utilisateur ; **`Voxel::Volume` n'hérite pas automatiquement de `Element`**.
-- [ ] Définir la vue graphique de cet élément respectant `Model3D::ObjectGraphics` ou une extension explicitement validée, et réutiliser les commandes voxel PR-13.
-- [ ] Capturer les transformations des `ElementNode` et sous-objets attachés avec la matrice commune fournie à `Object<TGraphics>::buildRenderSnapshot(builder, transform)`.
-- [ ] Mettre en cache les `Voxel::Geometry` indépendamment des poses ; nouvelle rotation = nouvelle matrice d'instance uniquement.
-- [ ] Configurer les palettes au niveau des occurrences graphiques, vérifier `Geometry::isCompatible`, et séparer les buckets lorsque nécessaire.
-- [ ] Conserver des snapshots graphiques autonomes, sans lire la pose mutable durant `RenderCommand::execute()`.
+## Branche expérimentale existante
 
-## Tests obligatoires
+La [PR GitHub #64](https://github.com/EreliaStudio/Sparkle/pull/64), en brouillon et **non fusionnée**, implémente l'ancien périmètre PR14. Elle ne devient **pas un prérequis technique** de la roadmap et ne doit pas être fusionnée au titre de ce plan. Sa fermeture administrative peut être effectuée séparément.
 
-- [ ] Golden 3D articulé avec **de vrais `Voxel::Volume`** (torse, bras, jambes, et objet attaché) ; comparer plusieurs poses.
-- [ ] Rotations parent/enfant non commutatives, et vérification que le même mesh est partagé entre deux occurrences.
-- [ ] Après rotation, aucun nouveau bake ; après remplacement de la géométrie, nouveau bake/capture nécessaires.
-- [ ] Deux palettes compatibles distinctes sur une même géométrie ; buckets séparés si atlas/mapping incompatibles.
-- [ ] Détachement/réattachement d'un sous-objet sans pixels fantômes ; anciens snapshots inchangés.
-
-## Hors périmètre
-
-Anciennes API `Voxel::Assembly`, `PartID`, reparentage par expansion, `AssemblyRenderingComponent` imposé, ombres automatiques, système d'animation temporelle.
-
-**Définition de terminé :** une hiérarchie `Model3D` rend des voxels texturés articulés avec instancing et cache de géométrie.
+**Point de départ des PR futures :** [PR13 livrée](PR-13-voxel-render-first.md), sur la branche `V0.1.4`.
