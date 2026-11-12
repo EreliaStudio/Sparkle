@@ -2,11 +2,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <ranges>
-#include <cstddef>
 #include <string>
 #include <utility>
 #include <vector>
@@ -290,8 +291,7 @@ namespace spk
 				{
 					if (capture.context.active)
 					{
-						capture.finalTexture = Framebuffer::RenderAttachment::create2D(
-							capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
+						capture.finalTexture = Framebuffer::RenderAttachment::create2D(capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
 					}
 				}
 				for (std::size_t index = 0; index < captures.size(); ++index)

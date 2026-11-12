@@ -52,8 +52,7 @@ namespace
 	[[nodiscard]] spk::Voxel::Geometry geometry(const std::string &shapeName)
 	{
 		spk::Voxel::Shape::Builder shapes;
-		shapes.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
+		shapes.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
 		spk::Voxel::Definition::SlotMapping mapping;
 		const auto shape = shapes.build();
 		for (const auto &slot : shape.slots())

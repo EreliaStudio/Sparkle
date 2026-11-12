@@ -29,7 +29,9 @@ namespace spk
 	}
 
 	std::vector<DrawVoxelCommand::MaterialData> DrawVoxelCommand::_resolveMaterials(
-		const Palette &palette, Texture::Handle &atlas, std::optional<EngineView::Source> &source,
+		const Palette &palette,
+		Texture::Handle &atlas,
+		std::optional<EngineView::Source> &source,
 		const EngineView::CaptureContext *context)
 	{
 		std::vector<MaterialData> result;

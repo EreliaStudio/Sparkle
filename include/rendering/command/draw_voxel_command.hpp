@@ -10,8 +10,8 @@
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
 #include "math/matrix.hpp"
-#include "rendering/render_command.hpp"
 #include "rendering/engine/engine_view.hpp"
+#include "rendering/render_command.hpp"
 #include "voxel/geometry.hpp"
 
 namespace spk
@@ -47,7 +47,9 @@ namespace spk
 
 		[[nodiscard]] static Program &_sharedProgram();
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
-			const Palette &palette, Texture::Handle &atlas, std::optional<EngineView::Source> &source,
+			const Palette &palette,
+			Texture::Handle &atlas,
+			std::optional<EngineView::Source> &source,
 			const EngineView::CaptureContext *context);
 
 	public:
