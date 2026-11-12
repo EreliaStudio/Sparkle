@@ -74,6 +74,26 @@ namespace spk
 			void setDetached(bool detached, DetachedOutputPolicy policy, Texture::Handle fallback);
 		};
 
+		class Texture final : public spk::Texture
+		{
+		private:
+			class State final : public spk::Texture::State
+			{
+			private:
+				std::weak_ptr<Output> _output;
+
+				[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override;
+				void _synchronize(GPUResource::Instance &, RenderContext &) const override;
+				void _bind(GPUResource::Instance &, RenderContext &context) const override;
+
+			public:
+				explicit State(std::weak_ptr<Output> output);
+			};
+
+		public:
+			explicit Texture(std::weak_ptr<Output> output);
+		};
+
 		struct CaptureContext
 		{
 			std::string name;
@@ -145,6 +165,7 @@ namespace spk
 		RGB _backgroundColor{};
 		AmbientLight _ambientLight;
 		std::shared_ptr<Output> _output = std::make_shared<Output>();
+		Texture _texture{_output};
 		float _exposure = 1.0f;
 		float _targetFPS = 60.0f;
 
@@ -162,6 +183,7 @@ namespace spk
 		[[nodiscard]] const std::string &name() const noexcept;
 		[[nodiscard]] std::uint64_t identity() const noexcept;
 		[[nodiscard]] std::shared_ptr<Output> output() const noexcept;
+		[[nodiscard]] const Texture &texture() const noexcept;
 		[[nodiscard]] CameraComponent3D *camera() const noexcept;
 		void setCamera(CameraComponent3D *camera) noexcept;
 		void detachCamera() noexcept;
