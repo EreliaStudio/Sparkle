@@ -178,8 +178,7 @@ namespace spk
 		context.cameraSnapshot = _camera->captureCamera();
 		context.projectionMatrix = context.cameraSnapshot.projectionMatrix();
 		context.viewMatrix = context.cameraSnapshot.viewMatrix();
-		context.inverseViewMatrix = Matrix4x4::translation(context.cameraSnapshot.position()) *
-			Matrix4x4::rotation(context.cameraSnapshot.rotation());
+		context.inverseViewMatrix = Matrix4x4::translation(context.cameraSnapshot.position()) * Matrix4x4::rotation(context.cameraSnapshot.rotation());
 		context.viewProjectionMatrix = context.projectionMatrix * context.viewMatrix;
 		return context;
 	}

@@ -61,8 +61,7 @@ namespace
 	{
 		expectMatrix(actual.projection, camera.projectionMatrix());
 		expectMatrix(actual.view, camera.viewMatrix());
-		expectMatrix(actual.inverseView,
-			spk::Matrix4x4::translation(camera.position()) * spk::Matrix4x4::rotation(camera.rotation()));
+		expectMatrix(actual.inverseView, spk::Matrix4x4::translation(camera.position()) * spk::Matrix4x4::rotation(camera.rotation()));
 		expectMatrix(actual.viewProjection, camera.viewProjectionMatrix());
 	}
 }
