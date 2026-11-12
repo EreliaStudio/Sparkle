@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-09](PR-09-rendering-engine-inheritance.md), [PR-10](PR-10-engineview-snapshot.md), [PR-17](PR-17-light-components.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+`EngineView::CaptureContext`, les layers et les snapshots immuables existent. La `Light::Selection` CPU est capturée pour la vue et sera consommée plus tard par **les `DrawVoxelCommand` de PR13**. PR14 ne constitue pas une dépendance.
+
 ## Spécifications normatives
 
 - [07-vues-et-passes.md](../07-vues-et-passes.md)

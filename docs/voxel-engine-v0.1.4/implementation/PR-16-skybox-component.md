@@ -8,6 +8,10 @@
 
 **Prérequis :** [PR-06](PR-06-materials-json.md), [PR-10](PR-10-engineview-snapshot.md), [PR-11](PR-11-gpu-attachments-surfaces.md), [PR-12](PR-12-enginewidget-first-view.md), [PR-15](PR-15-material-view-source.md)
 
+## Adaptation à la baseline PR13 (obligatoire)
+
+La passe Skybox est déjà définie et initialisée par `EngineView` depuis PR10–12. Ajouter seulement le composant et son dessin générique à six Materials ; réutiliser la source EngineView introduite en PR15. **Aucun Model3D ou adaptateur PR14 n'est nécessaire**.
+
 ## Spécifications normatives
 
 - [07-vues-et-passes.md](../07-vues-et-passes.md)
