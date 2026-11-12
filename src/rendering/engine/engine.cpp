@@ -417,7 +417,7 @@ namespace spk
 		throw spk::Exception("EngineView collection changed repeatedly during capture");
 	}
 
-		std::shared_ptr<const RenderSnapshot> Engine::latestRenderSnapshot() const noexcept
+	std::shared_ptr<const RenderSnapshot> Engine::latestRenderSnapshot() const noexcept
 	{
 		return _renderSnapshot.acquireLatest();
 	}
