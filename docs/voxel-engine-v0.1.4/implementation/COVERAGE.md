@@ -1,6 +1,6 @@
 # Couverture de la spécification par les 26 PR
 
-**État :** les capacités PR-01 à PR-08 sont implémentées sous les noms décrits dans [IMPLEMENTED-01-08.md](IMPLEMENTED-01-08.md). Les autres lignes désignent des objectifs futurs, non des API déjà disponibles.
+**État :** PR01–PR13 fusionnées. `Model3D` PR08 reste générique ; le renderer voxel PR13 utilise `Voxel::Renderer` et l'ECS. PR14 est retirée ; PR15–PR26 sont les objectifs futurs.
 
 | Contrat fonctionnel obligatoire | Référence normative | Fiche(s) |
 |---|---|---|
@@ -20,8 +20,9 @@
 | Texture render-target, Framebuffer attachments partagés, resize | [07](../07-vues-et-passes.md) | PR11 |
 | GPUResourceCollection, multi-surfaces, récupération GL et fermeture | [08](../08-lumieres-et-ombres.md) | PR11, PR21 |
 | EngineWidget rôles, fond opaque, exposition, Reinhard et sRGB | [07](../07-vues-et-passes.md) | PR12 |
-| Vue voxel/association `Geometry` + `Palette`, rendu opaque et SSBO/buckets | [09](../09-pipeline-gpu-transparence.md) | PR13 |
-| Intégration du rendu voxel aux éléments articulés `Model3D` | [06](../06-assemblies-scene.md) | PR14 |
+| `Voxel::Renderer` + `Voxel::RenderingSystem` : géométrie et palettes par occurrence, opaques, SSBO/buckets et instancing | [09](../09-pipeline-gpu-transparence.md) | PR13 (livrée) |
+| Scènes voxel avec poses et pièces attachées via transformations/parenté `Entity3D` | [06](../06-assemblies-scene.md), [10](../10-contrats-et-validation.md) | PR13 (livrée) |
+| Adaptation automatique de `Model3D::Blueprint` au renderer voxel | [06](../06-assemblies-scene.md) | **Hors périmètre v0.1.4 ; PR14 retirée** |
 | Material source EngineView, ordre/dépendances, sorties détachées | [07](../07-vues-et-passes.md) | PR15 |
 | Skybox six Materials unlit, composant, layers | [07](../07-vues-et-passes.md) | PR16 |
 | Point/Spot/Directional, Smoothstep, frustum, score, shadow params | [08](../08-lumieres-et-ombres.md) | PR17 |
@@ -32,7 +33,7 @@
 | ShadowMap::RenderingSystem, Spot/Directional et caches | [08](../08-lumieres-et-ombres.md) | PR22 |
 | Point cubemap depth et PCF 3x3 inter-faces | [08](../08-lumieres-et-ombres.md) | PR23 |
 | Point sélection X/Y/epsilon/h, budget/surface et évictions | [08](../08-lumieres-et-ombres.md) | PR24 |
-| WBOIT MRT RGBA16F/R8, depth partagé, transparence HDR | [09](../09-pipeline-gpu-transparence.md) | PR25 |
+| EngineView HDR/WBOIT générique déjà livré ; géométrie voxel translucide à intégrer sans réinventer la composition | [09](../09-pipeline-gpu-transparence.md) | PR12 (baseline), PR25 (extension voxel) |
 | Golden images, tests multi-surfaces, CI et packaging | [10](../10-contrats-et-validation.md) | Toutes ; PR26 intégration |
 
 **Améliorations exclues :** éviction automatique des caches par orientation Shape, Tiled Forward+, gestionnaire GPU parallèle, raffinement progressif des ombres, LRU des assets, réordonnancement automatique des vues.

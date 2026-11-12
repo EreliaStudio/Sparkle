@@ -1,6 +1,6 @@
-# Sparkle v0.1.4 — Dossier de préparation des 26 PR
+# Sparkle v0.1.4 — Roadmap après PR13 (26 fiches historiques)
 
-Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été fusionnées dans `V0.1.4`** ; leurs interfaces finales ont évolué. Les PR-09 à PR-26 sont à réaliser. Consulter [l'état consolidé des PR-01 à PR-08](IMPLEMENTED-01-08.md) avant de lancer une nouvelle PR.
+**PR01–PR13 fusionnées dans `V0.1.4` ; PR14 retirée du plan ; PR15–PR26 à réaliser.** Les API réellement fusionnées priment sur les préparations historiques. Voir [état PR01–08](IMPLEMENTED-01-08.md), [PR13 livrée](PR-13-voxel-render-first.md) et [décision de retrait PR14](PR-14-assembly-render.md).
 
 **Références :** [spécification normative](../../voxel-engine-v0.1.4-specification.md) · [PR documentaire #37](https://github.com/EreliaStudio/Sparkle/pull/37) · [dépendances](DEPENDENCIES.md) · [couverture des fonctionnalités](COVERAGE.md) · [prompt pour une IA](AI-HANDOFF.md).
 
@@ -21,7 +21,7 @@ Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été
 | [PR-11 — Attachments partagés et ressources GPU par Surface](PR-11-gpu-attachments-surfaces.md) | — | Rendre sûrs Texture/Framebuffer versionnés et la récupération GPU en multifenêtres. |
 | [PR-12 — EngineWidget et première EngineView visible](PR-12-enginewidget-first-view.md) | 09, 10, 11 | Afficher une vue et sa sortie HDR finale dans un widget sans dessin voxel. |
 | [PR-13 — Premier rendu voxel opaque](PR-13-voxel-render-first.md) | 04, 07, 10, 11, 12 | Dessiner une `Voxel::Geometry` texturée avec sa palette dans une EngineView. |
-| [PR-14 — Rendu voxel articulé Model3D](PR-14-assembly-render.md) | 08, 13 | Afficher des éléments voxel articulés dans `Model3D::Object` sans rebake. |
+| [PR-14 — retirée](PR-14-assembly-render.md) | — | Conserver le rendu de PR13 et les hiérarchies ECS ; pas de nouvel adaptateur voxel/Model3D. |
 | [PR-15 — EngineView comme source de Material](PR-15-material-view-source.md) | 06, 10, 11, 12, 13 | Permettre l'usage de la sortie finale d'une EngineView par un Material dans une autre vue. |
 | [PR-16 — Skybox unlit à six Materials](PR-16-skybox-component.md) | 06, 10, 11, 12, 15 | Ajouter un Skybox générique comme composant RenderingComponent3D ordinaire. |
 | [PR-17 — Point, Spot, Directional et scores](PR-17-light-components.md) | 09 | Introduire les sources lumineuses directes et leur mathématique CPU. |
@@ -33,11 +33,11 @@ Ce dossier rassemble les 26 lots du plan initial. **Les PR-01 à PR-08 ont été
 | [PR-23 — Cubemaps PointLight et PCF inter-faces](PR-23-point-cubemaps.md) | 11, 17, 21, 22 | Étendre les cartes statique/finale aux PointLight omnidirectionnelles. |
 | [PR-24 — Sélection et budget PointLight multi-vues](PR-24-point-shadow-budget.md) | 18, 21, 22, 23 | Limiter à chaque image/surface les reconstructions intégrales de cubemaps selon la priorité réelle. |
 | [PR-25 — WBOIT MRT et composition HDR complète](PR-25-wboit-hdr.md) | 11, 12, 13, 19 | Afficher des surfaces translucides avec une seule passe de géométrie et HDR jusqu'à la sortie. |
-| [PR-26 — Intégration complète et publication v0.1.4](PR-26-integration-validation.md) | 04, 08, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25 | Vérifier collectivement toutes les fonctionnalités sans introduire une nouvelle architecture. |
+| [PR-26 — Intégration complète et publication v0.1.4](PR-26-integration-validation.md) | 04, 13, 15, 16, 19, 20, 21, 22, 23, 24, 25 | Valider le rendu voxel PR13 avec les nouvelles lumières, ombres et transparences, sans Model3D obligatoire. |
 
 ## Règle Git — une branche indépendante par PR
 
-Chaque PR **restante** possède une **branche Git dédiée**, créée depuis la tête courante de `V0.1.4` **au moment de commencer** la fiche, et sa PR GitHub cible exclusivement `V0.1.4`.
+Chaque PR **restante (PR15–PR26)** possède une **branche Git dédiée**, créée depuis la tête courante de `V0.1.4` **au moment de commencer** la fiche, et sa PR GitHub cible exclusivement `V0.1.4`.
 
 1. Pour PR-XX, créer `impl/v0.1.4/XX-nom-de-fiche` **depuis `V0.1.4`**, après fusion dans `V0.1.4` de tous ses prérequis. Ne pas créer les 26 branches en avance.
 2. Développer et tester sur cette branche, puis ouvrir une unique PR `impl/v0.1.4/XX-nom-de-fiche` → **`V0.1.4`**. Ne jamais committer l'implémentation directement sur `V0.1.4` ou `main`.
@@ -51,8 +51,15 @@ Chaque PR **restante** possède une **branche Git dédiée**, créée depuis la 
 - Exécuter les tests CTest/GoogleTest pertinents en Debug et Release, Core Windows/Linux et Graphics Windows lorsque ces cibles sont touchées. Les images de référence nécessitent une revue humaine.
 - Réaliser une revue indépendante et obtenir accord du propriétaire pour chaque fusion.
 
-**Jalons :** PR01 huit Shape::Instance précalculées ; PR03 clipping et cache d'occlusion facultatif ; PR04 premier mesh ; PR12 première EngineView visible ; PR13 premier cube voxel texturé ; PR14 rendu voxel articulé Model3D ; PR19 premier éclairage ; PR22 première shadow map ; PR25 transparence ; PR26 intégration complète.
+**Jalons livrés :** PR01 Shape, PR03 occlusion, PR04 meshing, PR08 Model3D générique, PR12 EngineView/HDR et PR13 rendu voxel texturé/instancié (poses et armes via ECS). **Jalons restants :** PR15 sources EngineView dans Material, PR16 Skybox, PR17–19 éclairage, PR20–24 ombres, PR25 voxel translucide sur WBOIT existant, PR26 intégration. **PR14 n'est plus un jalon.**
 
 **Hors scope volontaire :** éviction automatique des caches de géométrie, raffinements adaptatifs d'ombres, Tiled Forward+, moteur de chunks, scheduling GPU global, optimisation SSBO incrémentale.
 
 **Ordre voxel révisé :** PR-01 crée les huit instances dans Shape ; PR-02 (Volume) et PR-03 (clipping + cache facultatif) peuvent ensuite avancer indépendamment ; PR-04 (Mesher + Geometry) attend les deux. Le Mesher sans cache recalcule seulement l'occlusion, jamais les orientations.
+
+## Décision de référence après PR13
+
+- Voie de production : `Voxel::Volume` → `Voxel::Mesher` → `Voxel::Geometry` + `spk::Palette` → `Voxel::Renderer` / `Voxel::RenderingSystem` → `EngineView`. Les parents et rotations ECS permettent déjà de composer des personnages et des armes.
+- `Model3D::Blueprint`, `ObjectHeadless`, `Object<TGraphics>` restent des API génériques indépendantes de PR08. **Un `Model3D::Blueprint` ne se lie pas directement à `Voxel::Renderer`**.
+- Pas de deuxième `Renderer`, `RenderBatch`, pipeline d'instancing, ou WBOIT/HDR dans les PR suivantes : étendre PR13 et la sortie EngineView existante pour éclairage/ombres/translucence.
+- La [PR GitHub #64](https://github.com/EreliaStudio/Sparkle/pull/64) est une expérimentation non fusionnée de l'ancien périmètre PR14 et ne constitue pas la baseline approuvée.
