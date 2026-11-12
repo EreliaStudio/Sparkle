@@ -41,6 +41,6 @@ Couplage direct à `Model3D` (PR14 retirée), dessins voxel translucides (PR25),
 
 - `Voxel::Renderer` associe une `Geometry` immuable et une `spk::Palette` à une `Entity3D`. `Voxel::RenderingSystem` collecte, vérifie layers et scale et émet des `DrawVoxelCommand` opaques instanciés par EngineView.
 - `Renderer::resolveMaterialRemap` calcule les indices de Materials au binding, le remap étant consommé par un SSBO dans le dessin existant ; changer la palette n'impose pas de rebake.
-- Les [golden tests de PR13](../../../../tests/TU/Graphics/srcs/voxel/voxel_scenes_golden_test.cpp) couvrent personnages, poses et arme par parenting ECS, maisons, matériaux et caméras. **Les poses du personnage sont rebakées comme géométries distinctes dans ces tests** : elles ne prouvent pas la consommation directe d'un `Model3D::Blueprint`.
+- Les [golden tests de PR13](../../../tests/TU/Graphics/srcs/voxel/voxel_scenes_golden_test.cpp) couvrent personnages, poses et arme par parenting ECS, maisons, matériaux et caméras. **Les poses du personnage sont rebakées comme géométries distinctes dans ces tests** : elles ne prouvent pas la consommation directe d'un `Model3D::Blueprint`.
 - `Model3D::Blueprint` (PR08) n'est pas une entrée de `Voxel::Renderer` ; aucune intégration supplémentaire n'est exigée en v0.1.4. [PR14 retirée](PR-14-assembly-render.md).
 - Les PR19 et PR25 étendent les shaders et le pipeline de dessin de PR13 plutôt que de les dupliquer ; les ombres PR20–24 sont fournies explicitement.
