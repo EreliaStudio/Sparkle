@@ -15,7 +15,7 @@ namespace spk::Voxel::Palette
 			const spk::Palette::Materials &existing)
 		{
 			const auto *albedo = material.find("albedo");
-			if (albedo == nullptr || !albedo->valid())
+			if (albedo == nullptr || !albedo->texture.valid())
 			{
 				throw spk::Exception("Voxel Palette: slot '" + std::string(name) + "' requires a valid albedo");
 			}
@@ -26,8 +26,8 @@ namespace spk::Voxel::Palette
 					continue;
 				}
 				const auto *otherAlbedo = other.find("albedo");
-				if (otherAlbedo == nullptr || !otherAlbedo->valid() ||
-					!otherAlbedo->sameSource(*albedo))
+				if (otherAlbedo == nullptr || !otherAlbedo->texture.valid() ||
+					otherAlbedo->texture.identifier() != albedo->texture.identifier())
 				{
 					throw spk::Exception("Voxel Palette: slot '" + std::string(name) + "' uses a different albedo atlas");
 				}
