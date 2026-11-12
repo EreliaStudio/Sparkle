@@ -32,7 +32,7 @@
 | [PR-22 — ShadowMap::RenderingSystem pour Spot/Directional](PR-22-shadowmaps-spot-directional.md) | 17, 18, 19, 20, 21 | Produire des ombres 2D avec caches depth statiques et finals, puis éclairer avec. |
 | [PR-23 — Cubemaps PointLight et PCF inter-faces](PR-23-point-cubemaps.md) | 11, 17, 21, 22 | Étendre les cartes statique/finale aux PointLight omnidirectionnelles. |
 | [PR-24 — Sélection et budget PointLight multi-vues](PR-24-point-shadow-budget.md) | 18, 21, 22, 23 | Limiter à chaque image/surface les reconstructions intégrales de cubemaps selon la priorité réelle. |
-| [PR-25 — WBOIT MRT et composition HDR complète](PR-25-wboit-hdr.md) | 11, 12, 13, 19 | Afficher des surfaces translucides avec une seule passe de géométrie et HDR jusqu'à la sortie. |
+| [PR-25 — Dessin voxel translucide sur WBOIT/HDR existants](PR-25-wboit-hdr.md) | 11, 12, 13, 19 | Ajouter les draws voxel translucides à la composition EngineView déjà livrée. |
 | [PR-26 — Intégration complète et publication v0.1.4](PR-26-integration-validation.md) | 04, 13, 15, 16, 19, 20, 21, 22, 23, 24, 25 | Valider le rendu voxel PR13 avec les nouvelles lumières, ombres et transparences, sans Model3D obligatoire. |
 
 ## Règle Git — une branche indépendante par PR

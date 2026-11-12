@@ -86,7 +86,7 @@ Cet inventaire résume les types et adaptations décrits dans les sections préc
 | `spk::Voxel::Mesher`, `Occlusion::Cache`, `Geometry` | Bake complet, clipping/occlusion déterministes, meshes opaques/translucides et depth immuables | §3 |
 | `spk::Material`, `SpriteSheet`, `spk::Palette`, `spk::Palette` | Association matériaux/slots et sources JSON structurées par rôles, références Asset::Manager typées, UV, identité logique d'atlas statique ou EngineView, validation déterministe | §4, §5, §7.1 |
 | `spk::Asset::Manager` / `Asset::Factory<T>` | Identités de chargement, factories, cycle de vie et détection de cycles | §5 |
-| `spk::Model3D::Blueprint` / `ObjectHeadless` / `Object<TGraphics>` | Hiérarchie structurelle partagée, pose Core et vues graphiques génériques ; rendu voxel spécialisé en PR-13/14 | §6 |
+| `spk::Model3D::Blueprint` / `ObjectHeadless` / `Object<TGraphics>` | Hiérarchie structurelle partagée, pose Core et vues génériques PR08, indépendantes du renderer voxel ECS PR13 (PR14 retirée) | §6 |
 | `VoxelRenderingSystem`, SSBO et `DrawVoxelBucketCommand` (**nom indicatif**) | Buckets instanciés, rendu voxel opaque et WBOIT ; **bindings SSBO fixés par pipeline, réactivation explicite de tous les buffers consommés avant chaque draw**, sans indices globalement réservés ; jamais de commandes de shadow maps | §7.5–7.8 |
 | Pipeline Forward classique et WBOIT | Top-N global par EngineView, Point/Spot communs, Directional hors quota, sélection partagée opaque/WBOIT, cibles HDR, exposition propre à la vue, composition et tone mapping unique, fond RGB puis Skybox Contributor à six Materials rendue unlit avant opaque, sans écrire depth ; sortie `GL_SRGB8_ALPHA8` après Reinhard | §7.8 |
 
@@ -108,7 +108,7 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 
 **Assets, Materials, Palettes et Model3D**
 
-- `Voxel::Mesher::bake(volume)` produit une `Geometry` **sans palette**. `Geometry::isCompatible(palette)` vérifie tous les noms de slots, y compris occultés, sans retenir la palette. La géométrie immuable peut être partagée ; PR-13 devra rendre possible une palette différente par occurrence graphique et refuser une association incompatible avant publication.
+- `Voxel::Mesher::bake(volume)` produit une `Geometry` **sans palette**. `Geometry::isCompatible(palette)` vérifie tous les noms de slots, y compris occultés, sans retenir la palette. La géométrie immuable peut être partagée ; PR13 a livré une palette par occurrence `Voxel::Renderer` et le refus des bindings incompatibles avant publication.
 - Une `spk::Palette` générique accepte les Materials sans `albedo` ; `spk::Voxel::Palette::Builder` exige `albedo` uniquement lors de l'ajout d'un Material. Ce Builder ne connaît aucun Geometry ni complétude ; son validateur compare les atlas à chaque ajout et son `build()` est le `build()` générique. Chaque `Geometry` vérifie via `isCompatible` seulement la présence de ses slots, y compris totalement occultés. Aucune palette n'enregistre l'opacité. Deux géométries peuvent avoir un slot homonyme avec opacités différentes et partager la même palette ; les conflits à l'intérieur d'un Geometry restent rejetés par le Mesher.
 
 - Deux `Asset::Manager::load<T>(id, config)` avec type, identifiant et JSON structurel identiques retournent la même référence, indépendamment de l'ordre textuel des clés JSON ; une configuration 16×16 et une 8×8 donnent deux assets distincts. L'absence de configuration équivaut à un **objet JSON vide**, et non à `Null`.
@@ -136,7 +136,7 @@ Ces scénarios transcrivent les comportements déjà définis dans ce document e
 - **Sous-objets dynamiques :** attacher deux instances à un même AttachmentPoint, en détacher une précisément, la réattacher ailleurs sans perdre les descendants, et rejeter cycles/objets étrangers.
 - **Copie et déplacement :** copier un ObjectHeadless partage la définition mais duplique la pose et les sous-objets ; déplacer préserve les nœuds internes conformément à leurs contrats.
 - **Cache graphique :** `Object<TGraphics>::synchronize()` conserve une vue lors d'une rotation, en retire une après détachement, construit les vues typées et permet un nouveau snapshot après échec ; aucun mesh voxel de production n'est présumé.
-- **Rendu voxel futur :** vérifier en PR-13 que l'alpha final et la classification opaque/translucide respectent les slots ; en PR-14 que les matrices articulées changent sans rebake, et que les snapshots antérieurs conservent leurs données.
+- **Rendu voxel PR13 (livré) :** couvrir l'opaque texturé, les slots, palettes, instancing, transformations d'occurrences `Entity3D`, golden images des poses/armes et snapshots historiques. Transformer une occurrence ECS ne rebake pas son mesh. **PR14 est retirée** : la consommation directe d'un `Model3D::Blueprint` n'est pas un critère de v0.1.4. Le dessin voxel translucide sera ajouté en PR25.
 
 **EngineView, snapshots, layers et multi-fenêtres**
 
