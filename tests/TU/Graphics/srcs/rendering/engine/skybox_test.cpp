@@ -198,7 +198,8 @@ namespace
 		}
 		if (!std::filesystem::exists(expected))
 		{
-			GTEST_SKIP() << "OpenGL capture awaits approved golden reference: " << actual;
+			ADD_FAILURE() << "Missing approved OpenGL golden reference: " << actual;
+			return;
 		}
 		const auto difference = sparkle_test::resultImagePath(category, name + "_difference");
 		const auto result = sparkle_test::compareImages(actual, expected, difference);
