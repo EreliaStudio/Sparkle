@@ -74,6 +74,6 @@ namespace spk
 		const EngineView::CaptureContext &)
 	{
 		const auto captured = _resolve();
-		builder.renderPass(EngineView::SkyboxPassKey).emplace<DrawSkyboxCommand>(captured.albedo, captured.sections, context.projectionMatrix, context.viewMatrix);
+		builder.renderPass(EngineView::SkyboxPassKey).emplace<DrawSkyboxCommand>(captured.albedo, captured.sections);
 	}
 }
