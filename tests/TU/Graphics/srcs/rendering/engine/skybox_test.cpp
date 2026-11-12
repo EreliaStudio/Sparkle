@@ -166,7 +166,7 @@ namespace
 		{
 			throw spk::Exception("Skybox test: missing final view output");
 		}
-		spk::Framebuffer framebuffer(output->size(), {output}, std::nullopt);
+		spk::Framebuffer framebuffer(output->size(), std::vector<spk::Texture::Handle>{output}, std::nullopt);
 		framebuffer.activate(gl.renderContext());
 		std::array<std::uint8_t, 4> pixel{};
 		glReadPixels(
