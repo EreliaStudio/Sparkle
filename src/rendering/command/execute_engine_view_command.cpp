@@ -15,12 +15,12 @@ namespace spk
 		std::shared_ptr<EngineView::Output> publisher,
 		std::shared_ptr<EngineView::Output::Targets> targets,
 		Texture::Handle finalTexture,
-		CameraData camera) :
+		const Camera3D &camera) :
 		_snapshot(std::move(snapshot)),
 		_publisher(std::move(publisher)),
 		_targets(std::move(targets)),
 		_finalTexture(std::move(finalTexture)),
-		_camera(std::move(camera))
+		_camera(camera)
 	{
 		if (!_snapshot || !_publisher || !_targets || !_finalTexture)
 		{

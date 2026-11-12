@@ -25,7 +25,7 @@ namespace spk
 			std::shared_ptr<EngineView::Output> publisher,
 			std::shared_ptr<EngineView::Output::Targets> targets,
 			Texture::Handle finalTexture,
-			CameraData camera);
+			const Camera3D &camera);
 
 		void execute(RenderContext &context) const override;
 	};

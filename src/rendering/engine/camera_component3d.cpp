@@ -52,6 +52,15 @@ namespace spk
 		return _projection.projectionMatrix();
 	}
 
+	Camera3D CameraComponent3D::captureCamera() const
+	{
+		_refreshViewCache();
+		Camera3D result = _projection;
+		result.setPosition(_cachedWorldPose->position);
+		result.setRotation(_cachedWorldPose->rotation);
+		return result;
+	}
+
 	const Matrix4x4 &CameraComponent3D::viewMatrix() const
 	{
 		_refreshViewCache();

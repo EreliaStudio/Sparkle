@@ -16,6 +16,7 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "graphics/image.hpp"
+#include "math/camera_3d.hpp"
 #include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/command/draw_voxel_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
@@ -34,10 +35,9 @@ namespace
 {
 	constexpr spk::Vector2UInt ImageSize{160, 120};
 
-	[[nodiscard]] spk::CameraUniformRenderCommand identityCamera()
+	[[nodiscard]] spk::CameraUniformRenderCommand defaultCamera()
 	{
-		const auto identity = spk::Matrix4x4::identity();
-		return spk::CameraUniformRenderCommand({identity, identity, identity, identity});
+		return spk::CameraUniformRenderCommand(spk::Camera3D{});
 	}
 
 	class TestAtlas final : public spk::Texture
@@ -313,7 +313,7 @@ TEST(VoxelRendererTest, InstanceMatricesAreUploadedInStd430Order)
 		makePalette(atlas, spk::Texture::Section::whole),
 		{0u},
 		models);
-	const auto camera = identityCamera();
+	const auto camera = defaultCamera();
 	camera.execute(gl.renderContext());
 	command.execute(gl.renderContext());
 
@@ -392,7 +392,7 @@ TEST(VoxelRendererTest, SingleDrawCommandRebindsMaterialBuffersAfterThirdParty)
 		palette,
 		{0u},
 		spk::Matrix4x4::identity());
-	const auto camera = identityCamera();
+	const auto camera = defaultCamera();
 	camera.execute(gl.renderContext());
 	command.execute(gl.renderContext());
 	GLint sampler = 0;
