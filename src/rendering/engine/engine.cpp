@@ -285,8 +285,7 @@ namespace spk
 			{
 				continue;
 			}
-			capture.finalTexture =
-				Framebuffer::RenderAttachment::create2D(capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
+			capture.finalTexture = Framebuffer::RenderAttachment::create2D(capture.context.resolution, Texture::Format::SRGB8_ALPHA8).texture();
 		}
 	}
 
@@ -343,8 +342,7 @@ namespace spk
 				continue;
 			}
 			auto context = capture.context;
-			context.resolveSource = [&captures, &dependencies, index](
-										const std::shared_ptr<EngineView::Output> &output, std::uint64_t identity) {
+			context.resolveSource = [&captures, &dependencies, index](const std::shared_ptr<EngineView::Output> &output, std::uint64_t identity) {
 				return _sourceFromView(captures, dependencies, index, output, identity);
 			};
 			pass.append(_buildViewCommand(context, capture.finalTexture));
@@ -407,8 +405,7 @@ namespace spk
 			try
 			{
 				_prepareViewCommands(builder, captures);
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception("Engine failed to build view snapshots", std::current_exception());
 			}
