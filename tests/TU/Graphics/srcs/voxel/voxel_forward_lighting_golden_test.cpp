@@ -277,6 +277,22 @@ TEST(VoxelForwardLightingGolden, SpotHasVisibleCone)
 	expectGolden(scene, "spot_visible_cone");
 }
 
+TEST(VoxelForwardLightingGolden, ObliqueSpotCastsRoundedOvalAcrossDifferentShapes)
+{
+	Scene scene;
+	// Shine diagonally across the floor, rather than straight down: the
+	// projected cone becomes an elongated, rounded oval around all three shapes.
+	scene.view.ambientLight().setIntensity(0.07f);
+	auto &spot = scene.addLight<spk::Light::Spot>(
+		{4.0f, 2.8f, 2.5f},
+		{0.0f, -1.2f, -0.6f},
+		{1.0f, 0.9f, 0.72f},
+		9.0f,
+		11.5f);
+	spot.setAngle(0.29f);
+	expectGolden(scene, "spot_oblique_oval_cube_stair_slope");
+}
+
 TEST(VoxelForwardLightingGolden, TwoViewsHaveIndependentAmbientOnSameObjects)
 {
 	Scene scene;
