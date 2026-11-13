@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -12,13 +13,17 @@
 #include <vector>
 
 #include "container/json/object.hpp"
+#include "core/platform/window.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
+#include "graphics/opengl/framebuffer.hpp"
 #include "graphics/image.hpp"
 #include "light/directional.hpp"
 #include "light/point.hpp"
 #include "light/spot.hpp"
+#include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/command/draw_engine_view_command.hpp"
+#include "rendering/command/draw_voxel_command.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
@@ -322,4 +327,51 @@ TEST(VoxelForwardLightingGolden, PreviousCaptureRetainsLightsAndAmbientAfterMuta
 	ASSERT_NE(current, nullptr);
 	expectGolden(*old, scene.view, "capture_before_mutation");
 	expectGolden(*current, scene.view, "capture_after_mutation");
+}
+
+TEST(VoxelForwardLightingIntegration, RenderTargetPreservesHDRAboveOneBeforeToneMapping)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	Scene scene;
+
+	const auto hdr = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::RGBA16F);
+	const auto depth = spk::Framebuffer::RenderAttachment::create2D(ImageSize, spk::Texture::Format::Depth24Stencil8);
+	spk::Framebuffer target(ImageSize, std::vector<spk::Texture::Handle>{hdr.texture()}, depth.texture());
+	const spk::Window::Surface::RenderTarget binding(gl.surface(), target.handle());
+	binding.activate(gl.renderContext());
+	gl.renderContext().activeRenderTarget = binding;
+	glViewport(0, 0, static_cast<GLsizei>(ImageSize.x), static_cast<GLsizei>(ImageSize.y));
+	const GLfloat black[]{0.0f, 0.0f, 0.0f, 1.0f};
+	glClearBufferfv(GL_COLOR, 0, black);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	const spk::Vector3 eye{6.0f, 4.2f, 8.0f};
+	spk::Camera3D camera;
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 40.0f);
+	const auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
+	const auto illumination = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{8.0f, 8.0f, 8.0f});
+	spk::DrawVoxelCommand draw(
+		scene.cube,
+		palette(scene.atlas, 0),
+		{0u},
+		spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
+		illumination,
+		cameraBinding);
+	draw.execute(gl.renderContext());
+
+	hdr.texture().activate(gl.renderContext());
+	std::vector<float> pixels(static_cast<std::size_t>(ImageSize.x) * ImageSize.y * 4);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+	float brightest = 0.0f;
+	for (std::size_t i = 0; i < pixels.size(); i += 4)
+	{
+		brightest = std::max(brightest, std::max(pixels[i], std::max(pixels[i + 1], pixels[i + 2])));
+	}
+	EXPECT_GT(brightest, 1.0f) << "Opaque lighting was clamped before the final Reinhard pass";
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	gl.reset();
 }

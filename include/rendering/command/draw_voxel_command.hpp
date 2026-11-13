@@ -10,8 +10,8 @@
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
 #include "lighting/system.hpp"
-#include "rendering/command/camera_uniform_render_command.hpp"
 #include "math/matrix.hpp"
+#include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/render_command.hpp"
 #include "voxel/geometry.hpp"
 
