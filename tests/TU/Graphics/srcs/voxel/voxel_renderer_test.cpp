@@ -14,6 +14,7 @@
 #include "container/json/object.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
+#include "light/directional.hpp"
 #include "exception.hpp"
 #include "graphics/image.hpp"
 #include "math/camera_3d.hpp"
@@ -112,6 +113,7 @@ namespace
 	{
 		spk::Engine engine;
 		spk::Entity3D cameraEntity{"camera"};
+		spk::Entity3D sunEntity{"PR13 golden sunlight"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
 		spk::EngineView &view;
 		spk::Voxel::RenderingSystem &system;
@@ -121,6 +123,11 @@ namespace
 			view(_createView()),
 			system(engine.addSystem<spk::Voxel::RenderingSystem>())
 		{
+			sunEntity.transform().setRotation(spk::Quaternion::lookAt({0, 0, 0}, {-0.35f, -0.85f, -0.45f}));
+			auto &sun = sunEntity.addComponent<spk::Light::Directional>();
+			sun.setIntensity(0.62f);
+			engine.addEntity(&sunEntity);
+			view.ambientLight().setIntensity(0.38f);
 		}
 
 		spk::EngineView &_createView()
@@ -156,6 +163,7 @@ namespace
 			{
 				engine.removeEntity(entity.get());
 			}
+			engine.removeEntity(&sunEntity);
 			engine.removeEntity(&cameraEntity);
 		}
 
