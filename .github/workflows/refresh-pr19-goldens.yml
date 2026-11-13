@@ -1,0 +1,48 @@
+name: Refresh PR19 golden references (temporary)
+
+on:
+  push:
+    branches:
+      - impl/v0.1.4/19-forward-lighting
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  refresh-pr19-goldens:
+    if: github.event.head_commit.message == 'chore: stage PR19 golden refresh'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out PR19 branch
+        uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/19-forward-lighting
+          persist-credentials: true
+      - name: Download golden captures from validated CI run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43420685530
+          name: graphics-unit-tests-Debug
+          github-token: ${{ github.token }}
+          path: _pr19_golden_capture
+      - name: Commit provisional golden references
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="_pr19_golden_capture/tests/TU/Graphics/results/rendering/forward-lighting"
+          target_dir="tests/TU/Graphics/resources/expectedImages/rendering/forward-lighting"
+          test -d "$source_dir"
+          mapfile -d '' images < <(find "$source_dir" -maxdepth 1 -type f -name '*.png' ! -name '*_difference.png' -print0)
+          test "${#images[@]}" -eq 36
+          mkdir -p "$target_dir"
+          for file in "${images[@]}"; do
+            cp "$file" "$target_dir/$(basename "$file")"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A "$target_dir"
+          git diff --cached --stat
+          test "$(git diff --cached --name-only | wc -l)" -eq 36
+          git commit -m "test(graphics): update 36 forward-lighting goldens for review"
+          git push origin HEAD:impl/v0.1.4/19-forward-lighting
