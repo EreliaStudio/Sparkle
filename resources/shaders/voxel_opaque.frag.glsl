@@ -59,12 +59,13 @@ float spotAttenuation(vec3 direction, vec3 toReceiver, float cosineEdge)
 void main()
 {
 	MaterialSection section = sections[paletteIndices[materialIndex]];
-	vec2 halfTexel = 0.5 / vec2(textureSize(uAlbedo, 0));
-	vec2 inset = min(halfTexel, section.size * 0.5);
+	vec2 atlasSize = vec2(textureSize(uAlbedo, 0));
+	vec2 firstTexel = floor(section.anchor * atlasSize);
+	vec2 lastTexel = max(firstTexel, ceil((section.anchor + section.size) * atlasSize) - 1.0);
 	vec2 uv = clamp(
 		section.anchor + vertexUV * section.size,
-		section.anchor + inset,
-		section.anchor + section.size - inset);
+		(firstTexel + 0.5) / atlasSize,
+		(lastTexel + 0.5) / atlasSize);
 	vec4 albedo = texture(uAlbedo, uv);
 	if (albedo.a <= 0.0)
 	{

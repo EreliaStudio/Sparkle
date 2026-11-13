@@ -381,6 +381,48 @@ TEST(VoxelRendererTest, NearestAtlasSamplingStaysInsideOneTexelSections)
 	gl.reset();
 }
 
+TEST(VoxelRendererTest, TexelInsetAtlasSectionsPreserveTheirBorderTexels)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	EdgeAtlas atlas;
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+
+	spk::Camera3D camera;
+	const spk::Vector3 eye{2, 2, 4};
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+	const auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
+
+	spk::DrawVoxelCommand command(
+		cubeGeometry(),
+		makePalette(atlas, {{0.5f / 8.0f, 0.0f}, {3.0f / 8.0f, 1.0f}}),
+		{0u},
+		spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
+		lighting,
+		cameraBinding);
+	command.execute(gl.renderContext());
+
+	const auto image = gl.capture();
+	std::size_t redBorderPixels = 0;
+	std::size_t cyanInteriorPixels = 0;
+	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
+		{
+			const auto *pixel = image.pixel({x, y});
+			redBorderPixels += pixel[0] > 100 && pixel[1] < 10 && pixel[2] < 10;
+			cyanInteriorPixels += pixel[0] < 10 && pixel[1] > 100 && pixel[2] > 100;
+		}
+	}
+	EXPECT_GT(redBorderPixels, 30u);
+	EXPECT_GT(cyanInteriorPixels, 100u);
+	gl.requireNoErrors();
+	gl.reset();
+}
+
 TEST(VoxelRendererTest, DrawCommandRejectsMissingLighting)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
