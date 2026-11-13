@@ -37,11 +37,6 @@ namespace
 {
 	constexpr spk::Vector2UInt ImageSize{160, 120};
 
-	[[nodiscard]] spk::CameraUniformRenderCommand defaultCamera()
-	{
-		return spk::CameraUniformRenderCommand(spk::Camera3D{});
-	}
-
 	class TestAtlas final : public spk::Texture
 	{
 	public:
