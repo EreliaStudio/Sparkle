@@ -11,8 +11,11 @@
 
 Ajouter des animations déterministes et réutilisables à `spk::Model3D`, sans dépendre d'OpenGL ni déplacer automatiquement la transformation ECS de l'entité.
 
+Pour la première version, chaque définition d'animation est conçue pour un modèle précis et ses noms d'éléments/articulations. Aucun mécanisme générique de retargeting inter-modèles n'est requis.
+
 Cas d'usage prioritaires :
 - faire marcher un personnage en animant ses articulations ;
+- faire marcher et saluer le personnage simultanément en composant deux animations sur des canaux compatibles ;
 - le faire saluer par une rotation de bras ;
 - réaliser un squat en abaissant des éléments du modèle et en pliant les jambes, **sans modifier la position de l'entité** ;
 - modifier localement les proportions/tailles d'éléments ;
@@ -159,15 +162,21 @@ Le résultat d'une animation à un instant donné doit dépendre du **temps de l
 
 Ce choix détermine la reproductibilité à temps arbitraire, la compatibilité avec des changements manuels de pose et les éventuels conflits entre animations. Il faut fixer une règle commune avant les signatures définitives.
 
-## 8. Animations simultanées — question ouverte
+## 8. Animations simultanées — décision validée le 13/11/2026
 
-Cas soulevé : **marcher tout en saluant**.
+**La première version doit autoriser plusieurs animations actives simultanément** pour composer des gestes complexes sans devoir redéfinir toutes leurs combinaisons.
 
-Deux orientations possibles, à arbitrer :
-1. une animation active à la fois (première version plus simple) ;
-2. plusieurs animations simultanées ciblant des canaux distincts, avec politique explicite pour les conflits.
+Exemple : jouer une animation `walk` qui anime les jambes et une animation `wave` qui anime un bras. Chaque clip conserve son temps de lecture et ses canaux propres ; `Animator` évalue la pose résultante pour l'`ObjectHeadless` cible.
 
-Ne pas introduire silencieusement du blending, des layers, des priorités ou des masques tant que ce besoin n'est pas approuvé. Une politique de composition des canaux est indispensable si l'option 2 est retenue.
+**Décidé :** les canaux non contradictoires de plusieurs animations peuvent être appliqués ensemble. Une animation ne doit pas écraser arbitrairement les propriétés qu'elle ne contrôle pas.
+
+**Encore à arbitrer :** quand deux animations veulent piloter la **même propriété du même nœud** (par exemple la rotation de l'épaule), faut-il refuser le chevauchement, donner une priorité explicite, ou faire un mélange pondéré ? Ne pas créer implicitement un système de layers, masques ou blending tant que cette règle n'est pas validée.
+
+### Portabilité des clips — reportée
+
+Idée exploratoire : décrire des intentions sémantiques (`bite`, `walk`, etc.) indépendamment des noms d'articulations, pour pouvoir utiliser une animation `bite` sur plusieurs morphologies. Par exemple, une morsure pourrait comprendre : ouvrir la mâchoire, avancer la tête, fermer la mâchoire, reculer la tête. En revanche, une marche de quadrupède et une marche de bipède exigent des réalisations différentes.
+
+**Ce n'est pas dans le périmètre de la première version.** Pour PR27, une `Animation` cible les éléments et points d'attachement **d'un modèle précis**, selon leurs identifiants existants. L'`Animator` anime ce modèle. Aucun tag sémantique, rôle de squelette, mapping d'articulations ni retargeting automatique n'est ajouté. Ces idées pourront constituer une évolution ultérieure, sans imposer d'abstraction anticipée.
 
 ## 9. Contraintes de cycle de vie et d'intégrité
 
@@ -190,6 +199,8 @@ Ne pas introduire silencieusement du blending, des layers, des priorités ou des
 - absence de modification de la transformation ECS après squat ;
 - poses partielles : propriété non ciblée inchangée selon la politique décidée ;
 - interpolation : `lerp` translation/échelle, `slerp` rotation et valeurs de borne ;
+- composition de deux clips actifs sur des canaux disjoints (marche + salut), chacun progressant selon son propre temps ;
+- test des canaux en conflit conformément à la politique qui sera validée ;
 - durée totale, passage de plusieurs étapes sur un grand `deltaTime`, résultats identiques pour différents découpages temporels ;
 - activité du Behaviour, arrêt/reprise/boucle selon les politiques approuvées ;
 - copies, moves, attache/détache de sous-`ObjectHeadless`, refs invalides, durées et valeurs invalides.
@@ -208,17 +219,18 @@ Les scénarios graphiques ne doivent pas imposer la création d'un nouveau chemi
 - système générique de rig/skeleton séparé de `Model3D` ;
 - refonte du renderer voxel, des snapshots, de l'ECS ou du moteur graphique ;
 - import de formats externes d'animation et éditeur de timeline ;
+- retargeting d'animations entre modèles, tags sémantiques de gestes et correspondances automatiques bipède/quadrupède ;
 - interpolation directe des matrices, ou rotation dynamique ajoutée aux éléments.
 
 ## 12. Décisions restantes pour notre discussion
 
-1. **Lecture simultanée :** une animation unique au départ ou plusieurs clips indépendants, et comment résoudre leurs conflits ?
+1. **Conflits entre animations simultanées :** politique quand plusieurs clips ciblent la même propriété d'un même nœud (refus, priorité, mélange), sans réouvrir le principe des lectures simultanées.
 2. **Canaux partiels :** valeur initiale d'une propriété absente des états adjacents, maintien en fin de clip et interaction avec les modifications manuelles ?
 3. **Contrôle de lecture :** `play`/`stop`/`pause`, fin de clip, bouclage, vitesse, changement de clip et politique de transition.
 4. **Validation :** échelles nulles/négatives, durées nulles, animation vide et correspondance clip/modèle.
 5. **Interface publique exacte :** objets valeurs et setters à exposer sur `ElementNode`, type de clé d'articulation et modèle de propriété/liaison dans `Animator`.
 
-**Décision actée sur le scale (13/11/2026) :** il est local à la géométrie ; les attaches changent de position mais les descendants ne sont pas redimensionnés. Les cinq autres questions restent ouvertes.
+**Décisions actées le 13/11/2026 :** scale uniquement local à la géométrie, points d'attachement repositionnés sans scale hérité ; plusieurs animations peuvent se jouer simultanément ; les clips de PR27 sont conçus pour un modèle précis. Les cinq questions ci-dessus restent ouvertes, dont la politique de conflit entre canaux.
 
 Cette fiche constitue la base de la prochaine discussion d'architecture, pas un mandat pour coder immédiatement.
 
