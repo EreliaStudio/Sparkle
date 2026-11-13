@@ -66,11 +66,11 @@ namespace
 		}
 	};
 
-	[[nodiscard]] spk::Voxel::Geometry geometry(spk::Vector3UInt dimensions)
+	[[nodiscard]] spk::Voxel::Geometry geometry(spk::Vector3UInt dimensions, const std::string &shapeName = "cube")
 	{
 		spk::Voxel::Shape::Builder shapeBuilder;
 		shapeBuilder.addFromJSON(
-			spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+			spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (shapeName + ".json")));
 		const auto shape = shapeBuilder.build();
 		spk::Voxel::Definition::SlotMapping slots;
 		for (const auto &slot : shape.slots())
@@ -112,6 +112,8 @@ namespace
 		spk::Voxel::RenderingSystem &voxelSystem;
 		Atlas atlas;
 		spk::Voxel::Geometry cube = geometry({1, 1, 1});
+		spk::Voxel::Geometry stair = geometry({1, 1, 1}, "stair");
+		spk::Voxel::Geometry slope = geometry({1, 1, 1}, "slope");
 		spk::Voxel::Geometry floor = geometry({7, 1, 5});
 		std::vector<std::unique_ptr<spk::Entity3D>> objects;
 		std::vector<std::unique_ptr<spk::Entity3D>> lights;
@@ -122,8 +124,8 @@ namespace
 		{
 			add(floor, 3, {-3.5f, -1.2f, -2.5f});
 			add(cube, 0, {-2.0f, -0.2f, -0.5f});
-			add(cube, 1, {-0.5f, -0.2f, -0.5f});
-			add(cube, 2, {1.0f, -0.2f, -0.5f});
+			add(stair, 1, {-0.5f, -0.2f, -0.5f});
+			add(slope, 2, {1.0f, -0.2f, -0.5f});
 		}
 
 		spk::EngineView &_makeView()
