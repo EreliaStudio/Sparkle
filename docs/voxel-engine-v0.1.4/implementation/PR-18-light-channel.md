@@ -67,3 +67,24 @@ mutex global ajouté à chaque type, scheduler de light tiles.
 ## Consigne de passation
 
 Confier **uniquement PR-18** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+
+## Décision d'implémentation du 12 novembre 2026 : mutations CPU
+
+Le mainteneur a explicitement accepté pour PR18 le contrat existant de Sparkle
+**modifier la source, puis émettre sa notification**, sans envelopper les setters
+de lumières, transformations et caméras dans un verrou de transaction moteur.
+Cette décision remplace uniquement l'obligation de transaction stricte de
+Q-TECH-001 pour les mutations de ces sources.
+
+Les générations des Channels, la reconstruction unique par Channel, la
+publication d'un résultat immuable et le rejet d'une reconstruction invalidée
+avant son commit restent requis. L'application doit coordonner toute mutation
+de la scène concurrente d'une capture CPU, comme elle le fait déjà pour ses
+autres composants. Les lectures d'un état mutable simultanément à son écriture
+ne sont **pas** garanties sûres, et la fenêtre entre écriture et notification
+n'a pas la garantie transactionnelle de la spécification d'origine.
+
+Les tests de capture concurrente ne doivent donc pas supposer la présence de
+cette transaction de mutation supprimée. En revanche, les demandes simultanées
+de sélection sur une scène CPU stable restent synchronisées par Channel.

@@ -11,6 +11,10 @@
 
 #include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "light/directional.hpp"
+#include "light/frustum.hpp"
+#include "light/point.hpp"
+#include "light/spot.hpp"
 #include "rendering/command/engine_view_composition_command.hpp"
 #include "rendering/command/engine_view_pass_command.hpp"
 #include "rendering/command/execute_engine_view_command.hpp"
@@ -22,6 +26,165 @@
 
 namespace spk
 {
+	Engine::Engine()
+	{
+		auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance();
+		_lightAddition = lights.subscribeToAddition(this, [this](EngineHeadless *const &, Light::Contributor *light) {
+			_trackLight(*light);
+			_invalidateAllLightChannels();
+		});
+		_lightRemoval = lights.subscribeToRemoval(this, [this](EngineHeadless *const &, Light::Contributor *light) {
+			_lightContracts.erase(light);
+			_invalidateAllLightChannels();
+		});
+		for (Light::Contributor *light : lights.elements(this))
+		{
+			_trackLight(*light);
+		}
+
+		auto &transforms = Registry<Transform3D, EngineHeadless *>::instance();
+		_transformAddition = transforms.subscribeToAddition(this, [this](EngineHeadless *const &, Transform3D *transform) {
+			_trackTransform(*transform);
+			_onTransformChanged(*transform);
+		});
+		_transformRemoval = transforms.subscribeToRemoval(this, [this](EngineHeadless *const &, Transform3D *transform) {
+			_transformContracts.erase(transform);
+			_invalidateAllLightChannels();
+		});
+		for (Transform3D *transform : transforms.elements(this))
+		{
+			_trackTransform(*transform);
+		}
+
+		auto &entities = Registry<Entity, EngineHeadless *>::instance();
+		_entityAddition = entities.subscribeToAddition(this, [this](EngineHeadless *const &, Entity *entity) {
+			_trackEntity(*entity);
+		});
+		_entityRemoval = entities.subscribeToRemoval(this, [this](EngineHeadless *const &, Entity *entity) {
+			_entityContracts.erase(entity);
+		});
+		for (Entity *entity : entities.elements(this))
+		{
+			_trackEntity(*entity);
+		}
+	}
+
+	void Engine::_trackLight(Light::Contributor &light)
+	{
+		if (_lightContracts.contains(&light))
+		{
+			return;
+		}
+		LightContracts contracts;
+		contracts.edition = light.subscribeToEdition([this](const Light::Contributor &) {
+			_invalidateAllLightChannels();
+		});
+		contracts.activation = light.subscribeToActivation([this] {
+			_invalidateAllLightChannels();
+		});
+		contracts.deactivation = light.subscribeToDeactivation([this] {
+			_invalidateAllLightChannels();
+		});
+		_lightContracts.emplace(&light, std::move(contracts));
+	}
+
+	void Engine::_trackTransform(Transform3D &transform)
+	{
+		if (_transformContracts.contains(&transform))
+		{
+			return;
+		}
+		_transformContracts.emplace(&transform, transform.subscribeToEdition([this](const Transform3D &changed) {
+			_onTransformChanged(changed);
+		}));
+	}
+
+	void Engine::_trackEntity(Entity &entity)
+	{
+		if (_entityContracts.contains(&entity))
+		{
+			return;
+		}
+		EntityContracts contracts;
+		contracts.activation = entity.subscribeToActivation([this, &entity] {
+			_onEntityChanged(entity);
+		});
+		contracts.deactivation = entity.subscribeToDeactivation([this, &entity] {
+			_onEntityChanged(entity);
+		});
+		contracts.parent = entity.subscribeToParentEdition([this, &entity](const Entity *) {
+			_onEntityChanged(entity);
+		});
+		_entityContracts.emplace(&entity, std::move(contracts));
+	}
+
+	bool Engine::_isDescendantOf(const Entity *candidate, const Entity *ancestor) noexcept
+	{
+		for (const Entity *current = candidate; current != nullptr; current = current->parent())
+		{
+			if (current == ancestor)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void Engine::_invalidateAllLightChannels()
+	{
+		std::lock_guard lock(_viewMutex);
+		for (const auto &view : _views)
+		{
+			view->_lightChannel->invalidate();
+		}
+	}
+
+	void Engine::_onEntityChanged(const Entity &entity)
+	{
+		const auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance().elements(this);
+		bool affectsLights = false;
+		for (const Light::Contributor *light : lights)
+		{
+			if (light->owner() != nullptr && _isDescendantOf(light->owner(), &entity))
+			{
+				affectsLights = true;
+				break;
+			}
+		}
+		if (affectsLights)
+		{
+			_invalidateAllLightChannels();
+			return;
+		}
+
+		std::lock_guard lock(_viewMutex);
+		for (const auto &view : _views)
+		{
+			if (view->camera() != nullptr && view->camera()->owner() != nullptr &&
+				_isDescendantOf(view->camera()->owner(), &entity))
+			{
+				view->_lightChannel->invalidate();
+			}
+		}
+	}
+
+	void Engine::_onTransformChanged(const Transform3D &transform)
+	{
+		if (transform.owner() != nullptr)
+		{
+			_onEntityChanged(*transform.owner());
+		}
+	}
+
+	Engine::~Engine()
+	{
+		std::lock_guard lock(_viewMutex);
+		for (const auto &view : _views)
+		{
+			view->_lightChannel->close();
+		}
+	}
+
 	void Engine::_visitEntity(Entity &entity, const std::function<void(EngineView::Contributor &)> &callback) const
 	{
 		if (auto *rendering = dynamic_cast<EngineView::Contributor *>(&entity))
@@ -152,6 +315,7 @@ namespace spk
 			{
 				throw spk::Exception("Unknown EngineView [" + name + "]");
 			}
+			(*it)->_lightChannel->close();
 			removed = std::move(*it);
 			_views.erase(it);
 		}
@@ -177,17 +341,47 @@ namespace spk
 		view._order = order;
 	}
 
-	std::vector<Engine::ViewCapture> Engine::_captureViews() const
+	std::vector<Engine::ViewCapture> Engine::_captureViews()
 	{
-		std::lock_guard lock(_viewMutex);
 		std::vector<ViewCapture> captures;
-		for (const auto &view : _views)
 		{
-			if (view->camera() != nullptr)
+			std::lock_guard lock(_viewMutex);
+			if (_nextCaptureOrdinal == std::numeric_limits<std::uint64_t>::max())
 			{
-				captures.push_back({view->identity(), view->order(), view->_capture()});
+				throw spk::Exception("Engine capture ordinal exhausted");
+			}
+			const std::uint64_t ordinal = ++_nextCaptureOrdinal;
+			for (const auto &view : _views)
+			{
+				if (view->camera() != nullptr)
+				{
+					auto context = view->_capture();
+					context.captureOrdinal = ordinal;
+					captures.push_back({view->identity(), view->order(), std::move(context)});
+				}
 			}
 		}
+		for (auto &capture : captures)
+		{
+			if (capture.context.lightChannel->isClosed())
+			{
+				continue;
+			}
+			try
+			{
+				capture.context.lightSelection = capture.context.lightChannel->acquire(
+					capture.context.cameraSnapshot, capture.context.captureOrdinal);
+			} catch (...)
+			{
+				if (!capture.context.lightChannel->isClosed())
+				{
+					throw;
+				}
+			}
+		}
+		std::erase_if(captures, [](const ViewCapture &capture) {
+			return capture.context.lightChannel->isClosed();
+		});
 		std::ranges::stable_sort(captures, [](const ViewCapture &a, const ViewCapture &b) {
 			if (a.order && b.order)
 			{
@@ -196,6 +390,59 @@ namespace spk
 			return a.order.has_value() && !b.order.has_value();
 		});
 		return captures;
+	}
+
+	std::vector<Light::Selection::Entry> Engine::_captureLightCandidates(const Camera3D &camera) const
+	{
+		// The current mutable scene API uses modify-then-notify; concurrent edits
+		// must be coordinated by the application.
+		const Light::Frustum frustum = Light::Frustum::fromViewProjection(camera.viewProjectionMatrix());
+		std::vector<Light::Selection::Entry> candidates;
+		const auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance().elements(
+			const_cast<Engine *>(this));
+		candidates.reserve(lights.size());
+		for (const Light::Contributor *light : lights)
+		{
+			if (light == nullptr || light->registrationOrder() == 0 || !light->isEffectivelyActive() || light->owner() == nullptr)
+			{
+				continue;
+			}
+			Light::Selection::Entry entry;
+			entry.registrationOrder = light->registrationOrder();
+			entry.color = light->color();
+			entry.intensity = light->intensity();
+			entry.priorityWeight = light->priorityWeight();
+			entry.castsShadows = light->castsShadows();
+			entry.shadowResolution = light->shadowResolution();
+			if (const auto *point = dynamic_cast<const Light::Point *>(light))
+			{
+				entry.type = Light::Selection::Type::Point;
+				entry.position = point->worldPosition();
+				entry.range = point->range();
+				entry.score = point->priorityScore(frustum, camera.position());
+			}
+			else if (const auto *spot = dynamic_cast<const Light::Spot *>(light))
+			{
+				entry.type = Light::Selection::Type::Spot;
+				entry.position = spot->worldPosition();
+				entry.direction = spot->worldDirection();
+				entry.range = spot->range();
+				entry.angle = spot->angle();
+				entry.score = spot->priorityScore(frustum, camera.position());
+			}
+			else if (const auto *directional = dynamic_cast<const Light::Directional *>(light))
+			{
+				entry.type = Light::Selection::Type::Directional;
+				entry.direction = directional->worldDirection();
+				entry.shadowDistance = directional->shadowDistance();
+			}
+			else
+			{
+				continue;
+			}
+			candidates.push_back(entry);
+		}
+		return candidates;
 	}
 
 	void Engine::_validateViewPasses(const std::string &name, const RenderSnapshot::Builder &builder)
@@ -259,7 +506,13 @@ namespace spk
 		builder.renderPass(EngineView::CompositionPassKey).emplace<EngineViewCompositionCommand>(targets->hdr, targets->accumulation, targets->revealage, context.resolution, context.exposure);
 		auto snapshot = std::make_shared<const RenderSnapshot>(builder.build());
 		return std::make_unique<ExecuteEngineViewCommand>(
-			std::move(snapshot), context.output, targets, finalImage.texture(), context.cameraSnapshot);
+			std::move(snapshot),
+			context.output,
+			targets,
+			finalImage.texture(),
+			context.cameraSnapshot,
+			context.lightChannel,
+			context.lightSelection);
 	}
 
 	bool Engine::_commitSnapshot(const std::vector<ViewCapture> &views, RenderSnapshot snapshot)

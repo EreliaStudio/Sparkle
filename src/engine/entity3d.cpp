@@ -10,8 +10,7 @@ namespace spk
 	{
 		_onParentEditionContract = subscribeToParentEdition(
 			[this](const Entity *) {
-				_transform._clearWorldCaches();
-				_transform._clearDescendantWorldCaches();
+				_transform._notifyEdition();
 			});
 	}
 

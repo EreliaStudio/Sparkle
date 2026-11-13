@@ -18,6 +18,8 @@ namespace spk
 		std::shared_ptr<EngineView::Output::Targets> _targets;
 		Texture::Handle _finalTexture;
 		CameraUniformRenderCommand _camera;
+		std::shared_ptr<Light::Channel> _lightChannel;
+		std::shared_ptr<const Light::Selection> _lightSelection;
 
 	public:
 		ExecuteEngineViewCommand(
@@ -25,7 +27,9 @@ namespace spk
 			std::shared_ptr<EngineView::Output> publisher,
 			std::shared_ptr<EngineView::Output::Targets> targets,
 			Texture::Handle finalTexture,
-			const Camera3D &camera);
+			const Camera3D &camera,
+			std::shared_ptr<Light::Channel> lightChannel,
+			std::shared_ptr<const Light::Selection> lightSelection);
 
 		void execute(RenderContext &context) const override;
 	};
