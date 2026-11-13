@@ -1,0 +1,59 @@
+# Temporary, one-shot transfer of 13 manually reviewed PR19 golden captures.
+# The hashes prevent accidental acceptance of arbitrary or unreviewed images.
+name: Approve reviewed PR19 golden captures (temporary)
+on:
+  push:
+    branches: [impl/v0.1.4/19-forward-lighting]
+    paths: [.github/workflows/pr19-approved-goldens.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  approve-goldens:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: graphics-unit-tests-Debug
+          repository: EreliaStudio/Sparkle
+          run-id: 43403967041
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: candidate
+      - name: Validate hashes of the 13 visually reviewed captures
+        shell: bash
+        run: |
+          cd candidate/tests/TU/Graphics/results/rendering/forward-lighting
+          cat > /tmp/pr19-goldens.sha256 <<'SHA256'
+            6492781ea7d40aa531ce836d165797e5a9d45461482e5417bb0d4153e1bf5917  ambient_only.png
+            ed345c1e285aef934658cde6d6ed45143d87d6eff61118eb25bf2d0e51bac535  ambient_two_views_cool.png
+            e9bdeb212c9fd7d6e01952482c4bc43f1cee2881b3b281641a570ab809f98075  ambient_two_views_warm.png
+            58d8f6c5bad7c2a792bb9679e13aa06c9ee483edb10506b776b2f4e630e4dd11  capture_after_mutation.png
+            cc5b865021b4dc60438fbb8c227c5e03822f36ad5544cbf795672e5a7bf962fb  capture_before_mutation.png
+            b713fd56e537f549aefb1606ca26819913b6adb9de76263957f49e6f9259d6b0  combined_forward.png
+            12fb58988e6466cc4bc6e504f04cf21c3da6a74184c7adbd712ff4b63e44907a  directional_only.png
+            a98f0cffebfb3be245916750bcd95f42c9db47c70ff653f89a0a779a82b58652  point_limited_range.png
+            bb3bf60938239f7001949f5fd0bcf7c25c93adbd90b466cfa95b86414ce5f59f  point_only.png
+            11360d49eeab786c9292ff113100a4d1ff2746383c3db3c779b0422586136ce7  spot_only.png
+            a56618091603b8c11da963785f4e3ef5a316de24f401561d58b27ca9fe165127  spot_visible_cone.png
+            e16e7e05e05108bc8859dc5a11c71dc33af6ab270676b9bb2824ddcdd2abbf79  top_n_blue.png
+            e079167952543a075c83b3b07c96e60395fa9774f4df2e7b181ba96bd35bdb8f  top_n_red.png
+          SHA256
+          sed -i 's/^            //' /tmp/pr19-goldens.sha256
+          sha256sum --check /tmp/pr19-goldens.sha256
+          count=$(find . -maxdepth 1 -type f -name '*.png' | wc -l)
+          test "$count" -eq 13
+      - name: Commit manually approved references
+        shell: bash
+        run: |
+          src=candidate/tests/TU/Graphics/results/rendering/forward-lighting
+          dst=tests/TU/Graphics/resources/expectedImages/rendering/forward-lighting
+          mkdir -p "$dst"
+          cp "$src"/*.png "$dst/"
+          git add "$dst"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test(lighting): commit 13 individually reviewed Forward golden references"
+          git push origin HEAD:impl/v0.1.4/19-forward-lighting
