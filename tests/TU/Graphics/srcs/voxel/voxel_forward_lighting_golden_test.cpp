@@ -42,20 +42,17 @@ namespace
 		Atlas()
 		{
 			std::array<std::uint8_t, 16 * 4 * 4> pixels{};
-			constexpr std::array<std::array<std::uint8_t, 3>, 4> colors{{
-				{235, 110, 93},
-				{103, 200, 177},
-				{221, 201, 153},
-				{170, 174, 188}}};
+			constexpr std::array<std::uint8_t, 4> red{235, 103, 221, 170};
+			constexpr std::array<std::uint8_t, 4> green{110, 200, 201, 174};
+			constexpr std::array<std::uint8_t, 4> blue{93, 177, 153, 188};
 			for (std::size_t y = 0; y < 4; ++y)
 			{
 				for (std::size_t x = 0; x < 16; ++x)
 				{
 					const std::size_t offset = (y * 16 + x) * 4;
-					for (std::size_t c = 0; c < 3; ++c)
-					{
-						pixels[offset + c] = colors[x / 4][c];
-					}
+					pixels[offset] = red[x / 4];
+					pixels[offset + 1] = green[x / 4];
+					pixels[offset + 2] = blue[x / 4];
 					pixels[offset + 3] = 255;
 				}
 			}
@@ -95,9 +92,7 @@ namespace
 	[[nodiscard]] spk::Palette palette(const Atlas &atlas, std::uint32_t tile)
 	{
 		spk::Material::Builder material;
-		material.add(
-			"albedo", atlas,
-			{{static_cast<float>(tile) * 0.25f, 0.0f}, {0.25f, 1.0f}});
+		material.add("albedo", atlas, {{static_cast<float>(tile) * 0.25f, 0.0f}, {0.25f, 1.0f}});
 		spk::Voxel::Palette::Builder result;
 		result.setMaterial("paint", material.build());
 		return result.build();
@@ -156,8 +151,7 @@ namespace
 			auto &light = entity->addComponent<TLight>();
 			light.setColor(color);
 			light.setIntensity(intensity);
-			if constexpr (std::is_same_v<TLight, spk::Light::Point> ||
-						  std::is_same_v<TLight, spk::Light::Spot>)
+			if constexpr (std::is_same_v<TLight, spk::Light::Point> || std::is_same_v<TLight, spk::Light::Spot>)
 			{
 				light.setRange(range);
 			}

@@ -211,10 +211,9 @@ namespace
 		const auto actual = sparkle_test::resultImagePath(category, name);
 		const auto expected = sparkle_test::expectedImagePath(category, name);
 		gl.save(actual);
-		if (!std::filesystem::exists(expected))
-		{
-			GTEST_SKIP() << "New golden reference awaiting manual approval: " << actual;
-		}
+		ASSERT_TRUE(std::filesystem::exists(expected))
+			<< "Missing golden reference (manual approval required): " << expected
+			<< "; captured actual: " << actual;
 		const auto diff = sparkle_test::resultImagePath(category, name + "_difference");
 		const auto comparison = sparkle_test::compareImages(actual, expected, diff);
 		EXPECT_TRUE(comparison.matches) << name << ": " << comparison.differentPixelCount << " different pixels";
