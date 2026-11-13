@@ -309,6 +309,23 @@ TEST(VoxelRendererTest, SharedMeshWithDifferentSlotMappingsDoesNotBatch)
 	EXPECT_EQ(scene.commandCount(), 2u);
 }
 
+TEST(VoxelRendererTest, DrawCommandRejectsMissingLighting)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	TestAtlas atlas;
+	const auto appearance = makePalette(atlas, spk::Texture::Section::whole);
+	const std::shared_ptr<const spk::Lighting::System> noLighting;
+	EXPECT_THROW(
+		spk::DrawVoxelCommand(cubeGeometry(), appearance, {0u}, spk::Matrix4x4::identity(), noLighting),
+		spk::Exception);
+	EXPECT_THROW(
+		spk::DrawVoxelCommand(
+			cubeGeometry(), appearance, {0u}, std::vector<spk::Matrix4x4>{spk::Matrix4x4::identity()}, noLighting),
+		spk::Exception);
+	gl.reset();
+}
+
 TEST(VoxelRendererTest, InstanceMatricesAreUploadedInStd430Order)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
@@ -317,11 +334,14 @@ TEST(VoxelRendererTest, InstanceMatricesAreUploadedInStd430Order)
 	const std::vector<spk::Matrix4x4> models{
 		spk::Matrix4x4::translation(1.0f, 2.0f, 3.0f),
 		spk::Matrix4x4::translation(-4.0f, 5.0f, 6.0f)};
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
 	spk::DrawVoxelCommand command(
 		cubeGeometry(),
 		makePalette(atlas, spk::Texture::Section::whole),
 		{0u},
-		models);
+		models,
+		lighting);
 	const auto camera = defaultCamera();
 	camera.execute(gl.renderContext());
 	command.execute(gl.renderContext());

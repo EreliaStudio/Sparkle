@@ -56,14 +56,14 @@ namespace spk
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
 			std::vector<Matrix4x4> models,
-			std::shared_ptr<const Lighting::System> lighting = {},
+			std::shared_ptr<const Lighting::System> lighting,
 			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
 		DrawVoxelCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
 			Matrix4x4 model,
-			std::shared_ptr<const Lighting::System> lighting = {},
+			std::shared_ptr<const Lighting::System> lighting,
 			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
 
 		void execute(RenderContext &context) const override;

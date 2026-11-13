@@ -118,14 +118,17 @@ namespace
 		std::vector<std::unique_ptr<spk::Entity3D>> objects;
 		std::vector<std::unique_ptr<spk::Entity3D>> lights;
 
-		Scene() :
+		explicit Scene(bool includeProps = true) :
 			view(_makeView()),
 			voxelSystem(engine.addSystem<spk::Voxel::RenderingSystem>())
 		{
 			add(floor, 3, {-3.5f, -1.2f, -2.5f});
-			add(cube, 0, {-2.0f, -0.2f, -0.5f});
-			add(stair, 1, {-0.5f, -0.2f, -0.5f});
-			add(slope, 2, {1.0f, -0.2f, -0.5f});
+			if (includeProps)
+			{
+				add(cube, 0, {-2.0f, -0.2f, -0.5f});
+				add(stair, 1, {-0.5f, -0.2f, -0.5f});
+				add(slope, 2, {1.0f, -0.2f, -0.5f});
+			}
 		}
 
 		spk::EngineView &_makeView()
@@ -138,15 +141,37 @@ namespace
 			return engine.addView("main", &camera, ImageSize);
 		}
 
-		void add(const spk::Voxel::Geometry &mesh, std::uint32_t tile, spk::Vector3 position)
+		spk::Entity3D &add(
+			const spk::Voxel::Geometry &mesh,
+			std::uint32_t tile,
+			spk::Vector3 position,
+			spk::Entity3D *parent = nullptr)
 		{
 			auto entity = std::make_unique<spk::Entity3D>("Forward voxel");
 			entity->transform().place(position);
 			auto &renderer = entity->addComponent<spk::Voxel::Renderer>();
 			renderer.bind(mesh);
 			renderer.bind(palette(atlas, tile));
-			engine.addEntity(entity.get());
+			if (parent != nullptr)
+			{
+				entity->setParent(*parent);
+			}
+			else
+			{
+				engine.addEntity(entity.get());
+			}
+			auto &result = *entity;
 			objects.push_back(std::move(entity));
+			return result;
+		}
+
+		spk::Entity3D &joint(spk::Entity3D &parent, spk::Vector3 offset)
+		{
+			auto child = std::make_unique<spk::Entity3D>("Articulated voxel joint", &parent);
+			child->transform().place(offset);
+			auto &result = *child;
+			objects.push_back(std::move(child));
+			return result;
 		}
 
 		template <typename TLight>
@@ -392,4 +417,310 @@ TEST(VoxelForwardLightingIntegration, RenderTargetPreservesHDRAboveOneBeforeTone
 	EXPECT_GT(brightest, 1.0f) << "Opaque lighting was clamped before the final Reinhard pass";
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
+}
+
+
+namespace
+{
+	struct ArticulatedCharacter
+	{
+		spk::Entity3D &root;
+		spk::Entity3D &head;
+		spk::Entity3D &leftShoulder;
+		spk::Entity3D &rightShoulder;
+		spk::Entity3D &leftHip;
+		spk::Entity3D &rightHip;
+		spk::Entity3D &rightWrist;
+	};
+
+	[[nodiscard]] ArticulatedCharacter addArticulatedCharacter(Scene &scene, bool withSword = false)
+	{
+		auto rootEntity = std::make_unique<spk::Entity3D>("Voxel character root");
+		rootEntity->transform().place({0, 1.83f, 0});
+		rootEntity->transform().rescale({0.45f, 0.45f, 0.45f});
+		auto &root = *rootEntity;
+		scene.engine.addEntity(&root);
+		scene.objects.push_back(std::move(rootEntity));
+
+		scene.add(geometry({3, 4, 1}), 1, {-1.5f, -1.5f, -0.5f}, &root);
+		auto &head = scene.joint(root, {0, 2.8f, 0});
+		scene.add(geometry({2, 2, 2}), 3, {-1, 0, -1}, &head);
+		scene.add(scene.cube, 0, {-0.5f, 0.5f, 1}, &head);
+
+		auto &leftShoulder = scene.joint(root, {-1.8f, 2.2f, 0});
+		auto &rightShoulder = scene.joint(root, {1.8f, 2.2f, 0});
+		scene.add(geometry({1, 3, 1}), 2, {-0.5f, -3, -0.5f}, &leftShoulder);
+		scene.add(geometry({1, 3, 1}), 2, {-0.5f, -3, -0.5f}, &rightShoulder);
+
+		auto &leftHip = scene.joint(root, {-0.85f, -1.5f, 0});
+		auto &rightHip = scene.joint(root, {0.85f, -1.5f, 0});
+		scene.add(geometry({1, 3, 1}), 0, {-0.5f, -3, -0.5f}, &leftHip);
+		scene.add(geometry({1, 3, 1}), 0, {-0.5f, -3, -0.5f}, &rightHip);
+
+		auto &rightWrist = scene.joint(rightShoulder, {0, -2.7f, 0});
+		if (withSword)
+		{
+			rightWrist.transform().setEulerRotation({90, 0, 0});
+			scene.add(scene.cube, 0, {-0.5f, -0.5f, -0.5f}, &rightWrist);
+			scene.add(geometry({1, 4, 1}), 2, {-0.5f, 0, -0.5f}, &rightWrist);
+		}
+
+		const spk::Vector3 eye{7, 5.5f, 9};
+		scene.cameraEntity.transform().place(eye);
+		scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, 1.65f, 0}));
+		return {root, head, leftShoulder, rightShoulder, leftHip, rightHip, rightWrist};
+	}
+
+	void addCharacterSun(Scene &scene, spk::Vector3 position, spk::RGB color = {1, 1, 1}, float intensity = 1.4f)
+	{
+		scene.addLight<spk::Light::Directional>(position, {0, 1.7f, 0}, color, intensity);
+	}
+
+	void addCharacterPointLeft(Scene &scene)
+	{
+		scene.addLight<spk::Light::Point>({-3.5f, 3.8f, 3}, {0, 1.5f, 0}, {1, 0.25f, 0.12f}, 6.0f, 10.0f);
+	}
+
+	void addCharacterPointRight(Scene &scene)
+	{
+		scene.addLight<spk::Light::Point>({3.5f, 3.8f, 3}, {0, 1.5f, 0}, {0.15f, 0.35f, 1}, 6.0f, 10.0f);
+	}
+
+	void addCharacterSpot(Scene &scene, spk::Vector3 origin, spk::RGB color, float angle = 0.5f)
+	{
+		auto &spot = scene.addLight<spk::Light::Spot>(origin, {0, 1.2f, 0}, color, 8.0f, 12.0f);
+		spot.setAngle(angle);
+	}
+
+	[[nodiscard]] sparkle_test::FramebufferImage renderCapture(
+		const spk::RenderSnapshot &snapshot, const spk::EngineView &view)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		gl.reset(ImageSize);
+		snapshot.execute(gl.renderContext());
+		spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = ImageSize}).execute(gl.renderContext());
+		spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = ImageSize}).execute(gl.renderContext());
+		auto image = gl.capture();
+		gl.reset();
+		return image;
+	}
+
+	[[nodiscard]] std::size_t differentPixels(
+		const sparkle_test::FramebufferImage &before, const sparkle_test::FramebufferImage &after)
+	{
+		if (before.size != after.size || before.pixels.size() != after.pixels.size())
+		{
+			return 0;
+		}
+		std::size_t count = 0;
+		for (std::size_t i = 0; i < before.pixels.size(); i += 4)
+		{
+			if (before.pixels[i] != after.pixels[i] ||
+				before.pixels[i + 1] != after.pixels[i + 1] ||
+				before.pixels[i + 2] != after.pixels[i + 2])
+			{
+				++count;
+			}
+		}
+		return count;
+	}
+
+	enum class CharacterLighting
+	{
+		AmbientOnly,
+		DirectionalFront,
+		DirectionalBehind,
+		PointLeft,
+		PointRight,
+		ArmUpPointLeft,
+		ArmUpPointRight,
+		BothArmsSplitPoints,
+		WalkingSpotLeft,
+		WalkingSpotRight,
+		HeadYawDirectional,
+		RootYawDirectional,
+		SwordForwardSpot,
+		SwordRaisedSpot,
+		SpotAcrossShapes,
+		ThreeLightMix
+	};
+
+	struct CharacterLightingCase
+	{
+		const char *name;
+		CharacterLighting lighting;
+	};
+
+	class ArticulatedVoxelLightingGolden : public ::testing::TestWithParam<CharacterLightingCase>
+	{
+	};
+}
+
+TEST_P(ArticulatedVoxelLightingGolden, ArticulatedNormalsFollowHierarchyAndLights)
+{
+	const auto &param = GetParam();
+	const bool withSword =
+		param.lighting == CharacterLighting::SwordForwardSpot ||
+		param.lighting == CharacterLighting::SwordRaisedSpot;
+	Scene scene(false);
+	auto rig = addArticulatedCharacter(scene, withSword);
+	scene.view.ambientLight().setIntensity(0.08f);
+	switch (param.lighting)
+	{
+	case CharacterLighting::AmbientOnly:
+		scene.view.ambientLight().setIntensity(0.75f);
+		break;
+	case CharacterLighting::DirectionalFront:
+		addCharacterSun(scene, {5, 7, 7});
+		break;
+	case CharacterLighting::DirectionalBehind:
+		addCharacterSun(scene, {-4, 6, -6});
+		break;
+	case CharacterLighting::PointLeft:
+		addCharacterPointLeft(scene);
+		break;
+	case CharacterLighting::PointRight:
+		addCharacterPointRight(scene);
+		break;
+	case CharacterLighting::ArmUpPointLeft:
+		rig.leftShoulder.transform().setEulerRotation({0, 0, -75});
+		addCharacterPointLeft(scene);
+		break;
+	case CharacterLighting::ArmUpPointRight:
+		rig.leftShoulder.transform().setEulerRotation({0, 0, -75});
+		addCharacterPointRight(scene);
+		break;
+	case CharacterLighting::BothArmsSplitPoints:
+		rig.leftShoulder.transform().setEulerRotation({0, 0, -75});
+		rig.rightShoulder.transform().setEulerRotation({0, 0, 75});
+		addCharacterPointLeft(scene);
+		addCharacterPointRight(scene);
+		break;
+	case CharacterLighting::WalkingSpotLeft:
+		rig.leftHip.transform().setEulerRotation({25, 0, 0});
+		rig.rightHip.transform().setEulerRotation({-25, 0, 0});
+		addCharacterSpot(scene, {-4, 5, 4}, {1, 0.65f, 0.2f});
+		break;
+	case CharacterLighting::WalkingSpotRight:
+		rig.leftHip.transform().setEulerRotation({-25, 0, 0});
+		rig.rightHip.transform().setEulerRotation({25, 0, 0});
+		addCharacterSpot(scene, {4, 5, 4}, {0.25f, 0.6f, 1});
+		break;
+	case CharacterLighting::HeadYawDirectional:
+		rig.head.transform().setEulerRotation({0, 65, 0});
+		addCharacterSun(scene, {5, 7, 7});
+		break;
+	case CharacterLighting::RootYawDirectional:
+		rig.root.transform().setEulerRotation({0, 75, 0});
+		addCharacterSun(scene, {5, 7, 7});
+		break;
+	case CharacterLighting::SwordForwardSpot:
+		addCharacterSpot(scene, {4, 5, 4}, {1, 0.8f, 0.3f});
+		break;
+	case CharacterLighting::SwordRaisedSpot:
+		rig.rightShoulder.transform().setEulerRotation({0, 0, 70});
+		addCharacterSpot(scene, {-4, 5, 4}, {0.35f, 0.65f, 1});
+		break;
+	case CharacterLighting::SpotAcrossShapes:
+		scene.add(scene.stair, 1, {-3.0f, -0.2f, 0});
+		scene.add(scene.slope, 2, {2.5f, -0.2f, 0});
+		addCharacterSpot(scene, {4, 4.5f, 4}, {1, 0.85f, 0.6f}, 0.8f);
+		break;
+	case CharacterLighting::ThreeLightMix:
+		rig.leftShoulder.transform().setEulerRotation({0, 0, -65});
+		rig.rightHip.transform().setEulerRotation({-20, 0, 0});
+		addCharacterSun(scene, {2, 8, -4}, {0.3f, 0.5f, 1}, 0.7f);
+		addCharacterPointLeft(scene);
+		addCharacterSpot(scene, {3, 5, 4}, {1, 0.8f, 0.4f});
+		break;
+	}
+	expectGolden(scene, std::string("articulated_") + param.name);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+	CharacterPosesAndLightTypes,
+	ArticulatedVoxelLightingGolden,
+	::testing::Values(
+		CharacterLightingCase{"ambient_only", CharacterLighting::AmbientOnly},
+		CharacterLightingCase{"directional_front", CharacterLighting::DirectionalFront},
+		CharacterLightingCase{"directional_behind", CharacterLighting::DirectionalBehind},
+		CharacterLightingCase{"point_left", CharacterLighting::PointLeft},
+		CharacterLightingCase{"point_right", CharacterLighting::PointRight},
+		CharacterLightingCase{"arm_up_point_left", CharacterLighting::ArmUpPointLeft},
+		CharacterLightingCase{"arm_up_point_right", CharacterLighting::ArmUpPointRight},
+		CharacterLightingCase{"both_arms_split_points", CharacterLighting::BothArmsSplitPoints},
+		CharacterLightingCase{"walking_spot_left", CharacterLighting::WalkingSpotLeft},
+		CharacterLightingCase{"walking_spot_right", CharacterLighting::WalkingSpotRight},
+		CharacterLightingCase{"head_yaw_directional", CharacterLighting::HeadYawDirectional},
+		CharacterLightingCase{"root_yaw_directional", CharacterLighting::RootYawDirectional},
+		CharacterLightingCase{"sword_forward_spot", CharacterLighting::SwordForwardSpot},
+		CharacterLightingCase{"sword_raised_spot", CharacterLighting::SwordRaisedSpot},
+		CharacterLightingCase{"spot_across_shapes", CharacterLighting::SpotAcrossShapes},
+		CharacterLightingCase{"three_light_mix", CharacterLighting::ThreeLightMix}),
+	[](const ::testing::TestParamInfo<CharacterLightingCase> &info) {
+		return std::string(info.param.name);
+	});
+
+TEST(VoxelForwardLightingIntegration, ArticulatedArmRotationChangesVisibleLighting)
+{
+	Scene scene(false);
+	auto rig = addArticulatedCharacter(scene);
+	scene.view.ambientLight().setIntensity(0.08f);
+	addCharacterPointLeft(scene);
+	const auto before = scene.capture();
+	ASSERT_NE(before, nullptr);
+	const auto beforePixels = renderCapture(*before, scene.view);
+
+	rig.leftShoulder.transform().setEulerRotation({0, 0, -75});
+	const auto after = scene.capture();
+	ASSERT_NE(after, nullptr);
+	const auto afterPixels = renderCapture(*after, scene.view);
+
+	EXPECT_GT(differentPixels(beforePixels, afterPixels), 50u);
+	expectGolden(*before, scene.view, "articulated_arm_before_rotation");
+	expectGolden(*after, scene.view, "articulated_arm_after_rotation");
+}
+
+TEST(VoxelForwardLightingIntegration, CharacterYawChangesWorldSpaceLighting)
+{
+	Scene scene(false);
+	auto rig = addArticulatedCharacter(scene);
+	scene.view.ambientLight().setIntensity(0.08f);
+	addCharacterSun(scene, {5, 7, 7});
+	const auto before = scene.capture();
+	ASSERT_NE(before, nullptr);
+	const auto beforePixels = renderCapture(*before, scene.view);
+
+	rig.root.transform().setEulerRotation({0, 65, 0});
+	const auto after = scene.capture();
+	ASSERT_NE(after, nullptr);
+	const auto afterPixels = renderCapture(*after, scene.view);
+
+	EXPECT_GT(differentPixels(beforePixels, afterPixels), 50u);
+	expectGolden(*before, scene.view, "articulated_yaw_before");
+	expectGolden(*after, scene.view, "articulated_yaw_after");
+}
+
+TEST(VoxelForwardLightingIntegration, StationaryArticulatedNormalsRespondToLightChange)
+{
+	Scene scene(false);
+	addArticulatedCharacter(scene);
+	scene.view.ambientLight().setIntensity(0.08f);
+	auto &left = scene.addLight<spk::Light::Point>(
+		{-3.5f, 3.8f, 3}, {0, 1.5f, 0}, {1, 0.2f, 0.1f}, 6.0f, 10.0f);
+	auto &right = scene.addLight<spk::Light::Point>(
+		{3.5f, 3.8f, 3}, {0, 1.5f, 0}, {0.1f, 0.2f, 1}, 0.0f, 10.0f);
+	const auto before = scene.capture();
+	ASSERT_NE(before, nullptr);
+	const auto beforePixels = renderCapture(*before, scene.view);
+
+	left.setIntensity(0.0f);
+	right.setIntensity(6.0f);
+	const auto after = scene.capture();
+	ASSERT_NE(after, nullptr);
+	const auto afterPixels = renderCapture(*after, scene.view);
+
+	EXPECT_GT(differentPixels(beforePixels, afterPixels), 50u);
+	expectGolden(*before, scene.view, "articulated_light_before");
+	expectGolden(*after, scene.view, "articulated_light_after");
 }

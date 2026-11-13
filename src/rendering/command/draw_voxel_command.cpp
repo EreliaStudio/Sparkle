@@ -76,9 +76,13 @@ namespace spk
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
 		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
-		_lighting(lighting ? std::move(lighting) : std::make_shared<const Lighting::System>(Light::Selection{}, RGB{1.0f, 1.0f, 1.0f})),
+		_lighting(std::move(lighting)),
 		_camera(std::move(camera))
 	{
+		if (!_lighting)
+		{
+			throw spk::Exception("Voxel draw: lighting system is required");
+		}
 		if (models.empty())
 		{
 			throw spk::Exception("Voxel draw: at least one instance is required");
