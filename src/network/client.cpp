@@ -418,7 +418,7 @@ namespace spk
 		if (_connection._data == session._data)
 		{
 			_acceptIncoming = false;
-			_messages.drain(discarded);
+			(void)_messages.drain(discarded);
 		}
 	}
 
@@ -428,7 +428,7 @@ namespace spk
 		Connection connection;
 		{
 			const std::scoped_lock lock(_connectionMutex);
-			_messages.drain(stale);
+			(void)_messages.drain(stale);
 			_connection = connection;
 			_acceptIncoming = true;
 		}

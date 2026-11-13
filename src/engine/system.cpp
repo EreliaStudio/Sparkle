@@ -4,14 +4,14 @@
 
 namespace spk
 {
-	System::System(const std::string &name, Engine *engine) :
+	System::System(const std::string &name, EngineHeadless *engine) :
 		NameTrait(name)
 	{
 		activate();
 		attach(engine);
 	}
 
-	System::System(Engine *engine) :
+	System::System(EngineHeadless *engine) :
 		System("Unnamed system", engine)
 	{
 	}
@@ -21,17 +21,17 @@ namespace spk
 		return isActive();
 	}
 
-	void System::attach(Engine *engine)
+	void System::attach(EngineHeadless *engine)
 	{
 		changeContext(engine);
 	}
 
-	Engine *System::engine()
+	EngineHeadless *System::engine()
 	{
 		return context();
 	}
 
-	const Engine *System::engine() const
+	const EngineHeadless *System::engine() const
 	{
 		return context();
 	}

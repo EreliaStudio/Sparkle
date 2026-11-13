@@ -5,6 +5,8 @@
 #include <Windows.h>
 
 #include <atomic>
+#include <exception>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -35,6 +37,9 @@ namespace spk
 		HGLRC renderingContext = nullptr;
 		spk::Rect2D geometry;
 		Profiler *profiler = nullptr;
+		ContractProvider<> destructionSubscribers;
+		std::mutex closingMutex;
+		std::exception_ptr firstDestructionError;
 
 		explicit Impl(Window::Identifier windowID) :
 			windowID(std::move(windowID)),
@@ -152,6 +157,15 @@ namespace spk
 				throwLastError("wglMakeCurrent");
 			}
 			deleteContext(context);
+		}
+
+		void recordDestructionError(std::exception_ptr error)
+		{
+			const std::scoped_lock lock(closingMutex);
+			if (!firstDestructionError)
+			{
+				firstDestructionError = std::move(error);
+			}
 		}
 
 		void releaseRenderingContext()
@@ -277,20 +291,60 @@ namespace spk
 
 	void Window::Surface::destroy()
 	{
-		if (_impl->lifeCycle == LifeCycle::Released)
 		{
-			return;
+			const std::scoped_lock lock(_impl->closingMutex);
+			if (_impl->lifeCycle == LifeCycle::Released || _impl->lifeCycle == LifeCycle::Releasing)
+			{
+				return;
+			}
+			_impl->lifeCycle = LifeCycle::Releasing;
 		}
 
-		_impl->lifeCycle = LifeCycle::Releasing;
+		try
+		{
+			_impl->destructionSubscribers.trigger();
+		} catch (...)
+		{
+			_impl->recordDestructionError(std::current_exception());
+		}
+		_impl->destructionSubscribers.invalidate();
 
-		_impl->releaseRenderingContext();
-
+		try
+		{
+			_impl->releaseRenderingContext();
+		} catch (...)
+		{
+			_impl->recordDestructionError(std::current_exception());
+		}
 		_impl->releaseDeviceContext();
-
 		_impl->windowHandle = nullptr;
-
 		_impl->lifeCycle = LifeCycle::Released;
+		if (_impl->firstDestructionError)
+		{
+			std::rethrow_exception(std::exchange(_impl->firstDestructionError, {}));
+		}
+	}
+
+	Window::Surface::DestructionContract Window::Surface::subscribeToDestruction(std::function<void()> callback)
+	{
+		if (!callback)
+		{
+			throw std::invalid_argument("Surface destruction callback must not be empty");
+		}
+		const std::scoped_lock lock(_impl->closingMutex);
+		if (_impl->lifeCycle != LifeCycle::Ready)
+		{
+			throw std::logic_error("Cannot subscribe to destruction of a surface that is not Ready");
+		}
+		return _impl->destructionSubscribers.subscribe([impl = _impl.get(), callback = std::move(callback)] {
+			try
+			{
+				callback();
+			} catch (...)
+			{
+				impl->recordDestructionError(std::current_exception());
+			}
+		});
 	}
 
 	void Window::Surface::makeCurrent()

@@ -1,0 +1,96 @@
+# PR-18 — Light::Channel, Top-N et cohérence CPU
+
+> **Livrée : [PR #69](https://github.com/EreliaStudio/Sparkle/pull/69) fusionnée dans `V0.1.4`.** Les checklists ci-dessous sont historiques et ne sont pas des tâches ouvertes.
+>
+> **Branche historique :** `impl/v0.1.4/18-light-channel`, déjà fusionnée dans `V0.1.4` via #69.
+
+**Objectif :** Fournir une sélection immuable par EngineView cohérente avec ses mutations.
+
+**Prérequis :** [PR-09](PR-09-rendering-engine-inheritance.md), [PR-10](PR-10-engineview-snapshot.md), [PR-17](PR-17-light-components.md)
+
+## Adaptation à la baseline PR13 (obligatoire)
+
+`EngineView::CaptureContext`, les layers et les snapshots immuables existent. La `Light::Selection` CPU est capturée pour la vue et sera consommée plus tard par **les `DrawVoxelCommand` de PR13**. PR14 ne constitue pas une dépendance.
+
+## Spécifications normatives
+
+- [07-vues-et-passes.md](../07-vues-et-passes.md)
+- [08-lumieres-et-ombres.md](../08-lumieres-et-ombres.md)
+- [10-contrats-et-validation.md](../10-contrats-et-validation.md)
+- [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
+- [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
+
+## Périmètre historique
+
+- [ ] Light::Channel/Prioritizer/Selection
+- [ ] N=8/h=0,10
+- [ ] ordinals d'inscription
+- [ ] conservation et places libres
+- [ ] reset sur N/h modifié
+- [ ] generations
+- [ ] invalidation diffuse
+- [ ] verrou moteur→Channel
+- [ ] fermeture lors removeView.
+
+## Instructions techniques et intégration
+
+Entourer mutation CPU réelle et invalidation aux points source dans setters de lumières, Transform3D/parents, Registry et caméra/projection, pas seulement par callbacks tardifs ; copie sous verrou moteur, tri sans verrou, validation finale génération; snapshot historique de PR10 reste permis.
+
+Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
+
+## Tests historiques
+
+- [ ] Top-N début et hystérésis
+- [ ] candidate plus forte mais sous seuil conserve titulaires
+- [ ] place libre sans hystérésis
+- [ ] N=0 et Directional maintenues
+- [ ] reset h seul
+- [ ] deux vues partageant caméra
+- [ ] interleaving mutation/commit avec barrières
+- [ ] absence de deadlock.
+
+**Non-régression commune :** conserver la compilation et les tests existants. Lancer `cmake --workflow --preset testDebug` et `cmake --workflow --preset testRelease` pour les configurations prises en charge, en plus des builds Core sans Graphics lorsque pertinent. Tests GPU et golden-image sur l'infrastructure graphique existante (Windows/WGL) ; ne pas remplacer automatiquement une golden image de référence.
+
+## Définition de terminé / critère de fusion
+
+Light::Selection stable, mêmes entrées/historique => même résultat; aucun nouveau snapshot moteur imposé pour simple mutation.
+
+- [ ] Tous les invariants et erreurs publiques ci-dessus sont testés et documentés ; aucun état partiel n'est publié après un échec lorsqu'une garantie forte est prescrite.
+- [ ] Les dépendances listées sont disponibles sur la branche de base ; aucune fonctionnalité des fiches suivantes n'est embarquée sans nécessité stricte.
+- [ ] La PR présente le périmètre, les tests réellement exécutés et les résultats, les screenshots/diffs si graphiques, et les limitations éventuelles.
+- [ ] Aucune fusion sans validation du propriétaire.
+
+## Hors périmètre
+
+mutex global ajouté à chaque type, scheduler de light tiles.
+
+## Consigne de passation
+
+Confier **uniquement PR-18** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+
+## Décision d'implémentation du 12 novembre 2026 : mutations CPU
+
+Le mainteneur a explicitement accepté pour PR18 le contrat existant de Sparkle
+**modifier la source, puis émettre sa notification**, sans envelopper les setters
+de lumières, transformations et caméras dans un verrou de transaction moteur.
+Cette décision remplace uniquement l'obligation de transaction stricte de
+Q-TECH-001 pour les mutations de ces sources.
+
+Les générations des Channels, la reconstruction unique par Channel, la
+publication d'un résultat immuable et le rejet d'une reconstruction invalidée
+avant son commit restent requis. L'application doit coordonner toute mutation
+de la scène concurrente d'une capture CPU, comme elle le fait déjà pour ses
+autres composants. Les lectures d'un état mutable simultanément à son écriture
+ne sont **pas** garanties sûres, et la fenêtre entre écriture et notification
+n'a pas la garantie transactionnelle de la spécification d'origine.
+
+Les tests de capture concurrente ne doivent donc pas supposer la présence de
+cette transaction de mutation supprimée. En revanche, les demandes simultanées
+de sélection sur une scène CPU stable restent synchronisées par Channel.
+
+## Résultat réel fusionné (#69)
+
+`Light::Channel`, `Prioritizer` et `Selection` immuable livrés par EngineView : Top-N Point/Spot, Directional hors quota, générations, invalidation, hystérésis et historique. **Mutation CPU puis notification** est la décision fusionnée, sans transaction globale de setters. L'application coordonne la concurrence source/capture ; le rejet de publication générationnellement périmée reste requis.
+
+Les nouvelles PR réutilisent ce code livré et ne recommencent pas cette ancienne fiche.

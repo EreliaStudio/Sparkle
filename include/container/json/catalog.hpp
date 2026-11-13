@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -12,22 +13,23 @@
 
 namespace spk::JSON
 {
-	template <typename TElement>
+	template <typename TElement, typename TID = typename TElement::ID>
 	class Catalog
 	{
 	public:
 		using Element = TElement;
-		using ID = typename Element::ID;
+		using ID = TID;
 
 	private:
-		std::unordered_map<ID, Element> _elements;
+		using Entries = std::unordered_map<ID, Element>;
+		Entries _elements;
 
-		void _parseAndInsert(const Reader &elementReader)
+		void _parseAndInsert(const Reader &elementReader, Entries &pending)
 		{
 			elementReader.forbidUnknown({"id", "data"});
 
 			ID id = _parseKey(elementReader);
-			if (contains(id))
+			if (contains(id) || pending.contains(id))
 			{
 				spk::JSON::throwAt(
 					elementReader.file(),
@@ -37,7 +39,29 @@ namespace spk::JSON
 
 			const Reader dataReader = elementReader.child("data");
 			Element element = _parseElement(dataReader);
-			_elements.emplace(std::move(id), std::move(element));
+			pending.emplace(std::move(id), std::move(element));
+		}
+
+		void _load(const Reader &root, Entries &pending)
+		{
+			if (!root.contains("elements"))
+			{
+				_parseAndInsert(root, pending);
+				return;
+			}
+
+			root.forbidUnknown({"elements"});
+			const Value &elements = root.value().at("elements");
+			if (!elements.isArray())
+			{
+				spk::JSON::throwAt(root.file(), root.pathFor("elements"), "expected an array");
+			}
+			const auto &array = elements.asArray();
+			for (std::size_t index = 0; index < array.size(); ++index)
+			{
+				const std::string path = root.pathFor("elements") + "[" + std::to_string(index) + "]";
+				_parseAndInsert(Reader(array[index], root.file(), path), pending);
+			}
 		}
 
 	protected:
@@ -46,6 +70,11 @@ namespace spk::JSON
 
 		[[nodiscard]] virtual ID _parseKey(const Reader &reader) const = 0;
 		[[nodiscard]] virtual Element _parseElement(const Reader &reader) const = 0;
+
+		[[nodiscard]] const std::unordered_map<ID, Element> &_entries() const noexcept
+		{
+			return _elements;
+		}
 
 		void _insert(ID id, Element element)
 		{
@@ -61,26 +90,26 @@ namespace spk::JSON
 		{
 			const Value document = Loader::parseFile(file);
 			const Reader root(document, file);
+			Entries pending;
+			_load(root, pending);
+			_elements.reserve(_elements.size() + pending.size());
+			_elements.merge(pending);
+		}
 
-			if (!root.contains("elements"))
-			{
-				_parseAndInsert(root);
-				return;
-			}
+		[[nodiscard]] std::size_t size() const noexcept
+		{
+			return _elements.size();
+		}
 
-			root.forbidUnknown({"elements"});
-			const Value &elements = root.value().at("elements");
-			if (!elements.isArray())
+		[[nodiscard]] static std::string _describeID(const ID &id)
+		{
+			if constexpr (requires(std::ostringstream &stream, const ID &value) { stream << value; })
 			{
-				spk::JSON::throwAt(file, root.pathFor("elements"), "expected an array");
+				std::ostringstream stream;
+				stream << id;
+				return stream.str();
 			}
-
-			const auto &array = elements.asArray();
-			for (std::size_t index = 0; index < array.size(); ++index)
-			{
-				const std::string path = root.pathFor("elements") + "[" + std::to_string(index) + "]";
-				_parseAndInsert(Reader(array[index], file, path));
-			}
+			return "<unprintable>";
 		}
 
 		[[nodiscard]] const Element &at(const ID &id) const
@@ -88,7 +117,7 @@ namespace spk::JSON
 			const auto found = _elements.find(id);
 			if (found == _elements.end())
 			{
-				throw spk::Exception("unknown JSON catalog ID");
+				throw spk::Exception("unknown JSON catalog ID: " + _describeID(id));
 			}
 			return found->second;
 		}

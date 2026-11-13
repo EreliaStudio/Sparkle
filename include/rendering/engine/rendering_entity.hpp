@@ -3,12 +3,12 @@
 #include "engine/entity.hpp"
 #include "engine/entity2d.hpp"
 #include "engine/entity3d.hpp"
-#include "rendering/engine/rendering_object_trait.hpp"
+#include "rendering/engine/engine_view.hpp"
 
 namespace spk
 {
 	class RenderingEntity : public Entity,
-							public RenderingObjectTrait
+							public EngineView::Contributor
 	{
 	protected:
 		[[nodiscard]] bool _isAcceptingEvent() const override
@@ -21,19 +21,19 @@ namespace spk
 			return isEffectivelyActive();
 		}
 
-		[[nodiscard]] bool _canBuildRenderSnapshot() const override
+		[[nodiscard]] bool _canContribute() const override
 		{
 			return isEffectivelyActive();
 		}
 
 	public:
+		using EngineView::Contributor::updateState;
 		using Entity::Entity;
 		using Entity::updateState;
-		using RenderingObjectTrait::updateState;
 	};
 
 	class RenderingEntity2D : public Entity2D,
-							  public RenderingObjectTrait
+							  public EngineView::Contributor
 	{
 	protected:
 		[[nodiscard]] bool _isAcceptingEvent() const override
@@ -46,19 +46,19 @@ namespace spk
 			return isEffectivelyActive();
 		}
 
-		[[nodiscard]] bool _canBuildRenderSnapshot() const override
+		[[nodiscard]] bool _canContribute() const override
 		{
 			return isEffectivelyActive();
 		}
 
 	public:
+		using EngineView::Contributor::updateState;
 		using Entity2D::Entity2D;
 		using Entity2D::updateState;
-		using RenderingObjectTrait::updateState;
 	};
 
 	class RenderingEntity3D : public Entity3D,
-							  public RenderingObjectTrait
+							  public EngineView::Contributor
 	{
 	protected:
 		[[nodiscard]] bool _isAcceptingEvent() const override
@@ -71,14 +71,14 @@ namespace spk
 			return isEffectivelyActive();
 		}
 
-		[[nodiscard]] bool _canBuildRenderSnapshot() const override
+		[[nodiscard]] bool _canContribute() const override
 		{
 			return isEffectivelyActive();
 		}
 
 	public:
+		using EngineView::Contributor::updateState;
 		using Entity3D::Entity3D;
 		using Entity3D::updateState;
-		using RenderingObjectTrait::updateState;
 	};
 }

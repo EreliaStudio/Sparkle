@@ -8,8 +8,10 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <string>
 #include <vector>
 
+#include "asset/factory.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
 #include "math/vector2.hpp"
 
@@ -31,6 +33,7 @@ namespace spk
 	class Texture : public GPUResource
 	{
 		friend class Framebuffer;
+		friend class CubeMap;
 		friend class Sampler;
 
 	public:
@@ -50,6 +53,8 @@ namespace spk
 			BGRA,
 			GreyLevel,
 			DualChannel,
+			RGBA16F,
+			SRGB8_ALPHA8,
 			Depth24,
 			Depth32F,
 			Depth24Stencil8,
@@ -59,7 +64,7 @@ namespace spk
 		enum class ContentSource
 		{
 			PixelData,
-			RenderTarget
+			RenderAttachment
 		};
 
 		enum class Mipmap
@@ -82,7 +87,7 @@ namespace spk
 			[[nodiscard]] bool operator!=(const Section &other) const noexcept;
 		};
 
-		class State final : public GPUResource::State
+		class State : public GPUResource::State
 		{
 			friend class Texture;
 
@@ -104,6 +109,7 @@ namespace spk
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
+		protected:
 			explicit State(Target target) :
 				_textureTarget(target)
 			{
@@ -160,7 +166,8 @@ namespace spk
 		[[nodiscard]] static std::size_t _checkedByteCount(const Vector2UInt &size, Format format);
 
 		void _bindToUnit(std::size_t bindingPoint, RenderContext &context) const;
-		void _allocateRenderTarget(const Vector2UInt &size, Format format);
+		void _allocateRenderAttachment(const Vector2UInt &size, Format format);
+		[[nodiscard]] static Texture _createRenderAttachment(Target target, const Vector2UInt &size, Format format);
 
 	protected:
 		void _cloneResolutions(Handle previous);
@@ -192,7 +199,7 @@ namespace spk
 		[[nodiscard]] const Vector2UInt &size() const noexcept;
 		[[nodiscard]] Format format() const noexcept;
 		[[nodiscard]] ContentSource contentSource() const noexcept;
-		[[nodiscard]] bool isRenderTarget() const noexcept;
+		[[nodiscard]] bool isRenderAttachment() const noexcept;
 		[[nodiscard]] Mipmap mipmap() const noexcept;
 		[[nodiscard]] const std::vector<std::uint8_t> &pixels() const;
 
@@ -208,5 +215,14 @@ namespace spk
 		[[nodiscard]] Resolution resolve(const Section &section, const Vector2UInt &available) const;
 
 		void saveAsPng(const std::filesystem::path &path) const;
+	};
+}
+
+namespace spk::Asset
+{
+	template <>
+	struct Factory<spk::Texture>
+	{
+		[[nodiscard]] static spk::Texture create(Manager &assets, const std::string &id, const JSON::Value &config);
 	};
 }

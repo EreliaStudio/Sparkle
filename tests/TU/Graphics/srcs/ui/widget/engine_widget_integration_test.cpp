@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
 #include "core/context/update_context.hpp"
+#include "engine/entity3d.hpp"
 #include "exception.hpp"
+#include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/render_command.hpp"
 #include "sparkle_test.hpp"
@@ -111,13 +113,13 @@ namespace
 	{
 		bool fail = false;
 		std::vector<int> *log = nullptr;
-		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override
+		void buildViewRenderSnapshot(spk::RenderSnapshot::Builder &builder, const spk::EngineView::CaptureContext &) override
 		{
 			if (fail)
 			{
 				throw std::runtime_error("engine render failure");
 			}
-			builder.renderPass(spk::RenderingEngine::SceneRenderPassKey).emplace<Mark>(*log, 2);
+			builder.renderPass(spk::EngineView::OpaquePassKey).emplace<Mark>(*log, 2);
 		}
 	};
 }
@@ -158,6 +160,10 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 {
 	std::vector<int> log;
 	auto engine = std::make_unique<spk::Engine>();
+	spk::Entity3D cameraEntity("camera");
+	auto &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+	engine->addEntity(&cameraEntity);
+	engine->addView("scene", &camera, {100, 100});
 	auto &behaviour = engine->root().addBehaviour<Rendering>();
 	behaviour.log = &log;
 	spk::EngineWidget widget("RenderingWidget", nullptr);
@@ -165,8 +171,9 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	widget.setGeometry({.anchor = {0, 0}, .size = {100, 100}});
 	widget.setEngine(engine.get());
 	spk::RenderSnapshot::Builder builder;
-	builder.renderPass({"before-scene", spk::RenderingEngine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
-	builder.renderPass({"after-scene", spk::RenderingEngine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
+	builder.renderPass({"before-scene", spk::Engine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
+	builder.renderPass({"after-scene", spk::Engine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
+	engine->refreshRenderSnapshot();
 	widget.buildRenderSnapshot(builder);
 	const auto snapshot = builder.build();
 	auto &context = sparkle_test::OpenGLTestContext::instance();
@@ -174,16 +181,9 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	snapshot.execute(context.renderContext());
 	EXPECT_EQ(log, (std::vector<int>{1, 2, 3}));
 	behaviour.fail = true;
-	try
-	{
-		spk::RenderSnapshot::Builder failing;
-		widget.buildRenderSnapshot(failing);
-		FAIL();
-	} catch (const spk::Exception &error)
-	{
-		EXPECT_NE(std::string(error.what()).find("RenderingWidget"), std::string::npos);
-		EXPECT_NE(error.cause(), nullptr);
-	}
+	auto previous = engine->latestRenderSnapshot();
+	EXPECT_THROW(engine->refreshRenderSnapshot(), spk::Exception);
+	EXPECT_EQ(engine->latestRenderSnapshot(), previous);
 	widget.setEngine(nullptr);
 	engine.reset();
 	spk::RenderSnapshot::Builder detached;

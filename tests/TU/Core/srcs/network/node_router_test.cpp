@@ -18,7 +18,7 @@ TEST(NodeRouterTest, RoutesIncomingMessageByType)
 	router.dispatch();
 
 	std::vector<spk::ReceivedMessage> received;
-	node.incoming().drain(received);
+	(void)node.incoming().drain(received);
 	ASSERT_EQ(received.size(), 1u);
 	EXPECT_EQ(received.front().emitter, 91u);
 	EXPECT_EQ(received.front().message.type(), 17u);
@@ -88,8 +88,8 @@ TEST(NodeRouterTest, RedirectCanBeReassignedToAnotherNode)
 
 	std::vector<spk::ReceivedMessage> firstMessages;
 	std::vector<spk::ReceivedMessage> secondMessages;
-	first.incoming().drain(firstMessages);
-	second.incoming().drain(secondMessages);
+	(void)first.incoming().drain(firstMessages);
+	(void)second.incoming().drain(secondMessages);
 	EXPECT_TRUE(firstMessages.empty());
 	ASSERT_EQ(secondMessages.size(), 1u);
 	EXPECT_EQ(secondMessages.front().emitter, 5u);

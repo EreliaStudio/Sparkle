@@ -167,18 +167,22 @@ namespace spk
 
 		[[nodiscard]] static TVector3 fromJSON(const JSON::Value &value)
 		{
-			const auto &array = value.asArray();
-
-			if (array.size() != 3)
+			if (value.isObject())
 			{
-				throw std::runtime_error(
-					"Expected 3 elements for TVector3");
+				const auto &object = value.asObject();
+				if (object.size() != 3 || !object.contains("x") || !object.contains("y") || !object.contains("z"))
+				{
+					throw std::runtime_error("Expected x, y and z components for TVector3");
+				}
+				return {object.at("x").as<TType>(), object.at("y").as<TType>(), object.at("z").as<TType>()};
 			}
 
-			return {
-				array[0].as<TType>(),
-				array[1].as<TType>(),
-				array[2].as<TType>()};
+			const auto &array = value.asArray();
+			if (array.size() != 3)
+			{
+				throw std::runtime_error("Expected 3 elements for TVector3");
+			}
+			return {array[0].as<TType>(), array[1].as<TType>(), array[2].as<TType>()};
 		}
 	};
 

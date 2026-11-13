@@ -36,7 +36,7 @@ namespace spk
 
 		changeContext(_owner->context());
 		_onOwnerContextEditionContract = _owner->subscribeToContextEdition(
-			[this](Engine *const &, Engine *const &newContext) {
+			[this](EngineHeadless *const &, EngineHeadless *const &newContext) {
 				changeContext(newContext);
 			});
 	}

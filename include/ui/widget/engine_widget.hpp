@@ -1,24 +1,39 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
-#include "engine/engine.hpp"
+#include "container/flags.hpp"
+
 #include "input/device_context.hpp"
-#include "rendering/engine/rendering_engine.hpp"
+#include "rendering/engine/engine.hpp"
 #include "ui/widget.hpp"
 
 namespace spk
 {
 	/**
-	 * @brief Widget that forwards update and interaction events to an Engine.
+	 * @brief Widget that forwards updates and interaction events to a graphical Engine.
 	 *
 	 * The engine is not owned by the widget and must outlive it, or be detached
 	 * with setEngine(nullptr) before it is destroyed.
 	 */
 	class EngineWidget : public Widget
 	{
+	public:
+		enum class Type : std::uint8_t
+		{
+			None = 0,
+			Update = 1 << 0,
+			Render = 1 << 1,
+			Draw = 1 << 2
+		};
+
+		static constexpr Flags<Type> DefaultType = Flags<Type>(Type::Update) | Type::Render | Type::Draw;
+
 	private:
-		RenderingEngine _renderingEngine;
+		Engine *_engine = nullptr;
+		Flags<Type> _type;
+		std::string _viewName = "main";
 
 		void _onGeometryChange() override;
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override;
@@ -48,10 +63,21 @@ namespace spk
 		void _onPassiveKeyReleasedEvent(KeyReleasedEvent &event) override;
 
 	public:
-		EngineWidget(std::string name, Widget *parent);
+		EngineWidget(std::string name, Widget *parent, Flags<Type> type = DefaultType);
+
+		[[nodiscard]] Flags<Type> type() const noexcept;
+		void setType(Flags<Type> type);
+		void setViewName(std::string name);
+		[[nodiscard]] const std::string &viewName() const noexcept;
 
 		void setEngine(Engine *engine) noexcept;
 		[[nodiscard]] Engine *engine() noexcept;
 		[[nodiscard]] const Engine *engine() const noexcept;
 	};
+
+	[[nodiscard]] constexpr Flags<EngineWidget::Type> operator|(
+		EngineWidget::Type lhs, EngineWidget::Type rhs) noexcept
+	{
+		return Flags<EngineWidget::Type>(lhs) | rhs;
+	}
 }

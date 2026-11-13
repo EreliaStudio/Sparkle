@@ -18,11 +18,12 @@ namespace spk
 
 		TextureMesh2D _mesh;
 		Sampler _sampler;
+		bool _presentSRGB = false;
 
 	public:
 		static constexpr std::size_t TextureSamplerBindingPoint = 0;
-		DrawTextureMeshRenderCommand(Texture::Handle texture, TextureMesh2D mesh);
-		DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh);
+		DrawTextureMeshRenderCommand(Texture::Handle texture, TextureMesh2D mesh, bool presentSRGB = false);
+		DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh, bool presentSRGB = false);
 		void execute(RenderContext &) const override;
 	};
 }

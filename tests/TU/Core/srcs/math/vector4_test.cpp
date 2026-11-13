@@ -39,6 +39,17 @@ namespace
 		EXPECT_EQ(spk::Vector4Int(value), spk::Vector4Int(1, 2, 3, 1));
 	}
 
+	TEST(Vector4Test, ScalarMultiplicationAndXyzProjection)
+	{
+		const spk::Vector4 value{1.5f, -2.0f, 3.0f, 4.0f};
+		EXPECT_EQ(value * 2.0f, spk::Vector4(3.0f, -4.0f, 6.0f, 8.0f));
+		EXPECT_EQ(value.xyz(), spk::Vector3(1.5f, -2.0f, 3.0f));
+
+		const spk::TVector4<double> promoted(value);
+		EXPECT_EQ(promoted * -0.5, (spk::TVector4<double>{-0.75, 1.0, -1.5, -2.0}));
+		EXPECT_EQ(promoted.xyz(), (spk::TVector3<double>{1.5, -2.0, 3.0}));
+	}
+
 	TEST(Vector4Test, ConstructsFromVector2AndVector3)
 	{
 		const spk::Vector2Int xy{2, -3};
@@ -155,6 +166,30 @@ namespace
 		const spk::Vector4 value = spk::Vector4::fromJSON(json);
 
 		EXPECT_EQ(value, spk::Vector4(1.5f, -2.25f, -3.125f, 4.25f));
+	}
+
+	TEST(Vector4Test, FromJSONAcceptsNamedCoordinates)
+	{
+		const spk::JSON::Value json = spk::JSON::Value::fromString(R"({"w":4.25,"z":-3.125,"y":-2.25,"x":1.5})");
+
+		EXPECT_EQ(spk::Vector4::fromJSON(json), spk::Vector4(1.5f, -2.25f, -3.125f, 4.25f));
+		EXPECT_EQ(spk::Vector4(json), spk::Vector4(1.5f, -2.25f, -3.125f, 4.25f));
+		EXPECT_EQ(json.as<spk::Vector4>(), spk::Vector4(1.5f, -2.25f, -3.125f, 4.25f));
+		EXPECT_EQ(
+			spk::Vector4UInt::fromJSON(spk::JSON::Value::fromString(R"({"x":1,"y":2,"z":3,"w":4})")),
+			(spk::Vector4UInt{1, 2, 3, 4}));
+	}
+
+	TEST(Vector4Test, FromJSONRejectsInvalidNamedCoordinates)
+	{
+		using spk::JSON::Value;
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":4,"k":5})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":"invalid"})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4UInt::fromJSON(Value::fromString(R"({"x":1,"y":2,"z":3,"w":-4})")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString("[1,2,3]")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4::fromJSON(Value::fromString("[1,2,3,4,5]")), std::runtime_error);
+		EXPECT_THROW((void)spk::Vector4(Value::fromString(R"({"x":1,"y":2,"z":3})")), std::runtime_error);
 	}
 
 	TEST(Vector4Test, ConstructorFromJSONDeserializesComponentsFromArray)

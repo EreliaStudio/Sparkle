@@ -21,15 +21,17 @@ set(SPARKLE_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
 file(GLOB_RECURSE SPARKLE_CORE_SOURCES
     CONFIGURE_DEPENDS
+    "${SPARKLE_SOURCE_DIR}/asset/*.cpp"
     "${SPARKLE_SOURCE_DIR}/container/*.cpp"
     "${SPARKLE_SOURCE_DIR}/design_pattern/*.cpp"
     "${SPARKLE_SOURCE_DIR}/diagnostics/*.cpp"
     "${SPARKLE_SOURCE_DIR}/engine/*.cpp"
     "${SPARKLE_SOURCE_DIR}/math/*.cpp"
     "${SPARKLE_SOURCE_DIR}/network/*.cpp"
-    "${SPARKLE_SOURCE_DIR}/structure/*.cpp"
+    "${SPARKLE_SOURCE_DIR}/model3d/*.cpp"
     "${SPARKLE_SOURCE_DIR}/system/*.cpp"
     "${SPARKLE_SOURCE_DIR}/type/*.cpp"
+    "${SPARKLE_SOURCE_DIR}/voxel/*.cpp"
 )
 list(APPEND SPARKLE_CORE_SOURCES
     "${SPARKLE_SOURCE_DIR}/exception.cpp"

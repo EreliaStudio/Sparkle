@@ -1,7 +1,5 @@
 #include "internal/application_internal.hpp"
 
-#include <gl/gl.h>
-
 #include <utility>
 #include <variant>
 
@@ -57,9 +55,7 @@ namespace spk
 		}
 		surface.makeCurrent();
 
-		spk::RenderContext context{
-			.targetSurface = &surface,
-			.profiler = surface.profiler()};
+		spk::RenderContext context{surface, surface.profiler()};
 
 		if (_renderFrameDuration == nullptr)
 		{
@@ -118,18 +114,29 @@ namespace spk
 		const Task<void>::Answer surfaceDeletionAnswer = request.task->answer();
 		auto nativeDeletionContract = surfaceDeletionAnswer.subscribeToCompletion(
 			[this, surfaceDeletionAnswer, identifier = request.windowIdentifier, nativeDeletionTask = request.nativeDeletionTask] {
-				if (surfaceDeletionAnswer.status() == Task<void>::Status::Completed)
+				if (surfaceDeletionAnswer.status() != Task<void>::Status::Pending)
 				{
 					_platformRequestProducer.publish(
 						NativeDeletionRequest{.windowIdentifier = identifier, .task = nativeDeletionTask});
 				}
 			});
 
-		if (contains(request.windowIdentifier) == true)
+		std::exception_ptr error;
+		if (contains(request.windowIdentifier))
 		{
-			_destroySurface(object(request.windowIdentifier));
+			try
+			{
+				_destroySurface(object(request.windowIdentifier));
+			} catch (...)
+			{
+				error = std::current_exception();
+			}
 			remove(request.windowIdentifier);
 			_renderSnapshotEnties.erase(request.windowIdentifier);
+		}
+		if (error)
+		{
+			std::rethrow_exception(error);
 		}
 		request.task->validate();
 	}
@@ -173,27 +180,25 @@ namespace spk
 		{
 			return;
 		}
-		auto *entry = _tryGetSnapshotConsumer(identifier);
-		if (entry == nullptr)
+		if (auto *entry = _tryGetSnapshotConsumer(identifier))
 		{
-			return;
-		}
-
-		auto snapshot = entry->consumer.acquireLatest();
-		if (snapshot != nullptr && snapshot != entry->lastRenderedSnapshot)
-		{
-			entry->lastRenderedSnapshot = snapshot;
-			try
+			auto snapshot = entry->consumer.acquireLatest();
+			if (snapshot != nullptr && snapshot != entry->lastRenderedSnapshot)
 			{
-				_render(surface, *snapshot);
-			} catch (...)
-			{
-				throw spk::Exception(
-					"Exception while rendering window [" + identifier + "]",
-					std::current_exception());
+				entry->lastRenderedSnapshot = snapshot;
+				try
+				{
+					_render(surface, *snapshot);
+				} catch (...)
+				{
+					throw spk::Exception(
+						"Exception while rendering window [" + identifier + "]",
+						std::current_exception());
+				}
+				entry->isRequested->store(true, std::memory_order_relaxed);
 			}
-			entry->isRequested->store(true, std::memory_order_relaxed);
 		}
+		surface.makeCurrent();
 		surface._gpuResources().reclaimReleased();
 	}
 

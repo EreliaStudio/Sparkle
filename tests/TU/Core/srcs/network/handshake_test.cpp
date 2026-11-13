@@ -39,7 +39,7 @@ TEST(Handshake, ExplicitRejectionCarriesFailureReason)
 		Handshake::Kind::Rejected, 17, spk::Connection::Error::VersionMismatch));
 	EXPECT_EQ(rejection.error, spk::Connection::Error::VersionMismatch);
 	EXPECT_FALSE(Handshake::validAcceptance(rejection));
-	EXPECT_THROW(Handshake::encode(Handshake::Kind::Accepted, 0), spk::Exception);
+	EXPECT_THROW((void)Handshake::encode(Handshake::Kind::Accepted, 0), spk::Exception);
 }
 
 TEST(Handshake, DeadlineIsRelativeToStartNotEachPage)
@@ -63,16 +63,16 @@ TEST(Handshake, PageSizeIsNegotiatedInBothDirections)
 		Handshake::Kind::Accepted, 42, spk::Connection::Error::None, 4096));
 	EXPECT_TRUE(Handshake::validAcceptance(accepted));
 	EXPECT_EQ(accepted.maximumPageBytes, 4096u);
-	EXPECT_THROW(Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, 0), spk::Exception);
-	EXPECT_THROW(Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, spk::NetworkInternal::MaximumSupportedPageBytes + 1), spk::Exception);
+	EXPECT_THROW((void)Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, 0), spk::Exception);
+	EXPECT_THROW((void)Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, spk::NetworkInternal::MaximumSupportedPageBytes + 1), spk::Exception);
 }
 
 TEST(Handshake, UnknownControlKindAndErrorAreRejected)
 {
 	using Handshake = spk::NetworkInternal::Handshake;
-	EXPECT_THROW(Handshake::encode(static_cast<Handshake::Kind>(99)), spk::Exception);
-	EXPECT_THROW(Handshake::encode(Handshake::Kind::Rejected, 0, static_cast<spk::Connection::Error>(255)), spk::Exception);
+	EXPECT_THROW((void)Handshake::encode(static_cast<Handshake::Kind>(99)), spk::Exception);
+	EXPECT_THROW((void)Handshake::encode(Handshake::Kind::Rejected, 0, static_cast<spk::Connection::Error>(255)), spk::Exception);
 	auto frame = Handshake::encode(Handshake::Kind::Hello);
 	(*frame)[39] = std::byte{255};
-	EXPECT_THROW(Handshake::decode(*frame), spk::Exception);
+	EXPECT_THROW((void)Handshake::decode(*frame), spk::Exception);
 }

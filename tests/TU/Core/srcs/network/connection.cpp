@@ -108,7 +108,7 @@ TEST(Connection, ServerRetainedHandleSurvivesStop)
 		EXPECT_TRUE(retained.isConnected());
 		server.stop();
 		EXPECT_EQ(retained.status(), spk::Connection::Status::Disconnected);
-		EXPECT_THROW(server.connection(retained.id()), spk::Exception);
+		EXPECT_THROW((void)server.connection(retained.id()), spk::Exception);
 		client.disconnect();
 	}
 	EXPECT_EQ(retained.status(), spk::Connection::Status::Disconnected);

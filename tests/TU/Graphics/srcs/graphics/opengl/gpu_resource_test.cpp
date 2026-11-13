@@ -238,7 +238,7 @@ TEST(GPUResourceCollectionTest, IndependentContextsReuseThenClearAndRecreateInst
 	auto counters = std::make_shared<ResourceCounters>();
 	FakeGPUResource resource(counters);
 	spk::Window::Surface first("FakeFirst"), second("FakeSecond");
-	spk::RenderContext a{.targetSurface = &first}, b{.targetSurface = &second};
+	spk::RenderContext a{first}, b{second};
 	resource.activate(a);
 	resource.activate(a);
 	resource.activate(b);
@@ -268,7 +268,7 @@ TEST(GPUResourceCollectionTest, ResourceAndCollectionCanBeDestroyedInEitherOrder
 		auto counters = std::make_shared<ResourceCounters>();
 		auto resource = std::make_unique<FakeGPUResource>(counters);
 		auto surface = std::make_unique<spk::Window::Surface>("FakeLifetime");
-		spk::RenderContext context{.targetSurface = surface.get()};
+		spk::RenderContext context{*surface};
 		resource->activate(context);
 		if (resourceFirst)
 		{
@@ -294,7 +294,7 @@ TEST(GPUResourceCollectionTest, ResourceIdentifiersKeepSameKindInstancesIndepend
 	FakeGPUResource a(first), b(second);
 	EXPECT_NE(a.identifier(), b.identifier());
 	spk::Window::Surface surface("FakeKeys");
-	spk::RenderContext context{.targetSurface = &surface};
+	spk::RenderContext context{surface};
 	a.activate(context);
 	b.activate(context);
 	a.validate();
@@ -304,8 +304,6 @@ TEST(GPUResourceCollectionTest, ResourceIdentifiersKeepSameKindInstancesIndepend
 	EXPECT_EQ(second->creations, 1);
 	EXPECT_EQ(first->synchronizations, 2);
 	EXPECT_EQ(second->synchronizations, 1);
-	spk::RenderContext missing{.targetSurface = nullptr};
-	EXPECT_THROW(a.activate(missing), std::invalid_argument);
 	surface._gpuResources().clear();
 	EXPECT_EQ(first->destructions, 1);
 	EXPECT_EQ(second->destructions, 1);
@@ -317,7 +315,7 @@ TEST(GPUResourceCollectionTest, FailureAtEachActivationStageReleasesExactlyOnceA
 	{
 		auto counters = std::make_shared<ResourceCounters>();
 		spk::Window::Surface surface("FakeFailure");
-		spk::RenderContext context{.targetSurface = &surface};
+		spk::RenderContext context{surface};
 		{
 			FakeGPUResource resource(counters);
 			counters->failCreation = stage == 0;
@@ -345,7 +343,7 @@ TEST(GPUResourceCollectionTest, FailureAtEachActivationStageReleasesExactlyOnceA
 TEST(GPUResourceCollectionTest, DestructionDuringReclamationQueuesFurtherReleasesForNextTraversal)
 {
 	spk::Window::Surface surface("Mutation");
-	spk::RenderContext context{.targetSurface = &surface};
+	spk::RenderContext context{surface};
 	auto a = std::make_shared<ResourceCounters>(), b = std::make_shared<ResourceCounters>();
 	auto first = std::make_unique<FakeGPUResource>(a);
 	auto second = std::make_shared<std::unique_ptr<FakeGPUResource>>(std::make_unique<FakeGPUResource>(b));

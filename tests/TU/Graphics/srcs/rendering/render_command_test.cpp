@@ -35,7 +35,8 @@ TEST(RenderCommandTest, PolymorphicConstOwnershipExecutesAndDestroysExactlyOnce)
 {
 	std::vector<int> log;
 	int destructions = 0;
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderCommandTest");
+	spk::RenderContext context{surface};
 	{
 		std::unique_ptr<const spk::RenderCommand> command = std::make_unique<PolymorphicRecordingCommand>(log, destructions);
 		command->execute(context);

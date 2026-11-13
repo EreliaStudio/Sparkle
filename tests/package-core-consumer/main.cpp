@@ -31,7 +31,7 @@ namespace
 
 int main()
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity3D entity("Server entity");
 	auto &behaviour = entity.addBehaviour<TickBehaviour>();
 	auto &system = engine.addSystem<TickSystem>();
