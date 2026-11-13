@@ -205,5 +205,5 @@ Les scénarios graphiques ne doivent pas imposer la création d'un nouveau chemi
 - [Architecture PR08 implémentée](IMPLEMENTED-01-08.md)
 - [Model3D Object actuel](PR-08.4b-model3d-object.md)
 - [Architecture générale de la roadmap](README.md)
-- [Guide de développement Sparkle](../../../ai-development-guidelines.md)
+- [Guide de développement Sparkle](../../ai-development-guidelines.md)
 - Sources techniques : `include/model3d/{blueprint,object_headless,object}.hpp`, `src/model3d/{object_headless,object_attachment_node}.cpp`, `include/engine/behaviour.hpp`, `include/core/context/update_context.hpp`.
