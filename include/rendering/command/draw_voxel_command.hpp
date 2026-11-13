@@ -2,12 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 #include <vector>
 
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
+#include "lighting/system.hpp"
 #include "math/matrix.hpp"
 #include "rendering/render_command.hpp"
 #include "voxel/geometry.hpp"
@@ -40,6 +42,7 @@ namespace spk
 		ShaderStorageBuffer _materials;
 		ShaderStorageBuffer _materialRemap;
 		Sampler _albedo;
+		std::shared_ptr<const Lighting::System> _lighting;
 
 		[[nodiscard]] static Program &_sharedProgram();
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
@@ -50,12 +53,14 @@ namespace spk
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
-			std::vector<Matrix4x4> models);
+			std::vector<Matrix4x4> models,
+			std::shared_ptr<const Lighting::System> lighting = {});
 		DrawVoxelCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
-			Matrix4x4 model);
+			Matrix4x4 model,
+			std::shared_ptr<const Lighting::System> lighting = {});
 
 		void execute(RenderContext &context) const override;
 	};
