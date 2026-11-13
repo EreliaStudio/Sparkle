@@ -6,9 +6,9 @@
 #include <cstdint>
 
 #include "engine/entity3d.hpp"
-#include "lighting/system.hpp"
 #include "light/point.hpp"
 #include "light/spot.hpp"
+#include "lighting/system.hpp"
 #include "rendering/engine/ambient_light.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
