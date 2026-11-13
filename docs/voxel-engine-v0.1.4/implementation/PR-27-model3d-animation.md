@@ -31,6 +31,7 @@ L'animation doit pouvoir s'exécuter dans le Core/headless. Un `Object<TGraphics
 | Poses | **Partielles** : chaque pose décrit seulement les propriétés qu'elle anime, et non l'intégralité du modèle. |
 | Articulations | `AttachmentNode` gère la **rotation dynamique** uniquement (conserve ses points d'attachement définis par le `Blueprint`). |
 | Éléments | `ObjectHeadless::ElementNode` reçoit une **translation** et une **échelle** dynamiques dans son repère local ; **pas de rotation dynamique propre à l'élément**. |
+| Portée du scale | Le scale d'un élément modifie seulement sa géométrie et la position des points d'attachement qu'il porte. Les géométries enfants ne sont pas redimensionnées. |
 | Interpolation | Rotations par interpolation de quaternions (`slerp`) ; translations et échelles par `lerp`. Ne jamais interpoler directement les 16 coefficients d'une matrice. |
 | Définition statique | Le `Blueprint` et ses matrices d'ancrage restent immuables. |
 | Pas de GPU requis | Le calcul temporel et les changements de pose doivent fonctionner indépendamment des vues graphiques. |
@@ -63,22 +64,40 @@ M_attachment = M_attachmentBlueprint × R_dynamic
 - Le pivot et l'orientation de repos viennent du `Blueprint`.
 - Aucune translation ou échelle *dynamique propre à l'articulation* n'est introduite.
 
-### Élément
+### Élément — scale local non hérité (décision validée le 13/11/2026)
+
+Le scale d'un élément s'applique **uniquement à sa propre géométrie**. Les descendants **n'héritent jamais de son scale** : leurs dimensions et orientations restent indépendantes.
+
+En revanche, **la position des points d'attachement de cet élément suit sa déformation**. Quand l'avant-bras devient plus long, sa main attachée à son extrémité avance, sans grandir. Le bras supérieur ne change pas non plus.
+
+Il faut donc distinguer la transformation du **repère hiérarchique** de l'élément, sans scale hérité, et celle de sa **géométrie**, avec scale local :
 
 ```text
-M_elementLocal = M_anchorBlueprint × T_dynamic × S_dynamic
+M_elementFrame    = M_parentAttachmentFrame × M_anchorBlueprint × T_dynamic
+M_elementGeometry = M_elementFrame × S_dynamic
+
+M_childAttachmentFrame =
+    M_elementFrame
+    × Translate(S_dynamic × attachmentPositionBlueprint)
+    × attachmentOrientationBlueprint
+    × R_attachmentDynamic
 ```
 
-- La translation `T_dynamic` est exprimée selon les axes du repère d'ancrage local de l'élément.
-- L'échelle `S_dynamic` est elle aussi locale.
-- Pas de rotation dynamique sur `ElementNode` : celle-ci est assurée par l'articulation parente.
-- Valeurs neutres : translation `(0,0,0)`, échelle `(1,1,1)`.
-- Conserver les composantes numériques séparées et une matrice locale dérivée/cachée ; une matrice 4×4 peut être exposée pour la consommation, sans être le stockage unique de l'état interpolable.
-- Recalculer les caches uniquement lorsque les valeurs changent ; invalider les transformations globales pertinentes et leurs descendants.
+Ces formules sont **conceptuelles** : la factorisation exacte devra respecter les conventions mathématiques et les matrices existantes du `Blueprint`. Le contrat invariant est que le scale modifie **la position locale des points d'attachement**, pas leurs orientations ni les dimensions des enfants.
 
-La matrice mondiale/relative d'un élément reste la composition de sa hiérarchie existante, avec les articulations intermédiaires et sa transformation locale.
+- `T_dynamic` est exprimée dans les axes de l'ancrage local de l'élément ; l'échelle `S_dynamic` est aussi locale.
+- Le point d'attachement placé localement en `p` est repositionné en `S × p` autour de l'origine de l'élément, y compris pour une échelle non uniforme.
+- La rotation du point d'attachement reste celle du `Blueprint`, composée avec la rotation dynamique de `AttachmentNode`, sans scale dans la base transmise à l'enfant.
+- Le descendant suit le déplacement induit par l'attache, mais conserve son **propre scale** et sa propre orientation.
+- Les valeurs neutres sont : translation `(0,0,0)` et échelle `(1,1,1)`.
+- Conserver les composantes séparées pour interpoler, et dériver les matrices ; n'interpoler ni ne propager directement une matrice 4×4 incluant le scale.
+- Un changement d'échelle invalide la matrice de géométrie de l'élément et les transformations des descendants dont les attaches sont déplacées, **pas** leurs échelles locales.
 
-**Point encore à arbitrer :** le redimensionnement d'un élément propage-t-il son échelle aux points d'attachement et descendants ? C'est le comportement naturel si `S_dynamic` est dans la chaîne hiérarchique. Nous l'avons proposé, pas encore explicitement validé.
+**Exemple :** épaule → bras → avant-bras → main. Avec un avant-bras allongé de 50 % sur son axe longitudinal, son extrémité et donc la main avancent. Le bras garde exactement ses dimensions et sa position ; la main garde ses dimensions, mais sa position suit l'extrémité de l'avant-bras.
+
+### Implication sur l'implémentation
+
+Actuellement, `Attachable::globalTransform()` sert aussi à construire la matrice de rendu des éléments dans `Object<TGraphics>`. L'implémentation devra distinguer la matrice du **repère transmis aux attaches** (sans scale) et celle de **géométrie** (avec scale), ou fournir une représentation équivalente. Préserver les caches, les copies/déplacements et l'attachement dynamique de sous-`ObjectHeadless`.
 
 ## 5. `spk::Model3D::Animation` — données, sans horloge
 
@@ -163,8 +182,10 @@ Ne pas introduire silencieusement du blending, des layers, des priorités ou des
 ## 10. Tests d'acceptation à prévoir lors de l'implémentation
 
 ### Core / headless
-- pose de repos, translation/échelle locale et composition `M_anchor × T × S` ;
+- pose de repos, translation/échelle locale, et séparation de la matrice de géométrie et du repère transmis aux descendants ;
 - rotation d'articulation avec translation locale d'un élément enfant ;
+- bras → avant-bras → main : allonger l'avant-bras déplace la main sans la redimensionner et sans modifier le bras ;
+- scale non uniforme du parent : les attaches sont repositionnées, sans héritage de scale ni de modification d'orientation des descendants ;
 - calcul des matrices et invalidation ciblée des caches ;
 - absence de modification de la transformation ECS après squat ;
 - poses partielles : propriété non ciblée inchangée selon la politique décidée ;
@@ -191,14 +212,15 @@ Les scénarios graphiques ne doivent pas imposer la création d'un nouveau chemi
 
 ## 12. Décisions restantes pour notre discussion
 
-1. **Propagation du scale :** échelle hiérarchique incluant les descendants/attachements, ou échelle visuelle limitée à l'élément ?
-2. **Lecture simultanée :** une animation unique au départ ou plusieurs clips indépendants, et comment résoudre leurs conflits ?
-3. **Canaux partiels :** valeur initiale d'une propriété absente des états adjacents, maintien en fin de clip et interaction avec les modifications manuelles ?
-4. **Contrôle de lecture :** `play`/`stop`/`pause`, fin de clip, bouclage, vitesse, changement de clip et politique de transition.
-5. **Validation :** échelles nulles/négatives, durées nulles, animation vide et correspondance clip/modèle.
-6. **Interface publique exacte :** objets valeurs et setters à exposer sur `ElementNode`, type de clé d'articulation et modèle de propriété/liaison dans `Animator`.
+1. **Lecture simultanée :** une animation unique au départ ou plusieurs clips indépendants, et comment résoudre leurs conflits ?
+2. **Canaux partiels :** valeur initiale d'une propriété absente des états adjacents, maintien en fin de clip et interaction avec les modifications manuelles ?
+3. **Contrôle de lecture :** `play`/`stop`/`pause`, fin de clip, bouclage, vitesse, changement de clip et politique de transition.
+4. **Validation :** échelles nulles/négatives, durées nulles, animation vide et correspondance clip/modèle.
+5. **Interface publique exacte :** objets valeurs et setters à exposer sur `ElementNode`, type de clé d'articulation et modèle de propriété/liaison dans `Animator`.
 
-**Ne pas présenter ces points comme actés.** Cette fiche constitue la base de la prochaine discussion d'architecture, pas un mandat pour coder immédiatement.
+**Décision actée sur le scale (13/11/2026) :** il est local à la géométrie ; les attaches changent de position mais les descendants ne sont pas redimensionnés. Les cinq autres questions restent ouvertes.
+
+Cette fiche constitue la base de la prochaine discussion d'architecture, pas un mandat pour coder immédiatement.
 
 ## Références
 
