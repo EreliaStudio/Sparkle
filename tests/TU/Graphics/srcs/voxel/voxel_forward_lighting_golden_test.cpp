@@ -284,8 +284,8 @@ TEST(VoxelForwardLightingGolden, ObliqueSpotCastsRoundedOvalAcrossDifferentShape
 	// projected cone becomes an elongated, rounded oval around all three shapes.
 	scene.view.ambientLight().setIntensity(0.07f);
 	auto &spot = scene.addLight<spk::Light::Spot>(
-		{4.0f, 2.8f, 2.5f},
-		{0.0f, -1.2f, -0.6f},
+		{3.8f, 3.4f, 1.9f},
+		{0.0f, -0.2f, -0.2f},
 		{1.0f, 0.9f, 0.72f},
 		9.0f,
 		11.5f);
