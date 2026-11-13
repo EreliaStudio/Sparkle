@@ -59,6 +59,28 @@ namespace
 		}
 	};
 
+	class EdgeAtlas final : public spk::Texture
+	{
+	public:
+		EdgeAtlas()
+		{
+			std::array<std::uint8_t, 8 * 8 * 4> pixels{};
+			for (std::size_t y = 0; y < 8; ++y)
+			{
+				for (std::size_t x = 0; x < 8; ++x)
+				{
+					const std::size_t index = (y * 8 + x) * 4;
+					pixels[index] = x == 0 ? 255 : 0;
+					pixels[index + 1] = x == 0 ? 0 : 255;
+					pixels[index + 2] = x == 0 ? 0 : 255;
+					pixels[index + 3] = 255;
+				}
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {8, 8}, Format::RGBA);
+			validate();
+		}
+	};
+
 	[[nodiscard]] spk::Voxel::Geometry namedGeometry(const std::string &shapeName, const std::string &materialName)
 	{
 		spk::Voxel::Shape::Builder shapes;
@@ -302,6 +324,61 @@ TEST(VoxelRendererTest, SharedMeshWithDifferentSlotMappingsDoesNotBatch)
 	scene.add(stone, appearance, {-1, 0, 0});
 	scene.add(wood, appearance, {1, 0, 0});
 	EXPECT_EQ(scene.commandCount(), 2u);
+}
+
+TEST(VoxelRendererTest, NearestAtlasSamplingStaysInsideOneTexelSections)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	EdgeAtlas atlas;
+	const auto geometry = cubeGeometry();
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+
+	spk::Camera3D camera;
+	const spk::Vector3 eye{2, 2, 4};
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+	const auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
+
+	const auto drawSection = [&](spk::Texture::Section section) {
+		gl.reset(ImageSize);
+		spk::DrawVoxelCommand command(
+			geometry,
+			makePalette(atlas, section),
+			{0u},
+			spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
+			lighting,
+			cameraBinding);
+		command.execute(gl.renderContext());
+		const auto image = gl.capture();
+		gl.requireNoErrors();
+		return image;
+	};
+
+	const auto redTile = drawSection({{0, 0}, {0.125f, 1}});
+	const auto cyanTile = drawSection({{0.125f, 0}, {0.125f, 1}});
+	std::size_t redPixels = 0;
+	std::size_t cyanPixels = 0;
+	std::size_t wrongRedPixels = 0;
+	std::size_t wrongCyanPixels = 0;
+	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
+		{
+			const auto *red = redTile.pixel({x, y});
+			const auto *cyan = cyanTile.pixel({x, y});
+			redPixels += red[0] > 100 && red[1] < 10 && red[2] < 10;
+			cyanPixels += cyan[0] < 10 && cyan[1] > 100 && cyan[2] > 100;
+			wrongRedPixels += red[1] > 30 || red[2] > 30;
+			wrongCyanPixels += cyan[0] > 30;
+		}
+	}
+	EXPECT_GT(redPixels, 100u);
+	EXPECT_GT(cyanPixels, 100u);
+	EXPECT_EQ(wrongRedPixels, 0u);
+	EXPECT_EQ(wrongCyanPixels, 0u);
+	gl.reset();
 }
 
 TEST(VoxelRendererTest, DrawCommandRejectsMissingLighting)
