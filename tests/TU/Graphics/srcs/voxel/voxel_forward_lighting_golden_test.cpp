@@ -419,7 +419,6 @@ TEST(VoxelForwardLightingIntegration, RenderTargetPreservesHDRAboveOneBeforeTone
 	gl.reset();
 }
 
-
 namespace
 {
 	struct ArticulatedCharacter
