@@ -56,9 +56,10 @@ namespace spk
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
 		Matrix4x4 model,
-		std::shared_ptr<const Lighting::System> lighting) :
+		std::shared_ptr<const Lighting::System> lighting,
+		std::shared_ptr<const CameraUniformRenderCommand> camera) :
 		DrawVoxelCommand(
-			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, std::move(lighting))
+			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, std::move(lighting), std::move(camera))
 	{
 	}
 
@@ -67,14 +68,16 @@ namespace spk
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
 		std::vector<Matrix4x4> models,
-		std::shared_ptr<const Lighting::System> lighting) :
+		std::shared_ptr<const Lighting::System> lighting,
+		std::shared_ptr<const CameraUniformRenderCommand> camera) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
 		_instances(InstanceBinding, 0, sizeof(Matrix4x4)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
 		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
-		_lighting(lighting ? std::move(lighting) : std::make_shared<const Lighting::System>(Light::Selection{}, RGB{1.0f, 1.0f, 1.0f}))
+		_lighting(lighting ? std::move(lighting) : std::make_shared<const Lighting::System>(Light::Selection{}, RGB{1.0f, 1.0f, 1.0f})),
+		_camera(std::move(camera))
 	{
 		if (models.empty())
 		{
@@ -119,6 +122,10 @@ namespace spk
 		OpenGL::State::DepthTest{}.apply(context);
 		OpenGL::State::Blend::disabled(context).apply(context);
 		OpenGL::State::Rasterization{}.apply(context);
+		if (_camera)
+		{
+			_camera->execute(context);
+		}
 		_program.activate(context);
 		_instances.activate(context);
 		_materials.activate(context);

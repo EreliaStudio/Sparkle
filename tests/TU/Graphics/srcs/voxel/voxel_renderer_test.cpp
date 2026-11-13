@@ -17,6 +17,7 @@
 #include "exception.hpp"
 #include "graphics/image.hpp"
 #include "light/directional.hpp"
+#include "lighting/system.hpp"
 #include "math/camera_3d.hpp"
 #include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/command/draw_voxel_command.hpp"
@@ -395,13 +396,16 @@ TEST(VoxelRendererTest, SingleDrawCommandRebindsMaterialBuffersAfterThirdParty)
 	gl.reset(ImageSize);
 	TestAtlas atlas;
 	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+	const auto camera = std::make_shared<const spk::CameraUniformRenderCommand>(spk::Camera3D{});
 	spk::DrawVoxelCommand command(
 		cubeGeometry(),
 		palette,
 		{0u},
-		spk::Matrix4x4::identity());
-	const auto camera = defaultCamera();
-	camera.execute(gl.renderContext());
+		spk::Matrix4x4::identity(),
+		lighting,
+		camera);
 	command.execute(gl.renderContext());
 	GLint sampler = 0;
 	glGetIntegeri_v(GL_SAMPLER_BINDING, 0, &sampler);
@@ -415,25 +419,39 @@ TEST(VoxelRendererTest, SingleDrawCommandRebindsMaterialBuffersAfterThirdParty)
 	GLint instances = 0;
 	GLint material = 0;
 	GLint remap = 0;
+	GLint forward = 0;
+	GLint cameraBinding = 0;
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &instances);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &material);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &remap);
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, spk::Lighting::System::BindingPoint, &forward);
+	glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, spk::CameraUniformRenderCommand::BindingPoint, &cameraBinding);
 	EXPECT_GT(instances, 0);
 	EXPECT_GT(material, 0);
 	EXPECT_GT(remap, 0);
+	EXPECT_GT(forward, 0);
+	EXPECT_GT(cameraBinding, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, spk::Lighting::System::BindingPoint, 0);
+	glBindBufferBase(GL_UNIFORM_BUFFER, spk::CameraUniformRenderCommand::BindingPoint, 0);
 	command.execute(gl.renderContext());
 	GLint reboundInstances = 0;
 	GLint reboundMaterial = 0;
 	GLint reboundRemap = 0;
+	GLint reboundForward = 0;
+	GLint reboundCamera = 0;
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &reboundInstances);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &reboundMaterial);
 	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &reboundRemap);
+	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, spk::Lighting::System::BindingPoint, &reboundForward);
+	glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, spk::CameraUniformRenderCommand::BindingPoint, &reboundCamera);
 	EXPECT_EQ(reboundInstances, instances);
 	EXPECT_EQ(reboundMaterial, material);
 	EXPECT_EQ(reboundRemap, remap);
+	EXPECT_EQ(reboundForward, forward);
+	EXPECT_EQ(reboundCamera, cameraBinding);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	gl.reset();
 }

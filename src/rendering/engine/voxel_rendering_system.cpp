@@ -14,6 +14,7 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "lighting/system.hpp"
+#include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/command/draw_voxel_command.hpp"
 #include "voxel/renderer.hpp"
 
@@ -107,6 +108,7 @@ namespace spk::Voxel
 		const Light::Selection emptySelection;
 		const auto &selection = context.lightSelection ? *context.lightSelection : emptySelection;
 		const auto lighting = std::make_shared<const Lighting::System>(selection, context.ambientRGB);
+		const auto camera = std::make_shared<const CameraUniformRenderCommand>(context.cameraSnapshot);
 		for (auto &bucket : buckets)
 		{
 			auto &pass = builder.renderPass(spk::EngineView::OpaquePassKey);
@@ -115,7 +117,8 @@ namespace spk::Voxel
 				bucket.palette,
 				std::move(bucket.materialRemap),
 				std::move(bucket.models),
-				lighting);
+				lighting,
+				camera);
 		}
 	}
 }

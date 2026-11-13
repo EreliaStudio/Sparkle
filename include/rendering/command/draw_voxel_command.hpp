@@ -10,6 +10,7 @@
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
 #include "lighting/system.hpp"
+#include "rendering/command/camera_uniform_render_command.hpp"
 #include "math/matrix.hpp"
 #include "rendering/render_command.hpp"
 #include "voxel/geometry.hpp"
@@ -43,6 +44,7 @@ namespace spk
 		ShaderStorageBuffer _materialRemap;
 		Sampler _albedo;
 		std::shared_ptr<const Lighting::System> _lighting;
+		std::shared_ptr<const CameraUniformRenderCommand> _camera;
 
 		[[nodiscard]] static Program &_sharedProgram();
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
@@ -54,13 +56,15 @@ namespace spk
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
 			std::vector<Matrix4x4> models,
-			std::shared_ptr<const Lighting::System> lighting = {});
+			std::shared_ptr<const Lighting::System> lighting = {},
+			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
 		DrawVoxelCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
 			Matrix4x4 model,
-			std::shared_ptr<const Lighting::System> lighting = {});
+			std::shared_ptr<const Lighting::System> lighting = {},
+			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
 
 		void execute(RenderContext &context) const override;
 	};
