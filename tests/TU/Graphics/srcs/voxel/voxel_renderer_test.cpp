@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <GL/glew.h>
-
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -16,6 +14,10 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "graphics/image.hpp"
+#include "graphics/opengl/sampler.hpp"
+#include "graphics/opengl/shader_storage_buffer.hpp"
+#include "light/directional.hpp"
+#include "lighting/system.hpp"
 #include "math/camera_3d.hpp"
 #include "rendering/command/camera_uniform_render_command.hpp"
 #include "rendering/command/draw_voxel_command.hpp"
@@ -35,11 +37,6 @@ namespace
 {
 	constexpr spk::Vector2UInt ImageSize{160, 120};
 
-	[[nodiscard]] spk::CameraUniformRenderCommand defaultCamera()
-	{
-		return spk::CameraUniformRenderCommand(spk::Camera3D{});
-	}
-
 	class TestAtlas final : public spk::Texture
 	{
 	public:
@@ -55,6 +52,28 @@ namespace
 					pixels[offset + 1] = y < 4 ? 255 : 0;
 					pixels[offset + 2] = x >= 4 ? 255 : 0;
 					pixels[offset + 3] = 255;
+				}
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {8, 8}, Format::RGBA);
+			validate();
+		}
+	};
+
+	class EdgeAtlas final : public spk::Texture
+	{
+	public:
+		EdgeAtlas()
+		{
+			std::array<std::uint8_t, 8 * 8 * 4> pixels{};
+			for (std::size_t y = 0; y < 8; ++y)
+			{
+				for (std::size_t x = 0; x < 8; ++x)
+				{
+					const std::size_t index = (y * 8 + x) * 4;
+					pixels[index] = x == 0 ? 255 : 0;
+					pixels[index + 1] = x == 0 ? 0 : 255;
+					pixels[index + 2] = x == 0 ? 0 : 255;
+					pixels[index + 3] = 255;
 				}
 			}
 			setPixels(std::span<const std::uint8_t>(pixels), {8, 8}, Format::RGBA);
@@ -97,9 +116,10 @@ namespace
 	[[nodiscard]] spk::Palette sharedPalette(const spk::Texture &atlas)
 	{
 		spk::Voxel::Palette::Builder builder;
-		for (const auto &[name, section] : std::array<std::pair<const char *, spk::Texture::Section>, 2>{
-				 {{"stone", {{0.0f, 0.0f}, {0.5f, 0.5f}}},
-				  {"wood", {{0.5f, 0.0f}, {0.5f, 0.5f}}}}})
+		const std::array<std::pair<const char *, spk::Texture::Section>, 2> tiles{{
+			{"stone", spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {4, 4})},
+			{"wood", spk::Texture::Section::fromPixels(atlas.size(), {4, 0}, {4, 4})}}};
+		for (const auto &[name, section] : tiles)
 		{
 			spk::Material::Builder material;
 			material.add("albedo", atlas, section);
@@ -112,6 +132,7 @@ namespace
 	{
 		spk::Engine engine;
 		spk::Entity3D cameraEntity{"camera"};
+		spk::Entity3D sunEntity{"PR13 golden sunlight"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
 		spk::EngineView &view;
 		spk::Voxel::RenderingSystem &system;
@@ -121,6 +142,11 @@ namespace
 			view(_createView()),
 			system(engine.addSystem<spk::Voxel::RenderingSystem>())
 		{
+			sunEntity.transform().setRotation(spk::Quaternion::lookAt({0, 0, 0}, {-0.35f, -0.85f, -0.45f}));
+			auto &sun = sunEntity.addComponent<spk::Light::Directional>();
+			sun.setIntensity(0.62f);
+			engine.addEntity(&sunEntity);
+			view.ambientLight().setIntensity(0.38f);
 		}
 
 		spk::EngineView &_createView()
@@ -156,6 +182,7 @@ namespace
 			{
 				engine.removeEntity(entity.get());
 			}
+			engine.removeEntity(&sunEntity);
 			engine.removeEntity(&cameraEntity);
 		}
 
@@ -184,7 +211,7 @@ namespace
 		gl.save(actual);
 		const auto image = gl.capture();
 		EXPECT_EQ(image.size, ImageSize);
-		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		EXPECT_NO_THROW(gl.requireNoErrors());
 		bool hasVisiblePixel = false;
 		for (std::uint32_t y = 0; y < ImageSize.y && !hasVisiblePixel; ++y)
 		{
@@ -300,36 +327,158 @@ TEST(VoxelRendererTest, SharedMeshWithDifferentSlotMappingsDoesNotBatch)
 	EXPECT_EQ(scene.commandCount(), 2u);
 }
 
-TEST(VoxelRendererTest, InstanceMatricesAreUploadedInStd430Order)
+TEST(VoxelRendererTest, NearestAtlasSamplingStaysInsideOneTexelSections)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	EdgeAtlas atlas;
+	const auto geometry = cubeGeometry();
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+
+	spk::Camera3D camera;
+	const spk::Vector3 eye{2, 2, 4};
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+	const auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
+
+	const auto drawSection = [&](spk::Texture::Section section) {
+		gl.reset(ImageSize);
+		spk::DrawVoxelCommand command(
+			geometry,
+			makePalette(atlas, section),
+			{0u},
+			spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
+			lighting,
+			cameraBinding);
+		command.execute(gl.renderContext());
+		const auto image = gl.capture();
+		gl.requireNoErrors();
+		return image;
+	};
+
+	const auto redTile = drawSection(spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {1, 8}));
+	const auto cyanTile = drawSection(spk::Texture::Section::fromPixels(atlas.size(), {1, 0}, {1, 8}));
+	std::size_t redPixels = 0;
+	std::size_t cyanPixels = 0;
+	std::size_t wrongRedPixels = 0;
+	std::size_t wrongCyanPixels = 0;
+	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
+		{
+			const auto *red = redTile.pixel({x, y});
+			const auto *cyan = cyanTile.pixel({x, y});
+			redPixels += red[0] > 100 && red[1] < 10 && red[2] < 10;
+			cyanPixels += cyan[0] < 10 && cyan[1] > 100 && cyan[2] > 100;
+			wrongRedPixels += red[1] > 30 || red[2] > 30;
+			wrongCyanPixels += cyan[0] > 30;
+		}
+	}
+	EXPECT_GT(redPixels, 100u);
+	EXPECT_GT(cyanPixels, 100u);
+	EXPECT_EQ(wrongRedPixels, 0u);
+	EXPECT_EQ(wrongCyanPixels, 0u);
+	gl.reset();
+}
+
+TEST(VoxelRendererTest, TexelInsetAtlasSectionsPreserveTheirBorderTexels)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	EdgeAtlas atlas;
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+
+	spk::Camera3D camera;
+	const spk::Vector3 eye{2, 2, 4};
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+	const auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
+
+	spk::DrawVoxelCommand command(
+		cubeGeometry(),
+		makePalette(atlas, spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {4, 8})),
+		{0u},
+		spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
+		lighting,
+		cameraBinding);
+	command.execute(gl.renderContext());
+
+	const auto image = gl.capture();
+	std::size_t redBorderPixels = 0;
+	std::size_t cyanInteriorPixels = 0;
+	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
+		{
+			const auto *pixel = image.pixel({x, y});
+			redBorderPixels += pixel[0] > 100 && pixel[1] < 10 && pixel[2] < 10;
+			cyanInteriorPixels += pixel[0] < 10 && pixel[1] > 100 && pixel[2] > 100;
+		}
+	}
+	EXPECT_GT(redBorderPixels, 30u);
+	EXPECT_GT(cyanInteriorPixels, 100u);
+	gl.requireNoErrors();
+	gl.reset();
+}
+
+TEST(VoxelRendererTest, DrawCommandRejectsMissingLighting)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	TestAtlas atlas;
+	const auto appearance = makePalette(atlas, spk::Texture::Section::whole);
+	const std::shared_ptr<const spk::Lighting::System> noLighting;
+	EXPECT_THROW(
+		spk::DrawVoxelCommand(cubeGeometry(), appearance, {0u}, spk::Matrix4x4::identity(), noLighting),
+		spk::Exception);
+	EXPECT_THROW(
+		spk::DrawVoxelCommand(
+			cubeGeometry(), appearance, {0u}, std::vector<spk::Matrix4x4>{spk::Matrix4x4::identity()}, noLighting),
+		spk::Exception);
+	gl.reset();
+}
+
+TEST(VoxelRendererTest, InstancedDrawRendersBothModelPositions)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(ImageSize);
 	TestAtlas atlas;
 	const std::vector<spk::Matrix4x4> models{
-		spk::Matrix4x4::translation(1.0f, 2.0f, 3.0f),
-		spk::Matrix4x4::translation(-4.0f, 5.0f, 6.0f)};
+		spk::Matrix4x4::translation(-1.5f, -0.5f, -0.5f),
+		spk::Matrix4x4::translation(0.5f, -0.5f, -0.5f)};
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+
+	spk::Camera3D camera;
+	const spk::Vector3 eye{0, 1.5f, 7};
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+	auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
 	spk::DrawVoxelCommand command(
-		cubeGeometry(),
-		makePalette(atlas, spk::Texture::Section::whole),
-		{0u},
-		models);
-	const auto camera = defaultCamera();
-	camera.execute(gl.renderContext());
+		cubeGeometry(), makePalette(atlas, spk::Texture::Section::whole), {0u}, models, lighting, cameraBinding);
 	command.execute(gl.renderContext());
 
-	GLint instances = 0;
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &instances);
-	ASSERT_GT(instances, 0);
-	GLint64 size = 0;
-	glGetNamedBufferParameteri64v(static_cast<GLuint>(instances), GL_BUFFER_SIZE, &size);
-	EXPECT_EQ(size, static_cast<GLint64>(models.size() * sizeof(spk::Matrix4x4)));
-	std::array<spk::Matrix4x4, 2> uploaded{};
-	glGetNamedBufferSubData(static_cast<GLuint>(instances), 0, sizeof(uploaded), uploaded.data());
-	EXPECT_EQ(uploaded[0][3][0], 1.0f);
-	EXPECT_EQ(uploaded[0][3][1], 2.0f);
-	EXPECT_EQ(uploaded[1][3][0], -4.0f);
-	EXPECT_EQ(uploaded[1][3][2], 6.0f);
-	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	const auto image = gl.capture();
+	std::size_t leftPixels = 0;
+	std::size_t rightPixels = 0;
+	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
+		{
+			const auto *pixel = image.pixel({x, y});
+			if (pixel[0] > 20 || pixel[1] > 20 || pixel[2] > 20)
+			{
+				(x < ImageSize.x / 2 ? leftPixels : rightPixels)++;
+			}
+		}
+	}
+	EXPECT_GT(leftPixels, 80u);
+	EXPECT_GT(rightPixels, 80u);
+	EXPECT_NO_THROW(gl.requireNoErrors());
 	gl.reset();
 }
 
@@ -359,7 +508,7 @@ TEST(VoxelRendererTest, DifferentMeshesSharingOnePaletteRenderDistinctMaterials)
 	}
 	EXPECT_GT(yellowPixels, 30u);
 	EXPECT_GT(cyanPixels, 30u);
-	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	EXPECT_NO_THROW(gl.requireNoErrors());
 	gl.save(sparkle_test::resultImagePath("rendering/voxel", "shared_palette_distinct_meshes"));
 }
 
@@ -381,52 +530,78 @@ TEST(VoxelRendererTest, InvalidScaleIsRejectedBeforeSnapshotPublication)
 	EXPECT_NO_THROW(scene.engine.refreshRenderSnapshot());
 }
 
-TEST(VoxelRendererTest, SingleDrawCommandRebindsMaterialBuffersAfterThirdParty)
+TEST(VoxelRendererTest, SingleDrawCommandRestoresItsOwnResourcesAfterAnotherPipeline)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(ImageSize);
+
 	TestAtlas atlas;
-	const auto palette = makePalette(atlas, spk::Texture::Section::whole);
+	const auto palette = sharedPalette(atlas);
+	const auto lighting = std::make_shared<const spk::Lighting::System>(
+		spk::Light::Selection{}, spk::RGB{1, 1, 1});
+	spk::Camera3D camera;
+	const spk::Vector3 eye{2, 2, 4};
+	camera.setPosition(eye);
+	camera.setRotation(spk::Quaternion::lookAt(eye, {0, 0, 0}));
+	camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 30.0f);
+	const auto cameraBinding = std::make_shared<const spk::CameraUniformRenderCommand>(camera);
 	spk::DrawVoxelCommand command(
 		cubeGeometry(),
 		palette,
 		{0u},
-		spk::Matrix4x4::identity());
-	const auto camera = defaultCamera();
-	camera.execute(gl.renderContext());
+		spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
+		lighting,
+		cameraBinding);
 	command.execute(gl.renderContext());
-	GLint sampler = 0;
-	glGetIntegeri_v(GL_SAMPLER_BINDING, 0, &sampler);
-	ASSERT_GT(sampler, 0);
-	GLint minFilter = 0;
-	GLint magFilter = 0;
-	glGetSamplerParameteriv(static_cast<GLuint>(sampler), GL_TEXTURE_MIN_FILTER, &minFilter);
-	glGetSamplerParameteriv(static_cast<GLuint>(sampler), GL_TEXTURE_MAG_FILTER, &magFilter);
-	EXPECT_EQ(minFilter, GL_NEAREST);
-	EXPECT_EQ(magFilter, GL_NEAREST);
-	GLint instances = 0;
-	GLint material = 0;
-	GLint remap = 0;
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &instances);
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &material);
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &remap);
-	EXPECT_GT(instances, 0);
-	EXPECT_GT(material, 0);
-	EXPECT_GT(remap, 0);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+	const auto reference = gl.capture();
+	const auto isVisible = [](const sparkle_test::FramebufferImage &image) {
+		for (std::size_t i = 0; i < image.pixels.size(); i += 4)
+		{
+			if (image.pixels[i] > 20 || image.pixels[i + 1] > 20 || image.pixels[i + 2] > 20)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	ASSERT_TRUE(isVisible(reference));
+
+	gl.reset(ImageSize);
+	const std::array<spk::Matrix4x4, 1> shiftedModels{spk::Matrix4x4::translation(50, 0, 0)};
+	spk::ShaderStorageBuffer otherInstances(0, 0, sizeof(spk::Matrix4x4));
+	otherInstances.resize(1);
+	otherInstances.setDynamicData(std::span<const spk::Matrix4x4>(shiftedModels));
+	otherInstances.validate();
+	otherInstances.activate(gl.renderContext());
+
+	const std::array<std::array<float, 4>, 2> otherUVs{{{0, 0, 0, 0}, {0, 0, 0, 0}}};
+	spk::ShaderStorageBuffer otherMaterials(1, 0, sizeof(otherUVs[0]));
+	otherMaterials.resize(2);
+	otherMaterials.setDynamicData(std::span<const std::array<float, 4>>(otherUVs));
+	otherMaterials.validate();
+	otherMaterials.activate(gl.renderContext());
+
+	const std::array<std::uint32_t, 1> otherIndices{1};
+	spk::ShaderStorageBuffer otherRemap(2, 0, sizeof(std::uint32_t));
+	otherRemap.resize(1);
+	otherRemap.setDynamicData(std::span<const std::uint32_t>(otherIndices));
+	otherRemap.validate();
+	otherRemap.activate(gl.renderContext());
+
+	const spk::Lighting::System otherLighting(spk::Light::Selection{}, spk::RGB{0, 0, 0});
+	otherLighting.activate(gl.renderContext());
+	spk::CameraUniformRenderCommand otherCamera(spk::Camera3D{});
+	otherCamera.execute(gl.renderContext());
+	spk::Sampler otherSampler(0, spk::Sampler::Filtering::Linear);
+	otherSampler.setTexture(atlas.handle());
+	otherSampler.validate();
+	otherSampler.activate(gl.renderContext());
+
 	command.execute(gl.renderContext());
-	GLint reboundInstances = 0;
-	GLint reboundMaterial = 0;
-	GLint reboundRemap = 0;
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &reboundInstances);
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 1, &reboundMaterial);
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 2, &reboundRemap);
-	EXPECT_EQ(reboundInstances, instances);
-	EXPECT_EQ(reboundMaterial, material);
-	EXPECT_EQ(reboundRemap, remap);
-	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	const auto rebound = gl.capture();
+	EXPECT_EQ(rebound.size, reference.size);
+	EXPECT_EQ(rebound.pixels, reference.pixels);
+	EXPECT_NO_THROW(gl.requireNoErrors());
 	gl.reset();
 }
 

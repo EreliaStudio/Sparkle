@@ -13,6 +13,7 @@
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "graphics/image.hpp"
+#include "light/directional.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/render_snapshot.hpp"
@@ -62,11 +63,10 @@ namespace
 
 	[[nodiscard]] spk::Texture::Section section(std::size_t index, spk::Vector2UInt textureSize)
 	{
-		const float x = static_cast<float>(index % 4) * 16.0f;
-		const float y = static_cast<float>(index / 4) * 16.0f;
-		const spk::Vector2 anchor{(x + 0.5f) / static_cast<float>(textureSize.x), (y + 0.5f) / static_cast<float>(textureSize.y)};
-		const spk::Vector2 size{15.0f / static_cast<float>(textureSize.x), 15.0f / static_cast<float>(textureSize.y)};
-		return {anchor, size};
+		const spk::Vector2UInt pixelAnchor{
+			static_cast<std::uint32_t>(index % 4) * 16u,
+			static_cast<std::uint32_t>(index / 4) * 16u};
+		return spk::Texture::Section::fromPixels(textureSize, pixelAnchor, {16, 16});
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Image &atlas, bool alternate = false)
@@ -141,6 +141,7 @@ namespace
 	{
 		spk::Engine engine;
 		spk::Entity3D cameraEntity{"Voxel scene camera"};
+		spk::Entity3D sunEntity{"PR13 golden sunlight"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
 		spk::EngineView &view;
 		spk::Voxel::RenderingSystem &system;
@@ -150,6 +151,11 @@ namespace
 			view(_createView()),
 			system(engine.addSystem<spk::Voxel::RenderingSystem>())
 		{
+			sunEntity.transform().setRotation(spk::Quaternion::lookAt({0, 0, 0}, {-0.35f, -0.85f, -0.45f}));
+			auto &sun = sunEntity.addComponent<spk::Light::Directional>();
+			sun.setIntensity(0.62f);
+			engine.addEntity(&sunEntity);
+			view.ambientLight().setIntensity(0.38f);
 		}
 
 		spk::EngineView &_createView()
@@ -209,6 +215,7 @@ namespace
 			{
 				engine.removeEntity(entity.get());
 			}
+			engine.removeEntity(&sunEntity);
 			engine.removeEntity(&cameraEntity);
 		}
 	};
