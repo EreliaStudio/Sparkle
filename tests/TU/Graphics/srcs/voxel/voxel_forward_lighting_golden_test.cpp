@@ -40,6 +40,7 @@ namespace
 {
 	constexpr spk::Vector2UInt ImageSize{320, 240};
 	constexpr const char *Category = "rendering/forward-lighting";
+	constexpr float SoftFillAmbientIntensity = 0.20f;
 
 	class Atlas final : public spk::Texture
 	{
@@ -307,7 +308,7 @@ TEST(VoxelForwardLightingGolden, ObliqueSpotCastsRoundedOvalAcrossDifferentShape
 	Scene scene;
 	// Shine diagonally across the floor, rather than straight down: the
 	// projected cone becomes an elongated, rounded oval around all three shapes.
-	scene.view.ambientLight().setIntensity(0.07f);
+	scene.view.ambientLight().setIntensity(SoftFillAmbientIntensity);
 	auto &spot = scene.addLight<spk::Light::Spot>(
 		{3.8f, 3.4f, 1.9f},
 		{0.0f, -0.2f, -0.2f},
@@ -563,7 +564,7 @@ TEST_P(ArticulatedVoxelLightingGolden, ArticulatedNormalsFollowHierarchyAndLight
 		param.lighting == CharacterLighting::SwordRaisedSpot;
 	Scene scene(false);
 	auto rig = addArticulatedCharacter(scene, withSword);
-	scene.view.ambientLight().setIntensity(0.08f);
+	scene.view.ambientLight().setIntensity(SoftFillAmbientIntensity);
 	switch (param.lighting)
 	{
 	case CharacterLighting::AmbientOnly:
@@ -664,7 +665,7 @@ TEST(VoxelForwardLightingIntegration, ArticulatedArmRotationChangesVisibleLighti
 {
 	Scene scene(false);
 	auto rig = addArticulatedCharacter(scene);
-	scene.view.ambientLight().setIntensity(0.08f);
+	scene.view.ambientLight().setIntensity(SoftFillAmbientIntensity);
 	addCharacterPointLeft(scene);
 	const auto before = scene.capture();
 	ASSERT_NE(before, nullptr);
@@ -684,7 +685,7 @@ TEST(VoxelForwardLightingIntegration, CharacterYawChangesWorldSpaceLighting)
 {
 	Scene scene(false);
 	auto rig = addArticulatedCharacter(scene);
-	scene.view.ambientLight().setIntensity(0.08f);
+	scene.view.ambientLight().setIntensity(SoftFillAmbientIntensity);
 	addCharacterSun(scene, {5, 7, 7});
 	const auto before = scene.capture();
 	ASSERT_NE(before, nullptr);
@@ -704,7 +705,7 @@ TEST(VoxelForwardLightingIntegration, StationaryArticulatedNormalsRespondToLight
 {
 	Scene scene(false);
 	addArticulatedCharacter(scene);
-	scene.view.ambientLight().setIntensity(0.08f);
+	scene.view.ambientLight().setIntensity(SoftFillAmbientIntensity);
 	auto &left = scene.addLight<spk::Light::Point>(
 		{-3.5f, 3.8f, 3}, {0, 1.5f, 0}, {1, 0.2f, 0.1f}, 6.0f, 10.0f);
 	auto &right = scene.addLight<spk::Light::Point>(
@@ -752,7 +753,7 @@ TEST_P(VoxelWorldNormalRotation, EquivalentWorldGeometryKeepsEquivalentShading)
 	// produce the same world-space illumination.
 	Scene scene(false);
 	auto &cube = scene.add(geometry({3, 3, 3}), 0, {-1.5f, -0.2f, -1.5f});
-	scene.view.ambientLight().setIntensity(0.06f);
+	scene.view.ambientLight().setIntensity(SoftFillAmbientIntensity);
 	switch (GetParam().lighting)
 	{
 	case EquivalentLighting::Directional:
