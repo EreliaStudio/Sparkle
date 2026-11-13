@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -441,27 +440,35 @@ TEST(VoxelRendererTest, SingleDrawCommandRestoresItsOwnResourcesAfterAnotherPipe
 	command.execute(gl.renderContext());
 	const auto reference = gl.capture();
 	const auto isVisible = [](const sparkle_test::FramebufferImage &image) {
-		return std::any_of(image.pixels.begin(), image.pixels.end(), [](std::uint8_t value) {
-			return value > 20;
-		});
+		for (std::size_t i = 0; i < image.pixels.size(); i += 4)
+		{
+			if (image.pixels[i] > 20 || image.pixels[i + 1] > 20 || image.pixels[i + 2] > 20)
+			{
+				return true;
+			}
+		}
+		return false;
 	};
 	ASSERT_TRUE(isVisible(reference));
 
 	gl.reset(ImageSize);
 	const std::array<spk::Matrix4x4, 1> shiftedModels{spk::Matrix4x4::translation(50, 0, 0)};
 	spk::ShaderStorageBuffer otherInstances(0, 0, sizeof(spk::Matrix4x4));
+	otherInstances.resize(1);
 	otherInstances.setDynamicData(std::span<const spk::Matrix4x4>(shiftedModels));
 	otherInstances.validate();
 	otherInstances.activate(gl.renderContext());
 
 	const std::array<std::array<float, 4>, 2> otherUVs{{{0, 0, 0, 0}, {0, 0, 0, 0}}};
 	spk::ShaderStorageBuffer otherMaterials(1, 0, sizeof(otherUVs[0]));
+	otherMaterials.resize(2);
 	otherMaterials.setDynamicData(std::span<const std::array<float, 4>>(otherUVs));
 	otherMaterials.validate();
 	otherMaterials.activate(gl.renderContext());
 
 	const std::array<std::uint32_t, 1> otherIndices{1};
 	spk::ShaderStorageBuffer otherRemap(2, 0, sizeof(std::uint32_t));
+	otherRemap.resize(1);
 	otherRemap.setDynamicData(std::span<const std::uint32_t>(otherIndices));
 	otherRemap.validate();
 	otherRemap.activate(gl.renderContext());

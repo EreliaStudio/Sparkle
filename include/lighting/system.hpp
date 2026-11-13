@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "graphics/color.hpp"
+#include "graphics/opengl/padding.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
 #include "light/selection.hpp"
 #include "math/vector3.hpp"
@@ -27,7 +28,7 @@ namespace spk::Lighting
 		struct alignas(16) Header
 		{
 			RGB ambient;
-			float padding = 0.0f;
+			SPK_PADDING(1);
 			std::uint32_t count = 0;
 			std::uint32_t localCount = 0;
 			std::uint32_t directionalCount = 0;
@@ -43,7 +44,7 @@ namespace spk::Lighting
 			RGB color;
 			float intensity = 0.0f;
 			std::uint32_t type = 0;
-			std::uint32_t padding[3]{};
+			SPK_PADDING(3);
 		};
 
 		static_assert(sizeof(Header) == 32 && alignof(Header) == 16);
