@@ -116,9 +116,10 @@ namespace
 	[[nodiscard]] spk::Palette sharedPalette(const spk::Texture &atlas)
 	{
 		spk::Voxel::Palette::Builder builder;
-		for (const auto &[name, section] : std::array<std::pair<const char *, spk::Texture::Section>, 2>{
-				 {{"stone", {{0.0f, 0.0f}, {0.5f, 0.5f}}},
-				  {"wood", {{0.5f, 0.0f}, {0.5f, 0.5f}}}}})
+		const std::array<std::pair<const char *, spk::Texture::Section>, 2> tiles{{
+			{"stone", spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {4, 4})},
+			{"wood", spk::Texture::Section::fromPixels(atlas.size(), {4, 0}, {4, 4})}}};
+		for (const auto &[name, section] : tiles)
 		{
 			spk::Material::Builder material;
 			material.add("albedo", atlas, section);
@@ -356,8 +357,8 @@ TEST(VoxelRendererTest, NearestAtlasSamplingStaysInsideOneTexelSections)
 		return image;
 	};
 
-	const auto redTile = drawSection({{0, 0}, {0.125f, 1}});
-	const auto cyanTile = drawSection({{0.125f, 0}, {0.125f, 1}});
+	const auto redTile = drawSection(spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {1, 8}));
+	const auto cyanTile = drawSection(spk::Texture::Section::fromPixels(atlas.size(), {1, 0}, {1, 8}));
 	std::size_t redPixels = 0;
 	std::size_t cyanPixels = 0;
 	std::size_t wrongRedPixels = 0;
@@ -398,7 +399,7 @@ TEST(VoxelRendererTest, TexelInsetAtlasSectionsPreserveTheirBorderTexels)
 
 	spk::DrawVoxelCommand command(
 		cubeGeometry(),
-		makePalette(atlas, {{0.5f / 8.0f, 0.0f}, {3.0f / 8.0f, 1.0f}}),
+		makePalette(atlas, spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {4, 8})),
 		{0u},
 		spk::Matrix4x4::translation(-0.5f, -0.5f, -0.5f),
 		lighting,

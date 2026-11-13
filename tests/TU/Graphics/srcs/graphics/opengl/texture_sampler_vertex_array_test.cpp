@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <stdexcept>
 #include <vector>
 
 #include "exception.hpp"
@@ -47,6 +48,27 @@ namespace
 		vertices.validate();
 		indices.validate();
 	}
+}
+
+TEST(TextureTest, PixelSectionsUseTexelCentersAndValidateBounds)
+{
+	using Section = spk::Texture::Section;
+	const auto tile = Section::fromPixels({64, 64}, {16, 32}, {16, 16});
+	EXPECT_FLOAT_EQ(tile.anchor.x, 16.5f / 64.0f);
+	EXPECT_FLOAT_EQ(tile.anchor.y, 32.5f / 64.0f);
+	EXPECT_FLOAT_EQ(tile.size.x, 15.0f / 64.0f);
+	EXPECT_FLOAT_EQ(tile.size.y, 15.0f / 64.0f);
+
+	const auto oneTexel = Section::fromPixels({8, 8}, {7, 7}, {1, 1});
+	EXPECT_FLOAT_EQ(oneTexel.anchor.x, 7.5f / 8.0f);
+	EXPECT_FLOAT_EQ(oneTexel.size.x, 0.25f / 8.0f);
+	EXPECT_GT(oneTexel.size.y, 0.0f);
+	EXPECT_LT(oneTexel.anchor.x + oneTexel.size.x, 1.0f);
+
+	EXPECT_THROW(Section::fromPixels({0, 8}, {0, 0}, {1, 1}), std::invalid_argument);
+	EXPECT_THROW(Section::fromPixels({8, 8}, {0, 0}, {0, 1}), std::invalid_argument);
+	EXPECT_THROW(Section::fromPixels({8, 8}, {7, 0}, {2, 1}), std::out_of_range);
+	EXPECT_THROW(Section::fromPixels({8, 8}, {0, 8}, {1, 1}), std::out_of_range);
 }
 
 TEST(TextureTest, FormatDescriptorsAndClassifiersCoverEveryPublicFormat)

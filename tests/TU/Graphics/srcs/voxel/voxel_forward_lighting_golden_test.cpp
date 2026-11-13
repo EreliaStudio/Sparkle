@@ -98,7 +98,7 @@ namespace
 	[[nodiscard]] spk::Palette palette(const Atlas &atlas, std::uint32_t tile)
 	{
 		spk::Material::Builder material;
-		material.add("albedo", atlas, {{static_cast<float>(tile) * 0.25f, 0.0f}, {0.25f, 1.0f}});
+		material.add("albedo", atlas, spk::Texture::Section::fromPixels(atlas.size(), {tile * 4u, 0u}, {4, 4}));
 		spk::Voxel::Palette::Builder result;
 		result.setMaterial("paint", material.build());
 		return result.build();

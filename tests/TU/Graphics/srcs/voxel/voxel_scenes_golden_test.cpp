@@ -63,11 +63,10 @@ namespace
 
 	[[nodiscard]] spk::Texture::Section section(std::size_t index, spk::Vector2UInt textureSize)
 	{
-		const float x = static_cast<float>(index % 4) * 16.0f;
-		const float y = static_cast<float>(index / 4) * 16.0f;
-		const spk::Vector2 anchor{(x + 0.5f) / static_cast<float>(textureSize.x), (y + 0.5f) / static_cast<float>(textureSize.y)};
-		const spk::Vector2 size{15.0f / static_cast<float>(textureSize.x), 15.0f / static_cast<float>(textureSize.y)};
-		return {anchor, size};
+		const spk::Vector2UInt pixelAnchor{
+			static_cast<std::uint32_t>(index % 4) * 16u,
+			static_cast<std::uint32_t>(index / 4) * 16u};
+		return spk::Texture::Section::fromPixels(textureSize, pixelAnchor, {16, 16});
 	}
 
 	[[nodiscard]] spk::Palette palette(const spk::Image &atlas, bool alternate = false)
