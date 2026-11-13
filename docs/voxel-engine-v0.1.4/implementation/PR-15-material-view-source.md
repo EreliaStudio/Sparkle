@@ -1,8 +1,8 @@
 # PR-15 — EngineView comme source de Material
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **Livrée : [PR #66](https://github.com/EreliaStudio/Sparkle/pull/66) fusionnée dans `V0.1.4`.** Les checklists ci-dessous sont historiques et ne sont pas des tâches ouvertes.
 >
-> **Branche source :** `impl/v0.1.4/15-material-view-source`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche historique :** `impl/v0.1.4/15-material-view-source`, déjà fusionnée dans `V0.1.4` via #66.
 
 **Objectif :** Permettre l'usage de la sortie finale d'une EngineView par un Material dans une autre vue.
 
@@ -21,7 +21,7 @@
 - [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
 - [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
 
-## Périmètre exact à réaliser
+## Périmètre historique
 
 - [ ] Material::Builder source EngineView& explicite en C++
 - [ ] identité incarnation de vue
@@ -36,7 +36,7 @@ Choix logique à capture CPU, validité réelle GPU par Surface et version; pas 
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
-## Tests obligatoires
+## Tests historiques
 
 - [ ] Surveillance avant main fonctionne première image sur Surface B
 - [ ] ordre inverse/cycle refusé CPU
@@ -63,3 +63,9 @@ réordonnancement automatique des vues, lien EngineView depuis JSON.
 ## Consigne de passation
 
 Confier **uniquement PR-15** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+## Résultat réel fusionné (#66)
+
+`EngineView::Texture` dérive de `spk::Texture`. `view.texture()` fournit un handle stable utilisable dans `Material::Builder`, résolu à l'exécution selon la Surface courante, y compris après resize. L'ordre des vues et les politiques de sortie détachée existantes s'appliquent.
+
+Les nouvelles PR réutilisent ce code livré et ne recommencent pas cette ancienne fiche.

@@ -38,11 +38,11 @@ Les arbitrages suivants sont **validés** et décrits de façon normative dans l
 
 ## État de l'implémentation
 
-Les PR01–PR13 sont fusionnées dans `V0.1.4`. **PR13 fournit le renderer voxel ECS de référence ; PR14 (adaptateur `Model3D`/voxel) est retirée ; PR15–PR26 sont les travaux futurs.** Voir [PR13 livrée](voxel-engine-v0.1.4/implementation/PR-13-voxel-render-first.md), [décision PR14](voxel-engine-v0.1.4/implementation/PR-14-assembly-render.md) et [état PR01–08](voxel-engine-v0.1.4/implementation/IMPLEMENTED-01-08.md).
+Les PR01–PR13 et PR15–PR18 sont fusionnées dans `V0.1.4`. **PR13 fournit le renderer voxel ECS de référence ; PR14 est retirée ; PR19–PR26 restent à réaliser.** Voir [PR13 livrée](voxel-engine-v0.1.4/implementation/PR-13-voxel-render-first.md), [décision PR14](voxel-engine-v0.1.4/implementation/PR-14-assembly-render.md) et [état PR01–08](voxel-engine-v0.1.4/implementation/IMPLEMENTED-01-08.md).
 
 ## Préparation de l'implémentation
 
-Les **treize arbitrages Q-ARCH-001 à Q-ARCH-013** sont clos, ainsi que **Q-TECH-001** (Top-N et transactions des Light::Channel) et **Q-TECH-007** (captures CPU, résultats d'ombres et cycles de vie GPU). Le [dossier d'implémentation](voxel-engine-v0.1.4/implementation/README.md) décrit 26 PR successives, avec leurs tests et dépendances. Les détails de bas niveau non spécifiés (signatures finales, états GPU, cas numériques limites) sont à décider et vérifier dans les PR concernées, sans rouvrir les choix validés.
+Les **treize arbitrages Q-ARCH-001 à Q-ARCH-013** sont clos, ainsi que **Q-TECH-001** (Top-N/Channel, avec décision PR18 : mutation CPU puis notification, sans transaction stricte des setters) et **Q-TECH-007** (captures CPU, résultats d'ombres et cycles de vie GPU). Le [dossier d'implémentation](voxel-engine-v0.1.4/implementation/README.md) décrit 26 fiches historiques, dont PR19–PR26 restent à réaliser, avec tests et dépendances. Les détails de bas niveau non spécifiés (signatures finales, états GPU, cas numériques limites) sont à décider et vérifier dans les PR concernées, sans rouvrir les choix validés.
 
 ## Pondération WBOIT — contrat validé
 

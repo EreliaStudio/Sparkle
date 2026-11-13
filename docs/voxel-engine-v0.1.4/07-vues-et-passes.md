@@ -2,6 +2,8 @@
 
 [Sommaire de l'architecture](../voxel-engine-v0.1.4-specification.md)
 
+**Baseline PR15–PR18 livrée :** `EngineView::Texture` en source de Material, résolue à l'exécution par Surface ; `CameraUniformRenderCommand` / UBO `CameraData` binding 1 ; composants Light ECS et sélections `Light::Channel` par vue. PR18 conserve **mutation CPU puis notification**, sans transaction stricte des setters.
+
 ## 7. Systèmes de rendu visuel, d’ombres et commandes GPU
 
 Le module graphique fournit une orchestration par vues, des systèmes de rendu visuel et d'ombres distincts, des ressources OpenGL par surface et des commandes indépendantes de l'état mutable de la simulation. Les types et comportements ci-dessous constituent le contrat cible ; les exemples de signatures expressément indicatifs ne fixent pas une API non arbitrée.
@@ -486,7 +488,7 @@ Le sous-snapshot de chaque vue est construit puis **détenu par valeur** par une
 
 **Portée et réentrance.** Le budget demeure propre au `ShadowMap::RenderingSystem`, commun à toutes les vues de **son snapshot moteur** et isolé par `Window::Surface`. Deux surfaces peuvent exécuter le même snapshot simultanément avec des plans et réalisations GPU indépendants. Comme déjà établi pour les `EngineWidget`, l'application est responsable d'éviter les doubles déclenchements logiques du même `Engine` dans une fenêtre : aucun ordonnanceur global inter-`EngineWidget` ou inter-moteurs n'est créé pour agréger plusieurs snapshots moteurs indépendants dans une image. Si une même paire est rencontrée à nouveau au cours de cette image, elle n'est jamais reconstruite ou débitée deux fois. Le protocole d'exécution des vues et leurs `RenderPass` reste strictement inchangé.
 
-**Pas de mutualisation inter-vues pour V0.1.4.** Chaque vue recalcule indépendamment ses transforms, sa visibilité, ses buckets, ses SSBO d'instances et ses commandes. Les ressources sources préexistantes (meshes, matériaux, textures, handles) demeurent réutilisables ; aucun cache ou objet de capture partagé entre vues n'est exigé. La mutualisation est une optimisation future éventuelle, seulement après mesures. La simulation `EngineHeadless::updateState()` n'est pas répétée pour chaque vue.
+**Pas de mutualisation inter-vues pour V0.1.4.** Chaque vue recalcule indépendamment ses transforms, sa visibilité, ses regroupements locaux compatibles, ses SSBO d'instances et ses commandes. Les ressources sources préexistantes (meshes, matériaux, textures, handles) demeurent réutilisables ; aucun cache ou objet de capture partagé entre vues n'est exigé. La mutualisation est une optimisation future éventuelle, seulement après mesures. La simulation `EngineHeadless::updateState()` n'est pas répétée pour chaque vue.
 
 ```mermaid
 sequenceDiagram

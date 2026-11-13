@@ -1,8 +1,8 @@
 # PR-17 — Point, Spot, Directional et scores
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **Livrée : [PR #68](https://github.com/EreliaStudio/Sparkle/pull/68) fusionnée dans `V0.1.4`.** Les checklists ci-dessous sont historiques et ne sont pas des tâches ouvertes.
 >
-> **Branche source :** `impl/v0.1.4/17-light-components`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche historique :** `impl/v0.1.4/17-light-components`, déjà fusionnée dans `V0.1.4` via #68.
 
 **Objectif :** Introduire les sources lumineuses directes et leur mathématique CPU.
 
@@ -19,7 +19,7 @@ Les objets voxel de la scène sont des `Entity3D` portant des `Voxel::Renderer` 
 - [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
 - [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
 
-## Périmètre exact à réaliser
+## Périmètre historique
 
 - [ ] Light::Contributor/Point/Spot/Directional Component3D
 - [ ] couleur RGB/intensity
@@ -36,7 +36,7 @@ Distance en U ; Smoothstep radiale A=1-3x²+2x³, Spot angulaire; culling conser
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
-## Tests obligatoires
+## Tests historiques
 
 - [ ] Range=0 pas lumière/ombre
 - [ ] angle Spot et projection near/far
@@ -63,3 +63,9 @@ Forward shader, Tiled Forward+, nouvelle hiérarchie de transforms.
 ## Consigne de passation
 
 Confier **uniquement PR-17** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+## Résultat réel fusionné (#68)
+
+`Light::Contributor`, Point, Spot et Directional livrés en Core : validations, atténuation Smoothstep, culling frustum sphère/cône, score fini, Transform3D monde et ordinals 64 bits par moteur. L'éclairage GPU et les shadows restent hors de PR17.
+
+Les nouvelles PR réutilisent ce code livré et ne recommencent pas cette ancienne fiche.

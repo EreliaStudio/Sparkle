@@ -18,6 +18,6 @@ Les parties d'un personnage et son arme peuvent être composées à l'aide des t
 
 ## Branche expérimentale existante
 
-La [PR GitHub #64](https://github.com/EreliaStudio/Sparkle/pull/64), en brouillon et **non fusionnée**, implémente l'ancien périmètre PR14. Elle ne devient **pas un prérequis technique** de la roadmap et ne doit pas être fusionnée au titre de ce plan. Sa fermeture administrative peut être effectuée séparément.
+La [PR GitHub #64](https://github.com/EreliaStudio/Sparkle/pull/64), fermée **sans fusion**, implémente l'ancien périmètre PR14. Elle ne devient **pas un prérequis technique** de la roadmap et ne doit pas être fusionnée au titre de ce plan. La PR expérimentale #64 a été fermée ; son périmètre n'est pas à réintroduire.
 
 **Point de départ des PR futures :** [PR13 livrée](PR-13-voxel-render-first.md), sur la branche `V0.1.4`.

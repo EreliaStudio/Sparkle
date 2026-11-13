@@ -8,9 +8,9 @@
 
 **Prérequis :** [PR-12](PR-12-enginewidget-first-view.md), [PR-13](PR-13-voxel-render-first.md), [PR-17](PR-17-light-components.md), [PR-18](PR-18-light-channel.md)
 
-## Adaptation à la baseline PR13 (obligatoire)
+## Adaptation à la baseline PR18 (obligatoire)
 
-**Étendre** `Voxel::RenderingSystem`, `DrawVoxelCommand` et les shaders opaques de PR13 (SSBO instances/Materials/remap) avec la sélection de lumières PR18. Ne pas créer un second renderer/bucket manager. `EngineView::AmbientLight`, le HDR, l'exposition et Reinhard existent depuis PR10–12 ; les réutiliser et couvrir les golden images PR13 inchangées.
+**Étendre** `Voxel::RenderingSystem`, `DrawVoxelCommand` et les shaders opaques PR13 (SSBO instances/Materials/`MaterialRemap`) avec `Light::Selection` de PR18, sans second renderer ni manager de buckets. Réutiliser AmbientLight/HDR/Reinhard et `CameraUniformRenderCommand` / `CameraData` de PR16 (`std140`, binding UBO 1). Préserver les goldens PR13.
 
 ## Spécifications normatives
 
@@ -31,7 +31,7 @@
 
 ## Instructions techniques et intégration
 
-Opaque calcul linéaire HDR, sans clamp avant Reinhard; toutes les sources directes issues du même Selection par vue; AmbientLight non ombrée; réactiver programme et tous SSBO aux bindings choisis par pipeline à chaque draw.
+Éclairage opaque HDR linéaire sans clamp, même `Light::Selection` par vue, AmbientLight non ombrée, UBO `CameraData` commun aux draws. Activer les SSBO nécessaires par draw ; ne pas relire les sources Light mutables dans `execute()`. Pour PR18, l'application coordonne toute mutation CPU concurrente avec la capture.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 

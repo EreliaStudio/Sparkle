@@ -1,8 +1,8 @@
 # PR-18 — Light::Channel, Top-N et cohérence CPU
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **Livrée : [PR #69](https://github.com/EreliaStudio/Sparkle/pull/69) fusionnée dans `V0.1.4`.** Les checklists ci-dessous sont historiques et ne sont pas des tâches ouvertes.
 >
-> **Branche source :** `impl/v0.1.4/18-light-channel`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche historique :** `impl/v0.1.4/18-light-channel`, déjà fusionnée dans `V0.1.4` via #69.
 
 **Objectif :** Fournir une sélection immuable par EngineView cohérente avec ses mutations.
 
@@ -20,7 +20,7 @@
 - [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
 - [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
 
-## Périmètre exact à réaliser
+## Périmètre historique
 
 - [ ] Light::Channel/Prioritizer/Selection
 - [ ] N=8/h=0,10
@@ -38,7 +38,7 @@ Entourer mutation CPU réelle et invalidation aux points source dans setters de 
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
-## Tests obligatoires
+## Tests historiques
 
 - [ ] Top-N début et hystérésis
 - [ ] candidate plus forte mais sous seuil conserve titulaires
@@ -88,3 +88,9 @@ n'a pas la garantie transactionnelle de la spécification d'origine.
 Les tests de capture concurrente ne doivent donc pas supposer la présence de
 cette transaction de mutation supprimée. En revanche, les demandes simultanées
 de sélection sur une scène CPU stable restent synchronisées par Channel.
+
+## Résultat réel fusionné (#69)
+
+`Light::Channel`, `Prioritizer` et `Selection` immuable livrés par EngineView : Top-N Point/Spot, Directional hors quota, générations, invalidation, hystérésis et historique. **Mutation CPU puis notification** est la décision fusionnée, sans transaction globale de setters. L'application coordonne la concurrence source/capture ; le rejet de publication générationnellement périmée reste requis.
+
+Les nouvelles PR réutilisent ce code livré et ne recommencent pas cette ancienne fiche.

@@ -1,8 +1,8 @@
 # PR-16 — Skybox unlit à six Materials
 
-> **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
+> **Livrée : [PR #67](https://github.com/EreliaStudio/Sparkle/pull/67) fusionnée dans `V0.1.4`.** Les checklists ci-dessous sont historiques et ne sont pas des tâches ouvertes.
 >
-> **Branche source :** `impl/v0.1.4/16-skybox-component`, à créer depuis la **tête courante de `V0.1.4`** après fusion des prérequis. **Branche cible de la PR GitHub : `V0.1.4`**. Ne jamais cibler `main` ni partir d'une autre branche de feature.
+> **Branche historique :** `impl/v0.1.4/16-skybox-component`, déjà fusionnée dans `V0.1.4` via #67.
 
 **Objectif :** Ajouter un Skybox générique comme composant RenderingComponent3D ordinaire.
 
@@ -21,7 +21,7 @@ La passe Skybox est déjà définie et initialisée par `EngineView` depuis PR10
 - [Spécification principale](../../voxel-engine-v0.1.4-specification.md)
 - [Contrats et scénarios d'acceptation](../10-contrats-et-validation.md)
 
-## Périmètre exact à réaliser
+## Périmètre historique
 
 - [ ] Skybox sur Entity3D
 - [ ] cube inversé centré caméra
@@ -36,7 +36,7 @@ Validation des six sources communes lors de capture CPU; pas de pointeur Skybox 
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
-## Tests obligatoires
+## Tests historiques
 
 - [ ] Six faces d'un atlas
 - [ ] source différente ou albedo manquante => Exception sans publication
@@ -63,3 +63,9 @@ SkyboxMaterial, glTextureCube couleur, EngineView.setSkybox.
 ## Consigne de passation
 
 Confier **uniquement PR-16** à l'IA. Les détails locaux (signatures C++, choix numérique aux bornes, états GPU) peuvent être finalisés pendant l'implémentation avec tests. Ne pas réouvrir les choix validés ni recréer le registre de questions supprimé. En cas de contradiction fonctionnelle publique **démontrée**, soumettre au plus une question ciblée ; poursuivre les éléments indépendants. [Prompt de démarrage générique](AI-HANDOFF.md).
+
+## Résultat réel fusionné (#67)
+
+`Skybox` sur `RenderingComponent3D`, six Materials de même source `albedo`, UV propres et rendu unlit HDR. `CameraUniformRenderCommand` capture projection, view, inverseView et viewProjection dans un UBO `CameraData` (`std140`, binding 1), partagé avec le voxel. Tests et goldens Skybox livrés.
+
+Les nouvelles PR réutilisent ce code livré et ne recommencent pas cette ancienne fiche.
