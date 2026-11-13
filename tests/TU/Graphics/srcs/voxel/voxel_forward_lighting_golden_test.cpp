@@ -1,4 +1,3 @@
-#include <GL/glew.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -18,6 +17,7 @@
 #include "engine/transform3d.hpp"
 #include "graphics/image.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/state.hpp"
 #include "light/directional.hpp"
 #include "light/point.hpp"
 #include "light/spot.hpp"
@@ -227,7 +227,7 @@ namespace
 		const auto actual = sparkle_test::resultImagePath(Category, name);
 		const auto expected = sparkle_test::expectedImagePath(Category, name);
 		gl.save(actual);
-		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		EXPECT_NO_THROW(gl.requireNoErrors());
 		const auto image = gl.capture();
 		EXPECT_EQ(image.size, ImageSize);
 		ASSERT_TRUE(std::filesystem::exists(expected))
@@ -385,10 +385,9 @@ TEST(VoxelForwardLightingIntegration, RenderTargetPreservesHDRAboveOneBeforeTone
 	const spk::Window::Surface::RenderTarget binding(gl.surface(), target.handle());
 	binding.activate(gl.renderContext());
 	gl.renderContext().activeRenderTarget = binding;
-	glViewport(0, 0, static_cast<GLsizei>(ImageSize.x), static_cast<GLsizei>(ImageSize.y));
-	const GLfloat black[]{0.0f, 0.0f, 0.0f, 1.0f};
-	glClearBufferfv(GL_COLOR, 0, black);
-	glClear(GL_DEPTH_BUFFER_BIT);
+	spk::OpenGL::State::Viewport{{0, 0, static_cast<int>(ImageSize.x), static_cast<int>(ImageSize.y)}}.apply(gl.renderContext());
+	spk::OpenGL::State::Clear::color(gl.renderContext(), 0, {0, 0, 0, 1});
+	spk::OpenGL::State::Clear::depth(gl.renderContext());
 
 	const spk::Vector3 eye{6.0f, 4.2f, 8.0f};
 	spk::Camera3D camera;
@@ -407,16 +406,14 @@ TEST(VoxelForwardLightingIntegration, RenderTargetPreservesHDRAboveOneBeforeTone
 		cameraBinding);
 	draw.execute(gl.renderContext());
 
-	hdr.texture().activate(gl.renderContext());
-	std::vector<float> pixels(static_cast<std::size_t>(ImageSize.x) * ImageSize.y * 4);
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+	const auto pixels = gl.captureFloatTexture(hdr.texture(), ImageSize);
 	float brightest = 0.0f;
 	for (std::size_t i = 0; i < pixels.size(); i += 4)
 	{
 		brightest = std::max(brightest, std::max(pixels[i], std::max(pixels[i + 1], pixels[i + 2])));
 	}
 	EXPECT_GT(brightest, 1.0f) << "Opaque lighting was clamped before the final Reinhard pass";
-	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	EXPECT_NO_THROW(gl.requireNoErrors());
 	gl.reset();
 }
 

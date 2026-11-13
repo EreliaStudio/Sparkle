@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <GL/glew.h>
-
 #include <cmath>
 #include <cstdint>
 
@@ -99,7 +97,7 @@ TEST(ForwardLighting, RadialAndAngularAttenuationMatchSelectedLightContracts)
 	EXPECT_FLOAT_EQ(spot.attenuation(0, {0, 0, -1}), 0.0f);
 }
 
-TEST(ForwardLighting, DrawBindingCanRecoverAfterAnotherLightingPayloadUsesSameIndex)
+TEST(ForwardLighting, AlternatingLightingPayloadsKeepTheirGPUContentsIndependent)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset({64, 64});
@@ -108,18 +106,18 @@ TEST(ForwardLighting, DrawBindingCanRecoverAfterAnotherLightingPayloadUsesSameIn
 	const spk::Lighting::System second(selection, {0.7f, 0.8f, 0.9f});
 
 	first.activate(gl.renderContext());
-	GLint firstBuffer = 0;
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, spk::Lighting::System::BindingPoint, &firstBuffer);
-	ASSERT_GT(firstBuffer, 0);
+	const auto firstData =
+		first.buffer().retrieve<spk::Lighting::System::Header, spk::Lighting::System::LightData>(gl.renderContext());
 	second.activate(gl.renderContext());
-	GLint secondBuffer = 0;
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, spk::Lighting::System::BindingPoint, &secondBuffer);
-	ASSERT_GT(secondBuffer, 0);
-	ASSERT_NE(secondBuffer, firstBuffer);
+	const auto secondData =
+		second.buffer().retrieve<spk::Lighting::System::Header, spk::Lighting::System::LightData>(gl.renderContext());
 	first.activate(gl.renderContext());
-	GLint reboundBuffer = 0;
-	glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, spk::Lighting::System::BindingPoint, &reboundBuffer);
-	EXPECT_EQ(reboundBuffer, firstBuffer);
-	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+	const auto restored =
+		first.buffer().retrieve<spk::Lighting::System::Header, spk::Lighting::System::LightData>(gl.renderContext());
+
+	EXPECT_EQ(firstData.fixedPart.ambient, (spk::RGB{0.1f, 0.2f, 0.3f}));
+	EXPECT_EQ(secondData.fixedPart.ambient, (spk::RGB{0.7f, 0.8f, 0.9f}));
+	EXPECT_EQ(restored.fixedPart.ambient, firstData.fixedPart.ambient);
+	EXPECT_NO_THROW(gl.requireNoErrors());
 	gl.reset();
 }
