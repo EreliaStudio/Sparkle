@@ -723,3 +723,81 @@ TEST(VoxelForwardLightingIntegration, StationaryArticulatedNormalsRespondToLight
 	expectGolden(*before, scene.view, "articulated_light_before");
 	expectGolden(*after, scene.view, "articulated_light_after");
 }
+
+namespace
+{
+	enum class EquivalentLighting
+	{
+		Directional,
+		Point,
+		Spot
+	};
+
+	struct EquivalentRotationCase
+	{
+		const char *name;
+		bool pitch;
+		EquivalentLighting lighting;
+	};
+
+	class VoxelWorldNormalRotation : public ::testing::TestWithParam<EquivalentRotationCase>
+	{
+	};
+}
+
+TEST_P(VoxelWorldNormalRotation, EquivalentWorldGeometryKeepsEquivalentShading)
+{
+	// A cube of uniform material occupies the exact same world volume
+	// before and after a quarter-turn. Rotated local normals must still
+	// produce the same world-space illumination.
+	Scene scene(false);
+	auto &cube = scene.add(geometry({3, 3, 3}), 0, {-1.5f, -0.2f, -1.5f});
+	scene.view.ambientLight().setIntensity(0.06f);
+	switch (GetParam().lighting)
+	{
+	case EquivalentLighting::Directional:
+		addCharacterSun(scene, {4, 7, 5}, {1, 0.8f, 0.5f}, 1.7f);
+		break;
+	case EquivalentLighting::Point:
+		scene.addLight<spk::Light::Point>(
+			{3, 4, 5}, {0, 1, 0}, {1, 0.4f, 0.2f}, 7.0f, 12.0f);
+		break;
+	case EquivalentLighting::Spot:
+		addCharacterSpot(scene, {4, 5, 6}, {0.3f, 0.7f, 1}, 0.7f);
+		break;
+	}
+
+	const auto initial = scene.capture();
+	ASSERT_NE(initial, nullptr);
+	const auto initialPixels = renderCapture(*initial, scene.view);
+
+	if (GetParam().pitch)
+	{
+		cube.transform().place({-1.5f, 2.8f, -1.5f});
+		cube.transform().setEulerRotation({90, 0, 0});
+	}
+	else
+	{
+		cube.transform().place({-1.5f, -0.2f, 1.5f});
+		cube.transform().setEulerRotation({0, 90, 0});
+	}
+	const auto rotated = scene.capture();
+	ASSERT_NE(rotated, nullptr);
+	const auto rotatedPixels = renderCapture(*rotated, scene.view);
+	EXPECT_LE(differentPixels(initialPixels, rotatedPixels), 100u)
+		<< GetParam().name << ": normals did not follow the model rotation";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+	RotationAndLightType,
+	VoxelWorldNormalRotation,
+	::testing::Values(
+		EquivalentRotationCase{"yaw_directional", false, EquivalentLighting::Directional},
+		EquivalentRotationCase{"yaw_point", false, EquivalentLighting::Point},
+		EquivalentRotationCase{"yaw_spot", false, EquivalentLighting::Spot},
+		EquivalentRotationCase{"pitch_directional", true, EquivalentLighting::Directional},
+		EquivalentRotationCase{"pitch_point", true, EquivalentLighting::Point},
+		EquivalentRotationCase{"pitch_spot", true, EquivalentLighting::Spot}),
+	[](const ::testing::TestParamInfo<EquivalentRotationCase> &info) {
+		return std::string(info.param.name);
+	});
