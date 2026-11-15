@@ -442,12 +442,15 @@ namespace
 		scene.add(geometry({3, 4, 1}), 1, {-1.5f, -1.5f, -0.5f}, &root);
 		auto &head = scene.joint(root, {0, 2.8f, 0});
 		scene.add(geometry({2, 2, 2}), 3, {-1, 0, -1}, &head);
-		scene.add(scene.cube, 0, {-0.5f, 0.5f, 1}, &head);
+		// Slightly embed the nose in the head to avoid equal-depth faces.
+		scene.add(scene.cube, 0, {-0.5f, 0.5f, 0.95f}, &head);
 
 		auto &leftShoulder = scene.joint(root, {-1.8f, 2.2f, 0});
 		auto &rightShoulder = scene.joint(root, {1.8f, 2.2f, 0});
-		scene.add(geometry({1, 3, 1}), 2, {-0.5f, -3, -0.5f}, &leftShoulder);
-		scene.add(geometry({1, 3, 1}), 2, {-0.5f, -3, -0.5f}, &rightShoulder);
+		// Arms slightly overlap the torso. Keep their front/back faces
+		// off the torso planes, otherwise the golden depends on draw order.
+		scene.add(geometry({1, 3, 1}), 2, {-0.5f, -3, -0.45f}, &leftShoulder);
+		scene.add(geometry({1, 3, 1}), 2, {-0.5f, -3, -0.55f}, &rightShoulder);
 
 		auto &leftHip = scene.joint(root, {-0.85f, -1.5f, 0});
 		auto &rightHip = scene.joint(root, {0.85f, -1.5f, 0});
@@ -459,7 +462,8 @@ namespace
 		{
 			rightWrist.transform().setEulerRotation({90, 0, 0});
 			scene.add(scene.cube, 0, {-0.5f, -0.5f, -0.5f}, &rightWrist);
-			scene.add(geometry({1, 4, 1}), 2, {-0.5f, 0, -0.5f}, &rightWrist);
+			// The blade and hilt overlap in the grip: avoid coplanar faces.
+			scene.add(geometry({1, 4, 1}), 2, {-0.5f, 0, -0.45f}, &rightWrist);
 		}
 
 		const spk::Vector3 eye{7, 5.5f, 9};
