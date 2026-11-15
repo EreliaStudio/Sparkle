@@ -116,15 +116,12 @@ namespace
 	[[nodiscard]] spk::Palette sharedPalette(const spk::Texture &atlas)
 	{
 		spk::Voxel::Palette::Builder builder;
-		const std::array<std::pair<const char *, spk::Texture::Section>, 2> tiles{{
-			{"stone", spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {4, 4})},
-			{"wood", spk::Texture::Section::fromPixels(atlas.size(), {4, 0}, {4, 4})}}};
-		for (const auto &[name, section] : tiles)
-		{
-			spk::Material::Builder material;
-			material.add("albedo", atlas, section);
-			builder.setMaterial(name, material.build());
-		}
+		spk::Material::Builder stone;
+		stone.add("albedo", atlas, spk::Texture::Section::fromPixels(atlas.size(), {0, 0}, {4, 4}));
+		builder.setMaterial("stone", stone.build());
+		spk::Material::Builder wood;
+		wood.add("albedo", atlas, spk::Texture::Section::fromPixels(atlas.size(), {4, 0}, {4, 4}));
+		builder.setMaterial("wood", wood.build());
 		return builder.build();
 	}
 
