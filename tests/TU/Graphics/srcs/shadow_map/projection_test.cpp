@@ -73,15 +73,9 @@ TEST(ShadowProjectionTest, PointFacesFollowOpenGLOrientationWithNinetyDegreeFrus
 	light.position = {2, 3, 4};
 	light.range = 12.0f;
 	const auto faces = spk::ShadowMap::Projection::point(light);
-	constexpr std::array<spk::Vector3, 6> axes{{
-		{1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-		{0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
-	constexpr std::array<spk::Vector3, 6> rights{{
-		{0, 0, -1}, {0, 0, 1}, {1, 0, 0},
-		{1, 0, 0}, {1, 0, 0}, {-1, 0, 0}}};
-	constexpr std::array<spk::Vector3, 6> ups{{
-		{0, -1, 0}, {0, -1, 0}, {0, 0, 1},
-		{0, 0, -1}, {0, -1, 0}, {0, -1, 0}}};
+	constexpr std::array<spk::Vector3, 6> axes{{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
+	constexpr std::array<spk::Vector3, 6> rights{{{0, 0, -1}, {0, 0, 1}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {-1, 0, 0}}};
+	constexpr std::array<spk::Vector3, 6> ups{{{0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0}}};
 	for (std::size_t index = 0; index < faces.size(); ++index)
 	{
 		const auto &projection = faces[index];
