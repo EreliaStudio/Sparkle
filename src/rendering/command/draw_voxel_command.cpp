@@ -16,6 +16,10 @@ namespace spk
 {
 	Program &DrawVoxelCommand::_sharedProgram(Mode mode)
 	{
+		if (mode != Mode::Opaque && mode != Mode::Translucent)
+		{
+			throw spk::Exception("Voxel draw: invalid rendering mode");
+		}
 		const auto build = [](Mode variant) {
 			std::string fragment(resources::text("shaders/voxel_opaque.frag.glsl"));
 			if (variant == Mode::Translucent)
