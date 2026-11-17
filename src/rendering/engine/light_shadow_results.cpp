@@ -97,9 +97,10 @@ namespace spk::Light
 			return nullptr;
 		}
 		const auto result = entry->slot.acquireLatest();
-		return entry->closed.load(std::memory_order_acquire) ||
-				   surface.lifeCycle() != Window::LifeCycle::Ready
-				   ? nullptr
-				   : result;
+		if (entry->closed.load(std::memory_order_acquire) || surface.lifeCycle() != Window::LifeCycle::Ready)
+		{
+			return nullptr;
+		}
+		return result;
 	}
 }

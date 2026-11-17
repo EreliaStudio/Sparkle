@@ -5,8 +5,8 @@
 #include <Windows.h>
 
 #include <atomic>
-#include <exception>
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <mutex>
 #include <stdexcept>

@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <ranges>
 #include <optional>
+#include <ranges>
 #include <utility>
 
 #include "exception.hpp"
