@@ -28,6 +28,12 @@ namespace spk
 			{
 				program.bindSampler("uShadowMaps[" + std::to_string(i) + "]", 1 + i);
 			}
+			for (std::size_t i = 0; i < Lighting::System::MaxPointShadowSamplers; ++i)
+			{
+				program.bindSampler(
+					"uPointShadowMaps[" + std::to_string(i) + "]",
+					Lighting::System::PointShadowBindingBase + i);
+			}
 			program.bindSampler("uAlbedo", AlbedoUnit);
 			return program;
 		}();
