@@ -118,7 +118,11 @@ namespace spk::ShadowMap
 			OpenGL::State::ColorOutput::writable(context, false).apply(context);
 			OpenGL::State::DepthTest{}.apply(context);
 			OpenGL::State::Blend::disabled(context).apply(context);
-			OpenGL::State::Rasterization{}.apply(context);
+			auto rasterization = OpenGL::State::Rasterization{};
+			rasterization.polygonOffsetEnabled = true;
+			rasterization.polygonOffsetFactor = 1.5f;
+			rasterization.polygonOffsetUnits = 2.0f;
+			rasterization.apply(context);
 			if (clear)
 			{
 				OpenGL::State::Clear::depth(context);
@@ -281,8 +285,8 @@ namespace spk::ShadowMap
 			entry.nearPlane = projection.nearPlane;
 			entry.farPlane = projection.farPlane;
 			entry.resolution = light.shadowResolution;
-			entry.depthBias = 0.0015f;
-			entry.normalBias = 0.002f;
+			entry.depthBias = 0.0005f;
+			entry.normalBias = 0.025f;
 			if (_channel->publishShadowResult(*context.targetSurface, std::move(entry)))
 			{
 				cache.publishedAdmission = light.admission;
