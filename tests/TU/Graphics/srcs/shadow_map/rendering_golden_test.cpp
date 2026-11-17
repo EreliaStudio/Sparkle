@@ -139,11 +139,14 @@ namespace
 		}
 		spk::Voxel::Volume::Builder volume({4, 1, 4});
 		volume.bind(registry.build());
+		using Horizontal = spk::Voxel::Shape::HorizontalOrientation;
+		constexpr std::array<Horizontal, 4> directions{
+			Horizontal::XPositive, Horizontal::ZPositive, Horizontal::XNegative, Horizontal::ZNegative};
 		for (std::uint32_t z = 0; z < 4; ++z)
 		{
 			for (std::uint32_t x = 0; x < 4; ++x)
 			{
-				volume.set({x, 0, z}, (x + z) % 4 + 1);
+				volume.set({x, 0, z}, (x + z) % 4 + 1, directions[z]);
 			}
 		}
 		return spk::Voxel::Mesher().bake(volume.build());
@@ -461,8 +464,11 @@ TEST(ShadowRenderingGolden, PointInsideRoomLightsMultipleWallFaces)
 	auto leftWall = geometry({1, 3, 7});
 	scene.add(backWall, 0, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::Static);
 	scene.add(leftWall, 2, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::Static);
-	scene.add(scene.cube, 1, {-0.8f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
-	scene.add(scene.cube, 2, {0.8f, -0.2f, 0.2f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.stair, 1, {-0.8f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slope, 2, {0.8f, -0.2f, 0.2f}, spk::ShadowMap::Mode::Static);
+	const spk::Vector3 eye{2.7f, 2.4f, 3.0f};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {-0.2f, -0.3f, -0.4f}));
 	scene.addLight<spk::Light::Point>({0, 1, 0}, {0, 0, 0}, {1, 0.78f, 0.65f}, 8.0f);
 	render(scene, "point_room");
 }
