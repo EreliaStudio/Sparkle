@@ -425,7 +425,7 @@ TEST(ShadowRenderingGolden, PointDynamicCasterMovesWithoutChangingHistoricalDept
 	auto &dynamic = scene.add(scene.cube, 1, {1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
 	scene.addLight<spk::Light::Point>({0, 3, 1}, {0, 0, 0}, {1, 1, 1}, 8.0f);
 	render(scene, "point_dynamic_before");
-	const auto &gl = sparkle_test::OpenGLTestContext::instance();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	ASSERT_NE(first, nullptr);
 	ASSERT_EQ(first->entries.size(), 1u);
