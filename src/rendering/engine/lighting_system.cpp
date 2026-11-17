@@ -65,6 +65,8 @@ namespace spk::Lighting
 		header.localCount = static_cast<std::uint32_t>(selection.local.size());
 		header.directionalCount = static_cast<std::uint32_t>(selection.directional.size());
 
+		_header = header;
+		_lightData = data;
 		_lights.resize(data.size());
 		_lights.setFixedData(header);
 		_lights.setDynamicData(std::span<const LightData>(data));
@@ -92,6 +94,8 @@ namespace spk::Lighting
 		bindings->samplers.reserve(MaxShadowSamplers + MaxPointShadowSamplers);
 		std::size_t map2DCount = 0;
 		std::size_t cubeCount = 0;
+		std::vector<LightData> historicalLights = _lightData;
+		bool requiresHistoricalLights = false;
 		const auto append = [&](const Light::Selection::Entry &light) {
 			ShadowData shadow;
 			if (_shadowChannel && context.targetSurface != nullptr)
@@ -107,6 +111,14 @@ namespace spk::Lighting
 							resolved->depthTexture->target() == Texture::Target::Texture2D;
 					if (compatible && point && cubeCount < MaxPointShadowSamplers)
 					{
+						const auto &geometry = resolved->light;
+						LightData &historic = historicalLights[data.size()];
+						if (historic.position != geometry.position || historic.range != geometry.range)
+						{
+							historic.position = geometry.position;
+							historic.range = geometry.range;
+							requiresHistoricalLights = true;
+						}
 						const std::size_t index = cubeCount++;
 						shadow.viewProjection = resolved->viewProjection;
 						shadow.parameters[0] = resolved->depthBias;
@@ -154,6 +166,16 @@ namespace spk::Lighting
 		for (const auto &light : _selection.directional)
 		{
 			append(light);
+		}
+		if (requiresHistoricalLights)
+		{
+			bindings->historicalLights = std::make_unique<ShaderStorageBuffer>(
+				BindingPoint, sizeof(Header), sizeof(LightData));
+			bindings->historicalLights->resize(historicalLights.size());
+			bindings->historicalLights->setFixedData(_header);
+			bindings->historicalLights->setDynamicData(std::span<const LightData>(historicalLights));
+			bindings->historicalLights->validate();
+			bindings->historicalLights->activate(context);
 		}
 		bindings->buffer.resize(data.size());
 		bindings->buffer.setDynamicData(std::span<const ShadowData>(data));
