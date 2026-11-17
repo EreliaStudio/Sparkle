@@ -147,7 +147,7 @@ namespace
 			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0.5f, 0.5f, 0.0f}));
 			camera.setPerspective(0.85f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 20.0f);
 			engine.addEntity(&cameraEntity);
-			return engine.addView("transparency", &camera, ImageSize);
+			return engine.addView("main", &camera, ImageSize);
 		}
 
 		void add(const spk::Voxel::Geometry &geometry, const spk::Texture &atlas, float depth)
