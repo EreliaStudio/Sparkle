@@ -714,7 +714,7 @@ TEST(PointShadowDepthTest, NonCubeCastersPopulateEveryCardinalFace)
 	const auto &entry = latest->entries.begin()->second;
 	ASSERT_EQ(entry.faceCount, 6u);
 	ASSERT_EQ(entry.resolution, ShadowSize);
-	ASSERT_NE(entry.depthTexture, nullptr);
+	ASSERT_TRUE(entry.depthTexture);
 	EXPECT_EQ(entry.depthTexture->format(), spk::Texture::Format::Depth32F);
 	for (std::size_t face = 0; face < 6; ++face)
 	{
