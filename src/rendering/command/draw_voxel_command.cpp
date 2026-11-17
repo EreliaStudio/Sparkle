@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -13,15 +14,29 @@
 
 namespace spk
 {
-	Program &DrawVoxelCommand::_sharedProgram()
+	Program &DrawVoxelCommand::_sharedProgram(Mode mode)
 	{
-		static Program result = [] {
+		const auto build = [](Mode variant) {
+			std::string fragment(resources::text("shaders/voxel_opaque.frag.glsl"));
+			if (variant == Mode::Translucent)
+			{
+				const auto versionEnd = fragment.find('\n');
+				if (versionEnd == std::string::npos)
+				{
+					throw spk::Exception("Voxel draw: fragment shader is missing its GLSL version");
+				}
+				fragment.insert(versionEnd + 1, "#define SPK_VOXEL_TRANSLUCENT 1\n");
+			}
 			Program program(
 				std::string(resources::text("shaders/voxel_opaque.vert.glsl")),
-				std::string(resources::text("shaders/voxel_opaque.frag.glsl")));
+				std::move(fragment));
 			program.bindShaderStorageBlock("Instances", InstanceBinding);
 			program.bindShaderStorageBlock("Materials", MaterialBinding);
 			program.bindShaderStorageBlock("MaterialRemap", MaterialRemapBinding);
+			if (variant == Mode::Translucent)
+			{
+				program.bindShaderStorageBlock("SlotOpacities", SlotOpacityBinding);
+			}
 			program.bindShaderStorageBlock("ForwardLighting", Lighting::System::BindingPoint);
 			program.bindShaderStorageBlock("ForwardShadows", Lighting::System::ShadowBindingPoint);
 			for (std::size_t i = 0; i < Lighting::System::MaxShadowSamplers; ++i)
@@ -36,8 +51,10 @@ namespace spk
 			}
 			program.bindSampler("uAlbedo", AlbedoUnit);
 			return program;
-		}();
-		return result;
+		};
+		static Program opaque = build(Mode::Opaque);
+		static Program translucent = build(Mode::Translucent);
+		return mode == Mode::Translucent ? translucent : opaque;
 	}
 
 	std::vector<DrawVoxelCommand::MaterialData> DrawVoxelCommand::_resolveMaterials(
@@ -68,9 +85,10 @@ namespace spk
 		std::vector<std::uint32_t> materialRemap,
 		Matrix4x4 model,
 		std::shared_ptr<const Lighting::System> lighting,
-		std::shared_ptr<const CameraUniformRenderCommand> camera) :
+		std::shared_ptr<const CameraUniformRenderCommand> camera,
+		Mode mode) :
 		DrawVoxelCommand(
-			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, std::move(lighting), std::move(camera))
+			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, std::move(lighting), std::move(camera), mode)
 	{
 	}
 
@@ -80,12 +98,15 @@ namespace spk
 		std::vector<std::uint32_t> materialRemap,
 		std::vector<Matrix4x4> models,
 		std::shared_ptr<const Lighting::System> lighting,
-		std::shared_ptr<const CameraUniformRenderCommand> camera) :
+		std::shared_ptr<const CameraUniformRenderCommand> camera,
+		Mode mode) :
+		_mode(mode),
 		_geometry(std::move(geometry)),
-		_program(_sharedProgram()),
+		_program(_sharedProgram(mode)),
 		_instances(InstanceBinding, 0, sizeof(Matrix4x4)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
+		_slotOpacities(SlotOpacityBinding, 0, sizeof(float)),
 		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
 		_lighting(std::move(lighting)),
 		_camera(std::move(camera))
@@ -114,6 +135,18 @@ namespace spk
 		_materialRemap.resize(materialRemap.size());
 		_materialRemap.setDynamicData(std::span<const std::uint32_t>(materialRemap));
 		_materialRemap.validate();
+		if (_mode == Mode::Translucent)
+		{
+			std::vector<float> opacities;
+			opacities.reserve(_geometry.materialSlots().size());
+			for (const auto &slot : _geometry.materialSlots())
+			{
+				opacities.push_back(slot.opacity);
+			}
+			_slotOpacities.resize(opacities.size());
+			_slotOpacities.setDynamicData(std::span<const float>(opacities));
+			_slotOpacities.validate();
+		}
 		_materials.resize(materials.size());
 		_materials.setDynamicData(std::span<const MaterialData>(materials));
 		_materials.validate();
@@ -130,12 +163,24 @@ namespace spk
 
 	void DrawVoxelCommand::execute(RenderContext &context) const
 	{
-		if (_geometry.opaqueMesh().empty())
+		const auto &mesh = _mode == Mode::Opaque ? _geometry.opaqueMesh() : _geometry.transparentMesh();
+		if (mesh.empty())
 		{
 			return;
 		}
-		OpenGL::State::DepthTest{}.apply(context);
-		OpenGL::State::Blend::disabled(context).apply(context);
+		if (_mode == Mode::Opaque)
+		{
+			OpenGL::State::DepthTest{}.apply(context);
+			OpenGL::State::Blend::disabled(context).apply(context);
+		}
+		else
+		{
+			OpenGL::State::DepthTest{.write = false}.apply(context);
+			auto blend = OpenGL::State::Blend::disabled(context);
+			blend.attachments[0] = {.enabled = true, .sourceRGB = OpenGL::State::BlendFactor::One, .destinationRGB = OpenGL::State::BlendFactor::One, .sourceAlpha = OpenGL::State::BlendFactor::One, .destinationAlpha = OpenGL::State::BlendFactor::One};
+			blend.attachments[1] = {.enabled = true, .sourceRGB = OpenGL::State::BlendFactor::Zero, .destinationRGB = OpenGL::State::BlendFactor::OneMinusSourceColor, .sourceAlpha = OpenGL::State::BlendFactor::Zero, .destinationAlpha = OpenGL::State::BlendFactor::OneMinusSourceColor};
+			blend.apply(context);
+		}
 		OpenGL::State::Rasterization{}.apply(context);
 		if (_camera)
 		{
@@ -145,10 +190,13 @@ namespace spk
 		_instances.activate(context);
 		_materials.activate(context);
 		_materialRemap.activate(context);
+		if (_mode == Mode::Translucent)
+		{
+			_slotOpacities.activate(context);
+		}
 		_lighting->activate(context);
 		const auto shadows = _lighting->activateShadows(context);
 		_albedo.activate(context);
-		const auto &mesh = _geometry.opaqueMesh();
 		mesh.layout().activate(context);
 		_program.renderInstanced(
 			Program::Primitive::Triangles, mesh.indexType(), 0, mesh.indexCount(), _instances.dynamicElementCount());
