@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -17,6 +18,7 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/state.hpp"
@@ -88,6 +90,28 @@ namespace spk::ShadowMap
 			return Framebuffer({resolution, resolution}, {}, Texture::Format::Depth32F);
 		}
 
+		struct CubeTargets
+		{
+			Texture::Handle depth;
+			std::array<Framebuffer::Handle, 6> faces;
+		};
+
+		[[nodiscard]] CubeTargets newCubeTargets(std::uint32_t resolution)
+		{
+			CubeMap cube(resolution);
+			CubeTargets result;
+			result.depth = cube.handle();
+			for (std::size_t face = 0; face < result.faces.size(); ++face)
+			{
+				Framebuffer target(
+					{resolution, resolution},
+					std::vector<Framebuffer::RenderAttachment>{},
+					Framebuffer::RenderAttachment(result.depth, static_cast<CubeMap::Face>(face)));
+				result.faces[face] = target.handle();
+			}
+			return result;
+		}
+
 		[[nodiscard]] Program &depthProgram()
 		{
 			static Program program = [] {
@@ -129,6 +153,10 @@ namespace spk::ShadowMap
 			}
 			if (casters.empty())
 			{
+				if (const GLenum error = glGetError(); error != GL_NO_ERROR)
+				{
+					throw spk::Exception("Shadow depth rendering failed with OpenGL error " + std::to_string(error));
+				}
 				return;
 			}
 			UniformBuffer cameraBuffer(4, sizeof(Matrix4x4));
@@ -184,6 +212,10 @@ namespace spk::ShadowMap
 			std::uint64_t publishedAdmission = 0;
 			Framebuffer::Handle staticTarget;
 			Framebuffer::Handle finalTarget;
+			bool point = false;
+			std::array<Matrix4x4, 6> pointProjections{};
+			std::array<Framebuffer::Handle, 6> pointStaticFaces;
+			std::array<Framebuffer::Handle, 6> pointFinalFaces;
 			Texture::Handle finalTexture;
 		};
 
@@ -234,15 +266,91 @@ namespace spk::ShadowMap
 			return cache;
 		}
 
+		void _renderPoint(
+			RenderContext &context,
+			RenderingSystem::State::LightCache &cache,
+			const Light::Selection::Entry &light) const
+		{
+			const auto projections = Projection::point(light);
+			std::array<Matrix4x4, 6> matrices{};
+			for (std::size_t face = 0; face < matrices.size(); ++face)
+			{
+				matrices[face] = projections[face].viewProjection;
+			}
+			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature;
+			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
+			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
+			if (staticDirty)
+			{
+				auto targets = newCubeTargets(light.shadowResolution);
+				staticFaces = std::move(targets.faces);
+				for (std::size_t face = 0; face < staticFaces.size(); ++face)
+				{
+					renderDepth(context, staticFaces[face], matrices[face], _staticCasters, true);
+				}
+			}
+			std::array<Framebuffer::Handle, 6> finalFaces = cache.pointFinalFaces;
+			Texture::Handle finalTexture = cache.finalTexture;
+			if (dynamicDirty)
+			{
+				auto targets = newCubeTargets(light.shadowResolution);
+				finalTexture = std::move(targets.depth);
+				finalFaces = std::move(targets.faces);
+				for (std::size_t face = 0; face < finalFaces.size(); ++face)
+				{
+					copyDepth(context, staticFaces[face], finalFaces[face]);
+					renderDepth(context, finalFaces[face], matrices[face], _dynamicCasters, false);
+				}
+			}
+			// Commit only after every face was generated successfully. The previous
+			// depth texture remains untouched and valid for historical readers.
+			if (!dynamicDirty && cache.publishedAdmission == light.admission)
+			{
+				return;
+			}
+			cache.pointStaticFaces = std::move(staticFaces);
+			cache.pointFinalFaces = std::move(finalFaces);
+			cache.finalTexture = std::move(finalTexture);
+			cache.pointProjections = matrices;
+			cache.point = true;
+			cache.resolution = light.shadowResolution;
+			cache.staticSignature = _staticSignature;
+			cache.dynamicSignature = _dynamicSignature;
+
+			ShadowMap::Result::Entry entry;
+			entry.registrationOrder = light.registrationOrder;
+			entry.admission = light.admission;
+			entry.generation = ++cache.generation;
+			entry.captureOrdinal = _captureOrdinal;
+			entry.light = light;
+			entry.depthTexture = cache.finalTexture;
+			entry.viewProjection = matrices;
+			entry.faceCount = 6;
+			entry.nearPlane = projections[0].nearPlane;
+			entry.farPlane = projections[0].farPlane;
+			entry.resolution = light.shadowResolution;
+			entry.depthBias = 0.0005f;
+			entry.normalBias = 0.025f;
+			if (_channel->publishShadowResult(*context.targetSurface, std::move(entry)))
+			{
+				cache.publishedAdmission = light.admission;
+			}
+		}
+
 		void _renderLight(
 			RenderContext &context,
 			RenderingSystem::State::LightCache &cache,
 			const Light::Selection::Entry &light) const
 		{
+			if (light.type == Light::Selection::Type::Point)
+			{
+				_renderPoint(context, cache, light);
+				return;
+			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
 											  ? Projection::spot(light)
 											  : Projection::directional(light, _camera);
-			const bool staticDirty = !cache.staticTarget || cache.resolution != light.shadowResolution ||
+			const bool staticDirty = cache.point || !cache.staticTarget || cache.resolution != light.shadowResolution ||
 									 cache.projection != projection.viewProjection ||
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
@@ -274,6 +382,7 @@ namespace spk::ShadowMap
 			cache.dynamicSignature = _dynamicSignature;
 			cache.projection = projection.viewProjection;
 			cache.resolution = light.shadowResolution;
+			cache.point = false;
 			ShadowMap::Result::Entry entry;
 			entry.registrationOrder = light.registrationOrder;
 			entry.admission = light.admission;
@@ -351,7 +460,8 @@ namespace spk::ShadowMap
 		}
 		std::vector<Light::Selection::Entry> lights;
 		const auto append = [&lights](const Light::Selection::Entry &light) {
-			if (light.castsShadows && (light.type == Light::Selection::Type::Spot ||
+			if (light.castsShadows && (light.type == Light::Selection::Type::Point ||
+									   light.type == Light::Selection::Type::Spot ||
 									   light.type == Light::Selection::Type::Directional))
 			{
 				lights.push_back(light);

@@ -35,6 +35,8 @@ namespace spk::Lighting
 		static constexpr std::size_t BindingPoint = 3;
 		static constexpr std::size_t ShadowBindingPoint = 4;
 		static constexpr std::size_t MaxShadowSamplers = 16;
+		static constexpr std::size_t MaxPointShadowSamplers = 8;
+		static constexpr std::size_t PointShadowBindingBase = 1 + MaxShadowSamplers;
 
 		struct alignas(16) Header
 		{
@@ -69,20 +71,25 @@ namespace spk::Lighting
 
 		struct alignas(16) ShadowData
 		{
-			Matrix4x4 viewProjection = Matrix4x4::identity();
+			std::array<Matrix4x4, 6> viewProjection{};
 			std::array<float, 4> parameters{};
+			std::array<float, 4> pointPositionNear{};
+			std::array<float, 4> pointFarResolution{};
 		};
 
-		static_assert(sizeof(ShadowData) == 80 && alignof(ShadowData) == 16);
+		static_assert(sizeof(ShadowData) == 432 && alignof(ShadowData) == 16);
 
 		struct ShadowBindings
 		{
 			ShaderStorageBuffer buffer{ShadowBindingPoint, 0, sizeof(ShadowData)};
 			std::vector<Sampler> samplers;
+			std::unique_ptr<ShaderStorageBuffer> historicalLights;
 		};
 
 	private:
 		ShaderStorageBuffer _lights;
+		Header _header;
+		std::vector<LightData> _lightData;
 		Light::Selection _selection;
 		std::shared_ptr<Light::Channel> _shadowChannel;
 		std::uint64_t _captureOrdinal = 0;

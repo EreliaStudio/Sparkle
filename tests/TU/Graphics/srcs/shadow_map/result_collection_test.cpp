@@ -15,13 +15,15 @@
 #include "core/platform/window.hpp"
 #include "core/window.hpp"
 #include "engine/entity3d.hpp"
+#include "graphics/opengl/cube_map.hpp"
 #include "light/channel.hpp"
 #include "light/directional.hpp"
+#include "light/point.hpp"
 #include "light/selection.hpp"
-#include "shadow_map/result.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
+#include "shadow_map/result.hpp"
 
 namespace
 {
@@ -88,6 +90,18 @@ namespace
 		{
 			auto lightEntity = std::make_unique<spk::Entity3D>("directional");
 			auto &light = lightEntity->addComponent<spk::Light::Directional>();
+			engine.addEntity(lightEntity.get());
+			lightEntities.push_back(std::move(lightEntity));
+			return light;
+		}
+
+		spk::Light::Point &addPoint()
+		{
+			auto lightEntity = std::make_unique<spk::Entity3D>("point");
+			auto &light = lightEntity->addComponent<spk::Light::Point>();
+			light.setRange(8.0f);
+			light.setCastsShadows(true);
+			light.setShadowResolution(64);
 			engine.addEntity(lightEntity.get());
 			lightEntities.push_back(std::move(lightEntity));
 			return light;
@@ -324,4 +338,61 @@ TEST(GraphicsShadowResultCollection, RemovingViewClosesChannelWithoutClearingIts
 	EXPECT_TRUE(weak.expired());
 	EXPECT_EQ(held->entries.size(), 1u);
 	surface.destroy();
+}
+
+// Point shadow results use the same per-Surface publication and admission
+// contract as PR22, but carry six immutable cubemap faces.
+TEST(GraphicsShadowResultCollection, PointCubeGenerationsStayIsolatedPerSurfaceAndHistoricalCapture)
+{
+	Scene scene;
+	auto &view = scene.addView();
+	auto &point = scene.addPoint();
+	scene.engine.refreshRenderSnapshot();
+	const auto selection = view.lightChannel().current();
+	ASSERT_NE(selection, nullptr);
+	ASSERT_EQ(selection->local.size(), 1u);
+	const auto light = selection->local.front();
+	ASSERT_EQ(light.type, spk::Light::Selection::Type::Point);
+
+	HiddenFrame firstFrame;
+	HiddenFrame secondFrame;
+	spk::Window::Surface first("point-cube-one");
+	spk::Window::Surface second("point-cube-two");
+	first.create(firstFrame.native.window());
+	second.create(secondFrame.native.window());
+
+	const auto makePointMap = [&](std::uint64_t generation) {
+		auto entry = makeMap(light, generation, selection->captureOrdinal);
+		spk::CubeMap cube(64);
+		entry.depthTexture = cube.handle();
+		entry.faceCount = 6;
+		return entry;
+	};
+	auto &channel = view.lightChannel();
+	ASSERT_TRUE(channel.publishShadowResult(first, makePointMap(1)));
+	const auto held = channel.shadowResultCollection().acquireLatest(first);
+	ASSERT_NE(held, nullptr);
+	ASSERT_TRUE(channel.publishShadowResult(second, makePointMap(1)));
+	const auto other = channel.shadowResultCollection().acquireLatest(second);
+	ASSERT_NE(other, nullptr);
+	ASSERT_TRUE(channel.publishShadowResult(first, makePointMap(2)));
+	const auto newer = channel.shadowResultCollection().acquireLatest(first);
+	ASSERT_NE(newer, nullptr);
+	EXPECT_EQ(held->entries.at(light.registrationOrder).faceCount, 6u);
+	EXPECT_EQ(held->entries.at(light.registrationOrder).generation, 1u);
+	EXPECT_EQ(newer->entries.at(light.registrationOrder).generation, 2u);
+	EXPECT_EQ(other->entries.at(light.registrationOrder).generation, 1u);
+	EXPECT_NE(
+		newer->entries.at(light.registrationOrder).depthTexture.identifier(),
+		held->entries.at(light.registrationOrder).depthTexture.identifier());
+	EXPECT_TRUE(channel.resolveShadowResult(first, light, selection->captureOrdinal).has_value());
+	EXPECT_TRUE(channel.resolveShadowResult(second, light, selection->captureOrdinal).has_value());
+	EXPECT_FALSE(channel.publishShadowResult(first, makePointMap(1)));
+
+	point.setCastsShadows(false);
+	EXPECT_FALSE(channel.resolveShadowResult(first, light, selection->captureOrdinal).has_value());
+	EXPECT_FALSE(channel.publishShadowResult(first, makePointMap(3)));
+	EXPECT_EQ(channel.shadowResultCollection().acquireLatest(first).get(), newer.get());
+	first.destroy();
+	second.destroy();
 }
