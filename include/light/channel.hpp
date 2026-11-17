@@ -30,6 +30,10 @@ namespace spk::Light
 		std::condition_variable _ready;
 		std::size_t _limit = 8;
 		float _hysteresis = 0.10f;
+		std::size_t _targetShadowCount = 2;
+		std::size_t _maxShadowCount = 4;
+		float _shadowPriorityTolerance = 0.10f;
+		float _shadowSelectionHysteresis = 0.10f;
 		std::uint64_t _generation = 0;
 		std::uint64_t _publishedGeneration = 0;
 		std::uint64_t _lastAdmission = 0;
@@ -37,6 +41,7 @@ namespace spk::Light
 		bool _building = false;
 		bool _closed = false;
 		std::vector<std::uint64_t> _history;
+		std::vector<std::uint64_t> _pointShadowHistory;
 		std::shared_ptr<const Selection> _published;
 		ShadowMap::ResultCollection _shadowResultCollection;
 
@@ -54,6 +59,14 @@ namespace spk::Light
 		void setLimit(std::size_t limit);
 		[[nodiscard]] float hysteresis() const;
 		void setHysteresis(float hysteresis);
+		[[nodiscard]] std::size_t targetShadowCount() const;
+		void setTargetShadowCount(std::size_t value);
+		[[nodiscard]] std::size_t maxShadowCount() const;
+		void setMaxShadowCount(std::size_t value);
+		[[nodiscard]] float shadowPriorityTolerance() const;
+		void setShadowPriorityTolerance(float value);
+		[[nodiscard]] float shadowSelectionHysteresis() const;
+		void setShadowSelectionHysteresis(float value);
 		[[nodiscard]] std::uint64_t generation() const;
 		[[nodiscard]] std::uint64_t publishedGeneration() const;
 		[[nodiscard]] std::shared_ptr<const Selection> current() const;
