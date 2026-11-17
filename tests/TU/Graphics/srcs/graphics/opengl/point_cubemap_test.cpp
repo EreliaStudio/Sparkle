@@ -73,8 +73,26 @@ TEST(PointCubemapTest, RejectsInvalidFacesAndSizeBeforeGraphicsAllocation)
 
 TEST(PointCubemapTest, DefaultDepthFormatHas1024TexelFaces)
 {
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset({32, 32});
 	spk::CubeMap map(1024);
 	EXPECT_EQ(map.faceSize(), 1024u);
 	EXPECT_EQ(map.handle()->size(), spk::Vector2UInt(1024, 1024));
 	EXPECT_EQ(map.handle()->format(), spk::Texture::Format::Depth32F);
+	map.activate(gl.renderContext());
+	for (std::size_t face = 0; face < 6; ++face)
+	{
+		const GLenum target = static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face);
+		GLint width = 0;
+		GLint height = 0;
+		GLint format = GL_NONE;
+		glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(target, 0, GL_TEXTURE_HEIGHT, &height);
+		glGetTexLevelParameteriv(target, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+		EXPECT_EQ(width, 1024);
+		EXPECT_EQ(height, 1024);
+		EXPECT_EQ(format, GL_DEPTH_COMPONENT32F);
+	}
+	EXPECT_NO_THROW(gl.requireNoErrors());
+	gl.reset();
 }

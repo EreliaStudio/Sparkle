@@ -153,6 +153,10 @@ namespace spk::ShadowMap
 			}
 			if (casters.empty())
 			{
+				if (const GLenum error = glGetError(); error != GL_NO_ERROR)
+				{
+					throw spk::Exception("Shadow depth rendering failed with OpenGL error " + std::to_string(error));
+				}
 				return;
 			}
 			UniformBuffer cameraBuffer(4, sizeof(Matrix4x4));

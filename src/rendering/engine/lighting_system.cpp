@@ -104,7 +104,8 @@ namespace spk::Lighting
 				if (resolved && resolved->resolution > 0 && resolved->depthTexture)
 				{
 					const bool point = light.type == Light::Selection::Type::Point;
-					const bool compatible = point ? (resolved->faceCount == 6 && resolved->depthTexture->target() == Texture::Target::TextureCubeMap) : (resolved->faceCount == 1 && resolved->depthTexture->target() == Texture::Target::Texture2D);
+					const bool pointCompatible = resolved->faceCount == 6 && resolved->depthTexture->target() == Texture::Target::TextureCubeMap && resolved->depthTexture->format() == Texture::Format::Depth32F && resolved->depthTexture->size().x == resolved->resolution && resolved->depthTexture->size().y == resolved->resolution;
+					const bool compatible = point ? pointCompatible : (resolved->faceCount == 1 && resolved->depthTexture->target() == Texture::Target::Texture2D);
 					if (compatible && point && cubeCount < MaxPointShadowSamplers)
 					{
 						const auto &geometry = resolved->light;

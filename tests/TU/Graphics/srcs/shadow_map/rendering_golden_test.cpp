@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
@@ -391,7 +392,19 @@ TEST(ShadowRenderingGolden, PointCubeProjectsOmnidirectionalHardShadowsAndSixDep
 	scene.add(scene.cube, 1, {0.7f, -0.2f, -0.8f}, spk::ShadowMap::Mode::Static);
 	auto &light = scene.addLight<spk::Light::Point>({0, 2.5f, 1}, {0, 0, 0}, {1, 0.92f, 0.75f}, 7.0f);
 	EXPECT_EQ(light.shadowFilter(), spk::Light::ShadowFilter::Hard);
-	render(scene, "point_hard_floor", "point_faces");
+	render(scene, "point_hard_floor");
+}
+
+TEST(ShadowRenderingGolden, PointSixDepthFacesHaveIndependentCardinalCasters)
+{
+	Scene scene;
+	const std::array<spk::Vector3, 6> positions{{{2, 2, 0}, {-2, 2, 0}, {0, 4, 0}, {0, 0, 0}, {0, 2, 2}, {0, 2, -2}}};
+	for (std::size_t i = 0; i < positions.size(); ++i)
+	{
+		scene.add(scene.cube, i % 3, positions[i], spk::ShadowMap::Mode::Static);
+	}
+	scene.addLight<spk::Light::Point>({0, 2, 0}, {0, 0, 0}, {1, 0.92f, 0.78f}, 7.0f);
+	render(scene, "point_six_face_occluders", "point_faces");
 }
 
 TEST(ShadowRenderingGolden, PointSurroundingCubesCastShadowsOnAllSides)
@@ -409,9 +422,10 @@ TEST(ShadowRenderingGolden, PointSurroundingCubesCastShadowsOnAllSides)
 TEST(ShadowRenderingGolden, PointInsideRoomLightsMultipleWallFaces)
 {
 	Scene scene;
-	auto wall = geometry({7, 3, 1});
-	scene.add(wall, 0, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::Static);
-	scene.add(wall, 2, {-3.5f, -1.2f, 2.5f}, spk::ShadowMap::Mode::Static);
+	auto backWall = geometry({7, 3, 1});
+	auto leftWall = geometry({1, 3, 7});
+	scene.add(backWall, 0, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(leftWall, 2, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 1, {-0.8f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 2, {0.8f, -0.2f, 0.2f}, spk::ShadowMap::Mode::Static);
 	scene.addLight<spk::Light::Point>({0, 1, 0}, {0, 0, 0}, {1, 0.78f, 0.65f}, 8.0f);
@@ -423,7 +437,7 @@ TEST(ShadowRenderingGolden, PointDynamicCasterMovesWithoutChangingHistoricalDept
 	Scene scene;
 	scene.add(scene.cube, 0, {-1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
 	auto &dynamic = scene.add(scene.cube, 1, {1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
-	scene.addLight<spk::Light::Point>({0, 3, 1}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	auto &point = scene.addLight<spk::Light::Point>({0, 3, 1}, {0, 0, 0}, {1, 1, 1}, 8.0f);
 	render(scene, "point_dynamic_before");
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
@@ -438,6 +452,28 @@ TEST(ShadowRenderingGolden, PointDynamicCasterMovesWithoutChangingHistoricalDept
 	EXPECT_GT(second->entries.begin()->second.generation, entry.generation);
 	EXPECT_NE(second->entries.begin()->second.depthTexture.identifier(), entry.depthTexture.identifier());
 	EXPECT_EQ(first->entries.begin()->second.depthTexture.identifier(), entry.depthTexture.identifier());
+	point.setShadowResolution(256);
+	render(scene, "point_dynamic_resized");
+	const auto third = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(third, nullptr);
+	ASSERT_EQ(third->entries.size(), 1u);
+	EXPECT_EQ(third->entries.begin()->second.resolution, 256u);
+	EXPECT_GT(third->entries.begin()->second.generation, second->entries.begin()->second.generation);
+	EXPECT_NE(third->entries.begin()->second.depthTexture.identifier(), second->entries.begin()->second.depthTexture.identifier());
+
+	// A failed GPU cube allocation must leave the last completely published
+	// six-face generation untouched, even after Light::Channel invalidates admission.
+	GLint maximum = 0;
+	glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &maximum);
+	ASSERT_GT(maximum, 0);
+	ASSERT_LT(maximum, std::numeric_limits<std::int32_t>::max());
+	point.setShadowResolution(static_cast<std::uint32_t>(maximum) + 1u);
+	gl.reset(ImageSize);
+	const auto failed = scene.capture();
+	ASSERT_NE(failed, nullptr);
+	EXPECT_THROW(failed->execute(gl.renderContext()), spk::Exception);
+	EXPECT_EQ(scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface()).get(), third.get());
+	gl.reset();
 }
 
 TEST(ShadowRenderingGolden, PointAndSpotAndDirectionalCanShadowSameForwardScene)
@@ -457,6 +493,7 @@ TEST(ShadowRenderingGolden, PointHardAndNineTapPCFHaveDistinctReferences)
 	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 1, {0.7f, -0.2f, 0.4f}, spk::ShadowMap::Mode::Dynamic);
 	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3, 1.5f}, {0, 0, 0}, {1, 1, 1}, 9.0f);
+	point.setShadowResolution(128);
 	render(scene, "point_hard_compare");
 	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "point_pcf3x3_compare");
