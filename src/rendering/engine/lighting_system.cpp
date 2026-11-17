@@ -187,4 +187,5 @@ namespace spk::Lighting
 			sampler.activate(context);
 		}
 		return bindings;
-	}}
+	}
+}
