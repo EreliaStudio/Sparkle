@@ -37,6 +37,15 @@ namespace spk::Light
 			std::uint32_t shadowResolution = 1024;
 			ShadowFilter shadowFilter = ShadowFilter::Hard;
 			float score = 0.0f;
+			enum class PointShadowStatus
+			{
+				Disabled,
+				Selected,
+				OutsideTolerance,
+				AtCapacity,
+				Hysteresis
+			};
+			PointShadowStatus pointShadowStatus = PointShadowStatus::Selected;
 		};
 
 		std::uint64_t generation = 0;
