@@ -106,10 +106,11 @@ namespace spk::Lighting
 					shadow.parameters[3] = static_cast<float>(index + 1);
 					bindings->samplers.emplace_back(
 						1 + index,
-						Sampler::Filtering::Nearest,
+						Sampler::Filtering::Linear,
 						Sampler::Wrap::ClampToBorder,
 						Sampler::MipmapFiltering::Disabled);
 					bindings->samplers.back().setTexture(resolved->depthTexture);
+					bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 				}
 			}
 			data.push_back(shadow);
