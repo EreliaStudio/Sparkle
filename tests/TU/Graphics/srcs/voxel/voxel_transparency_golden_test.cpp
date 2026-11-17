@@ -15,7 +15,9 @@
 
 #include "container/json/object.hpp"
 #include "engine/entity3d.hpp"
+#include "exception.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "rendering/command/draw_voxel_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
@@ -346,4 +348,18 @@ TEST(VoxelTransparencyGPU, ExcessiveHDRDoesNotProduceUndefinedOutput)
 	EXPECT_GT(image.pixel(Center)[0], 0);
 	EXPECT_EQ(image.pixel(Center)[3], 255);
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
+}
+
+TEST(VoxelTransparencyCPU, InvalidDrawModeIsRejected)
+{
+	EXPECT_THROW(
+		(void)spk::DrawVoxelCommand(
+			spk::Voxel::Geometry{},
+			spk::Palette{},
+			std::vector<std::uint32_t>{},
+			spk::Matrix4x4{},
+			nullptr,
+			nullptr,
+			static_cast<spk::DrawVoxelCommand::Mode>(255)),
+		spk::Exception);
 }
