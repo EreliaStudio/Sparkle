@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "light/prioritizer.hpp"
-#include "shadow_map/result_collection.hpp"
 #include "math/camera_3d.hpp"
+#include "shadow_map/result_collection.hpp"
 
 namespace spk
 {
@@ -62,9 +62,9 @@ namespace spk::Light
 		[[nodiscard]] bool isClosed() const;
 		[[nodiscard]] const ShadowMap::ResultCollection &shadowResultCollection() const noexcept;
 		// Called only by the single GPU render stream for this Surface.
-		[[nodiscard]] bool publishResult(Window::Surface &surface, ShadowMap::Result::Entry result);
+		[[nodiscard]] bool publishShadowResult(Window::Surface &surface, ShadowMap::Result::Entry result);
 		// Historical snapshots may use only admitted, non-future results.
-		[[nodiscard]] std::optional<ShadowMap::Result::Entry> resolveResult(
+		[[nodiscard]] std::optional<ShadowMap::Result::Entry> resolveShadowResult(
 			const Window::Surface &surface, const Selection::Entry &capturedLight, std::uint64_t captureOrdinal) const;
 
 		// Called by Engine's existing source-edition notifications; no immediate rebuild.

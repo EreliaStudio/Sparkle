@@ -258,7 +258,7 @@ namespace spk::Light
 		return _shadowResultCollection;
 	}
 
-	bool Channel::publishResult(Window::Surface &surface, ShadowMap::Result::Entry result)
+	bool Channel::publishShadowResult(Window::Surface &surface, ShadowMap::Result::Entry result)
 	{
 		if (result.registrationOrder == 0 || result.admission == 0 ||
 			result.light.registrationOrder != result.registrationOrder ||
@@ -312,7 +312,7 @@ namespace spk::Light
 		return true;
 	}
 
-	std::optional<ShadowMap::Result::Entry> Channel::resolveResult(
+	std::optional<ShadowMap::Result::Entry> Channel::resolveShadowResult(
 		const Window::Surface &surface, const Selection::Entry &capturedLight, std::uint64_t captureOrdinal) const
 	{
 		if (!capturedLight.castsShadows)

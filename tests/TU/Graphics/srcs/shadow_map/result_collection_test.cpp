@@ -151,13 +151,13 @@ TEST(GraphicsShadowResultCollection, TwoSurfacesAndRecreatedSurfaceWithSameNameN
 	EXPECT_EQ(view.lightChannel().shadowResultCollection().acquireLatest(first), nullptr);
 	EXPECT_EQ(view.lightChannel().shadowResultCollection().acquireLatest(second), nullptr);
 
-	ASSERT_TRUE(view.lightChannel().publishResult(first, makeMap(light, 1, selection->captureOrdinal)));
+	ASSERT_TRUE(view.lightChannel().publishShadowResult(first, makeMap(light, 1, selection->captureOrdinal)));
 	auto firstResult = view.lightChannel().shadowResultCollection().acquireLatest(first);
 	ASSERT_NE(firstResult, nullptr);
 	ASSERT_EQ(firstResult->entries.size(), 1u);
 	EXPECT_EQ(view.lightChannel().shadowResultCollection().acquireLatest(second), nullptr);
 
-	ASSERT_TRUE(view.lightChannel().publishResult(second, makeMap(light, 2, selection->captureOrdinal)));
+	ASSERT_TRUE(view.lightChannel().publishShadowResult(second, makeMap(light, 2, selection->captureOrdinal)));
 	auto secondResult = view.lightChannel().shadowResultCollection().acquireLatest(second);
 	ASSERT_NE(secondResult, nullptr);
 	EXPECT_EQ(secondResult->entries.at(light.registrationOrder).generation, 2u);
@@ -171,8 +171,8 @@ TEST(GraphicsShadowResultCollection, TwoSurfacesAndRecreatedSurfaceWithSameNameN
 	replacement.create(replacementFrame.native.window());
 	EXPECT_NE(replacement.identity(), first.identity());
 	EXPECT_EQ(view.lightChannel().shadowResultCollection().acquireLatest(replacement), nullptr);
-	EXPECT_FALSE(view.lightChannel().resolveResult(first, light, selection->captureOrdinal).has_value());
-	EXPECT_TRUE(view.lightChannel().resolveResult(second, light, selection->captureOrdinal).has_value());
+	EXPECT_FALSE(view.lightChannel().resolveShadowResult(first, light, selection->captureOrdinal).has_value());
+	EXPECT_TRUE(view.lightChannel().resolveShadowResult(second, light, selection->captureOrdinal).has_value());
 	EXPECT_EQ(firstResult->entries.at(light.registrationOrder).generation, 1u);
 	replacement.destroy();
 	second.destroy();
@@ -195,11 +195,11 @@ TEST(GraphicsShadowResultCollection, CopyMergePreservesOtherLightsAndReadersOfHi
 	spk::Window::Surface surface("merge");
 	surface.create(frame.native.window());
 	auto &channel = view.lightChannel();
-	ASSERT_TRUE(channel.publishResult(surface, makeMap(first, 1, selection->captureOrdinal)));
+	ASSERT_TRUE(channel.publishShadowResult(surface, makeMap(first, 1, selection->captureOrdinal)));
 	auto held = channel.shadowResultCollection().acquireLatest(surface);
 	ASSERT_NE(held, nullptr);
 	ASSERT_EQ(held->entries.size(), 1u);
-	ASSERT_TRUE(channel.publishResult(surface, makeMap(second, 3, selection->captureOrdinal)));
+	ASSERT_TRUE(channel.publishShadowResult(surface, makeMap(second, 3, selection->captureOrdinal)));
 	auto merged = channel.shadowResultCollection().acquireLatest(surface);
 	ASSERT_NE(merged, nullptr);
 	EXPECT_EQ(merged->entries.size(), 2u);
@@ -207,10 +207,10 @@ TEST(GraphicsShadowResultCollection, CopyMergePreservesOtherLightsAndReadersOfHi
 	EXPECT_EQ(merged->entries.at(first.registrationOrder).generation, 1u);
 	EXPECT_EQ(merged->entries.at(second.registrationOrder).generation, 3u);
 
-	EXPECT_FALSE(channel.publishResult(surface, makeMap(first, 1, selection->captureOrdinal)));
-	EXPECT_FALSE(channel.publishResult(surface, makeMap(second, 2, selection->captureOrdinal)));
+	EXPECT_FALSE(channel.publishShadowResult(surface, makeMap(first, 1, selection->captureOrdinal)));
+	EXPECT_FALSE(channel.publishShadowResult(surface, makeMap(second, 2, selection->captureOrdinal)));
 	EXPECT_EQ(channel.shadowResultCollection().acquireLatest(surface).get(), merged.get());
-	ASSERT_TRUE(channel.publishResult(surface, makeMap(first, 2, selection->captureOrdinal)));
+	ASSERT_TRUE(channel.publishShadowResult(surface, makeMap(first, 2, selection->captureOrdinal)));
 	auto newer = channel.shadowResultCollection().acquireLatest(surface);
 	ASSERT_NE(newer, nullptr);
 	EXPECT_EQ(newer->entries.at(second.registrationOrder).generation, 3u);
@@ -235,19 +235,19 @@ TEST(GraphicsShadowResultCollection, FutureCaptureIsInvisibleToHistoricalSnapsho
 	surface.create(frame.native.window());
 	auto &channel = view.lightChannel();
 	const auto futureOrdinal = selection->captureOrdinal + 1;
-	ASSERT_TRUE(channel.publishResult(surface, makeMap(light, 1, futureOrdinal)));
-	EXPECT_FALSE(channel.resolveResult(surface, light, selection->captureOrdinal).has_value());
-	EXPECT_TRUE(channel.resolveResult(surface, light, futureOrdinal).has_value());
+	ASSERT_TRUE(channel.publishShadowResult(surface, makeMap(light, 1, futureOrdinal)));
+	EXPECT_FALSE(channel.resolveShadowResult(surface, light, selection->captureOrdinal).has_value());
+	EXPECT_TRUE(channel.resolveShadowResult(surface, light, futureOrdinal).has_value());
 
 	component.setCastsShadows(false);
-	EXPECT_FALSE(channel.resolveResult(surface, light, futureOrdinal).has_value());
-	EXPECT_FALSE(channel.publishResult(surface, makeMap(light, 2, futureOrdinal)));
+	EXPECT_FALSE(channel.resolveShadowResult(surface, light, futureOrdinal).has_value());
+	EXPECT_FALSE(channel.publishShadowResult(surface, makeMap(light, 2, futureOrdinal)));
 	const auto previous = channel.shadowResultCollection().acquireLatest(surface);
 	ASSERT_NE(previous, nullptr);
 	EXPECT_EQ(previous->entries.at(light.registrationOrder).generation, 1u);
 
 	scene.engine.refreshRenderSnapshot();
-	EXPECT_FALSE(channel.publishResult(surface, makeMap(light, 2, futureOrdinal)));
+	EXPECT_FALSE(channel.publishShadowResult(surface, makeMap(light, 2, futureOrdinal)));
 	EXPECT_EQ(channel.shadowResultCollection().acquireLatest(surface).get(), previous.get());
 	surface.destroy();
 }
@@ -273,8 +273,8 @@ TEST(GraphicsShadowResultCollection, ThrowingSurfaceCallbackDoesNotPreventEntryC
 		callbacks.push_back(1);
 		throw std::runtime_error("expected close failure");
 	});
-	ASSERT_TRUE(view.lightChannel().publishResult(first, makeMap(light, 1, selection->captureOrdinal)));
-	ASSERT_TRUE(view.lightChannel().publishResult(second, makeMap(light, 1, selection->captureOrdinal)));
+	ASSERT_TRUE(view.lightChannel().publishShadowResult(first, makeMap(light, 1, selection->captureOrdinal)));
+	ASSERT_TRUE(view.lightChannel().publishShadowResult(second, makeMap(light, 1, selection->captureOrdinal)));
 	auto next = first.subscribeToDestruction([&] {
 		callbacks.push_back(2);
 		EXPECT_EQ(view.lightChannel().shadowResultCollection().acquireLatest(first), nullptr);
@@ -283,7 +283,7 @@ TEST(GraphicsShadowResultCollection, ThrowingSurfaceCallbackDoesNotPreventEntryC
 	EXPECT_EQ(first.lifeCycle(), spk::Window::LifeCycle::Released);
 	EXPECT_EQ(callbacks, (std::vector<int>{1, 2}));
 	EXPECT_EQ(view.lightChannel().shadowResultCollection().acquireLatest(first), nullptr);
-	EXPECT_FALSE(view.lightChannel().publishResult(first, makeMap(light, 2, selection->captureOrdinal)));
+	EXPECT_FALSE(view.lightChannel().publishShadowResult(first, makeMap(light, 2, selection->captureOrdinal)));
 	EXPECT_NE(view.lightChannel().shadowResultCollection().acquireLatest(second), nullptr);
 	EXPECT_NO_THROW(first.destroy());
 	second.destroy();
@@ -307,15 +307,15 @@ TEST(GraphicsShadowResultCollection, RemovingViewClosesChannelWithoutClearingIts
 	HiddenFrame frame;
 	spk::Window::Surface surface("view-retained");
 	surface.create(frame.native.window());
-	ASSERT_TRUE(captured->publishResult(surface, makeMap(selected->directional.front(), 1, selected->captureOrdinal)));
+	ASSERT_TRUE(captured->publishShadowResult(surface, makeMap(selected->directional.front(), 1, selected->captureOrdinal)));
 	auto held = captured->shadowResultCollection().acquireLatest(surface);
 	ASSERT_NE(held, nullptr);
 
 	std::weak_ptr<spk::Light::Channel> weak = captured;
 	scene.engine.removeView("main");
 	EXPECT_TRUE(captured->isClosed());
-	EXPECT_FALSE(captured->publishResult(surface, makeMap(selected->directional.front(), 2, selected->captureOrdinal)));
-	EXPECT_FALSE(captured->resolveResult(surface, selected->directional.front(), selected->captureOrdinal).has_value());
+	EXPECT_FALSE(captured->publishShadowResult(surface, makeMap(selected->directional.front(), 2, selected->captureOrdinal)));
+	EXPECT_FALSE(captured->resolveShadowResult(surface, selected->directional.front(), selected->captureOrdinal).has_value());
 	EXPECT_EQ(captured->shadowResultCollection().acquireLatest(surface).get(), held.get());
 	EXPECT_EQ(held->entries.size(), 1u);
 

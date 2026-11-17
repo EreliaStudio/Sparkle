@@ -23,7 +23,7 @@ namespace spk::ShadowMap
 
 			// The geometric light parameters used when the depth map was built.
 			// Shading color and intensity instead come from the consumer snapshot.
-			Selection::Entry light;
+			Light::Selection::Entry light;
 			Texture::Handle depthTexture;
 			std::array<Matrix4x4, 6> viewProjection{};
 			std::uint8_t faceCount = 1;
