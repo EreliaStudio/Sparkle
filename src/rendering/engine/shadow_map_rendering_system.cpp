@@ -22,9 +22,9 @@
 #include "graphics/opengl/state.hpp"
 #include "graphics/opengl/uniform_buffer.hpp"
 #include "light/channel.hpp"
+#include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/projection.hpp"
-#include "rendering/render_command.hpp"
 
 namespace spk::ShadowMap
 {
@@ -367,7 +367,8 @@ namespace spk::ShadowMap
 		}
 		std::vector<Caster> staticCasters;
 		std::vector<Caster> dynamicCasters;
-		for (const Contributor *contributor : Registry<Contributor, EngineHeadless *>::instance().elements(engine()))
+		for (const ShadowMap::Contributor *contributor :
+		 Registry<ShadowMap::Contributor, EngineHeadless *>::instance().elements(engine()))
 		{
 			if (contributor == nullptr || !contributor->isEffectivelyActive() || contributor->owner() == nullptr ||
 				contributor->shadowMode() == Mode::None || !context.isLayerCompatible(contributor->layers()))
@@ -385,7 +386,8 @@ namespace spk::ShadowMap
 				}
 			}
 		}
-		builder.renderPass(spk::EngineView::ShadowPassKey).emplace<DepthCommand>(
-			_state, context.lightChannel, context, std::move(lights), std::move(staticCasters), std::move(dynamicCasters));
+		builder.renderPass(spk::EngineView::ShadowPassKey)
+			.emplace<DepthCommand>(
+				_state, context.lightChannel, context, std::move(lights), std::move(staticCasters), std::move(dynamicCasters));
 	}
 }
