@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -23,6 +24,7 @@
 #include "light/channel.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/projection.hpp"
+#include "rendering/render_command.hpp"
 
 namespace spk::ShadowMap
 {

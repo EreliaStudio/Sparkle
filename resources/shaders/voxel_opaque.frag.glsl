@@ -31,13 +31,15 @@ layout(std430) readonly buffer ForwardLighting
 	LightData lights[];
 };
 
+struct ShadowData
+{
+	mat4 viewProjection;
+	vec4 parameters;
+};
+
 layout(std430) readonly buffer ForwardShadows
 {
-	struct ShadowData
-	{
-		mat4 viewProjection;
-		vec4 parameters;
-	} shadows[];
+	ShadowData shadows[];
 };
 
 uniform sampler2D uAlbedo;
