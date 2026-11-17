@@ -600,7 +600,7 @@ TEST(ShadowRenderingGolden, PointNonUniformStairScaleAndRotationInvalidateDepth)
 	scene.add(scene.slope, 1, {1.0f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
 	scene.addLight<spk::Light::Point>({0.0f, 3.0f, 1.3f}, {0, 0, 0}, {1, 0.95f, 0.8f}, 8.0f);
 	render(scene, "point_stair_scaled");
-	const auto &gl = sparkle_test::OpenGLTestContext::instance();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	ASSERT_NE(first, nullptr);
 	ASSERT_EQ(first->entries.size(), 1u);
@@ -649,7 +649,7 @@ TEST(ShadowRenderingGolden, PointDynamicSlopeMovesBetweenStaticStairsAndSlabs)
 	auto &movingSlope = scene.add(scene.slope, 2, {0.5f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Dynamic);
 	scene.addLight<spk::Light::Point>({0.0f, 2.6f, 0.0f}, {0, 0, 0}, {1, 0.95f, 0.85f}, 8.0f);
 	render(scene, "point_shape_dynamic_before");
-	const auto &gl = sparkle_test::OpenGLTestContext::instance();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	ASSERT_NE(first, nullptr);
 	ASSERT_EQ(first->entries.size(), 1u);
