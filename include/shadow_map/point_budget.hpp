@@ -27,9 +27,11 @@ namespace spk::ShadowMap
 		};
 
 	private:
+		std::uint64_t _identity;
 		std::vector<Request> _requests;
 
 	public:
+		PointBudget();
 		void add(Request request);
 		void prepare(RenderContext &context) const;
 		[[nodiscard]] bool consume(
