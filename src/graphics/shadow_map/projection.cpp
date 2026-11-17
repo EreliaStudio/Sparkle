@@ -68,6 +68,38 @@ namespace spk::ShadowMap
 		}
 	}
 
+	std::array<Projection, 6> Projection::point(const Light::Selection::Entry &light)
+	{
+		if (light.type != Light::Selection::Type::Point || !std::isfinite(light.range) ||
+			light.range <= 0.0f || !std::isfinite(light.position.x) ||
+			!std::isfinite(light.position.y) || !std::isfinite(light.position.z))
+		{
+			throw spk::Exception("Invalid Point shadow projection parameters");
+		}
+		const float nearPlane = light.range * 0.001f;
+		if (!std::isfinite(nearPlane) || nearPlane <= 0.0f ||
+			!(nearPlane < light.range))
+		{
+			throw spk::Exception("Point shadow near/far planes cannot be represented");
+		}
+		constexpr std::array<Vector3, 6> directions{{
+			{1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
+			{0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
+		constexpr std::array<Vector3, 6> ups{{
+			{0, -1, 0}, {0, -1, 0}, {0, 0, 1},
+			{0, 0, -1}, {0, -1, 0}, {0, -1, 0}}};
+		std::array<Projection, 6> result{};
+		for (std::size_t face = 0; face < result.size(); ++face)
+		{
+			Camera3D camera;
+			camera.setPosition(light.position);
+			camera.lookAt(light.position + directions[face], ups[face]);
+			camera.setPerspective(1.57079632679f, 1.0f, nearPlane, light.range);
+			result[face] = {camera.viewProjectionMatrix(), nearPlane, light.range};
+		}
+		return result;
+	}
+
 	Projection Projection::spot(const Light::Selection::Entry &light)
 	{
 		if (light.type != Light::Selection::Type::Spot ||
