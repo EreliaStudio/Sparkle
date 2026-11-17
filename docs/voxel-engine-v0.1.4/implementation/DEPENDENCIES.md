@@ -33,7 +33,7 @@ flowchart TD
   P17 --> P19
   P04 --> P20["20 Shadow Contrib"]
   P09 --> P20
-  P18 --> P21["21 ShadowResults"]
+  P18 --> P21["21 ResultCollection"]
   P11 --> P21
   P19 --> P22["22 Spot Directional Shadows"]
   P20 --> P22

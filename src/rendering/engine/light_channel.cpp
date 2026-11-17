@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <ranges>
 #include <utility>
 
@@ -236,6 +237,110 @@ namespace spk::Light
 		{
 			_invalidateLocked();
 		}
+	}
+
+	bool Channel::_isShadowAdmissionCurrentLocked(std::uint64_t registrationOrder, std::uint64_t admission) const
+	{
+		if (_closed || !_published || _publishedGeneration != _generation)
+		{
+			return false;
+		}
+		const auto matches = [=](const Selection::Entry &entry) {
+			return entry.registrationOrder == registrationOrder && entry.admission == admission &&
+				   entry.castsShadows;
+		};
+		return std::ranges::any_of(_published->local, matches) ||
+			   std::ranges::any_of(_published->directional, matches);
+	}
+
+	const ShadowMap::ResultCollection &Channel::shadowResultCollection() const noexcept
+	{
+		return _shadowResultCollection;
+	}
+
+	bool Channel::publishShadowResult(Window::Surface &surface, ShadowMap::Result::Entry result)
+	{
+		if (result.registrationOrder == 0 || result.admission == 0 ||
+			result.light.registrationOrder != result.registrationOrder ||
+			result.light.admission != result.admission || !result.light.castsShadows)
+		{
+			return false;
+		}
+
+		{
+			std::lock_guard lock(_mutex);
+			if (!_isShadowAdmissionCurrentLocked(result.registrationOrder, result.admission))
+			{
+				return false;
+			}
+		}
+
+		// This GPU stream alone produces this Surface's slot. All allocations and
+		// the copy/merge take place outside the Channel and dictionary locks.
+		const auto entry = _shadowResultCollection._getOrCreate(surface);
+		if (entry == nullptr)
+		{
+			return false;
+		}
+		const auto old = entry->slot.acquireLatest();
+		ShadowMap::Result merged = old != nullptr ? *old : ShadowMap::Result{};
+		const std::uint64_t registrationOrder = result.registrationOrder;
+		const std::uint64_t admission = result.admission;
+		const std::uint64_t generation = result.generation;
+		auto previous = merged.entries.find(registrationOrder);
+		if (previous != merged.entries.end() &&
+			previous->second.admission == admission &&
+			previous->second.generation >= generation)
+		{
+			return false;
+		}
+		merged.entries.insert_or_assign(registrationOrder, std::move(result));
+
+		// The short Channel lock makes final admission/revocation and publication
+		// indivisible. No GL operation or dictionary lock is taken here.
+		std::lock_guard lock(_mutex);
+		if (!_isShadowAdmissionCurrentLocked(registrationOrder, admission) ||
+			entry->closed.load(std::memory_order_acquire) ||
+			surface.lifeCycle() != Window::LifeCycle::Ready)
+		{
+			return false;
+		}
+		std::erase_if(merged.entries, [this](const auto &item) {
+			return !_isShadowAdmissionCurrentLocked(item.second.registrationOrder, item.second.admission);
+		});
+		entry->slot.publish(std::move(merged));
+		return true;
+	}
+
+	std::optional<ShadowMap::Result::Entry> Channel::resolveShadowResult(
+		const Window::Surface &surface, const Selection::Entry &capturedLight, std::uint64_t captureOrdinal) const
+	{
+		if (!capturedLight.castsShadows)
+		{
+			return std::nullopt;
+		}
+		const auto published = _shadowResultCollection.acquireLatest(surface);
+		if (published == nullptr)
+		{
+			return std::nullopt;
+		}
+		const auto it = published->entries.find(capturedLight.registrationOrder);
+		if (it == published->entries.end())
+		{
+			return std::nullopt;
+		}
+		const ShadowMap::Result::Entry &result = it->second;
+		if (result.admission != capturedLight.admission ||
+			result.captureOrdinal > captureOrdinal ||
+			result.light.type != capturedLight.type ||
+			!result.depthTexture.valid())
+		{
+			return std::nullopt;
+		}
+		std::lock_guard lock(_mutex);
+		return _isShadowAdmissionCurrentLocked(result.registrationOrder, result.admission)
+				   ? std::optional<ShadowMap::Result::Entry>{result}
+				   : std::nullopt;
 	}
 
 	bool Channel::isAdmissionCurrent(std::uint64_t registrationOrder, std::uint64_t admission) const

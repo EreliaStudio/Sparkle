@@ -1,4 +1,4 @@
-# PR-21 — ShadowResults, admission et durée de vie des surfaces
+# PR-21 — ResultCollection, admission et durée de vie des surfaces
 
 > **Fiche de préparation pour une future PR GitHub, pas une PR déjà créée.** Ne développer que cette fiche.
 >
@@ -23,7 +23,7 @@ Les surfaces, handles GPU et `EngineView::Output` sont déjà mis en place depui
 
 ## Périmètre exact à réaliser
 
-- [ ] Light::ShadowResult immutable, ShadowResults dictionnaire SurfaceIdentity→Entry
+- [ ] ShadowMap::Result immutable, ResultCollection dictionnaire `spk::UUID` (Surface) → Entry
 - [ ] ThreadSafeSlot par Surface
 - [ ] admission/générations/ordinal de capture
 - [ ] callback fermeture Surface

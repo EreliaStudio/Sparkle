@@ -30,6 +30,7 @@ namespace spk
 		static constexpr int ContextCoreProfileBit = 0x00000001;
 
 		Window::Identifier windowID;
+		const UUID identity;
 		std::atomic<LifeCycle> lifeCycle = LifeCycle::Pending;
 		std::unique_ptr<GPUResourceCollection> _gpuResources;
 		HWND windowHandle = nullptr;
@@ -41,8 +42,9 @@ namespace spk
 		std::mutex closingMutex;
 		std::exception_ptr firstDestructionError;
 
-		explicit Impl(Window::Identifier windowID) :
+		explicit Impl(Window::Identifier windowID, UUID identity) :
 			windowID(std::move(windowID)),
+			identity(identity),
 			_gpuResources(std::make_unique<GPUResourceCollection>())
 		{
 		}
@@ -221,7 +223,7 @@ namespace spk
 	};
 
 	Window::Surface::Surface(const Window::Identifier &windowID) :
-		_impl(std::make_unique<Impl>(windowID))
+		_impl(std::make_unique<Impl>(windowID, UUID::generate()))
 	{
 	}
 	Window::Surface::~Surface() = default;
@@ -229,6 +231,11 @@ namespace spk
 	Window::LifeCycle Window::Surface::lifeCycle() const noexcept
 	{
 		return _impl->lifeCycle.load();
+	}
+
+	UUID Window::Surface::identity() const noexcept
+	{
+		return _impl->identity;
 	}
 
 	static void initializeGLEW()
