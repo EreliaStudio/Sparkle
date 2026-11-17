@@ -16,30 +16,12 @@ namespace spk::ShadowMap
 		Dynamic
 	};
 
-	// Allows the future rendering system to invalidate precisely the relevant
-	// caches, including when a caster switches from one mode to another.
-	struct Edition
-	{
-		enum class Kind
-		{
-			Binding,
-			ShadowMode,
-			Layers
-		};
-
-		Kind kind;
-		ShadowMode previousMode;
-		ShadowMode currentMode;
-		bool invalidatesStatic;
-		bool invalidatesFinal;
-	};
-
 	class Contributor final : public Component3D,
 							  public Registry<Contributor, EngineHeadless *>::Object
 	{
 	public:
 		using Layers = std::vector<std::string>;
-		using OnEditionContractProvider = ContractProvider<const Contributor &, const Edition &>;
+		using OnEditionContractProvider = ContractProvider<const Contributor &>;
 		using OnEditionCallback = OnEditionContractProvider::callback_type;
 		using OnEditionContract = OnEditionContractProvider::Contract;
 
@@ -50,7 +32,7 @@ namespace spk::ShadowMap
 		OnEditionContractProvider _onEditionContractProvider;
 		MeshFilter::OnEditionContract _meshFilterEditionContract;
 
-		void _notify(Edition::Kind kind, ShadowMode previousMode);
+		void _notifyEdition();
 
 	public:
 		explicit Contributor(

@@ -9,20 +9,13 @@ namespace spk::ShadowMap
 	{
 		_meshFilterEditionContract = _meshFilter.subscribeToEdition(
 			[this](const MeshFilter &) {
-				_notify(Edition::Kind::Binding, _shadowMode);
+				_notifyEdition();
 			});
 	}
 
-	void Contributor::_notify(Edition::Kind kind, ShadowMode previousMode)
+	void Contributor::_notifyEdition()
 	{
-		const bool changedMode = kind == Edition::Kind::ShadowMode;
-		const Edition edition{
-			kind,
-			previousMode,
-			_shadowMode,
-			changedMode || _shadowMode == ShadowMode::Static,
-			changedMode || _shadowMode != ShadowMode::None};
-		_onEditionContractProvider.trigger(*this, edition);
+		_onEditionContractProvider.trigger(*this);
 	}
 
 	MeshFilter &Contributor::meshFilter() noexcept
@@ -46,9 +39,8 @@ namespace spk::ShadowMap
 		{
 			return;
 		}
-		const ShadowMode previous = _shadowMode;
 		_shadowMode = mode;
-		_notify(Edition::Kind::ShadowMode, previous);
+		_notifyEdition();
 	}
 
 	const Contributor::Layers &Contributor::layers() const noexcept
@@ -63,7 +55,7 @@ namespace spk::ShadowMap
 			return;
 		}
 		_layers.swap(layers);
-		_notify(Edition::Kind::Layers, _shadowMode);
+		_notifyEdition();
 	}
 
 	Contributor::OnEditionContract Contributor::subscribeToEdition(OnEditionCallback callback)

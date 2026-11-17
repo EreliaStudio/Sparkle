@@ -26,7 +26,6 @@ namespace
 {
 	using spk::Matrix4x4;
 	using spk::ShadowMap::Contributor;
-	using spk::ShadowMap::Edition;
 	using spk::ShadowMap::Mesh;
 	using spk::ShadowMap::MeshFilter;
 	using spk::ShadowMap::ShadowMode;
@@ -289,54 +288,65 @@ TEST(ShadowMapContributorTest, InitialStateAndRegistryFollowEngineContext)
 	EXPECT_TRUE(Registry::instance().elements(nullptr).contains(&contributor));
 }
 
-TEST(ShadowMapContributorTest, ModeAndBindingNotificationsExposeCorrectInvalidationScope)
+TEST(ShadowMapContributorTest, NotificationsAllowObserversToDeriveInvalidationWithoutPublicCachePolicy)
 {
 	Contributor contributor;
-	std::vector<Edition> events;
-	auto contract = contributor.subscribeToEdition([&](const Contributor &source, const Edition &edition) {
+	std::vector<ShadowMode> observedModes;
+	ShadowMode lastMode = contributor.shadowMode();
+	int staticInvalidations = 0;
+	int finalInvalidations = 0;
+	auto contract = contributor.subscribeToEdition([&](const Contributor &source) {
 		EXPECT_EQ(&source, &contributor);
-		events.push_back(edition);
+		const ShadowMode currentMode = source.shadowMode();
+		const bool modeChanged = currentMode != lastMode;
+		if (modeChanged || currentMode == ShadowMode::Static)
+		{
+			++staticInvalidations;
+		}
+		if (modeChanged || currentMode != ShadowMode::None)
+		{
+			++finalInvalidations;
+		}
+		lastMode = currentMode;
+		observedModes.push_back(currentMode);
 	});
 
 	contributor.setShadowMode(ShadowMode::None);
-	EXPECT_TRUE(events.empty());
+	EXPECT_TRUE(observedModes.empty());
 	contributor.bind(makeShadowMesh());
-	ASSERT_EQ(events.size(), 1u);
-	EXPECT_EQ(events.back().kind, Edition::Kind::Binding);
-	EXPECT_FALSE(events.back().invalidatesStatic);
-	EXPECT_FALSE(events.back().invalidatesFinal);
+	ASSERT_EQ(observedModes.size(), 1u);
+	EXPECT_EQ(observedModes.back(), ShadowMode::None);
+	EXPECT_EQ(staticInvalidations, 0);
+	EXPECT_EQ(finalInvalidations, 0);
 
 	contributor.setShadowMode(ShadowMode::Dynamic);
-	ASSERT_EQ(events.size(), 2u);
-	EXPECT_EQ(events.back().kind, Edition::Kind::ShadowMode);
-	EXPECT_EQ(events.back().previousMode, ShadowMode::None);
-	EXPECT_EQ(events.back().currentMode, ShadowMode::Dynamic);
-	EXPECT_TRUE(events.back().invalidatesStatic);
-	EXPECT_TRUE(events.back().invalidatesFinal);
+	ASSERT_EQ(observedModes.size(), 2u);
+	EXPECT_EQ(observedModes.back(), ShadowMode::Dynamic);
+	EXPECT_EQ(staticInvalidations, 1);
+	EXPECT_EQ(finalInvalidations, 1);
 	contributor.setShadowMode(ShadowMode::Dynamic);
-	EXPECT_EQ(events.size(), 2u);
+	EXPECT_EQ(observedModes.size(), 2u);
 
 	contributor.meshFilter().bind(makeShadowMesh());
-	ASSERT_EQ(events.size(), 3u);
-	EXPECT_EQ(events.back().kind, Edition::Kind::Binding);
-	EXPECT_FALSE(events.back().invalidatesStatic);
-	EXPECT_TRUE(events.back().invalidatesFinal);
+	ASSERT_EQ(observedModes.size(), 3u);
+	EXPECT_EQ(staticInvalidations, 1);
+	EXPECT_EQ(finalInvalidations, 2);
 
 	contributor.setShadowMode(ShadowMode::Static);
-	ASSERT_EQ(events.size(), 4u);
-	EXPECT_EQ(events.back().previousMode, ShadowMode::Dynamic);
-	EXPECT_EQ(events.back().currentMode, ShadowMode::Static);
-	EXPECT_TRUE(events.back().invalidatesStatic);
-	EXPECT_TRUE(events.back().invalidatesFinal);
+	ASSERT_EQ(observedModes.size(), 4u);
+	EXPECT_EQ(observedModes.back(), ShadowMode::Static);
+	EXPECT_EQ(staticInvalidations, 2);
+	EXPECT_EQ(finalInvalidations, 3);
 	contributor.bind(makeShadowMesh());
-	ASSERT_EQ(events.size(), 5u);
-	EXPECT_TRUE(events.back().invalidatesStatic);
-	EXPECT_TRUE(events.back().invalidatesFinal);
+	ASSERT_EQ(observedModes.size(), 5u);
+	EXPECT_EQ(staticInvalidations, 3);
+	EXPECT_EQ(finalInvalidations, 4);
 
 	contributor.setShadowMode(ShadowMode::None);
-	ASSERT_EQ(events.size(), 6u);
-	EXPECT_TRUE(events.back().invalidatesStatic);
-	EXPECT_TRUE(events.back().invalidatesFinal);
+	ASSERT_EQ(observedModes.size(), 6u);
+	EXPECT_EQ(observedModes.back(), ShadowMode::None);
+	EXPECT_EQ(staticInvalidations, 4);
+	EXPECT_EQ(finalInvalidations, 5);
 	EXPECT_TRUE(contract.isValid());
 }
 
@@ -364,15 +374,13 @@ TEST(ShadowMapContributorTest, LayersAreSeparateFromVisualComponentsAndNotifyOnC
 	auto &shadow = entity.addComponent<Contributor>();
 	visual.setLayers({"visual"});
 	int count = 0;
-	std::vector<Edition> events;
-	auto contract = shadow.subscribeToEdition([&](const Contributor &, const Edition &edition) {
+	auto contract = shadow.subscribeToEdition([&](const Contributor &source) {
+		EXPECT_EQ(&source, &shadow);
 		++count;
-		events.push_back(edition);
 	});
 	shadow.setLayers({"shadow"});
 	shadow.setLayers({"shadow"});
 	EXPECT_EQ(count, 1);
-	EXPECT_EQ(events[0].kind, Edition::Kind::Layers);
 	EXPECT_EQ(shadow.layers(), (Contributor::Layers{"shadow"}));
 	EXPECT_EQ(visual.layers(), (spk::EngineView::Layers{"visual"}));
 
