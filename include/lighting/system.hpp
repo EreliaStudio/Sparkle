@@ -83,10 +83,13 @@ namespace spk::Lighting
 		{
 			ShaderStorageBuffer buffer{ShadowBindingPoint, 0, sizeof(ShadowData)};
 			std::vector<Sampler> samplers;
+			std::unique_ptr<ShaderStorageBuffer> historicalLights;
 		};
 
 	private:
 		ShaderStorageBuffer _lights;
+		Header _header;
+		std::vector<LightData> _lightData;
 		Light::Selection _selection;
 		std::shared_ptr<Light::Channel> _shadowChannel;
 		std::uint64_t _captureOrdinal = 0;
