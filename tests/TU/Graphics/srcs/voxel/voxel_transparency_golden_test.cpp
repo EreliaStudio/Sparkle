@@ -146,7 +146,7 @@ namespace
 			const auto actual = sparkle_test::resultImagePath(category, golden);
 			const auto difference = sparkle_test::resultImagePath(category, golden + "_difference");
 			gl.save(actual);
-			ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing PR25 golden " << expected;
+			EXPECT_TRUE(std::filesystem::exists(expected)) << "Missing PR25 golden " << expected;
 			if (std::filesystem::exists(expected))
 			{
 				const auto comparison = sparkle_test::compareImages(actual, expected, difference);
