@@ -312,3 +312,126 @@ TEST(GraphicsLightChannel, FailedReconstructionDoesNotPoisonChannel)
 	scene.lights.front()->transform().place({0.0f, 0.0f, -5.0f});
 	EXPECT_NO_THROW(static_cast<void>(view.lightChannel().acquire(capturedCamera, 6)));
 }
+
+TEST(GraphicsPointShadowSelection, DefaultsAndValidationAreAtomic)
+{
+	Scene scene;
+	auto &view = scene.addView("main");
+	auto &channel = view.lightChannel();
+	EXPECT_EQ(channel.targetShadowCount(), 2u);
+	EXPECT_EQ(channel.maxShadowCount(), 4u);
+	EXPECT_FLOAT_EQ(channel.shadowPriorityTolerance(), 0.10f);
+	EXPECT_FLOAT_EQ(channel.shadowSelectionHysteresis(), 0.10f);
+	const auto generation = channel.generation();
+	EXPECT_THROW(channel.setTargetShadowCount(5), spk::Exception);
+	EXPECT_THROW(channel.setMaxShadowCount(1), spk::Exception);
+	EXPECT_THROW(channel.setShadowPriorityTolerance(-0.1f), spk::Exception);
+	EXPECT_THROW(channel.setShadowPriorityTolerance(1.1f), spk::Exception);
+	EXPECT_THROW(channel.setShadowSelectionHysteresis(std::numeric_limits<float>::infinity()), spk::Exception);
+	EXPECT_EQ(channel.generation(), generation);
+	EXPECT_EQ(channel.targetShadowCount(), 2u);
+	EXPECT_EQ(channel.maxShadowCount(), 4u);
+
+	channel.setTargetShadowCount(0);
+	channel.setMaxShadowCount(0);
+	channel.setShadowPriorityTolerance(0.0f);
+	channel.setShadowSelectionHysteresis(0.0f);
+	auto &point = scene.addLight<spk::Light::Point>(10.0f);
+	point.setCastsShadows(true);
+	scene.engine.refreshRenderSnapshot();
+	const auto current = channel.current();
+	ASSERT_NE(current, nullptr);
+	ASSERT_EQ(current->local.size(), 1u);
+	EXPECT_EQ(current->local.front().pointShadowStatus, spk::Light::Selection::Entry::PointShadowStatus::AtCapacity);
+}
+
+TEST(GraphicsPointShadowSelection, BaseToleranceAndAbsoluteMaximum)
+{
+	Scene scene;
+	auto &view = scene.addView("main");
+	for (float intensity : {100.0f, 99.0f, 98.0f, 97.0f, 96.0f, 60.0f})
+	{
+		scene.addLight<spk::Light::Point>(intensity).setCastsShadows(true);
+	}
+	scene.engine.refreshRenderSnapshot();
+	const auto current = view.lightChannel().current();
+	ASSERT_NE(current, nullptr);
+	ASSERT_EQ(current->local.size(), 6u);
+	using Status = spk::Light::Selection::Entry::PointShadowStatus;
+	for (std::size_t i = 0; i < 4; ++i)
+	{
+		EXPECT_EQ(current->local[i].pointShadowStatus, Status::Selected);
+	}
+	EXPECT_EQ(current->local[4].pointShadowStatus, Status::Hysteresis);
+	EXPECT_EQ(current->local[5].pointShadowStatus, Status::OutsideTolerance);
+}
+
+TEST(GraphicsPointShadowSelection, ExtraRetainsItsPlaceUntilStrictHysteresis)
+{
+	Scene scene;
+	auto &view = scene.addView("main");
+	view.lightChannel().setTargetShadowCount(1);
+	view.lightChannel().setMaxShadowCount(2);
+	view.lightChannel().setShadowPriorityTolerance(0.6f);
+	auto &top = scene.addLight<spk::Light::Point>(100.0f);
+	auto &incumbent = scene.addLight<spk::Light::Point>(90.0f);
+	top.setCastsShadows(true);
+	incumbent.setCastsShadows(true);
+	scene.engine.refreshRenderSnapshot();
+	const auto previous = view.lightChannel().current();
+	ASSERT_NE(previous, nullptr);
+	ASSERT_EQ(previous->local.size(), 2u);
+	const auto priorAdmission = previous->local[1].admission;
+
+	auto &challenger = scene.addLight<spk::Light::Point>(95.0f);
+	challenger.setCastsShadows(true);
+	scene.engine.refreshRenderSnapshot();
+	const auto next = view.lightChannel().current();
+	ASSERT_NE(next, nullptr);
+	using Status = spk::Light::Selection::Entry::PointShadowStatus;
+	EXPECT_EQ(next->local[0].pointShadowStatus, Status::Selected);
+	EXPECT_EQ(next->local[1].pointShadowStatus, Status::Hysteresis);
+	EXPECT_EQ(next->local[2].pointShadowStatus, Status::Selected);
+	EXPECT_EQ(next->local[2].registrationOrder, incumbent.registrationOrder());
+	EXPECT_EQ(next->local[2].admission, priorAdmission);
+
+	challenger.setIntensity(101.0f);
+	scene.engine.refreshRenderSnapshot();
+	const auto replaced = view.lightChannel().current();
+	ASSERT_NE(replaced, nullptr);
+	EXPECT_EQ(replaced->local[0].registrationOrder, challenger.registrationOrder());
+	EXPECT_EQ(replaced->local[0].pointShadowStatus, Status::Selected);
+	EXPECT_EQ(replaced->local[1].pointShadowStatus, Status::Selected);
+	EXPECT_EQ(replaced->local[2].pointShadowStatus, Status::Hysteresis);
+}
+
+TEST(GraphicsPointShadowSelection, ReadmissionGetsNewAdmissionAndHistoryIsImmutable)
+{
+	Scene scene;
+	auto &view = scene.addView("main");
+	view.lightChannel().setTargetShadowCount(1);
+	view.lightChannel().setMaxShadowCount(1);
+	auto &first = scene.addLight<spk::Light::Point>(10.0f);
+	auto &second = scene.addLight<spk::Light::Point>(9.0f);
+	first.setCastsShadows(true);
+	second.setCastsShadows(true);
+	scene.engine.refreshRenderSnapshot();
+	const auto original = view.lightChannel().current();
+	ASSERT_NE(original, nullptr);
+	ASSERT_EQ(original->local.size(), 2u);
+	const auto originalAdmission = original->local[0].admission;
+	first.setIntensity(1.0f);
+	scene.engine.refreshRenderSnapshot();
+	const auto displaced = view.lightChannel().current();
+	ASSERT_NE(displaced, nullptr);
+	EXPECT_EQ(displaced->local[0].registrationOrder, second.registrationOrder());
+	EXPECT_EQ(displaced->local[0].pointShadowStatus, spk::Light::Selection::Entry::PointShadowStatus::Selected);
+	first.setIntensity(20.0f);
+	scene.engine.refreshRenderSnapshot();
+	const auto readmitted = view.lightChannel().current();
+	ASSERT_NE(readmitted, nullptr);
+	EXPECT_EQ(readmitted->local[0].registrationOrder, first.registrationOrder());
+	EXPECT_NE(readmitted->local[0].admission, originalAdmission);
+	EXPECT_EQ(original->local[0].admission, originalAdmission);
+	EXPECT_EQ(original->local[0].pointShadowStatus, spk::Light::Selection::Entry::PointShadowStatus::Selected);
+}

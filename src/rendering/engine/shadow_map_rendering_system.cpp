@@ -4,13 +4,16 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -26,12 +29,23 @@
 #include "light/channel.hpp"
 #include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
+#include "shadow_map/point_budget.hpp"
 #include "shadow_map/projection.hpp"
 
 namespace spk::ShadowMap
 {
 	namespace
 	{
+		using PointKey = std::tuple<const void *, std::uint64_t, std::uint64_t, std::uint64_t>;
+
+		std::atomic<std::uint64_t> nextPointBudgetIdentity{1};
+
+		struct PointImagePlan
+		{
+			std::set<PointKey> approved;
+			std::set<PointKey> consumed;
+		};
+
 		struct Caster
 		{
 			Mesh mesh;
@@ -200,6 +214,87 @@ namespace spk::ShadowMap
 		}
 	}
 
+	PointBudget::PointBudget() :
+		_identity(nextPointBudgetIdentity.fetch_add(1, std::memory_order_relaxed))
+	{
+	}
+
+	void PointBudget::add(Request request)
+	{
+		if (request.system == nullptr || request.registrationOrder == 0 ||
+			request.admission == 0 || !request.limit || !request.needsRebuild)
+		{
+			throw spk::Exception("Invalid PointLight shadow budget request");
+		}
+		_requests.push_back(std::move(request));
+	}
+
+	void PointBudget::prepare(RenderContext &context) const
+	{
+		if (context.imageState.contains(_identity))
+		{
+			return;
+		}
+		auto plan = std::make_shared<PointImagePlan>();
+		std::vector<const Request *> pending;
+		for (const Request &request : _requests)
+		{
+			if (request.needsRebuild(context))
+			{
+				pending.push_back(&request);
+			}
+		}
+		std::ranges::sort(pending, [](const Request *a, const Request *b) {
+			if (a->score != b->score)
+			{
+				return a->score > b->score;
+			}
+			if (a->viewIdentity != b->viewIdentity)
+			{
+				return a->viewIdentity < b->viewIdentity;
+			}
+			if (a->registrationOrder != b->registrationOrder)
+			{
+				return a->registrationOrder < b->registrationOrder;
+			}
+			return std::less<const void *>{}(a->system, b->system);
+		});
+		std::map<const void *, std::size_t, std::less<const void *>> used;
+		std::set<PointKey> seen;
+		for (const Request *request : pending)
+		{
+			const PointKey key{request->system, request->viewIdentity, request->registrationOrder, request->admission};
+			if (!seen.insert(key).second)
+			{
+				continue;
+			}
+			auto &count = used[request->system];
+			if (count < request->limit())
+			{
+				plan->approved.insert(key);
+				++count;
+			}
+		}
+		context.imageState.emplace(_identity, std::move(plan));
+	}
+
+	bool PointBudget::consume(
+		RenderContext &context,
+		const void *system,
+		std::uint64_t viewIdentity,
+		std::uint64_t registrationOrder,
+		std::uint64_t admission) const
+	{
+		const auto it = context.imageState.find(_identity);
+		if (it == context.imageState.end())
+		{
+			return false;
+		}
+		const auto plan = std::static_pointer_cast<PointImagePlan>(it->second);
+		const PointKey key{system, viewIdentity, registrationOrder, admission};
+		return plan->approved.contains(key) && plan->consumed.insert(key).second;
+	}
+
 	struct RenderingSystem::State final
 	{
 		struct LightCache
@@ -210,6 +305,7 @@ namespace spk::ShadowMap
 			std::uint64_t dynamicSignature = 0;
 			std::uint64_t generation = 0;
 			std::uint64_t publishedAdmission = 0;
+			std::uint64_t sourceCaptureOrdinal = 0;
 			Framebuffer::Handle staticTarget;
 			Framebuffer::Handle finalTarget;
 			bool point = false;
@@ -228,6 +324,7 @@ namespace spk::ShadowMap
 
 		std::mutex mutex;
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
+		std::atomic<std::size_t> maxPointRebuilds{1};
 	};
 
 	class DepthCommand final : public RenderCommand
@@ -235,6 +332,7 @@ namespace spk::ShadowMap
 	private:
 		std::shared_ptr<RenderingSystem::State> _state;
 		std::shared_ptr<Light::Channel> _channel;
+		std::weak_ptr<PointBudget> _budget;
 		std::uint64_t _viewIdentity;
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
@@ -271,13 +369,17 @@ namespace spk::ShadowMap
 			RenderingSystem::State::LightCache &cache,
 			const Light::Selection::Entry &light) const
 		{
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
+				return;
+			}
 			const auto projections = Projection::point(light);
 			std::array<Matrix4x4, 6> matrices{};
 			for (std::size_t face = 0; face < matrices.size(); ++face)
 			{
 				matrices[face] = projections[face].viewProjection;
 			}
-			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature;
+			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature || cache.publishedAdmission != light.admission;
 			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
@@ -316,6 +418,7 @@ namespace spk::ShadowMap
 			cache.resolution = light.shadowResolution;
 			cache.staticSignature = _staticSignature;
 			cache.dynamicSignature = _dynamicSignature;
+			cache.sourceCaptureOrdinal = _captureOrdinal;
 
 			ShadowMap::Result::Entry entry;
 			entry.registrationOrder = light.registrationOrder;
@@ -345,6 +448,10 @@ namespace spk::ShadowMap
 			if (light.type == Light::Selection::Type::Point)
 			{
 				_renderPoint(context, cache, light);
+				return;
+			}
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
 				return;
 			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
@@ -383,6 +490,7 @@ namespace spk::ShadowMap
 			cache.projection = projection.viewProjection;
 			cache.resolution = light.shadowResolution;
 			cache.point = false;
+			cache.sourceCaptureOrdinal = _captureOrdinal;
 			ShadowMap::Result::Entry entry;
 			entry.registrationOrder = light.registrationOrder;
 			entry.admission = light.admission;
@@ -412,6 +520,7 @@ namespace spk::ShadowMap
 			std::vector<Caster> dynamicCasters) :
 			_state(std::move(state)),
 			_channel(std::move(channel)),
+			_budget(view.pointShadowBudget),
 			_viewIdentity(view.identity),
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
@@ -421,6 +530,48 @@ namespace spk::ShadowMap
 			_staticSignature(signature(_staticCasters)),
 			_dynamicSignature(signature(_dynamicCasters))
 		{
+		}
+
+		[[nodiscard]] bool pointNeedsRebuild(
+			RenderContext &context,
+			const Light::Selection::Entry &light) const
+		{
+			if (context.targetSurface == nullptr ||
+				context.targetSurface->lifeCycle() != Window::LifeCycle::Ready ||
+				!_channel->isAdmissionCurrent(light.registrationOrder, light.admission) ||
+				light.pointShadowStatus != Light::Selection::Entry::PointShadowStatus::Selected)
+			{
+				return false;
+			}
+			auto surface = _surface(*context.targetSurface);
+			std::lock_guard lock(surface->mutex);
+			const auto it = surface->lights.find({_viewIdentity, light.registrationOrder});
+			if (it == surface->lights.end())
+			{
+				return true;
+			}
+			const auto &cache = it->second;
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
+				return false;
+			}
+			if (!cache.point || !cache.pointStaticFaces[0] || !cache.pointFinalFaces[0] ||
+				cache.resolution != light.shadowResolution ||
+				cache.staticSignature != _staticSignature ||
+				cache.dynamicSignature != _dynamicSignature ||
+				cache.publishedAdmission != light.admission)
+			{
+				return true;
+			}
+			const auto projections = Projection::point(light);
+			for (std::size_t face = 0; face < projections.size(); ++face)
+			{
+				if (cache.pointProjections[face] != projections[face].viewProjection)
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 
 		void execute(RenderContext &context) const override
@@ -438,11 +589,47 @@ namespace spk::ShadowMap
 				{
 					continue;
 				}
+				if (light.type == Light::Selection::Type::Point)
+				{
+					auto budget = _budget.lock();
+					if (!budget || !budget->consume(
+									   context, _state.get(), _viewIdentity, light.registrationOrder, light.admission))
+					{
+						continue;
+					}
+				}
 				auto &cache = surface->lights[{_viewIdentity, light.registrationOrder}];
 				_renderLight(context, cache, light);
 			}
 		}
 	};
+
+	class SharedDepthCommand final : public RenderCommand
+	{
+	private:
+		std::shared_ptr<const DepthCommand> _command;
+
+	public:
+		explicit SharedDepthCommand(std::shared_ptr<const DepthCommand> command) :
+			_command(std::move(command))
+		{
+		}
+
+		void execute(RenderContext &context) const override
+		{
+			_command->execute(context);
+		}
+	};
+
+	std::size_t RenderingSystem::maxPointShadowRebuildsPerImage() const noexcept
+	{
+		return _state->maxPointRebuilds.load(std::memory_order_relaxed);
+	}
+
+	void RenderingSystem::setMaxPointShadowRebuildsPerImage(std::size_t value) noexcept
+	{
+		_state->maxPointRebuilds.store(value, std::memory_order_relaxed);
+	}
 
 	RenderingSystem::RenderingSystem() :
 		spk::RenderingSystem("Shadow map rendering"),
@@ -460,9 +647,9 @@ namespace spk::ShadowMap
 		}
 		std::vector<Light::Selection::Entry> lights;
 		const auto append = [&lights](const Light::Selection::Entry &light) {
-			if (light.castsShadows && (light.type == Light::Selection::Type::Point ||
-									   light.type == Light::Selection::Type::Spot ||
-									   light.type == Light::Selection::Type::Directional))
+			if (light.castsShadows &&
+				(light.type != Light::Selection::Type::Point ||
+				 light.pointShadowStatus == Light::Selection::Entry::PointShadowStatus::Selected))
 			{
 				lights.push_back(light);
 			}
@@ -475,6 +662,28 @@ namespace spk::ShadowMap
 		{
 			append(light);
 		}
+		{
+			std::set<std::uint64_t> selected;
+			for (const auto &light : context.lightSelection->local)
+			{
+				if (light.type == Light::Selection::Type::Point &&
+					light.castsShadows &&
+					light.pointShadowStatus == Light::Selection::Entry::PointShadowStatus::Selected)
+				{
+					selected.insert(light.registrationOrder);
+				}
+			}
+			std::lock_guard stateLock(_state->mutex);
+			for (const auto &[identity, surface] : _state->surfaces)
+			{
+				std::lock_guard surfaceLock(surface->mutex);
+				std::erase_if(surface->lights, [&selected, &context](const auto &item) {
+					return item.first.first == context.identity && item.second.point &&
+						   !selected.contains(item.first.second);
+				});
+			}
+		}
+
 		if (lights.empty())
 		{
 			return;
@@ -499,8 +708,25 @@ namespace spk::ShadowMap
 				}
 			}
 		}
-		builder.renderPass(spk::EngineView::ShadowPassKey)
-			.emplace<DepthCommand>(
-				_state, context.lightChannel, context, std::move(lights), std::move(staticCasters), std::move(dynamicCasters));
+
+		const auto command = std::make_shared<DepthCommand>(
+			_state, context.lightChannel, context, lights, std::move(staticCasters), std::move(dynamicCasters));
+		if (context.pointShadowBudget)
+		{
+			for (const auto &light : lights)
+			{
+				if (light.type != Light::Selection::Type::Point)
+				{
+					continue;
+				}
+				context.pointShadowBudget->add({.system = _state.get(), .viewIdentity = context.identity, .registrationOrder = light.registrationOrder, .admission = light.admission, .score = light.score, .limit = [state = _state] {
+													return state->maxPointRebuilds.load(std::memory_order_relaxed);
+												},
+												.needsRebuild = [command, light](RenderContext &renderContext) {
+													return command->pointNeedsRebuild(renderContext, light);
+												}});
+			}
+		}
+		builder.renderPass(spk::EngineView::ShadowPassKey).emplace<SharedDepthCommand>(command);
 	}
 }

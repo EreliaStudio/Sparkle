@@ -23,9 +23,31 @@
 #include "rendering/engine/rendering_component.hpp"
 #include "rendering/engine/rendering_entity.hpp"
 #include "rendering/engine/rendering_system.hpp"
+#include "rendering/render_command.hpp"
+#include "shadow_map/point_budget.hpp"
 
 namespace spk
 {
+	namespace
+	{
+		class ExecutePointBudgetCommand final : public RenderCommand
+		{
+		private:
+			std::shared_ptr<ShadowMap::PointBudget> _budget;
+
+		public:
+			explicit ExecutePointBudgetCommand(std::shared_ptr<ShadowMap::PointBudget> budget) :
+				_budget(std::move(budget))
+			{
+			}
+
+			void execute(RenderContext &context) const override
+			{
+				_budget->prepare(context);
+			}
+		};
+	}
+
 	Engine::Engine()
 	{
 		auto &lights = Registry<Light::Contributor, EngineHeadless *>::instance();
@@ -538,12 +560,16 @@ namespace spk
 		{
 			auto captures = _captureViews();
 			RenderSnapshot::Builder builder;
+			auto budget = std::make_shared<ShadowMap::PointBudget>();
+			builder.renderPass({"sparkle.engine.point-shadow-budget", -1}).emplace<ExecutePointBudgetCommand>(budget);
 			auto &pass = builder.renderPass({"sparkle.engine.views", 0});
 			try
 			{
 				for (const auto &capture : captures)
 				{
-					pass.append(_buildViewCommand(capture.context));
+					auto viewContext = capture.context;
+					viewContext.pointShadowBudget = budget;
+					pass.append(_buildViewCommand(viewContext));
 				}
 			} catch (...)
 			{

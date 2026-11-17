@@ -25,6 +25,10 @@
 namespace spk
 {
 	class Engine;
+	namespace ShadowMap
+	{
+		class PointBudget;
+	}
 
 	class EngineView final
 	{
@@ -104,6 +108,7 @@ namespace spk
 			std::uint64_t captureOrdinal = 0;
 			std::shared_ptr<Light::Channel> lightChannel;
 			std::shared_ptr<const Light::Selection> lightSelection;
+			std::shared_ptr<ShadowMap::PointBudget> pointShadowBudget;
 			Vector2UInt resolution{};
 			Camera3D cameraSnapshot;
 			Matrix4x4 projectionMatrix{};

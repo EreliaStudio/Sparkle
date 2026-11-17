@@ -12,6 +12,108 @@
 
 namespace spk::Light
 {
+	namespace
+	{
+		using Entry = Selection::Entry;
+		using Status = Entry::PointShadowStatus;
+
+		void selectPointShadows(
+			std::vector<Entry> &local,
+			const std::vector<std::uint64_t> &history,
+			std::size_t target,
+			std::size_t maximum,
+			float tolerance,
+			float hysteresis)
+		{
+			std::vector<Entry *> candidates;
+			for (Entry &entry : local)
+			{
+				if (entry.type != Selection::Type::Point)
+				{
+					continue;
+				}
+				entry.pointShadowStatus = entry.castsShadows ? Status::AtCapacity : Status::Disabled;
+				if (entry.castsShadows && entry.score > 0.0f)
+				{
+					candidates.push_back(&entry);
+				}
+			}
+			std::ranges::sort(candidates, [](const Entry *a, const Entry *b) {
+				if (a->score != b->score)
+				{
+					return a->score > b->score;
+				}
+				return a->registrationOrder < b->registrationOrder;
+			});
+			if (target == 0 || candidates.empty())
+			{
+				return;
+			}
+			const std::size_t required = std::min(target, candidates.size());
+			for (std::size_t i = 0; i < required; ++i)
+			{
+				candidates[i]->pointShadowStatus = Status::Selected;
+			}
+			if (required < target || maximum <= required)
+			{
+				return;
+			}
+
+			const float threshold = candidates[target - 1]->score * (1.0f - tolerance);
+			std::vector<Entry *> extras;
+			for (std::size_t i = target; i < candidates.size(); ++i)
+			{
+				if (candidates[i]->score >= threshold)
+				{
+					extras.push_back(candidates[i]);
+				}
+				else
+				{
+					candidates[i]->pointShadowStatus = Status::OutsideTolerance;
+				}
+			}
+			std::vector<Entry *> retained;
+			const std::size_t slots = maximum - required;
+			for (Entry *entry : extras)
+			{
+				if (std::ranges::find(history, entry->registrationOrder) != history.end() &&
+					retained.size() < slots)
+				{
+					retained.push_back(entry);
+					entry->pointShadowStatus = Status::Selected;
+				}
+			}
+			for (Entry *candidate : extras)
+			{
+				if (candidate->pointShadowStatus == Status::Selected)
+				{
+					continue;
+				}
+				if (retained.size() < slots)
+				{
+					retained.push_back(candidate);
+					candidate->pointShadowStatus = Status::Selected;
+					continue;
+				}
+				const auto weakest = std::ranges::min_element(retained, [](const Entry *a, const Entry *b) {
+					return a->score < b->score || (a->score == b->score && a->registrationOrder > b->registrationOrder);
+				});
+				if (weakest != retained.end() &&
+					static_cast<double>(candidate->score) >
+						static_cast<double>((*weakest)->score) * (1.0 + static_cast<double>(hysteresis)))
+				{
+					(*weakest)->pointShadowStatus = Status::AtCapacity;
+					*weakest = candidate;
+					candidate->pointShadowStatus = Status::Selected;
+				}
+				else
+				{
+					candidate->pointShadowStatus = Status::Hysteresis;
+				}
+			}
+		}
+	}
+
 	Channel::Channel(Engine &engine) noexcept :
 		_engine(&engine)
 	{
@@ -74,6 +176,94 @@ namespace spk::Light
 		_resetNext = true;
 	}
 
+	std::size_t Channel::targetShadowCount() const
+	{
+		std::lock_guard lock(_mutex);
+		return _targetShadowCount;
+	}
+
+	void Channel::setTargetShadowCount(std::size_t value)
+	{
+		std::lock_guard lock(_mutex);
+		if (_closed || value > _maxShadowCount)
+		{
+			throw spk::Exception("Light::Channel target shadow count exceeds maximum or Channel is closed");
+		}
+		if (value != _targetShadowCount)
+		{
+			_invalidateLocked();
+			_targetShadowCount = value;
+		}
+	}
+
+	std::size_t Channel::maxShadowCount() const
+	{
+		std::lock_guard lock(_mutex);
+		return _maxShadowCount;
+	}
+
+	void Channel::setMaxShadowCount(std::size_t value)
+	{
+		std::lock_guard lock(_mutex);
+		if (_closed || value < _targetShadowCount)
+		{
+			throw spk::Exception("Light::Channel max shadow count is below target or Channel is closed");
+		}
+		if (value != _maxShadowCount)
+		{
+			_invalidateLocked();
+			_maxShadowCount = value;
+		}
+	}
+
+	float Channel::shadowPriorityTolerance() const
+	{
+		std::lock_guard lock(_mutex);
+		return _shadowPriorityTolerance;
+	}
+
+	void Channel::setShadowPriorityTolerance(float value)
+	{
+		if (!std::isfinite(value) || value < 0.0f || value > 1.0f)
+		{
+			throw spk::Exception("Light::Channel shadow tolerance must be finite and in [0,1]");
+		}
+		std::lock_guard lock(_mutex);
+		if (_closed)
+		{
+			throw spk::Exception("Cannot configure a closed Light::Channel");
+		}
+		if (value != _shadowPriorityTolerance)
+		{
+			_invalidateLocked();
+			_shadowPriorityTolerance = value;
+		}
+	}
+
+	float Channel::shadowSelectionHysteresis() const
+	{
+		std::lock_guard lock(_mutex);
+		return _shadowSelectionHysteresis;
+	}
+
+	void Channel::setShadowSelectionHysteresis(float value)
+	{
+		if (!std::isfinite(value) || value < 0.0f)
+		{
+			throw spk::Exception("Light::Channel shadow hysteresis must be finite and nonnegative");
+		}
+		std::lock_guard lock(_mutex);
+		if (_closed)
+		{
+			throw spk::Exception("Cannot configure a closed Light::Channel");
+		}
+		if (value != _shadowSelectionHysteresis)
+		{
+			_invalidateLocked();
+			_shadowSelectionHysteresis = value;
+		}
+	}
+
 	std::uint64_t Channel::generation() const
 	{
 		std::lock_guard lock(_mutex);
@@ -126,6 +316,11 @@ namespace spk::Light
 				float hysteresis;
 				bool resetHistory;
 				std::vector<std::uint64_t> history;
+				std::vector<std::uint64_t> pointShadowHistory;
+				std::size_t targetShadowCount;
+				std::size_t maxShadowCount;
+				float shadowPriorityTolerance;
+				float shadowSelectionHysteresis;
 				{
 					std::lock_guard lock(_mutex);
 					if (_closed)
@@ -137,6 +332,11 @@ namespace spk::Light
 					hysteresis = _hysteresis;
 					resetHistory = _resetNext;
 					history = _history;
+					pointShadowHistory = _pointShadowHistory;
+					targetShadowCount = _targetShadowCount;
+					maxShadowCount = _maxShadowCount;
+					shadowPriorityTolerance = _shadowPriorityTolerance;
+					shadowSelectionHysteresis = _shadowSelectionHysteresis;
 				}
 
 				std::vector<Selection::Entry> candidates;
@@ -159,6 +359,13 @@ namespace spk::Light
 				}
 				std::ranges::sort(fresh->directional, {}, &Selection::Entry::registrationOrder);
 				fresh->local = Prioritizer::select(std::move(candidates), history, limit, hysteresis, resetHistory);
+				selectPointShadows(
+					fresh->local,
+					pointShadowHistory,
+					targetShadowCount,
+					maxShadowCount,
+					shadowPriorityTolerance,
+					shadowSelectionHysteresis);
 
 				{
 					// Publication uses the order Engine -> Channel.
@@ -187,7 +394,12 @@ namespace spk::Light
 							{
 								const auto &old = entry.type == Selection::Type::Directional ? _published->directional : _published->local;
 								const auto it = findOld(old);
-								if (it != old.end())
+								if (it != old.end() &&
+									(entry.type != Selection::Type::Point ||
+									 (entry.pointShadowStatus == Selection::Entry::PointShadowStatus::Selected &&
+									  it->pointShadowStatus == Selection::Entry::PointShadowStatus::Selected) ||
+									 (entry.pointShadowStatus != Selection::Entry::PointShadowStatus::Selected &&
+									  it->pointShadowStatus != Selection::Entry::PointShadowStatus::Selected)))
 								{
 									entry.admission = it->admission;
 									continue;
@@ -209,6 +421,16 @@ namespace spk::Light
 					{
 						newHistory.push_back(entry.registrationOrder);
 					}
+					std::vector<std::uint64_t> nextPointShadowHistory;
+					for (const auto &entry : fresh->local)
+					{
+						if (entry.type == Selection::Type::Point &&
+							entry.pointShadowStatus == Selection::Entry::PointShadowStatus::Selected)
+						{
+							nextPointShadowHistory.push_back(entry.registrationOrder);
+						}
+					}
+					_pointShadowHistory = std::move(nextPointShadowHistory);
 					_history = std::move(newHistory);
 					_lastAdmission = nextAdmission;
 					_published = fresh;
@@ -247,7 +469,9 @@ namespace spk::Light
 		}
 		const auto matches = [=](const Selection::Entry &entry) {
 			return entry.registrationOrder == registrationOrder && entry.admission == admission &&
-				   entry.castsShadows;
+				   entry.castsShadows &&
+				   (entry.type != Selection::Type::Point ||
+					entry.pointShadowStatus == Selection::Entry::PointShadowStatus::Selected);
 		};
 		return std::ranges::any_of(_published->local, matches) ||
 			   std::ranges::any_of(_published->directional, matches);
@@ -290,7 +514,8 @@ namespace spk::Light
 		auto previous = merged.entries.find(registrationOrder);
 		if (previous != merged.entries.end() &&
 			previous->second.admission == admission &&
-			previous->second.generation >= generation)
+			(previous->second.generation >= generation ||
+			 previous->second.captureOrdinal > result.captureOrdinal))
 		{
 			return false;
 		}
@@ -315,7 +540,9 @@ namespace spk::Light
 	std::optional<ShadowMap::Result::Entry> Channel::resolveShadowResult(
 		const Window::Surface &surface, const Selection::Entry &capturedLight, std::uint64_t captureOrdinal) const
 	{
-		if (!capturedLight.castsShadows)
+		if (!capturedLight.castsShadows ||
+			(capturedLight.type == Selection::Type::Point &&
+			 capturedLight.pointShadowStatus != Selection::Entry::PointShadowStatus::Selected))
 		{
 			return std::nullopt;
 		}
