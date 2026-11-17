@@ -125,8 +125,7 @@ namespace spk::ShadowMap
 		const float padding = std::max(0.01f, radius * 0.01f);
 		const float nearPlane = std::max(0.001f, -maxZ - padding);
 		const float farPlane = std::max(nearPlane + 0.01f, -minZ + padding);
-		return {Matrix4x4::ortho(minX - padding, maxX + padding, minY - padding, maxY + padding, nearPlane, farPlane) *
-					view,
-				nearPlane, farPlane};
+		const Matrix4x4 orthographic = Matrix4x4::ortho(minX - padding, maxX + padding, minY - padding, maxY + padding, nearPlane, farPlane);
+		return {orthographic * view, nearPlane, farPlane};
 	}
 }
