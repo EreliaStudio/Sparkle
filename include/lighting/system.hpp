@@ -89,8 +89,10 @@ namespace spk::Lighting
 
 	public:
 		System(
-			const Light::Selection &selection, RGB ambient,
-			std::shared_ptr<Light::Channel> shadowChannel = {}, std::uint64_t captureOrdinal = 0);
+			const Light::Selection &selection,
+			RGB ambient,
+			std::shared_ptr<Light::Channel> shadowChannel = {},
+			std::uint64_t captureOrdinal = 0);
 
 		[[nodiscard]] const ShaderStorageBuffer &buffer() const noexcept;
 		void activate(RenderContext &context) const;
