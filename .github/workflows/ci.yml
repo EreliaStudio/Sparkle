@@ -431,6 +431,16 @@ jobs:
           $timer = [System.Diagnostics.Stopwatch]::StartNew()
           cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
           $buildExitCode = $LASTEXITCODE
+          if ($buildExitCode -ne 0 -and '${{ matrix.configuration }}' -eq 'Release')
+          {
+            # The GitHub Actions sccache backend can return HTTP 503 / ServerBusy.
+            # Retry without its launcher; genuine compiler errors still fail.
+            Write-Warning 'MSVC Release build failed; retrying without sccache'
+            cmake -S . -B build/compiler-compat '-DCMAKE_CXX_COMPILER_LAUNCHER='
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
+            $buildExitCode = $LASTEXITCODE
+          }
           $timer.Stop()
           $seconds = [math]::Round($timer.Elapsed.TotalSeconds, 1)
           "MSVC ${{ matrix.configuration }} compile: $seconds seconds" >> $env:GITHUB_STEP_SUMMARY
