@@ -1,14 +1,14 @@
 #pragma once
 
 #include <atomic>
-#include <cstdint>
 #include <memory>
 #include <mutex>
-#include <unordered_map>
+#include <map>
 
 #include "container/thread_safe_slot.hpp"
 #include "core/window.hpp"
 #include "light/shadow_result.hpp"
+#include "type/uuid.hpp"
 
 namespace spk::Light
 {
@@ -31,7 +31,7 @@ namespace spk::Light
 		struct State final
 		{
 			std::mutex mutex;
-			std::unordered_map<std::uint64_t, std::shared_ptr<Entry>> entries;
+			std::map<UUID, std::shared_ptr<Entry>> entries;
 		};
 
 		std::shared_ptr<State> _state = std::make_shared<State>();

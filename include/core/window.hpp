@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -8,6 +7,7 @@
 #include "graphics/color.hpp"
 #include "math/rect2d.hpp"
 #include "type/focus_mode.hpp"
+#include "type/uuid.hpp"
 
 #include "design_pattern/contract_provider.hpp"
 #include "diagnostics/profiler.hpp"
@@ -136,7 +136,7 @@ namespace spk
 			Surface &operator=(Surface &&) = delete;
 
 			[[nodiscard]] LifeCycle lifeCycle() const noexcept;
-			[[nodiscard]] std::uint64_t identity() const noexcept;
+			[[nodiscard]] UUID identity() const noexcept;
 			void create(const WinAPI::Window &window);
 			void destroy();
 			void makeCurrent();

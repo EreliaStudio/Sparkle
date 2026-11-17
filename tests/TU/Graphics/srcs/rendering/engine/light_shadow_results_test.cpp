@@ -145,6 +145,9 @@ TEST(GraphicsShadowResults, TwoSurfacesAndRecreatedSurfaceWithSameNameNeverShare
 	first.create(firstFrame.native.window());
 	second.create(secondFrame.native.window());
 	ASSERT_NE(first.identity(), second.identity());
+	EXPECT_TRUE(first.identity().hasRFCVariant());
+	EXPECT_EQ(first.identity().version(), 4u);
+	EXPECT_FALSE(first.identity().isNull());
 	EXPECT_EQ(view.lightChannel().shadowResults().acquireLatest(first), nullptr);
 	EXPECT_EQ(view.lightChannel().shadowResults().acquireLatest(second), nullptr);
 

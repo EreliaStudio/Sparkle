@@ -29,7 +29,7 @@ namespace spk::Light
 		auto candidate = std::make_shared<Entry>();
 		const std::weak_ptr<State> weakState = _state;
 		const std::weak_ptr<Entry> weakEntry = candidate;
-		const std::uint64_t identity = surface.identity();
+		const UUID identity = surface.identity();
 
 		try
 		{
