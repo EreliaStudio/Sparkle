@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 
 #include "rendering/engine/rendering_system.hpp"
@@ -17,6 +18,8 @@ namespace spk::ShadowMap
 
 	public:
 		RenderingSystem();
+		[[nodiscard]] std::size_t maxPointShadowRebuildsPerImage() const noexcept;
+		void setMaxPointShadowRebuildsPerImage(std::size_t value) noexcept;
 		void buildViewRenderSnapshot(
 			spk::RenderSnapshot::Builder &builder,
 			const spk::EngineView::CaptureContext &context) override;
