@@ -362,6 +362,10 @@ namespace spk::ShadowMap
 			RenderingSystem::State::LightCache &cache,
 			const Light::Selection::Entry &light) const
 		{
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
+				return;
+			}
 			const auto projections = Projection::point(light);
 			std::array<Matrix4x4, 6> matrices{};
 			for (std::size_t face = 0; face < matrices.size(); ++face)
@@ -439,6 +443,10 @@ namespace spk::ShadowMap
 				_renderPoint(context, cache, light);
 				return;
 			}
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
+				return;
+			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
 											  ? Projection::spot(light)
 											  : Projection::directional(light, _camera);
@@ -475,6 +483,7 @@ namespace spk::ShadowMap
 			cache.projection = projection.viewProjection;
 			cache.resolution = light.shadowResolution;
 			cache.point = false;
+			cache.sourceCaptureOrdinal = _captureOrdinal;
 			ShadowMap::Result::Entry entry;
 			entry.registrationOrder = light.registrationOrder;
 			entry.admission = light.admission;
@@ -535,6 +544,10 @@ namespace spk::ShadowMap
 				return true;
 			}
 			const auto &cache = it->second;
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
+				return false;
+			}
 			if (!cache.point || !cache.pointStaticFaces[0] || !cache.pointFinalFaces[0] ||
 				cache.resolution != light.shadowResolution ||
 				cache.staticSignature != _staticSignature ||
@@ -642,6 +655,28 @@ namespace spk::ShadowMap
 		{
 			append(light);
 		}
+				{
+			std::set<std::uint64_t> selected;
+			for (const auto &light : context.lightSelection->local)
+			{
+				if (light.type == Light::Selection::Type::Point &&
+					light.castsShadows &&
+					light.pointShadowStatus == Light::Selection::Entry::PointShadowStatus::Selected)
+				{
+					selected.insert(light.registrationOrder);
+				}
+			}
+			std::lock_guard stateLock(_state->mutex);
+			for (const auto &[identity, surface] : _state->surfaces)
+			{
+				std::lock_guard surfaceLock(surface->mutex);
+				std::erase_if(surface->lights, [&selected, &context](const auto &item) {
+					return item.first.first == context.identity && item.second.point &&
+						   !selected.contains(item.first.second);
+				});
+			}
+		}
+
 		if (lights.empty())
 		{
 			return;
@@ -664,27 +699,6 @@ namespace spk::ShadowMap
 				{
 					destination.push_back({instance.mesh, base * instance.localTransform});
 				}
-			}
-		}
-		{
-			std::set<std::uint64_t> selected;
-			for (const auto &light : context.lightSelection->local)
-			{
-				if (light.type == Light::Selection::Type::Point &&
-					light.castsShadows &&
-					light.pointShadowStatus == Light::Selection::Entry::PointShadowStatus::Selected)
-				{
-					selected.insert(light.registrationOrder);
-				}
-			}
-			std::lock_guard stateLock(_state->mutex);
-			for (const auto &[identity, surface] : _state->surfaces)
-			{
-				std::lock_guard surfaceLock(surface->mutex);
-				std::erase_if(surface->lights, [&selected, &context](const auto &item) {
-					return item.first.first == context.identity && item.second.point &&
-						   !selected.contains(item.first.second);
-				});
 			}
 		}
 
