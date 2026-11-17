@@ -75,7 +75,8 @@ namespace spk
 			std::vector<std::uint32_t> materialRemap,
 			Matrix4x4 model,
 			std::shared_ptr<const Lighting::System> lighting,
-			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
+			std::shared_ptr<const CameraUniformRenderCommand> camera = {},
+			Mode mode = Mode::Opaque);
 
 		void execute(RenderContext &context) const override;
 	};
