@@ -457,13 +457,18 @@ namespace
 		scene.add(geometry({1, 3, 1}), 0, {-0.5f, -3, -0.5f}, &leftHip);
 		scene.add(geometry({1, 3, 1}), 0, {-0.5f, -3, -0.5f}, &rightHip);
 
-		auto &rightWrist = scene.joint(rightShoulder, {0, -2.7f, 0});
+		// Place the grip just beyond the arm tip so the hilt cannot share
+		// a depth plane with the forearm in raised or resting poses.
+		auto &rightWrist = scene.joint(rightShoulder, {0, -3.1f, 0});
 		if (withSword)
 		{
 			rightWrist.transform().setEulerRotation({90, 0, 0});
-			scene.add(scene.cube, 0, {-0.5f, -0.5f, -0.5f}, &rightWrist);
-			// The blade and hilt overlap in the grip: avoid coplanar faces.
-			scene.add(geometry({1, 4, 1}), 2, {-0.5f, 0, -0.45f}, &rightWrist);
+			// Use separate, uniformly scaled voxel elements. The blade overlaps
+			// the hilt slightly without sharing its side faces or the arm's.
+			auto &hilt = scene.add(scene.cube, 0, {-0.4f, -0.4f, -0.4f}, &rightWrist);
+			hilt.transform().rescale({0.8f, 0.8f, 0.8f});
+			auto &blade = scene.add(geometry({1, 4, 1}), 2, {-0.325f, 0.33f, -0.325f}, &rightWrist);
+			blade.transform().rescale({0.65f, 0.65f, 0.65f});
 		}
 
 		const spk::Vector3 eye{7, 5.5f, 9};
