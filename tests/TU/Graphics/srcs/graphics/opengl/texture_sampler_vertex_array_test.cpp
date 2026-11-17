@@ -10,6 +10,7 @@
 
 #include "exception.hpp"
 #include "graphics/image.hpp"
+#include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/index_buffer.hpp"
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/texture.hpp"
@@ -203,6 +204,41 @@ TEST(SamplerTest, PropertiesTextureAndBindingAreObservableInOpenGL)
 	EXPECT_EQ(value, GL_NEAREST_MIPMAP_NEAREST);
 	::glGetSamplerParameteriv(static_cast<GLuint>(samplerIdentifier), GL_TEXTURE_WRAP_S, &value);
 	EXPECT_EQ(value, GL_REPEAT);
+}
+
+TEST(SamplerTest, DepthComparisonUsesFilteredDepthReferenceAndCanBeDisabled)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset({32, 32});
+	const auto attachment = spk::Framebuffer::RenderAttachment::create2D(
+		{32, 32}, spk::Texture::Format::Depth32F);
+	spk::Sampler sampler(
+		2, spk::Sampler::Filtering::Linear, spk::Sampler::Wrap::ClampToBorder);
+	sampler.setTexture(attachment.texture());
+	sampler.setDepthComparison(spk::Sampler::DepthComparison::LessEqual);
+	sampler.validate();
+	sampler.activate(openGL.renderContext());
+
+	GLint identifier = 0;
+	glGetIntegeri_v(GL_SAMPLER_BINDING, 2, &identifier);
+	ASSERT_NE(identifier, 0);
+	GLint value = 0;
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_COMPARE_MODE, &value);
+	EXPECT_EQ(value, GL_COMPARE_REF_TO_TEXTURE);
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_COMPARE_FUNC, &value);
+	EXPECT_EQ(value, GL_LEQUAL);
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_MIN_FILTER, &value);
+	EXPECT_EQ(value, GL_LINEAR);
+	EXPECT_EQ(sampler.depthComparison(), spk::Sampler::DepthComparison::LessEqual);
+
+	sampler.setDepthComparison(spk::Sampler::DepthComparison::Disabled);
+	sampler.validate();
+	sampler.activate(openGL.renderContext());
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_COMPARE_MODE, &value);
+	EXPECT_EQ(value, GL_NONE);
+	EXPECT_EQ(sampler.depthComparison(), spk::Sampler::DepthComparison::Disabled);
+	EXPECT_NO_THROW(openGL.requireNoErrors());
+	openGL.reset();
 }
 
 TEST(SamplerTest, AllSettersAndCombinedPropertiesUpdateAccessors)
