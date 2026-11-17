@@ -104,11 +104,7 @@ namespace spk::Lighting
 				if (resolved && resolved->resolution > 0 && resolved->depthTexture)
 				{
 					const bool point = light.type == Light::Selection::Type::Point;
-					const bool compatible = point
-						? resolved->faceCount == 6 &&
-							resolved->depthTexture->target() == Texture::Target::TextureCubeMap
-						: resolved->faceCount == 1 &&
-							resolved->depthTexture->target() == Texture::Target::Texture2D;
+					const bool compatible = point ? (resolved->faceCount == 6 && resolved->depthTexture->target() == Texture::Target::TextureCubeMap) : (resolved->faceCount == 1 && resolved->depthTexture->target() == Texture::Target::Texture2D);
 					if (compatible && point && cubeCount < MaxPointShadowSamplers)
 					{
 						const auto &geometry = resolved->light;
@@ -124,12 +120,8 @@ namespace spk::Lighting
 						shadow.parameters[0] = resolved->depthBias;
 						shadow.parameters[1] = resolved->normalBias;
 						shadow.parameters[3] = static_cast<float>(index + 1);
-						shadow.pointPositionNear = {
-							resolved->light.position.x, resolved->light.position.y,
-							resolved->light.position.z, resolved->nearPlane};
-						shadow.pointFarResolution = {
-							resolved->farPlane, static_cast<float>(resolved->resolution),
-							light.shadowFilter == Light::ShadowFilter::PCF3x3 ? 1.0f : 0.0f, 1.0f};
+						shadow.pointPositionNear = {resolved->light.position.x, resolved->light.position.y, resolved->light.position.z, resolved->nearPlane};
+						shadow.pointFarResolution = {resolved->farPlane, static_cast<float>(resolved->resolution), light.shadowFilter == Light::ShadowFilter::PCF3x3 ? 1.0f : 0.0f, 1.0f};
 						bindings->samplers.emplace_back(
 							PointShadowBindingBase + index,
 							Sampler::Filtering::Nearest,
