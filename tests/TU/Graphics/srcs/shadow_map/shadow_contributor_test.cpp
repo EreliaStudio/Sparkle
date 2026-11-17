@@ -24,12 +24,13 @@
 
 namespace
 {
+	using spk::Matrix4x4;
 	using spk::ShadowMap::Contributor;
 	using spk::ShadowMap::Edition;
 	using spk::ShadowMap::Mesh;
 	using spk::ShadowMap::MeshFilter;
 	using spk::ShadowMap::ShadowMode;
-	using spk::Matrix4x4;
+
 	static_assert(std::is_same_v<MeshFilter, spk::MeshFilter<Mesh>>);
 
 	constexpr float NaN = std::numeric_limits<float>::quiet_NaN();
@@ -252,7 +253,9 @@ TEST(ShadowMapMeshFilterTest, OldCollectionsRemainReadableAfterReplacementAndSou
 	MeshFilter::Collection snapshot;
 	{
 		const auto source = makeSourceMesh();
-		const auto depth = Mesh::from(source, [](const spk::Texture3DVertex &v) { return v.position; });
+		const auto depth = Mesh::from(source, [](const spk::Texture3DVertex &v) {
+			return v.position;
+		});
 		filter.bind(MeshFilter::Collection{{depth, Matrix4x4::translation(1.0f, 0.0f, 0.0f)}});
 		snapshot = filter.instances();
 	}
