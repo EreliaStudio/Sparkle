@@ -514,7 +514,8 @@ namespace
 		auto previous = merged.entries.find(registrationOrder);
 		if (previous != merged.entries.end() &&
 			previous->second.admission == admission &&
-			previous->second.generation >= generation)
+			(previous->second.generation >= generation ||
+			 previous->second.captureOrdinal > result.captureOrdinal))
 		{
 			return false;
 		}
