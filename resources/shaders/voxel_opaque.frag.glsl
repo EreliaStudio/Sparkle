@@ -33,8 +33,10 @@ layout(std430) readonly buffer ForwardLighting
 
 struct ShadowData
 {
-	mat4 viewProjection;
+	mat4 viewProjection[6];
 	vec4 parameters;
+	vec4 pointPositionNear;
+	vec4 pointFarResolution;
 };
 
 layout(std430) readonly buffer ForwardShadows
@@ -44,6 +46,7 @@ layout(std430) readonly buffer ForwardShadows
 
 uniform sampler2D uAlbedo;
 uniform sampler2DShadow uShadowMaps[16];
+uniform samplerCubeShadow uPointShadowMaps[8];
 
 layout(location = 0) in vec2 vertexUV;
 layout(location = 1) flat in uint materialIndex;
@@ -68,16 +71,121 @@ float spotAttenuation(vec3 direction, vec3 toReceiver, float cosineEdge)
 	return t * t * (3.0 - 2.0 * t);
 }
 
+// OpenGL cube face order: +X, -X, +Y, -Y, +Z, -Z.
+// Dominant-axis ties are explicitly resolved X > Y > Z.
+int pointFace(vec3 direction)
+{
+	vec3 a = abs(direction);
+	if (a.x >= a.y && a.x >= a.z)
+	{
+		return direction.x >= 0.0 ? 0 : 1;
+	}
+	if (a.y >= a.z)
+	{
+		return direction.y >= 0.0 ? 2 : 3;
+	}
+	return direction.z >= 0.0 ? 4 : 5;
+}
+
+vec2 pointFaceUV(vec3 direction, int face)
+{
+	if (face == 0) return vec2(-direction.z, -direction.y) / abs(direction.x);
+	if (face == 1) return vec2( direction.z, -direction.y) / abs(direction.x);
+	if (face == 2) return vec2( direction.x,  direction.z) / abs(direction.y);
+	if (face == 3) return vec2( direction.x, -direction.z) / abs(direction.y);
+	if (face == 4) return vec2( direction.x, -direction.y) / abs(direction.z);
+	return vec2(-direction.x, -direction.y) / abs(direction.z);
+}
+
+vec3 pointFaceDirection(int face, vec2 uv)
+{
+	if (face == 0) return vec3( 1.0, -uv.y, -uv.x);
+	if (face == 1) return vec3(-1.0, -uv.y,  uv.x);
+	if (face == 2) return vec3( uv.x,  1.0,  uv.y);
+	if (face == 3) return vec3( uv.x, -1.0, -uv.y);
+	if (face == 4) return vec3( uv.x, -uv.y,  1.0);
+	return vec3(-uv.x, -uv.y, -1.0);
+}
+
+float pointComparison(ShadowData shadow, int slot, vec3 ray, vec3 receiver)
+{
+	int face = pointFace(ray);
+	vec4 clip = shadow.viewProjection[face] * vec4(receiver, 1.0);
+	// The historical near plane is a per-tap guard: no texture access.
+	if (clip.w < shadow.pointPositionNear.w || clip.w <= 0.0)
+	{
+		return 1.0;
+	}
+	vec3 projected = clip.xyz / clip.w * 0.5 + 0.5;
+	if (clip.w > shadow.pointFarResolution.x ||
+		projected.z <= 0.0 || projected.z >= 1.0)
+	{
+		return 1.0;
+	}
+	// The cube hardware must make the same deterministic choice at exact
+	// dominant-axis ties. One positive float ULP breaks those ties.
+	vec3 direction = ray / max(max(abs(ray.x), abs(ray.y)), abs(ray.z));
+	int axis = face / 2;
+	float competing = axis == 0 ? max(abs(direction.y), abs(direction.z)) :
+		(axis == 1 ? max(abs(direction.x), abs(direction.z)) :
+		max(abs(direction.x), abs(direction.y)));
+	if (abs(direction[axis]) == competing)
+	{
+		direction[axis] = sign(direction[axis]) *
+			uintBitsToFloat(floatBitsToUint(competing) + 1u);
+	}
+	return texture(uPointShadowMaps[slot], vec4(direction, projected.z - shadow.parameters.x));
+}
+
+float pointShadowVisibility(ShadowData shadow, int slot, vec3 position, vec3 normal)
+{
+	vec3 ray = position - shadow.pointPositionNear.xyz;
+	if (all(equal(ray, vec3(0.0))))
+	{
+		return 1.0;
+	}
+	float maximum = max(max(abs(ray.x), abs(ray.y)), abs(ray.z));
+	vec3 q = ray / maximum;
+	// Do not normalize a tiny world-space vector directly.
+	vec3 stableRay = q / sqrt(dot(q, q));
+	vec3 receiver = position + normal * shadow.parameters.y;
+	if (shadow.pointFarResolution.z == 0.0)
+	{
+		return pointComparison(shadow, slot, stableRay, receiver);
+	}
+	int centralFace = pointFace(stableRay);
+	vec2 uv = pointFaceUV(stableRay, centralFace);
+	float texel = 2.0 / shadow.pointFarResolution.y;
+	float visibility = 0.0;
+	for (int y = -1; y <= 1; ++y)
+	{
+		for (int x = -1; x <= 1; ++x)
+		{
+			vec3 direction = pointFaceDirection(centralFace, uv + vec2(x, y) * texel);
+			visibility += pointComparison(shadow, slot, direction, receiver);
+		}
+	}
+	return visibility / 9.0;
+}
+
 float shadowVisibility(uint i, vec3 position, vec3 normal)
 {
 	ShadowData shadow = shadows[i];
 	int slot = int(shadow.parameters.w) - 1;
-	if (slot < 0 || slot >= 16)
+	if (slot < 0)
+	{
+		return 1.0;
+	}
+	if (shadow.pointFarResolution.w != 0.0)
+	{
+		return slot < 8 ? pointShadowVisibility(shadow, slot, position, normal) : 1.0;
+	}
+	if (slot >= 16)
 	{
 		return 1.0;
 	}
 	vec3 receiver = position + normal * shadow.parameters.y;
-	vec4 clip = shadow.viewProjection * vec4(receiver, 1.0);
+	vec4 clip = shadow.viewProjection[0] * vec4(receiver, 1.0);
 	if (clip.w <= 0.0)
 	{
 		return 1.0;
@@ -90,7 +198,6 @@ float shadowVisibility(uint i, vec3 position, vec3 normal)
 		return 1.0;
 	}
 	float bias = shadow.parameters.x;
-	// Hard shadows require one nearest-filtered depth comparison.
 	if (shadow.parameters.z == 0.0)
 	{
 		return texture(uShadowMaps[slot], vec3(projected.xy, projected.z - bias));
