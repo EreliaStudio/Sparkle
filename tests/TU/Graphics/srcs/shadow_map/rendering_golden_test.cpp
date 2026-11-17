@@ -1,0 +1,348 @@
+#include <gtest/gtest.h>
+
+#include <GL/glew.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <span>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include "container/json/object.hpp"
+#include "engine/entity3d.hpp"
+#include "engine/transform3d.hpp"
+#include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/state.hpp"
+#include "light/directional.hpp"
+#include "light/spot.hpp"
+#include "rendering/command/draw_engine_view_command.hpp"
+#include "rendering/command/viewport_uniform_render_command.hpp"
+#include "rendering/engine/camera_component3d.hpp"
+#include "rendering/engine/engine.hpp"
+#include "rendering/render_snapshot.hpp"
+#include "shadow_map/contributor.hpp"
+#include "shadow_map/rendering_system.hpp"
+#include "sparkle_test/image_comparison.hpp"
+#include "sparkle_test/open_gl_test_context.hpp"
+#include "sparkle_test/paths.hpp"
+#include "voxel/mesher.hpp"
+#include "voxel/palette.hpp"
+#include "voxel/renderer.hpp"
+#include "voxel/rendering_system.hpp"
+
+namespace
+{
+	constexpr spk::Vector2UInt ImageSize{320, 240};
+	constexpr std::uint32_t ShadowSize = 128;
+	constexpr const char *Category = "rendering/shadow-maps";
+
+	class Atlas final : public spk::Texture
+	{
+	public:
+		Atlas()
+		{
+			std::array<std::uint8_t, 16 * 4 * 4> pixels{};
+			constexpr std::array<std::uint8_t, 4> red{224, 92, 148, 185};
+			constexpr std::array<std::uint8_t, 4> green{191, 166, 195, 130};
+			constexpr std::array<std::uint8_t, 4> blue{145, 210, 140, 180};
+			for (std::size_t y = 0; y < 4; ++y)
+			{
+				for (std::size_t x = 0; x < 16; ++x)
+				{
+					const std::size_t offset = (y * 16 + x) * 4;
+					pixels[offset] = red[x / 4];
+					pixels[offset + 1] = green[x / 4];
+					pixels[offset + 2] = blue[x / 4];
+					pixels[offset + 3] = 255;
+				}
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {16, 4}, Format::RGBA);
+			validate();
+		}
+	};
+
+	class DepthPreview final : public spk::Texture
+	{
+	public:
+		void saveDepth(std::span<const float> depth, std::uint32_t size, const std::filesystem::path &path)
+		{
+			std::vector<std::uint8_t> rgba(size * size * 4);
+			for (std::size_t i = 0; i < depth.size(); ++i)
+			{
+				const float distance = std::clamp((1.0f - depth[i]) * 32.0f, 0.0f, 1.0f);
+				const auto value = static_cast<std::uint8_t>(std::lround(distance * 255.0f));
+				rgba[4 * i] = value;
+				rgba[4 * i + 1] = value;
+				rgba[4 * i + 2] = value;
+				rgba[4 * i + 3] = 255;
+			}
+			setPixels(std::span<const std::uint8_t>(rgba), {size, size}, Format::RGBA);
+			saveAsPng(path);
+		}
+	};
+
+	[[nodiscard]] spk::Voxel::Geometry geometry(spk::Vector3UInt dimensions)
+	{
+		spk::Voxel::Shape::Builder shapeBuilder;
+		shapeBuilder.addFromJSON(
+			spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+		const auto shape = shapeBuilder.build();
+		spk::Voxel::Definition::SlotMapping slots;
+		for (const auto &slot : shape.slots())
+		{
+			slots.emplace(slot.name, spk::Voxel::Definition::Slot{"paint", 1.0f});
+		}
+		spk::Voxel::Definition::Registry::Builder registry;
+		registry.add(1, spk::Voxel::Definition(shape, std::move(slots)));
+		spk::Voxel::Volume::Builder volume(dimensions);
+		volume.bind(registry.build());
+		for (std::uint32_t z = 0; z < dimensions.z; ++z)
+		{
+			for (std::uint32_t y = 0; y < dimensions.y; ++y)
+			{
+				for (std::uint32_t x = 0; x < dimensions.x; ++x)
+				{
+					volume.set({x, y, z}, 1);
+				}
+			}
+		}
+		return spk::Voxel::Mesher().bake(volume.build());
+	}
+
+	[[nodiscard]] spk::Palette palette(const Atlas &atlas, std::uint32_t tile)
+	{
+		spk::Material::Builder material;
+		material.add("albedo", atlas, spk::Texture::Section::fromPixels(atlas.size(), {tile * 4u, 0u}, {4, 4}));
+		spk::Voxel::Palette::Builder builder;
+		builder.setMaterial("paint", material.build());
+		return builder.build();
+	}
+
+	struct Scene
+	{
+		spk::Engine engine;
+		spk::Entity3D cameraEntity{"Shadow test camera"};
+		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+		spk::EngineView &view;
+		spk::Voxel::RenderingSystem &voxels;
+		spk::ShadowMap::RenderingSystem &shadows;
+		Atlas atlas;
+		spk::Voxel::Geometry cube = geometry({1, 1, 1});
+		spk::Voxel::Geometry floor = geometry({7, 1, 7});
+		std::vector<std::unique_ptr<spk::Entity3D>> objects;
+		std::vector<std::unique_ptr<spk::Entity3D>> lights;
+
+		Scene() :
+			view(_initializeView()),
+			voxels(engine.addSystem<spk::Voxel::RenderingSystem>()),
+			shadows(engine.addSystem<spk::ShadowMap::RenderingSystem>())
+		{
+			view.ambientLight().setColor({1.0f, 1.0f, 1.0f});
+			view.ambientLight().setIntensity(0.12f);
+			add(floor, 3, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::None);
+		}
+
+		spk::EngineView &_initializeView()
+		{
+			const spk::Vector3 eye{6.0f, 4.2f, 8.0f};
+			cameraEntity.transform().place(eye);
+			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.4f, 0}));
+			camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 40.0f);
+			engine.addEntity(&cameraEntity);
+			return engine.addView("shadow", &camera, ImageSize);
+		}
+
+		spk::Entity3D &add(
+			const spk::Voxel::Geometry &mesh,
+			std::uint32_t tile,
+			spk::Vector3 position,
+			spk::ShadowMap::Mode mode)
+		{
+			auto object = std::make_unique<spk::Entity3D>("Shadow test voxel");
+			object->transform().place(position);
+			auto &visual = object->addComponent<spk::Voxel::Renderer>();
+			visual.bind(mesh);
+			visual.bind(palette(atlas, tile));
+			auto &caster = object->addComponent<spk::ShadowMap::Contributor>();
+			caster.bind(mesh.depthMesh());
+			caster.setShadowMode(mode);
+			engine.addEntity(object.get());
+			auto &result = *object;
+			objects.push_back(std::move(object));
+			return result;
+		}
+
+		template <typename TLight>
+		TLight &addLight(spk::Vector3 position, spk::Vector3 target, spk::RGB color, float intensity)
+		{
+			auto object = std::make_unique<spk::Entity3D>("Shadow test light");
+			object->transform().place(position);
+			object->transform().setRotation(spk::Quaternion::lookAt(position, target));
+			auto &light = object->addComponent<TLight>();
+			light.setColor(color);
+			light.setIntensity(intensity);
+			light.setCastsShadows(true);
+			light.setShadowResolution(ShadowSize);
+			if constexpr (std::is_same_v<TLight, spk::Light::Spot>)
+			{
+				light.setRange(12.0f);
+				light.setAngle(0.6f);
+			}
+			else
+			{
+				light.setShadowDistance(24.0f);
+			}
+			engine.addEntity(object.get());
+			lights.push_back(std::move(object));
+			return light;
+		}
+
+		[[nodiscard]] std::shared_ptr<const spk::RenderSnapshot> capture()
+		{
+			engine.refreshRenderSnapshot();
+			return engine.latestRenderSnapshot();
+		}
+
+		~Scene()
+		{
+			for (const auto &object : objects)
+			{
+				engine.removeEntity(object.get());
+			}
+			for (const auto &light : lights)
+			{
+				engine.removeEntity(light.get());
+			}
+			engine.removeEntity(&cameraEntity);
+		}
+	};
+
+	void compareGolden(const std::filesystem::path &category, const std::string &name, const std::filesystem::path &actual)
+	{
+		const auto expected = sparkle_test::expectedImagePath(category, name);
+		ASSERT_TRUE(std::filesystem::exists(expected))
+			<< "Missing shadow golden image. Inspect CI result " << actual << " before accepting a reference";
+		const auto difference = sparkle_test::resultImagePath(category, name + "_difference");
+		const auto comparison = sparkle_test::compareImages(actual, expected, difference);
+		EXPECT_TRUE(comparison.matches)
+			<< name << ": " << comparison.differentPixelCount << " different pixels; actual " << actual;
+	}
+
+	void compareDepth(const spk::ShadowMap::Result::Entry &entry, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		ASSERT_EQ(entry.resolution, ShadowSize);
+		ASSERT_TRUE(entry.depthTexture);
+		spk::Framebuffer framebuffer(
+			{entry.resolution, entry.resolution}, std::vector<spk::Texture::Handle>{}, entry.depthTexture);
+		framebuffer.activate(gl.renderContext());
+		std::vector<float> depths(entry.resolution * entry.resolution);
+		glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
+		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		EXPECT_LT(*std::min_element(depths.begin(), depths.end()), 1.0f);
+		const auto category = std::filesystem::path(Category) / "depth";
+		const auto actual = sparkle_test::resultImagePath(category, name);
+		DepthPreview{}.saveDepth(depths, entry.resolution, actual);
+		compareGolden(category, name, actual);
+	}
+
+	void render(Scene &scene, const std::string &name, const std::string &depthName = {})
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		gl.reset(ImageSize);
+		const auto snapshot = scene.capture();
+		ASSERT_NE(snapshot, nullptr);
+		snapshot->execute(gl.renderContext());
+		spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = ImageSize}).execute(gl.renderContext());
+		spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = ImageSize})
+			.execute(gl.renderContext());
+		const auto actual = sparkle_test::resultImagePath(Category, name);
+		gl.save(actual);
+		compareGolden(Category, name, actual);
+		if (!depthName.empty())
+		{
+			const auto selection = scene.view.lightChannel().current();
+			ASSERT_NE(selection, nullptr);
+			const auto &light = selection->local.empty() ? selection->directional.front() : selection->local.front();
+			const auto result =
+				scene.view.lightChannel().resolveShadowResult(gl.surface(), light, selection->captureOrdinal);
+			ASSERT_TRUE(result.has_value());
+			compareDepth(*result, depthName);
+		}
+		EXPECT_NO_THROW(gl.requireNoErrors());
+		gl.reset();
+	}
+}
+
+TEST(ShadowRenderingGolden, SpotStaticCasterHasVisibleShadowAndD32FDepth)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-0.8f, -0.2f, -0.4f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 1, {0.7f, -0.2f, -0.8f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Spot>({-2, 4, 3}, {0, -1, -0.5f}, {1, 0.92f, 0.78f}, 9.0f);
+	render(scene, "spot_static", "spot_static");
+}
+
+TEST(ShadowRenderingGolden, DirectionalStaticCasterHasVisibleShadowAndD32FDepth)
+{
+	Scene scene;
+	scene.add(scene.cube, 1, {-1.0f, -0.2f, -0.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {1.0f, -0.2f, 0.7f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Directional>({-5, 8, 5}, {0, 0, 0}, {1, 0.95f, 0.8f}, 1.8f);
+	render(scene, "directional_static", "directional_static");
+}
+
+TEST(ShadowRenderingGolden, StaticAndDynamicCastersShareFinalDepthWithoutSharingStaticLayer)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Spot>({0, 5, 3}, {0, -1, 0}, {1, 1, 1}, 9.0f);
+	render(scene, "mixed_static_dynamic", "mixed_static_dynamic");
+}
+
+TEST(ShadowRenderingGolden, DynamicCasterMovesAndRegeneratesFinalDepth)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.3f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	auto &dynamic = scene.add(scene.cube, 1, {1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Spot>({-1, 5, 2}, {0, -1, 0}, {1, 1, 1}, 9.0f);
+	render(scene, "dynamic_before", "dynamic_before");
+	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(
+		sparkle_test::OpenGLTestContext::instance().surface());
+	ASSERT_NE(first, nullptr);
+	ASSERT_EQ(first->entries.size(), 1u);
+	const auto generation = first->entries.begin()->second.generation;
+	dynamic.transform().place({0.4f, -0.2f, -1.7f});
+	render(scene, "dynamic_after", "dynamic_after");
+	const auto second = scene.view.lightChannel().shadowResultCollection().acquireLatest(
+		sparkle_test::OpenGLTestContext::instance().surface());
+	ASSERT_NE(second, nullptr);
+	ASSERT_EQ(second->entries.size(), 1u);
+	EXPECT_GT(second->entries.begin()->second.generation, generation);
+}
+
+TEST(ShadowRenderingGolden, NoneModeDoesNotOccludeShadowMap)
+{
+	Scene scene;
+	scene.add(scene.cube, 1, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::None);
+	scene.add(scene.cube, 0, {1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Directional>({-5, 8, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	render(scene, "none_caster");
+}
+
+TEST(ShadowRenderingGolden, SpotAndDirectionalUseIndependentProjectorsAndPCF)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {0.9f, -0.2f, 0.6f}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 8.0f);
+	scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {1.0f, 0.9f, 0.6f}, 1.7f);
+	render(scene, "spot_directional_pcf");
+}
