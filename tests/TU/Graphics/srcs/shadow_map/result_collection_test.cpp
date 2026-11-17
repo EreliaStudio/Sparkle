@@ -15,15 +15,15 @@
 #include "core/platform/window.hpp"
 #include "core/window.hpp"
 #include "engine/entity3d.hpp"
+#include "graphics/opengl/cube_map.hpp"
 #include "light/channel.hpp"
 #include "light/directional.hpp"
 #include "light/point.hpp"
-#include "graphics/opengl/cube_map.hpp"
 #include "light/selection.hpp"
-#include "shadow_map/result.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
+#include "shadow_map/result.hpp"
 
 namespace
 {
@@ -339,7 +339,6 @@ TEST(GraphicsShadowResultCollection, RemovingViewClosesChannelWithoutClearingIts
 	EXPECT_EQ(held->entries.size(), 1u);
 	surface.destroy();
 }
-
 
 // Point shadow results use the same per-Surface publication and admission
 // contract as PR22, but carry six immutable cubemap faces.
