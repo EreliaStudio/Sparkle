@@ -19,6 +19,7 @@
 #include "graphics/material.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/sprite_sheet.hpp"
+#include "light/directional.hpp"
 #include "rendering/engine/engine.hpp"
 #include "rendering/engine/skybox.hpp"
 #include "rendering/render_snapshot.hpp"
@@ -110,6 +111,15 @@ namespace
 			appearance.setMaterial("stone", material(atlas, atlas.sprite(3)));
 			const auto palette = appearance.build();
 			engine.addSystem<spk::Voxel::RenderingSystem>();
+			// The old opaque-voxel golden used a hardcoded shader key light.
+			// Express that light through real scene sources instead.
+			view->ambientLight().setIntensity(0.38f);
+			auto sunEntity = std::make_unique<spk::Entity3D>("skybox foreground key light");
+			sunEntity->transform().setRotation(spk::Quaternion::lookAt({0, 0, 0}, {-0.35f, -0.85f, -0.45f}));
+			auto &sun = sunEntity->addComponent<spk::Light::Directional>();
+			sun.setIntensity(0.62f);
+			engine.addEntity(sunEntity.get());
+			objects.push_back(std::move(sunEntity));
 			for (const spk::Vector3 &location : {spk::Vector3{-0.8f, -0.5f, -3.0f}, spk::Vector3{0.5f, -0.4f, -4.0f}})
 			{
 				auto entity = std::make_unique<spk::Entity3D>("skybox foreground cube");

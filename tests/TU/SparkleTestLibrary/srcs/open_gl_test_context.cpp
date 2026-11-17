@@ -221,6 +221,28 @@ namespace sparkle_test
 		return result;
 	}
 
+	void OpenGLTestContext::requireNoErrors()
+	{
+		makeCurrent();
+		const GLenum error = ::glGetError();
+		if (error != GL_NO_ERROR)
+		{
+			throw std::runtime_error("OpenGL error " + std::to_string(error));
+		}
+	}
+
+	std::vector<float> OpenGLTestContext::captureFloatTexture(
+		const spk::Texture::Handle &texture,
+		spk::Vector2UInt size)
+	{
+		makeCurrent();
+		std::vector<float> pixels(static_cast<std::size_t>(size.x) * size.y * 4);
+		texture.activate(_impl->renderContext);
+		::glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+		requireNoErrors();
+		return pixels;
+	}
+
 	void OpenGLTestContext::save(const std::filesystem::path &path)
 	{
 		const FramebufferImage image = capture();

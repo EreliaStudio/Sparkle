@@ -57,6 +57,28 @@ namespace spk
 	{
 	}
 
+	Texture::Section Texture::Section::fromPixels(
+		Vector2UInt textureSize, Vector2UInt pixelAnchor, Vector2UInt pixelSize)
+	{
+		if (textureSize.x == 0 || textureSize.y == 0 || pixelSize.x == 0 || pixelSize.y == 0)
+		{
+			throw std::invalid_argument("Texture pixel section dimensions must be nonzero");
+		}
+		if (pixelAnchor.x > textureSize.x || pixelSize.x > textureSize.x - pixelAnchor.x ||
+			pixelAnchor.y > textureSize.y || pixelSize.y > textureSize.y - pixelAnchor.y)
+		{
+			throw std::out_of_range("Texture pixel section exceeds texture dimensions");
+		}
+
+		// A one-texel section still needs a positive normalized size. Keep
+		// its interpolation entirely inside that texel.
+		return {
+			{(static_cast<float>(pixelAnchor.x) + 0.5f) / static_cast<float>(textureSize.x),
+			 (static_cast<float>(pixelAnchor.y) + 0.5f) / static_cast<float>(textureSize.y)},
+			{std::max(0.25f, static_cast<float>(pixelSize.x) - 1.0f) / static_cast<float>(textureSize.x),
+			 std::max(0.25f, static_cast<float>(pixelSize.y) - 1.0f) / static_cast<float>(textureSize.y)}};
+	}
+
 	bool Texture::Section::operator==(const Section &other) const noexcept
 	{
 		return anchor == other.anchor && size == other.size;

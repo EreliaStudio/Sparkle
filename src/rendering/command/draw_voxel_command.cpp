@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <utility>
 #include <vector>
@@ -21,6 +22,7 @@ namespace spk
 			program.bindShaderStorageBlock("Instances", InstanceBinding);
 			program.bindShaderStorageBlock("Materials", MaterialBinding);
 			program.bindShaderStorageBlock("MaterialRemap", MaterialRemapBinding);
+			program.bindShaderStorageBlock("ForwardLighting", Lighting::System::BindingPoint);
 			program.bindSampler("uAlbedo", AlbedoUnit);
 			return program;
 		}();
@@ -53,9 +55,11 @@ namespace spk
 		Voxel::Geometry geometry,
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
-		Matrix4x4 model) :
+		Matrix4x4 model,
+		std::shared_ptr<const Lighting::System> lighting,
+		std::shared_ptr<const CameraUniformRenderCommand> camera) :
 		DrawVoxelCommand(
-			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model})
+			std::move(geometry), palette, std::move(materialRemap), std::vector<Matrix4x4>{model}, std::move(lighting), std::move(camera))
 	{
 	}
 
@@ -63,14 +67,22 @@ namespace spk
 		Voxel::Geometry geometry,
 		const Palette &palette,
 		std::vector<std::uint32_t> materialRemap,
-		std::vector<Matrix4x4> models) :
+		std::vector<Matrix4x4> models,
+		std::shared_ptr<const Lighting::System> lighting,
+		std::shared_ptr<const CameraUniformRenderCommand> camera) :
 		_geometry(std::move(geometry)),
 		_program(_sharedProgram()),
 		_instances(InstanceBinding, 0, sizeof(Matrix4x4)),
 		_materials(MaterialBinding, 0, sizeof(MaterialData)),
 		_materialRemap(MaterialRemapBinding, 0, sizeof(std::uint32_t)),
-		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled)
+		_albedo(AlbedoUnit, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToEdge, Sampler::MipmapFiltering::Disabled),
+		_lighting(std::move(lighting)),
+		_camera(std::move(camera))
 	{
+		if (!_lighting)
+		{
+			throw spk::Exception("Voxel draw: lighting system is required");
+		}
 		if (models.empty())
 		{
 			throw spk::Exception("Voxel draw: at least one instance is required");
@@ -114,10 +126,15 @@ namespace spk
 		OpenGL::State::DepthTest{}.apply(context);
 		OpenGL::State::Blend::disabled(context).apply(context);
 		OpenGL::State::Rasterization{}.apply(context);
+		if (_camera)
+		{
+			_camera->execute(context);
+		}
 		_program.activate(context);
 		_instances.activate(context);
 		_materials.activate(context);
 		_materialRemap.activate(context);
+		_lighting->activate(context);
 		_albedo.activate(context);
 		const auto &mesh = _geometry.opaqueMesh();
 		mesh.layout().activate(context);

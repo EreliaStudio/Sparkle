@@ -82,6 +82,10 @@ namespace spk
 
 			Section();
 			Section(Vector2 anchor, Vector2 size);
+			// Converts a pixel rectangle to a normalized UV section, sampling
+			// between its boundary texel centers for nearest-filtered atlases.
+			[[nodiscard]] static Section fromPixels(
+				Vector2UInt textureSize, Vector2UInt pixelAnchor, Vector2UInt pixelSize);
 
 			[[nodiscard]] bool operator==(const Section &other) const noexcept;
 			[[nodiscard]] bool operator!=(const Section &other) const noexcept;
