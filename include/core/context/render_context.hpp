@@ -41,7 +41,7 @@ namespace spk
 		Profiler &profiler;
 		ActiveProgram _activeProgram{};
 		Window::Surface::RenderTarget activeRenderTarget;
-		std::unordered_map<const void *, std::shared_ptr<void>> imageState;
+		std::unordered_map<std::uint64_t, std::shared_ptr<void>> imageState;
 
 		explicit RenderContext(
 			Window::Surface &surface,
