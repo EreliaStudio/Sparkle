@@ -43,7 +43,7 @@ layout(std430) readonly buffer ForwardShadows
 };
 
 uniform sampler2D uAlbedo;
-uniform sampler2D uShadowMaps[16];
+uniform sampler2DShadow uShadowMaps[16];
 
 layout(location = 0) in vec2 vertexUV;
 layout(location = 1) flat in uint materialIndex;
@@ -68,7 +68,7 @@ float spotAttenuation(vec3 direction, vec3 toReceiver, float cosineEdge)
 	return t * t * (3.0 - 2.0 * t);
 }
 
-float shadowVisibility(uint i, vec3 position, vec3 normal, vec3 toLight)
+float shadowVisibility(uint i, vec3 position, vec3 normal)
 {
 	ShadowData shadow = shadows[i];
 	int slot = int(shadow.parameters.w) - 1;
@@ -76,7 +76,8 @@ float shadowVisibility(uint i, vec3 position, vec3 normal, vec3 toLight)
 	{
 		return 1.0;
 	}
-	vec4 clip = shadow.viewProjection * vec4(position, 1.0);
+	vec3 receiver = position + normal * shadow.parameters.y;
+	vec4 clip = shadow.viewProjection * vec4(receiver, 1.0);
 	if (clip.w <= 0.0)
 	{
 		return 1.0;
@@ -88,16 +89,14 @@ float shadowVisibility(uint i, vec3 position, vec3 normal, vec3 toLight)
 	{
 		return 1.0;
 	}
-	float bias = shadow.parameters.x + shadow.parameters.y *
-		(1.0 - max(dot(normal, normalize(toLight)), 0.0));
+	float bias = shadow.parameters.x;
 	float visibility = 0.0;
 	for (int y = -1; y <= 1; ++y)
 	{
 		for (int x = -1; x <= 1; ++x)
 		{
 			vec2 sampleUV = projected.xy + vec2(x, y) * shadow.parameters.z;
-			float depth = texture(uShadowMaps[slot], sampleUV).r;
-			visibility += projected.z - bias <= depth ? 1.0 : 0.0;
+			visibility += texture(uShadowMaps[slot], vec3(sampleUV, projected.z - bias));
 		}
 	}
 	return visibility / 9.0;
@@ -149,7 +148,7 @@ void main()
 		}
 		if (attenuation > 0.0 && lambert > 0.0)
 		{
-			attenuation *= shadowVisibility(i, worldPosition, normal, lightVector);
+			attenuation *= shadowVisibility(i, worldPosition, normal);
 		}
 		illumination += light.colorIntensity.rgb * (light.colorIntensity.w * attenuation * lambert);
 	}
