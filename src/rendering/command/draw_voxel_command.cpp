@@ -23,6 +23,11 @@ namespace spk
 			program.bindShaderStorageBlock("Materials", MaterialBinding);
 			program.bindShaderStorageBlock("MaterialRemap", MaterialRemapBinding);
 			program.bindShaderStorageBlock("ForwardLighting", Lighting::System::BindingPoint);
+			program.bindShaderStorageBlock("ForwardShadows", Lighting::System::ShadowBindingPoint);
+			for (std::size_t i = 0; i < Lighting::System::MaxShadowSamplers; ++i)
+			{
+				program.bindSampler("uShadowMaps[" + std::to_string(i) + "]", 1 + i);
+			}
 			program.bindSampler("uAlbedo", AlbedoUnit);
 			return program;
 		}();
@@ -135,6 +140,7 @@ namespace spk
 		_materials.activate(context);
 		_materialRemap.activate(context);
 		_lighting->activate(context);
+		const auto shadows = _lighting->activateShadows(context);
 		_albedo.activate(context);
 		const auto &mesh = _geometry.opaqueMesh();
 		mesh.layout().activate(context);

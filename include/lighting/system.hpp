@@ -2,18 +2,27 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <array>
+#include <memory>
 #include <type_traits>
 #include <vector>
 
 #include "graphics/color.hpp"
 #include "graphics/opengl/padding.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
+#include "graphics/opengl/sampler.hpp"
+#include "math/matrix.hpp"
 #include "light/selection.hpp"
 #include "math/vector3.hpp"
 
 namespace spk
 {
 	class RenderContext;
+}
+
+namespace spk::Light
+{
+	class Channel;
 }
 
 namespace spk::Lighting
@@ -24,6 +33,8 @@ namespace spk::Lighting
 	{
 	public:
 		static constexpr std::size_t BindingPoint = 3;
+		static constexpr std::size_t ShadowBindingPoint = 4;
+		static constexpr std::size_t MaxShadowSamplers = 16;
 
 		struct alignas(16) Header
 		{
@@ -56,13 +67,32 @@ namespace spk::Lighting
 		static_assert(offsetof(LightData, type) == 48);
 		static_assert(std::is_standard_layout_v<LightData> && std::is_trivially_copyable_v<LightData>);
 
+		struct alignas(16) ShadowData
+		{
+			Matrix4x4 viewProjection = Matrix4x4::identity();
+			std::array<float, 4> parameters{};
+		};
+
+		static_assert(sizeof(ShadowData) == 80 && alignof(ShadowData) == 16);
+
+		struct ShadowBindings
+		{
+			ShaderStorageBuffer buffer{ShadowBindingPoint, 0, sizeof(ShadowData)};
+			std::vector<Sampler> samplers;
+		};
+
 	private:
 		ShaderStorageBuffer _lights;
+		Light::Selection _selection;
+		std::shared_ptr<Light::Channel> _shadowChannel;
+		std::uint64_t _captureOrdinal = 0;
 
 	public:
-		System(const Light::Selection &selection, RGB ambient);
+		System(const Light::Selection &selection, RGB ambient,
+			std::shared_ptr<Light::Channel> shadowChannel = {}, std::uint64_t captureOrdinal = 0);
 
 		[[nodiscard]] const ShaderStorageBuffer &buffer() const noexcept;
 		void activate(RenderContext &context) const;
+		[[nodiscard]] std::unique_ptr<ShadowBindings> activateShadows(RenderContext &context) const;
 	};
 }

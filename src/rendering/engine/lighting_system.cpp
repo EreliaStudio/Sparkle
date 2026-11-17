@@ -3,13 +3,21 @@
 #include <cmath>
 #include <limits>
 #include <span>
+#include <string>
+
+#include "core/context/render_context.hpp"
+#include "light/channel.hpp"
 
 #include "exception.hpp"
 
 namespace spk::Lighting
 {
-	System::System(const Light::Selection &selection, RGB ambient) :
-		_lights(BindingPoint, sizeof(Header), sizeof(LightData))
+	System::System(const Light::Selection &selection, RGB ambient,
+		std::shared_ptr<Light::Channel> shadowChannel, std::uint64_t captureOrdinal) :
+		_lights(BindingPoint, sizeof(Header), sizeof(LightData)),
+		_selection(selection),
+		_shadowChannel(std::move(shadowChannel)),
+		_captureOrdinal(captureOrdinal == 0 ? selection.captureOrdinal : captureOrdinal)
 	{
 		const std::size_t count = selection.local.size() + selection.directional.size();
 		if (count < selection.local.size() || count > std::numeric_limits<std::uint32_t>::max())
@@ -69,5 +77,53 @@ namespace spk::Lighting
 	void System::activate(RenderContext &context) const
 	{
 		_lights.activate(context);
+	}
+}
+
+namespace spk::Lighting
+{
+	std::unique_ptr<System::ShadowBindings> System::activateShadows(RenderContext &context) const
+	{
+		auto bindings = std::make_unique<ShadowBindings>();
+		std::vector<ShadowData> data;
+		data.reserve(_selection.local.size() + _selection.directional.size());
+		bindings->samplers.reserve(MaxShadowSamplers);
+		const auto append = [&](const Light::Selection::Entry &light) {
+			ShadowData shadow;
+			if (_shadowChannel && context.targetSurface != nullptr &&
+				light.type != Light::Selection::Type::Point && bindings->samplers.size() < MaxShadowSamplers)
+			{
+				const auto resolved = _shadowChannel->resolveShadowResult(*context.targetSurface, light, _captureOrdinal);
+				if (resolved && resolved->faceCount == 1 && resolved->resolution > 0)
+				{
+					const std::size_t index = bindings->samplers.size();
+					shadow.viewProjection = resolved->viewProjection[0];
+					shadow.parameters = {resolved->depthBias, resolved->normalBias,
+						1.0f / static_cast<float>(resolved->resolution), static_cast<float>(index + 1)};
+					bindings->samplers.emplace_back(1 + index, Sampler::Filtering::Nearest,
+						Sampler::Wrap::ClampToBorder, Sampler::MipmapFiltering::Disabled);
+					bindings->samplers.back().setTexture(resolved->depthTexture);
+				}
+			}
+			data.push_back(shadow);
+		};
+		for (const auto &light : _selection.local)
+		{
+			append(light);
+		}
+		for (const auto &light : _selection.directional)
+		{
+			append(light);
+		}
+		bindings->buffer.resize(data.size());
+		bindings->buffer.setDynamicData(std::span<const ShadowData>(data));
+		bindings->buffer.validate();
+		bindings->buffer.activate(context);
+		for (auto &sampler : bindings->samplers)
+		{
+			sampler.validate();
+			sampler.activate(context);
+		}
+		return bindings;
 	}
 }
