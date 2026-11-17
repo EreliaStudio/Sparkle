@@ -80,6 +80,9 @@ namespace spk
 
 		glSamplerParameteri(instance.identifier, GL_TEXTURE_MAG_FILTER, _openGLMagFilter(_filtering));
 		glSamplerParameteri(instance.identifier, GL_TEXTURE_MIN_FILTER, _openGLMinFilter(_filtering, _mipmapFiltering));
+		glSamplerParameteri(instance.identifier, GL_TEXTURE_COMPARE_MODE,
+			_depthComparison == DepthComparison::LessEqual ? GL_COMPARE_REF_TO_TEXTURE : GL_NONE);
+		glSamplerParameteri(instance.identifier, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
 		const GLint wrap = _openGLWrap(_wrap);
 		glSamplerParameteri(instance.identifier, GL_TEXTURE_WRAP_S, wrap);
@@ -144,6 +147,11 @@ namespace spk
 		state<State>()._mipmapFiltering = mipmapFiltering;
 	}
 
+	void Sampler::setDepthComparison(DepthComparison comparison) noexcept
+	{
+		state<State>()._depthComparison = comparison;
+	}
+
 	void Sampler::setProperties(Filtering filtering, Wrap wrap, MipmapFiltering mipmapFiltering) noexcept
 	{
 		auto &content = state<State>();
@@ -175,5 +183,10 @@ namespace spk
 	Sampler::MipmapFiltering Sampler::mipmapFiltering() const noexcept
 	{
 		return state<State>()._mipmapFiltering;
+	}
+
+	Sampler::DepthComparison Sampler::depthComparison() const noexcept
+	{
+		return state<State>()._depthComparison;
 	}
 }
