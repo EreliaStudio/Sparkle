@@ -12,8 +12,10 @@
 namespace spk::Lighting
 {
 	System::System(
-		const Light::Selection &selection, RGB ambient,
-		std::shared_ptr<Light::Channel> shadowChannel, std::uint64_t captureOrdinal) :
+		const Light::Selection &selection,
+		RGB ambient,
+		std::shared_ptr<Light::Channel> shadowChannel,
+		std::uint64_t captureOrdinal) :
 		_lights(BindingPoint, sizeof(Header), sizeof(LightData)),
 		_selection(selection),
 		_shadowChannel(std::move(shadowChannel)),
@@ -98,11 +100,15 @@ namespace spk::Lighting
 				{
 					const std::size_t index = bindings->samplers.size();
 					shadow.viewProjection = resolved->viewProjection[0];
-					shadow.parameters = {resolved->depthBias, resolved->normalBias,
-									 1.0f / static_cast<float>(resolved->resolution), static_cast<float>(index + 1)};
+					shadow.parameters[0] = resolved->depthBias;
+					shadow.parameters[1] = resolved->normalBias;
+					shadow.parameters[2] = 1.0f / static_cast<float>(resolved->resolution);
+					shadow.parameters[3] = static_cast<float>(index + 1);
 					bindings->samplers.emplace_back(
-						1 + index, Sampler::Filtering::Nearest,
-						Sampler::Wrap::ClampToBorder, Sampler::MipmapFiltering::Disabled);
+						1 + index,
+						Sampler::Filtering::Nearest,
+						Sampler::Wrap::ClampToBorder,
+						Sampler::MipmapFiltering::Disabled);
 					bindings->samplers.back().setTexture(resolved->depthTexture);
 				}
 			}
