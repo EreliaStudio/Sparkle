@@ -729,7 +729,9 @@ TEST(PointShadowDepthTest, NonCubeCastersPopulateEveryCardinalFace)
 		const auto nearest = std::min_element(depths.begin(), depths.end());
 		ASSERT_NE(nearest, depths.end());
 		EXPECT_LT(*nearest, 0.99999f) << "No non-cube caster depth in face " << face;
-		const auto occupied = std::count_if(depths.begin(), depths.end(), [](float value) { return value < 0.99999f; });
+		const auto occupied = std::count_if(depths.begin(), depths.end(), [](float value) {
+			return value < 0.99999f;
+		});
 		EXPECT_GT(occupied, 8) << "No meaningful non-cube coverage in face " << face;
 	}
 	EXPECT_NO_THROW(gl.requireNoErrors());
