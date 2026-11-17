@@ -30,6 +30,12 @@ namespace spk
 			ClampToBorder
 		};
 
+		enum class DepthComparison
+		{
+			Disabled,
+			LessEqual
+		};
+
 		enum class MipmapFiltering
 		{
 			Disabled,
@@ -51,6 +57,7 @@ namespace spk
 			Filtering _filtering = Filtering::Nearest;
 			Wrap _wrap = Wrap::ClampToEdge;
 			MipmapFiltering _mipmapFiltering = MipmapFiltering::Disabled;
+			DepthComparison _depthComparison = DepthComparison::Disabled;
 
 		protected:
 			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
@@ -91,6 +98,7 @@ namespace spk
 		void setFiltering(Filtering filtering) noexcept;
 		void setWrap(Wrap wrap) noexcept;
 		void setMipmapFiltering(MipmapFiltering mipmapFiltering) noexcept;
+		void setDepthComparison(DepthComparison comparison) noexcept;
 		void setProperties(Filtering filtering, Wrap wrap, MipmapFiltering mipmapFiltering) noexcept;
 
 		[[nodiscard]] std::size_t bindingPoint() const noexcept;
@@ -98,5 +106,6 @@ namespace spk
 		[[nodiscard]] Filtering filtering() const noexcept;
 		[[nodiscard]] Wrap wrap() const noexcept;
 		[[nodiscard]] MipmapFiltering mipmapFiltering() const noexcept;
+		[[nodiscard]] DepthComparison depthComparison() const noexcept;
 	};
 }
