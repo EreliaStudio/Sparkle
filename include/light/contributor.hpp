@@ -7,8 +7,8 @@
 #include "engine/component3d.hpp"
 #include "engine/registry.hpp"
 #include "graphics/color.hpp"
-#include "math/vector3.hpp"
 #include "light/shadow_filter.hpp"
+#include "math/vector3.hpp"
 
 namespace spk::Light
 {
