@@ -1,18 +1,18 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <array>
 #include <memory>
 #include <type_traits>
 #include <vector>
 
 #include "graphics/color.hpp"
 #include "graphics/opengl/padding.hpp"
-#include "graphics/opengl/shader_storage_buffer.hpp"
 #include "graphics/opengl/sampler.hpp"
-#include "math/matrix.hpp"
+#include "graphics/opengl/shader_storage_buffer.hpp"
 #include "light/selection.hpp"
+#include "math/matrix.hpp"
 #include "math/vector3.hpp"
 
 namespace spk
@@ -88,7 +88,8 @@ namespace spk::Lighting
 		std::uint64_t _captureOrdinal = 0;
 
 	public:
-		System(const Light::Selection &selection, RGB ambient,
+		System(
+			const Light::Selection &selection, RGB ambient,
 			std::shared_ptr<Light::Channel> shadowChannel = {}, std::uint64_t captureOrdinal = 0);
 
 		[[nodiscard]] const ShaderStorageBuffer &buffer() const noexcept;
