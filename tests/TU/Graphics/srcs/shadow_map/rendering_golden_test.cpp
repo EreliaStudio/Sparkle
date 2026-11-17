@@ -544,3 +544,188 @@ TEST(ShadowRenderingGolden, PointShadowSeamsAndCornersUseCrossFaceSampling)
 	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "point_face_seams");
 }
+
+TEST(ShadowRenderingGolden, PointHalfSlabCastsShorterShadowThanFullCube)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.25f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slab, 1, {0.75f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({-1.5f, 3.5f, 1.0f}, {0, 0, 0}, {1, 0.9f, 0.7f}, 9.0f);
+	render(scene, "point_slab_vs_cube");
+}
+
+TEST(ShadowRenderingGolden, PointSlopeCastsDiagonalShadowWithDepthGeometry)
+{
+	Scene scene;
+	scene.add(scene.slope, 0, {-0.9f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {0.9f, -0.2f, -0.5f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({-1.0f, 3.0f, 2.5f}, {0, 0, 0}, {1, 0.92f, 0.8f}, 8.0f);
+	render(scene, "point_slope_diagonal", "point_slope_diagonal");
+}
+
+TEST(ShadowRenderingGolden, PointStairCastsSteppedShadowWithDepthGeometry)
+{
+	Scene scene;
+	scene.add(scene.stair, 1, {-0.5f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slab, 2, {1.0f, -0.2f, -0.3f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({-1.4f, 3.0f, 2.3f}, {0, 0, 0}, {1, 0.85f, 0.65f}, 8.0f);
+	render(scene, "point_stair_steps", "point_stair_steps");
+}
+
+TEST(ShadowRenderingGolden, PointFourDistinctShapeCastersShareOneCubemap)
+{
+	Scene scene;
+	const std::array<const spk::Voxel::Geometry *, 4> shapes{&scene.cube, &scene.slab, &scene.slope, &scene.stair};
+	for (std::size_t i = 0; i < shapes.size(); ++i)
+	{
+		scene.add(*shapes[i], static_cast<std::uint32_t>(i % 3), {-2.25f + static_cast<float>(i) * 1.3f, -0.2f, -0.6f}, spk::ShadowMap::Mode::Static);
+	}
+	scene.addLight<spk::Light::Point>({0.0f, 3.0f, 2.0f}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	render(scene, "point_all_four_shapes");
+}
+
+TEST(ShadowRenderingGolden, PointMixedShapeCellsProduceOneCompositeDepthMesh)
+{
+	Scene scene;
+	scene.add(scene.mixed, 0, {-2.0f, -0.2f, -2.0f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({-0.5f, 3.0f, 0.5f}, {0, 0, 0}, {1, 0.9f, 0.72f}, 8.0f);
+	render(scene, "point_mixed_cell_geometry", "point_mixed_cell_geometry");
+}
+
+TEST(ShadowRenderingGolden, PointNonUniformStairScaleAndRotationInvalidateDepth)
+{
+	Scene scene;
+	auto &stair = scene.add(scene.stair, 0, {-0.7f, -0.2f, -0.2f}, spk::ShadowMap::Mode::Static);
+	stair.transform().rescale({1.6f, 1.5f, 0.65f});
+	scene.add(scene.slope, 1, {1.0f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({0.0f, 3.0f, 1.3f}, {0, 0, 0}, {1, 0.95f, 0.8f}, 8.0f);
+	render(scene, "point_stair_scaled");
+	const auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(first, nullptr);
+	ASSERT_EQ(first->entries.size(), 1u);
+	const auto generation = first->entries.begin()->second.generation;
+	stair.transform().setEulerRotation({0, 0.72f, 0});
+	render(scene, "point_stair_rotated");
+	const auto second = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(second, nullptr);
+	ASSERT_EQ(second->entries.size(), 1u);
+	EXPECT_GT(second->entries.begin()->second.generation, generation);
+}
+
+TEST(ShadowRenderingGolden, PointSlabRoofPillarsAndStairsCastArchitecturalShadows)
+{
+	Scene scene;
+	const auto pillar = geometry({1, 3, 1});
+	const auto roof = geometry({5, 1, 3}, "slab.json");
+	scene.add(pillar, 2, {-2.5f, -0.2f, -1.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(pillar, 2, {1.5f, -0.2f, -1.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(pillar, 2, {-2.5f, -0.2f, 0.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(pillar, 2, {1.5f, -0.2f, 0.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(roof, 1, {-2.5f, 2.8f, -1.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.stair, 0, {-0.9f, -0.2f, 2.0f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({0, 1.5f, 0}, {0, 0, 0}, {1, 0.88f, 0.62f}, 10.0f);
+	render(scene, "point_slab_roof_pavilion");
+}
+
+TEST(ShadowRenderingGolden, PointRotatedSlopesAndStairsCrossCubemapFaceSeams)
+{
+	Scene scene;
+	auto &first = scene.add(scene.slope, 0, {0.55f, -0.2f, 0.55f}, spk::ShadowMap::Mode::Static);
+	auto &second = scene.add(scene.stair, 1, {-1.25f, -0.2f, -0.3f}, spk::ShadowMap::Mode::Static);
+	first.transform().setEulerRotation({0, 0.785398f, 0});
+	second.transform().setEulerRotation({0, -0.785398f, 0});
+	scene.add(scene.slab, 2, {0.6f, 0.8f, -1.1f}, spk::ShadowMap::Mode::Static);
+	auto &light = scene.addLight<spk::Light::Point>({0, 2.0f, 0}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	light.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	render(scene, "point_non_cube_face_seams");
+}
+
+TEST(ShadowRenderingGolden, PointDynamicSlopeMovesBetweenStaticStairsAndSlabs)
+{
+	Scene scene;
+	scene.add(scene.stair, 0, {-1.4f, -0.2f, -0.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slab, 1, {1.1f, -0.2f, 0.4f}, spk::ShadowMap::Mode::Static);
+	auto &movingSlope = scene.add(scene.slope, 2, {0.5f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Point>({0.0f, 2.6f, 0.0f}, {0, 0, 0}, {1, 0.95f, 0.85f}, 8.0f);
+	render(scene, "point_shape_dynamic_before");
+	const auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(first, nullptr);
+	ASSERT_EQ(first->entries.size(), 1u);
+	const auto generation = first->entries.begin()->second.generation;
+	movingSlope.transform().place({-0.4f, -0.2f, 1.2f});
+	render(scene, "point_shape_dynamic_after");
+	const auto second = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(second, nullptr);
+	ASSERT_EQ(second->entries.size(), 1u);
+	EXPECT_GT(second->entries.begin()->second.generation, generation);
+}
+
+TEST(ShadowRenderingGolden, PointAndSpotMixedShapeCastersUseIndependentFilters)
+{
+	Scene scene;
+	scene.add(scene.stair, 0, {-1.2f, -0.2f, 0.1f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slope, 1, {0.8f, -0.2f, -0.5f}, spk::ShadowMap::Mode::Dynamic);
+	scene.add(scene.slab, 2, {1.5f, 0.8f, 0.5f}, spk::ShadowMap::Mode::Static);
+	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3.0f, 1.0f}, {0, 0, 0}, {1, 0.45f, 0.35f}, 7.0f);
+	auto &spot = scene.addLight<spk::Light::Spot>({2.0f, 4.0f, 2.0f}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 7.0f);
+	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
+	render(scene, "point_spot_non_cube_mixed");
+}
+
+TEST(ShadowRenderingGolden, PointNoneModeSlopeRemainsVisibleButCannotBlockShadow)
+{
+	Scene scene;
+	scene.add(scene.slope, 0, {-1.0f, -0.2f, -0.3f}, spk::ShadowMap::Mode::None);
+	scene.add(scene.stair, 1, {0.7f, -0.2f, -0.3f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slab, 2, {-0.2f, 0.6f, 1.1f}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Point>({0, 3.0f, 1.0f}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	render(scene, "point_none_mode_slope");
+}
+
+// Unlike the golden images, this test checks the GPU-produced D32F data
+// directly: non-cubic casters must populate every one of the six faces.
+TEST(PointShadowDepthTest, NonCubeCastersPopulateEveryCardinalFace)
+{
+	Scene scene;
+	scene.add(scene.slab, 0, {2, 2, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slope, 1, {-3, 2, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.stair, 2, {0, 4, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slab, 0, {0, 0, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.slope, 1, {0, 2, 2}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.stair, 2, {0, 2, -3}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({0, 2, 0}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(ImageSize);
+	const auto snapshot = scene.capture();
+	ASSERT_NE(snapshot, nullptr);
+	snapshot->execute(gl.renderContext());
+	const auto latest = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(latest, nullptr);
+	ASSERT_EQ(latest->entries.size(), 1u);
+	const auto &entry = latest->entries.begin()->second;
+	ASSERT_EQ(entry.faceCount, 6u);
+	ASSERT_EQ(entry.resolution, ShadowSize);
+	ASSERT_NE(entry.depthTexture, nullptr);
+	EXPECT_EQ(entry.depthTexture->format(), spk::Texture::Format::Depth32F);
+	for (std::size_t face = 0; face < 6; ++face)
+	{
+		spk::Framebuffer framebuffer(
+			{entry.resolution, entry.resolution},
+			std::vector<spk::Framebuffer::RenderAttachment>{},
+			spk::Framebuffer::RenderAttachment(entry.depthTexture, static_cast<spk::CubeMap::Face>(face)));
+		framebuffer.activate(gl.renderContext());
+		std::vector<float> depths(entry.resolution * entry.resolution);
+		glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
+		EXPECT_EQ(glGetError(), GL_NO_ERROR) << "face " << face;
+		const auto nearest = std::min_element(depths.begin(), depths.end());
+		ASSERT_NE(nearest, depths.end());
+		EXPECT_LT(*nearest, 0.99999f) << "No non-cube caster depth in face " << face;
+		EXPECT_GT(std::count_if(depths.begin(), depths.end(), [](float value) { return value < 0.99999f; }), 8)
+			<< "No meaningful non-cube coverage in face " << face;
+	}
+	EXPECT_NO_THROW(gl.requireNoErrors());
+	gl.reset();
+}
