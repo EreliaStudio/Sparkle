@@ -24,8 +24,8 @@
 ## Périmètre exact à réaliser
 
 - [ ] Réutiliser `ShadowMap::Mesh` position seule et son extracteur existant, ne compléter que les fonctions manquantes
-- [ ] MeshInstance
-- [ ] MeshFilter collection + baseTransform
+- [ ] `spk::MeshFilter<TMesh>` réutilisable avec `MeshFilter::Instance` imbriquée
+- [ ] Alias `ShadowMap::MeshFilter = spk::MeshFilter<ShadowMap::Mesh>`, collection + baseTransform
 - [ ] ShadowMode None/Static/Dynamic
 - [ ] Contributor avec layers et notification de bind.
 

@@ -13,6 +13,7 @@
 #include "engine/registry.hpp"
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
+#include "geometry/mesh_filter.hpp"
 #include "geometry/shadow_mesh.hpp"
 #include "geometry/texture_mesh_3d.hpp"
 #include "math/vector4.hpp"
@@ -27,9 +28,9 @@ namespace
 	using spk::ShadowMap::Edition;
 	using spk::ShadowMap::Mesh;
 	using spk::ShadowMap::MeshFilter;
-	using spk::ShadowMap::MeshInstance;
 	using spk::ShadowMap::ShadowMode;
 	using spk::Matrix4x4;
+	static_assert(std::is_same_v<MeshFilter, spk::MeshFilter<Mesh>>);
 
 	constexpr float NaN = std::numeric_limits<float>::quiet_NaN();
 	constexpr float Infinity = std::numeric_limits<float>::infinity();
@@ -399,5 +400,48 @@ TEST(ShadowMapContributorTest, TransformNotificationsRemainObservableForFutureSh
 	const auto world = child.transform().modelMatrix() * spk::Vector4{0.0f, 0.0f, 0.0f, 1.0f};
 	EXPECT_FLOAT_EQ(world.x, 2.0f);
 	EXPECT_EQ(shadow.shadowMode(), ShadowMode::Dynamic);
+	EXPECT_TRUE(contract.isValid());
+}
+
+TEST(GenericMeshFilterTest, VisualMeshUsesSameInstanceAndBindingContractsWithoutShadowPolicy)
+{
+	using VisualFilter = spk::MeshFilter<spk::TextureMesh3D>;
+	using Instance = VisualFilter::Instance;
+	VisualFilter filter;
+	const auto mesh = makeSourceMesh();
+	const auto first = Matrix4x4::translation(1.0f, 0.0f, 0.0f);
+	const auto second = Matrix4x4::translation(2.0f, 0.0f, 0.0f);
+	const auto base = Matrix4x4::scale(3.0f, 3.0f, 3.0f);
+	const VisualFilter::Collection collection{Instance{mesh, first}, Instance{mesh, second}};
+
+	int notifications = 0;
+	auto contract = filter.subscribeToEdition([&](const VisualFilter &modified) {
+		EXPECT_EQ(&modified, &filter);
+		++notifications;
+	});
+
+	filter.bind(collection, base);
+	ASSERT_EQ(filter.instances().size(), 2u);
+	EXPECT_EQ(filter.baseTransform(), base);
+	EXPECT_EQ(filter.instances()[0].localTransform, first);
+	EXPECT_EQ(filter.instances()[1].localTransform, second);
+	EXPECT_EQ(&filter.instances()[0].mesh.layout(), &filter.instances()[1].mesh.layout());
+	EXPECT_EQ(notifications, 1);
+
+	const auto previous = filter.instances();
+	EXPECT_THROW(filter.bind(collection, invalidMatrix(NaN, 0, 3)), spk::Exception);
+	EXPECT_EQ(filter.baseTransform(), base);
+	EXPECT_EQ(filter.instances().size(), 2u);
+	EXPECT_EQ(notifications, 1);
+	EXPECT_EQ(previous[0].mesh.indexCount(), 6u);
+
+	filter.bind(collection);
+	EXPECT_EQ(filter.baseTransform(), Matrix4x4::identity());
+	EXPECT_EQ(notifications, 2);
+	filter.unbind();
+	EXPECT_TRUE(filter.instances().empty());
+	EXPECT_EQ(filter.baseTransform(), Matrix4x4::identity());
+	EXPECT_EQ(notifications, 3);
+	EXPECT_EQ(previous[1].mesh.indexCount(), 6u);
 	EXPECT_TRUE(contract.isValid());
 }
