@@ -18,6 +18,8 @@
 #include "graphics/opengl/framebuffer.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
+#include "rendering/engine/rendering_behaviour.hpp"
+#include "rendering/render_command.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
@@ -76,6 +78,48 @@ namespace
 		builder.setMaterial("paint", material.build());
 		return builder.build();
 	}
+
+	struct WBOITReading
+	{
+		std::array<float, 4> accumulation{};
+		float revealage = 1.0f;
+		bool observed = false;
+	};
+
+	struct ReadWBOITCommand final : spk::RenderCommand
+	{
+		std::shared_ptr<WBOITReading> value;
+
+		explicit ReadWBOITCommand(std::shared_ptr<WBOITReading> reading) :
+			value(std::move(reading))
+		{
+		}
+
+		void execute(spk::RenderContext &) const override
+		{
+			glReadBuffer(GL_COLOR_ATTACHMENT0);
+			glReadPixels(Center.x, Center.y, 1, 1, GL_RGBA, GL_FLOAT, value->accumulation.data());
+			glReadBuffer(GL_COLOR_ATTACHMENT1);
+			glReadPixels(Center.x, Center.y, 1, 1, GL_RED, GL_FLOAT, &value->revealage);
+			value->observed = true;
+		}
+	};
+
+	struct WBOITObserver final : spk::RenderingBehaviour
+	{
+		std::shared_ptr<WBOITReading> reading;
+
+		void buildViewRenderSnapshot(
+			spk::RenderSnapshot::Builder &builder,
+			const spk::EngineView::CaptureContext &) override
+		{
+			if (reading)
+			{
+				builder.renderPass({"test.voxel-transparency.inspect", spk::EngineView::WBOITPassKey.order + 1})
+					.emplace<ReadWBOITCommand>(reading);
+			}
+		}
+	};
 
 	struct Scene
 	{
@@ -259,6 +303,37 @@ TEST(VoxelTransparencyGPU, RevealR8UsesQuantizedTransmittance)
 	const float revealR8 = std::round(0.5f * 255.0f) / 255.0f;
 	EXPECT_NEAR(image.pixel(Center)[0], displayColor(1.0f - revealR8), 3);
 	EXPECT_EQ(image.pixel(Center)[3], 255);
+}
+
+TEST(VoxelTransparencyGPU, MRTWeightUsesWindowDepthAndRevealQuantizesInR8)
+{
+	SolidAtlas red({255, 0, 0, 255});
+	Scene scene;
+	auto &observer = scene.engine.root().addBehaviour<WBOITObserver>();
+	observer.reading = std::make_shared<WBOITReading>();
+	scene.add(cube(0.5f), red, 0.0f);
+	const auto image = render(scene);
+	ASSERT_TRUE(observer.reading->observed);
+	const float distance = 4.0f - 0.5f;
+	const float nearPlane = 0.1f;
+	const float farPlane = 20.0f;
+	const float z = farPlane / (farPlane - nearPlane) -
+					(farPlane * nearPlane) / ((farPlane - nearPlane) * distance);
+	const float expectedWeight = 1.0f + 7.0f * (1.0f - z);
+	EXPECT_NEAR(observer.reading->accumulation[0], 0.5f * expectedWeight, 0.03f);
+	EXPECT_NEAR(observer.reading->accumulation[3], 0.5f * expectedWeight, 0.03f);
+	EXPECT_NEAR(observer.reading->revealage, std::round(0.5f * 255.0f) / 255.0f, 1.0f / 255.0f);
+	EXPECT_NEAR(image.pixel(Center)[0], displayColor(1.0f - observer.reading->revealage), 3);
+}
+
+TEST(VoxelTransparencyGPU, DepthWeightReferenceBounds)
+{
+	const auto weight = [](float windowDepth) {
+		return 1.0f + 7.0f * (1.0f - windowDepth);
+	};
+	EXPECT_FLOAT_EQ(weight(0.0f), 8.0f);
+	EXPECT_FLOAT_EQ(weight(0.5f), 4.5f);
+	EXPECT_FLOAT_EQ(weight(1.0f), 1.0f);
 }
 
 TEST(VoxelTransparencyGPU, ExcessiveHDRDoesNotProduceUndefinedOutput)
