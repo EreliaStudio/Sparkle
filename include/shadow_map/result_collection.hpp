@@ -1,29 +1,32 @@
 #pragma once
 
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <map>
 
 #include "container/thread_safe_slot.hpp"
 #include "core/window.hpp"
-#include "light/shadow_result.hpp"
+#include "shadow_map/result.hpp"
 #include "type/uuid.hpp"
 
 namespace spk::Light
 {
 	class Channel;
+}
 
+namespace spk::ShadowMap
+{
 	// Logically owned by one Channel, with a distinct immutable slot for each
 	// incarnation of a Window::Surface. Does not create or own native GL objects.
-	class ShadowResults final
+	class ResultCollection final
 	{
 	private:
-		friend class Channel;
+		friend class spk::Light::Channel;
 
 		struct Entry final
 		{
-			ThreadSafeSlot<ShadowResult> slot;
+			ThreadSafeSlot<Result> slot;
 			std::atomic_bool closed = false;
 			Window::Surface::DestructionContract destruction;
 		};
@@ -40,11 +43,11 @@ namespace spk::Light
 		[[nodiscard]] std::shared_ptr<Entry> _getOrCreate(Window::Surface &surface);
 
 	public:
-		ShadowResults() = default;
-		ShadowResults(const ShadowResults &) = delete;
-		ShadowResults &operator=(const ShadowResults &) = delete;
+		ResultCollection() = default;
+		ResultCollection(const ResultCollection &) = delete;
+		ResultCollection &operator=(const ResultCollection &) = delete;
 
 		// Read-only: CPU threads must never become producers of a surface slot.
-		[[nodiscard]] std::shared_ptr<const ShadowResult> acquireLatest(const Window::Surface &surface) const;
+		[[nodiscard]] std::shared_ptr<const Result> acquireLatest(const Window::Surface &surface) const;
 	};
 }

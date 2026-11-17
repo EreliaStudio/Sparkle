@@ -1,18 +1,18 @@
-#include "light/shadow_results.hpp"
+#include "shadow_map/result_collection.hpp"
 
 #include <stdexcept>
 #include <utility>
 
-namespace spk::Light
+namespace spk::ShadowMap
 {
-	std::shared_ptr<ShadowResults::Entry> ShadowResults::_find(const Window::Surface &surface) const
+	std::shared_ptr<ResultCollection::Entry> ResultCollection::_find(const Window::Surface &surface) const
 	{
 		std::lock_guard lock(_state->mutex);
 		const auto it = _state->entries.find(surface.identity());
 		return it == _state->entries.end() ? nullptr : it->second;
 	}
 
-	std::shared_ptr<ShadowResults::Entry> ShadowResults::_getOrCreate(Window::Surface &surface)
+	std::shared_ptr<ResultCollection::Entry> ResultCollection::_getOrCreate(Window::Surface &surface)
 	{
 		if (surface.lifeCycle() != Window::LifeCycle::Ready)
 		{
@@ -85,7 +85,7 @@ namespace spk::Light
 		return result;
 	}
 
-	std::shared_ptr<const ShadowResult> ShadowResults::acquireLatest(const Window::Surface &surface) const
+	std::shared_ptr<const Result> ResultCollection::acquireLatest(const Window::Surface &surface) const
 	{
 		if (surface.lifeCycle() != Window::LifeCycle::Ready)
 		{

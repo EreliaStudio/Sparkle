@@ -253,12 +253,12 @@ namespace spk::Light
 			   std::ranges::any_of(_published->directional, matches);
 	}
 
-	const ShadowResults &Channel::shadowResults() const noexcept
+	const ShadowMap::ResultCollection &Channel::shadowResultCollection() const noexcept
 	{
-		return _shadowResults;
+		return _shadowResultCollection;
 	}
 
-	bool Channel::publishShadowResult(Window::Surface &surface, ShadowResult::Entry result)
+	bool Channel::publishResult(Window::Surface &surface, ShadowMap::Result::Entry result)
 	{
 		if (result.registrationOrder == 0 || result.admission == 0 ||
 			result.light.registrationOrder != result.registrationOrder ||
@@ -277,13 +277,13 @@ namespace spk::Light
 
 		// This GPU stream alone produces this Surface's slot. All allocations and
 		// the copy/merge take place outside the Channel and dictionary locks.
-		const auto entry = _shadowResults._getOrCreate(surface);
+		const auto entry = _shadowResultCollection._getOrCreate(surface);
 		if (entry == nullptr)
 		{
 			return false;
 		}
 		const auto old = entry->slot.acquireLatest();
-		ShadowResult merged = old != nullptr ? *old : ShadowResult{};
+		ShadowMap::Result merged = old != nullptr ? *old : ShadowMap::Result{};
 		const std::uint64_t registrationOrder = result.registrationOrder;
 		const std::uint64_t admission = result.admission;
 		const std::uint64_t generation = result.generation;
@@ -312,14 +312,14 @@ namespace spk::Light
 		return true;
 	}
 
-	std::optional<ShadowResult::Entry> Channel::resolveShadowResult(
+	std::optional<ShadowMap::Result::Entry> Channel::resolveResult(
 		const Window::Surface &surface, const Selection::Entry &capturedLight, std::uint64_t captureOrdinal) const
 	{
 		if (!capturedLight.castsShadows)
 		{
 			return std::nullopt;
 		}
-		const auto published = _shadowResults.acquireLatest(surface);
+		const auto published = _shadowResultCollection.acquireLatest(surface);
 		if (published == nullptr)
 		{
 			return std::nullopt;
@@ -329,7 +329,7 @@ namespace spk::Light
 		{
 			return std::nullopt;
 		}
-		const ShadowResult::Entry &result = it->second;
+		const ShadowMap::Result::Entry &result = it->second;
 		if (result.admission != capturedLight.admission ||
 			result.captureOrdinal > captureOrdinal ||
 			result.light.type != capturedLight.type ||
@@ -339,7 +339,7 @@ namespace spk::Light
 		}
 		std::lock_guard lock(_mutex);
 		return _isShadowAdmissionCurrentLocked(result.registrationOrder, result.admission)
-				   ? std::optional<ShadowResult::Entry>{result}
+				   ? std::optional<ShadowMap::Result::Entry>{result}
 				   : std::nullopt;
 	}
 

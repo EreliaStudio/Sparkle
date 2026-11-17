@@ -8,11 +8,11 @@
 #include "light/selection.hpp"
 #include "math/matrix.hpp"
 
-namespace spk::Light
+namespace spk::ShadowMap
 {
 	// One immutable publication per view/surface. Entries are keyed by the
 	// Engine's light-registration identity, not by names or component addresses.
-	struct ShadowResult
+	struct Result
 	{
 		struct Entry
 		{
