@@ -90,11 +90,11 @@ namespace
 		}
 	};
 
-	[[nodiscard]] spk::Voxel::Geometry geometry(spk::Vector3UInt dimensions)
+	[[nodiscard]] spk::Voxel::Geometry geometry(spk::Vector3UInt dimensions, const char *shapeFile = "cube.json")
 	{
 		spk::Voxel::Shape::Builder shapeBuilder;
 		shapeBuilder.addFromJSON(
-			spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / "cube.json"));
+			spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / shapeFile));
 		const auto shape = shapeBuilder.build();
 		spk::Voxel::Definition::SlotMapping slots;
 		for (const auto &slot : shape.slots())
@@ -113,6 +113,37 @@ namespace
 				{
 					volume.set({x, y, z}, 1);
 				}
+			}
+		}
+		return spk::Voxel::Mesher().bake(volume.build());
+	}
+
+	// A single mesh containing cube, slab, slope and stair cells validates both
+	// the visible triangles and the independent opaque depth-mesh output.
+	[[nodiscard]] spk::Voxel::Geometry mixedGeometry()
+	{
+		spk::Voxel::Definition::Registry::Builder registry;
+		constexpr std::array<const char *, 4> files{"cube.json", "slab.json", "slope.json", "stair.json"};
+		for (std::size_t index = 0; index < files.size(); ++index)
+		{
+			spk::Voxel::Shape::Builder builder;
+			builder.addFromJSON(
+				spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / files[index]));
+			const auto shape = builder.build();
+			spk::Voxel::Definition::SlotMapping slots;
+			for (const auto &slot : shape.slots())
+			{
+				slots.emplace(slot.name, spk::Voxel::Definition::Slot{"paint", 1.0f});
+			}
+			registry.add(static_cast<std::uint32_t>(index + 1), spk::Voxel::Definition(shape, std::move(slots)));
+		}
+		spk::Voxel::Volume::Builder volume({4, 1, 4});
+		volume.bind(registry.build());
+		for (std::uint32_t z = 0; z < 4; ++z)
+		{
+			for (std::uint32_t x = 0; x < 4; ++x)
+			{
+				volume.set({x, 0, z}, (x + z) % 4 + 1);
 			}
 		}
 		return spk::Voxel::Mesher().bake(volume.build());
@@ -137,6 +168,10 @@ namespace
 		spk::ShadowMap::RenderingSystem &shadows;
 		Atlas atlas;
 		spk::Voxel::Geometry cube = geometry({1, 1, 1});
+		spk::Voxel::Geometry slab = geometry({1, 1, 1}, "slab.json");
+		spk::Voxel::Geometry slope = geometry({1, 1, 1}, "slope.json");
+		spk::Voxel::Geometry stair = geometry({1, 1, 1}, "stair.json");
+		spk::Voxel::Geometry mixed = mixedGeometry();
 		spk::Voxel::Geometry floor = geometry({7, 1, 7});
 		std::vector<std::unique_ptr<spk::Entity3D>> objects;
 		std::vector<std::unique_ptr<spk::Entity3D>> lights;
