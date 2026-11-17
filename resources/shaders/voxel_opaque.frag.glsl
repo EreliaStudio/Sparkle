@@ -52,7 +52,16 @@ layout(location = 0) in vec2 vertexUV;
 layout(location = 1) flat in uint materialIndex;
 layout(location = 2) in vec3 worldNormal;
 layout(location = 3) in vec3 worldPosition;
+#ifdef SPK_VOXEL_TRANSLUCENT
+layout(std430) readonly buffer SlotOpacities
+{
+	float slotOpacities[];
+};
+layout(location = 0) out vec4 outAccumulation;
+layout(location = 1) out float outRevealage;
+#else
 layout(location = 0) out vec4 outColor;
+#endif
 
 float radialAttenuation(float distance, float range)
 {
@@ -224,7 +233,12 @@ void main()
 	MaterialSection section = sections[paletteIndices[materialIndex]];
 	vec2 uv = section.anchor + vertexUV * section.size;
 	vec4 albedo = texture(uAlbedo, uv);
-	if (albedo.a <= 0.0)
+#ifdef SPK_VOXEL_TRANSLUCENT
+	float alpha = albedo.a * slotOpacities[materialIndex];
+#else
+	float alpha = albedo.a;
+#endif
+	if (alpha <= 0.0)
 	{
 		discard;
 	}
@@ -269,5 +283,14 @@ void main()
 		}
 		illumination += light.colorIntensity.rgb * (light.colorIntensity.w * attenuation * lambert);
 	}
-	outColor = vec4(albedo.rgb * illumination, 1.0);
+	vec3 color = albedo.rgb * illumination;
+#ifdef SPK_VOXEL_TRANSLUCENT
+	float z = clamp(gl_FragCoord.z, 0.0, 1.0);
+	float weight = 1.0 + 7.0 * (1.0 - z);
+	float weightedAlpha = alpha * weight;
+	outAccumulation = vec4(color * weightedAlpha, weightedAlpha);
+	outRevealage = alpha;
+#else
+	outColor = vec4(color, 1.0);
+#endif
 }
