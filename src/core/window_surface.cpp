@@ -6,6 +6,8 @@
 
 #include <atomic>
 #include <exception>
+#include <cstdint>
+#include <limits>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -30,6 +32,7 @@ namespace spk
 		static constexpr int ContextCoreProfileBit = 0x00000001;
 
 		Window::Identifier windowID;
+		const std::uint64_t identity;
 		std::atomic<LifeCycle> lifeCycle = LifeCycle::Pending;
 		std::unique_ptr<GPUResourceCollection> _gpuResources;
 		HWND windowHandle = nullptr;
@@ -41,8 +44,9 @@ namespace spk
 		std::mutex closingMutex;
 		std::exception_ptr firstDestructionError;
 
-		explicit Impl(Window::Identifier windowID) :
+		explicit Impl(Window::Identifier windowID, std::uint64_t identity) :
 			windowID(std::move(windowID)),
+			identity(identity),
 			_gpuResources(std::make_unique<GPUResourceCollection>())
 		{
 		}
@@ -220,8 +224,28 @@ namespace spk
 		}
 	};
 
+	namespace
+	{
+		std::uint64_t nextSurfaceIdentity()
+		{
+			static std::atomic<std::uint64_t> next{1};
+			auto current = next.load(std::memory_order_relaxed);
+			for (;;)
+			{
+				if (current == std::numeric_limits<std::uint64_t>::max())
+				{
+					throw std::overflow_error("Window::Surface identity range exhausted");
+				}
+				if (next.compare_exchange_weak(current, current + 1, std::memory_order_relaxed))
+				{
+					return current;
+				}
+			}
+		}
+	}
+
 	Window::Surface::Surface(const Window::Identifier &windowID) :
-		_impl(std::make_unique<Impl>(windowID))
+		_impl(std::make_unique<Impl>(windowID, nextSurfaceIdentity()))
 	{
 	}
 	Window::Surface::~Surface() = default;
@@ -229,6 +253,11 @@ namespace spk
 	Window::LifeCycle Window::Surface::lifeCycle() const noexcept
 	{
 		return _impl->lifeCycle.load();
+	}
+
+	std::uint64_t Window::Surface::identity() const noexcept
+	{
+		return _impl->identity;
 	}
 
 	static void initializeGLEW()

@@ -5,9 +5,11 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #include "light/prioritizer.hpp"
+#include "light/shadow_results.hpp"
 #include "math/camera_3d.hpp"
 
 namespace spk
@@ -36,6 +38,9 @@ namespace spk::Light
 		bool _closed = false;
 		std::vector<std::uint64_t> _history;
 		std::shared_ptr<const Selection> _published;
+		ShadowResults _shadowResults;
+
+		[[nodiscard]] bool _isShadowAdmissionCurrentLocked(std::uint64_t registrationOrder, std::uint64_t admission) const;
 
 		void _invalidateLocked();
 
@@ -55,6 +60,12 @@ namespace spk::Light
 		[[nodiscard]] std::shared_ptr<const Selection> acquire(const Camera3D &camera, std::uint64_t captureOrdinal);
 		[[nodiscard]] bool isAdmissionCurrent(std::uint64_t registrationOrder, std::uint64_t admission) const;
 		[[nodiscard]] bool isClosed() const;
+		[[nodiscard]] const ShadowResults &shadowResults() const noexcept;
+		// Called only by the single GPU render stream for this Surface.
+		[[nodiscard]] bool publishShadowResult(Window::Surface &surface, ShadowResult::Entry result);
+		// Historical snapshots may use only admitted, non-future results.
+		[[nodiscard]] std::optional<ShadowResult::Entry> resolveShadowResult(
+			const Window::Surface &surface, const Selection::Entry &capturedLight, std::uint64_t captureOrdinal) const;
 
 		// Called by Engine's existing source-edition notifications; no immediate rebuild.
 		void invalidate();

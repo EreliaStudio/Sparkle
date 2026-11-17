@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -135,6 +136,7 @@ namespace spk
 			Surface &operator=(Surface &&) = delete;
 
 			[[nodiscard]] LifeCycle lifeCycle() const noexcept;
+			[[nodiscard]] std::uint64_t identity() const noexcept;
 			void create(const WinAPI::Window &window);
 			void destroy();
 			void makeCurrent();
