@@ -367,8 +367,7 @@ namespace spk::ShadowMap
 		}
 		std::vector<Caster> staticCasters;
 		std::vector<Caster> dynamicCasters;
-		for (const ShadowMap::Contributor *contributor :
-		 Registry<ShadowMap::Contributor, EngineHeadless *>::instance().elements(engine()))
+		for (const ShadowMap::Contributor *contributor : Registry<ShadowMap::Contributor, EngineHeadless *>::instance().elements(engine()))
 		{
 			if (contributor == nullptr || !contributor->isEffectivelyActive() || contributor->owner() == nullptr ||
 				contributor->shadowMode() == Mode::None || !context.isLayerCompatible(contributor->layers()))
