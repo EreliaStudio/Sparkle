@@ -39,7 +39,7 @@
 namespace
 {
 	constexpr spk::Vector2UInt ImageSize{320, 240};
-	constexpr std::uint32_t ShadowSize = 128;
+	constexpr std::uint32_t ShadowSize = 512;
 	constexpr const char *Category = "rendering/shadow-maps";
 
 	class Atlas final : public spk::Texture
