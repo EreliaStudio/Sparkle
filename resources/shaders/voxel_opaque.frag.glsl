@@ -90,6 +90,11 @@ float shadowVisibility(uint i, vec3 position, vec3 normal)
 		return 1.0;
 	}
 	float bias = shadow.parameters.x;
+	// Hard shadows require one nearest-filtered depth comparison.
+	if (shadow.parameters.z == 0.0)
+	{
+		return texture(uShadowMaps[slot], vec3(projected.xy, projected.z - bias));
+	}
 	float visibility = 0.0;
 	for (int y = -1; y <= 1; ++y)
 	{
