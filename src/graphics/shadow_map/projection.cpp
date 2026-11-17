@@ -82,12 +82,8 @@ namespace spk::ShadowMap
 		{
 			throw spk::Exception("Point shadow near/far planes cannot be represented");
 		}
-		constexpr std::array<Vector3, 6> directions{{
-			{1, 0, 0}, {-1, 0, 0}, {0, 1, 0},
-			{0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
-		constexpr std::array<Vector3, 6> ups{{
-			{0, -1, 0}, {0, -1, 0}, {0, 0, 1},
-			{0, 0, -1}, {0, -1, 0}, {0, -1, 0}}};
+		constexpr std::array<Vector3, 6> directions{{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
+		constexpr std::array<Vector3, 6> ups{{{0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0}}};
 		std::array<Projection, 6> result{};
 		for (std::size_t face = 0; face < result.size(); ++face)
 		{
