@@ -250,15 +250,15 @@ namespace
 		bool foundDepth = false;
 		for (std::size_t i = 0; i < entry.faceCount; ++i)
 		{
-			spk::Framebuffer framebuffer =
-				entry.faceCount == 6
-					? spk::Framebuffer(
-						{entry.resolution, entry.resolution},
-						std::vector<spk::Framebuffer::RenderAttachment>{},
-						spk::Framebuffer::RenderAttachment(entry.depthTexture, static_cast<spk::CubeMap::Face>(i)))
-					: spk::Framebuffer(
-						{entry.resolution, entry.resolution},
-						std::vector<spk::Texture::Handle>{}, entry.depthTexture);
+			spk::Framebuffer framebuffer;
+			if (entry.faceCount == 6)
+			{
+				framebuffer = spk::Framebuffer({entry.resolution, entry.resolution}, std::vector<spk::Framebuffer::RenderAttachment>{}, spk::Framebuffer::RenderAttachment(entry.depthTexture, static_cast<spk::CubeMap::Face>(i)));
+			}
+			else
+			{
+				framebuffer = spk::Framebuffer({entry.resolution, entry.resolution}, std::vector<spk::Texture::Handle>{}, entry.depthTexture);
+			}
 			framebuffer.activate(gl.renderContext());
 			std::vector<float> depths(entry.resolution * entry.resolution);
 			glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
@@ -397,10 +397,8 @@ TEST(ShadowRenderingGolden, PointCubeProjectsOmnidirectionalHardShadowsAndSixDep
 TEST(ShadowRenderingGolden, PointSurroundingCubesCastShadowsOnAllSides)
 {
 	Scene scene;
-	for (const spk::Vector3 position : {
-			spk::Vector3{2, -0.2f, 0}, {-2, -0.2f, 0},
-			{0, -0.2f, 2}, {0, -0.2f, -2},
-			{1.2f, 1.3f, 0}, {-1.2f, 1.3f, 0}})
+	const std::array<spk::Vector3, 6> positions{{{2, -0.2f, 0}, {-2, -0.2f, 0}, {0, -0.2f, 2}, {0, -0.2f, -2}, {1.2f, 1.3f, 0}, {-1.2f, 1.3f, 0}}};
+	for (const spk::Vector3 &position : positions)
 	{
 		scene.add(scene.cube, 1, position, spk::ShadowMap::Mode::Static);
 	}
