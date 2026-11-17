@@ -102,11 +102,13 @@ namespace spk::Lighting
 					shadow.viewProjection = resolved->viewProjection[0];
 					shadow.parameters[0] = resolved->depthBias;
 					shadow.parameters[1] = resolved->normalBias;
-					shadow.parameters[2] = 1.0f / static_cast<float>(resolved->resolution);
+					const bool soft = light.shadowFilter == Light::ShadowFilter::PCF3x3;
+					// A zero PCF offset requests a single nearest-filtered comparison.
+					shadow.parameters[2] = soft ? 1.0f / static_cast<float>(resolved->resolution) : 0.0f;
 					shadow.parameters[3] = static_cast<float>(index + 1);
 					bindings->samplers.emplace_back(
 						1 + index,
-						Sampler::Filtering::Linear,
+						soft ? Sampler::Filtering::Linear : Sampler::Filtering::Nearest,
 						Sampler::Wrap::ClampToBorder,
 						Sampler::MipmapFiltering::Disabled);
 					bindings->samplers.back().setTexture(resolved->depthTexture);
