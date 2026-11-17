@@ -47,14 +47,7 @@ jobs:
             base="$(git rev-parse HEAD^)"
           fi
           git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.cpp' '*.hpp' '*.c' '*.h' '*.cc' '*.hh' |
-            xargs -0 -r clang-format --style=file -i
-          git diff --name-only --diff-filter=ACMR "$base" HEAD -- '*.cpp' '*.hpp' '*.c' '*.h' '*.cc' '*.hh' |
-            while IFS= read -r file; do
-              echo "PR24_FORMAT_START:$file"
-              base64 -w0 "$file"
-              echo
-              echo "PR24_FORMAT_END:$file"
-            done
+            xargs -0 -r clang-format --style=file --dry-run --Werror
 
   core-unit-tests:
     name: Core unit tests (${{ matrix.os }}, ${{ matrix.configuration }})

@@ -12,7 +12,7 @@
 
 namespace spk::Light
 {
-namespace
+	namespace
 	{
 		using Entry = Selection::Entry;
 		using Status = Entry::PointShadowStatus;

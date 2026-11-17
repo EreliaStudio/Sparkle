@@ -29,8 +29,8 @@
 #include "light/channel.hpp"
 #include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
-#include "shadow_map/projection.hpp"
 #include "shadow_map/point_budget.hpp"
+#include "shadow_map/projection.hpp"
 
 namespace spk::ShadowMap
 {
@@ -593,7 +593,7 @@ namespace spk::ShadowMap
 				{
 					auto budget = _budget.lock();
 					if (!budget || !budget->consume(
-							context, _state.get(), _viewIdentity, light.registrationOrder, light.admission))
+									   context, _state.get(), _viewIdentity, light.registrationOrder, light.admission))
 					{
 						continue;
 					}
@@ -662,7 +662,7 @@ namespace spk::ShadowMap
 		{
 			append(light);
 		}
-				{
+		{
 			std::set<std::uint64_t> selected;
 			for (const auto &light : context.lightSelection->local)
 			{
@@ -719,18 +719,12 @@ namespace spk::ShadowMap
 				{
 					continue;
 				}
-				context.pointShadowBudget->add({
-					.system = _state.get(),
-					.viewIdentity = context.identity,
-					.registrationOrder = light.registrationOrder,
-					.admission = light.admission,
-					.score = light.score,
-					.limit = [state = _state] {
-						return state->maxPointRebuilds.load(std::memory_order_relaxed);
-					},
-					.needsRebuild = [command, light](RenderContext &renderContext) {
-						return command->pointNeedsRebuild(renderContext, light);
-					}});
+				context.pointShadowBudget->add({.system = _state.get(), .viewIdentity = context.identity, .registrationOrder = light.registrationOrder, .admission = light.admission, .score = light.score, .limit = [state = _state] {
+													return state->maxPointRebuilds.load(std::memory_order_relaxed);
+												},
+												.needsRebuild = [command, light](RenderContext &renderContext) {
+													return command->pointNeedsRebuild(renderContext, light);
+												}});
 			}
 		}
 		builder.renderPass(spk::EngineView::ShadowPassKey).emplace<SharedDepthCommand>(command);

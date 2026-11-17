@@ -342,8 +342,7 @@ TEST(GraphicsPointShadowSelection, DefaultsAndValidationAreAtomic)
 	const auto current = channel.current();
 	ASSERT_NE(current, nullptr);
 	ASSERT_EQ(current->local.size(), 1u);
-	EXPECT_EQ(current->local.front().pointShadowStatus,
-			  spk::Light::Selection::Entry::PointShadowStatus::AtCapacity);
+	EXPECT_EQ(current->local.front().pointShadowStatus, spk::Light::Selection::Entry::PointShadowStatus::AtCapacity);
 }
 
 TEST(GraphicsPointShadowSelection, BaseToleranceAndAbsoluteMaximum)

@@ -24,8 +24,12 @@ namespace
 			.registrationOrder = light,
 			.admission = 1,
 			.score = score,
-			.limit = [&budget] { return budget; },
-			.needsRebuild = [&dirty](spk::RenderContext &) { return dirty; }};
+			.limit = [&budget] {
+				return budget;
+			},
+			.needsRebuild = [&dirty](spk::RenderContext &) {
+				return dirty;
+			}};
 	}
 }
 
