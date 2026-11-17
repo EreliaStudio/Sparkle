@@ -314,7 +314,7 @@ TEST(VoxelTransparencyGPU, MRTWeightUsesWindowDepthAndRevealQuantizesInR8)
 	scene.add(cube(0.5f), red, 0.0f);
 	const auto image = render(scene);
 	ASSERT_TRUE(observer.reading->observed);
-	const float distance = 4.0f - 0.5f;
+	const float distance = 4.0f - 1.0f;
 	const float nearPlane = 0.1f;
 	const float farPlane = 20.0f;
 	const float z = farPlane / (farPlane - nearPlane) -
