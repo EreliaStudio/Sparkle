@@ -89,30 +89,60 @@ namespace spk::Lighting
 		auto bindings = std::make_unique<ShadowBindings>();
 		std::vector<ShadowData> data;
 		data.reserve(_selection.local.size() + _selection.directional.size());
-		bindings->samplers.reserve(MaxShadowSamplers);
+		bindings->samplers.reserve(MaxShadowSamplers + MaxPointShadowSamplers);
+		std::size_t map2DCount = 0;
+		std::size_t cubeCount = 0;
 		const auto append = [&](const Light::Selection::Entry &light) {
 			ShadowData shadow;
-			if (_shadowChannel && context.targetSurface != nullptr &&
-				light.type != Light::Selection::Type::Point && bindings->samplers.size() < MaxShadowSamplers)
+			if (_shadowChannel && context.targetSurface != nullptr)
 			{
 				const auto resolved = _shadowChannel->resolveShadowResult(*context.targetSurface, light, _captureOrdinal);
-				if (resolved && resolved->faceCount == 1 && resolved->resolution > 0)
+				if (resolved && resolved->resolution > 0 && resolved->depthTexture)
 				{
-					const std::size_t index = bindings->samplers.size();
-					shadow.viewProjection = resolved->viewProjection[0];
-					shadow.parameters[0] = resolved->depthBias;
-					shadow.parameters[1] = resolved->normalBias;
-					const bool soft = light.shadowFilter == Light::ShadowFilter::PCF3x3;
-					// A zero PCF offset requests a single nearest-filtered comparison.
-					shadow.parameters[2] = soft ? 1.0f / static_cast<float>(resolved->resolution) : 0.0f;
-					shadow.parameters[3] = static_cast<float>(index + 1);
-					bindings->samplers.emplace_back(
-						1 + index,
-						soft ? Sampler::Filtering::Linear : Sampler::Filtering::Nearest,
-						Sampler::Wrap::ClampToBorder,
-						Sampler::MipmapFiltering::Disabled);
-					bindings->samplers.back().setTexture(resolved->depthTexture);
-					bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
+					const bool point = light.type == Light::Selection::Type::Point;
+					const bool compatible = point
+						? resolved->faceCount == 6 &&
+							resolved->depthTexture->target() == Texture::Target::TextureCubeMap
+						: resolved->faceCount == 1 &&
+							resolved->depthTexture->target() == Texture::Target::Texture2D;
+					if (compatible && point && cubeCount < MaxPointShadowSamplers)
+					{
+						const std::size_t index = cubeCount++;
+						shadow.viewProjection = resolved->viewProjection;
+						shadow.parameters[0] = resolved->depthBias;
+						shadow.parameters[1] = resolved->normalBias;
+						shadow.parameters[3] = static_cast<float>(index + 1);
+						shadow.pointPositionNear = {
+							resolved->light.position.x, resolved->light.position.y,
+							resolved->light.position.z, resolved->nearPlane};
+						shadow.pointFarResolution = {
+							resolved->farPlane, static_cast<float>(resolved->resolution),
+							light.shadowFilter == Light::ShadowFilter::PCF3x3 ? 1.0f : 0.0f, 1.0f};
+						bindings->samplers.emplace_back(
+							PointShadowBindingBase + index,
+							Sampler::Filtering::Nearest,
+							Sampler::Wrap::ClampToEdge,
+							Sampler::MipmapFiltering::Disabled);
+						bindings->samplers.back().setTexture(resolved->depthTexture);
+						bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
+					}
+					else if (compatible && !point && map2DCount < MaxShadowSamplers)
+					{
+						const std::size_t index = map2DCount++;
+						shadow.viewProjection[0] = resolved->viewProjection[0];
+						shadow.parameters[0] = resolved->depthBias;
+						shadow.parameters[1] = resolved->normalBias;
+						const bool soft = light.shadowFilter == Light::ShadowFilter::PCF3x3;
+						shadow.parameters[2] = soft ? 1.0f / static_cast<float>(resolved->resolution) : 0.0f;
+						shadow.parameters[3] = static_cast<float>(index + 1);
+						bindings->samplers.emplace_back(
+							1 + index,
+							soft ? Sampler::Filtering::Linear : Sampler::Filtering::Nearest,
+							Sampler::Wrap::ClampToBorder,
+							Sampler::MipmapFiltering::Disabled);
+						bindings->samplers.back().setTexture(resolved->depthTexture);
+						bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
+					}
 				}
 			}
 			data.push_back(shadow);
@@ -135,5 +165,4 @@ namespace spk::Lighting
 			sampler.activate(context);
 		}
 		return bindings;
-	}
-}
+	}}
