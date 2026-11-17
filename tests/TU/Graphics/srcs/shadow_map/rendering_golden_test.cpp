@@ -17,9 +17,11 @@
 #include "container/json/object.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
+#include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/state.hpp"
 #include "light/directional.hpp"
+#include "light/point.hpp"
 #include "light/spot.hpp"
 #include "rendering/command/draw_engine_view_command.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
@@ -194,9 +196,13 @@ namespace
 				light.setRange(12.0f);
 				light.setAngle(0.6f);
 			}
-			else
+			else if constexpr (std::is_same_v<TLight, spk::Light::Directional>)
 			{
 				light.setShadowDistance(24.0f);
+			}
+			else
+			{
+				light.setRange(12.0f);
 			}
 			engine.addEntity(object.get());
 			lights.push_back(std::move(object));
@@ -239,17 +245,30 @@ namespace
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		ASSERT_EQ(entry.resolution, ShadowSize);
 		ASSERT_TRUE(entry.depthTexture);
-		spk::Framebuffer framebuffer(
-			{entry.resolution, entry.resolution}, std::vector<spk::Texture::Handle>{}, entry.depthTexture);
-		framebuffer.activate(gl.renderContext());
-		std::vector<float> depths(entry.resolution * entry.resolution);
-		glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
-		EXPECT_EQ(glGetError(), GL_NO_ERROR);
-		EXPECT_LT(*std::min_element(depths.begin(), depths.end()), 1.0f);
-		const auto category = std::filesystem::path(Category) / "depth";
-		const auto actual = sparkle_test::resultImagePath(category, name);
-		DepthPreview{}.saveDepth(depths, entry.resolution, actual);
-		compareGolden(category, name, actual);
+		const std::array<const char *, 6> suffixes{
+			"positive_x", "negative_x", "positive_y", "negative_y", "positive_z", "negative_z"};
+		for (std::size_t i = 0; i < entry.faceCount; ++i)
+		{
+			spk::Framebuffer framebuffer =
+				entry.faceCount == 6
+					? spk::Framebuffer(
+						{entry.resolution, entry.resolution},
+						std::vector<spk::Framebuffer::RenderAttachment>{},
+						spk::Framebuffer::RenderAttachment(entry.depthTexture, static_cast<spk::CubeMap::Face>(i)))
+					: spk::Framebuffer(
+						{entry.resolution, entry.resolution},
+						std::vector<spk::Texture::Handle>{}, entry.depthTexture);
+			framebuffer.activate(gl.renderContext());
+			std::vector<float> depths(entry.resolution * entry.resolution);
+			glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
+			EXPECT_EQ(glGetError(), GL_NO_ERROR);
+			EXPECT_LT(*std::min_element(depths.begin(), depths.end()), 1.0f);
+			const auto category = std::filesystem::path(Category) / "depth";
+			const std::string imageName = entry.faceCount == 6 ? name + "_" + suffixes[i] : name;
+			const auto actual = sparkle_test::resultImagePath(category, imageName);
+			DepthPreview{}.saveDepth(depths, entry.resolution, actual);
+			compareGolden(category, imageName, actual);
+		}
 	}
 
 	void render(Scene &scene, const std::string &name, const std::string &depthName = {})
@@ -361,4 +380,95 @@ TEST(ShadowRenderingGolden, SpotHardAndDirectionalSoftUseIndependentFilters)
 	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "mixed_shadow_filters");
+}
+
+TEST(ShadowRenderingGolden, PointCubeProjectsOmnidirectionalHardShadowsAndSixDepthFaces)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-0.8f, -0.2f, -0.4f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 1, {0.7f, -0.2f, -0.8f}, spk::ShadowMap::Mode::Static);
+	auto &light = scene.addLight<spk::Light::Point>({0, 2.5f, 1}, {0, 0, 0}, {1, 0.92f, 0.75f}, 7.0f);
+	EXPECT_EQ(light.shadowFilter(), spk::Light::ShadowFilter::Hard);
+	render(scene, "point_hard_floor", "point_faces");
+}
+
+TEST(ShadowRenderingGolden, PointSurroundingCubesCastShadowsOnAllSides)
+{
+	Scene scene;
+	for (const spk::Vector3 position : {
+			spk::Vector3{2, -0.2f, 0}, {-2, -0.2f, 0},
+			{0, -0.2f, 2}, {0, -0.2f, -2},
+			{1.2f, 1.3f, 0}, {-1.2f, 1.3f, 0}})
+	{
+		scene.add(scene.cube, 1, position, spk::ShadowMap::Mode::Static);
+	}
+	scene.addLight<spk::Light::Point>({0, 1, 0}, {0, 0, 0}, {1, 0.9f, 0.78f}, 8.0f);
+	render(scene, "point_surrounding_cubes");
+}
+
+TEST(ShadowRenderingGolden, PointInsideRoomLightsMultipleWallFaces)
+{
+	Scene scene;
+	auto wall = geometry({7, 3, 1});
+	scene.add(wall, 0, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(wall, 2, {-3.5f, -1.2f, 2.5f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 1, {-0.8f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {0.8f, -0.2f, 0.2f}, spk::ShadowMap::Mode::Static);
+	scene.addLight<spk::Light::Point>({0, 1, 0}, {0, 0, 0}, {1, 0.78f, 0.65f}, 8.0f);
+	render(scene, "point_room");
+}
+
+TEST(ShadowRenderingGolden, PointDynamicCasterMovesWithoutChangingHistoricalDepth)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	auto &dynamic = scene.add(scene.cube, 1, {1.2f, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Point>({0, 3, 1}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	render(scene, "point_dynamic_before");
+	const auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(first, nullptr);
+	ASSERT_EQ(first->entries.size(), 1u);
+	const auto entry = first->entries.begin()->second;
+	ASSERT_EQ(entry.faceCount, 6);
+	dynamic.transform().place({0.3f, -0.2f, -1.5f});
+	render(scene, "point_dynamic_after");
+	const auto second = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(second, nullptr);
+	EXPECT_GT(second->entries.begin()->second.generation, entry.generation);
+	EXPECT_NE(second->entries.begin()->second.depthTexture.identifier(), entry.depthTexture.identifier());
+	EXPECT_EQ(first->entries.begin()->second.depthTexture.identifier(), entry.depthTexture.identifier());
+}
+
+TEST(ShadowRenderingGolden, PointAndSpotAndDirectionalCanShadowSameForwardScene)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {0.9f, -0.2f, 0.6f}, spk::ShadowMap::Mode::Dynamic);
+	scene.addLight<spk::Light::Point>({-1, 2, 0}, {0, 0, 0}, {1, 0.4f, 0.3f}, 5.0f);
+	scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1}, 5.0f);
+	scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {0.8f, 0.9f, 1}, 1.5f);
+	render(scene, "point_spot_directional");
+}
+
+TEST(ShadowRenderingGolden, PointHardAndNineTapPCFHaveDistinctReferences)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 1, {0.7f, -0.2f, 0.4f}, spk::ShadowMap::Mode::Dynamic);
+	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3, 1.5f}, {0, 0, 0}, {1, 1, 1}, 9.0f);
+	render(scene, "point_hard_compare");
+	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	render(scene, "point_pcf3x3_compare");
+}
+
+TEST(ShadowRenderingGolden, PointShadowSeamsAndCornersUseCrossFaceSampling)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {0.7f, -0.2f, 0.7f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 1, {-0.7f, -0.2f, -0.7f}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {1.2f, -0.2f, -1.2f}, spk::ShadowMap::Mode::Static);
+	auto &point = scene.addLight<spk::Light::Point>({0, 2, 0}, {0, 0, 0}, {1, 1, 1}, 8.0f);
+	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	render(scene, "point_face_seams");
 }
