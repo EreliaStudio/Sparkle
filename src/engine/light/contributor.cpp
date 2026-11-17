@@ -164,6 +164,21 @@ namespace spk::Light
 		_notifyEdition();
 	}
 
+	ShadowFilter Contributor::shadowFilter() const noexcept
+	{
+		return _shadowFilter;
+	}
+
+	void Contributor::setShadowFilter(ShadowFilter filter)
+	{
+		if (_shadowFilter == filter)
+		{
+			return;
+		}
+		_shadowFilter = filter;
+		_notifyEdition();
+	}
+
 	std::uint64_t Contributor::registrationOrder() const noexcept
 	{
 		return _registrationOrder;

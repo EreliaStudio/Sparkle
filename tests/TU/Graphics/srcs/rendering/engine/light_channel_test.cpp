@@ -126,6 +126,34 @@ TEST(GraphicsLightChannel, DefaultsAndDirectionalOutsideLocalQuota)
 	EXPECT_EQ(first->local.size(), 8u);
 }
 
+TEST(GraphicsLightChannel, CapturedShadowFilterIsImmutableAndChangingItInvalidatesSelection)
+{
+	Scene scene;
+	auto &view = scene.addView("main");
+	auto &spot = scene.addLight<spk::Light::Spot>();
+	auto &directional = scene.addLight<spk::Light::Directional>();
+	scene.engine.refreshRenderSnapshot();
+	const auto before = view.lightChannel().current();
+	ASSERT_NE(before, nullptr);
+	ASSERT_EQ(before->local.size(), 1u);
+	ASSERT_EQ(before->directional.size(), 1u);
+	EXPECT_EQ(before->local.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(before->directional.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+
+	const auto generation = view.lightChannel().generation();
+	spot.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_GT(view.lightChannel().generation(), generation);
+	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	scene.engine.refreshRenderSnapshot();
+	const auto after = view.lightChannel().current();
+	ASSERT_NE(after, nullptr);
+	EXPECT_NE(after.get(), before.get());
+	EXPECT_EQ(after->local.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(after->directional.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(before->local.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(before->directional.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+}
+
 TEST(GraphicsLightChannel, IncumbentsSurviveUntilHysteresisThresholdOrReset)
 {
 	Scene scene;

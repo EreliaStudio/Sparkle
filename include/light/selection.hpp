@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "graphics/color.hpp"
+#include "light/shadow_filter.hpp"
 #include "math/vector3.hpp"
 
 namespace spk::Light
@@ -34,6 +35,7 @@ namespace spk::Light
 			float shadowDistance = 0.0f;
 			bool castsShadows = false;
 			std::uint32_t shadowResolution = 1024;
+			ShadowFilter shadowFilter = ShadowFilter::Hard;
 			float score = 0.0f;
 		};
 

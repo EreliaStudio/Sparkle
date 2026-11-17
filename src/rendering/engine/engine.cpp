@@ -414,6 +414,7 @@ namespace spk
 			entry.priorityWeight = light->priorityWeight();
 			entry.castsShadows = light->castsShadows();
 			entry.shadowResolution = light->shadowResolution();
+			entry.shadowFilter = light->shadowFilter();
 			if (const auto *point = dynamic_cast<const Light::Point *>(light))
 			{
 				entry.type = Light::Selection::Type::Point;

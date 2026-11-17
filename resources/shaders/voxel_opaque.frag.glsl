@@ -31,7 +31,19 @@ layout(std430) readonly buffer ForwardLighting
 	LightData lights[];
 };
 
+struct ShadowData
+{
+	mat4 viewProjection;
+	vec4 parameters;
+};
+
+layout(std430) readonly buffer ForwardShadows
+{
+	ShadowData shadows[];
+};
+
 uniform sampler2D uAlbedo;
+uniform sampler2DShadow uShadowMaps[16];
 
 layout(location = 0) in vec2 vertexUV;
 layout(location = 1) flat in uint materialIndex;
@@ -56,6 +68,45 @@ float spotAttenuation(vec3 direction, vec3 toReceiver, float cosineEdge)
 	return t * t * (3.0 - 2.0 * t);
 }
 
+float shadowVisibility(uint i, vec3 position, vec3 normal)
+{
+	ShadowData shadow = shadows[i];
+	int slot = int(shadow.parameters.w) - 1;
+	if (slot < 0 || slot >= 16)
+	{
+		return 1.0;
+	}
+	vec3 receiver = position + normal * shadow.parameters.y;
+	vec4 clip = shadow.viewProjection * vec4(receiver, 1.0);
+	if (clip.w <= 0.0)
+	{
+		return 1.0;
+	}
+	vec3 projected = clip.xyz / clip.w * 0.5 + 0.5;
+	if (projected.x < 0.0 || projected.x > 1.0 ||
+		projected.y < 0.0 || projected.y > 1.0 ||
+		projected.z <= 0.0 || projected.z >= 1.0)
+	{
+		return 1.0;
+	}
+	float bias = shadow.parameters.x;
+	// Hard shadows require one nearest-filtered depth comparison.
+	if (shadow.parameters.z == 0.0)
+	{
+		return texture(uShadowMaps[slot], vec3(projected.xy, projected.z - bias));
+	}
+	float visibility = 0.0;
+	for (int y = -1; y <= 1; ++y)
+	{
+		for (int x = -1; x <= 1; ++x)
+		{
+			vec2 sampleUV = projected.xy + vec2(x, y) * shadow.parameters.z;
+			visibility += texture(uShadowMaps[slot], vec3(sampleUV, projected.z - bias));
+		}
+	}
+	return visibility / 9.0;
+}
+
 void main()
 {
 	MaterialSection section = sections[paletteIndices[materialIndex]];
@@ -78,6 +129,7 @@ void main()
 
 		float attenuation = 1.0;
 		float lambert = 0.0;
+		vec3 lightVector = -normalize(light.directionCosine.xyz);
 		if (light.typeAndPadding.x == 2u)
 		{
 			lambert = max(dot(normal, -normalize(light.directionCosine.xyz)), 0.0);
@@ -92,11 +144,16 @@ void main()
 				continue;
 			}
 			vec3 toLight = distance > 0.0 ? offset / distance : vec3(0.0);
+			lightVector = toLight;
 			lambert = distance > 0.0 ? max(dot(normal, toLight), 0.0) : 1.0;
 			if (light.typeAndPadding.x == 1u && distance > 0.0)
 			{
 				attenuation *= spotAttenuation(light.directionCosine.xyz, -toLight, light.directionCosine.w);
 			}
+		}
+		if (attenuation > 0.0 && lambert > 0.0)
+		{
+			attenuation *= shadowVisibility(i, worldPosition, normal);
 		}
 		illumination += light.colorIntensity.rgb * (light.colorIntensity.w * attenuation * lambert);
 	}

@@ -7,6 +7,7 @@
 #include "engine/component3d.hpp"
 #include "engine/registry.hpp"
 #include "graphics/color.hpp"
+#include "light/shadow_filter.hpp"
 #include "math/vector3.hpp"
 
 namespace spk::Light
@@ -27,6 +28,7 @@ namespace spk::Light
 		float _priorityWeight = 1.0f;
 		bool _castsShadows = false;
 		std::uint32_t _shadowResolution = 1024;
+		ShadowFilter _shadowFilter = ShadowFilter::Hard;
 		std::uint64_t _registrationOrder = 0;
 		OnEditionContractProvider _onEditionContractProvider;
 		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _onContextEditionContract;
@@ -55,6 +57,8 @@ namespace spk::Light
 		// Side length of a square D32F shadow map; actual GPU allocation belongs to later PRs.
 		[[nodiscard]] std::uint32_t shadowResolution() const noexcept;
 		void setShadowResolution(std::uint32_t resolution);
+		[[nodiscard]] ShadowFilter shadowFilter() const noexcept;
+		void setShadowFilter(ShadowFilter filter);
 		// Zero denotes no current engine registration.
 		[[nodiscard]] std::uint64_t registrationOrder() const noexcept;
 		[[nodiscard]] static std::uint64_t nextRegistrationOrder(std::uint64_t previous);
