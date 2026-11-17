@@ -75,7 +75,7 @@ namespace
 			std::vector<std::uint8_t> rgba(size * size * 4);
 			for (std::size_t i = 0; i < depth.size(); ++i)
 			{
-				const float distance = std::clamp((1.0f - depth[i]) * 32.0f, 0.0f, 1.0f);
+				const float distance = std::clamp((1.0f - depth[i]) * 128.0f, 0.0f, 1.0f);
 				const auto value = static_cast<std::uint8_t>(std::lround(distance * 255.0f));
 				rgba[4 * i] = value;
 				rgba[4 * i + 1] = value;
@@ -270,10 +270,12 @@ namespace
 			const auto selection = scene.view.lightChannel().current();
 			ASSERT_NE(selection, nullptr);
 			const auto &light = selection->local.empty() ? selection->directional.front() : selection->local.front();
-			const auto result =
-				scene.view.lightChannel().resolveShadowResult(gl.surface(), light, selection->captureOrdinal);
-			ASSERT_TRUE(result.has_value());
-			compareDepth(*result, depthName);
+			const auto published = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+			ASSERT_NE(published, nullptr);
+			const auto result = published->entries.find(light.registrationOrder);
+			ASSERT_NE(result, published->entries.end());
+			EXPECT_EQ(result->second.admission, light.admission);
+			compareDepth(result->second, depthName);
 		}
 		EXPECT_NO_THROW(gl.requireNoErrors());
 		gl.reset();
