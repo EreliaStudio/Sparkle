@@ -27,7 +27,7 @@ namespace spk::ShadowMap
 		[[nodiscard]] static Mesh from(const spk::Mesh<TVertex> &source, TExtractor &&extractor)
 		{
 			Builder builder;
-			if (source.indexCount() == 0)
+			if (source.vertexCount() == 0 && source.indexCount() == 0)
 			{
 				return std::move(builder).build();
 			}
