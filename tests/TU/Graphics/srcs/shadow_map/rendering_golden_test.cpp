@@ -598,25 +598,69 @@ TEST(ShadowRenderingGolden, PointMixedShapeCellsProduceOneCompositeDepthMesh)
 	render(scene, "point_mixed_cell_geometry", "point_mixed_cell_geometry");
 }
 
-TEST(ShadowRenderingGolden, PointNonUniformStairScaleAndRotationInvalidateDepth)
+// Non-uniform voxel scaling is intentionally unsupported by the Forward
+// renderer. Keep that contract distinct from the valid PointLight shadow test.
+TEST(PointShadowRenderingTest, NonUniformStairScaleIsRejected)
 {
 	Scene scene;
 	auto &stair = scene.add(scene.stair, 0, {-0.7f, -0.2f, -0.2f}, spk::ShadowMap::Mode::Static);
 	stair.transform().rescale({1.6f, 1.5f, 0.65f});
+	scene.addLight<spk::Light::Point>({0.0f, 3.0f, 1.3f}, {0, 0, 0}, {1, 0.95f, 0.8f}, 8.0f);
+	EXPECT_THROW((void)scene.capture(), spk::Exception);
+}
+
+TEST(PointShadowRenderingTest, UniformStairScaleAndRotationChangeAllFaceDepthAsNeeded)
+{
+	Scene scene;
+	auto &stair = scene.add(scene.stair, 0, {-0.7f, -0.2f, -0.2f}, spk::ShadowMap::Mode::Static);
+	stair.transform().rescale({1.5f, 1.5f, 1.5f});
 	scene.add(scene.slope, 1, {1.0f, -0.2f, 0.0f}, spk::ShadowMap::Mode::Static);
 	scene.addLight<spk::Light::Point>({0.0f, 3.0f, 1.3f}, {0, 0, 0}, {1, 0.95f, 0.8f}, 8.0f);
-	render(scene, "point_stair_scaled");
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto readDepthFaces = [&](const spk::ShadowMap::Result::Entry &entry) {
+		std::array<std::vector<float>, 6> depths;
+		for (std::size_t face = 0; face < depths.size(); ++face)
+		{
+			spk::Framebuffer framebuffer(
+				{entry.resolution, entry.resolution},
+				std::vector<spk::Framebuffer::RenderAttachment>{},
+				spk::Framebuffer::RenderAttachment(entry.depthTexture, static_cast<spk::CubeMap::Face>(face)));
+			framebuffer.activate(gl.renderContext());
+			depths[face].resize(entry.resolution * entry.resolution);
+			glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths[face].data());
+			EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		}
+		return depths;
+	};
+
+	gl.reset(ImageSize);
+	const auto firstSnapshot = scene.capture();
+	ASSERT_NE(firstSnapshot, nullptr);
+	firstSnapshot->execute(gl.renderContext());
 	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	ASSERT_NE(first, nullptr);
 	ASSERT_EQ(first->entries.size(), 1u);
-	const auto generation = first->entries.begin()->second.generation;
+	const auto firstEntry = first->entries.begin()->second;
+	ASSERT_EQ(firstEntry.faceCount, 6u);
+	const auto firstDepth = readDepthFaces(firstEntry);
+	gl.reset();
+
 	stair.transform().setEulerRotation({0, 0.72f, 0});
-	render(scene, "point_stair_rotated");
+	gl.reset(ImageSize);
+	const auto secondSnapshot = scene.capture();
+	ASSERT_NE(secondSnapshot, nullptr);
+	secondSnapshot->execute(gl.renderContext());
 	const auto second = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	ASSERT_NE(second, nullptr);
 	ASSERT_EQ(second->entries.size(), 1u);
-	EXPECT_GT(second->entries.begin()->second.generation, generation);
+	const auto &secondEntry = second->entries.begin()->second;
+	ASSERT_EQ(secondEntry.faceCount, 6u);
+	EXPECT_GT(secondEntry.generation, firstEntry.generation);
+	EXPECT_NE(secondEntry.depthTexture.identifier(), firstEntry.depthTexture.identifier());
+	const auto secondDepth = readDepthFaces(secondEntry);
+	EXPECT_NE(secondDepth, firstDepth) << "Rotating the stair must alter at least one cubemap depth pixel";
+	EXPECT_NO_THROW(gl.requireNoErrors());
+	gl.reset();
 }
 
 TEST(ShadowRenderingGolden, PointSlabRoofPillarsAndStairsCastArchitecturalShadows)
