@@ -123,7 +123,7 @@ float pointComparison(ShadowData shadow, int slot, vec3 ray, vec3 worldRay, vec3
 	}
 	vec3 projected = clip.xyz / clip.w * 0.5 + 0.5;
 	if (clip.w > shadow.pointFarResolution.x ||
-		projected.z <= 0.0 || projected.z >= 1.0)
+		projected.z < 0.0 || projected.z > 1.0)
 	{
 		return 1.0;
 	}
