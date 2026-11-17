@@ -38,6 +38,8 @@ namespace spk::ShadowMap
 	{
 		using PointKey = std::tuple<const void *, std::uint64_t, std::uint64_t, std::uint64_t>;
 
+		std::atomic<std::uint64_t> nextPointBudgetIdentity{1};
+
 		struct PointImagePlan
 		{
 			std::set<PointKey> approved;
@@ -212,6 +214,11 @@ namespace spk::ShadowMap
 		}
 	}
 
+	PointBudget::PointBudget() :
+		_identity(nextPointBudgetIdentity.fetch_add(1, std::memory_order_relaxed))
+	{
+	}
+
 	void PointBudget::add(Request request)
 	{
 		if (request.system == nullptr || request.registrationOrder == 0 ||
@@ -224,7 +231,7 @@ namespace spk::ShadowMap
 
 	void PointBudget::prepare(RenderContext &context) const
 	{
-		if (context.imageState.contains(this))
+		if (context.imageState.contains(_identity))
 		{
 			return;
 		}
@@ -268,7 +275,7 @@ namespace spk::ShadowMap
 				++count;
 			}
 		}
-		context.imageState.emplace(this, std::move(plan));
+		context.imageState.emplace(_identity, std::move(plan));
 	}
 
 	bool PointBudget::consume(
@@ -278,7 +285,7 @@ namespace spk::ShadowMap
 		std::uint64_t registrationOrder,
 		std::uint64_t admission) const
 	{
-		const auto it = context.imageState.find(this);
+		const auto it = context.imageState.find(_identity);
 		if (it == context.imageState.end())
 		{
 			return false;
