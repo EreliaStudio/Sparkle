@@ -51,6 +51,7 @@ TEST(CoreLightTest, DefaultValuesAndIndependentShadowSettings)
 		EXPECT_FLOAT_EQ(light->intensity(), 1.0f);
 		EXPECT_FLOAT_EQ(light->priorityWeight(), 1.0f);
 		EXPECT_EQ(light->shadowResolution(), 1024u);
+		EXPECT_EQ(light->shadowFilter(), spk::Light::ShadowFilter::Hard);
 		EXPECT_EQ(light->registrationOrder(), 0u);
 	}
 	EXPECT_FALSE(point.castsShadows());
@@ -67,6 +68,29 @@ TEST(CoreLightTest, DefaultValuesAndIndependentShadowSettings)
 	EXPECT_EQ(spot.shadowResolution(), 1024u);
 	EXPECT_EQ(directional.shadowResolution(), 1024u);
 	EXPECT_TRUE(point.castsShadows());
+	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(point.shadowFilter(), spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
+	spot.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(directional.shadowFilter(), spk::Light::ShadowFilter::Hard);
+}
+
+TEST(CoreLightTest, ShadowFilterEditionNotifiesOnlyOnActualChange)
+{
+	spk::Light::Spot light;
+	int changes = 0;
+	auto contract = light.subscribeToEdition([&changes](const spk::Light::Contributor &) {
+		++changes;
+	});
+	light.setShadowFilter(spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(changes, 0);
+	light.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(changes, 1);
+	light.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(changes, 1);
+	light.setShadowFilter(spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(changes, 2);
 }
 
 TEST(CoreLightTest, InvalidSharedParametersPreserveStateAndNoIntensityCeiling)
