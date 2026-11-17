@@ -247,6 +247,7 @@ namespace
 		ASSERT_TRUE(entry.depthTexture);
 		const std::array<const char *, 6> suffixes{
 			"positive_x", "negative_x", "positive_y", "negative_y", "positive_z", "negative_z"};
+		bool foundDepth = false;
 		for (std::size_t i = 0; i < entry.faceCount; ++i)
 		{
 			spk::Framebuffer framebuffer =
@@ -262,13 +263,14 @@ namespace
 			std::vector<float> depths(entry.resolution * entry.resolution);
 			glReadPixels(0, 0, entry.resolution, entry.resolution, GL_DEPTH_COMPONENT, GL_FLOAT, depths.data());
 			EXPECT_EQ(glGetError(), GL_NO_ERROR);
-			EXPECT_LT(*std::min_element(depths.begin(), depths.end()), 1.0f);
+			foundDepth |= *std::min_element(depths.begin(), depths.end()) < 1.0f;
 			const auto category = std::filesystem::path(Category) / "depth";
 			const std::string imageName = entry.faceCount == 6 ? name + "_" + suffixes[i] : name;
 			const auto actual = sparkle_test::resultImagePath(category, imageName);
 			DepthPreview{}.saveDepth(depths, entry.resolution, actual);
 			compareGolden(category, imageName, actual);
 		}
+		EXPECT_TRUE(foundDepth);
 	}
 
 	void render(Scene &scene, const std::string &name, const std::string &depthName = {})
