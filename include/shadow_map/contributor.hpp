@@ -9,7 +9,7 @@
 
 namespace spk::ShadowMap
 {
-	enum class ShadowMode
+	enum class Mode
 	{
 		None,
 		Static,
@@ -27,7 +27,7 @@ namespace spk::ShadowMap
 
 	private:
 		MeshFilter _meshFilter;
-		ShadowMode _shadowMode = ShadowMode::None;
+		Mode _shadowMode = Mode::None;
 		Layers _layers;
 		OnEditionContractProvider _onEditionContractProvider;
 		MeshFilter::OnEditionContract _meshFilterEditionContract;
@@ -41,8 +41,8 @@ namespace spk::ShadowMap
 
 		[[nodiscard]] MeshFilter &meshFilter() noexcept;
 		[[nodiscard]] const MeshFilter &meshFilter() const noexcept;
-		[[nodiscard]] ShadowMode shadowMode() const noexcept;
-		void setShadowMode(ShadowMode mode);
+		[[nodiscard]] Mode shadowMode() const noexcept;
+		void setShadowMode(Mode mode);
 		[[nodiscard]] const Layers &layers() const noexcept;
 		void setLayers(Layers layers);
 		[[nodiscard]] OnEditionContract subscribeToEdition(OnEditionCallback callback);

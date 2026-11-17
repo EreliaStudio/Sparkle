@@ -28,12 +28,12 @@ namespace spk::ShadowMap
 		return _meshFilter;
 	}
 
-	ShadowMode Contributor::shadowMode() const noexcept
+	Mode Contributor::shadowMode() const noexcept
 	{
 		return _shadowMode;
 	}
 
-	void Contributor::setShadowMode(ShadowMode mode)
+	void Contributor::setShadowMode(Mode mode)
 	{
 		if (_shadowMode == mode)
 		{

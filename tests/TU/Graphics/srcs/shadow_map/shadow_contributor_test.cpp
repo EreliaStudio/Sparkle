@@ -28,7 +28,7 @@ namespace
 	using spk::ShadowMap::Contributor;
 	using spk::ShadowMap::Mesh;
 	using spk::ShadowMap::MeshFilter;
-	using spk::ShadowMap::ShadowMode;
+	using spk::ShadowMap::Mode;
 
 	static_assert(std::is_same_v<MeshFilter, spk::MeshFilter<Mesh>>);
 
@@ -274,7 +274,7 @@ TEST(ShadowMapContributorTest, InitialStateAndRegistryFollowEngineContext)
 	spk::Entity3D entity("caster");
 	auto &contributor = entity.addComponent<Contributor>();
 	EXPECT_EQ(contributor.owner(), &entity);
-	EXPECT_EQ(contributor.shadowMode(), ShadowMode::None);
+	EXPECT_EQ(contributor.shadowMode(), Mode::None);
 	EXPECT_TRUE(contributor.meshFilter().instances().empty());
 	EXPECT_EQ(contributor.meshFilter().baseTransform(), Matrix4x4::identity());
 	EXPECT_TRUE(contributor.layers().empty());
@@ -291,19 +291,19 @@ TEST(ShadowMapContributorTest, InitialStateAndRegistryFollowEngineContext)
 TEST(ShadowMapContributorTest, NotificationsAllowObserversToDeriveInvalidationWithoutPublicCachePolicy)
 {
 	Contributor contributor;
-	std::vector<ShadowMode> observedModes;
-	ShadowMode lastMode = contributor.shadowMode();
+	std::vector<Mode> observedModes;
+	Mode lastMode = contributor.shadowMode();
 	int staticInvalidations = 0;
 	int finalInvalidations = 0;
 	auto contract = contributor.subscribeToEdition([&](const Contributor &source) {
 		EXPECT_EQ(&source, &contributor);
-		const ShadowMode currentMode = source.shadowMode();
+		const Mode currentMode = source.shadowMode();
 		const bool modeChanged = currentMode != lastMode;
-		if (modeChanged || currentMode == ShadowMode::Static)
+		if (modeChanged || currentMode == Mode::Static)
 		{
 			++staticInvalidations;
 		}
-		if (modeChanged || currentMode != ShadowMode::None)
+		if (modeChanged || currentMode != Mode::None)
 		{
 			++finalInvalidations;
 		}
@@ -311,20 +311,20 @@ TEST(ShadowMapContributorTest, NotificationsAllowObserversToDeriveInvalidationWi
 		observedModes.push_back(currentMode);
 	});
 
-	contributor.setShadowMode(ShadowMode::None);
+	contributor.setShadowMode(Mode::None);
 	EXPECT_TRUE(observedModes.empty());
 	contributor.bind(makeShadowMesh());
 	ASSERT_EQ(observedModes.size(), 1u);
-	EXPECT_EQ(observedModes.back(), ShadowMode::None);
+	EXPECT_EQ(observedModes.back(), Mode::None);
 	EXPECT_EQ(staticInvalidations, 0);
 	EXPECT_EQ(finalInvalidations, 0);
 
-	contributor.setShadowMode(ShadowMode::Dynamic);
+	contributor.setShadowMode(Mode::Dynamic);
 	ASSERT_EQ(observedModes.size(), 2u);
-	EXPECT_EQ(observedModes.back(), ShadowMode::Dynamic);
+	EXPECT_EQ(observedModes.back(), Mode::Dynamic);
 	EXPECT_EQ(staticInvalidations, 1);
 	EXPECT_EQ(finalInvalidations, 1);
-	contributor.setShadowMode(ShadowMode::Dynamic);
+	contributor.setShadowMode(Mode::Dynamic);
 	EXPECT_EQ(observedModes.size(), 2u);
 
 	contributor.meshFilter().bind(makeShadowMesh());
@@ -332,9 +332,9 @@ TEST(ShadowMapContributorTest, NotificationsAllowObserversToDeriveInvalidationWi
 	EXPECT_EQ(staticInvalidations, 1);
 	EXPECT_EQ(finalInvalidations, 2);
 
-	contributor.setShadowMode(ShadowMode::Static);
+	contributor.setShadowMode(Mode::Static);
 	ASSERT_EQ(observedModes.size(), 4u);
-	EXPECT_EQ(observedModes.back(), ShadowMode::Static);
+	EXPECT_EQ(observedModes.back(), Mode::Static);
 	EXPECT_EQ(staticInvalidations, 2);
 	EXPECT_EQ(finalInvalidations, 3);
 	contributor.bind(makeShadowMesh());
@@ -342,9 +342,9 @@ TEST(ShadowMapContributorTest, NotificationsAllowObserversToDeriveInvalidationWi
 	EXPECT_EQ(staticInvalidations, 3);
 	EXPECT_EQ(finalInvalidations, 4);
 
-	contributor.setShadowMode(ShadowMode::None);
+	contributor.setShadowMode(Mode::None);
 	ASSERT_EQ(observedModes.size(), 6u);
-	EXPECT_EQ(observedModes.back(), ShadowMode::None);
+	EXPECT_EQ(observedModes.back(), Mode::None);
 	EXPECT_EQ(staticInvalidations, 4);
 	EXPECT_EQ(finalInvalidations, 5);
 	EXPECT_TRUE(contract.isValid());
@@ -356,15 +356,15 @@ TEST(ShadowMapContributorTest, ParentAndChildShadowModesNeverInherit)
 	spk::Entity3D child("child", &parent);
 	auto &p = parent.addComponent<Contributor>();
 	auto &c = child.addComponent<Contributor>();
-	c.setShadowMode(ShadowMode::Dynamic);
-	EXPECT_EQ(p.shadowMode(), ShadowMode::None);
-	EXPECT_EQ(c.shadowMode(), ShadowMode::Dynamic);
-	p.setShadowMode(ShadowMode::Static);
-	EXPECT_EQ(c.shadowMode(), ShadowMode::Dynamic);
-	c.setShadowMode(ShadowMode::None);
-	EXPECT_EQ(p.shadowMode(), ShadowMode::Static);
-	p.setShadowMode(ShadowMode::None);
-	EXPECT_EQ(c.shadowMode(), ShadowMode::None);
+	c.setShadowMode(Mode::Dynamic);
+	EXPECT_EQ(p.shadowMode(), Mode::None);
+	EXPECT_EQ(c.shadowMode(), Mode::Dynamic);
+	p.setShadowMode(Mode::Static);
+	EXPECT_EQ(c.shadowMode(), Mode::Dynamic);
+	c.setShadowMode(Mode::None);
+	EXPECT_EQ(p.shadowMode(), Mode::Static);
+	p.setShadowMode(Mode::None);
+	EXPECT_EQ(c.shadowMode(), Mode::None);
 }
 
 TEST(ShadowMapContributorTest, LayersAreSeparateFromVisualComponentsAndNotifyOnChange)
@@ -401,7 +401,7 @@ TEST(ShadowMapContributorTest, TransformNotificationsRemainObservableForFutureSh
 	spk::Entity3D parent("parent");
 	spk::Entity3D child("child", &parent);
 	auto &shadow = child.addComponent<Contributor>();
-	shadow.setShadowMode(ShadowMode::Dynamic);
+	shadow.setShadowMode(Mode::Dynamic);
 	int edits = 0;
 	auto contract = parent.transform().subscribeToEdition([&](const spk::Transform3D &) {
 		++edits;
@@ -410,7 +410,7 @@ TEST(ShadowMapContributorTest, TransformNotificationsRemainObservableForFutureSh
 	EXPECT_EQ(edits, 1);
 	const auto world = child.transform().modelMatrix() * spk::Vector4{0.0f, 0.0f, 0.0f, 1.0f};
 	EXPECT_FLOAT_EQ(world.x, 2.0f);
-	EXPECT_EQ(shadow.shadowMode(), ShadowMode::Dynamic);
+	EXPECT_EQ(shadow.shadowMode(), Mode::Dynamic);
 	EXPECT_TRUE(contract.isValid());
 }
 

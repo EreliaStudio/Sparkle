@@ -26,12 +26,12 @@
 - [ ] Réutiliser `ShadowMap::Mesh` position seule et son extracteur existant, ne compléter que les fonctions manquantes
 - [ ] `spk::MeshFilter<TMesh>` réutilisable avec `MeshFilter::Instance` imbriquée
 - [ ] Alias `ShadowMap::MeshFilter = spk::MeshFilter<ShadowMap::Mesh>`, collection + baseTransform
-- [ ] ShadowMode None/Static/Dynamic
+- [ ] ShadowMap::Mode None/Static/Dynamic
 - [ ] Contributor avec layers et notification de bind.
 
 ## Instructions techniques et intégration
 
-Le binding remplace atomiquement toutes instances+baseTransform ; matrice monde Entity*base*instance ; bind(collection) remet base à identité ; aucune propagation parent/enfant ShadowMode, aucun caster créé par VoxelRenderingSystem; opaques seulement et aucune alpha texture.
+Le binding remplace atomiquement toutes instances+baseTransform ; matrice monde Entity*base*instance ; bind(collection) remet base à identité ; aucune propagation parent/enfant ShadowMap::Mode, aucun caster créé par VoxelRenderingSystem; opaques seulement et aucune alpha texture.
 
 Avant de coder, inspecter la forme **actuelle** des classes, constructions, tests et CMake ; réutiliser `Mesh<T>`, `Registry`, `ContractProvider`, `ThreadSafeSlot`, `GPUResourceCollection`, `RenderSnapshot::Builder`, `ShaderStorageBuffer`, `spk::Exception` selon pertinence. Les exemples d'API dans les spécifications sont parfois indicatifs : la signature finale doit respecter les invariants sans créer une abstraction parallèle.
 
