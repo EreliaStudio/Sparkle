@@ -344,7 +344,21 @@ TEST(ShadowRenderingGolden, SpotAndDirectionalUseIndependentProjectorsAndPCF)
 	Scene scene;
 	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 2, {0.9f, -0.2f, 0.6f}, spk::ShadowMap::Mode::Dynamic);
-	scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 8.0f);
-	scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {1.0f, 0.9f, 0.6f}, 1.7f);
+	auto &spot = scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 8.0f);
+	auto &directional = scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {1.0f, 0.9f, 0.6f}, 1.7f);
+	spot.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "spot_directional_pcf");
+}
+
+TEST(ShadowRenderingGolden, SpotHardAndDirectionalSoftUseIndependentFilters)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	scene.add(scene.cube, 2, {0.9f, -0.2f, 0.6f}, spk::ShadowMap::Mode::Dynamic);
+	auto &spot = scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 8.0f);
+	auto &directional = scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {1.0f, 0.9f, 0.6f}, 1.7f);
+	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
+	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	render(scene, "mixed_shadow_filters");
 }
