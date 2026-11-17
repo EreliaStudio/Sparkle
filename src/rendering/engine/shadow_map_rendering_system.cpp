@@ -273,11 +273,8 @@ namespace spk::ShadowMap
 			{
 				matrices[face] = projections[face].viewProjection;
 			}
-			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] ||
-				cache.resolution != light.shadowResolution ||
-				cache.pointProjections != matrices || cache.staticSignature != _staticSignature;
-			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] ||
-				cache.dynamicSignature != _dynamicSignature;
+			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature;
+			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
 			{
