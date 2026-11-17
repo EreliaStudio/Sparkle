@@ -6,13 +6,13 @@
 #include <string>
 
 #include "core/context/render_context.hpp"
-#include "light/channel.hpp"
-
 #include "exception.hpp"
+#include "light/channel.hpp"
 
 namespace spk::Lighting
 {
-	System::System(const Light::Selection &selection, RGB ambient,
+	System::System(
+		const Light::Selection &selection, RGB ambient,
 		std::shared_ptr<Light::Channel> shadowChannel, std::uint64_t captureOrdinal) :
 		_lights(BindingPoint, sizeof(Header), sizeof(LightData)),
 		_selection(selection),
@@ -99,8 +99,9 @@ namespace spk::Lighting
 					const std::size_t index = bindings->samplers.size();
 					shadow.viewProjection = resolved->viewProjection[0];
 					shadow.parameters = {resolved->depthBias, resolved->normalBias,
-						1.0f / static_cast<float>(resolved->resolution), static_cast<float>(index + 1)};
-					bindings->samplers.emplace_back(1 + index, Sampler::Filtering::Nearest,
+									 1.0f / static_cast<float>(resolved->resolution), static_cast<float>(index + 1)};
+					bindings->samplers.emplace_back(
+						1 + index, Sampler::Filtering::Nearest,
 						Sampler::Wrap::ClampToBorder, Sampler::MipmapFiltering::Disabled);
 					bindings->samplers.back().setTexture(resolved->depthTexture);
 				}
