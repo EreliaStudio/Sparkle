@@ -107,12 +107,17 @@ vec3 pointFaceDirection(int face, vec2 uv)
 	return vec3(-uv.x, -uv.y, -1.0);
 }
 
-float pointComparison(ShadowData shadow, int slot, vec3 ray, vec3 receiver)
+float pointComparison(ShadowData shadow, int slot, vec3 ray, vec3 worldRay, vec3 receiver)
 {
 	int face = pointFace(ray);
+	// Check the physical, unshifted receiver before applying normal bias.
+	// Otherwise an arbitrarily close fragment could sample past near.
+	if (abs(worldRay[face / 2]) < shadow.pointPositionNear.w)
+	{
+		return 1.0;
+	}
 	vec4 clip = shadow.viewProjection[face] * vec4(receiver, 1.0);
-	// The historical near plane is a per-tap guard: no texture access.
-	if (clip.w < shadow.pointPositionNear.w || clip.w <= 0.0)
+	if (clip.w <= 0.0)
 	{
 		return 1.0;
 	}
@@ -151,7 +156,7 @@ float pointShadowVisibility(ShadowData shadow, int slot, vec3 position, vec3 nor
 	vec3 receiver = position + normal * shadow.parameters.y;
 	if (shadow.pointFarResolution.z == 0.0)
 	{
-		return pointComparison(shadow, slot, stableRay, receiver);
+		return pointComparison(shadow, slot, stableRay, ray, receiver);
 	}
 	int centralFace = pointFace(stableRay);
 	vec2 uv = pointFaceUV(stableRay, centralFace);
@@ -162,7 +167,7 @@ float pointShadowVisibility(ShadowData shadow, int slot, vec3 position, vec3 nor
 		for (int x = -1; x <= 1; ++x)
 		{
 			vec3 direction = pointFaceDirection(centralFace, uv + vec2(x, y) * texel);
-			visibility += pointComparison(shadow, slot, direction, receiver);
+			visibility += pointComparison(shadow, slot, direction, ray, receiver);
 		}
 	}
 	return visibility / 9.0;
