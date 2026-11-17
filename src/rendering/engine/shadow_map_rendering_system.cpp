@@ -4,13 +4,16 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -27,11 +30,20 @@
 #include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/projection.hpp"
+#include "shadow_map/point_budget.hpp"
 
 namespace spk::ShadowMap
 {
 	namespace
 	{
+		using PointKey = std::tuple<const void *, std::uint64_t, std::uint64_t, std::uint64_t>;
+
+		struct PointImagePlan
+		{
+			std::set<PointKey> approved;
+			std::set<PointKey> consumed;
+		};
+
 		struct Caster
 		{
 			Mesh mesh;
@@ -200,6 +212,82 @@ namespace spk::ShadowMap
 		}
 	}
 
+	void PointBudget::add(Request request)
+	{
+		if (request.system == nullptr || request.registrationOrder == 0 ||
+			request.admission == 0 || !request.limit || !request.needsRebuild)
+		{
+			throw spk::Exception("Invalid PointLight shadow budget request");
+		}
+		_requests.push_back(std::move(request));
+	}
+
+	void PointBudget::prepare(RenderContext &context) const
+	{
+		if (context.imageState.contains(this))
+		{
+			return;
+		}
+		auto plan = std::make_shared<PointImagePlan>();
+		std::vector<const Request *> pending;
+		for (const Request &request : _requests)
+		{
+			if (request.needsRebuild(context))
+			{
+				pending.push_back(&request);
+			}
+		}
+		std::ranges::sort(pending, [](const Request *a, const Request *b) {
+			if (a->score != b->score)
+			{
+				return a->score > b->score;
+			}
+			if (a->viewIdentity != b->viewIdentity)
+			{
+				return a->viewIdentity < b->viewIdentity;
+			}
+			if (a->registrationOrder != b->registrationOrder)
+			{
+				return a->registrationOrder < b->registrationOrder;
+			}
+			return std::less<const void *>{}(a->system, b->system);
+		});
+		std::map<const void *, std::size_t, std::less<const void *>> used;
+		std::set<PointKey> seen;
+		for (const Request *request : pending)
+		{
+			const PointKey key{request->system, request->viewIdentity, request->registrationOrder, request->admission};
+			if (!seen.insert(key).second)
+			{
+				continue;
+			}
+			auto &count = used[request->system];
+			if (count < request->limit())
+			{
+				plan->approved.insert(key);
+				++count;
+			}
+		}
+		context.imageState.emplace(this, std::move(plan));
+	}
+
+	bool PointBudget::consume(
+		RenderContext &context,
+		const void *system,
+		std::uint64_t viewIdentity,
+		std::uint64_t registrationOrder,
+		std::uint64_t admission) const
+	{
+		const auto it = context.imageState.find(this);
+		if (it == context.imageState.end())
+		{
+			return false;
+		}
+		const auto plan = std::static_pointer_cast<PointImagePlan>(it->second);
+		const PointKey key{system, viewIdentity, registrationOrder, admission};
+		return plan->approved.contains(key) && plan->consumed.insert(key).second;
+	}
+
 	struct RenderingSystem::State final
 	{
 		struct LightCache
@@ -210,6 +298,7 @@ namespace spk::ShadowMap
 			std::uint64_t dynamicSignature = 0;
 			std::uint64_t generation = 0;
 			std::uint64_t publishedAdmission = 0;
+			std::uint64_t sourceCaptureOrdinal = 0;
 			Framebuffer::Handle staticTarget;
 			Framebuffer::Handle finalTarget;
 			bool point = false;
@@ -228,6 +317,7 @@ namespace spk::ShadowMap
 
 		std::mutex mutex;
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
+		std::atomic<std::size_t> maxPointRebuilds{1};
 	};
 
 	class DepthCommand final : public RenderCommand
@@ -443,6 +533,16 @@ namespace spk::ShadowMap
 			}
 		}
 	};
+
+	std::size_t RenderingSystem::maxPointShadowRebuildsPerImage() const noexcept
+	{
+		return _state->maxPointRebuilds.load(std::memory_order_relaxed);
+	}
+
+	void RenderingSystem::setMaxPointShadowRebuildsPerImage(std::size_t value) noexcept
+	{
+		_state->maxPointRebuilds.store(value, std::memory_order_relaxed);
+	}
 
 	RenderingSystem::RenderingSystem() :
 		spk::RenderingSystem("Shadow map rendering"),
