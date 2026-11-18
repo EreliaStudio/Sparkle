@@ -385,11 +385,11 @@ TEST(VoxelTransparencyWindowGolden, OpaqueWallFullyOccludesCharacterOutsideOpeni
 {
 	WindowAssets assets;
 	WindowScene wall(0.5f);
-	populateWindow(wall, assets, false, true, false, 1.5f);
+	populateWindow(wall, assets, false, true, false, 2.0f);
 	const auto emptyWall = renderWindow(wall);
 
 	WindowScene hidden(0.5f);
-	populateWindow(hidden, assets, false, true, true, 1.5f);
+	populateWindow(hidden, assets, false, true, true, 2.0f);
 	const auto hiddenCharacter = renderWindow(hidden, "window_wall_hides_character");
 
 	EXPECT_EQ(hiddenCharacter.pixels, emptyWall.pixels);
