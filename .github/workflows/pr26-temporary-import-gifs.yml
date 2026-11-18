@@ -1,0 +1,59 @@
+name: PR26 temporary golden GIF import
+on:
+  push:
+    branches: [impl/v0.1.4/26-model3d-animator]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  import-goldens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/26-model3d-animator
+          fetch-depth: 0
+      - name: Download checked Graphics Debug previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh run download 44362620903 --repo EreliaStudio/Sparkle --name graphics-unit-tests-Debug --dir /tmp/pr26-artifacts
+          find /tmp/pr26-artifacts -name '*animator*gif' -print
+      - name: Optimize and verify reference GIFs
+        shell: bash
+        run: |
+          python -m pip install pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageSequence
+          root = Path('/tmp/pr26-artifacts')
+          target = Path('tests/TU/Graphics/resources/expectedImages/rendering/model3d')
+          target.mkdir(parents=True, exist_ok=True)
+          for name in ('animator_articulations', 'animator_scaling'):
+              matches = list(root.rglob(name + '_actual.gif'))
+              assert len(matches) == 1, (name, matches)
+              with Image.open(matches[0]) as image:
+                  frames = [frame.copy().convert('RGB') for frame in ImageSequence.Iterator(image)]
+                  delays = [100] * len(frames)
+              assert len(frames) == 12, (name, len(frames))
+              output = target / (name + '_expected.gif')
+              frames[0].save(output, save_all=True, append_images=frames[1:], duration=delays,
+                  loop=0, optimize=True, disposal=2)
+              with Image.open(output) as check:
+                  assert check.n_frames == 12, (name, check.n_frames)
+                  converted = [frame.copy().convert('RGB') for frame in ImageSequence.Iterator(check)]
+              # Optimization must not change even one pixel of the approved preview.
+              assert all(a.tobytes() == b.tobytes() for a, b in zip(frames, converted)), name
+              print(output, output.stat().st_size)
+          PY
+      - name: Commit golden GIF references to PR26
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/TU/Graphics/resources/expectedImages/rendering/model3d/animator_*_expected.gif
+          git commit -m 'test: add PR26 animated Golden GIF references'
+          git push origin HEAD:impl/v0.1.4/26-model3d-animator
