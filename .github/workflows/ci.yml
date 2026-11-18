@@ -47,14 +47,7 @@ jobs:
             base="$(git rev-parse HEAD^)"
           fi
           git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.cpp' '*.hpp' '*.c' '*.h' '*.cc' '*.hh' |
-            xargs -0 -r clang-format --style=file -i
-          git diff --name-only --diff-filter=ACMR "$base" HEAD -- '*.cpp' '*.hpp' '*.c' '*.h' '*.cc' '*.hh' |
-            while IFS= read -r file; do
-              echo "PR25_FORMAT_START:$file"
-              base64 -w0 "$file"
-              echo
-              echo "PR25_FORMAT_END:$file"
-            done
+            xargs -0 -r clang-format --style=file --dry-run --Werror
 
   core-unit-tests:
     name: Core unit tests (${{ matrix.os }}, ${{ matrix.configuration }})
@@ -290,19 +283,6 @@ jobs:
         run: ./tools/ci/install-mesa.ps1 -Destination build/graphics-test/tests/TU/Graphics
       - name: Run Graphics tests
         run: ctest --test-dir build/graphics-test -R '^Graphics\.' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
-      - name: Export PR25 golden candidates
-        if: always() && matrix.configuration == 'Debug'
-        shell: pwsh
-        run: |
-          $names = @('zero_layers', 'one_layer', 'two_layers', 'two_layers_order_front_first', 'two_layers_order_back_first', 'opaque_occludes_translucent', 'alpha_zero', 'near_opaque_reveal_zero')
-          foreach ($name in $names) {
-            $file = "build/graphics-test/tests/TU/Graphics/results/rendering/voxel-transparency/$name.png"
-            if (Test-Path $file) {
-              Write-Output "PR25_IMAGE_START:$name"
-              Write-Output ([Convert]::ToBase64String([IO.File]::ReadAllBytes($file)))
-              Write-Output "PR25_IMAGE_END:$name"
-            }
-          }
       - name: Build visual comparison gallery
         if: always()
         run: >-

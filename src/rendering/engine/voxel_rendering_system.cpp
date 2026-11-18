@@ -114,25 +114,11 @@ namespace spk::Voxel
 		{
 			if (!bucket.geometry.opaqueMesh().empty())
 			{
-				builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelCommand>(
-					bucket.geometry,
-					bucket.palette,
-					bucket.materialRemap,
-					bucket.models,
-					lighting,
-					camera,
-					spk::DrawVoxelCommand::Mode::Opaque);
+				builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelCommand>(bucket.geometry, bucket.palette, bucket.materialRemap, bucket.models, lighting, camera, spk::DrawVoxelCommand::Mode::Opaque);
 			}
 			if (!bucket.geometry.transparentMesh().empty())
 			{
-				builder.renderPass(spk::EngineView::WBOITPassKey).emplace<spk::DrawVoxelCommand>(
-					std::move(bucket.geometry),
-					bucket.palette,
-					std::move(bucket.materialRemap),
-					std::move(bucket.models),
-					lighting,
-					camera,
-					spk::DrawVoxelCommand::Mode::Translucent);
+				builder.renderPass(spk::EngineView::WBOITPassKey).emplace<spk::DrawVoxelCommand>(std::move(bucket.geometry), bucket.palette, std::move(bucket.materialRemap), std::move(bucket.models), lighting, camera, spk::DrawVoxelCommand::Mode::Translucent);
 			}
 		}
 	}
