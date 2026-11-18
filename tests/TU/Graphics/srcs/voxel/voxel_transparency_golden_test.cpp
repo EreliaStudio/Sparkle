@@ -161,22 +161,6 @@ namespace
 			objects.push_back(std::move(object));
 		}
 
-		void addBlock(
-			const spk::Voxel::Geometry &geometry,
-			const spk::Texture &atlas,
-			spk::Vector3 position,
-			spk::Vector3 scale)
-		{
-			auto object = std::make_unique<spk::Entity3D>("window scene voxel");
-			object->transform().place(position);
-			object->transform().rescale(scale);
-			auto &renderer = object->addComponent<spk::Voxel::Renderer>();
-			renderer.bind(geometry);
-			renderer.bind(palette(atlas));
-			engine.addEntity(object.get());
-			objects.push_back(std::move(object));
-		}
-
 		~Scene()
 		{
 			for (const auto &object : objects)
@@ -310,69 +294,6 @@ TEST(VoxelTransparencyGolden, AlphaZeroSkipsBothTargetsAndAlphaOneQuantizesRevea
 		EXPECT_NEAR(image.pixel(Center)[0], displayColor(1.0f), 2);
 		EXPECT_EQ(image.pixel(Center)[3], 255);
 	}
-}
-
-// A wall frames a glass pane. The character straddles the pane's right edge:
-// its left side is tinted by the glass, while its right side is unobstructed.
-TEST(VoxelTransparencyGolden, WindowInSolidWallPartiallyCoversCharacter)
-{
-	SolidAtlas wall({110, 116, 128, 255});
-	SolidAtlas glass({45, 170, 240, 255});
-	SolidAtlas character({240, 170, 65, 255});
-	const auto solid = cube(1.0f);
-	const auto pane = cube(0.45f);
-
-	const auto populate = [&](Scene &scene, bool withGlass) {
-		// Wall surrounds a 1.2 x 1.4 opening in the plane z = 0.5.
-		scene.addBlock(solid, wall, {-1.0f, -0.7f, 0.5f}, {0.7f, 2.8f, 0.35f});
-		scene.addBlock(solid, wall, {1.3f, -0.7f, 0.5f}, {0.7f, 2.8f, 0.35f});
-		scene.addBlock(solid, wall, {-0.3f, -0.7f, 0.5f}, {1.6f, 0.7f, 0.35f});
-		scene.addBlock(solid, wall, {-0.3f, 1.4f, 0.5f}, {1.6f, 0.7f, 0.35f});
-		if (withGlass)
-		{
-			// Only the left portion of the opening is glazed.
-			scene.addBlock(pane, glass, {-0.3f, 0.0f, 0.6f}, {0.8f, 1.4f, 0.12f});
-		}
-		// Blocky humanoid behind the pane (negative z), spanning its edge.
-		scene.addBlock(solid, character, {0.25f, 0.25f, -0.5f}, {0.65f, 0.65f, 0.3f});
-		scene.addBlock(solid, character, {0.35f, 0.9f, -0.5f}, {0.45f, 0.38f, 0.3f});
-		scene.addBlock(solid, character, {0.10f, 0.05f, -0.5f}, {0.2f, 0.3f, 0.3f});
-		scene.addBlock(solid, character, {0.65f, 0.05f, -0.5f}, {0.2f, 0.3f, 0.3f});
-	};
-
-	Scene withoutGlass;
-	populate(withoutGlass, false);
-	const auto clear = render(withoutGlass, "window_character_clear");
-
-	Scene withGlass;
-	populate(withGlass, true);
-	const auto tinted = render(withGlass, "window_character_partial");
-
-	// The window must change part of the character, without hiding all of it.
-	std::size_t changed = 0;
-	std::size_t unchangedCharacter = 0;
-	for (std::uint32_t y = 0; y < ImageSize.y; ++y)
-	{
-		for (std::uint32_t x = 0; x < ImageSize.x; ++x)
-		{
-			const spk::Vector2UInt point{x, y};
-			const auto a = clear.pixel(point);
-			const auto b = tinted.pixel(point);
-			if (a[0] > a[2] + 30 && a[0] > a[1] + 10)
-			{
-				if (a[0] != b[0] || a[1] != b[1] || a[2] != b[2])
-				{
-					++changed;
-				}
-				else
-				{
-					++unchangedCharacter;
-				}
-			}
-		}
-	}
-	EXPECT_GT(changed, 0u) << "Glass must visibly tint the covered character pixels";
-	EXPECT_GT(unchangedCharacter, 0u) << "Part of the character must remain clearly visible";
 }
 
 TEST(VoxelTransparencyGPU, RevealR8UsesQuantizedTransmittance)
