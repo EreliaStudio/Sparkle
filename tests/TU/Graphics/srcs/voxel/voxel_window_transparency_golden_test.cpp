@@ -164,8 +164,7 @@ namespace
 		const spk::Texture &eyes)
 	{
 		spk::Voxel::Palette::Builder builder;
-		const auto add = [&builder](const char *name, const spk::Texture &texture)
-		{
+		const auto add = [&builder](const char *name, const spk::Texture &texture) {
 			spk::Material::Builder material;
 			material.add("albedo", texture);
 			builder.setMaterial(name, material.build());
