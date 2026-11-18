@@ -1,0 +1,40 @@
+name: PR26 one-shot formatting
+on:
+  push:
+    branches:
+      - impl/v0.1.4/26-model3d-animator
+    paths:
+      - .github/workflows/pr26-format-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/26-model3d-animator
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install clang-format==21.1.0
+      - name: Format changed PR26 C++ files
+        shell: bash
+        run: |
+          clang-format -i --style=file \
+            include/model3d/animation.hpp \
+            include/model3d/animator.hpp \
+            src/model3d/animation.cpp \
+            src/model3d/animator.cpp \
+            tests/TU/Core/srcs/model3d/animator_test.cpp \
+            tests/TU/Graphics/srcs/model3d/object_preview_test.cpp
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --quiet; then
+            git add include/model3d/animation.hpp include/model3d/animator.hpp src/model3d/animation.cpp src/model3d/animator.cpp tests/TU/Core/srcs/model3d/animator_test.cpp tests/TU/Graphics/srcs/model3d/object_preview_test.cpp
+            git commit -m 'style: clang-format PR26 Step API changes'
+            git push origin HEAD:impl/v0.1.4/26-model3d-animator
+          fi
