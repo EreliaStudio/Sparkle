@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "model3d/animator.hpp"
+#include "sparkle_test/gif_comparison.hpp"
 
 #include <cmath>
 #include <cstdint>

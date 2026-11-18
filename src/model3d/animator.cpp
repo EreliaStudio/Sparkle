@@ -136,7 +136,9 @@ namespace spk::Model3D
 			Running &active = *it;
 			const double elapsed = active.time + static_cast<double>(deltaSeconds);
 			const double duration = static_cast<double>(active.animation.duration());
-			if (!active.loop && elapsed >= duration)
+			// Clip timestamps use float precision; compare at that precision so
+			// 0.9f + 0.1f completes exactly like a single 1.0f update.
+			if (!active.loop && static_cast<float>(elapsed) >= active.animation.duration())
 			{
 				// A completed one-shot releases its entire mask and restores the
 				// pose that was present before play(), including scale.

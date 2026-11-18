@@ -204,6 +204,7 @@ TEST(Model3DAnimatorTest, CopiesOfBlueprintAreIndependentAndStopAllReleasesMasks
 	EXPECT_TRUE(a.play(clip).started);
 	EXPECT_TRUE(b.play(clip).started);
 	a.update(0.5f);
+	b.update(0.25f);
 	EXPECT_NE(first.attachment("torso", "shoulder").transform(), second.attachment("torso", "shoulder").transform());
 	a.stopAll();
 	EXPECT_EQ(a.activeCount(), 0u);
