@@ -1,0 +1,63 @@
+name: PR26 one-shot translation Golden GIF import
+on:
+  push:
+    branches:
+      - impl/v0.1.4/26-model3d-animator
+    paths:
+      - .github/workflows/pr26-import-translation-gif.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  import-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: impl/v0.1.4/26-model3d-animator
+          fetch-depth: 0
+      - name: Download the checked Debug Graphics test evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 44409543580 --repo EreliaStudio/Sparkle --name graphics-unit-tests-Debug --dir /tmp/pr26-graphics
+          find /tmp/pr26-graphics -name '*animator*gif' -print
+      - name: Validate and import the generated 12-frame reference
+        shell: bash
+        run: |
+          python -m pip install pillow
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          from PIL import Image, ImageSequence
+          root = Path('/tmp/pr26-graphics')
+          paths = list(root.rglob('animator_scaling_actual.gif'))
+          assert len(paths) == 1, paths
+          source = paths[0]
+          with Image.open(source) as image:
+              assert image.format == 'GIF', image.format
+              assert image.n_frames == 12, image.n_frames
+              frames = [frame.copy().convert('RGB') for frame in ImageSequence.Iterator(image)]
+              durations = [frame.info.get('duration', 0) for frame in ImageSequence.Iterator(image)]
+          assert durations == [100] * 12, durations
+          destination = Path('tests/TU/Graphics/resources/expectedImages/rendering/model3d/animator_scaling_expected.gif')
+          destination.parent.mkdir(parents=True, exist_ok=True)
+          # Use exactly the source renderer's quantized pixels; do not add colour errors.
+          shutil.copyfile(source, destination)
+          with Image.open(destination) as check:
+              assert check.n_frames == 12
+              actual = [frame.copy().convert('RGB') for frame in ImageSequence.Iterator(check)]
+          assert all(a.tobytes() == b.tobytes() for a, b in zip(frames, actual))
+          print('Reference:', destination, 'bytes:', destination.stat().st_size)
+          PY
+      - name: Commit the translation and easing Golden GIF
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/TU/Graphics/resources/expectedImages/rendering/model3d/animator_scaling_expected.gif
+          git commit -m 'test: refresh scaling Golden GIF for element translation and easing'
+          git push origin HEAD:impl/v0.1.4/26-model3d-animator
