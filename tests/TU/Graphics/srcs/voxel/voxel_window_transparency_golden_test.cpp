@@ -31,7 +31,6 @@
 namespace
 {
 	constexpr spk::Vector2UInt WindowImageSize{320, 240};
-	constexpr std::uint32_t HalfImageX = WindowImageSize.x / 2;
 	constexpr const char *WindowGoldenCategory = "rendering/voxel-transparency-windows";
 
 	class SolidColorTexture final : public spk::Texture
@@ -237,9 +236,11 @@ namespace
 
 		spk::EngineView &_createView(float focusX)
 		{
-			const spk::Vector3 eye{focusX, 1.0f, 7.0f};
+			// A shallow three-quarter view exposes voxel thickness and the glass/wall side faces.
+			const spk::Vector3 eye{focusX + 1.7f, 2.35f, 6.2f};
+			const spk::Vector3 target{focusX, 1.0f, 0.0f};
 			cameraEntity.transform().place(eye);
-			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {focusX, 1.0f, 0.0f}));
+			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, target));
 			camera.setPerspective(
 				0.82f,
 				static_cast<float>(WindowImageSize.x) / WindowImageSize.y,
@@ -397,7 +398,7 @@ TEST(VoxelTransparencyWindowGolden, FramedGlassShowsCharacterBehindWindow)
 	EXPECT_GT(differentPixels(throughGlass, withoutCharacter, 0, WindowImageSize.x), 40u);
 	EXPECT_GT(differentPixels(throughGlass, withoutGlass, 0, WindowImageSize.x), 40u);
 	EXPECT_TRUE(samePixel(throughGlass, withoutGlass, {2, 2}));
-	EXPECT_EQ(throughGlass.pixel({HalfImageX, WindowImageSize.y / 2})[3], 255);
+	EXPECT_EQ(throughGlass.pixel({WindowImageSize.x / 2, WindowImageSize.y / 2})[3], 255);
 }
 
 TEST(VoxelTransparencyWindowGolden, CharacterStraddlesGlassAndUncoveredHalf)
@@ -415,22 +416,48 @@ TEST(VoxelTransparencyWindowGolden, CharacterStraddlesGlassAndUncoveredHalf)
 	populateWindow(noCharacter, assets, true, true, false, 1.0f);
 	const auto emptyOpening = renderWindow(noCharacter);
 
-	EXPECT_GT(differentPixels(glassAndClear, entirelyClear, 0, HalfImageX - 4), 40u);
-	EXPECT_EQ(differentPixels(glassAndClear, entirelyClear, HalfImageX + 4, WindowImageSize.x), 0u);
-	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, 0, HalfImageX - 4), 20u);
-	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, HalfImageX + 4, WindowImageSize.x), 20u);
-	EXPECT_EQ(glassAndClear.pixel({HalfImageX, WindowImageSize.y / 2})[3], 255);
+	WindowScene emptyClear(1.0f);
+	populateWindow(emptyClear, assets, true, false, false, 1.0f);
+	const auto emptyWithoutGlass = renderWindow(emptyClear);
+
+	// Under an oblique camera the projected glass boundary is not at the screen midpoint.
+	// Compare only pixels where the character is visible in the glass-free reference.
+	std::size_t characterBehindGlass = 0;
+	std::size_t characterOutsideGlass = 0;
+	for (std::uint32_t y = 0; y < WindowImageSize.y; ++y)
+	{
+		for (std::uint32_t x = 0; x < WindowImageSize.x; ++x)
+		{
+			const spk::Vector2UInt pixel{x, y};
+			if (samePixel(entirelyClear, emptyWithoutGlass, pixel))
+			{
+				continue;
+			}
+			if (samePixel(glassAndClear, entirelyClear, pixel))
+			{
+				++characterOutsideGlass;
+			}
+			else
+			{
+				++characterBehindGlass;
+			}
+		}
+	}
+	EXPECT_GT(characterBehindGlass, 20u);
+	EXPECT_GT(characterOutsideGlass, 20u);
+	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, 0, WindowImageSize.x), 40u);
+	EXPECT_EQ(glassAndClear.pixel({WindowImageSize.x / 2, WindowImageSize.y / 2})[3], 255);
 }
 
 TEST(VoxelTransparencyWindowGolden, OpaqueWallFullyOccludesCharacterOutsideOpening)
 {
 	WindowAssets assets;
 	WindowScene wall(0.5f);
-	populateWindow(wall, assets, false, true, false, 2.0f);
+	populateWindow(wall, assets, false, true, false, 2.5f);
 	const auto emptyWall = renderWindow(wall);
 
 	WindowScene hidden(0.5f);
-	populateWindow(hidden, assets, false, true, true, 2.0f);
+	populateWindow(hidden, assets, false, true, true, 2.5f);
 	const auto hiddenCharacter = renderWindow(hidden, "window_wall_hides_character");
 
 	EXPECT_EQ(hiddenCharacter.pixels, emptyWall.pixels);
