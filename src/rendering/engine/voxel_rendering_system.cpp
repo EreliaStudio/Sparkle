@@ -97,7 +97,8 @@ namespace spk::Voxel
 			{
 				continue;
 			}
-			if (renderer->geometry()->opaqueMesh().empty())
+			if (renderer->geometry()->opaqueMesh().empty() &&
+				renderer->geometry()->transparentMesh().empty())
 			{
 				continue;
 			}
@@ -111,14 +112,14 @@ namespace spk::Voxel
 		const auto camera = std::make_shared<const CameraUniformRenderCommand>(context.cameraSnapshot);
 		for (auto &bucket : buckets)
 		{
-			auto &pass = builder.renderPass(spk::EngineView::OpaquePassKey);
-			pass.emplace<spk::DrawVoxelCommand>(
-				std::move(bucket.geometry),
-				bucket.palette,
-				std::move(bucket.materialRemap),
-				std::move(bucket.models),
-				lighting,
-				camera);
+			if (!bucket.geometry.opaqueMesh().empty())
+			{
+				builder.renderPass(spk::EngineView::OpaquePassKey).emplace<spk::DrawVoxelCommand>(bucket.geometry, bucket.palette, bucket.materialRemap, bucket.models, lighting, camera, spk::DrawVoxelCommand::Mode::Opaque);
+			}
+			if (!bucket.geometry.transparentMesh().empty())
+			{
+				builder.renderPass(spk::EngineView::WBOITPassKey).emplace<spk::DrawVoxelCommand>(std::move(bucket.geometry), bucket.palette, std::move(bucket.materialRemap), std::move(bucket.models), lighting, camera, spk::DrawVoxelCommand::Mode::Translucent);
+			}
 		}
 	}
 }

@@ -19,6 +19,13 @@ namespace spk
 {
 	class DrawVoxelCommand final : public RenderCommand
 	{
+	public:
+		enum class Mode
+		{
+			Opaque,
+			Translucent
+		};
+
 	private:
 		struct alignas(8) MaterialData
 		{
@@ -36,17 +43,20 @@ namespace spk
 		static constexpr std::size_t MaterialBinding = 1;
 		static constexpr std::size_t MaterialRemapBinding = 2;
 		static constexpr std::size_t AlbedoUnit = 0;
+		static constexpr std::size_t SlotOpacityBinding = 5;
 
+		Mode _mode;
 		Voxel::Geometry _geometry;
 		Program _program;
 		ShaderStorageBuffer _instances;
 		ShaderStorageBuffer _materials;
 		ShaderStorageBuffer _materialRemap;
+		ShaderStorageBuffer _slotOpacities;
 		Sampler _albedo;
 		std::shared_ptr<const Lighting::System> _lighting;
 		std::shared_ptr<const CameraUniformRenderCommand> _camera;
 
-		[[nodiscard]] static Program &_sharedProgram();
+		[[nodiscard]] static Program &_sharedProgram(Mode mode);
 		[[nodiscard]] static std::vector<MaterialData> _resolveMaterials(
 			const Palette &palette, Texture::Handle &atlas);
 
@@ -57,14 +67,16 @@ namespace spk
 			std::vector<std::uint32_t> materialRemap,
 			std::vector<Matrix4x4> models,
 			std::shared_ptr<const Lighting::System> lighting,
-			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
+			std::shared_ptr<const CameraUniformRenderCommand> camera = {},
+			Mode mode = Mode::Opaque);
 		DrawVoxelCommand(
 			Voxel::Geometry geometry,
 			const Palette &palette,
 			std::vector<std::uint32_t> materialRemap,
 			Matrix4x4 model,
 			std::shared_ptr<const Lighting::System> lighting,
-			std::shared_ptr<const CameraUniformRenderCommand> camera = {});
+			std::shared_ptr<const CameraUniformRenderCommand> camera = {},
+			Mode mode = Mode::Opaque);
 
 		void execute(RenderContext &context) const override;
 	};

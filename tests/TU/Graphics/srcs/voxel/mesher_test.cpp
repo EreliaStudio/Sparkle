@@ -56,6 +56,16 @@ namespace
 		return Definition(shape, std::move(mapping));
 	}
 
+	[[nodiscard]] Definition uniformDefinition(const Shape &shape, const std::string &material, float opacity)
+	{
+		Definition::SlotMapping mapping;
+		for (const auto &slot : shape.slots())
+		{
+			mapping.emplace(slot.name, Definition::Slot{material, opacity});
+		}
+		return Definition(shape, std::move(mapping));
+	}
+
 	[[nodiscard]] Definition::Registry registry(const std::vector<Definition> &definitions)
 	{
 		Definition::Registry::Builder builder;
@@ -453,16 +463,50 @@ TEST(MesherGeometry, TransparentNeighborDoesNotOccludeOpaqueShadow)
 	expectShadowGeometryMatchesOpaque(model);
 }
 
-TEST(MesherGeometry, TransparentNeighborsRetainInternalFacesWithoutShadows)
+TEST(MesherGeometry, MatchingTranslucentNeighborsCullTheirSharedFaces)
 {
-	const auto glass = definition(fixture("cube"), "glass_", 0.5f);
-	const Geometry model = Mesher().bake(pair(glass, {}, glass, {}, Face::PositiveX));
+	const auto glass = uniformDefinition(fixture("cube"), "glass", 0.5f);
+	for (const Face face : Faces)
+	{
+		SCOPED_TRACE(static_cast<unsigned>(face));
+		const auto volume = pair(glass, {}, glass, {}, face);
+		const Geometry model = Mesher().bake(volume);
+		EXPECT_TRUE(model.opaqueMesh().empty());
+		EXPECT_TRUE(model.depthMesh().empty());
+		EXPECT_EQ(model.transparentMesh().indexCount(), 60u);
+		EXPECT_NEAR(visualArea(model.transparentMesh()), 10.0f, 1.0e-5f);
+		expectValidTriangles(model, model.transparentMesh(), 0.5f);
+		expectShadowGeometryMatchesOpaque(model);
+
+		Occlusion::Cache cache;
+		Mesher cached;
+		cached.attachCache(cache);
+		expectEqual(model, cached.bake(volume));
+	}
+}
+
+TEST(MesherGeometry, DifferentTranslucentMaterialsRetainInternalFaces)
+{
+	const auto cube = fixture("cube");
+	const auto blue = uniformDefinition(cube, "blue_glass", 0.5f);
+	const auto green = uniformDefinition(cube, "green_glass", 0.5f);
+	const Geometry model = Mesher().bake(pair(blue, {}, green, {}, Face::PositiveY));
 	EXPECT_TRUE(model.opaqueMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
 	EXPECT_EQ(model.transparentMesh().indexCount(), 72u);
 	EXPECT_NEAR(visualArea(model.transparentMesh()), 12.0f, 1.0e-5f);
 	expectValidTriangles(model, model.transparentMesh(), 0.5f);
-	expectShadowGeometryMatchesOpaque(model);
+}
+
+TEST(MesherGeometry, MatchingTranslucentSlabClipsOnlyCoveredInterface)
+{
+	const auto cube = uniformDefinition(fixture("cube"), "glass", 0.5f);
+	const auto slab = uniformDefinition(fixture("slab"), "glass", 0.5f);
+	const Geometry model = Mesher().bake(pair(cube, {}, slab, {}, Face::PositiveX));
+	EXPECT_TRUE(model.opaqueMesh().empty());
+	EXPECT_TRUE(model.depthMesh().empty());
+	EXPECT_NEAR(visualArea(model.transparentMesh()), 9.0f, 1.0e-5f);
+	expectValidTriangles(model, model.transparentMesh(), 0.5f);
 }
 
 TEST(MesherGeometry, CompletelyTransparentGeometryProducesNoShadow)
