@@ -1,3 +1,4 @@
+#include <array>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
@@ -81,6 +82,9 @@ TEST(Model3DAnimationTest, RejectsInvalidDurationAndStepsWithoutChangingTheClip)
 	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"", {1, 1, 1}}}}), std::invalid_argument);
 	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}, {"torso", "shoulder", {}}}}), std::invalid_argument);
 	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}, {"torso", {1, 1, 1}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}, {std::numeric_limits<float>::infinity(), 0, 0}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}, {}, static_cast<Animation::Interpolation>(99)}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}, static_cast<Animation::Interpolation>(99)}}}), std::invalid_argument);
 
 	builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 2}}}});
 
@@ -117,6 +121,74 @@ TEST(Model3DAnimatorTest, InterpolatesArticulationsAndBodyScaleIndependently)
 	EXPECT_EQ(shoulder.rotation(), spk::Quaternion::identity());
 	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1, 1}));
 	EXPECT_EQ(object.element("hand").globalTransform(), handBefore);
+}
+
+TEST(Model3DAnimationTest, InterpolationCurvesApplyToRotationTranslationAndScale)
+{
+	using Curve = Animation::Interpolation;
+	struct Expected
+	{
+		Curve interpolation;
+		float alpha;
+	};
+	const std::array<Expected, 4> cases{{
+		{Curve::Linear, 0.5f},
+		{Curve::Quadratic, 0.25f},
+		{Curve::Cubic, 0.125f},
+		{Curve::Logarithmic, std::log1p(4.5f) / std::log1p(9.0f)}}};
+
+	for (const auto &test : cases)
+	{
+		Animation::Builder builder;
+		builder.addStep({
+			.time = 0.0f,
+			.articulations = {{"torso", "shoulder", spk::Quaternion::identity()}},
+			.bodies = {{"arm", {1, 1, 1}, {0, 0, 0}}}});
+		builder.addStep({
+			.time = 1.0f,
+			.articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90}), test.interpolation}},
+			.bodies = {{"arm", {1, 3, 1}, {4, 0, 0}, test.interpolation}}});
+		const Animation clip = builder.build();
+		EXPECT_FLOAT_EQ(clip.duration(), 1.0f);
+		ObjectHeadless object(characterBlueprint());
+		Animator animator(object);
+		const auto handle = animator.play(clip);
+		animator.update(0.5f);
+		EXPECT_NEAR(object.element("arm").scale().y, 1.0f + 2.0f * test.alpha, 0.0001f);
+		EXPECT_NEAR(object.element("arm").translation().x, 4.0f * test.alpha, 0.0001f);
+		const auto expectedRotation = spk::Quaternion::slerp(
+			spk::Quaternion::identity(), spk::Quaternion::fromEuler({0, 0, 90}), test.alpha);
+		EXPECT_NEAR(std::fabs(object.attachment("torso", "shoulder").rotation().dot(expectedRotation)), 1.0f, 0.0001f);
+		EXPECT_TRUE(animator.stop(handle));
+		EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{}));
+	}
+}
+
+TEST(Model3DAnimatorTest, ElementTranslationPreservesHierarchyCopiesAndRestoresInitialPose)
+{
+	ObjectHeadless object(characterBlueprint());
+	const float before = object.element("hand").globalTransform()[3][1];
+	object.element("arm").setTranslation({0, 0.5f, 0});
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
+	EXPECT_NEAR(object.element("hand").globalTransform()[3][1], before + 0.5f, 0.0001f);
+	ObjectHeadless copy(object);
+	EXPECT_EQ(copy.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
+	EXPECT_EQ(copy.element("hand").globalTransform(), object.element("hand").globalTransform());
+	EXPECT_THROW(object.element("arm").setTranslation({std::numeric_limits<float>::quiet_NaN(), 0, 0}), spk::Exception);
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
+
+	Animation::Builder builder;
+	builder.addStep({.time = 0.0f, .bodies = {{"arm", {1, 1, 1}, {0, 0.5f, 0}}}});
+	builder.addStep({.time = 1.0f, .bodies = {{"arm", {1, 2, 1}, {0, 1.5f, 0}}}});
+	Animator animator(object);
+	const auto handle = animator.play(builder.build());
+	animator.update(0.5f);
+	EXPECT_NEAR(object.element("arm").translation().y, 1.0f, 0.0001f);
+	EXPECT_NEAR(object.element("arm").scale().y, 1.5f, 0.0001f);
+	EXPECT_TRUE(animator.stop(handle));
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1, 1}));
+	EXPECT_EQ(object.element("hand").globalTransform(), copy.element("hand").globalTransform());
 }
 
 TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToChildren)
