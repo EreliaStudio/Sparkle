@@ -63,11 +63,11 @@ namespace spk::Model3D
 			std::vector<Keyframe> keyframes;
 		};
 
-		float _duration;
+		float _duration = 0.0f;
 		std::vector<Step> _steps;
 		std::vector<Channel> _channels;
 
-		explicit Animation(float duration);
+		Animation() = default;
 
 	public:
 		[[nodiscard]] float duration() const noexcept;
@@ -84,7 +84,7 @@ namespace spk::Model3D
 		Builder &_reserve(Animation::Target target);
 
 	public:
-		explicit Builder(float duration);
+		Builder();
 
 		Builder(const Builder &) = delete;
 		Builder &operator=(const Builder &) = delete;
@@ -92,13 +92,16 @@ namespace spk::Model3D
 		Builder &operator=(Builder &&) noexcept = default;
 
 		// Steps are ordered and each can animate multiple independent targets.
+		// The last step defines the duration, which must be positive.
 		Builder &addStep(Step step);
 
 		// Reserve a target without providing keyframes for it.
 		Builder &reserveArticulation(std::string elementName, std::string attachmentName);
 		Builder &reserveBody(std::string elementName);
 
-		// Finishes the builder; subsequent operations are rejected.
+		// Finishes the builder; requires a final step after t=0.
+		// For a mask-only animation, use an empty step at its end time.
+		// Subsequent operations are rejected.
 		[[nodiscard]] Animation build();
 	};
 }
