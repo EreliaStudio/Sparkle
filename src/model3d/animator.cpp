@@ -4,35 +4,13 @@
 #include <cmath>
 #include <iterator>
 #include <stdexcept>
+#include <string>
 #include <utility>
+
+#include "exception.hpp"
 
 namespace spk::Model3D
 {
-	namespace
-	{
-		[[nodiscard]] Animation::Keyframe sample(const Animation::Track &track, float time)
-		{
-			const auto &keys = track.keyframes;
-			if (time <= keys.front().time)
-			{
-				return keys.front();
-			}
-			if (time >= keys.back().time)
-			{
-				return keys.back();
-			}
-			const auto upper = std::upper_bound(keys.begin(), keys.end(), time, [](float value, const Animation::Keyframe &key) {
-				return value < key.time;
-			});
-			const auto lower = std::prev(upper);
-			const float alpha = (time - lower->time) / (upper->time - lower->time);
-			return {
-				time,
-				Quaternion::slerp(lower->rotation, upper->rotation, alpha),
-				Vector3::lerp(lower->scale, upper->scale, alpha)};
-		}
-	}
-
 	Animator::Animator(ObjectHeadless &object) noexcept :
 		_object(object)
 	{
@@ -43,24 +21,58 @@ namespace spk::Model3D
 		stopAll();
 	}
 
+	Animation::Keyframe Animator::_sample(
+		const Animation::Channel &channel,
+		const StartPose &initial,
+		float time)
+	{
+		const auto &keys = channel.keyframes;
+		if (time <= keys.front().time)
+		{
+			if (keys.front().time == 0.0f)
+			{
+				return keys.front();
+			}
+			// A target introduced later starts from the instance's captured pose.
+			const float alpha = time / keys.front().time;
+			return {
+				time,
+				Quaternion::slerp(initial.rotation, keys.front().rotation, alpha),
+				Vector3::lerp(initial.scale, keys.front().scale, alpha)};
+		}
+		if (time >= keys.back().time)
+		{
+			return keys.back();
+		}
+		const auto upper = std::upper_bound(keys.begin(), keys.end(), time, [](float value, const Animation::Keyframe &key) {
+			return value < key.time;
+		});
+		const auto lower = std::prev(upper);
+		const float alpha = (time - lower->time) / (upper->time - lower->time);
+		return {
+			time,
+			Quaternion::slerp(lower->rotation, upper->rotation, alpha),
+			Vector3::lerp(lower->scale, upper->scale, alpha)};
+	}
+
 	void Animator::_apply(const Running &running, float time)
 	{
-		for (const auto &track : running.animation.tracks())
+		const auto &channels = running.animation._channels;
+		for (std::size_t index = 0; index < channels.size(); ++index)
 		{
-			if (track.keyframes.empty())
+			const auto &channel = channels[index];
+			if (channel.keyframes.empty())
 			{
 				continue;
 			}
-			const auto value = sample(track, time);
-			if (track.target.attachmentName.empty())
+			const auto value = _sample(channel, running.initial[index], time);
+			if (channel.target.attachmentName.empty())
 			{
-				_object.element(track.target.elementName).setScale(value.scale);
+				_object.element(channel.target.elementName).setScale(value.scale);
 			}
 			else
 			{
-				auto &joint = _object.attachment(track.target.elementName, track.target.attachmentName);
-				joint.setRotation(value.rotation);
-				joint.setScale(value.scale);
+				_object.attachment(channel.target.elementName, channel.target.attachmentName).setRotation(value.rotation);
 			}
 		}
 	}
@@ -75,54 +87,61 @@ namespace spk::Model3D
 			}
 			else
 			{
-				auto &joint = _object.attachment(pose.target.elementName, pose.target.attachmentName);
-				joint.setRotation(pose.rotation);
-				joint.setScale(pose.scale);
+				_object.attachment(pose.target.elementName, pose.target.attachmentName).setRotation(pose.rotation);
 			}
 		}
 	}
 
-	Animator::PlayResult Animator::play(Animation animation, bool loop)
+	Animator::Handle Animator::play(const Animation &animation, bool loop)
 	{
-		if (animation.tracks().empty())
+		if (animation._channels.empty())
 		{
-			throw std::invalid_argument("Animator cannot play an animation without any tracks");
+			throw std::invalid_argument("Animator cannot play an animation without any targets");
 		}
-		std::vector<StartPose> initial;
-		initial.reserve(animation.tracks().size());
-		for (const auto &track : animation.tracks())
-		{
-			StartPose pose{track.target, Quaternion::identity(), {1.0f, 1.0f, 1.0f}};
-			// Validate every target before changing any joint or reserving a mask.
-			if (track.target.attachmentName.empty())
-			{
-				pose.scale = _object.element(track.target.elementName).scale();
-			}
-			else
-			{
-				const auto &joint = _object.attachment(track.target.elementName, track.target.attachmentName);
-				pose.rotation = joint.rotation();
-				pose.scale = joint.scale();
-			}
-			initial.push_back(std::move(pose));
-		}
-		for (const auto &track : animation.tracks())
+
+		// Reject conflicts before changing the pose or registering the animation.
+		for (const auto &channel : animation._channels)
 		{
 			for (const auto &active : _running)
 			{
-				for (const auto &held : active.animation.tracks())
+				for (const auto &held : active.animation._channels)
 				{
-					if (track.target == held.target)
+					if (channel.target == held.target)
 					{
-						return {false, 0, Conflict{track.target, active.handle}};
+						const bool body = channel.target.attachmentName.empty();
+						const std::string target = channel.target.elementName +
+							(body ? "" : "/" + channel.target.attachmentName);
+						throw spk::Exception(
+							"Animation conflict: " + std::string(body ? "body " : "articulation ") +
+							target + " is already controlled by animation #" + std::to_string(active.handle));
 					}
 				}
 			}
 		}
-		const Handle handle = _nextHandle++;
-		_running.push_back({handle, std::move(animation), 0.0, loop, std::move(initial)});
+
+		std::vector<StartPose> initial;
+		initial.reserve(animation._channels.size());
+		for (const auto &channel : animation._channels)
+		{
+			StartPose pose{channel.target, Quaternion::identity(), {1.0f, 1.0f, 1.0f}};
+			// Validate every target before touching any pose.
+			if (channel.target.attachmentName.empty())
+			{
+				pose.scale = _object.element(channel.target.elementName).scale();
+			}
+			else
+			{
+				const auto &joint = _object.attachment(channel.target.elementName, channel.target.attachmentName);
+				pose.rotation = joint.rotation();
+			}
+			initial.push_back(std::move(pose));
+		}
+
+		const Handle handle = _nextHandle;
+		_running.push_back({handle, animation, 0.0, loop, std::move(initial)});
+		++_nextHandle;
 		_apply(_running.back(), 0.0f);
-		return {true, handle, std::nullopt};
+		return handle;
 	}
 
 	void Animator::update(float deltaSeconds)
@@ -140,8 +159,6 @@ namespace spk::Model3D
 			// 0.9f + 0.1f completes exactly like a single 1.0f update.
 			if (!active.loop && static_cast<float>(elapsed) >= active.animation.duration())
 			{
-				// A completed one-shot releases its entire mask and restores the
-				// pose that was present before play(), including scale.
 				_restore(active);
 				it = _running.erase(it);
 				continue;
