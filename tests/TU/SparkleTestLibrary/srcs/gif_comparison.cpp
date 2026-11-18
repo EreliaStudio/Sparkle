@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iterator>
 #include <limits>
+#include <map>
+#include <unordered_map>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -23,12 +25,67 @@ namespace
 		output.push_back(static_cast<Byte>((value >> 8) & 255));
 	}
 
-	[[nodiscard]] Byte paletteIndex(const Byte *rgba)
+	struct IndexedFrame
 	{
-		return static_cast<Byte>((rgba[0] & 0xe0) | ((rgba[1] & 0xe0) >> 3) | (rgba[2] >> 6));
+		std::array<std::uint32_t, 256> palette{};
+		std::vector<Byte> pixels;
+	};
+
+	[[nodiscard]] IndexedFrame quantize(const sparkle_test::FramebufferImage &frame)
+	{
+		// Use an independent 256-colour palette for each frame. Flat-shaded voxel
+		// scenes retain their main colours exactly; only rare colours are mapped
+		// to the nearest representative, deterministically.
+		std::map<std::uint32_t, std::size_t> histogram;
+		for (std::size_t index = 0; index < frame.pixels.size(); index += 4)
+		{
+			const std::uint32_t color = (static_cast<std::uint32_t>(frame.pixels[index]) << 16) |
+				(static_cast<std::uint32_t>(frame.pixels[index + 1]) << 8) | frame.pixels[index + 2];
+			++histogram[color];
+		}
+		std::vector<std::pair<std::uint32_t, std::size_t>> ranked(histogram.begin(), histogram.end());
+		std::sort(ranked.begin(), ranked.end(), [](const auto &a, const auto &b) {
+			return a.second != b.second ? a.second > b.second : a.first < b.first;
+		});
+		IndexedFrame result;
+		const std::size_t count = std::min<std::size_t>(256, ranked.size());
+		for (std::size_t index = 0; index < count; ++index)
+		{
+			result.palette[index] = ranked[index].first;
+		}
+		std::unordered_map<std::uint32_t, Byte> lookup;
+		lookup.reserve(histogram.size());
+		for (const auto &[rgb, frequency] : histogram)
+		{
+			(void)frequency;
+			int bestDistance = std::numeric_limits<int>::max();
+			std::size_t bestIndex = 0;
+			for (std::size_t index = 0; index < count; ++index)
+			{
+				const std::uint32_t chosen = result.palette[index];
+				const int dr = static_cast<int>((rgb >> 16) & 255) - static_cast<int>((chosen >> 16) & 255);
+				const int dg = static_cast<int>((rgb >> 8) & 255) - static_cast<int>((chosen >> 8) & 255);
+				const int db = static_cast<int>(rgb & 255) - static_cast<int>(chosen & 255);
+				const int distance = dr * dr + dg * dg + db * db;
+				if (distance < bestDistance)
+				{
+					bestDistance = distance;
+					bestIndex = index;
+				}
+			}
+			lookup.emplace(rgb, static_cast<Byte>(bestIndex));
+		}
+		result.pixels.reserve(frame.pixels.size() / 4);
+		for (std::size_t index = 0; index < frame.pixels.size(); index += 4)
+		{
+			const std::uint32_t color = (static_cast<std::uint32_t>(frame.pixels[index]) << 16) |
+				(static_cast<std::uint32_t>(frame.pixels[index + 1]) << 8) | frame.pixels[index + 2];
+			result.pixels.push_back(lookup.at(color));
+		}
+		return result;
 	}
 
-	[[nodiscard]] std::vector<Byte> encodeLzw(const sparkle_test::FramebufferImage &frame)
+	[[nodiscard]] std::vector<Byte> encodeLzw(const std::vector<Byte> &pixels)
 	{
 		// A valid GIF LZW stream can reset the dictionary before it grows past
 		// 9-bit codes. This deliberately simple encoding is test-only.
@@ -46,14 +103,13 @@ namespace
 			}
 		};
 		emit(256);
-		const std::size_t pixels = static_cast<std::size_t>(frame.size.x) * frame.size.y;
-		for (std::size_t index = 0; index < pixels; ++index)
+		for (std::size_t index = 0; index < pixels.size(); ++index)
 		{
 			if (index != 0 && index % 200 == 0)
 			{
 				emit(256);
 			}
-			emit(paletteIndex(frame.pixels.data() + index * 4));
+			emit(pixels[index]);
 		}
 		emit(257);
 		if (bitCount != 0)
@@ -156,17 +212,12 @@ namespace sparkle_test
 		std::vector<Byte> output{'G', 'I', 'F', '8', '9', 'a'};
 		append16(output, size.x);
 		append16(output, size.y);
-		output.insert(output.end(), {0xf7, 0, 0});
-		for (std::uint32_t index = 0; index < 256; ++index)
-		{
-			output.push_back(static_cast<Byte>(((index >> 5) & 7) * 255 / 7));
-			output.push_back(static_cast<Byte>(((index >> 2) & 7) * 255 / 7));
-			output.push_back(static_cast<Byte>((index & 3) * 255 / 3));
-		}
+		output.insert(output.end(), {0x70, 0, 0});
 		// Loop forever for convenient manual inspection.
 		output.insert(output.end(), {0x21, 0xff, 0x0b, 'N', 'E', 'T', 'S', 'C', 'A', 'P', 'E', '2', '.', '0', 0x03, 0x01, 0, 0, 0});
 		for (const auto &frame : frames)
 		{
+			const IndexedFrame indexed = quantize(frame);
 			output.insert(output.end(), {0x21, 0xf9, 0x04, 0x00});
 			append16(output, frameDelayMs / 10);
 			output.insert(output.end(), {0x00, 0x00});
@@ -175,9 +226,15 @@ namespace sparkle_test
 			append16(output, 0);
 			append16(output, size.x);
 			append16(output, size.y);
-			output.push_back(0);
+			output.push_back(0x87); // Frame-local 256-colour table.
+			for (std::uint32_t rgb : indexed.palette)
+			{
+				output.push_back(static_cast<Byte>((rgb >> 16) & 255));
+				output.push_back(static_cast<Byte>((rgb >> 8) & 255));
+				output.push_back(static_cast<Byte>(rgb & 255));
+			}
 			output.push_back(8);
-			const auto stream = encodeLzw(frame);
+			const auto stream = encodeLzw(indexed.pixels);
 			for (std::size_t offset = 0; offset < stream.size();)
 			{
 				const std::size_t count = std::min<std::size_t>(255, stream.size() - offset);
