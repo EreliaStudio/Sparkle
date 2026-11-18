@@ -266,8 +266,8 @@ namespace spk::Model3D
 		ObjectHeadless::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		Attachable(structuralParent, parentAttachment),
 		_definition(&definition),
-		_instanceData(&instanceData),
-		_localMatrix(definition.anchor())
+		_localMatrix(definition.anchor()),
+		_instanceData(&instanceData)
 	{
 		_attachments.reserve(definition.attachmentPoints().size());
 		_ownedChildren.reserve(definition.attachmentPoints().size());
