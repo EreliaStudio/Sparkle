@@ -6,9 +6,9 @@
 #include <iterator>
 #include <limits>
 #include <map>
-#include <unordered_map>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -40,7 +40,7 @@ namespace
 		for (std::size_t index = 0; index < frame.pixels.size(); index += 4)
 		{
 			const std::uint32_t color = (static_cast<std::uint32_t>(frame.pixels[index]) << 16) |
-				(static_cast<std::uint32_t>(frame.pixels[index + 1]) << 8) | frame.pixels[index + 2];
+										(static_cast<std::uint32_t>(frame.pixels[index + 1]) << 8) | frame.pixels[index + 2];
 			++histogram[color];
 		}
 		std::vector<std::pair<std::uint32_t, std::size_t>> ranked(histogram.begin(), histogram.end());
@@ -79,7 +79,7 @@ namespace
 		for (std::size_t index = 0; index < frame.pixels.size(); index += 4)
 		{
 			const std::uint32_t color = (static_cast<std::uint32_t>(frame.pixels[index]) << 16) |
-				(static_cast<std::uint32_t>(frame.pixels[index + 1]) << 8) | frame.pixels[index + 2];
+										(static_cast<std::uint32_t>(frame.pixels[index + 1]) << 8) | frame.pixels[index + 2];
 			result.pixels.push_back(lookup.at(color));
 		}
 		return result;
