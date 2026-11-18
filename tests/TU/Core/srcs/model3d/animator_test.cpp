@@ -131,23 +131,13 @@ TEST(Model3DAnimationTest, InterpolationCurvesApplyToRotationTranslationAndScale
 		Curve interpolation;
 		float alpha;
 	};
-	const std::array<Expected, 4> cases{{
-		{Curve::Linear, 0.5f},
-		{Curve::Quadratic, 0.25f},
-		{Curve::Cubic, 0.125f},
-		{Curve::Logarithmic, std::log1p(4.5f) / std::log1p(9.0f)}}};
+	const std::array<Expected, 4> cases{{{Curve::Linear, 0.5f}, {Curve::Quadratic, 0.25f}, {Curve::Cubic, 0.125f}, {Curve::Logarithmic, std::log1p(4.5f) / std::log1p(9.0f)}}};
 
 	for (const auto &test : cases)
 	{
 		Animation::Builder builder;
-		builder.addStep({
-			.time = 0.0f,
-			.articulations = {{"torso", "shoulder", spk::Quaternion::identity()}},
-			.bodies = {{"arm", {1, 1, 1}, {0, 0, 0}}}});
-		builder.addStep({
-			.time = 1.0f,
-			.articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90}), test.interpolation}},
-			.bodies = {{"arm", {1, 3, 1}, {4, 0, 0}, test.interpolation}}});
+		builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::identity()}}, .bodies = {{"arm", {1, 1, 1}, {0, 0, 0}}}});
+		builder.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90}), test.interpolation}}, .bodies = {{"arm", {1, 3, 1}, {4, 0, 0}, test.interpolation}}});
 		const Animation clip = builder.build();
 		EXPECT_FLOAT_EQ(clip.duration(), 1.0f);
 		ObjectHeadless object(characterBlueprint());
@@ -244,7 +234,7 @@ TEST(Model3DAnimatorTest, EmptyMaskReservationsLastForTheEntireClip)
 	reserve.reserveArticulation("torso", "shoulder");
 	reserve.reserveBody("arm");
 	reserve.reserveArticulation("torso", "shoulder"); // Idempotent
-	reserve.addStep({.time = 1.0f}); // A reservation-only animation still needs a final timestamp.
+	reserve.addStep({.time = 1.0f});				  // A reservation-only animation still needs a final timestamp.
 	const auto held = animator.play(reserve.build());
 	EXPECT_TRUE(animator.playing(held));
 	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);

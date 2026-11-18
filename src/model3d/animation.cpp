@@ -72,7 +72,6 @@ namespace spk::Model3D
 			throw std::invalid_argument("Animation step times must be finite, nonnegative and strictly increasing");
 		}
 
-
 		const auto validateInterpolation = [](Interpolation curve) {
 			switch (curve)
 			{
