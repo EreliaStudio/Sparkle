@@ -384,11 +384,11 @@ TEST(VoxelTransparencyWindowGolden, FramedGlassShowsCharacterBehindWindow)
 	ASSERT_GT(assets.pane.transparentMesh().indexCount(), 0u);
 	ASSERT_GT(assets.actor.opaqueMesh().indexCount(), 0u);
 	WindowScene glazed(0.5f);
-	populateWindow(glazed, assets, false, true, true, 0.5f);
+	populateWindow(glazed, assets, false, true, true, 0.15f);
 	const auto throughGlass = renderWindow(glazed, "framed_window_character_behind");
 
 	WindowScene clear(0.5f);
-	populateWindow(clear, assets, false, false, true, 0.5f);
+	populateWindow(clear, assets, false, false, true, 0.15f);
 	const auto withoutGlass = renderWindow(clear, "framed_window_without_glass");
 
 	WindowScene empty(0.5f);
@@ -405,11 +405,11 @@ TEST(VoxelTransparencyWindowGolden, CharacterStraddlesGlassAndUncoveredHalf)
 {
 	WindowAssets assets;
 	WindowScene halfGlazed(1.0f);
-	populateWindow(halfGlazed, assets, true, true, true, 1.0f);
+	populateWindow(halfGlazed, assets, true, true, true, 0.62f);
 	const auto glassAndClear = renderWindow(halfGlazed, "character_half_glass_half_clear");
 
 	WindowScene fullyOpen(1.0f);
-	populateWindow(fullyOpen, assets, true, false, true, 1.0f);
+	populateWindow(fullyOpen, assets, true, false, true, 0.62f);
 	const auto entirelyClear = renderWindow(fullyOpen, "character_both_halves_clear");
 
 	WindowScene noCharacter(1.0f);
