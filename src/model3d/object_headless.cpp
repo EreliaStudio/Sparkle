@@ -112,6 +112,7 @@ namespace spk::Model3D
 			destination._rotationMatrix = origin._rotationMatrix;
 			destination._transform = origin._transform;
 		}
+		target.setTranslation(source.translation());
 		target.setScale(source.scale());
 		for (const Attachable *child : source.children())
 		{
@@ -291,6 +292,27 @@ namespace spk::Model3D
 		return _localMatrix;
 	}
 
+	const Vector3 &ObjectHeadless::ElementNode::translation() const noexcept
+	{
+		return _translation;
+	}
+
+	void ObjectHeadless::ElementNode::setTranslation(const Vector3 &translation)
+	{
+		if (!std::isfinite(translation.x) || !std::isfinite(translation.y) || !std::isfinite(translation.z))
+		{
+			throw spk::Exception("Model3D translation must be finite");
+		}
+		_translation = translation;
+		_refreshTransform();
+	}
+
+	void ObjectHeadless::ElementNode::_refreshTransform()
+	{
+		_localMatrix = _definition->anchor() * Matrix4x4::translation(_translation) * Matrix4x4::scale(_scale);
+		_invalidateTransform();
+	}
+
 	const Vector3 &ObjectHeadless::ElementNode::scale() const noexcept
 	{
 		return _scale;
@@ -304,8 +326,7 @@ namespace spk::Model3D
 			throw spk::Exception("Model3D scale must be finite and strictly positive");
 		}
 		_scale = scale;
-		_localMatrix = _definition->anchor() * Matrix4x4::scale(_scale);
-		_invalidateTransform();
+		_refreshTransform();
 	}
 
 	const Blueprint::Element &ObjectHeadless::ElementNode::definition() const noexcept
