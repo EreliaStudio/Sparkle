@@ -59,9 +59,9 @@ TEST(VectorLerpTest, TwoThreeAndFourDimensionsSupportInterpolationAndExtrapolati
 
 TEST(Model3DAnimationTest, RejectsInvalidDurationAndKeyframesWithoutAddingTrack)
 {
-	EXPECT_THROW(Animation(0.0f), std::invalid_argument);
-	EXPECT_THROW(Animation(-1.0f), std::invalid_argument);
-	EXPECT_THROW(Animation(std::numeric_limits<float>::infinity()), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(Animation(0.0f)), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(Animation(-1.0f)), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(Animation(std::numeric_limits<float>::infinity())), std::invalid_argument);
 	Animation animation(1.0f);
 	EXPECT_THROW(animation.addTrack({"", "shoulder"}, {}), std::invalid_argument);
 	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.5f}, {0.5f}}), std::invalid_argument);
