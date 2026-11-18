@@ -275,8 +275,8 @@ namespace
 			scene.add(
 				assets.actor,
 				assets.actorMaterials,
-				{characterCenterX - 0.49f, 0.15f, -1.45f},
-				{0.14f, 0.12f, 0.12f});
+				{characterCenterX - 0.455f, 0.1f, -1.45f},
+				{0.13f, 0.13f, 0.13f});
 		}
 	}
 
