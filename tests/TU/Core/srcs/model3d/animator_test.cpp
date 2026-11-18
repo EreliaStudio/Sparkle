@@ -78,16 +78,14 @@ TEST(Model3DAnimationTest, RejectsInvalidDurationAndStepsWithoutChangingTheClip)
 	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"", {1, 1, 1}}}}), std::invalid_argument);
 	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}, {"torso", "shoulder", {}}}}), std::invalid_argument);
 	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}, {"torso", {1, 1, 1}}}}), std::invalid_argument);
-	
 
 	builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 2}}}});
-	
-	
+
 	EXPECT_THROW(builder.addStep({.time = 0.0f}), std::invalid_argument);
 	EXPECT_THROW(builder.addStep({.time = 0.8f, .bodies = {{"torso", {-1, 1, 1}}}}), std::invalid_argument);
-	
+
 	builder.addStep({.time = 0.8f, .articulations = {{"torso", "shoulder", {}}}});
-	
+
 	EXPECT_THROW(builder.addStep({.time = 0.4f}), std::invalid_argument);
 	const Animation result = builder.build();
 	ASSERT_EQ(result.steps().size(), 2u);
@@ -189,7 +187,7 @@ TEST(Model3DAnimationTest, InvalidReservationsDoNotChangeAnimation)
 	EXPECT_THROW(builder.reserveBody(""), std::invalid_argument);
 	const Animation clip = builder.build();
 	EXPECT_TRUE(clip.steps().empty());
-	
+
 }
 
 TEST(Model3DAnimatorTest, InvalidTargetsAndDeltaCannotChangeRunningAnimations)
