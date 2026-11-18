@@ -23,6 +23,7 @@ namespace spk::Model3D
 			Animation::Target target;
 			Quaternion rotation;
 			Vector3 scale;
+			Vector3 translation;
 		};
 
 		struct Running
