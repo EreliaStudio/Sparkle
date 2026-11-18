@@ -37,14 +37,8 @@ namespace
 	[[nodiscard]] Animation armAnimation()
 	{
 		Animation animation(1.0f);
-		animation.addStep({
-			.time = 0.0f,
-			.articulations = {{"torso", "shoulder", spk::Quaternion::identity()}},
-			.bodies = {{"arm", {1.0f, 1.0f, 1.0f}}}});
-		animation.addStep({
-			.time = 1.0f,
-			.articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}},
-			.bodies = {{"arm", {1.0f, 2.0f, 1.0f}}}});
+		animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::identity()}}, .bodies = {{"arm", {1.0f, 1.0f, 1.0f}}}});
+		animation.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}, .bodies = {{"arm", {1.0f, 2.0f, 1.0f}}}});
 		return animation;
 	}
 
@@ -149,8 +143,7 @@ TEST(Model3DAnimatorTest, ConcurrentDisjointMasksThrowOnConflictWithoutMutatingP
 	{
 		static_cast<void>(animator.play(armAnimation()));
 		FAIL() << "Conflicting animation was accepted";
-	}
-	catch (const spk::Exception &exception)
+	} catch (const spk::Exception &exception)
 	{
 		const std::string message = exception.what();
 		EXPECT_NE(message.find("torso/shoulder"), std::string::npos);

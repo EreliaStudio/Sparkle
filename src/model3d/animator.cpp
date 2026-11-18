@@ -110,7 +110,7 @@ namespace spk::Model3D
 					{
 						const bool body = channel.target.attachmentName.empty();
 						const std::string target = channel.target.elementName +
-							(body ? "" : "/" + channel.target.attachmentName);
+												   (body ? "" : "/" + channel.target.attachmentName);
 						throw spk::Exception(
 							"Animation conflict: " + std::string(body ? "body " : "articulation ") +
 							target + " is already controlled by animation #" + std::to_string(active.handle));

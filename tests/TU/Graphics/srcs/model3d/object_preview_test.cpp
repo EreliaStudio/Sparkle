@@ -891,44 +891,11 @@ namespace
 			return spk::Quaternion::fromEuler(euler);
 		};
 		Animation animation(1.2f);
-		animation.addStep({
-			.time = 0.0f,
-			.articulations = {
-				{"torso", "leftShoulder", rotation({0, 0, 0})},
-				{"torso", "rightShoulder", rotation({0, 0, 0})},
-				{"torso", "leftHip", rotation({0, 0, 0})},
-				{"torso", "rightHip", rotation({0, 0, 0})},
-				{"torso", "neck", rotation({0, 0, 0})}}});
-		animation.addStep({
-			.time = 0.3f,
-			.articulations = {
-				{"torso", "leftShoulder", rotation({0, 0, -95})},
-				{"torso", "rightShoulder", rotation({0, 0, 90})},
-				{"torso", "leftHip", rotation({30, 0, 0})},
-				{"torso", "rightHip", rotation({-30, 0, 0})}}});
-		animation.addStep({
-			.time = 0.6f,
-			.articulations = {
-				{"torso", "leftShoulder", rotation({0, 0, 0})},
-				{"torso", "rightShoulder", rotation({0, 0, 0})},
-				{"torso", "leftHip", rotation({0, 0, 0})},
-				{"torso", "rightHip", rotation({0, 0, 0})},
-				{"torso", "neck", rotation({0, 35, 0})}}});
-		animation.addStep({
-			.time = 0.9f,
-			.articulations = {
-				{"torso", "leftShoulder", rotation({0, 0, -60})},
-				{"torso", "rightShoulder", rotation({0, 0, 45})},
-				{"torso", "leftHip", rotation({-30, 0, 0})},
-				{"torso", "rightHip", rotation({30, 0, 0})}}});
-		animation.addStep({
-			.time = 1.2f,
-			.articulations = {
-				{"torso", "leftShoulder", rotation({0, 0, 0})},
-				{"torso", "rightShoulder", rotation({0, 0, 0})},
-				{"torso", "leftHip", rotation({0, 0, 0})},
-				{"torso", "rightHip", rotation({0, 0, 0})},
-				{"torso", "neck", rotation({0, 0, 0})}}});
+		animation.addStep({.time = 0.0f, .articulations = {{"torso", "leftShoulder", rotation({0, 0, 0})}, {"torso", "rightShoulder", rotation({0, 0, 0})}, {"torso", "leftHip", rotation({0, 0, 0})}, {"torso", "rightHip", rotation({0, 0, 0})}, {"torso", "neck", rotation({0, 0, 0})}}});
+		animation.addStep({.time = 0.3f, .articulations = {{"torso", "leftShoulder", rotation({0, 0, -95})}, {"torso", "rightShoulder", rotation({0, 0, 90})}, {"torso", "leftHip", rotation({30, 0, 0})}, {"torso", "rightHip", rotation({-30, 0, 0})}}});
+		animation.addStep({.time = 0.6f, .articulations = {{"torso", "leftShoulder", rotation({0, 0, 0})}, {"torso", "rightShoulder", rotation({0, 0, 0})}, {"torso", "leftHip", rotation({0, 0, 0})}, {"torso", "rightHip", rotation({0, 0, 0})}, {"torso", "neck", rotation({0, 35, 0})}}});
+		animation.addStep({.time = 0.9f, .articulations = {{"torso", "leftShoulder", rotation({0, 0, -60})}, {"torso", "rightShoulder", rotation({0, 0, 45})}, {"torso", "leftHip", rotation({-30, 0, 0})}, {"torso", "rightHip", rotation({30, 0, 0})}}});
+		animation.addStep({.time = 1.2f, .articulations = {{"torso", "leftShoulder", rotation({0, 0, 0})}, {"torso", "rightShoulder", rotation({0, 0, 0})}, {"torso", "leftHip", rotation({0, 0, 0})}, {"torso", "rightHip", rotation({0, 0, 0})}, {"torso", "neck", rotation({0, 0, 0})}}});
 		return animation;
 	}
 
@@ -936,36 +903,11 @@ namespace
 	{
 		using spk::Model3D::Animation;
 		Animation animation(1.2f);
-		animation.addStep({
-			.time = 0.0f,
-			.bodies = {
-				{"torso", {1, 1, 1}},
-				{"rightArm", {1, 1, 1}},
-				{"leftArm", {1, 1, 1}}}});
-		animation.addStep({
-			.time = 0.3f,
-			.bodies = {
-				{"torso", {1, 1.5, 1}},
-				{"rightArm", {1, 1.8, 1}},
-				{"leftArm", {1.5, 1, 1}}}});
-		animation.addStep({
-			.time = 0.6f,
-			.bodies = {
-				{"torso", {1.45, 0.8, 1}},
-				{"rightArm", {1, 2.1, 1}},
-				{"leftArm", {1, 1.4, 1}}}});
-		animation.addStep({
-			.time = 0.9f,
-			.bodies = {
-				{"torso", {0.85, 1.1, 1}},
-				{"rightArm", {1.3, 1.2, 1}},
-				{"leftArm", {1, 1, 1}}}});
-		animation.addStep({
-			.time = 1.2f,
-			.bodies = {
-				{"torso", {1, 1, 1}},
-				{"rightArm", {1, 1, 1}},
-				{"leftArm", {1, 1, 1}}}});
+		animation.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}, {"rightArm", {1, 1, 1}}, {"leftArm", {1, 1, 1}}}});
+		animation.addStep({.time = 0.3f, .bodies = {{"torso", {1, 1.5, 1}}, {"rightArm", {1, 1.8, 1}}, {"leftArm", {1.5, 1, 1}}}});
+		animation.addStep({.time = 0.6f, .bodies = {{"torso", {1.45, 0.8, 1}}, {"rightArm", {1, 2.1, 1}}, {"leftArm", {1, 1.4, 1}}}});
+		animation.addStep({.time = 0.9f, .bodies = {{"torso", {0.85, 1.1, 1}}, {"rightArm", {1.3, 1.2, 1}}, {"leftArm", {1, 1, 1}}}});
+		animation.addStep({.time = 1.2f, .bodies = {{"torso", {1, 1, 1}}, {"rightArm", {1, 1, 1}}, {"leftArm", {1, 1, 1}}}});
 		return animation;
 	}
 
