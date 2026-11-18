@@ -323,8 +323,7 @@ namespace
 		bool visible = false;
 		for (std::size_t offset = 0; offset < image.pixels.size(); offset += 4)
 		{
-			visible |= image.pixels[offset] > 18 || image.pixels[offset + 1] > 18 ||
-				image.pixels[offset + 2] > 18;
+			visible |= image.pixels[offset] > 18 || image.pixels[offset + 1] > 18 || image.pixels[offset + 2] > 18;
 		}
 		EXPECT_TRUE(visible) << "Window test rendered an empty image";
 		if (!golden.empty())
