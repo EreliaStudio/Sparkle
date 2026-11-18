@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 #include "model3d/animation.hpp"
@@ -17,19 +16,6 @@ namespace spk::Model3D
 	{
 	public:
 		using Handle = std::uint64_t;
-
-		struct Conflict
-		{
-			Animation::Target target;
-			Handle owner;
-		};
-
-		struct PlayResult
-		{
-			bool started = false;
-			Handle handle = 0;
-			std::optional<Conflict> conflict;
-		};
 
 	private:
 		struct StartPose
@@ -52,6 +38,10 @@ namespace spk::Model3D
 		std::vector<Running> _running;
 		Handle _nextHandle = 1;
 
+		[[nodiscard]] static Animation::Keyframe _sample(
+			const Animation::Channel &channel,
+			const StartPose &initial,
+			float time);
 		void _apply(const Running &running, float time);
 		void _restore(const Running &running);
 
@@ -64,9 +54,9 @@ namespace spk::Model3D
 		Animator(Animator &&) = delete;
 		Animator &operator=(Animator &&) = delete;
 
-		// Conflict rejection does not mutate pose or active clips.
-		// Clip definitions are copied and can safely outlive their caller.
-		[[nodiscard]] PlayResult play(Animation animation, bool loop = false);
+		// Returns a handle on success; throws spk::Exception on a mask conflict,
+		// without changing any pose or running clip. Copies the clip definition.
+		[[nodiscard]] Handle play(const Animation &animation, bool loop = false);
 		void update(float deltaSeconds);
 		[[nodiscard]] bool stop(Handle handle);
 		void stopAll();
