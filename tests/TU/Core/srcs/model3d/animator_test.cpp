@@ -1,9 +1,11 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <string>
 
 #include <gtest/gtest.h>
 
+#include "exception.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 #include "math/vector4.hpp"
@@ -35,14 +37,22 @@ namespace
 	[[nodiscard]] Animation armAnimation()
 	{
 		Animation animation(1.0f);
-		animation.addTrack({"torso", "shoulder"}, {{0.0f, {}, {1.0f, 1.0f, 1.0f}}, {1.0f, spk::Quaternion::fromEuler({0, 0, 90}), {1.0f, 2.0f, 1.0f}}});
+		animation.addStep({
+			.time = 0.0f,
+			.articulations = {{"torso", "shoulder", spk::Quaternion::identity()}},
+			.bodies = {{"arm", {1.0f, 1.0f, 1.0f}}}});
+		animation.addStep({
+			.time = 1.0f,
+			.articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}},
+			.bodies = {{"arm", {1.0f, 2.0f, 1.0f}}}});
 		return animation;
 	}
 
 	[[nodiscard]] Animation legAnimation()
 	{
 		Animation animation(1.0f);
-		animation.addTrack({"torso", "hip"}, {{0.0f, {}, {1.0f, 1.0f, 1.0f}}, {1.0f, spk::Quaternion::fromEuler({20, 0, 0}), {1.0f, 1.0f, 1.0f}}});
+		animation.addStep({.time = 0.0f, .articulations = {{"torso", "hip", {}}}});
+		animation.addStep({.time = 1.0f, .articulations = {{"torso", "hip", spk::Quaternion::fromEuler({20, 0, 0})}}});
 		return animation;
 	}
 }
@@ -57,141 +67,211 @@ TEST(VectorLerpTest, TwoThreeAndFourDimensionsSupportInterpolationAndExtrapolati
 	EXPECT_EQ(spk::Vector4::lerp({1, 2, 3, 4}, {5, 6, 7, 8}, 1.5f), (spk::Vector4{7, 8, 9, 10}));
 }
 
-TEST(Model3DAnimationTest, RejectsInvalidDurationAndKeyframesWithoutAddingTrack)
+TEST(Model3DAnimationTest, RejectsInvalidDurationAndStepsWithoutChangingTheClip)
 {
 	EXPECT_THROW(static_cast<void>(Animation(0.0f)), std::invalid_argument);
 	EXPECT_THROW(static_cast<void>(Animation(-1.0f)), std::invalid_argument);
 	EXPECT_THROW(static_cast<void>(Animation(std::numeric_limits<float>::infinity())), std::invalid_argument);
+
 	Animation animation(1.0f);
-	EXPECT_THROW(animation.addTrack({"", "shoulder"}, {}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.5f}, {0.5f}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.3f}, {0.2f}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{1.1f}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{-0.1f}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.0f, {0, 0, 0, 0}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.0f, {}, {1, 0, 1}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", ""}, {{0.0f, spk::Quaternion::fromEuler({0, 0, 10})}}), std::invalid_argument);
-	EXPECT_TRUE(animation.tracks().empty());
-	animation.addTrack({"torso", "shoulder"}, {{0.0f, {0, 0, 0, 2}}});
-	EXPECT_NEAR(animation.tracks().front().keyframes.front().rotation.w, 1.0f, 0.00001f);
-	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = -0.1f}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 1.1f}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = std::numeric_limits<float>::quiet_NaN()}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"", "shoulder", {}}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"torso", "", {}}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 0}}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .bodies = {{"torso", {0, 1, 1}}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .bodies = {{"", {1, 1, 1}}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}, {"torso", "shoulder", {}}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}, {"torso", {1, 1, 1}}}}), std::invalid_argument);
+	EXPECT_TRUE(animation.steps().empty());
+
+	animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 2}}}});
+	ASSERT_EQ(animation.steps().size(), 1u);
+	EXPECT_NEAR(animation.steps().front().articulations.front().rotation.w, 1.0f, 0.00001f);
+	EXPECT_THROW(animation.addStep({.time = 0.0f}), std::invalid_argument);
+	EXPECT_THROW(animation.addStep({.time = 0.8f, .bodies = {{"torso", {-1, 1, 1}}}}), std::invalid_argument);
+	EXPECT_EQ(animation.steps().size(), 1u);
+	animation.addStep({.time = 0.8f, .articulations = {{"torso", "shoulder", {}}}});
+	EXPECT_EQ(animation.steps().size(), 2u);
+	EXPECT_THROW(animation.addStep({.time = 0.4f}), std::invalid_argument);
 }
 
-TEST(Model3DAnimatorTest, InterpolatesRotationAndNonUniformScaleAndUpdatesDescendants)
+TEST(Model3DAnimatorTest, InterpolatesArticulationsAndBodyScaleIndependently)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
-	const auto before = object.element("hand").globalTransform();
-	const auto result = animator.play(armAnimation());
-	ASSERT_TRUE(result.started);
-	EXPECT_TRUE(animator.playing(result.handle));
+	const auto handBefore = object.element("hand").globalTransform();
+	const Animator::Handle handle = animator.play(armAnimation());
+	EXPECT_TRUE(animator.playing(handle));
 	animator.update(0.5f);
 	const auto &shoulder = object.attachment("torso", "shoulder");
-	EXPECT_NEAR(shoulder.scale().y, 1.5f, 0.0001f);
+	EXPECT_EQ(shoulder.scale(), (spk::Vector3{1, 1, 1}));
 	EXPECT_NEAR(shoulder.rotationMatrix()[0][0], std::sqrt(0.5f), 0.0001f);
-	EXPECT_NEAR(shoulder.transform()[1][1], 1.5f * std::sqrt(0.5f), 0.0001f);
-	EXPECT_NE(object.element("hand").globalTransform(), before);
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.5f, 1}));
+	EXPECT_NE(object.element("hand").globalTransform(), handBefore);
 	animator.update(0.5f);
-	EXPECT_FALSE(animator.playing(result.handle));
+	EXPECT_FALSE(animator.playing(handle));
 	EXPECT_EQ(animator.activeCount(), 0u);
 	EXPECT_EQ(shoulder.rotation(), spk::Quaternion::identity());
-	EXPECT_EQ(shoulder.scale(), (spk::Vector3{1, 1, 1}));
-	EXPECT_EQ(object.element("hand").globalTransform(), before);
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1, 1}));
+	EXPECT_EQ(object.element("hand").globalTransform(), handBefore);
 }
 
-TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToAllChildren)
+TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToChildren)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
 	Animation animation(1.0f);
-	animation.addTrack({"torso", ""}, {{0.0f, {}, {1, 1, 1}}, {1.0f, {}, {2, 3, 1}}});
+	animation.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}}});
+	animation.addStep({.time = 1.0f, .bodies = {{"torso", {2, 3, 1}}}});
 	const auto handBefore = object.element("hand").globalTransform();
-	const auto result = animator.play(animation);
-	ASSERT_TRUE(result.started);
+	const auto handle = animator.play(animation);
 	animator.update(0.5f);
 	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 2.0f, 1.0f}));
 	EXPECT_NEAR(object.element("arm").globalTransform()[3][1], 2.0f, 0.0001f);
 	EXPECT_NE(object.element("hand").globalTransform(), handBefore);
-	EXPECT_TRUE(animator.stop(result.handle));
+	EXPECT_TRUE(animator.stop(handle));
 	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 1, 1}));
 	EXPECT_EQ(object.element("hand").globalTransform(), handBefore);
 }
 
-TEST(Model3DAnimatorTest, ConcurrentDisjointMasksAndNonMutatingConflict)
+TEST(Model3DAnimatorTest, ConcurrentDisjointMasksThrowOnConflictWithoutMutatingPose)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
 	const auto arm = animator.play(armAnimation());
 	const auto leg = animator.play(legAnimation());
-	ASSERT_TRUE(arm.started);
-	ASSERT_TRUE(leg.started);
-	EXPECT_EQ(animator.activeCount(), 2u);
+	ASSERT_EQ(animator.activeCount(), 2u);
 	animator.update(0.25f);
 	const auto before = object.attachment("torso", "shoulder").rotation();
-	const auto blocked = animator.play(armAnimation());
-	EXPECT_FALSE(blocked.started);
-	ASSERT_TRUE(blocked.conflict.has_value());
-	EXPECT_EQ(blocked.conflict->owner, arm.handle);
-	EXPECT_EQ(blocked.conflict->target, (Animation::Target{"torso", "shoulder"}));
+	try
+	{
+		static_cast<void>(animator.play(armAnimation()));
+		FAIL() << "Conflicting animation was accepted";
+	}
+	catch (const spk::Exception &exception)
+	{
+		const std::string message = exception.what();
+		EXPECT_NE(message.find("torso/shoulder"), std::string::npos);
+		EXPECT_NE(message.find(std::to_string(arm)), std::string::npos);
+	}
 	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), before);
 	EXPECT_EQ(animator.activeCount(), 2u);
-	EXPECT_TRUE(animator.stop(arm.handle));
-	EXPECT_TRUE(animator.play(armAnimation()).started);
-	EXPECT_TRUE(animator.stop(leg.handle));
+	EXPECT_TRUE(animator.stop(arm));
+	const auto replacement = animator.play(armAnimation());
+	EXPECT_TRUE(animator.playing(replacement));
+	EXPECT_TRUE(animator.stop(leg));
 }
 
-TEST(Model3DAnimatorTest, ExplicitEmptyTrackReservesItsJointForEntireClip)
+TEST(Model3DAnimatorTest, EmptyMaskReservationsLastForTheEntireClip)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
 	Animation reserve(1.0f);
-	reserve.addTrack({"torso", "shoulder"}, {});
+	reserve.reserveArticulation("torso", "shoulder");
+	reserve.reserveBody("arm");
+	reserve.reserveArticulation("torso", "shoulder"); // Idempotent
 	const auto held = animator.play(reserve);
-	ASSERT_TRUE(held.started);
-	EXPECT_FALSE(animator.play(armAnimation()).started);
+	EXPECT_TRUE(animator.playing(held));
+	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);
 	animator.update(0.9f);
-	EXPECT_FALSE(animator.play(armAnimation()).started);
+	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);
 	animator.update(0.1f);
-	EXPECT_TRUE(animator.play(armAnimation()).started);
+	EXPECT_FALSE(animator.playing(held));
+	const auto handle = animator.play(armAnimation());
+	EXPECT_TRUE(animator.playing(handle));
 }
 
-TEST(Model3DAnimatorTest, FailedPlayAndInvalidDeltaDoNotChangePose)
+TEST(Model3DAnimationTest, InvalidReservationsDoNotChangeAnimation)
+{
+	Animation animation(1.0f);
+	EXPECT_THROW(animation.reserveArticulation("torso", ""), std::invalid_argument);
+	EXPECT_THROW(animation.reserveArticulation("", "shoulder"), std::invalid_argument);
+	EXPECT_THROW(animation.reserveBody(""), std::invalid_argument);
+	EXPECT_TRUE(animation.steps().empty());
+}
+
+TEST(Model3DAnimatorTest, InvalidTargetsAndDeltaCannotChangeRunningAnimations)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
-	Animation invalidTarget(1.0f);
-	invalidTarget.addTrack({"torso", "missing"}, {{0}});
-	EXPECT_THROW(static_cast<void>(animator.play(invalidTarget)), spk::Exception);
+	Animation invalid(1.0f);
+	invalid.addStep({.time = 0.0f, .articulations = {{"torso", "missing", {}}}});
+	EXPECT_THROW(static_cast<void>(animator.play(invalid)), spk::Exception);
 	EXPECT_EQ(animator.activeCount(), 0u);
-	const auto result = animator.play(armAnimation());
-	ASSERT_TRUE(result.started);
+	EXPECT_THROW(static_cast<void>(animator.play(Animation(1.0f))), std::invalid_argument);
+	const auto handle = animator.play(armAnimation());
 	animator.update(0.4f);
 	const auto rotation = object.attachment("torso", "shoulder").rotation();
 	EXPECT_THROW(animator.update(-0.1f), std::invalid_argument);
 	EXPECT_THROW(animator.update(std::numeric_limits<float>::quiet_NaN()), std::invalid_argument);
 	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), rotation);
+	EXPECT_TRUE(animator.playing(handle));
 }
 
-TEST(Model3DAnimatorTest, LoopingIsTimeBasedAndStopRestoresCapturedPose)
+TEST(Model3DAnimatorTest, LoopingUsesTimeAndRestoresCapturedPoseOnStop)
 {
 	ObjectHeadless object(characterBlueprint());
 	object.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 12});
 	object.attachment("torso", "shoulder").setScale({1, 1.25f, 1});
+	object.element("arm").setScale({1, 1.25f, 1});
 	const auto initial = object.attachment("torso", "shoulder").transform();
 	Animator animator(object);
-	const auto result = animator.play(armAnimation(), true);
-	ASSERT_TRUE(result.started);
+	const auto handle = animator.play(armAnimation(), true);
 	animator.update(2.25f);
-	const auto cycled = object.attachment("torso", "shoulder").transform();
+	const auto cycled = object.attachment("torso", "shoulder").rotationMatrix();
 	ObjectHeadless other(characterBlueprint());
 	Animator otherAnimator(other);
-	const auto otherClip = otherAnimator.play(armAnimation(), true);
-	ASSERT_TRUE(otherClip.started);
+	const auto otherHandle = otherAnimator.play(armAnimation(), true);
 	otherAnimator.update(0.25f);
-	EXPECT_EQ(cycled, other.attachment("torso", "shoulder").transform());
-	EXPECT_TRUE(animator.stop(result.handle));
+	EXPECT_EQ(cycled, other.attachment("torso", "shoulder").rotationMatrix());
+	EXPECT_TRUE(animator.stop(handle));
+	EXPECT_TRUE(otherAnimator.playing(otherHandle));
 	EXPECT_EQ(object.attachment("torso", "shoulder").transform(), initial);
-	EXPECT_FALSE(animator.stop(result.handle));
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.25f, 1}));
+	EXPECT_FALSE(animator.stop(handle));
+}
+
+TEST(Model3DAnimatorTest, AbsentEarlyStepUsesCapturedPoseAndSparseStepsInterpolate)
+{
+	ObjectHeadless object(characterBlueprint());
+	object.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 10});
+	const auto initial = object.attachment("torso", "shoulder").rotation();
+	Animation clip(1.0f);
+	clip.addStep({.time = 0.2f, .bodies = {{"torso", {1, 1, 1}}}});
+	clip.addStep({.time = 0.5f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
+	clip.addStep({.time = 0.75f, .bodies = {{"torso", {1, 2, 1}}}});
+	Animator animator(object);
+	const auto handle = animator.play(clip);
+	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), initial);
+	animator.update(0.25f);
+	const auto expected = spk::Quaternion::slerp(initial, spk::Quaternion::fromEuler({0, 0, 90}), 0.5f);
+	EXPECT_NEAR(std::fabs(object.attachment("torso", "shoulder").rotation().dot(expected)), 1.0f, 0.0001f);
+	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 1, 1}));
+	animator.update(0.5f);
+	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 2, 1}));
+	EXPECT_TRUE(animator.stop(handle));
+	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), initial);
+}
+
+TEST(Model3DAnimatorTest, RotationAndScaleOnTheSameElementCanBeIndependentClips)
+{
+	ObjectHeadless object(characterBlueprint());
+	Animator animator(object);
+	Animation rotate(1.0f);
+	rotate.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}}});
+	rotate.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
+	Animation scale(1.0f);
+	scale.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}}});
+	scale.addStep({.time = 1.0f, .bodies = {{"torso", {2, 1, 1}}}});
+	const auto rotationHandle = animator.play(rotate);
+	const auto scaleHandle = animator.play(scale);
+	animator.update(0.5f);
+	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 1, 1}));
+	EXPECT_NEAR(object.attachment("torso", "shoulder").rotationMatrix()[0][0], std::sqrt(0.5f), 0.0001f);
+	EXPECT_TRUE(animator.stop(rotationHandle));
+	EXPECT_TRUE(animator.playing(scaleHandle));
 }
 
 TEST(Model3DAnimatorTest, CopiesOfBlueprintAreIndependentAndStopAllReleasesMasks)
@@ -201,8 +281,8 @@ TEST(Model3DAnimatorTest, CopiesOfBlueprintAreIndependentAndStopAllReleasesMasks
 	ObjectHeadless second(characterBlueprint());
 	Animator a(first);
 	Animator b(second);
-	EXPECT_TRUE(a.play(clip).started);
-	EXPECT_TRUE(b.play(clip).started);
+	const auto firstHandle = a.play(clip);
+	const auto secondHandle = b.play(clip);
 	a.update(0.5f);
 	b.update(0.25f);
 	EXPECT_NE(first.attachment("torso", "shoulder").transform(), second.attachment("torso", "shoulder").transform());
@@ -210,4 +290,6 @@ TEST(Model3DAnimatorTest, CopiesOfBlueprintAreIndependentAndStopAllReleasesMasks
 	EXPECT_EQ(a.activeCount(), 0u);
 	EXPECT_EQ(first.attachment("torso", "shoulder").rotation(), spk::Quaternion::identity());
 	EXPECT_NE(first.attachment("torso", "shoulder").transform(), second.attachment("torso", "shoulder").transform());
+	EXPECT_FALSE(a.playing(firstHandle));
+	EXPECT_TRUE(b.playing(secondHandle));
 }
