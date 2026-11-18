@@ -49,7 +49,6 @@ namespace
 		}
 	};
 
-
 	class CharacterAtlas final : public spk::Texture
 	{
 	public:
