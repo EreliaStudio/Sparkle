@@ -129,6 +129,7 @@ namespace spk::Model3D
 
 	private:
 		const Blueprint::Element *_definition;
+		Vector3 _translation{};
 		Vector3 _scale{1.0f, 1.0f, 1.0f};
 		Matrix4x4 _localMatrix = Matrix4x4::identity();
 		ObjectHeadless::Data *_instanceData;
@@ -136,6 +137,7 @@ namespace spk::Model3D
 		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
 
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
+		void _refreshTransform();
 
 	public:
 		ElementNode(ObjectHeadless::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
@@ -147,6 +149,8 @@ namespace spk::Model3D
 		ElementNode &operator=(ElementNode &&) = delete;
 
 		[[nodiscard]] const Blueprint::Element &definition() const noexcept;
+		[[nodiscard]] const Vector3 &translation() const noexcept;
+		void setTranslation(const Vector3 &translation);
 		[[nodiscard]] const Vector3 &scale() const noexcept;
 		void setScale(const Vector3 &scale);
 		[[nodiscard]] ObjectHeadless &instance() noexcept;
