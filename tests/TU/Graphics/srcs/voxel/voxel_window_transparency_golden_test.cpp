@@ -49,6 +49,36 @@ namespace
 		}
 	};
 
+
+	class CharacterAtlas final : public spk::Texture
+	{
+	public:
+		CharacterAtlas()
+		{
+			constexpr std::array<std::array<std::uint8_t, 4>, 5> Colors{
+				std::array<std::uint8_t, 4>{226, 65, 42, 255},
+				std::array<std::uint8_t, 4>{254, 186, 123, 255},
+				std::array<std::uint8_t, 4>{70, 40, 22, 255},
+				std::array<std::uint8_t, 4>{45, 67, 193, 255},
+				std::array<std::uint8_t, 4>{15, 16, 25, 255}};
+
+			std::array<std::uint8_t, 5 * 4 * 4 * 4> pixels{};
+			for (std::size_t tile = 0; tile < Colors.size(); ++tile)
+			{
+				for (std::size_t y = 0; y < 4; ++y)
+				{
+					for (std::size_t x = 0; x < 4; ++x)
+					{
+						const std::size_t pixelOffset = 4 * (y * 20 + tile * 4 + x);
+						std::copy(Colors[tile].begin(), Colors[tile].end(), pixels.begin() + pixelOffset);
+					}
+				}
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {20, 4}, Format::RGBA);
+			validate();
+		}
+	};
+
 	[[nodiscard]] spk::Voxel::Shape cubeShape()
 	{
 		spk::Voxel::Shape::Builder builder;
@@ -156,24 +186,20 @@ namespace
 		return builder.build();
 	}
 
-	[[nodiscard]] spk::Palette characterPalette(
-		const spk::Texture &shirt,
-		const spk::Texture &skin,
-		const spk::Texture &hair,
-		const spk::Texture &trousers,
-		const spk::Texture &eyes)
+	[[nodiscard]] spk::Palette characterPalette(const spk::Texture &atlas)
 	{
+		constexpr std::array<const char *, 5> MaterialNames{"shirt", "skin", "hair", "trousers", "eyes"};
 		spk::Voxel::Palette::Builder builder;
-		const auto add = [&builder](const char *name, const spk::Texture &texture) {
+		for (std::size_t index = 0; index < MaterialNames.size(); ++index)
+		{
 			spk::Material::Builder material;
-			material.add("albedo", texture);
-			builder.setMaterial(name, material.build());
-		};
-		add("shirt", shirt);
-		add("skin", skin);
-		add("hair", hair);
-		add("trousers", trousers);
-		add("eyes", eyes);
+			const spk::Vector2UInt pixelAnchor{static_cast<std::uint32_t>(index * 4), 0};
+			material.add(
+				"albedo",
+				atlas,
+				spk::Texture::Section::fromPixels(atlas.size(), pixelAnchor, {4, 4}));
+			builder.setMaterial(MaterialNames[index], material.build());
+		}
 		return builder.build();
 	}
 
@@ -181,11 +207,7 @@ namespace
 	{
 		SolidColorTexture wall{{120, 122, 134, 255}};
 		SolidColorTexture glass{{25, 155, 245, 210}};
-		SolidColorTexture shirt{{226, 65, 42, 255}};
-		SolidColorTexture skin{{254, 186, 123, 255}};
-		SolidColorTexture hair{{70, 40, 22, 255}};
-		SolidColorTexture trousers{{45, 67, 193, 255}};
-		SolidColorTexture eyes{{15, 16, 25, 255}};
+		CharacterAtlas character;
 
 		spk::Voxel::Geometry wallNarrow = wallGeometry(false);
 		spk::Voxel::Geometry wallWide = wallGeometry(true);
@@ -194,7 +216,7 @@ namespace
 
 		spk::Palette wallMaterials = solidPalette("wall", wall);
 		spk::Palette glassMaterials = solidPalette("glass", glass);
-		spk::Palette actorMaterials = characterPalette(shirt, skin, hair, trousers, eyes);
+		spk::Palette actorMaterials = characterPalette(character);
 	};
 
 	struct WindowScene
