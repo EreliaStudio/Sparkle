@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 
 #include "math/vector3.hpp"
 
@@ -68,6 +69,14 @@ namespace spk
 			w(w)
 		{
 		}
+		// Linear interpolation; accepts extrapolation outside [0, 1].
+		[[nodiscard]] static constexpr TVector4 lerp(const TVector4 &from, const TVector4 &to, float alpha) noexcept
+			requires std::is_floating_point_v<TType>
+		{
+			const TType t = static_cast<TType>(alpha);
+			return {from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t, from.w + (to.w - from.w) * t};
+		}
+
 		[[nodiscard]] constexpr bool operator==(const TVector4 &other) const
 		{
 			return x == other.x && y == other.y && z == other.z && w == other.w;

@@ -1,6 +1,7 @@
 #include "model3d/object_headless.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace spk::Model3D
@@ -106,9 +107,12 @@ namespace spk::Model3D
 		{
 			auto &destination = *target._attachments[i];
 			const auto &origin = *source._attachments[i];
+			destination._rotation = origin._rotation;
+			destination._scale = origin._scale;
 			destination._rotationMatrix = origin._rotationMatrix;
 			destination._transform = origin._transform;
 		}
+		target.setScale(source.scale());
 		for (const Attachable *child : source.children())
 		{
 			if (const auto *bound = dynamic_cast<const ObjectHeadless *>(child))
@@ -262,7 +266,8 @@ namespace spk::Model3D
 		ObjectHeadless::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment) :
 		Attachable(structuralParent, parentAttachment),
 		_definition(&definition),
-		_instanceData(&instanceData)
+		_instanceData(&instanceData),
+		_localMatrix(definition.anchor())
 	{
 		_attachments.reserve(definition.attachmentPoints().size());
 		_ownedChildren.reserve(definition.attachmentPoints().size());
@@ -283,7 +288,24 @@ namespace spk::Model3D
 
 	const Matrix4x4 &ObjectHeadless::ElementNode::_localTransform() const noexcept
 	{
-		return _definition->anchor();
+		return _localMatrix;
+	}
+
+	const Vector3 &ObjectHeadless::ElementNode::scale() const noexcept
+	{
+		return _scale;
+	}
+
+	void ObjectHeadless::ElementNode::setScale(const Vector3 &scale)
+	{
+		if (!std::isfinite(scale.x) || !std::isfinite(scale.y) || !std::isfinite(scale.z) ||
+			scale.x <= 0.0f || scale.y <= 0.0f || scale.z <= 0.0f)
+		{
+			throw spk::Exception("Model3D scale must be finite and strictly positive");
+		}
+		_scale = scale;
+		_localMatrix = _definition->anchor() * Matrix4x4::scale(_scale);
+		_invalidateTransform();
 	}
 
 	const Blueprint::Element &ObjectHeadless::ElementNode::definition() const noexcept
