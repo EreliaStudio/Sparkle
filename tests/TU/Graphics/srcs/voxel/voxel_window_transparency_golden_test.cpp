@@ -319,6 +319,13 @@ namespace
 		const auto image = gl.capture();
 		EXPECT_EQ(image.size, WindowImageSize);
 		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		bool visible = false;
+		for (std::size_t offset = 0; offset < image.pixels.size(); offset += 4)
+		{
+			visible |= image.pixels[offset] > 18 || image.pixels[offset + 1] > 18 ||
+				image.pixels[offset + 2] > 18;
+		}
+		EXPECT_TRUE(visible) << "Window test rendered an empty image";
 		if (!golden.empty())
 		{
 			const auto category = std::filesystem::path(WindowGoldenCategory);
@@ -338,6 +345,16 @@ namespace
 		return image;
 	}
 
+	[[nodiscard]] bool samePixel(
+		const sparkle_test::FramebufferImage &left,
+		const sparkle_test::FramebufferImage &right,
+		spk::Vector2UInt position)
+	{
+		const auto *a = left.pixel(position);
+		const auto *b = right.pixel(position);
+		return std::equal(a, a + 4, b);
+	}
+
 	[[nodiscard]] std::size_t differentPixels(
 		const sparkle_test::FramebufferImage &left,
 		const sparkle_test::FramebufferImage &right,
@@ -349,7 +366,7 @@ namespace
 		{
 			for (std::uint32_t x = startX; x < endX; ++x)
 			{
-				if (left.pixel({x, y}) != right.pixel({x, y}))
+				if (!samePixel(left, right, {x, y}))
 				{
 					++differences;
 				}
@@ -362,6 +379,9 @@ namespace
 TEST(VoxelTransparencyWindowGolden, FramedGlassShowsCharacterBehindWindow)
 {
 	WindowAssets assets;
+	ASSERT_GT(assets.wallNarrow.opaqueMesh().indexCount(), 0u);
+	ASSERT_GT(assets.pane.transparentMesh().indexCount(), 0u);
+	ASSERT_GT(assets.actor.opaqueMesh().indexCount(), 0u);
 	WindowScene glazed(0.5f);
 	populateWindow(glazed, assets, false, true, true, 0.5f);
 	const auto throughGlass = renderWindow(glazed, "framed_window_character_behind");
@@ -376,8 +396,8 @@ TEST(VoxelTransparencyWindowGolden, FramedGlassShowsCharacterBehindWindow)
 
 	EXPECT_GT(differentPixels(throughGlass, withoutCharacter, 0, WindowImageSize.x), 40u);
 	EXPECT_GT(differentPixels(throughGlass, withoutGlass, 0, WindowImageSize.x), 40u);
-	EXPECT_EQ(throughGlass.pixel({2, 2}), withoutGlass.pixel({2, 2}));
-	EXPECT_EQ(throughGlass.pixel({2, 2})[3], 255);
+	EXPECT_TRUE(samePixel(throughGlass, withoutGlass, {2, 2}));
+	EXPECT_EQ(throughGlass.pixel({HalfImageX, WindowImageSize.y / 2})[3], 255);
 }
 
 TEST(VoxelTransparencyWindowGolden, CharacterStraddlesGlassAndUncoveredHalf)
@@ -399,7 +419,7 @@ TEST(VoxelTransparencyWindowGolden, CharacterStraddlesGlassAndUncoveredHalf)
 	EXPECT_EQ(differentPixels(glassAndClear, entirelyClear, HalfImageX + 4, WindowImageSize.x), 0u);
 	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, 0, HalfImageX - 4), 20u);
 	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, HalfImageX + 4, WindowImageSize.x), 20u);
-	EXPECT_EQ(glassAndClear.pixel({2, 2})[3], 255);
+	EXPECT_EQ(glassAndClear.pixel({HalfImageX, WindowImageSize.y / 2})[3], 255);
 }
 
 TEST(VoxelTransparencyWindowGolden, OpaqueWallFullyOccludesCharacterOutsideOpening)
