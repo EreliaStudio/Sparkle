@@ -51,7 +51,9 @@ TEST(GifComparisonTest, ChangedFrameFailsAndKeepsFrameDiagnostics)
 	sparkle_test::saveAnimationGif(frames, expected);
 	auto changed = frames;
 	changed[1] = solidFrame(0, 0, 255);
-	const auto result = sparkle_test::compareAnimationGif(changed, expected, actual, dir / "changed");
+	sparkle_test::GifComparisonOptions strict;
+	strict.maximumDifferentPixelsPerFrame = 0;
+	const auto result = sparkle_test::compareAnimationGif(changed, expected, actual, dir / "changed", strict);
 	EXPECT_FALSE(result.matches);
 	ASSERT_EQ(result.differentPixels.size(), 2u);
 	EXPECT_EQ(result.differentPixels[0], 0u);

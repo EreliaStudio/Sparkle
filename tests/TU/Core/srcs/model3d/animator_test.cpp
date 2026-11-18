@@ -74,7 +74,7 @@ TEST(Model3DAnimationTest, RejectsInvalidDurationAndKeyframesWithoutAddingTrack)
 	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{-0.1f}}), std::invalid_argument);
 	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.0f, {0, 0, 0, 0}}}), std::invalid_argument);
 	EXPECT_THROW(animation.addTrack({"torso", "shoulder"}, {{0.0f, {}, {1, 0, 1}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addTrack({"torso", "", {{0.0f, spk::Quaternion::fromEuler({0, 0, 10})}}}), std::invalid_argument);
+	EXPECT_THROW(animation.addTrack({"torso", ""}, {{0.0f, spk::Quaternion::fromEuler({0, 0, 10})}}), std::invalid_argument);
 	EXPECT_TRUE(animation.tracks().empty());
 	animation.addTrack({"torso", "shoulder"}, {{0.0f, {0, 0, 0, 2}}});
 	EXPECT_NEAR(animation.tracks().front().keyframes.front().rotation.w, 1.0f, 0.00001f);
