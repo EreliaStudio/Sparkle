@@ -187,7 +187,6 @@ TEST(Model3DAnimationTest, InvalidReservationsDoNotChangeAnimation)
 	EXPECT_THROW(builder.reserveBody(""), std::invalid_argument);
 	const Animation clip = builder.build();
 	EXPECT_TRUE(clip.steps().empty());
-
 }
 
 TEST(Model3DAnimatorTest, InvalidTargetsAndDeltaCannotChangeRunningAnimations)
