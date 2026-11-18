@@ -1,6 +1,7 @@
 #pragma once
 
 #include <compare>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -9,11 +10,13 @@
 
 namespace spk::Model3D
 {
-	// A reusable, object-independent animation defined chronologically.
-	// A Step can move any number of joints and scale any number of elements.
+	// An object-independent, reusable animation. Construct with Builder,
+	// which validates and compiles chronological steps into private channels.
 	class Animation
 	{
 	public:
+		class Builder;
+
 		struct Step
 		{
 			struct Articulation
@@ -37,8 +40,8 @@ namespace spk::Model3D
 	private:
 		friend class Animator;
 
-		// Channels are an implementation detail: callers only define Steps.
-		// Empty channels reserve a target for the full animation duration.
+		// A channel is an internal detail; clients only see Step.
+		// An empty channel reserves its target for the whole animation.
 		struct Target
 		{
 			std::string elementName;
@@ -64,21 +67,38 @@ namespace spk::Model3D
 		std::vector<Step> _steps;
 		std::vector<Channel> _channels;
 
-		Animation &_reserve(Target target);
-
-	public:
 		explicit Animation(float duration);
 
+	public:
 		[[nodiscard]] float duration() const noexcept;
 		[[nodiscard]] const std::vector<Step> &steps() const noexcept;
+	};
 
-		// Steps must be in strictly increasing time order, within [0, duration].
-		// A target may be omitted from intermediate steps; its values are
-		// interpolated between its own neighboring keyframes.
-		Animation &addStep(Step step);
+	// Follows Blueprint::Builder: definitions are mutable only while building.
+	class Animation::Builder
+	{
+	private:
+		std::optional<Animation> _animation;
 
-		// Reserve a target even when the animation has no keyframes for it.
-		Animation &reserveArticulation(std::string elementName, std::string attachmentName);
-		Animation &reserveBody(std::string elementName);
+		[[nodiscard]] Animation &_active();
+		Builder &_reserve(Animation::Target target);
+
+	public:
+		explicit Builder(float duration);
+
+		Builder(const Builder &) = delete;
+		Builder &operator=(const Builder &) = delete;
+		Builder(Builder &&) noexcept = default;
+		Builder &operator=(Builder &&) noexcept = default;
+
+		// Steps are ordered and each can animate multiple independent targets.
+		Builder &addStep(Step step);
+
+		// Reserve a target without providing keyframes for it.
+		Builder &reserveArticulation(std::string elementName, std::string attachmentName);
+		Builder &reserveBody(std::string elementName);
+
+		// Finishes the builder; subsequent operations are rejected.
+		[[nodiscard]] Animation build();
 	};
 }
