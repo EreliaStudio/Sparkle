@@ -65,9 +65,7 @@ namespace
 
 	void writePng(const std::filesystem::path &path, const sparkle_test::FramebufferImage &frame)
 	{
-		if (stbi_write_png(path.string().c_str(), static_cast<int>(frame.size.x),
-				static_cast<int>(frame.size.y), 4, frame.pixels.data(),
-				static_cast<int>(frame.size.x * 4)) == 0)
+		if (stbi_write_png(path.string().c_str(), static_cast<int>(frame.size.x), static_cast<int>(frame.size.y), 4, frame.pixels.data(), static_cast<int>(frame.size.x * 4)) == 0)
 		{
 			throw std::runtime_error("Cannot write GIF comparison frame: " + path.string());
 		}
@@ -97,8 +95,7 @@ namespace
 		int count = 0;
 		int components = 0;
 		Byte *raw = stbi_load_gif_from_memory(
-			bytes.data(), static_cast<int>(bytes.size()), &rawDelays,
-			&width, &height, &count, &components, 4);
+			bytes.data(), static_cast<int>(bytes.size()), &rawDelays, &width, &height, &count, &components, 4);
 		if (raw == nullptr)
 		{
 			throw std::runtime_error("Cannot decode golden GIF: " + path.string());
@@ -116,8 +113,7 @@ namespace
 				result.frames.push_back(std::move(frame));
 				result.delays.push_back(rawDelays != nullptr ? rawDelays[index] : 0);
 			}
-		}
-		catch (...)
+		} catch (...)
 		{
 			stbi_image_free(raw);
 			stbi_image_free(rawDelays);
@@ -186,8 +182,7 @@ namespace sparkle_test
 			{
 				const std::size_t count = std::min<std::size_t>(255, stream.size() - offset);
 				output.push_back(static_cast<Byte>(count));
-				output.insert(output.end(), stream.begin() + static_cast<std::ptrdiff_t>(offset),
-					stream.begin() + static_cast<std::ptrdiff_t>(offset + count));
+				output.insert(output.end(), stream.begin() + static_cast<std::ptrdiff_t>(offset), stream.begin() + static_cast<std::ptrdiff_t>(offset + count));
 				offset += count;
 			}
 			output.push_back(0);
@@ -231,9 +226,9 @@ namespace sparkle_test
 			const auto comparison = compareImages(actualPng, referencePng, differencePng, options.image, false);
 			result.differentPixels.push_back(comparison.differentPixelCount);
 			const bool valid = comparison.differentPixelCount <= options.maximumDifferentPixelsPerFrame &&
-				comparison.actualWidth == comparison.expectedWidth &&
-				comparison.actualHeight == comparison.expectedHeight &&
-				expected.delays[index] == static_cast<int>(options.frameDelayMs);
+							   comparison.actualWidth == comparison.expectedWidth &&
+							   comparison.actualHeight == comparison.expectedHeight &&
+							   expected.delays[index] == static_cast<int>(options.frameDelayMs);
 			if (valid)
 			{
 				std::filesystem::remove(actualPng);

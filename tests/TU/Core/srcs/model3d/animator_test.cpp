@@ -35,18 +35,14 @@ namespace
 	[[nodiscard]] Animation armAnimation()
 	{
 		Animation animation(1.0f);
-		animation.addTrack({"torso", "shoulder"}, {
-			{0.0f, {}, {1.0f, 1.0f, 1.0f}},
-			{1.0f, spk::Quaternion::fromEuler({0, 0, 90}), {1.0f, 2.0f, 1.0f}}});
+		animation.addTrack({"torso", "shoulder"}, {{0.0f, {}, {1.0f, 1.0f, 1.0f}}, {1.0f, spk::Quaternion::fromEuler({0, 0, 90}), {1.0f, 2.0f, 1.0f}}});
 		return animation;
 	}
 
 	[[nodiscard]] Animation legAnimation()
 	{
 		Animation animation(1.0f);
-		animation.addTrack({"torso", "hip"}, {
-			{0.0f, {}, {1.0f, 1.0f, 1.0f}},
-			{1.0f, spk::Quaternion::fromEuler({20, 0, 0}), {1.0f, 1.0f, 1.0f}}});
+		animation.addTrack({"torso", "hip"}, {{0.0f, {}, {1.0f, 1.0f, 1.0f}}, {1.0f, spk::Quaternion::fromEuler({20, 0, 0}), {1.0f, 1.0f, 1.0f}}});
 		return animation;
 	}
 }
@@ -108,9 +104,7 @@ TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToAllChildren)
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
 	Animation animation(1.0f);
-	animation.addTrack({"torso", ""}, {
-		{0.0f, {}, {1, 1, 1}},
-		{1.0f, {}, {2, 3, 1}}});
+	animation.addTrack({"torso", ""}, {{0.0f, {}, {1, 1, 1}}, {1.0f, {}, {2, 3, 1}}});
 	const auto handBefore = object.element("hand").globalTransform();
 	const auto result = animator.play(animation);
 	ASSERT_TRUE(result.started);

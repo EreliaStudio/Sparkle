@@ -849,7 +849,6 @@ TEST(EngineViewModel3DRoomGoldenTest, OverlappingTransparentBoxesComposeWithWarm
 	gl.reset();
 }
 
-
 namespace
 {
 	[[nodiscard]] sparkle_test::FramebufferImage captureAnimationPreview(PreviewScene &scene)
@@ -881,42 +880,21 @@ namespace
 		const auto result = sparkle_test::compareAnimationGif(frames, expected, actual, diagnostics, options);
 		EXPECT_EQ(result.expectedFrames, result.actualFrames) << "Frame count mismatch: " << actual;
 		EXPECT_TRUE(result.matches) << "Golden animation mismatch: " << expected << "\nActual GIF: " << actual
-			<< "\nFrame diagnostics: " << diagnostics;
+									<< "\nFrame diagnostics: " << diagnostics;
 	}
 
 	[[nodiscard]] spk::Model3D::Animation articulationClip()
 	{
 		using spk::Model3D::Animation;
-		const auto rotation = [](spk::Vector3 euler) { return spk::Quaternion::fromEuler(euler); };
+		const auto rotation = [](spk::Vector3 euler) {
+			return spk::Quaternion::fromEuler(euler);
+		};
 		Animation animation(1.2f);
-		animation.addTrack({"torso", "leftShoulder"}, {
-			{0.0f, rotation({0, 0, 0})},
-			{0.3f, rotation({0, 0, -95})},
-			{0.6f, rotation({0, 0, 0})},
-			{0.9f, rotation({0, 0, -60})},
-			{1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "rightShoulder"}, {
-			{0.0f, rotation({0, 0, 0})},
-			{0.3f, rotation({0, 0, 90})},
-			{0.6f, rotation({0, 0, 0})},
-			{0.9f, rotation({0, 0, 45})},
-			{1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "leftHip"}, {
-			{0.0f, rotation({0, 0, 0})},
-			{0.3f, rotation({30, 0, 0})},
-			{0.6f, rotation({0, 0, 0})},
-			{0.9f, rotation({-30, 0, 0})},
-			{1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "rightHip"}, {
-			{0.0f, rotation({0, 0, 0})},
-			{0.3f, rotation({-30, 0, 0})},
-			{0.6f, rotation({0, 0, 0})},
-			{0.9f, rotation({30, 0, 0})},
-			{1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "neck"}, {
-			{0.0f, rotation({0, 0, 0})},
-			{0.6f, rotation({0, 35, 0})},
-			{1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "leftShoulder"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({0, 0, -95})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({0, 0, -60})}, {1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "rightShoulder"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({0, 0, 90})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({0, 0, 45})}, {1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "leftHip"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({30, 0, 0})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({-30, 0, 0})}, {1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "rightHip"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({-30, 0, 0})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({30, 0, 0})}, {1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "neck"}, {{0.0f, rotation({0, 0, 0})}, {0.6f, rotation({0, 35, 0})}, {1.2f, rotation({0, 0, 0})}});
 		return animation;
 	}
 
@@ -924,24 +902,9 @@ namespace
 	{
 		using spk::Model3D::Animation;
 		Animation animation(1.2f);
-		animation.addTrack({"torso", ""}, {
-			{0.0f, {}, {1, 1, 1}},
-			{0.3f, {}, {1, 1.5f, 1}},
-			{0.6f, {}, {1.45f, 0.8f, 1}},
-			{0.9f, {}, {0.85f, 1.1f, 1}},
-			{1.2f, {}, {1, 1, 1}}});
-		animation.addTrack({"torso", "rightShoulder"}, {
-			{0.0f, {}, {1, 1, 1}},
-			{0.3f, {}, {1, 1.8f, 1}},
-			{0.6f, {}, {1, 2.1f, 1}},
-			{0.9f, {}, {1.3f, 1.2f, 1}},
-			{1.2f, {}, {1, 1, 1}}});
-		animation.addTrack({"torso", "leftShoulder"}, {
-			{0.0f, {}, {1, 1, 1}},
-			{0.3f, {}, {1.5f, 1, 1}},
-			{0.6f, {}, {1, 1.4f, 1}},
-			{0.9f, {}, {1, 1, 1}},
-			{1.2f, {}, {1, 1, 1}}});
+		animation.addTrack({"torso", ""}, {{0.0f, {}, {1, 1, 1}}, {0.3f, {}, {1, 1.5f, 1}}, {0.6f, {}, {1.45f, 0.8f, 1}}, {0.9f, {}, {0.85f, 1.1f, 1}}, {1.2f, {}, {1, 1, 1}}});
+		animation.addTrack({"torso", "rightShoulder"}, {{0.0f, {}, {1, 1, 1}}, {0.3f, {}, {1, 1.8f, 1}}, {0.6f, {}, {1, 2.1f, 1}}, {0.9f, {}, {1.3f, 1.2f, 1}}, {1.2f, {}, {1, 1, 1}}});
+		animation.addTrack({"torso", "leftShoulder"}, {{0.0f, {}, {1, 1, 1}}, {0.3f, {}, {1.5f, 1, 1}}, {0.6f, {}, {1, 1.4f, 1}}, {0.9f, {}, {1, 1, 1}}, {1.2f, {}, {1, 1, 1}}});
 		return animation;
 	}
 
