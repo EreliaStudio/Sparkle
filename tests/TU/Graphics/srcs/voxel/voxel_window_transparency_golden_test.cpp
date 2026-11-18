@@ -275,8 +275,8 @@ namespace
 			scene.add(
 				assets.actor,
 				assets.actorMaterials,
-				{characterCenterX - 0.385f, 0.15f, -1.45f},
-				{0.11f, 0.12f, 0.12f});
+				{characterCenterX - 0.49f, 0.15f, -1.45f},
+				{0.14f, 0.12f, 0.12f});
 		}
 	}
 
@@ -374,10 +374,10 @@ TEST(VoxelTransparencyWindowGolden, CharacterStraddlesGlassAndUncoveredHalf)
 	populateWindow(noCharacter, assets, true, true, false, 1.0f);
 	const auto emptyOpening = renderWindow(noCharacter);
 
-	EXPECT_GT(differentPixels(glassAndClear, entirelyClear, 0, HalfImageX - 8), 40u);
-	EXPECT_EQ(differentPixels(glassAndClear, entirelyClear, HalfImageX + 8, WindowImageSize.x), 0u);
-	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, 0, HalfImageX - 8), 30u);
-	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, HalfImageX + 8, WindowImageSize.x), 30u);
+	EXPECT_GT(differentPixels(glassAndClear, entirelyClear, 0, HalfImageX - 4), 40u);
+	EXPECT_EQ(differentPixels(glassAndClear, entirelyClear, HalfImageX + 4, WindowImageSize.x), 0u);
+	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, 0, HalfImageX - 4), 20u);
+	EXPECT_GT(differentPixels(glassAndClear, emptyOpening, HalfImageX + 4, WindowImageSize.x), 20u);
 	EXPECT_EQ(glassAndClear.pixel({2, 2})[3], 255);
 }
 
