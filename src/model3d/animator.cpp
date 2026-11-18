@@ -11,6 +11,28 @@
 
 namespace spk::Model3D
 {
+	namespace
+	{
+		// The easing curve changes time, not the quaternion or matrix math.
+		// All curves map [0,1] into [0,1] and preserve both endpoints.
+		[[nodiscard]] float easedTime(float alpha, Animation::Interpolation interpolation)
+		{
+			const float t = std::clamp(alpha, 0.0f, 1.0f);
+			switch (interpolation)
+			{
+			case Animation::Interpolation::Linear:
+				return t;
+			case Animation::Interpolation::Quadratic:
+				return t * t;
+			case Animation::Interpolation::Cubic:
+				return t * t * t;
+			case Animation::Interpolation::Logarithmic:
+				return std::log1p(9.0f * t) / std::log1p(9.0f);
+			}
+			throw std::invalid_argument("Invalid animation interpolation mode");
+		}
+	}
+
 	Animator::Animator(ObjectHeadless &object) noexcept :
 		_object(object)
 	{
@@ -34,11 +56,13 @@ namespace spk::Model3D
 				return keys.front();
 			}
 			// A target introduced later starts from the instance's captured pose.
-			const float alpha = time / keys.front().time;
+			const float alpha = easedTime(time / keys.front().time, keys.front().interpolation);
 			return {
 				time,
 				Quaternion::slerp(initial.rotation, keys.front().rotation, alpha),
-				Vector3::lerp(initial.scale, keys.front().scale, alpha)};
+				Vector3::lerp(initial.scale, keys.front().scale, alpha),
+				Vector3::lerp(initial.translation, keys.front().translation, alpha),
+				keys.front().interpolation};
 		}
 		if (time >= keys.back().time)
 		{
@@ -48,11 +72,13 @@ namespace spk::Model3D
 			return value < key.time;
 		});
 		const auto lower = std::prev(upper);
-		const float alpha = (time - lower->time) / (upper->time - lower->time);
+		const float alpha = easedTime((time - lower->time) / (upper->time - lower->time), upper->interpolation);
 		return {
 			time,
 			Quaternion::slerp(lower->rotation, upper->rotation, alpha),
-			Vector3::lerp(lower->scale, upper->scale, alpha)};
+			Vector3::lerp(lower->scale, upper->scale, alpha),
+			Vector3::lerp(lower->translation, upper->translation, alpha),
+			upper->interpolation};
 	}
 
 	void Animator::_apply(const Running &running, float time)
@@ -68,7 +94,9 @@ namespace spk::Model3D
 			const auto value = _sample(channel, running.initial[index], time);
 			if (channel.target.attachmentName.empty())
 			{
-				_object.element(channel.target.elementName).setScale(value.scale);
+				auto &body = _object.element(channel.target.elementName);
+				body.setTranslation(value.translation);
+				body.setScale(value.scale);
 			}
 			else
 			{
@@ -83,7 +111,9 @@ namespace spk::Model3D
 		{
 			if (pose.target.attachmentName.empty())
 			{
-				_object.element(pose.target.elementName).setScale(pose.scale);
+				auto &body = _object.element(pose.target.elementName);
+				body.setTranslation(pose.translation);
+				body.setScale(pose.scale);
 			}
 			else
 			{
@@ -123,11 +153,13 @@ namespace spk::Model3D
 		initial.reserve(animation._channels.size());
 		for (const auto &channel : animation._channels)
 		{
-			StartPose pose{channel.target, Quaternion::identity(), {1.0f, 1.0f, 1.0f}};
+			StartPose pose{channel.target, Quaternion::identity(), {1.0f, 1.0f, 1.0f}, {}};
 			// Validate every target before touching any pose.
 			if (channel.target.attachmentName.empty())
 			{
-				pose.scale = _object.element(channel.target.elementName).scale();
+				const auto &body = _object.element(channel.target.elementName);
+				pose.scale = body.scale();
+				pose.translation = body.translation();
 			}
 			else
 			{
