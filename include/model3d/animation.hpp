@@ -17,6 +17,16 @@ namespace spk::Model3D
 	public:
 		class Builder;
 
+		// Easing of the normalized interpolation parameter (0..1), not
+		// interpolation of matrix entries. Cubic/Quadratic are ease-in curves.
+		enum class Interpolation
+		{
+			Linear,
+			Quadratic,
+			Cubic,
+			Logarithmic
+		};
+
 		struct Step
 		{
 			struct Articulation
@@ -24,12 +34,15 @@ namespace spk::Model3D
 				std::string elementName;
 				std::string attachmentName;
 				Quaternion rotation{};
+				Interpolation interpolation = Interpolation::Linear;
 			};
 
 			struct Body
 			{
 				std::string elementName;
 				Vector3 scale{1.0f, 1.0f, 1.0f};
+				Vector3 translation{};
+				Interpolation interpolation = Interpolation::Linear;
 			};
 
 			float time = 0.0f;
@@ -55,6 +68,8 @@ namespace spk::Model3D
 			float time;
 			Quaternion rotation;
 			Vector3 scale;
+			Vector3 translation;
+			Interpolation interpolation;
 		};
 
 		struct Channel
