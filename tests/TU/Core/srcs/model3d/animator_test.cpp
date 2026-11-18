@@ -248,7 +248,7 @@ TEST(Model3DAnimatorTest, AbsentEarlyStepUsesCapturedPoseAndSparseStepsInterpola
 	animator.update(0.25f);
 	const auto expected = spk::Quaternion::slerp(initial, spk::Quaternion::fromEuler({0, 0, 90}), 0.5f);
 	EXPECT_NEAR(std::fabs(object.attachment("torso", "shoulder").rotation().dot(expected)), 1.0f, 0.0001f);
-	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 1, 1}));
+	EXPECT_NEAR(object.root().scale().y, 1.0f + (0.25f - 0.2f) / (0.75f - 0.2f), 0.0001f);
 	animator.update(0.5f);
 	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 2, 1}));
 	EXPECT_TRUE(animator.stop(handle));
