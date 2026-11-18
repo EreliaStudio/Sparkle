@@ -36,18 +36,18 @@ namespace
 
 	[[nodiscard]] Animation armAnimation()
 	{
-		Animation animation(1.0f);
-		animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::identity()}}, .bodies = {{"arm", {1.0f, 1.0f, 1.0f}}}});
-		animation.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}, .bodies = {{"arm", {1.0f, 2.0f, 1.0f}}}});
-		return animation;
+		Animation::Builder builder(1.0f);
+		builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::identity()}}, .bodies = {{"arm", {1.0f, 1.0f, 1.0f}}}});
+		builder.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}, .bodies = {{"arm", {1.0f, 2.0f, 1.0f}}}});
+		return builder.build();
 	}
 
 	[[nodiscard]] Animation legAnimation()
 	{
-		Animation animation(1.0f);
-		animation.addStep({.time = 0.0f, .articulations = {{"torso", "hip", {}}}});
-		animation.addStep({.time = 1.0f, .articulations = {{"torso", "hip", spk::Quaternion::fromEuler({20, 0, 0})}}});
-		return animation;
+		Animation::Builder builder(1.0f);
+		builder.addStep({.time = 0.0f, .articulations = {{"torso", "hip", {}}}});
+		builder.addStep({.time = 1.0f, .articulations = {{"torso", "hip", spk::Quaternion::fromEuler({20, 0, 0})}}});
+		return builder.build();
 	}
 }
 
@@ -63,32 +63,37 @@ TEST(VectorLerpTest, TwoThreeAndFourDimensionsSupportInterpolationAndExtrapolati
 
 TEST(Model3DAnimationTest, RejectsInvalidDurationAndStepsWithoutChangingTheClip)
 {
-	EXPECT_THROW(static_cast<void>(Animation(0.0f)), std::invalid_argument);
-	EXPECT_THROW(static_cast<void>(Animation(-1.0f)), std::invalid_argument);
-	EXPECT_THROW(static_cast<void>(Animation(std::numeric_limits<float>::infinity())), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(Animation::Builder(0.0f)), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(Animation::Builder(-1.0f)), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(Animation::Builder(std::numeric_limits<float>::infinity())), std::invalid_argument);
 
-	Animation animation(1.0f);
-	EXPECT_THROW(animation.addStep({.time = -0.1f}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 1.1f}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = std::numeric_limits<float>::quiet_NaN()}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"", "shoulder", {}}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"torso", "", {}}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 0}}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .bodies = {{"torso", {0, 1, 1}}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .bodies = {{"", {1, 1, 1}}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}, {"torso", "shoulder", {}}}}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}, {"torso", {1, 1, 1}}}}), std::invalid_argument);
-	EXPECT_TRUE(animation.steps().empty());
+	Animation::Builder builder(1.0f);
+	EXPECT_THROW(builder.addStep({.time = -0.1f}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 1.1f}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = std::numeric_limits<float>::quiet_NaN()}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"", "shoulder", {}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"torso", "", {}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 0}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"torso", {0, 1, 1}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"", {1, 1, 1}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}, {"torso", "shoulder", {}}}}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}, {"torso", {1, 1, 1}}}}), std::invalid_argument);
+	
 
-	animation.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 2}}}});
-	ASSERT_EQ(animation.steps().size(), 1u);
-	EXPECT_NEAR(animation.steps().front().articulations.front().rotation.w, 1.0f, 0.00001f);
-	EXPECT_THROW(animation.addStep({.time = 0.0f}), std::invalid_argument);
-	EXPECT_THROW(animation.addStep({.time = 0.8f, .bodies = {{"torso", {-1, 1, 1}}}}), std::invalid_argument);
-	EXPECT_EQ(animation.steps().size(), 1u);
-	animation.addStep({.time = 0.8f, .articulations = {{"torso", "shoulder", {}}}});
-	EXPECT_EQ(animation.steps().size(), 2u);
-	EXPECT_THROW(animation.addStep({.time = 0.4f}), std::invalid_argument);
+	builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {0, 0, 0, 2}}}});
+	
+	
+	EXPECT_THROW(builder.addStep({.time = 0.0f}), std::invalid_argument);
+	EXPECT_THROW(builder.addStep({.time = 0.8f, .bodies = {{"torso", {-1, 1, 1}}}}), std::invalid_argument);
+	
+	builder.addStep({.time = 0.8f, .articulations = {{"torso", "shoulder", {}}}});
+	
+	EXPECT_THROW(builder.addStep({.time = 0.4f}), std::invalid_argument);
+	const Animation result = builder.build();
+	ASSERT_EQ(result.steps().size(), 2u);
+	EXPECT_NEAR(result.steps().front().articulations.front().rotation.w, 1.0f, 0.00001f);
+	EXPECT_THROW(builder.addStep({.time = 0.9f}), std::logic_error);
+	EXPECT_THROW(static_cast<void>(builder.build()), std::logic_error);
 }
 
 TEST(Model3DAnimatorTest, InterpolatesArticulationsAndBodyScaleIndependently)
@@ -116,11 +121,11 @@ TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToChildren)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
-	Animation animation(1.0f);
-	animation.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}}});
-	animation.addStep({.time = 1.0f, .bodies = {{"torso", {2, 3, 1}}}});
+	Animation::Builder builder(1.0f);
+	builder.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}}});
+	builder.addStep({.time = 1.0f, .bodies = {{"torso", {2, 3, 1}}}});
 	const auto handBefore = object.element("hand").globalTransform();
-	const auto handle = animator.play(animation);
+	const auto handle = animator.play(builder.build());
 	animator.update(0.5f);
 	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 2.0f, 1.0f}));
 	EXPECT_NEAR(object.element("arm").globalTransform()[3][1], 2.0f, 0.0001f);
@@ -161,11 +166,11 @@ TEST(Model3DAnimatorTest, EmptyMaskReservationsLastForTheEntireClip)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
-	Animation reserve(1.0f);
+	Animation::Builder reserve(1.0f);
 	reserve.reserveArticulation("torso", "shoulder");
 	reserve.reserveBody("arm");
 	reserve.reserveArticulation("torso", "shoulder"); // Idempotent
-	const auto held = animator.play(reserve);
+	const auto held = animator.play(reserve.build());
 	EXPECT_TRUE(animator.playing(held));
 	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);
 	animator.update(0.9f);
@@ -178,22 +183,24 @@ TEST(Model3DAnimatorTest, EmptyMaskReservationsLastForTheEntireClip)
 
 TEST(Model3DAnimationTest, InvalidReservationsDoNotChangeAnimation)
 {
-	Animation animation(1.0f);
-	EXPECT_THROW(animation.reserveArticulation("torso", ""), std::invalid_argument);
-	EXPECT_THROW(animation.reserveArticulation("", "shoulder"), std::invalid_argument);
-	EXPECT_THROW(animation.reserveBody(""), std::invalid_argument);
-	EXPECT_TRUE(animation.steps().empty());
+	Animation::Builder builder(1.0f);
+	EXPECT_THROW(builder.reserveArticulation("torso", ""), std::invalid_argument);
+	EXPECT_THROW(builder.reserveArticulation("", "shoulder"), std::invalid_argument);
+	EXPECT_THROW(builder.reserveBody(""), std::invalid_argument);
+	const Animation clip = builder.build();
+	EXPECT_TRUE(clip.steps().empty());
+	
 }
 
 TEST(Model3DAnimatorTest, InvalidTargetsAndDeltaCannotChangeRunningAnimations)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
-	Animation invalid(1.0f);
+	Animation::Builder invalid(1.0f);
 	invalid.addStep({.time = 0.0f, .articulations = {{"torso", "missing", {}}}});
-	EXPECT_THROW(static_cast<void>(animator.play(invalid)), spk::Exception);
+	EXPECT_THROW(static_cast<void>(animator.play(invalid.build())), spk::Exception);
 	EXPECT_EQ(animator.activeCount(), 0u);
-	EXPECT_THROW(static_cast<void>(animator.play(Animation(1.0f))), std::invalid_argument);
+	EXPECT_THROW(static_cast<void>(animator.play(Animation::Builder(1.0f).build())), std::invalid_argument);
 	const auto handle = animator.play(armAnimation());
 	animator.update(0.4f);
 	const auto rotation = object.attachment("torso", "shoulder").rotation();
@@ -231,12 +238,12 @@ TEST(Model3DAnimatorTest, AbsentEarlyStepUsesCapturedPoseAndSparseStepsInterpola
 	ObjectHeadless object(characterBlueprint());
 	object.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 10});
 	const auto initial = object.attachment("torso", "shoulder").rotation();
-	Animation clip(1.0f);
+	Animation::Builder clip(1.0f);
 	clip.addStep({.time = 0.2f, .bodies = {{"torso", {1, 1, 1}}}});
 	clip.addStep({.time = 0.5f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
 	clip.addStep({.time = 0.75f, .bodies = {{"torso", {1, 2, 1}}}});
 	Animator animator(object);
-	const auto handle = animator.play(clip);
+	const auto handle = animator.play(clip.build());
 	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), initial);
 	animator.update(0.25f);
 	const auto expected = spk::Quaternion::slerp(initial, spk::Quaternion::fromEuler({0, 0, 90}), 0.5f);
@@ -252,14 +259,14 @@ TEST(Model3DAnimatorTest, RotationAndScaleOnTheSameElementCanBeIndependentClips)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator(object);
-	Animation rotate(1.0f);
+	Animation::Builder rotate(1.0f);
 	rotate.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}}});
 	rotate.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
-	Animation scale(1.0f);
+	Animation::Builder scale(1.0f);
 	scale.addStep({.time = 0.0f, .bodies = {{"torso", {1, 1, 1}}}});
 	scale.addStep({.time = 1.0f, .bodies = {{"torso", {2, 1, 1}}}});
-	const auto rotationHandle = animator.play(rotate);
-	const auto scaleHandle = animator.play(scale);
+	const auto rotationHandle = animator.play(rotate.build());
+	const auto scaleHandle = animator.play(scale.build());
 	animator.update(0.5f);
 	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 1, 1}));
 	EXPECT_NEAR(object.attachment("torso", "shoulder").rotationMatrix()[0][0], std::sqrt(0.5f), 0.0001f);
