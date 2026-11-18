@@ -309,6 +309,7 @@ namespace
 		gl.reset(WindowImageSize);
 		spk::EngineWidget widget("window transparency", nullptr);
 		widget.setEngine(&scene.engine);
+		widget.setViewName("window");
 		widget.setGeometry({.anchor = {0, 0}, .size = WindowImageSize});
 		widget.activate();
 
