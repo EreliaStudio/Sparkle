@@ -1,6 +1,8 @@
 #include <GL/glew.h>
 #include <gtest/gtest.h>
 
+#include "model3d/animator.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -845,4 +847,141 @@ TEST(EngineViewModel3DRoomGoldenTest, OverlappingTransparentBoxesComposeWithWarm
 	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 	expectRoomGolden("overlapping_glass_warm_ambient");
 	gl.reset();
+}
+
+
+namespace
+{
+	[[nodiscard]] sparkle_test::FramebufferImage captureAnimationPreview(PreviewScene &scene)
+	{
+		auto &context = sparkle_test::OpenGLTestContext::instance();
+		context.reset(ImageSize);
+		spk::RenderSnapshot::Builder builder;
+		auto &pass = builder.renderPass({"puppet-3d", 0});
+		pass.emplace<spk::ClearRenderCommand>(Background, spk::ClearRenderCommand::Mask::All);
+		pass.emplace<spk::ViewportRenderCommand>(spk::Rect2D{.anchor = {0, 0}, .size = ImageSize});
+		scene.buildRenderSnapshot(builder);
+		builder.build().execute(context.renderContext());
+		return context.capture();
+	}
+
+	void expectAnimatedGolden(
+		const std::vector<sparkle_test::FramebufferImage> &frames,
+		const std::string &name)
+	{
+		const auto expected = sparkle_test::expectedImagesDirectory() / GoldenCategory / (name + "_expected.gif");
+		const auto actual = sparkle_test::freshResultFilePath(GoldenCategory, name + "_actual.gif");
+		const auto diagnostics = sparkle_test::resultsDirectory() / GoldenCategory / (name + "_frames");
+		sparkle_test::GifComparisonOptions options;
+		// GIF palette quantization is acceptable; spatial errors are not.
+		options.image.rgbTolerance = 24;
+		options.image.alphaTolerance = 8;
+		options.maximumDifferentPixelsPerFrame = 150;
+		options.frameDelayMs = 100;
+		const auto result = sparkle_test::compareAnimationGif(frames, expected, actual, diagnostics, options);
+		EXPECT_EQ(result.expectedFrames, result.actualFrames) << "Frame count mismatch: " << actual;
+		EXPECT_TRUE(result.matches) << "Golden animation mismatch: " << expected << "\nActual GIF: " << actual
+			<< "\nFrame diagnostics: " << diagnostics;
+	}
+
+	[[nodiscard]] spk::Model3D::Animation articulationClip()
+	{
+		using spk::Model3D::Animation;
+		const auto rotation = [](spk::Vector3 euler) { return spk::Quaternion::fromEuler(euler); };
+		Animation animation(1.2f);
+		animation.addTrack({"torso", "leftShoulder"}, {
+			{0.0f, rotation({0, 0, 0})},
+			{0.3f, rotation({0, 0, -95})},
+			{0.6f, rotation({0, 0, 0})},
+			{0.9f, rotation({0, 0, -60})},
+			{1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "rightShoulder"}, {
+			{0.0f, rotation({0, 0, 0})},
+			{0.3f, rotation({0, 0, 90})},
+			{0.6f, rotation({0, 0, 0})},
+			{0.9f, rotation({0, 0, 45})},
+			{1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "leftHip"}, {
+			{0.0f, rotation({0, 0, 0})},
+			{0.3f, rotation({30, 0, 0})},
+			{0.6f, rotation({0, 0, 0})},
+			{0.9f, rotation({-30, 0, 0})},
+			{1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "rightHip"}, {
+			{0.0f, rotation({0, 0, 0})},
+			{0.3f, rotation({-30, 0, 0})},
+			{0.6f, rotation({0, 0, 0})},
+			{0.9f, rotation({30, 0, 0})},
+			{1.2f, rotation({0, 0, 0})}});
+		animation.addTrack({"torso", "neck"}, {
+			{0.0f, rotation({0, 0, 0})},
+			{0.6f, rotation({0, 35, 0})},
+			{1.2f, rotation({0, 0, 0})}});
+		return animation;
+	}
+
+	[[nodiscard]] spk::Model3D::Animation scalingClip()
+	{
+		using spk::Model3D::Animation;
+		Animation animation(1.2f);
+		animation.addTrack({"torso", ""}, {
+			{0.0f, {}, {1, 1, 1}},
+			{0.3f, {}, {1, 1.5f, 1}},
+			{0.6f, {}, {1.45f, 0.8f, 1}},
+			{0.9f, {}, {0.85f, 1.1f, 1}},
+			{1.2f, {}, {1, 1, 1}}});
+		animation.addTrack({"torso", "rightShoulder"}, {
+			{0.0f, {}, {1, 1, 1}},
+			{0.3f, {}, {1, 1.8f, 1}},
+			{0.6f, {}, {1, 2.1f, 1}},
+			{0.9f, {}, {1.3f, 1.2f, 1}},
+			{1.2f, {}, {1, 1, 1}}});
+		animation.addTrack({"torso", "leftShoulder"}, {
+			{0.0f, {}, {1, 1, 1}},
+			{0.3f, {}, {1.5f, 1, 1}},
+			{0.6f, {}, {1, 1.4f, 1}},
+			{0.9f, {}, {1, 1, 1}},
+			{1.2f, {}, {1, 1, 1}}});
+		return animation;
+	}
+
+	[[nodiscard]] std::vector<sparkle_test::FramebufferImage> captureClip(
+		Character &character,
+		const spk::Model3D::Animation &clip)
+	{
+		spk::Model3D::Animator animator(character);
+		const auto playback = animator.play(clip);
+		if (!playback.started)
+		{
+			throw std::runtime_error("Golden GIF animation unexpectedly rejected");
+		}
+		PreviewScene scene(character);
+		std::vector<sparkle_test::FramebufferImage> frames;
+		frames.reserve(12);
+		for (std::size_t i = 0; i < 12; ++i)
+		{
+			if (i > 0)
+			{
+				animator.update(0.1f);
+			}
+			frames.push_back(captureAnimationPreview(scene));
+		}
+		return frames;
+	}
+}
+
+TEST(Object3DGoldenTest, AnimatorRotationsMatchSingleGoldenGIF)
+{
+	Character character(characterBlueprint());
+	const auto frames = captureClip(character, articulationClip());
+	ASSERT_EQ(frames.size(), 12u);
+	expectAnimatedGolden(frames, "animator_articulations");
+}
+
+TEST(Object3DGoldenTest, AnimatorScalingMatchesSingleGoldenGIF)
+{
+	Character character(characterBlueprint());
+	const auto frames = captureClip(character, scalingClip());
+	ASSERT_EQ(frames.size(), 12u);
+	expectAnimatedGolden(frames, "animator_scaling");
 }
