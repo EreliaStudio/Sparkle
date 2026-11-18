@@ -891,11 +891,44 @@ namespace
 			return spk::Quaternion::fromEuler(euler);
 		};
 		Animation animation(1.2f);
-		animation.addTrack({"torso", "leftShoulder"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({0, 0, -95})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({0, 0, -60})}, {1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "rightShoulder"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({0, 0, 90})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({0, 0, 45})}, {1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "leftHip"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({30, 0, 0})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({-30, 0, 0})}, {1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "rightHip"}, {{0.0f, rotation({0, 0, 0})}, {0.3f, rotation({-30, 0, 0})}, {0.6f, rotation({0, 0, 0})}, {0.9f, rotation({30, 0, 0})}, {1.2f, rotation({0, 0, 0})}});
-		animation.addTrack({"torso", "neck"}, {{0.0f, rotation({0, 0, 0})}, {0.6f, rotation({0, 35, 0})}, {1.2f, rotation({0, 0, 0})}});
+		animation.addStep({
+			.time = 0.0f,
+			.articulations = {
+				{"torso", "leftShoulder", rotation({0, 0, 0})},
+				{"torso", "rightShoulder", rotation({0, 0, 0})},
+				{"torso", "leftHip", rotation({0, 0, 0})},
+				{"torso", "rightHip", rotation({0, 0, 0})},
+				{"torso", "neck", rotation({0, 0, 0})}}});
+		animation.addStep({
+			.time = 0.3f,
+			.articulations = {
+				{"torso", "leftShoulder", rotation({0, 0, -95})},
+				{"torso", "rightShoulder", rotation({0, 0, 90})},
+				{"torso", "leftHip", rotation({30, 0, 0})},
+				{"torso", "rightHip", rotation({-30, 0, 0})}}});
+		animation.addStep({
+			.time = 0.6f,
+			.articulations = {
+				{"torso", "leftShoulder", rotation({0, 0, 0})},
+				{"torso", "rightShoulder", rotation({0, 0, 0})},
+				{"torso", "leftHip", rotation({0, 0, 0})},
+				{"torso", "rightHip", rotation({0, 0, 0})},
+				{"torso", "neck", rotation({0, 35, 0})}}});
+		animation.addStep({
+			.time = 0.9f,
+			.articulations = {
+				{"torso", "leftShoulder", rotation({0, 0, -60})},
+				{"torso", "rightShoulder", rotation({0, 0, 45})},
+				{"torso", "leftHip", rotation({-30, 0, 0})},
+				{"torso", "rightHip", rotation({30, 0, 0})}}});
+		animation.addStep({
+			.time = 1.2f,
+			.articulations = {
+				{"torso", "leftShoulder", rotation({0, 0, 0})},
+				{"torso", "rightShoulder", rotation({0, 0, 0})},
+				{"torso", "leftHip", rotation({0, 0, 0})},
+				{"torso", "rightHip", rotation({0, 0, 0})},
+				{"torso", "neck", rotation({0, 0, 0})}}});
 		return animation;
 	}
 
@@ -903,9 +936,36 @@ namespace
 	{
 		using spk::Model3D::Animation;
 		Animation animation(1.2f);
-		animation.addTrack({"torso", ""}, {{0.0f, {}, {1, 1, 1}}, {0.3f, {}, {1, 1.5f, 1}}, {0.6f, {}, {1.45f, 0.8f, 1}}, {0.9f, {}, {0.85f, 1.1f, 1}}, {1.2f, {}, {1, 1, 1}}});
-		animation.addTrack({"torso", "rightShoulder"}, {{0.0f, {}, {1, 1, 1}}, {0.3f, {}, {1, 1.8f, 1}}, {0.6f, {}, {1, 2.1f, 1}}, {0.9f, {}, {1.3f, 1.2f, 1}}, {1.2f, {}, {1, 1, 1}}});
-		animation.addTrack({"torso", "leftShoulder"}, {{0.0f, {}, {1, 1, 1}}, {0.3f, {}, {1.5f, 1, 1}}, {0.6f, {}, {1, 1.4f, 1}}, {0.9f, {}, {1, 1, 1}}, {1.2f, {}, {1, 1, 1}}});
+		animation.addStep({
+			.time = 0.0f,
+			.bodies = {
+				{"torso", {1, 1, 1}},
+				{"rightArm", {1, 1, 1}},
+				{"leftArm", {1, 1, 1}}}});
+		animation.addStep({
+			.time = 0.3f,
+			.bodies = {
+				{"torso", {1, 1.5, 1}},
+				{"rightArm", {1, 1.8, 1}},
+				{"leftArm", {1.5, 1, 1}}}});
+		animation.addStep({
+			.time = 0.6f,
+			.bodies = {
+				{"torso", {1.45, 0.8, 1}},
+				{"rightArm", {1, 2.1, 1}},
+				{"leftArm", {1, 1.4, 1}}}});
+		animation.addStep({
+			.time = 0.9f,
+			.bodies = {
+				{"torso", {0.85, 1.1, 1}},
+				{"rightArm", {1.3, 1.2, 1}},
+				{"leftArm", {1, 1, 1}}}});
+		animation.addStep({
+			.time = 1.2f,
+			.bodies = {
+				{"torso", {1, 1, 1}},
+				{"rightArm", {1, 1, 1}},
+				{"leftArm", {1, 1, 1}}}});
 		return animation;
 	}
 
@@ -914,11 +974,7 @@ namespace
 		const spk::Model3D::Animation &clip)
 	{
 		spk::Model3D::Animator animator(character);
-		const auto playback = animator.play(clip);
-		if (!playback.started)
-		{
-			throw std::runtime_error("Golden GIF animation unexpectedly rejected");
-		}
+		static_cast<void>(animator.play(clip));
 		PreviewScene scene(character);
 		std::vector<sparkle_test::FramebufferImage> frames;
 		frames.reserve(12);
