@@ -27,23 +27,38 @@ namespace spk::Model3D
 		return _steps;
 	}
 
-	Animation &Animation::_reserve(Target target)
+	Animation::Builder::Builder(float duration) :
+		_animation(Animation(duration))
 	{
+	}
+
+	Animation &Animation::Builder::_active()
+	{
+		if (!_animation)
+		{
+			throw std::logic_error("Animation::Builder has already been built");
+		}
+		return *_animation;
+	}
+
+	Animation::Builder &Animation::Builder::_reserve(Animation::Target target)
+	{
+		Animation &animation = _active();
 		if (target.elementName.empty())
 		{
 			throw std::invalid_argument("Animation target requires an element name");
 		}
-		const auto existing = std::ranges::find_if(_channels, [&target](const Channel &channel) {
+		const auto existing = std::ranges::find_if(animation._channels, [&target](const Channel &channel) {
 			return channel.target == target;
 		});
-		if (existing == _channels.end())
+		if (existing == animation._channels.end())
 		{
-			_channels.push_back({std::move(target), {}});
+			animation._channels.push_back({std::move(target), {}});
 		}
 		return *this;
 	}
 
-	Animation &Animation::reserveArticulation(std::string elementName, std::string attachmentName)
+	Animation::Builder &Animation::Builder::reserveArticulation(std::string elementName, std::string attachmentName)
 	{
 		if (attachmentName.empty())
 		{
@@ -52,15 +67,16 @@ namespace spk::Model3D
 		return _reserve({std::move(elementName), std::move(attachmentName)});
 	}
 
-	Animation &Animation::reserveBody(std::string elementName)
+	Animation::Builder &Animation::Builder::reserveBody(std::string elementName)
 	{
 		return _reserve({std::move(elementName), {}});
 	}
 
-	Animation &Animation::addStep(Step step)
+	Animation::Builder &Animation::Builder::addStep(Step step)
 	{
-		if (!std::isfinite(step.time) || step.time < 0.0f || step.time > _duration ||
-			(!_steps.empty() && step.time <= _steps.back().time))
+		Animation &animation = _active();
+		if (!std::isfinite(step.time) || step.time < 0.0f || step.time > animation._duration ||
+			(!animation._steps.empty() && step.time <= animation._steps.back().time))
 		{
 			throw std::invalid_argument("Animation steps must be finite, strictly increasing and within the duration");
 		}
@@ -101,7 +117,7 @@ namespace spk::Model3D
 
 		// Compile the chronological step into private channels, without modifying
 		// the existing animation until all validation and allocations succeed.
-		auto channels = _channels;
+		auto channels = animation._channels;
 		auto insert = [&channels, time = step.time](Target target, Quaternion rotation, Vector3 scale) {
 			auto it = std::ranges::find_if(channels, [&target](const Channel &channel) {
 				return channel.target == target;
@@ -122,8 +138,15 @@ namespace spk::Model3D
 			insert({body.elementName, {}}, Quaternion::identity(), body.scale);
 		}
 
-		_steps.push_back(std::move(step));
-		_channels = std::move(channels);
+		animation._steps.push_back(std::move(step));
+		animation._channels = std::move(channels);
 		return *this;
+	}
+
+	Animation Animation::Builder::build()
+	{
+		Animation result = std::move(_active());
+		_animation.reset();
+		return result;
 	}
 }
