@@ -277,10 +277,34 @@ TEST(VoxelOcclusion, MultipleOverlappingBlockersDoNotIncreaseVisibleArea)
 	EXPECT_NEAR(surface(result), 0.75f, 1e-4f);
 }
 
-TEST(VoxelOcclusion, TransparentBlockerIsIgnored)
+TEST(VoxelOcclusion, TransparentBlockerDoesNotOccludeOpaqueSource)
 {
 	auto source = shape(1);
 	auto blocker = shape(0, 0, 1, 0.5f, false);
+	EXPECT_NEAR(surface(Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX)), 1.0f, 1e-4f);
+}
+
+TEST(VoxelOcclusion, MatchingTranslucentSurfacesCullSharedBoundary)
+{
+	auto source = shape(1, 0, 1, 0.5f);
+	auto blocker = shape(0, 0, 1, 0.5f, false);
+	EXPECT_TRUE(Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX).empty());
+
+	Cache cache;
+	EXPECT_TRUE(cache.get(key(source, blocker)).empty());
+}
+
+TEST(VoxelOcclusion, MatchingTranslucentPartialSurfaceOnlyClipsOverlap)
+{
+	auto source = shape(1, 0, 1, 0.5f);
+	auto blocker = shape(0, 0, 0.5f, 0.5f, false);
+	EXPECT_NEAR(surface(Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX)), 0.75f, 1e-4f);
+}
+
+TEST(VoxelOcclusion, DifferentTranslucentOpacitiesPreserveSharedBoundary)
+{
+	auto source = shape(1, 0, 1, 0.5f);
+	auto blocker = shape(0, 0, 1, 0.3f, false);
 	EXPECT_NEAR(surface(Algorithm::compute(source, {}, blocker, {}, Shape::Face::PositiveX)), 1.0f, 1e-4f);
 }
 

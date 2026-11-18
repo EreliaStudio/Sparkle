@@ -187,13 +187,18 @@ namespace spk::Voxel::Occlusion
 				continue;
 			}
 			std::vector<Polygon> current{polygon};
+			const auto &sourceSlot = source.slot(polygon.slotKey);
 			for (const auto &occluder : blocker.shape().instance(blockerOrientation).triangles())
 			{
 				if (occluder.shell != Shape::Shell::Outer || occluder.boundary != opposite(direction))
 				{
 					continue;
 				}
-				if (blocker.opacity(occluder.slotKey) < 1.0f)
+				const auto &blockerSlot = blocker.slot(occluder.slotKey);
+				// Only a matching translucent surface can hide another translucent surface.
+				// Different translucent materials (or opacities) retain their interface.
+				if (blockerSlot.opacity < 1.0f &&
+					(blockerSlot.name != sourceSlot.name || blockerSlot.opacity != sourceSlot.opacity))
 				{
 					continue;
 				}
