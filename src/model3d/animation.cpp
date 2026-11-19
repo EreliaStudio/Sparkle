@@ -118,7 +118,9 @@ namespace spk::Model3D
 			validateTarget({translation.elementName, {}, Target::Property::Translation});
 			if (!std::isfinite(translation.translation.x) || !std::isfinite(translation.translation.y) ||
 				!std::isfinite(translation.translation.z))
+			{
 				throw std::invalid_argument("Animation translation must be finite");
+			}
 			validateInterpolation(translation.interpolation);
 		}
 		for (const Step::Scaling &scaling : step.scalings)
@@ -126,7 +128,9 @@ namespace spk::Model3D
 			validateTarget({scaling.elementName, {}, Target::Property::Scaling});
 			if (!std::isfinite(scaling.scale.x) || !std::isfinite(scaling.scale.y) || !std::isfinite(scaling.scale.z) ||
 				scaling.scale.x <= 0.0f || scaling.scale.y <= 0.0f || scaling.scale.z <= 0.0f)
+			{
 				throw std::invalid_argument("Animation scale must be finite and strictly positive");
+			}
 			validateInterpolation(scaling.interpolation);
 		}
 
@@ -149,9 +153,13 @@ namespace spk::Model3D
 			insert({joint.elementName, joint.attachmentName, Target::Property::Rotation}, joint.rotation, {1.0f, 1.0f, 1.0f}, {}, joint.interpolation);
 		}
 		for (const Step::Translation &translation : step.translations)
+		{
 			insert({translation.elementName, {}, Target::Property::Translation}, Quaternion::identity(), {1, 1, 1}, translation.translation, translation.interpolation);
+		}
 		for (const Step::Scaling &scaling : step.scalings)
+		{
 			insert({scaling.elementName, {}, Target::Property::Scaling}, Quaternion::identity(), scaling.scale, {}, scaling.interpolation);
+		}
 
 		animation._steps.push_back(std::move(step));
 		animation._channels = std::move(channels);
