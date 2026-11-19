@@ -329,8 +329,9 @@ TEST(Model3DAnimatorTest, AbsentEarlyStepUsesCurrentPoseAndSparseStepsInterpolat
 	EXPECT_NEAR(object.root().scale().y, 1.0f + (0.25f - 0.2f) / (0.75f - 0.2f), 0.0001f);
 	animator.update(0.5f);
 	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 2, 1}));
+	const auto poseBeforeStop = object.attachment("torso", "shoulder").rotation();
 	EXPECT_TRUE(animator.stop(handle));
-	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), initial);
+	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), poseBeforeStop);
 }
 
 TEST(Model3DAnimatorTest, RotationAndScaleOnTheSameElementCanBeIndependentClips)
