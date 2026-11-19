@@ -34,8 +34,8 @@ namespace spk::Model3D
 	}
 
 	Animator::Animator(ObjectHeadless &object) :
-		_object(object),
-		_referencePose(object.blueprint())
+		_object(object)
+	
 	{
 	}
 
@@ -108,25 +108,6 @@ namespace spk::Model3D
 		}
 	}
 
-	void Animator::_restore(const Running &running)
-	{
-		for (const auto &pose : running.initial)
-		{
-			switch (pose.target.property)
-			{
-			case Animation::Target::Property::Rotation:
-				_object.attachment(pose.target.elementName, pose.target.attachmentName).setRotation(pose.rotation);
-				break;
-			case Animation::Target::Property::Translation:
-				_object.element(pose.target.elementName).setTranslation(pose.translation);
-				break;
-			case Animation::Target::Property::Scaling:
-				_object.element(pose.target.elementName).setScale(pose.scale);
-				break;
-			}
-		}
-	}
-
 	Animator::Handle Animator::play(const Animation &animation, bool loop)
 	{
 		if (animation._channels.empty())
@@ -147,7 +128,7 @@ namespace spk::Model3D
 						const std::string target = channel.target.elementName +
 												   (body ? "" : "/" + channel.target.attachmentName);
 						throw spk::Exception(
-							"Animation conflict: " + std::string(body ? "body " : "articulation ") +
+							"Animation conflict: " + std::string(body ? (channel.target.property == Animation::Target::Property::Scaling ? "scaling " : "translation ") : "articulation ") +
 							target + " is already controlled by animation #" + std::to_string(active.handle));
 					}
 				}
@@ -163,13 +144,13 @@ namespace spk::Model3D
 			switch (channel.target.property)
 			{
 			case Animation::Target::Property::Rotation:
-				pose.rotation = _referencePose.attachment(channel.target.elementName, channel.target.attachmentName).rotation();
+				pose.rotation = _object.attachment(channel.target.elementName, channel.target.attachmentName).rotation();
 				break;
 			case Animation::Target::Property::Translation:
-				pose.translation = _referencePose.element(channel.target.elementName).translation();
+				pose.translation = _object.element(channel.target.elementName).translation();
 				break;
 			case Animation::Target::Property::Scaling:
-				pose.scale = _referencePose.element(channel.target.elementName).scale();
+				pose.scale = _object.element(channel.target.elementName).scale();
 				break;
 			}
 			initial.push_back(std::move(pose));
@@ -197,7 +178,7 @@ namespace spk::Model3D
 			// 0.9f + 0.1f completes exactly like a single 1.0f update.
 			if (!active.loop && static_cast<float>(elapsed) >= active.animation.duration())
 			{
-				_restore(active);
+				_apply(active, active.animation.duration());
 				it = _running.erase(it);
 				continue;
 			}
@@ -216,17 +197,12 @@ namespace spk::Model3D
 		{
 			return false;
 		}
-		_restore(*it);
 		_running.erase(it);
 		return true;
 	}
 
 	void Animator::stopAll()
 	{
-		for (const auto &running : _running)
-		{
-			_restore(running);
-		}
 		_running.clear();
 	}
 
