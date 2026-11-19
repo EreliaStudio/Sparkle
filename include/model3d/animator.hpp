@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
+#include <map>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "model3d/animation.hpp"
@@ -15,7 +17,7 @@ namespace spk::Model3D
 	class Animator final
 	{
 	public:
-		using Handle = std::uint64_t;
+		class Builder;
 
 	private:
 		struct StartPose
@@ -28,16 +30,18 @@ namespace spk::Model3D
 
 		struct Running
 		{
-			Handle handle;
-			Animation animation;
+			std::string name;
 			double time;
-			bool loop;
 			std::vector<StartPose> initial;
 		};
 
 		ObjectHeadless *_object = nullptr;
+		struct Entry { Animation animation; std::optional<std::string> exit; };
+		std::map<std::string, Entry> _animations;
+		std::optional<std::string> _default;
 		std::vector<Running> _running;
-		Handle _nextHandle = 1;
+		void _start(const std::string &name);
+		void _resumeDefault();
 
 		[[nodiscard]] static Animation::Keyframe _sample(
 			const Animation::Channel &channel,
@@ -57,13 +61,21 @@ namespace spk::Model3D
 		Animator(Animator &&) = delete;
 		Animator &operator=(Animator &&) = delete;
 
-		// Returns a handle on success; throws spk::Exception on a mask conflict,
-		// without changing any pose or running clip. Copies the clip definition.
-		[[nodiscard]] Handle play(const Animation &animation, bool loop = false);
+		void play(const std::string &name);
 		void update(float deltaSeconds);
-		[[nodiscard]] bool stop(Handle handle);
+		[[nodiscard]] bool stop(const std::string &name);
 		void stopAll();
-		[[nodiscard]] bool playing(Handle handle) const noexcept;
+		[[nodiscard]] bool playing(const std::string &name) const noexcept;
 		[[nodiscard]] std::size_t activeCount() const noexcept;
+	};
+	class Animator::Builder
+	{
+		std::map<std::string, Entry> _animations;
+		std::optional<std::string> _default;
+	public:
+		Builder &addAnimation(std::string name, Animation animation);
+		Builder &setDefaultAnimation(std::optional<std::string> name);
+		Builder &setExitAnimation(const std::string &name, std::string exitName);
+		[[nodiscard]] Animator build();
 	};
 }
