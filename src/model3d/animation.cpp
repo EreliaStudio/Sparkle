@@ -55,12 +55,16 @@ namespace spk::Model3D
 		{
 			throw std::invalid_argument("Animation articulation requires an attachment name");
 		}
-		return _reserve({std::move(elementName), std::move(attachmentName)});
+		return _reserve({std::move(elementName), std::move(attachmentName), Target::Property::Rotation});
 	}
 
-	Animation::Builder &Animation::Builder::reserveBody(std::string elementName)
+	Animation::Builder &Animation::Builder::reserveTranslation(std::string elementName)
 	{
-		return _reserve({std::move(elementName), {}});
+		return _reserve({std::move(elementName), {}, Target::Property::Translation});
+	}
+	Animation::Builder &Animation::Builder::reserveScaling(std::string elementName)
+	{
+		return _reserve({std::move(elementName), {}, Target::Property::Scaling});
 	}
 
 	Animation::Builder &Animation::Builder::addStep(Step step)
@@ -85,7 +89,7 @@ namespace spk::Model3D
 		};
 
 		std::vector<Target> seen;
-		seen.reserve(step.articulations.size() + step.bodies.size());
+		seen.reserve(step.articulations.size() + step.translations.size() + step.scalings.size());
 		auto validateTarget = [&seen](const Target &target) {
 			if (target.elementName.empty() ||
 				std::ranges::find(seen, target) != seen.end())
@@ -100,7 +104,7 @@ namespace spk::Model3D
 			{
 				throw std::invalid_argument("Animation articulation requires an attachment name");
 			}
-			validateTarget({joint.elementName, joint.attachmentName});
+			validateTarget({joint.elementName, joint.attachmentName, Target::Property::Rotation});
 			const float lengthSquared = joint.rotation.dot(joint.rotation);
 			if (!std::isfinite(lengthSquared) || lengthSquared <= 0.0f)
 			{
@@ -109,19 +113,20 @@ namespace spk::Model3D
 			validateInterpolation(joint.interpolation);
 			joint.rotation = joint.rotation.normalized();
 		}
-		for (const Step::Body &body : step.bodies)
+		for (const Step::Translation &translation : step.translations)
 		{
-			validateTarget({body.elementName, {}});
-			if (!std::isfinite(body.scale.x) || !std::isfinite(body.scale.y) || !std::isfinite(body.scale.z) ||
-				body.scale.x <= 0.0f || body.scale.y <= 0.0f || body.scale.z <= 0.0f)
-			{
-				throw std::invalid_argument("Animation body scale must be finite and strictly positive");
-			}
-			if (!std::isfinite(body.translation.x) || !std::isfinite(body.translation.y) || !std::isfinite(body.translation.z))
-			{
-				throw std::invalid_argument("Animation body translation must be finite");
-			}
-			validateInterpolation(body.interpolation);
+			validateTarget({translation.elementName, {}, Target::Property::Translation});
+			if (!std::isfinite(translation.translation.x) || !std::isfinite(translation.translation.y) || !std::isfinite(translation.translation.z))
+				throw std::invalid_argument("Animation translation must be finite");
+			validateInterpolation(translation.interpolation);
+		}
+		for (const Step::Scaling &scaling : step.scalings)
+		{
+			validateTarget({scaling.elementName, {}, Target::Property::Scaling});
+			if (!std::isfinite(scaling.scale.x) || !std::isfinite(scaling.scale.y) || !std::isfinite(scaling.scale.z) ||
+				scaling.scale.x <= 0.0f || scaling.scale.y <= 0.0f || scaling.scale.z <= 0.0f)
+				throw std::invalid_argument("Animation scale must be finite and strictly positive");
+			validateInterpolation(scaling.interpolation);
 		}
 
 		// Compile the chronological step into private channels, without modifying
@@ -140,12 +145,12 @@ namespace spk::Model3D
 		};
 		for (const Step::Articulation &joint : step.articulations)
 		{
-			insert({joint.elementName, joint.attachmentName}, joint.rotation, {1.0f, 1.0f, 1.0f}, {}, joint.interpolation);
+			insert({joint.elementName, joint.attachmentName, Target::Property::Rotation}, joint.rotation, {1.0f, 1.0f, 1.0f}, {}, joint.interpolation);
 		}
-		for (const Step::Body &body : step.bodies)
-		{
-			insert({body.elementName, {}}, Quaternion::identity(), body.scale, body.translation, body.interpolation);
-		}
+		for (const Step::Translation &translation : step.translations)
+			insert({translation.elementName, {}, Target::Property::Translation}, Quaternion::identity(), {1, 1, 1}, translation.translation, translation.interpolation);
+		for (const Step::Scaling &scaling : step.scalings)
+			insert({scaling.elementName, {}, Target::Property::Scaling}, Quaternion::identity(), scaling.scale, {}, scaling.interpolation);
 
 		animation._steps.push_back(std::move(step));
 		animation._channels = std::move(channels);
