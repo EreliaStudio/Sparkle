@@ -106,7 +106,7 @@ TEST(Model3DAnimatorTest, InterpolatesArticulationsAndScalingIndependently)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	const auto handBefore = object.element("hand").globalTransform();
 	const Animator::Handle handle = animator.play(armAnimation());
 	EXPECT_TRUE(animator.playing(handle));
@@ -173,7 +173,7 @@ TEST(Model3DAnimatorTest, ElementTranslationPreservesHierarchyCopiesAndKeepsPose
 	builder.addStep({.time = 0.0f, .translations = {{"arm", {0, 0.5f, 0}}}, .scalings = {{"arm", {1, 1, 1}}}});
 	builder.addStep({.time = 1.0f, .translations = {{"arm", {0, 1.5f, 0}}}, .scalings = {{"arm", {1, 2, 1}}}});
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	const auto handle = animator.play(builder.build());
 	animator.update(0.5f);
 	EXPECT_NEAR(object.element("arm").translation().y, 1.0f, 0.0001f);
@@ -188,7 +188,7 @@ TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToChildren)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	Animation::Builder builder;
 	builder.addStep({.time = 0.0f, .scalings = {{"torso", {1, 1, 1}}}});
 	builder.addStep({.time = 1.0f, .scalings = {{"torso", {2, 3, 1}}}});
@@ -207,7 +207,7 @@ TEST(Model3DAnimatorTest, ConcurrentDisjointMasksThrowOnConflictWithoutMutatingP
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	const auto arm = animator.play(armAnimation());
 	const auto leg = animator.play(legAnimation());
 	ASSERT_EQ(animator.activeCount(), 2u);
@@ -235,7 +235,7 @@ TEST(Model3DAnimatorTest, EmptyMaskReservationsLastForTheEntireClip)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	Animation::Builder reserve;
 	reserve.reserveArticulation("torso", "shoulder");
 	reserve.reserveScaling("arm");
@@ -268,7 +268,7 @@ TEST(Model3DAnimatorTest, InvalidTargetsAndDeltaCannotChangeRunningAnimations)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	Animation::Builder invalid;
 	invalid.addStep({.time = 0.0f, .articulations = {{"torso", "missing", {}}}});
 	invalid.addStep({.time = 1.0f});
@@ -292,7 +292,7 @@ TEST(Model3DAnimatorTest, LoopingUsesTimeAndKeepsPoseOnStop)
 	object.element("arm").setScale({1, 1.25f, 1});
 	const auto initial = object.attachment("torso", "shoulder").transform();
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	const auto handle = animator.play(armAnimation(), true);
 	animator.update(2.25f);
 	const auto cycled = object.attachment("torso", "shoulder").rotationMatrix();
@@ -320,7 +320,7 @@ TEST(Model3DAnimatorTest, AbsentEarlyStepUsesCurrentPoseAndSparseStepsInterpolat
 	clip.addStep({.time = 0.75f, .scalings = {{"torso", {1, 2, 1}}}});
 	clip.addStep({.time = 1.0f});
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	const auto handle = animator.play(clip.build());
 	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), initial);
 	animator.update(0.25f);
@@ -337,7 +337,7 @@ TEST(Model3DAnimatorTest, RotationAndScaleOnTheSameElementCanBeIndependentClips)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	Animation::Builder rotate;
 	rotate.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}}});
 	rotate.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
@@ -357,7 +357,7 @@ TEST(Model3DAnimatorTest, TranslationAndScalingOfSameElementRunIndependently)
 {
 	ObjectHeadless object(characterBlueprint());
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	Animation::Builder translation;
 	translation.addStep({.time = 0.0f, .translations = {{"arm", {0, 0, 0}}}});
 	translation.addStep({.time = 1.0f, .translations = {{"arm", {4, 0, 0}}}});
@@ -382,7 +382,7 @@ TEST(Model3DAnimatorTest, SparseKeyframeStartsAtCurrentPoseAndCompletionAppliesL
 	ObjectHeadless object(characterBlueprint());
 	object.element("arm").setTranslation({3, 0, 0});
 	Animator animator;
-		animator.bind(object);
+	animator.bind(object);
 	Animation::Builder builder;
 	builder.addStep({.time = 0.5f, .translations = {{"arm", {5, 0, 0}}}});
 	builder.addStep({.time = 1.0f, .translations = {{"arm", {9, 0, 0}}}});
