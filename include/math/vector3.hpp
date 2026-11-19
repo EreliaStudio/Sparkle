@@ -60,6 +60,14 @@ namespace spk
 		{
 		}
 
+		// Linear interpolation; accepts extrapolation outside [0, 1].
+		[[nodiscard]] static constexpr TVector3 lerp(const TVector3 &from, const TVector3 &to, float alpha) noexcept
+			requires std::is_floating_point_v<TType>
+		{
+			const TType t = static_cast<TType>(alpha);
+			return {from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t};
+		}
+
 		[[nodiscard]] constexpr bool operator==(const TVector3 &other) const
 		{
 			return x == other.x && y == other.y && z == other.z;

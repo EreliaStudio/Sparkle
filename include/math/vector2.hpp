@@ -8,6 +8,7 @@
 #include <functional>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 
 #include "exception.hpp"
 
@@ -53,6 +54,14 @@ namespace spk
 			x(static_cast<TType>(other.x)),
 			y(static_cast<TType>(other.y))
 		{
+		}
+
+		// Linear interpolation; accepts extrapolation outside [0, 1].
+		[[nodiscard]] static constexpr TVector2 lerp(const TVector2 &from, const TVector2 &to, float alpha) noexcept
+			requires std::is_floating_point_v<TType>
+		{
+			const TType t = static_cast<TType>(alpha);
+			return {from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t};
 		}
 
 		[[nodiscard]] constexpr bool operator==(const TVector2 &other) const

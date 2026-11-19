@@ -2,6 +2,7 @@ find_package(Stb REQUIRED)
 
 add_library(SparkleTestLibrary STATIC
     srcs/image_comparison.cpp
+    srcs/gif_comparison.cpp
     srcs/open_gl_test_context.cpp
     srcs/paths.cpp
 )

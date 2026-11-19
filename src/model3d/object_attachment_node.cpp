@@ -15,6 +15,15 @@ namespace
 		}
 	}
 
+	void validateScale(const spk::Vector3 &scale)
+	{
+		if (!std::isfinite(scale.x) || !std::isfinite(scale.y) || !std::isfinite(scale.z) ||
+			scale.x <= 0.0f || scale.y <= 0.0f || scale.z <= 0.0f)
+		{
+			throw spk::Exception("Model3D scale must be finite and strictly positive");
+		}
+	}
+
 	spk::Quaternion eulerRotation(const spk::Vector3 &euler)
 	{
 		if (!std::isfinite(euler.x) || !std::isfinite(euler.y) || !std::isfinite(euler.z))
@@ -52,6 +61,16 @@ namespace spk::Model3D
 		return *_owner;
 	}
 
+	const Quaternion &AttachmentNode::rotation() const noexcept
+	{
+		return _rotation;
+	}
+
+	const Vector3 &AttachmentNode::scale() const noexcept
+	{
+		return _scale;
+	}
+
 	const Matrix4x4 &AttachmentNode::rotationMatrix() const noexcept
 	{
 		return _rotationMatrix;
@@ -62,10 +81,9 @@ namespace spk::Model3D
 		return _transform;
 	}
 
-	void AttachmentNode::_applyRotation(const Matrix4x4 &rotation)
+	void AttachmentNode::_refreshTransform()
 	{
-		_rotationMatrix = rotation;
-		_transform = _definition->transform() * _rotationMatrix;
+		_transform = _definition->transform() * _rotationMatrix * Matrix4x4::scale(_scale);
 		for (const Attachable *child : _owner->children())
 		{
 			if (child->parentAttachment() == this)
@@ -78,7 +96,9 @@ namespace spk::Model3D
 	void AttachmentNode::setRotation(const Quaternion &rotation)
 	{
 		validateRotation(rotation);
-		_applyRotation(Matrix4x4::rotation(rotation));
+		_rotation = rotation.normalized();
+		_rotationMatrix = Matrix4x4::rotation(_rotation);
+		_refreshTransform();
 	}
 
 	void AttachmentNode::setRotation(const Vector3 &euler)
@@ -89,12 +109,21 @@ namespace spk::Model3D
 	void AttachmentNode::rotate(const Quaternion &rotation)
 	{
 		validateRotation(rotation);
-		_applyRotation(_rotationMatrix * Matrix4x4::rotation(rotation));
+		_rotation = (_rotation * rotation.normalized()).normalized();
+		_rotationMatrix = Matrix4x4::rotation(_rotation);
+		_refreshTransform();
 	}
 
 	void AttachmentNode::rotate(const Vector3 &euler)
 	{
 		rotate(eulerRotation(euler));
+	}
+
+	void AttachmentNode::setScale(const Vector3 &scale)
+	{
+		validateScale(scale);
+		_scale = scale;
+		_refreshTransform();
 	}
 
 	std::size_t AttachmentNode::attachedCount() const noexcept

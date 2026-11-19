@@ -83,11 +83,13 @@ namespace spk::Model3D
 	private:
 		ObjectHeadless::ElementNode *_owner;
 		const Blueprint::Element::AttachmentPoint *_definition;
+		Quaternion _rotation{};
+		Vector3 _scale{1.0f, 1.0f, 1.0f};
 		Matrix4x4 _rotationMatrix = Matrix4x4::identity();
 		Matrix4x4 _transform = Matrix4x4::identity();
 		std::vector<std::unique_ptr<ObjectHeadless>> _bound;
 
-		void _applyRotation(const Matrix4x4 &rotation);
+		void _refreshTransform();
 		ObjectHeadless &_attachOwned(std::unique_ptr<ObjectHeadless> instance);
 
 	public:
@@ -102,6 +104,8 @@ namespace spk::Model3D
 		[[nodiscard]] const Blueprint::Element::AttachmentPoint &definition() const noexcept;
 		[[nodiscard]] ObjectHeadless::ElementNode &owner() noexcept;
 		[[nodiscard]] const ObjectHeadless::ElementNode &owner() const noexcept;
+		[[nodiscard]] const Quaternion &rotation() const noexcept;
+		[[nodiscard]] const Vector3 &scale() const noexcept;
 		[[nodiscard]] const Matrix4x4 &rotationMatrix() const noexcept;
 		[[nodiscard]] const Matrix4x4 &transform() const noexcept;
 
@@ -109,6 +113,7 @@ namespace spk::Model3D
 		void setRotation(const Vector3 &euler);
 		void rotate(const Quaternion &rotation);
 		void rotate(const Vector3 &euler);
+		void setScale(const Vector3 &scale);
 
 		[[nodiscard]] std::size_t attachedCount() const noexcept;
 		ObjectHeadless &attach(const Blueprint &assembly);
@@ -124,11 +129,15 @@ namespace spk::Model3D
 
 	private:
 		const Blueprint::Element *_definition;
+		Vector3 _translation{};
+		Vector3 _scale{1.0f, 1.0f, 1.0f};
+		Matrix4x4 _localMatrix = Matrix4x4::identity();
 		ObjectHeadless::Data *_instanceData;
 		std::vector<std::unique_ptr<ElementNode>> _ownedChildren;
 		std::vector<std::unique_ptr<AttachmentNode>> _attachments;
 
 		[[nodiscard]] const Matrix4x4 &_localTransform() const noexcept override;
+		void _refreshTransform();
 
 	public:
 		ElementNode(ObjectHeadless::Data &instanceData, const Blueprint::Element &definition, Attachable *structuralParent, AttachmentNode *parentAttachment);
@@ -140,6 +149,10 @@ namespace spk::Model3D
 		ElementNode &operator=(ElementNode &&) = delete;
 
 		[[nodiscard]] const Blueprint::Element &definition() const noexcept;
+		[[nodiscard]] const Vector3 &translation() const noexcept;
+		void setTranslation(const Vector3 &translation);
+		[[nodiscard]] const Vector3 &scale() const noexcept;
+		void setScale(const Vector3 &scale);
 		[[nodiscard]] ObjectHeadless &instance() noexcept;
 		[[nodiscard]] const ObjectHeadless &instance() const noexcept;
 		[[nodiscard]] AttachmentNode &attachment(const std::string &name);
