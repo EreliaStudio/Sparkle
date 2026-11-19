@@ -2,6 +2,7 @@
 
 #include <compare>
 #include <optional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -90,9 +91,8 @@ namespace spk::Model3D
 			std::vector<Keyframe> keyframes;
 		};
 
-		float _duration = 0.0f;
-		std::vector<Step> _steps;
-		std::vector<Channel> _channels;
+		struct Data { float duration = 0.0f; std::vector<Step> steps; std::vector<Channel> channels; };
+		std::shared_ptr<const Data> _data;
 
 		Animation() = default;
 
@@ -105,9 +105,9 @@ namespace spk::Model3D
 	class Animation::Builder
 	{
 	private:
-		std::optional<Animation> _animation;
+		std::optional<Animation::Data> _animation;
 
-		[[nodiscard]] Animation &_active();
+		[[nodiscard]] Animation::Data &_active();
 		Builder &_reserve(Animation::Target target);
 
 	public:
