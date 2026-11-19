@@ -33,9 +33,24 @@ namespace spk::Model3D
 		}
 	}
 
-	Animator::Animator(ObjectHeadless &object) :
-		_object(object)
+	void Animator::bind(ObjectHeadless &object)
 	{
+		if (_object != nullptr)
+		{
+			throw spk::Exception("Animator is already bound.");
+		}
+		_object = &object;
+	}
+
+	void Animator::unbind()
+	{
+		stopAll();
+		_object = nullptr;
+	}
+
+	bool Animator::bound() const noexcept
+	{
+		return _object != nullptr;
 	}
 
 	Animator::~Animator()
@@ -95,13 +110,13 @@ namespace spk::Model3D
 			switch (channel.target.property)
 			{
 			case Animation::Target::Property::Rotation:
-				_object.attachment(channel.target.elementName, channel.target.attachmentName).setRotation(value.rotation);
+				_object->attachment(channel.target.elementName, channel.target.attachmentName).setRotation(value.rotation);
 				break;
 			case Animation::Target::Property::Translation:
-				_object.element(channel.target.elementName).setTranslation(value.translation);
+				_object->element(channel.target.elementName).setTranslation(value.translation);
 				break;
 			case Animation::Target::Property::Scaling:
-				_object.element(channel.target.elementName).setScale(value.scale);
+				_object->element(channel.target.elementName).setScale(value.scale);
 				break;
 			}
 		}
@@ -109,6 +124,10 @@ namespace spk::Model3D
 
 	Animator::Handle Animator::play(const Animation &animation, bool loop)
 	{
+		if (_object == nullptr)
+		{
+			throw spk::Exception("Animator is not bound.");
+		}
 		if (animation._channels.empty())
 		{
 			throw std::invalid_argument("Animator cannot play an animation without any targets");
@@ -143,13 +162,13 @@ namespace spk::Model3D
 			switch (channel.target.property)
 			{
 			case Animation::Target::Property::Rotation:
-				pose.rotation = _object.attachment(channel.target.elementName, channel.target.attachmentName).rotation();
+				pose.rotation = _object->attachment(channel.target.elementName, channel.target.attachmentName).rotation();
 				break;
 			case Animation::Target::Property::Translation:
-				pose.translation = _object.element(channel.target.elementName).translation();
+				pose.translation = _object->element(channel.target.elementName).translation();
 				break;
 			case Animation::Target::Property::Scaling:
-				pose.scale = _object.element(channel.target.elementName).scale();
+				pose.scale = _object->element(channel.target.elementName).scale();
 				break;
 			}
 			initial.push_back(std::move(pose));
