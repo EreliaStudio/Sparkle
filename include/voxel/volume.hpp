@@ -6,7 +6,9 @@
 #include <memory>
 #include <vector>
 
+#include "container/byte_stream.hpp"
 #include "math/vector3.hpp"
+#include "network/message.hpp"
 #include "voxel/cell.hpp"
 
 namespace spk::Voxel
@@ -42,6 +44,7 @@ namespace spk::Voxel
 		public:
 			explicit Builder(spk::Vector3UInt dimensions);
 			void load(const Volume &volume);
+			void load(const spk::ByteStream::Reader &reader);
 			void bind(const Definition::Registry &registry);
 			void set(
 				spk::Vector3UInt position,
@@ -64,6 +67,7 @@ namespace spk::Voxel
 		std::shared_ptr<const Data> _data;
 
 		explicit Volume(std::shared_ptr<const Data> data) noexcept;
+		friend spk::ByteStream::Writer &operator<<(spk::ByteStream::Writer &writer, const Volume &volume);
 
 	public:
 		[[nodiscard]] spk::Vector3UInt dimensions() const noexcept;
@@ -71,4 +75,10 @@ namespace spk::Voxel
 		[[nodiscard]] Cell operator[](spk::Vector3UInt position) const;
 		[[nodiscard]] PackedCell::Storage atRaw(spk::Vector3UInt position) const;
 	};
+
+	// A self-contained voxel payload, independent of Message headers and transport.
+	// Uses a versioned little-endian encoding of dimensions and packed cells.
+	spk::ByteStream::Writer &operator<<(spk::ByteStream::Writer &writer, const Volume &volume);
+	spk::Message::Writer &operator<<(spk::Message::Writer &writer, const Volume &volume);
+	const spk::ByteStream::Reader &operator>>(const spk::ByteStream::Reader &reader, Volume::Builder &builder);
 }

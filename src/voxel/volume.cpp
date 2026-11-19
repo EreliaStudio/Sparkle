@@ -1,9 +1,11 @@
 #include "voxel/volume.hpp"
 
 #include <array>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,6 +16,28 @@ namespace
 {
 	using PackedCell = spk::Voxel::Volume::PackedCell;
 	using Registry = spk::Voxel::Definition::Registry;
+
+	constexpr std::uint32_t VolumeStreamMagic = 0x564B5053U; // "SPKV" in little-endian
+	constexpr std::uint32_t VolumeStreamVersion = 1;
+	constexpr std::size_t VolumeStreamHeaderBytes = 20;
+
+	void writeWord(std::span<std::byte> bytes, std::size_t offset, std::uint32_t value) noexcept
+	{
+		for (std::size_t i = 0; i < 4; ++i)
+		{
+			bytes[offset + i] = std::byte((value >> (8 * i)) & 0xFFU);
+		}
+	}
+
+	[[nodiscard]] std::uint32_t readWord(std::span<const std::byte> bytes, std::size_t offset) noexcept
+	{
+		std::uint32_t result = 0;
+		for (std::size_t i = 0; i < 4; ++i)
+		{
+			result |= static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(bytes[offset + i])) << (8 * i);
+		}
+		return result;
+	}
 
 	std::size_t checkedCellCount(spk::Vector3UInt dimensions)
 	{
@@ -156,6 +180,46 @@ namespace spk::Voxel
 		_cells.swap(cells);
 	}
 
+	void Volume::Builder::load(const spk::ByteStream::Reader &reader)
+	{
+		_ensureActive();
+		const auto data = reader.data().subspan(reader.readOffset());
+		if (data.size() < VolumeStreamHeaderBytes)
+		{
+			throw spk::Exception("Voxel Volume stream header is truncated");
+		}
+		if (readWord(data, 0) != VolumeStreamMagic || readWord(data, 4) != VolumeStreamVersion)
+		{
+			throw spk::Exception("Voxel Volume stream magic or version is unsupported");
+		}
+		const spk::Vector3UInt dimensions{readWord(data, 8), readWord(data, 12), readWord(data, 16)};
+		if (dimensions != _dimensions)
+		{
+			throw spk::Exception("Voxel Volume stream dimensions do not match Builder dimensions");
+		}
+		if (_cells.size() > (std::numeric_limits<std::size_t>::max() - VolumeStreamHeaderBytes) / 4)
+		{
+			throw spk::Exception("Voxel Volume stream size overflows");
+		}
+		const auto length = VolumeStreamHeaderBytes + _cells.size() * 4;
+		if (data.size() < length)
+		{
+			throw spk::Exception("Voxel Volume stream cells are truncated");
+		}
+		std::vector<PackedCell::Storage> decoded(_cells.size());
+		for (std::size_t i = 0; i < decoded.size(); ++i)
+		{
+			const auto packed = readWord(data, VolumeStreamHeaderBytes + i * 4);
+			if (!_registry.contains(PackedCell::definitionId(packed)))
+			{
+				throw spk::Exception("Voxel Volume stream contains an unknown Definition ID");
+			}
+			decoded[i] = packed;
+		}
+		_cells.swap(decoded);
+		reader.skip(length);
+	}
+
 	void Volume::Builder::bind(const Definition::Registry &registry)
 	{
 		_ensureActive();
@@ -211,5 +275,44 @@ namespace spk::Voxel
 		data->cells = std::move(_cells);
 		_consumed = true;
 		return Volume(std::move(data));
+	}
+
+	spk::ByteStream::Writer &operator<<(spk::ByteStream::Writer &writer, const Volume &volume)
+	{
+		const auto &cells = volume._data->cells;
+		if (cells.size() > (std::numeric_limits<std::size_t>::max() - VolumeStreamHeaderBytes) / 4)
+		{
+			throw spk::Exception("Voxel Volume stream size overflows");
+		}
+		const auto length = VolumeStreamHeaderBytes + cells.size() * 4;
+		if (length > std::numeric_limits<std::size_t>::max() - writer.size())
+		{
+			throw spk::Exception("Voxel Volume stream append overflows");
+		}
+		const auto start = writer.size();
+		writer.resize(start + length);
+		const auto data = writer.writableData().subspan(start, length);
+		writeWord(data, 0, VolumeStreamMagic);
+		writeWord(data, 4, VolumeStreamVersion);
+		writeWord(data, 8, volume._data->dimensions.x);
+		writeWord(data, 12, volume._data->dimensions.y);
+		writeWord(data, 16, volume._data->dimensions.z);
+		for (std::size_t i = 0; i < cells.size(); ++i)
+		{
+			writeWord(data, VolumeStreamHeaderBytes + i * 4, cells[i]);
+		}
+		return writer;
+	}
+
+	spk::Message::Writer &operator<<(spk::Message::Writer &writer, const Volume &volume)
+	{
+		writer.payload() << volume;
+		return writer;
+	}
+
+	const spk::ByteStream::Reader &operator>>(const spk::ByteStream::Reader &reader, Volume::Builder &builder)
+	{
+		builder.load(reader);
+		return reader;
 	}
 }
