@@ -40,7 +40,7 @@ depuis les structs C++. Tous les messages débutent par une version u8 égale à
 | Snapshot (0x56580002) | i32 chunkX/Y/Z, u64 revision, u32 count, count fois u32 packedCell |
 | Patch (0x56580003) | i32 chunkX/Y/Z, u64 previous, u64 next, u32 count, count fois (u32 localX/Y/Z, u32 packedCell) |
 | EditRequest (0x56580004) | i32 chunkX/Y/Z, u64 expectedRevision, même lot de cellules |
-| Ready (0x56580005) | aucun champ |
+| Ready (0x56580005) | u64 expectedChunkCount |
 | ResyncRequest (0x56580006) | i32 chunkX/Y/Z |
 | Error (0x56580007) | u8 code Error |
 
@@ -52,7 +52,11 @@ cellules par chunk. Une révision part de 1 et augmente de 1 à chaque
 modification effective ; un patch exige next == previous + 1.
 
 Les champs manquants, excédentaires, IDs inconnus, positions hors limites
-et doublons sont rejetés. Toute lacune dans les révisions provoque un
+et doublons sont rejetés. À la fin du transfert initial, Ready annonce le nombre
+attendu de chunks ; si le nombre de snapshots réellement appliqués diffère,
+le client rejette la synchronisation et se déconnecte. Le serveur n'émet
+pas Ready si un snapshot ne peut pas être admis par le transport.
+Toute lacune dans les révisions provoque un
 ResyncRequest et le serveur renvoie un Snapshot. Une reconnexion reconstruit
 le monde local à partir de zéro.
 
