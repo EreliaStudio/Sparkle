@@ -102,7 +102,6 @@ TEST(Model3DAnimationTest, RejectsInvalidDurationAndStepsWithoutChangingTheClip)
 	EXPECT_THROW(static_cast<void>(builder.build()), std::logic_error);
 }
 
-
 TEST(Model3DAnimatorTest, NamedAnimationsRestartAndKeepPoseOnStop)
 {
 	ObjectHeadless object(characterBlueprint());
@@ -123,12 +122,13 @@ TEST(Model3DAnimatorTest, NamedAnimationsRestartAndKeepPoseOnStop)
 TEST(Model3DAnimatorTest, DefaultIsSuspendedAndExitRunsOnlyAfterNaturalCompletion)
 {
 	ObjectHeadless object(characterBlueprint());
-	Animator animator = Animator::Builder().addAnimation("idle", legAnimation())
-			.addAnimation("attack", armAnimation())
-			.addAnimation("recovery", armAnimation())
-			.setDefaultAnimation("idle")
-			.setExitAnimation("attack", "recovery")
-			.build();
+	Animator animator = Animator::Builder()
+								.addAnimation("idle", legAnimation())
+								.addAnimation("attack", armAnimation())
+								.addAnimation("recovery", armAnimation())
+								.setDefaultAnimation("idle")
+								.setExitAnimation("attack", "recovery")
+								.build();
 	animator.bind(object);
 	EXPECT_TRUE(animator.playing("idle"));
 	animator.play("attack");
@@ -147,10 +147,11 @@ TEST(Model3DAnimatorTest, DefaultIsSuspendedAndExitRunsOnlyAfterNaturalCompletio
 TEST(Model3DAnimatorTest, DisjointAnimationsAndConflict)
 {
 	ObjectHeadless object(characterBlueprint());
-	Animator animator = Animator::Builder().addAnimation("arm", armAnimation())
-			.addAnimation("leg", legAnimation())
-			.addAnimation("arm2", armAnimation())
-			.build();
+	Animator animator = Animator::Builder()
+								.addAnimation("arm", armAnimation())
+								.addAnimation("leg", legAnimation())
+								.addAnimation("arm2", armAnimation())
+								.build();
 	animator.bind(object);
 	animator.play("arm");
 	animator.play("leg");
