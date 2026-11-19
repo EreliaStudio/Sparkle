@@ -916,7 +916,8 @@ namespace
 		Character &character,
 		const spk::Model3D::Animation &clip)
 	{
-		spk::Model3D::Animator animator(character);
+		spk::Model3D::Animator animator;
+	animator.bind(character);
 		static_cast<void>(animator.play(clip));
 		PreviewScene scene(character);
 		std::vector<sparkle_test::FramebufferImage> frames;
