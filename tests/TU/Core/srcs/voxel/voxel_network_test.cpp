@@ -50,9 +50,7 @@ namespace
 
 	[[nodiscard]] Edit edit(std::uint32_t x, std::uint32_t y, std::uint32_t z, std::uint32_t material)
 	{
-		return {{x, y, z}, Voxel::Volume::PackedCell::encode(material,
-									  Voxel::Cell::HorizontalOrientation::XPositive,
-									  Voxel::Cell::VerticalOrientation::YPositive)};
+		return {{x, y, z}, Voxel::Volume::PackedCell::encode(material, Voxel::Cell::HorizontalOrientation::XPositive, Voxel::Cell::VerticalOrientation::YPositive)};
 	}
 
 	template <typename Predicate, typename... TClients>
@@ -126,7 +124,10 @@ TEST(VoxelNetworkTest, InitialSyncPreservesPackedCellOrientationsAndCoordinates)
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
 
-	ASSERT_TRUE(pump(server, [&] { return client.isSynchronized() && client.world().chunk(key) != nullptr; }, client));
+	ASSERT_TRUE(pump(server, [&] {
+		return client.isSynchronized() && client.world().chunk(key) != nullptr;
+	},
+					 client));
 	ASSERT_NE(client.world().chunk(key), nullptr);
 	EXPECT_EQ(client.world().revision(key), 1u);
 	EXPECT_TRUE(same(*server.world().chunk(key), *client.world().chunk(key)));
@@ -148,14 +149,20 @@ TEST(VoxelNetworkTest, ServerEditsReachTwoClientsAndOnlyInvalidateChangedChunk)
 	server.start(0);
 	first.connect("127.0.0.1", server.port());
 	second.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return first.isSynchronized() && second.isSynchronized(); }, first, second));
+	ASSERT_TRUE(pump(server, [&] {
+		return first.isSynchronized() && second.isSynchronized();
+	},
+					 first,
+					 second));
 	(void)first.takeChangedChunks();
 	(void)second.takeChangedChunks();
 	const std::array updates{edit(0, 0, 0, 12), edit(2, 1, 1, 7)};
 	ASSERT_TRUE(server.edit(key, updates));
 	ASSERT_TRUE(pump(server, [&] {
 		return first.world().revision(key) == 2 && second.world().revision(key) == 2;
-	}, first, second));
+	},
+					 first,
+					 second));
 	EXPECT_TRUE(same(*server.world().chunk(key), *first.world().chunk(key)));
 	EXPECT_TRUE(same(*server.world().chunk(key), *second.world().chunk(key)));
 	EXPECT_EQ(first.takeChangedChunks(), std::vector<Position>{key});
@@ -178,10 +185,18 @@ TEST(VoxelNetworkTest, ClientRequestedEditIsAuthoritativeAndBroadcastToBoth)
 	server.start(0);
 	first.connect("127.0.0.1", server.port());
 	second.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return first.isSynchronized() && second.isSynchronized(); }, first, second));
+	ASSERT_TRUE(pump(server, [&] {
+		return first.isSynchronized() && second.isSynchronized();
+	},
+					 first,
+					 second));
 	const std::array batch{edit(1, 1, 0, 7), edit(3, 0, 1, 12)};
 	first.requestEdit(key, batch);
-	ASSERT_TRUE(pump(server, [&] { return first.world().revision(key) == 2 && second.world().revision(key) == 2; }, first, second));
+	ASSERT_TRUE(pump(server, [&] {
+		return first.world().revision(key) == 2 && second.world().revision(key) == 2;
+	},
+					 first,
+					 second));
 	EXPECT_TRUE(same(*server.world().chunk(key), *first.world().chunk(key)));
 	EXPECT_TRUE(same(*server.world().chunk(key), *second.world().chunk(key)));
 	first.disconnect();
@@ -202,7 +217,10 @@ TEST(VoxelNetworkTest, LateJoinReceivesCurrentSnapshotsForSeveralChunks)
 	server.start(0);
 	Net::Client late(Dimensions, definitions, Catalogue);
 	late.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return late.isSynchronized() && late.world().chunks().size() == 2; }, late));
+	ASSERT_TRUE(pump(server, [&] {
+		return late.isSynchronized() && late.world().chunks().size() == 2;
+	},
+					 late));
 	EXPECT_EQ(late.world().revision(a), 3u);
 	EXPECT_EQ(late.world().revision(b), 1u);
 	EXPECT_TRUE(same(*server.world().chunk(a), *late.world().chunk(a)));
@@ -220,12 +238,18 @@ TEST(VoxelNetworkTest, DisconnectReconnectGetsLatestStateAndInvalidatesPrevious)
 	server.start(0);
 	Net::Client client(Dimensions, definitions, Catalogue);
 	client.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return client.isSynchronized(); }, client));
+	ASSERT_TRUE(pump(server, [&] {
+		return client.isSynchronized();
+	},
+					 client));
 	(void)client.takeChangedChunks();
 	client.disconnect();
 	ASSERT_TRUE(server.edit(key, std::array{edit(1, 0, 0, 12)}));
 	client.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return client.isSynchronized() && client.world().revision(key) == 2; }, client));
+	ASSERT_TRUE(pump(server, [&] {
+		return client.isSynchronized() && client.world().revision(key) == 2;
+	},
+					 client));
 	EXPECT_TRUE(same(*server.world().chunk(key), *client.world().chunk(key)));
 	EXPECT_EQ(client.takeChangedChunks(), std::vector<Position>{key});
 	client.disconnect();
@@ -253,12 +277,20 @@ TEST(VoxelNetworkTest, ValidatorCanRejectClientEditsWithoutChangingWorld)
 	Net::Client client(Dimensions, definitions, Catalogue);
 	const Position key{0, 0, 0};
 	server.setChunk(key, volume(definitions));
-	server.setEditValidator([](spk::ConnectionID, Position, std::span<const Edit>) { return false; });
+	server.setEditValidator([](spk::ConnectionID, Position, std::span<const Edit>) {
+		return false;
+	});
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return client.isSynchronized(); }, client));
+	ASSERT_TRUE(pump(server, [&] {
+		return client.isSynchronized();
+	},
+					 client));
 	client.requestEdit(key, std::array{edit(0, 0, 0, 7)});
-	ASSERT_TRUE(pump(server, [&] { return client.lastError() == Net::Error::InvalidRequest; }, client));
+	ASSERT_TRUE(pump(server, [&] {
+		return client.lastError() == Net::Error::InvalidRequest;
+	},
+					 client));
 	EXPECT_EQ(server.world().revision(key), 1u);
 	EXPECT_EQ(client.world().revision(key), 1u);
 	client.disconnect();
@@ -273,10 +305,16 @@ TEST(VoxelNetworkTest, RejectsMismatchedCataloguesAndChunkDimensions)
 	Net::Client wrongDimensions({2, 2, 2}, definitions, Catalogue);
 	server.start(0);
 	wrongCatalogue.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return wrongCatalogue.lastError() == Net::Error::CatalogueMismatch; }, wrongCatalogue));
+	ASSERT_TRUE(pump(server, [&] {
+		return wrongCatalogue.lastError() == Net::Error::CatalogueMismatch;
+	},
+					 wrongCatalogue));
 	EXPECT_FALSE(wrongCatalogue.isSynchronized());
 	wrongDimensions.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return wrongDimensions.lastError() == Net::Error::CatalogueMismatch; }, wrongDimensions));
+	ASSERT_TRUE(pump(server, [&] {
+		return wrongDimensions.lastError() == Net::Error::CatalogueMismatch;
+	},
+					 wrongDimensions));
 	EXPECT_FALSE(wrongDimensions.isSynchronized());
 	wrongCatalogue.disconnect();
 	wrongDimensions.disconnect();
@@ -290,7 +328,11 @@ TEST(VoxelNetworkTest, MalformedOrTruncatedSnapshotCannotMutateClientWorld)
 	Net::Client client(Dimensions, definitions, Catalogue);
 	raw.start(0);
 	client.connect("127.0.0.1", raw.port());
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { client.update(); return client.isConnected(); }, 5s));
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isConnected();
+	},
+											5s));
 	auto connections = raw.connections();
 	ASSERT_EQ(connections.size(), 1u);
 	spk::Message::Writer truncated(Net::Protocol::Snapshot);
@@ -303,7 +345,8 @@ TEST(VoxelNetworkTest, MalformedOrTruncatedSnapshotCannotMutateClientWorld)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.lastError() == Net::Error::InvalidRequest;
-	}, 5s));
+	},
+											5s));
 	EXPECT_TRUE(client.world().chunks().empty());
 	EXPECT_FALSE(client.isSynchronized());
 	client.disconnect();
@@ -317,7 +360,11 @@ TEST(VoxelNetworkTest, UnsupportedProtocolVersionIsRejected)
 	Net::Client client(Dimensions, definitions, Catalogue);
 	raw.start(0);
 	client.connect("127.0.0.1", raw.port());
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { client.update(); return client.isConnected(); }, 5s));
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isConnected();
+	},
+											5s));
 	auto connections = raw.connections();
 	ASSERT_EQ(connections.size(), 1u);
 	spk::Message::Writer bad(Net::Protocol::Ready);
@@ -326,7 +373,8 @@ TEST(VoxelNetworkTest, UnsupportedProtocolVersionIsRejected)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.lastError() == Net::Error::ProtocolMismatch;
-	}, 5s));
+	},
+											5s));
 	EXPECT_FALSE(client.isSynchronized());
 	client.disconnect();
 	raw.stop();
@@ -340,7 +388,11 @@ TEST(VoxelNetworkTest, GapRequestsResynchronizationAndAcceptsNewerSnapshot)
 	const Position key{0, 0, 0};
 	raw.start(0);
 	client.connect("127.0.0.1", raw.port());
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { client.update(); return client.isConnected(); }, 5s));
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isConnected();
+	},
+											5s));
 	const auto connections = raw.connections();
 	ASSERT_EQ(connections.size(), 1u);
 	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(1, 16));
@@ -350,7 +402,8 @@ TEST(VoxelNetworkTest, GapRequestsResynchronizationAndAcceptsNewerSnapshot)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isSynchronized() && client.world().revision(key) == 1;
-	}, 5s));
+	},
+											5s));
 	std::vector<spk::ReceivedMessage> old;
 	(void)raw.messages().drain(old);
 
@@ -380,13 +433,15 @@ TEST(VoxelNetworkTest, GapRequestsResynchronizationAndAcceptsNewerSnapshot)
 			}
 		}
 		return false;
-	}, 5s));
+	},
+											5s));
 	EXPECT_FALSE(client.isSynchronized());
 	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(4, 16));
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isSynchronized() && client.world().revision(key) == 4;
-	}, 5s));
+	},
+											5s));
 	client.disconnect();
 	raw.stop();
 }
