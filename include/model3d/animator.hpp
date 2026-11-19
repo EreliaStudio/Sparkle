@@ -36,7 +36,11 @@ namespace spk::Model3D
 		};
 
 		ObjectHeadless *_object = nullptr;
-		struct Entry { Animation animation; std::optional<std::string> exit; };
+		struct Entry
+		{
+			Animation animation;
+			std::optional<std::string> exit;
+		};
 		std::map<std::string, Entry> _animations;
 		std::optional<std::string> _default;
 		std::vector<Running> _running;
