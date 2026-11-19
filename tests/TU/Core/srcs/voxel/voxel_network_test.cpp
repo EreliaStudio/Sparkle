@@ -458,7 +458,6 @@ TEST(VoxelNetworkTest, RejectsOversizedEditBatchesWithoutRevisionChanges)
 	EXPECT_EQ(server.world().revision(key), 1u);
 }
 
-
 TEST(VoxelNetworkTest, InitialReadyRejectsAnIncompleteChunkCollection)
 {
 	const auto definitions = registry();
@@ -469,7 +468,8 @@ TEST(VoxelNetworkTest, InitialReadyRejectsAnIncompleteChunkCollection)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isConnected();
-	}, 5s));
+	},
+											5s));
 	const auto connections = raw.connections();
 	ASSERT_EQ(connections.size(), 1u);
 
@@ -482,7 +482,8 @@ TEST(VoxelNetworkTest, InitialReadyRejectsAnIncompleteChunkCollection)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.lastError() == Net::Error::InvalidRequest;
-	}, 5s));
+	},
+											5s));
 	EXPECT_FALSE(client.isSynchronized());
 	EXPECT_EQ(client.world().chunks().size(), 1u);
 	client.disconnect();
@@ -500,7 +501,11 @@ TEST(VoxelNetworkTest, RepeatedEditsOnTheSameVoxelConverge)
 	server.start(0);
 	first.connect("127.0.0.1", server.port());
 	second.connect("127.0.0.1", server.port());
-	ASSERT_TRUE(pump(server, [&] { return first.isSynchronized() && second.isSynchronized(); }, first, second));
+	ASSERT_TRUE(pump(server, [&] {
+		return first.isSynchronized() && second.isSynchronized();
+	},
+					 first,
+					 second));
 	(void)first.takeChangedChunks();
 	(void)second.takeChangedChunks();
 	for (const auto material : {7u, 12u, 0u, 7u, 12u})
@@ -509,7 +514,9 @@ TEST(VoxelNetworkTest, RepeatedEditsOnTheSameVoxelConverge)
 	}
 	ASSERT_TRUE(pump(server, [&] {
 		return first.world().revision(key) == 6 && second.world().revision(key) == 6;
-	}, first, second));
+	},
+					 first,
+					 second));
 	EXPECT_TRUE(same(*server.world().chunk(key), *first.world().chunk(key)));
 	EXPECT_TRUE(same(*server.world().chunk(key), *second.world().chunk(key)));
 	EXPECT_EQ(first.takeChangedChunks(), std::vector<Position>{key});
@@ -530,7 +537,8 @@ TEST(VoxelNetworkTest, StalePatchCannotRollbackNewerSnapshot)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isConnected();
-	}, 5s));
+	},
+											5s));
 	const auto connections = raw.connections();
 	ASSERT_EQ(connections.size(), 1u);
 	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(5, 16));
@@ -541,7 +549,8 @@ TEST(VoxelNetworkTest, StalePatchCannotRollbackNewerSnapshot)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isSynchronized() && client.world().revision(key) == 5;
-	}, 5s));
+	},
+											5s));
 	spk::Message::Writer stale(Net::Protocol::Patch);
 	put(stale, Net::Protocol::Version, 1);
 	put(stale, 0, 12);
@@ -553,7 +562,8 @@ TEST(VoxelNetworkTest, StalePatchCannotRollbackNewerSnapshot)
 	const auto transferred = raw.sendTo(*connections.begin(), std::move(stale).build());
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return transferred.isComplete();
-	}, 5s));
+	},
+											5s));
 	ASSERT_EQ(transferred.status(), spk::Transfer::Status::Success);
 	client.update();
 	EXPECT_TRUE(client.isSynchronized());
@@ -573,7 +583,8 @@ TEST(VoxelNetworkTest, InvalidNetworkEditPatchIsRejectedAtomically)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isConnected();
-	}, 5s));
+	},
+											5s));
 	const auto connections = raw.connections();
 	ASSERT_EQ(connections.size(), 1u);
 	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(1, 16));
@@ -584,7 +595,8 @@ TEST(VoxelNetworkTest, InvalidNetworkEditPatchIsRejectedAtomically)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.isSynchronized();
-	}, 5s));
+	},
+											5s));
 
 	// The first valid edit must not be committed if the second edit is invalid.
 	spk::Message::Writer malformed(Net::Protocol::Patch);
@@ -603,7 +615,8 @@ TEST(VoxelNetworkTest, InvalidNetworkEditPatchIsRejectedAtomically)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
 		return client.lastError() == Net::Error::InvalidRequest;
-	}, 5s));
+	},
+											5s));
 	EXPECT_EQ(client.world().revision(key), 1u);
 	EXPECT_EQ(client.world().chunk(key)->atRaw({0, 0, 0}), 0u);
 	client.disconnect();
