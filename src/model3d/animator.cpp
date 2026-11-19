@@ -33,8 +33,9 @@ namespace spk::Model3D
 		}
 	}
 
-	Animator::Animator(ObjectHeadless &object) noexcept :
-		_object(object)
+	Animator::Animator(ObjectHeadless &object) :
+		_object(object),
+		_referencePose(object.blueprint())
 	{
 	}
 
@@ -92,15 +93,17 @@ namespace spk::Model3D
 				continue;
 			}
 			const auto value = _sample(channel, running.initial[index], time);
-			if (channel.target.attachmentName.empty())
+			switch (channel.target.property)
 			{
-				auto &body = _object.element(channel.target.elementName);
-				body.setTranslation(value.translation);
-				body.setScale(value.scale);
-			}
-			else
-			{
+			case Animation::Target::Property::Rotation:
 				_object.attachment(channel.target.elementName, channel.target.attachmentName).setRotation(value.rotation);
+				break;
+			case Animation::Target::Property::Translation:
+				_object.element(channel.target.elementName).setTranslation(value.translation);
+				break;
+			case Animation::Target::Property::Scaling:
+				_object.element(channel.target.elementName).setScale(value.scale);
+				break;
 			}
 		}
 	}
@@ -109,15 +112,17 @@ namespace spk::Model3D
 	{
 		for (const auto &pose : running.initial)
 		{
-			if (pose.target.attachmentName.empty())
+			switch (pose.target.property)
 			{
-				auto &body = _object.element(pose.target.elementName);
-				body.setTranslation(pose.translation);
-				body.setScale(pose.scale);
-			}
-			else
-			{
+			case Animation::Target::Property::Rotation:
 				_object.attachment(pose.target.elementName, pose.target.attachmentName).setRotation(pose.rotation);
+				break;
+			case Animation::Target::Property::Translation:
+				_object.element(pose.target.elementName).setTranslation(pose.translation);
+				break;
+			case Animation::Target::Property::Scaling:
+				_object.element(pose.target.elementName).setScale(pose.scale);
+				break;
 			}
 		}
 	}
@@ -138,7 +143,7 @@ namespace spk::Model3D
 				{
 					if (channel.target == held.target)
 					{
-						const bool body = channel.target.attachmentName.empty();
+						const bool body = channel.target.property != Animation::Target::Property::Rotation;
 						const std::string target = channel.target.elementName +
 												   (body ? "" : "/" + channel.target.attachmentName);
 						throw spk::Exception(
@@ -155,16 +160,17 @@ namespace spk::Model3D
 		{
 			StartPose pose{channel.target, Quaternion::identity(), {1.0f, 1.0f, 1.0f}, {}};
 			// Validate every target before touching any pose.
-			if (channel.target.attachmentName.empty())
+			switch (channel.target.property)
 			{
-				const auto &body = _object.element(channel.target.elementName);
-				pose.scale = body.scale();
-				pose.translation = body.translation();
-			}
-			else
-			{
-				const auto &joint = _object.attachment(channel.target.elementName, channel.target.attachmentName);
-				pose.rotation = joint.rotation();
+			case Animation::Target::Property::Rotation:
+				pose.rotation = _referencePose.attachment(channel.target.elementName, channel.target.attachmentName).rotation();
+				break;
+			case Animation::Target::Property::Translation:
+				pose.translation = _referencePose.element(channel.target.elementName).translation();
+				break;
+			case Animation::Target::Property::Scaling:
+				pose.scale = _referencePose.element(channel.target.elementName).scale();
+				break;
 			}
 			initial.push_back(std::move(pose));
 		}
