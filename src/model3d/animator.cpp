@@ -123,7 +123,6 @@ namespace spk::Model3D
 		}
 	}
 
-
 	Animator::Builder &Animator::Builder::addAnimation(std::string name, Animation animation)
 	{
 		if (name.empty() || !animation._data)
@@ -131,7 +130,9 @@ namespace spk::Model3D
 			throw std::invalid_argument("Invalid animation");
 		}
 		if (!_animations.emplace(std::move(name), Entry{std::move(animation), std::nullopt}).second)
+		{
 			throw std::invalid_argument("Duplicate animation name");
+		}
 		return *this;
 	}
 	Animator::Builder &Animator::Builder::setDefaultAnimation(std::optional<std::string> name)
@@ -240,7 +241,7 @@ namespace spk::Model3D
 		if (_default && name != *_default)
 		{
 			const auto it = std::ranges::find_if(_running, [this](const Running &r) {
-			return r.name == *_default;
+				return r.name == *_default;
 			});
 			if (it != _running.end())
 			{
@@ -280,7 +281,7 @@ namespace spk::Model3D
 		for (const auto &name : finished)
 		{
 			const auto it = std::ranges::find_if(_running, [&name](const Running &r) {
-			return r.name == name;
+				return r.name == name;
 			});
 			if (it != _running.end())
 			{
@@ -297,8 +298,8 @@ namespace spk::Model3D
 	bool Animator::stop(const std::string &name)
 	{
 		const auto it = std::ranges::find_if(_running, [&name](const Running &r) {
-			return r.name == name;
-			});
+				return r.name == name;
+		});
 		if (it == _running.end())
 		{
 			return false;
@@ -314,8 +315,8 @@ namespace spk::Model3D
 	bool Animator::playing(const std::string &name) const noexcept
 	{
 		return std::ranges::any_of(_running, [&name](const Running &r) {
-			return r.name == name;
-			});
+				return r.name == name;
+		});
 	}
 	std::size_t Animator::activeCount() const noexcept
 	{
