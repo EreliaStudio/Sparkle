@@ -398,6 +398,7 @@ TEST(VoxelNetworkTest, GapRequestsResynchronizationAndAcceptsNewerSnapshot)
 	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(1, 16));
 	spk::Message::Writer ready(Net::Protocol::Ready);
 	put(ready, Net::Protocol::Version, 1);
+	put(ready, 1, 8);
 	(void)raw.sendTo(*connections.begin(), std::move(ready).build());
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		client.update();
@@ -455,4 +456,155 @@ TEST(VoxelNetworkTest, RejectsOversizedEditBatchesWithoutRevisionChanges)
 	std::vector<Edit> excessive(Net::Protocol::MaxEdits + 1, edit(0, 0, 0, 7));
 	EXPECT_THROW((void)server.edit(key, excessive), spk::Exception);
 	EXPECT_EQ(server.world().revision(key), 1u);
+}
+
+
+TEST(VoxelNetworkTest, InitialReadyRejectsAnIncompleteChunkCollection)
+{
+	const auto definitions = registry();
+	spk::Server raw;
+	Net::Client client(Dimensions, definitions, Catalogue);
+	raw.start(0);
+	client.connect("127.0.0.1", raw.port());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isConnected();
+	}, 5s));
+	const auto connections = raw.connections();
+	ASSERT_EQ(connections.size(), 1u);
+
+	// A malicious or failed initial transfer must never mark a partial world ready.
+	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(1, 16));
+	spk::Message::Writer ready(Net::Protocol::Ready);
+	put(ready, Net::Protocol::Version, 1);
+	put(ready, 2, 8);
+	(void)raw.sendTo(*connections.begin(), std::move(ready).build());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.lastError() == Net::Error::InvalidRequest;
+	}, 5s));
+	EXPECT_FALSE(client.isSynchronized());
+	EXPECT_EQ(client.world().chunks().size(), 1u);
+	client.disconnect();
+	raw.stop();
+}
+
+TEST(VoxelNetworkTest, RepeatedEditsOnTheSameVoxelConverge)
+{
+	const auto definitions = registry();
+	Net::Server server(Dimensions, definitions, Catalogue);
+	Net::Client first(Dimensions, definitions, Catalogue);
+	Net::Client second(Dimensions, definitions, Catalogue);
+	const Position key{0, 0, 0};
+	server.setChunk(key, volume(definitions));
+	server.start(0);
+	first.connect("127.0.0.1", server.port());
+	second.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(pump(server, [&] { return first.isSynchronized() && second.isSynchronized(); }, first, second));
+	(void)first.takeChangedChunks();
+	(void)second.takeChangedChunks();
+	for (const auto material : {7u, 12u, 0u, 7u, 12u})
+	{
+		ASSERT_TRUE(server.edit(key, std::array{edit(0, 0, 0, material)}));
+	}
+	ASSERT_TRUE(pump(server, [&] {
+		return first.world().revision(key) == 6 && second.world().revision(key) == 6;
+	}, first, second));
+	EXPECT_TRUE(same(*server.world().chunk(key), *first.world().chunk(key)));
+	EXPECT_TRUE(same(*server.world().chunk(key), *second.world().chunk(key)));
+	EXPECT_EQ(first.takeChangedChunks(), std::vector<Position>{key});
+	EXPECT_EQ(second.takeChangedChunks(), std::vector<Position>{key});
+	first.disconnect();
+	second.disconnect();
+	server.stop();
+}
+
+TEST(VoxelNetworkTest, StalePatchCannotRollbackNewerSnapshot)
+{
+	const auto definitions = registry();
+	spk::Server raw;
+	Net::Client client(Dimensions, definitions, Catalogue);
+	const Position key{0, 0, 0};
+	raw.start(0);
+	client.connect("127.0.0.1", raw.port());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isConnected();
+	}, 5s));
+	const auto connections = raw.connections();
+	ASSERT_EQ(connections.size(), 1u);
+	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(5, 16));
+	spk::Message::Writer ready(Net::Protocol::Ready);
+	put(ready, Net::Protocol::Version, 1);
+	put(ready, 1, 8);
+	(void)raw.sendTo(*connections.begin(), std::move(ready).build());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isSynchronized() && client.world().revision(key) == 5;
+	}, 5s));
+	spk::Message::Writer stale(Net::Protocol::Patch);
+	put(stale, Net::Protocol::Version, 1);
+	put(stale, 0, 12);
+	put(stale, 3, 8);
+	put(stale, 4, 8);
+	put(stale, 1, 4);
+	put(stale, 0, 12);
+	put(stale, edit(0, 0, 0, 12).value, 4);
+	(void)raw.sendTo(*connections.begin(), std::move(stale).build());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.world().revision(key) == 5;
+	}, 5s));
+	EXPECT_TRUE(client.isSynchronized());
+	EXPECT_EQ(client.world().chunk(key)->atRaw({0, 0, 0}), 0u);
+	client.disconnect();
+	raw.stop();
+}
+
+TEST(VoxelNetworkTest, InvalidNetworkEditPatchIsRejectedAtomically)
+{
+	const auto definitions = registry();
+	spk::Server raw;
+	Net::Client client(Dimensions, definitions, Catalogue);
+	const Position key{0, 0, 0};
+	raw.start(0);
+	client.connect("127.0.0.1", raw.port());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isConnected();
+	}, 5s));
+	const auto connections = raw.connections();
+	ASSERT_EQ(connections.size(), 1u);
+	(void)raw.sendTo(*connections.begin(), maliciousSnapshot(1, 16));
+	spk::Message::Writer ready(Net::Protocol::Ready);
+	put(ready, Net::Protocol::Version, 1);
+	put(ready, 1, 8);
+	(void)raw.sendTo(*connections.begin(), std::move(ready).build());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.isSynchronized();
+	}, 5s));
+
+	// The first valid edit must not be committed if the second edit is invalid.
+	spk::Message::Writer malformed(Net::Protocol::Patch);
+	put(malformed, Net::Protocol::Version, 1);
+	put(malformed, 0, 12);
+	put(malformed, 1, 8);
+	put(malformed, 2, 8);
+	put(malformed, 2, 4);
+	put(malformed, 0, 12);
+	put(malformed, edit(0, 0, 0, 7).value, 4);
+	put(malformed, 1, 4);
+	put(malformed, 0, 4);
+	put(malformed, 0, 4);
+	put(malformed, edit(1, 0, 0, 99).value, 4);
+	(void)raw.sendTo(*connections.begin(), std::move(malformed).build());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		client.update();
+		return client.lastError() == Net::Error::InvalidRequest;
+	}, 5s));
+	EXPECT_EQ(client.world().revision(key), 1u);
+	EXPECT_EQ(client.world().chunk(key)->atRaw({0, 0, 0}), 0u);
+	client.disconnect();
+	raw.stop();
 }
