@@ -40,6 +40,7 @@ namespace spk::Model3D
 			throw spk::Exception("Animator is already bound.");
 		}
 		_object = &object;
+		_resumeDefault();
 	}
 
 	void Animator::unbind()
@@ -98,7 +99,7 @@ namespace spk::Model3D
 
 	void Animator::_apply(const Running &running, float time)
 	{
-		const auto &channels = running.animation._channels;
+		const auto &channels = _animations.at(running.name).animation._data->channels;
 		for (std::size_t index = 0; index < channels.size(); ++index)
 		{
 			const auto &channel = channels[index];
@@ -122,43 +123,52 @@ namespace spk::Model3D
 		}
 	}
 
-	Animator::Handle Animator::play(const Animation &animation, bool loop)
+
+	Animator::Builder &Animator::Builder::addAnimation(std::string name, Animation animation)
 	{
-		if (_object == nullptr)
-		{
-			throw spk::Exception("Animator is not bound.");
-		}
-		if (animation._channels.empty())
-		{
-			throw std::invalid_argument("Animator cannot play an animation without any targets");
-		}
-
-		// Reject conflicts before changing the pose or registering the animation.
-		for (const auto &channel : animation._channels)
-		{
-			for (const auto &active : _running)
-			{
-				for (const auto &held : active.animation._channels)
-				{
-					if (channel.target == held.target)
-					{
-						const bool body = channel.target.property != Animation::Target::Property::Rotation;
-						const std::string target = channel.target.elementName +
-												   (body ? "" : "/" + channel.target.attachmentName);
-						throw spk::Exception(
-							"Animation conflict: " + std::string(body ? (channel.target.property == Animation::Target::Property::Scaling ? "scaling " : "translation ") : "articulation ") +
-							target + " is already controlled by animation #" + std::to_string(active.handle));
-					}
-				}
-			}
-		}
-
+		if (name.empty() || !animation._data) throw std::invalid_argument("Invalid animation");
+		if (!_animations.emplace(std::move(name), Entry{std::move(animation), std::nullopt}).second)
+			throw std::invalid_argument("Duplicate animation name");
+		return *this;
+	}
+	Animator::Builder &Animator::Builder::setDefaultAnimation(std::optional<std::string> name)
+	{
+		_default = std::move(name);
+		return *this;
+	}
+	Animator::Builder &Animator::Builder::setExitAnimation(const std::string &name, std::string exitName)
+	{
+		const auto it = _animations.find(name);
+		if (it == _animations.end()) throw std::invalid_argument("Unknown source animation");
+		it->second.exit = std::move(exitName);
+		return *this;
+	}
+	Animator Animator::Builder::build()
+	{
+		if (_default && !_animations.contains(*_default)) throw std::invalid_argument("Unknown default animation");
+		for (const auto &[name, entry] : _animations)
+			if (entry.exit && !_animations.contains(*entry.exit)) throw std::invalid_argument("Unknown exit animation: " + name);
+		Animator animator;
+		animator._animations = std::move(_animations);
+		animator._default = std::move(_default);
+		return animator;
+	}
+	void Animator::_start(const std::string &name)
+	{
+		if (!_object) throw spk::Exception("Animator is not bound.");
+		const auto &animation = _animations.at(name).animation;
+		const auto &channels = animation._data->channels;
+		if (channels.empty()) throw std::invalid_argument("Animation has no targets");
+		for (const auto &active : _running)
+			if (active.name != name)
+				for (const auto &channel : channels)
+					for (const auto &held : _animations.at(active.name).animation._data->channels)
+						if (channel.target == held.target) throw spk::Exception("Animation conflict: " + name + " / " + active.name);
 		std::vector<StartPose> initial;
-		initial.reserve(animation._channels.size());
-		for (const auto &channel : animation._channels)
+		initial.reserve(channels.size());
+		for (const auto &channel : channels)
 		{
-			StartPose pose{channel.target, Quaternion::identity(), {1.0f, 1.0f, 1.0f}, {}};
-			// Validate every target before touching any pose.
+			StartPose pose{channel.target, Quaternion::identity(), {1, 1, 1}, {}};
 			switch (channel.target.property)
 			{
 			case Animation::Target::Property::Rotation:
@@ -173,66 +183,69 @@ namespace spk::Model3D
 			}
 			initial.push_back(std::move(pose));
 		}
-
-		const Handle handle = _nextHandle;
-		_running.push_back({handle, animation, 0.0, loop, std::move(initial)});
-		++_nextHandle;
+		const auto it = std::ranges::find_if(_running, [&name](const Running &running) { return running.name == name; });
+		if (it != _running.end()) _running.erase(it);
+		_running.push_back({name, 0.0, std::move(initial)});
 		_apply(_running.back(), 0.0f);
-		return handle;
 	}
-
+	void Animator::_resumeDefault()
+	{
+		if (_running.empty() && _default) _start(*_default);
+	}
+	void Animator::play(const std::string &name)
+	{
+		if (!_animations.contains(name)) throw std::invalid_argument("Unknown animation: " + name);
+		if (_default && name != *_default)
+		{
+			const auto it = std::ranges::find_if(_running, [this](const Running &r) { return r.name == *_default; });
+			if (it != _running.end()) _running.erase(it);
+		}
+		_start(name);
+	}
 	void Animator::update(float deltaSeconds)
 	{
 		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0.0f)
-		{
 			throw std::invalid_argument("Animator delta must be finite and nonnegative");
-		}
-		for (auto it = _running.begin(); it != _running.end();)
+		if (!_object) return;
+		_resumeDefault();
+		std::vector<std::string> finished;
+		for (auto &active : _running)
 		{
-			Running &active = *it;
+			const auto &animation = _animations.at(active.name).animation;
 			const double elapsed = active.time + static_cast<double>(deltaSeconds);
-			const double duration = static_cast<double>(active.animation.duration());
-			// Clip timestamps use float precision; compare at that precision so
-			// 0.9f + 0.1f completes exactly like a single 1.0f update.
-			if (!active.loop && static_cast<float>(elapsed) >= active.animation.duration())
+			const bool looping = _default && active.name == *_default;
+			if (!looping && static_cast<float>(elapsed) >= animation.duration())
 			{
-				_apply(active, active.animation.duration());
-				it = _running.erase(it);
-				continue;
+				_apply(active, animation.duration());
+				finished.push_back(active.name);
 			}
-			active.time = active.loop ? std::fmod(elapsed, duration) : elapsed;
-			_apply(active, static_cast<float>(active.time));
-			++it;
+			else
+			{
+				active.time = looping ? std::fmod(elapsed, static_cast<double>(animation.duration())) : elapsed;
+				_apply(active, static_cast<float>(active.time));
+			}
 		}
-	}
-
-	bool Animator::stop(Handle handle)
-	{
-		const auto it = std::ranges::find_if(_running, [handle](const Running &running) {
-			return running.handle == handle;
-		});
-		if (it == _running.end())
+		for (const auto &name : finished)
 		{
-			return false;
+			const auto it = std::ranges::find_if(_running, [&name](const Running &r) { return r.name == name; });
+			if (it != _running.end()) _running.erase(it);
+			const auto &exit = _animations.at(name).exit;
+			if (exit) _start(*exit);
 		}
+		_resumeDefault();
+	}
+	bool Animator::stop(const std::string &name)
+	{
+		const auto it = std::ranges::find_if(_running, [&name](const Running &r) { return r.name == name; });
+		if (it == _running.end()) return false;
 		_running.erase(it);
+		_resumeDefault();
 		return true;
 	}
-
-	void Animator::stopAll()
+	void Animator::stopAll() { _running.clear(); }
+	bool Animator::playing(const std::string &name) const noexcept
 	{
-		_running.clear();
+		return std::ranges::any_of(_running, [&name](const Running &r) { return r.name == name; });
 	}
-
-	bool Animator::playing(Handle handle) const noexcept
-	{
-		return std::ranges::any_of(_running, [handle](const Running &running) {
-			return running.handle == handle;
-		});
-	}
-
-	std::size_t Animator::activeCount() const noexcept
-	{
-		return _running.size();
-	}
+	std::size_t Animator::activeCount() const noexcept { return _running.size(); }
 }
