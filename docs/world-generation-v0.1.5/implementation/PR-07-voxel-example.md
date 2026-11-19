@@ -3,15 +3,15 @@
 **Layer:** Voxel Core/example. **Dependencies:** PR03 and PR06. **Status:** design draft.
 
 ## Scope
-- Introduce an example `VoxelChunk` deriving from `Chunk<...>` and holding existing immutable `Voxel::Volume` data. It remains legal for user chunks to hold multiple volumes, non-voxel geometry descriptions and other fields.
+- Introduce an example `VoxelChunk` deriving from `Chunk<...>`, holding existing immutable `Voxel::Volume` data and declaring a nested **`VoxelChunk::Builder`** to construct its complete contents. Users may add other volumes and non-voxel data.
 - Voxel size and number of cells are **independent of physical chunk dimensions**, which are world units.
-- Provide a small generator using ordered user-style passes: e.g. sample heights/noise, fill terrain with Volume::Builder, add one simple deterministic cross-chunk feature.
+- Provide a small generator with ordered passes on **`VoxelChunk::Builder&`**: sample heights/noise, mutate its nested `Voxel::Volume::Builder`, add one deterministic cross-chunk feature, then finalize the Volume and entire chunk in `VoxelChunk::Builder::build()`.
 - Demonstrate multiple configurable seeds and fresh TGenerationData sharing optional generator-owned structures.
-- Handle finite-world limits using null createChunk where useful, without coupling the generic requester to voxels.
+- Handle finite-world limits using null `createChunkBuilder` where useful, without coupling the generic requester to voxels.
 
 ## Required tests
-- Existing Volume::Builder and Definition::Registry are reused, no duplicate voxel storage.
-- Neighbor continuity in XYZ including negatives, same seed/coordinate independent of request ordering, separate seeds vary output.
+- Existing `Voxel::Volume::Builder` and `Definition::Registry` are reused **inside the chunk Builder**; no duplicate voxel storage and no in-place edits of a published immutable Volume.
+- Neighbor continuity in XYZ including negatives, same seed/coordinate independent of request ordering, separate seeds vary output; the passes never receive published immutable Volumes as mutable inputs.
 - Multi-chunk sample feature is coherent across boundary and works when either side generated first.
 - Headless only; no volume-to-renderer direct API assumption.
 

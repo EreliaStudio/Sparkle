@@ -13,7 +13,7 @@ A world is *practically unbounded*: signed 32-bit XYZ chunk coordinates cover a 
 - **`Chunk<SizeX, SizeY, SizeZ>`**: minimal inheritable base defining static world-unit dimensions and coordinate conversions; **no coordinate, entity or voxel payload stored in the base**.
 - **`ChunkCoordinate`**: signed three-dimensional integer key (reuse Sparkle's vector type where appropriate); floor-based negative coordinate conversions.
 - **`ChunkCollection<TChunk>`** (previous working name: `World<TChunk>`): `std::map` indexed by coordinate, owning typed chunks and one headless-compatible `spk::Entity3D` per loaded chunk. Insert/replace preserves an existing entity; removal destroys its entity. Exposes controlled map-like iteration and lookup.
-- **`Generator<TChunk, TGenerationData>`**: user-extensible generator, `createChunk(coordinate)`, `createGenerationData(coordinate)`, and ordered polymorphic `Pass::apply(TChunk&, TGenerationData&)`. Every generation has fresh temporary data; it may reference shared mutable persistent generator data. Multiple seeds are user-configurable. The user is responsible for thread safety of their passes/shared data.
+- **`Generator<TChunk, TGenerationData>`**: derives its mutable data type from **`typename TChunk::Builder`** (no third template argument). `createChunkBuilder(coordinate)` returns a new builder, or null for an absent chunk. Ordered polymorphic `Pass::apply(TChunk::Builder&, TGenerationData&)` edits the builder and fresh generation data, before **`builder.build()`** finalizes the chunk. A voxel chunk builder can own `Voxel::Volume::Builder`. Multiple seeds and synchronization of shared user data remain developer-controlled.
 - **`ChunkRequester<TChunk>`**: interchangeable asynchronous source (local generator, remote client, file, mock). Exactly one `spk::Task` per requested coordinate. Successful `nullptr` means no chunk exists; failure/timeout are separate outcomes.
 - **`ChunkInterest` and `WorldObserver`**: a symmetric XYZ radius around an observer's current chunk, supplied by a `Component3D` registered by existing `EngineHeadless*` context/Registry mechanisms. A player gets the component; ordinary monsters need not.
 - **`WorldStreamingSystem<TChunk>`**: headless system bound to a collection and requester, aggregating all registered observers in the Engine, loading union of their interests, ordering requests by minimum observer distance, keeping a configurable maximum number of in-flight tasks, applying results on the Engine update thread, retrying timed-out requests using request versions, and unloading all chunks outside every interest.
@@ -31,9 +31,10 @@ No new multiplayer protocol or server framework. Several observers in one headle
 1. [Architecture and ownership](architecture.md)
 2. [API contracts and agreed decisions](contracts.md)
 3. [Feature extensibility and examples](features.md)
-4. [Implementation roadmap](roadmap.md)
-5. [Validation](validation.md)
-6. [Individual draft PRs](implementation/README.md)
+4. [Remaining architecture review](architecture-review.md)
+5. [Implementation roadmap](roadmap.md)
+6. [Validation](validation.md)
+7. [Individual draft PRs](implementation/README.md)
 
 ## Existing Sparkle APIs to reuse
 

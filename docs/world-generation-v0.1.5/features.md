@@ -26,7 +26,7 @@ struct MyGenerationData {
 // -> BuildingRealizationPass -> VegetationPass
 ~~~
 
-The contract does not oblige every pass to touch the chunk. Stages can prepare data only. Users choose ordering, noise implementation, seed scopes, cache schemes, tie-breaking rules and how cross-chunk structures are described. They also ensure shared caches are thread-safe when needed.
+The contract does not oblige every pass to touch the chunk Builder. Stages can prepare data only. Users choose ordering, noise implementation, seed scopes, cache schemes, tie-breaking rules and how cross-chunk structures are described. They also ensure shared caches are thread-safe when needed.
 
 ## Cross-chunk continuity
 
@@ -36,11 +36,11 @@ This is a **sample design requirement**, not an imposed `RegionPlan` API. The de
 
 ## Finite and virtually unbounded worlds
 
-The framework supports the entire signed 32-bit chunk coordinate domain, limited by numeric type and checked conversions. A game can constrain its world arbitrarily: `createChunk` may return `nullptr` outside bounds. The requester reports that as a successful no-chunk result; streamer must not spin forever requesting the same absent coordinate.
+The framework supports the entire signed 32-bit chunk coordinate domain, limited by numeric type and checked conversions. A game can constrain its world arbitrarily: `createChunkBuilder` may return `nullptr` outside bounds. The requester reports that as a successful no-chunk result; streamer must not spin forever requesting the same absent coordinate.
 
 ## Example voxel integration
 
-A concrete `VoxelChunk` derives from the generic chunk type, contains one or more existing `spk::Voxel::Volume` values and may add unrelated game data. Voxels can be 0.5 world units or any chosen size; **chunk dimensions always describe world units**. Generator passes populate a `Voxel::Volume::Builder` and store the final immutable Volume; the example must not duplicate the current voxel cell storage.
+A concrete `VoxelChunk` derives from the generic chunk type, holds one or more existing immutable `spk::Voxel::Volume` values, and may add unrelated game data. **`VoxelChunk::Builder`** holds the mutable draft, including a `Voxel::Volume::Builder` on which the generator passes operate. Only its outer `build()` finalizes the Volume(s) and the chunk. Voxels can be 0.5 world units or any chosen size; **chunk dimensions always describe world units**. Do not duplicate existing voxel storage.
 
 The optional graphical adapter bakes Geometry with `Voxel::Mesher` and binds a `Voxel::Renderer` on the chunk's Entity3D; other components/child entities may be added by game-specific systems. The generic framework has no rule that one chunk means one mesh or one graphic.
 

@@ -4,7 +4,7 @@
 
 1. [PR01 — Chunk coordinates and static conversion](PR-01-chunk-coordinates.md)
 2. [PR02 — ChunkCollection, Entity3D ownership and sync events](PR-02-chunk-collection.md)
-3. [PR03 — Generator and ordered passes](PR-03-generator-passes.md)
+3. [PR03 — Generator with TChunk::Builder and ordered passes](PR-03-generator-passes.md)
 4. [PR04 — Async ChunkRequester and local source](PR-04-chunk-requester.md)
 5. [PR05 — ChunkInterest and WorldObserver](PR-05-interest-observer.md)
 6. [PR06 — WorldStreamingSystem](PR-06-streaming-system.md)

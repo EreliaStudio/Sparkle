@@ -12,7 +12,10 @@ flowchart TD
     S --> R["ChunkRequester<TChunk>"]
     R --> L["Local requester"] & N["Remote/file/mock requester"]
     L --> G["Generator<TChunk, TGenerationData>"]
-    G --> P["Ordered virtual passes"]
+    G --> B["createChunkBuilder: TChunk::Builder"]
+    B --> P["Ordered virtual passes: apply(Builder&, Data&)"]
+    P --> F["builder.build(): finalized TChunk"]
+    F --> L
     R --> T["One spk::Task answer per chunk"]
     T --> S
     S --> C["ChunkCollection<TChunk> (std::map)"]
@@ -46,9 +49,13 @@ The collection exposes `begin/end/rbegin/rend` (and const variants), `at(coordin
 
 ## Generation
 
-`Generator<TChunk, TGenerationData>` is the user-configured **synchronous generation recipe**. It owns an ordered list of `Generator::Pass` objects. User-overridden `createChunk(coordinate)` returns a `unique_ptr<TChunk>` (or null for outside a finite world). User-overridden `createGenerationData(coordinate)` constructs **fresh temporary data per call**, optionally holding non-const references to seeds, noise samplers, caches, plans or other generator-owned persistent state.
+`Generator<TChunk, TGenerationData>` is the user-configured **synchronous generation recipe**. It owns an ordered list of `Generator::Pass` objects. Every generatable concrete chunk type provides a nested **`TChunk::Builder`**, which is the mutable construction target. This does **not** add a third Generator template parameter or force builder implementation into the generic Chunk base.
 
-Every pass receives `(TChunk&, TGenerationData&)` and may freely modify either. Some passes only prepare temporary data for later passes. The library executes passes in order within one chunk request. **Sparkle does not synchronize user-defined persistent state**: passes and shared caches must be thread-safe when concurrent requests are used. Seed determinism is the algorithm author's responsibility; no cross-request completion order is guaranteed.
+User-overridden `createChunkBuilder(coordinate)` creates a fresh mutable `TChunk::Builder` (conceptually an owned nullable pointer, to support nonexistent chunks in finite worlds); `createGenerationData(coordinate)` constructs **fresh temporary data per call**, optionally holding mutable references to generator-owned seeds, noise samplers, caches and plans.
+
+Every pass receives **`(TChunk::Builder&, TGenerationData&)`**. It can modify the builder (including nested `Voxel::Volume::Builder`) and/or prepare temporary data for later passes. **Only after every pass succeeds does `builder.build()` produce the finalized `TChunk`.** A null builder skips passes; errors leave no partially built chunk published. Exact build return ownership remains an implementation API choice. Published `Voxel::Volume` snapshots are immutable; this does not mandate immutability for all possible fields of every application chunk.
+
+**Sparkle does not synchronize user-defined persistent state**: passes and shared caches must be thread-safe when concurrent requests are used. Seed determinism is the algorithm author's responsibility; no cross-request completion order is guaranteed.
 
 `Generator` is not a requester and does not edit the live collection. A local `ChunkRequester` wraps it in WorkerPool/Task.
 
@@ -75,7 +82,7 @@ For voxels, **`Voxel::Volume` is not a renderer input by magic**: the adapter pr
 ## Core/Graphics boundary
 
 - **Core/headless:** Chunk, coordinate math, collection, Entity3D, generator/passes, requester/Task, interest/observer, streaming and synchronization notification.
-- **Voxel Core example:** concrete chunk containing existing `Voxel::Volume` and example passes with world-unit dimensions independent of voxel size.
+- **Voxel Core example:** concrete chunk containing immutable `Voxel::Volume` and a nested Chunk Builder wrapping `Voxel::Volume::Builder`; example passes mutate only the builder. World-unit chunk dimensions remain independent of voxel size.
 - **Graphics optional:** rendering adapter, Mesher/Geometry/Palette/Renderer components, golden tests.
 
 One collection/world per Engine is the supported v0.1.5 assumption. A later feature may use `UUID` to identify multiple worlds inside one Engine and filter observers accordingly, without changing the Engine's existing context type.

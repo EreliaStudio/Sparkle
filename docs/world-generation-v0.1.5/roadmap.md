@@ -8,7 +8,7 @@ Deliver a functioning **headless framework first**, then a voxel specialization 
 | --- | --- | --- | --- |
 | [01](implementation/PR-01-chunk-coordinates.md) | Minimal inheritable chunk with world-unit dimensions and static signed XYZ conversions | — | Core |
 | [02](implementation/PR-02-chunk-collection.md) | Sorted ChunkCollection, headless Entity3D ownership, add/replace/remove, iteration and single coalesced sync notification | 01 | Core |
-| [03](implementation/PR-03-generator-passes.md) | Generator<TChunk,TData>, fresh creation data, ordered virtual Passes, user seeds and persistent references | 01 | Core |
+| [03](implementation/PR-03-generator-passes.md) | Generator<TChunk,TData>, TChunk::Builder, fresh builder/workspace, ordered passes then final build; user seeds and persistent references | 01 | Core |
 | [04](implementation/PR-04-chunk-requester.md) | Task-backed ChunkRequester interface and local generator implementation, null/failure differentiation | 03 | Core |
 | [05](implementation/PR-05-interest-observer.md) | ChunkInterest radius and WorldObserver Component3D using the existing Engine-context Registry | 01 | Core |
 | [06](implementation/PR-06-streaming-system.md) | Multi-observer union, nearest-first scheduling, request cap/timeout/version, update-thread publication, immediate unload | 02, 04, 05 | Core |
@@ -20,12 +20,14 @@ Deliver a functioning **headless framework first**, then a voxel specialization 
 ## Milestones
 
 - **A — Core data model:** 01–02. Chunk has no coordinate or rendering dependency. Ordered storage and entity lifetime verified.
-- **B — Generation and acquisition:** 03–04. Any application-defined chunk subclass and pass pipeline works headlessly, with a swappable Task-based requester.
+- **B — Generation and acquisition:** 03–04. A concrete `TChunk::Builder` and ordered passes construct the final chunk headlessly without partial publication, with a swappable Task-based requester.
 - **C — Streaming:** 05–06. One or multiple players drive chunk demand, scheduling and removal through EngineHeadless.
 - **D — Concrete example and Graphics:** 07–08. Existing Voxel::Volume and rendering components are reused. Bind after chunks exist and replace volumes safely.
 - **E — Validation:** 09–10. Multi-observer server-like usage, cross-chunk coherence, timeout/stale response behavior, visual updates and goldens.
 
 The user-defined voxel sample may demonstrate a simple continuous terrain plus one multi-chunk feature. **It does not require shipping production-grade default terrain, cities, roads or caves.**
+
+See [architecture decisions to finalize](architecture-review.md) before approving implementation signatures.
 
 ## Ground rules
 
