@@ -1,84 +1,49 @@
-# Validation and release criteria
+# v0.1.5 — Acceptance criteria and test plan
 
-This is a planning document only; implementation PRs must add automated
-tests that run without an external game server or graphics environment.
+## Core spatial model
 
-## Generic Core tests
+- Positive compile-time world-unit dimensions on `Chunk<SX,SY,SZ>`; arbitrary derived payload, no required position member.
+- `worldToChunkCoordinate`, `chunkCoordinateToWorld`, `worldToLocalCoordinate` round trips in signed XYZ, including -1, exact negative boundaries, zero and large positive/negative values.
+- Overflow checks at int32 chunk-coordinate limits and during conversion to world-unit values.
+- Different voxel sizes inside equal world-unit chunk sizes do not change generic coordinate math.
 
-- Signed coordinates and floor division: (-1) maps to previous chunk,
-  boundary positions, large positive/negative positions, overflow, zero
-  chunk dimensions and finite-world bounds.
-- Copy/move and lifetime of chunk payloads, duplicate insertion and removal,
-  revision monotonicity, change notification and deterministic iteration.
-- Seed stability and local sampler determinism across process restarts and
-  Windows/Linux (define the expected reproducibility boundary).
-- Chunk request order permutations and parallel invocation produce exactly
-  the same generated logical data.
-- World/region metadata contains every feature intersecting a requested
-  chunk; ownership is unique and results are stable across neighboring
-  regions.
-- Weighted biome transitions and boundary continuity; deterministic
-  scenery placement with exclusions and minimum distances.
-- Road segments and junctions spanning multiple regions, slope constraints,
-  crossed streams, settlements with shared streets/plots.
-- 3D cave tunnels spanning chunk boundaries and their interactions with
-  surface/road/structure generation.
-- Idempotent regeneration, invalid feature recipe, mutually exclusive
-  placements and stable conflict resolution.
-- Duplicate/failed/cancelled requests, priorities, stale asynchronous
-  completions, memory budgets and resource release.
-- Saved user modifications persist through eviction and regeneration;
-  regeneration must not overwrite authoritative edits.
+## ChunkCollection ownership and lookup
 
-## Voxel-specific tests
+- Lexicographically ordered `std::map` iteration via begin/end/rbegin/rend and const forms; `at` throws when absent; subscript does not silently insert.
+- `addChunk` initially creates the correct Entity3D at the coordinate origin; replacing the same key changes chunk data but preserves the **same** Entity3D and its components.
+- `removeChunk` destroys chunk-owned Entity3D/components (including in EngineHeadless); valid ownership and teardown order.
+- Insert and explicit modification dirty the entry; repeated modifications within a frame produce **one sync callback** on Engine update, not from a worker.
+- Binding a consumer to a pre-filled collection synchronizes all entries once; subsequent notifications update only relevant entries.
+- Generic non-voxel chunk and headless Engine tests; external raw references cannot outlive their entity/chunk.
 
-- Generated payloads are **Voxel::Volume**, built through the existing
-  Volume::Builder and bound to valid Definition::Registry IDs.
-- Different chunk dimensions; negative X/Y/Z chunk coordinates.
-- Exact voxel equality for same seed and plan, regardless of generation
-  order; seam checks for terrain, roads, buildings and caves.
-- Shape/orientation correctness and air/solid transitions.
-- Volume serialization with existing ByteStream/Message round trips when
-  world chunks travel between components; no new network protocol.
-- Mesher renders visible boundary faces correctly when neighbor chunks
-  are loaded, changed or evicted.
+## Generation and Requester
 
-## Graphics and visual acceptance
+- User subclass generator overrides `createChunk` and `createGenerationData`; passes execute in configured order.
+- Some passes modify only fresh local generation data; later passes consume it. Different chunk generations do not share temporary data.
+- Local generation data can hold user-controlled mutable references to generator-owned state; test with a user-provided synchronized cache and document that **Sparkle provides no implicit locks**.
+- Multiple configured seeds influence independent features; fixed seed/rules produce identical logical chunks regardless of request order **for deterministic example passes**.
+- Null `createChunk` skips passes and yields a successful no-chunk result. Exceptions/task failures stay distinguishable from absence.
+- One Task answer per requested chunk; local requester can use Sparkle WorkerPool; mock remote/file requesters use same abstraction.
 
-No golden images for generic metadata or generation-only PRs. Once the
-Graphics adapter is introduced, add extensive Sparkle golden tests:
-seam-free neighboring chunks, terrains at different elevations, roads
-crossing boundaries, buildings shared by chunks, cave entrance/interior,
-unload/reload and partial updates. Use Sparkle's built-in golden
-comparator; do not skip missing references or substitute Python image
-checking.
+## Observer and Streaming
 
-## End-to-end acceptance scene
+- `WorldObserver` registered by existing EngineHeadless context and Registry; removal/reattachment updates the observed set. Non-observer monsters do not trigger loading.
+- Given center and (X,Y,Z) radii, interest expands to exactly an inclusive axis-aligned box.
+- Two observers with overlapping interests load **union** once, using minimum interested-observer distance to prioritize each coordinate.
+- Configurable maximum in-flight requests; replenish slots upon completion, not as rigid all-or-nothing batches.
+- Repositioning observers reprioritizes pending work; chunks outside every interest are removed immediately.
+- Timeout causes new request version; late old results are ignored even if the old Task completes afterward; reentering an interest cannot reuse a stale request ID.
+- Failed requests, temporary absence, no-chunk (finite edge), fast observer movement and disappearance of all observers; **no infinite retry of absent chunks**.
+- Worker finishes but only Engine update installs chunks and emits sync events; no worker-side Entity mutation.
 
-Deterministically create a seeded, finite sample world with:
-- several biome zones and varied ground;
-- at least two settlements connected by roads;
-- objects/scenery distributed around reserved corridors;
-- an underground cave crossing chunk boundaries;
-- loading and unloading while traversing the map;
-- data regenerated in a different request order with identical results;
-- an edited cell that remains edited after unload and reload;
-- headless generation plus optional visible Geometry/Engine rendering.
+## Voxel and Graphics example
 
-A single demo is a **final integration target**; individual PRs have
-smaller acceptance targets in the roadmap and PR briefs.
+- Derived voxel chunk holds existing `Voxel::Volume` snapshots (with `Voxel::Volume::Builder`); chunk physical size in world units independent of voxel count/size.
+- Adjacent and negative-coordinate volumes have coherent seam samples even when generated in reverse order.
+- Bind Graphics renderer after chunks were loaded; initial sync creates the component, later replacement reuses it and changes bound geometry/palette.
+- New, updated and removed neighbors invalidate the relevant boundary geometry; use current Mesher semantics and existing Voxel::Renderer API, without inventing Volume->Renderer direct binding.
+- Golden images: several adjacent chunks with angled camera, variety of shapes, updated ground, empty neighbors, unload/reload, and replacement; Sparkle internal comparator only.
 
-## Performance and diagnostics
+## Delivery
 
-Record planning time per region, generation time per chunk,
-peak allocations, world-plan memory, cancellation overhead and
-render-bake latency. Use stable test seeds and representative worst cases.
-No unbounded caching or global mutex around every cell operation.
-Avoid performance promises before measurement.
-
-## CI acceptance
-
-C++23, Windows/Linux (Debug and Release where the pipeline provides it),
-clang-format and the existing relevant Core/Graphics test matrices.
-Do not mark a feature PR complete before its CI is green. Never merge
-without the maintainer's explicit permission.
+C++23, clang-format, Windows/Linux CI and applicable Core/Graphics tests must pass. Prefer deterministic fake requesters over real networks. Check runtime lifetime problems and no use-after-free across Task callbacks, observers and chunk/entity removal. No implementation PR is merged without maintainer approval.

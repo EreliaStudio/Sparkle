@@ -1,66 +1,42 @@
-# Sparkle v0.1.5 — World generation
+# Sparkle v0.1.5 — Chunk-based world generation and streaming
 
-> DESIGN DRAFT — no generation runtime implementation is authorized by this documentation.
-> This is a replacement for the v0.1.4 implementation roadmap, not a continuation
-> of its PR numbering. Approval is required before coding the feature PRs.
+> **Design plan, not an implementation authorization.** These documents supersede the original v0.1.5 world-planning proposal and reflect the architecture decisions discussed with the maintainer on 2026-11-19. API spellings are sketches until reviewed in a dedicated implementation PR. Never merge without explicit approval.
 
-## Goal
+## Objective
 
-Sparkle should offer a reusable, deterministic **procedural world-generation
-framework**, with an optional **voxel specialization** built on the already
-available Voxel::Volume and Voxel::Volume::Builder.
+Ship **reusable infrastructure** to generate, request, stream and optionally display chunk-based worlds. The library does **not** prescribe a game's geography, biomes, towns, roads, caves, vegetation, placement rules or other world content. Game developers create their own generation passes and chunk subclasses. An example based on the existing voxel API demonstrates the entire system.
 
-The framework must be able to describe the *world*, not just synthesize
-independent chunks. Intended domains include terrain and ground, climate and
-biomes, foliage/scenery, paths and roads, towns or cities and buildings,
-underground spaces or caves, plus arbitrary application-defined features.
-These are **capabilities to design**, not promises that every specialized
-generator must ship in v0.1.5.
+A world is *practically unbounded*: signed 32-bit XYZ chunk coordinates cover a huge address space; no truly infinite or preallocated world is claimed. Finite worlds are supported by a requester/generator returning no chunk outside valid bounds.
 
-The core must work headlessly; OpenGL, EngineView and Meshers must not be
-dependencies of the planning or generation layers. The engine must not encode
-rules from a particular game. No new network protocol is needed.
+## Agreed design
 
-## Documentation
+- **`Chunk<SizeX, SizeY, SizeZ>`**: minimal inheritable base defining static world-unit dimensions and coordinate conversions; **no coordinate, entity or voxel payload stored in the base**.
+- **`ChunkCoordinate`**: signed three-dimensional integer key (reuse Sparkle's vector type where appropriate); floor-based negative coordinate conversions.
+- **`ChunkCollection<TChunk>`** (previous working name: `World<TChunk>`): `std::map` indexed by coordinate, owning typed chunks and one headless-compatible `spk::Entity3D` per loaded chunk. Insert/replace preserves an existing entity; removal destroys its entity. Exposes controlled map-like iteration and lookup.
+- **`Generator<TChunk, TGenerationData>`**: user-extensible generator, `createChunk(coordinate)`, `createGenerationData(coordinate)`, and ordered polymorphic `Pass::apply(TChunk&, TGenerationData&)`. Every generation has fresh temporary data; it may reference shared mutable persistent generator data. Multiple seeds are user-configurable. The user is responsible for thread safety of their passes/shared data.
+- **`ChunkRequester<TChunk>`**: interchangeable asynchronous source (local generator, remote client, file, mock). Exactly one `spk::Task` per requested coordinate. Successful `nullptr` means no chunk exists; failure/timeout are separate outcomes.
+- **`ChunkInterest` and `WorldObserver`**: a symmetric XYZ radius around an observer's current chunk, supplied by a `Component3D` registered by existing `EngineHeadless*` context/Registry mechanisms. A player gets the component; ordinary monsters need not.
+- **`WorldStreamingSystem<TChunk>`**: headless system bound to a collection and requester, aggregating all registered observers in the Engine, loading union of their interests, ordering requests by minimum observer distance, keeping a configurable maximum number of in-flight tasks, applying results on the Engine update thread, retrying timed-out requests using request versions, and unloading all chunks outside every interest.
+- **Single chunk-synchronization notification**: insertion, replacement or explicitly marked changes cause one coalesced notification per chunk during Engine update (coordinate, chunk, entity). No dedicated rendering removal event; removing a chunk destroys its Entity3D and attached components.
+- **Graphics adapter**: bound to the collection, synchronizes all existing chunks at bind time and listens for the same notification thereafter; reuses existing rendering components or adds them if absent. A voxel adapter uses `Voxel::Volume`, Mesher and Renderer. The generic Core remains headless.
 
-1. [Architecture](architecture.md) — layering, ownership, common data and voxel adapter.
-2. [Generation contracts](contracts.md) — determinism, coordinates, APIs and lifecycle.
-3. [World features](features.md) — terrain, meta-structures, scenery, caves, settlements and roads.
-4. [Implementation PR roadmap](roadmap.md) — proposed PRs, dependencies and scope.
-5. [Validation](validation.md) — headless tests, boundary cases, performance and golden images.
-6. [PR briefs](implementation/README.md) — individual proposed implementation tasks.
+## Scope and boundaries
 
-## Baseline
+Only **one ChunkCollection/World per Engine** is supported by the first observer-registration design. Multiple separate worlds in one Engine (overworld/dungeon) may later be disambiguated with a world UUID in observers and systems; **do not implement this in v0.1.5**.
 
-As checked on 2026-11-19, main and V0.1.5 already share the same commit:
-0ed0ff4e9815ac902ec2a126b6a7ea31d67b7d63. The current Voxel::Volume is
-immutable, created by Volume::Builder, and supports ByteStream/Message.
-Voxel::Mesher exists in Graphics and offers an external-neighbor hook.
-No generic Chunk, WorldPlanner or WorldGenerator implementation currently
-exists in the public API.
+No new multiplayer protocol or server framework. Several observers in one headless Engine, independent requester implementations and voxel volume serialization are sufficient integration targets. No global world/region planner class, mandatory meta-structure graph or city/road/cave algorithm is part of the core contract. Optional sample passes may show cross-chunk coherence through shared user-defined data.
 
-The earlier GitHub issues #78–#83 are **obsolete and withdrawn**. This
-document is the starting point for a newly designed plan, not their approval.
+## Reading order
 
-## Architecture principles
+1. [Architecture and ownership](architecture.md)
+2. [API contracts and agreed decisions](contracts.md)
+3. [Feature extensibility and examples](features.md)
+4. [Implementation roadmap](roadmap.md)
+5. [Validation](validation.md)
+6. [Individual draft PRs](implementation/README.md)
 
-- **One source of voxel data:** only Voxel::Volume owns voxel cell snapshots.
-- **Planning before rasterization:** an entire road or city can cross chunks;
-  chunk generation must not independently invent a contradictory version.
-- **Typed and minimal generic APIs:** domain algorithms are composable but
-  do not require a giant abstract class family or a universal stringly-typed
-  metadata dictionary.
-- **Deterministic results:** seed, generator version, settings, coordinates
-  and input metadata uniquely define a generated base chunk.
-- **Explicit state layers:** base generated world, persistent/authoritative
-  player edits, loaded chunks and derived rendering assets are distinct.
-- **Asynchronous-friendly:** requests may run independently, but world
-  publication and visible revisions happen on a controlled owner thread.
-- **Progressive design:** settle class contracts and demonstrate one vertical
-  slice before building many specialized world-generator implementations.
+## Existing Sparkle APIs to reuse
 
-## Proposal status
+`EngineHeadless`, `System`, `Component3D`, `Entity3D`, `Registry<T, EngineHeadless*>`, `ContextualizableTrait`, `WorkerPool`, `Task`, `ContractProvider`, `spk::Vector3Int`, `Voxel::Volume::Builder`, `Voxel::Mesher` and `Voxel::Renderer`. The voxel data/meshing pipeline already exists; do not create a duplicate dense voxel storage representation.
 
-Nothing in these docs defines an approved exact C++ signature or hardcoded
-algorithm. Decisions still requiring review are listed in contracts.md.
-Feature PRs will be created separately against V0.1.5 after agreement.
+The planning PR is [#85](https://github.com/EreliaStudio/Sparkle/pull/85) (draft, documentation only), based on `V0.1.5`. Older candidate issues #78–#83 remain withdrawn and are not part of this plan.

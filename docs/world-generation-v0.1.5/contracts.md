@@ -1,89 +1,99 @@
-# World-generation contracts and decisions (design draft)
+# v0.1.5 — Agreed contracts and remaining API choices
 
-## Invariants to test before implementation is accepted
+> These decisions were made with the maintainer. Illustrative spelling is not a frozen ABI. Do not implement until a feature PR is approved.
 
-**Deterministic generation**
-- Same seed, settings, generator revision, global plan and spatial position
-  yield bitwise-equal logical output across request order and supported
-  Windows/Linux builds (including negative positions).
-- Per-stage random streams are derived from stable identifiers; no
-  iteration-order-dependent unordered containers are used for decisions.
-- Floating-point sampling needs a documented reproducibility policy:
-  bitwise cross-platform output where feasible, or an explicit fixed-point/
-  quantized boundary for persisted terrain categories.
+## Agreed / normative for design
 
-**Spatial correctness**
-- Negative world positions map to exactly one chunk and local cell.
-- Chunk dimensions are positive and total element counts are overflow checked.
-- Every cross-region feature has one stable identity and may be queried from
-  every intersecting chunk; no seams or duplicate structures.
-- Large worlds use checked 64-bit coordinate arithmetic and bounded queries.
-- Intersecting roads, buildings, scenery and caves have deterministic
-  tie-breaking and placement exclusions.
+| Topic | Decision |
+| --- | --- |
+| Type model | Inheritable `Chunk<SizeX,SizeY,SizeZ>` base, compile-time positive dimensions in **world units**; arbitrary application-defined subclasses |
+| Coordinates | Signed XYZ 32-bit `ChunkCoordinate`, floor division for negative positions; chunk **does not store** its key |
+| Conversion | Static world-to-chunk, chunk-to-world-origin and world-to-local helpers on chunk type |
+| Storage | `ChunkCollection<TChunk>` backed by ordered `std::map<ChunkCoordinate, ChunkEntry>`, chunk + headless Entity3D per entry |
+| Access | begin/end/rbegin/rend and const forms, subscript lookup and exception-throwing `at`; no bypass of structural mutations |
+| `addChunk` | Coordinate + owned chunk; replace existing chunk and **retain** its Entity3D |
+| Removal | Delete chunk and its Entity3D/components; no separate rendering-removal notification |
+| Events | **One** coalesced synchronization notification per dirty chunk, during Engine update; initial bind scans all existing entries |
+| Generation | `Generator<TChunk,TGenerationData>` with virtual `createChunk(coord)`, `createGenerationData(coord)`; ordered `Generator::Pass::apply(TChunk&,TGenerationData&)` |
+| Data lifetime | Fresh TGenerationData per chunk call; can hold mutable references to persistent generator data |
+| Seeds | Multiple explicitly configurable seeds in user-defined generation configuration; no forced single-seed derivation |
+| User concurrency | User-written generators/passes/caches responsible for their own thread safety and deterministic rules |
+| Requester | Pluggable `ChunkRequester<TChunk>` returning a Task answer for **one** coordinate; null result = no chunk |
+| Interest | `ChunkInterest` stores a nonnegative XYZ radius; observer position provides center; requested set is inclusive axis-aligned box |
+| Observers | `WorldObserver : Component3D`, registered by Sparkle EngineHeadless context and Registry; support multiple players |
+| Streaming | Union of interests, prioritize by nearest interested observer, configurable max concurrent Task requests, timeout, request version, ignore stale responses |
+| Retention | Unload **all** chunks outside combined interest; no LRU/distance-based cache |
+| Engine worlds | **One** collection/world per Engine in v0.1.5; future world UUID only if needed |
+| Graphics | Optional system bound to collection; per-chunk Entity3D already exists; find/create components and rebind data |
 
-**Ownership**
-- Generated metadata is not the authoritative voxel data.
-- Generic chunk payloads are owned by the generic runtime; voxel payloads
-  are existing immutable Voxel::Volume snapshots.
-- A requester may be local generation, disk or network, but no networking
-  mechanism is implemented by the generation framework.
-- Request completion is applied by the owning update loop; background
-  workers do not mutate a live chunk collection or GPU state.
-- Eviction cannot silently discard persistent user edits.
-
-**Public API**
-- Prefer small concrete types and value semantics over mandatory virtual
-  factories and many framework classes.
-- Use builders when assembling a meaningful mutable recipe or stage pipeline,
-  not for trivial values with no invariants.
-- Generic code does not depend on Voxel. Voxel Core does not depend on
-  Graphics, and no generation module depends on OpenGL.
-- Errors, cancellation, duplicate requests and invalid coordinates must
-  have defined observable behavior.
-
-## API sketches for review — not final signatures
-
-An idiomatic result could look conceptually like:
+## Illustrative C++ API (not final)
 
 ~~~cpp
-// Generic planning (names are illustrative, not committed):
-World::Plan<WorldMeta> plan = planner.build(seed, bounds, settings);
-auto descriptors = plan.featuresIntersecting(chunkBounds);
+// Static geometry and application data; no coordinate stored on Chunk.
+class GameChunk : public spk::Chunk<32, 16, 32>
+{
+public:
+    spk::Voxel::Volume ground;
+    // Other application-defined fields: foliage, structures, etc.
+};
 
-// Voxel realization (reuse current Sparkle API):
-Voxel::Volume::Builder builder(chunkDimensions);
-builder.bind(definitions);
-voxelRecipe.realize(plan, chunkPosition, builder);
-Voxel::Volume volume = builder.build();
+// Spatial ownership belongs to the collection, not the data.
+spk::ChunkCollection<GameChunk> chunks;
+chunks.addChunk({14, 16, 18}, std::make_unique<GameChunk>());
+GameChunk& chunk = chunks.at({14, 16, 18}); // Throws if missing.
+
+// Accessor spellings and exact Entry iteration representation remain under review.
+for (const auto& [coordinate, entry] : chunks) { /* inspect */ }
 ~~~
 
-It should be possible to use a generic generator without asking for a
-Voxel::Volume, and to ask a voxel generator for a chunk without constructing
-or rendering any Engine entities.
+~~~cpp
+template<typename TChunk, typename TGenerationData>
+class Generator
+{
+public:
+    class Pass
+    {
+    public:
+        virtual ~Pass() = default;
+        virtual void apply(TChunk&, TGenerationData&) = 0;
+    };
+protected:
+    virtual std::unique_ptr<TChunk> createChunk(const ChunkCoordinate&) = 0;
+    virtual TGenerationData createGenerationData(const ChunkCoordinate&) = 0;
+};
+~~~
 
-## Important unresolved choices for the maintainer
+~~~cpp
+// Concept, not verified exact Task syntax / method spelling:
+ChunkRequester<TChunk>::request(coordinate)
+    -> spk::Task<std::unique_ptr<TChunk>>::Answer;
 
-1. **Namespace:** spk::World, spk::Generation or another naming scheme?
-2. **World metadata:** one typed immutable WorldPlan value, multiple typed
-   RegionPlan values, or both? What is the minimal shared contract?
-3. **Regions:** always 2D X/Z for surface worlds, or generic N-dimensional
-   partitions with specialized 2D/3D views?
-4. **Chunk data:** does a Chunk<TData> wrapper add enough meaning beyond
-   (coordinate, TData, revision), or can Collection own that directly?
-5. **Generation composition:** procedural function pipeline, compile-time
-   stages, explicit Builder registry, or a small type-erased stage list?
-6. **Feature conflicts:** fixed phase precedence plus stable feature IDs,
-   or rule-driven reservations? How should bridges and tunnels override it?
-7. **Generator ownership:** how are dependencies/region plans cached, and
-   is the plan bound to the generator or passed as a stable input?
-8. **Threading:** expose synchronous generation as the core primitive and
-   put async acquisition in Requester, or support async stages internally?
-9. **Existing edits:** store sparse overrides or copy-on-write chunks?
-   This decision affects persistence and regeneration but should not force
-   a second dense voxel representation.
-10. **Release line:** which advanced algorithms (caves/cities/roads) must
-    be shipped as reusable defaults, versus examples and extension hooks?
+// Concept:
+// collection.subscribeToChunkSynchronization(
+//     [](const ChunkCoordinate&, TChunk&, spk::Entity3D&) {...});
+~~~
 
-Recommended first pass: approve decisions 1–4 and the deterministic
-contract, then implement one minimal end-to-end vertical slice before
-finalizing the full public hierarchy.
+## Operational details
+
+- `worldToChunkCoordinate` must handle negative values by floor, not C++ truncation. For (70,-2,35) in 32-unit chunks: key (2,-1,1), world origin (64,-32,32), local (6,30,3). Coordinate conversions use world units, *not number of voxels*.
+- Replacing a chunk retains its entity and only rebinds its attached component(s) on the next synchronization.
+- Direct mutation of a chunk's own fields cannot be detected automatically; callers explicitly signal that it changed. The collection deduplicates dirty coordinates per Engine update.
+- A bound rendering adapter must scan loaded chunks before depending on future notifications. Removal uses entity destruction; external resource holders must not retain dangling references.
+- Request timeouts and stale results are handled without requiring a cancellation API in Task. A fresh monotonically unique request version prevents old completions from superseding new requests even if interests are removed/re-added.
+- Because user-defined persistent generator state may be mutable, **Sparkle guarantees only pass order within a generation**, not deterministic outputs from nondeterministic user rules or scheduling across generations.
+
+## Deliberately not part of v0.1.5
+
+No built-in WorldPlan/RegionPlan, procedural city/road/cave generator hierarchy, universal metadata schema, persistence of player edits, auto-save/reload, network protocol, multi-world UUID, smart frustum/neighbor-flood interest, general object-entity persistence or LRU cache. These may be built by users through passes or designed later.
+
+## API details to settle during implementation review
+
+1. Exact namespace and public class names, including whether a future `World` will wrap `ChunkCollection`.
+2. Whether `operator[]` returns a nullable pointer on missing keys (recommended) and whether `at` returns TChunk or ChunkEntry; it **must not implicitly create a chunk**. `at` must throw for absence.
+3. Whether iteration exposes a read-only Entry view or a stable pair of references; ensure structural map/entry ownership cannot be mutated directly.
+4. Precise Engine binding/Entity3D parentage and safe teardown order, especially when the collection is destroyed or rebound.
+5. Exact `Task::Answer` return syntax, retry/error/terminal-null bookkeeping and timeout configuration, based on existing Sparkle APIs.
+6. Whether synchronization events are flushed by `ChunkCollection::updateState` or explicitly by its binding system during Engine update; keep one callback per coordinate per frame.
+7. Minimal concrete voxel example and renderer resource binding strategy, including neighboring-chunk rebakes.
+
+These are **implementation details, not permission to revert the architectural decisions above**.

@@ -1,54 +1,32 @@
-# v0.1.5 proposed PR roadmap
+# Sparkle v0.1.5 — Proposed implementation PR roadmap
 
-> All PRs below are **design proposals**, not authorized implementations.
-> Numbering begins at **PR01 for v0.1.5**, independent from v0.1.4's PR27.
-> Old v0.1.5 planning issues #78–#83 are withdrawn; their partial
-> responsibilities were reassessed and are not binding.
+> **Documentation only, no coding authorized yet.** This replaces the previous 13-PR roadmap, which incorrectly mandated region planners, terrain/biome algorithms, settlements, roads and caves. The old issue series #78–#83 stays withdrawn.
 
-The plan separates a **minimal vertical slice** (PR01–PR05) from
-**richer spatial features** (PR06–PR10) and **runtime integration**
-(PR11–PR13). It is acceptable to reorder or split PRs after API review,
-but avoid implementing streaming systems before proving generation.
+Deliver a functioning **headless framework first**, then a voxel specialization and optional visual integration. PR briefs below are proposed slices, subject to explicit maintainer approval individually. No automatic merges.
 
-| PR | Purpose | Prerequisites | Primary layer |
+| PR | Deliverable | Dependencies | Layer |
 | --- | --- | --- | --- |
-| [01](implementation/PR-01-world-coordinates.md) | Signed world/chunk/region coordinates and checked bounds | — | Generic Core |
-| [02](implementation/PR-02-chunks-and-storage.md) | Small typed chunk payload and loaded collection | 01 | Generic Core |
-| [03](implementation/PR-03-seeds-and-pipeline.md) | Generation context, reproducible seed derivation, stage composition | 01 | Generic Core |
-| [04](implementation/PR-04-world-plans.md) | Typed world/region metadata, cross-region feature indexing | 01, 03 | Generic Core |
-| [05](implementation/PR-05-voxel-first-slice.md) | Voxel::Volume adapter, basic generated ground in neighboring chunks | 02–04 | Voxel Core |
-| [06](implementation/PR-06-ground-and-biomes.md) | Generic fields, ground stratification, climate/biome metadata | 03–05 | Generic + Voxel |
-| [07](implementation/PR-07-scenery.md) | Deterministic scenery placement, reservations, multi-chunk objects | 04–06 | Generic + Voxel |
-| [08](implementation/PR-08-paths-and-roads.md) | Route graphs, continuous corridors, ground adaptation | 04, 06–07 | Generic + Voxel |
-| [09](implementation/PR-09-settlements.md) | Settlements, streets, plots, building footprints and realization | 07–08 | Generic + Voxel |
-| [10](implementation/PR-10-caves.md) | 3D underground features and cross-chunk carving | 04–06, 08–09 | Generic + Voxel |
-| [11](implementation/PR-11-requests-and-streaming.md) | Interest zones, request scheduling, cancellation, unloaded-chunk cache | 02, 05 | Generic Core |
-| [12](implementation/PR-12-graphics-adapter.md) | Voxel meshing/render resources, adjacent chunks and invalidations | 05, 11 | Graphics |
-| [13](implementation/PR-13-validation-demo.md) | Deterministic end-to-end world, stress/CI/visual integration | 06–12 | Integration |
+| [01](implementation/PR-01-chunk-coordinates.md) | Minimal inheritable chunk with world-unit dimensions and static signed XYZ conversions | — | Core |
+| [02](implementation/PR-02-chunk-collection.md) | Sorted ChunkCollection, headless Entity3D ownership, add/replace/remove, iteration and single coalesced sync notification | 01 | Core |
+| [03](implementation/PR-03-generator-passes.md) | Generator<TChunk,TData>, fresh creation data, ordered virtual Passes, user seeds and persistent references | 01 | Core |
+| [04](implementation/PR-04-chunk-requester.md) | Task-backed ChunkRequester interface and local generator implementation, null/failure differentiation | 03 | Core |
+| [05](implementation/PR-05-interest-observer.md) | ChunkInterest radius and WorldObserver Component3D using the existing Engine-context Registry | 01 | Core |
+| [06](implementation/PR-06-streaming-system.md) | Multi-observer union, nearest-first scheduling, request cap/timeout/version, update-thread publication, immediate unload | 02, 04, 05 | Core |
+| [07](implementation/PR-07-voxel-example.md) | Concrete VoxelChunk and simple deterministic user-style generation passes, headless | 03, 06 | Voxel Core/example |
+| [08](implementation/PR-08-graphics-adapter.md) | Graphics-bound chunk renderer: bind-time scan, reusable components, volume-to-geometry pipeline, neighbor invalidation | 02, 07 | Graphics |
+| [09](implementation/PR-09-headless-multiobserver.md) | Server-like multi-observer scenario, fake remote requester, crossing borders, latency/timeout tests | 06, 07 | Core/integration |
+| [10](implementation/PR-10-integration-validation.md) | End-to-end demo and regression/CI validation of framework, voxel sample, update and rendering | 07–09 | Integration |
 
-## Review gates
+## Milestones
 
-**Gate A — data contracts:** approve coordinate convention, Chunk<T>
-necessity, representation of region metadata, ownership and deterministic
-seed policy (PR01–04).
+- **A — Core data model:** 01–02. Chunk has no coordinate or rendering dependency. Ordered storage and entity lifetime verified.
+- **B — Generation and acquisition:** 03–04. Any application-defined chunk subclass and pass pipeline works headlessly, with a swappable Task-based requester.
+- **C — Streaming:** 05–06. One or multiple players drive chunk demand, scheduling and removal through EngineHeadless.
+- **D — Concrete example and Graphics:** 07–08. Existing Voxel::Volume and rendering components are reused. Bind after chunks exist and replace volumes safely.
+- **E — Validation:** 09–10. Multi-observer server-like usage, cross-chunk coherence, timeout/stale response behavior, visual updates and goldens.
 
-**Gate B — first observable result:** PR05 must build and compare adjacent
-Voxel::Volume snapshots headlessly from a world plan. No streaming, Graphics
-or multi-threading is required for this gate.
+The user-defined voxel sample may demonstrate a simple continuous terrain plus one multi-chunk feature. **It does not require shipping production-grade default terrain, cities, roads or caves.**
 
-**Gate C — coherent spatial world:** roads, scenery, settlements and optional
-caves are driven by shared world-space descriptors, not invented per chunk.
+## Ground rules
 
-**Gate D — runtime and visual world:** request/unload/rebuild safely; verify
-neighbor meshing and visual goldens; demonstrate a finite world.
-
-## Release flexibility
-
-Ground, regions and the voxel vertical slice are foundational.
-Scenery/roads/settlements/caves are planned capabilities with independent
-PR scopes; the maintainer may designate some as v0.1.5 core and defer others
-to v0.1.6 after architectural review. They must not be artificially
-entangled just to fit a release number.
-
-Each feature PR targets V0.1.5 and is opened separately, only after
-its contracts are approved. The documentation PR is **not** PR01.
+Feature PRs target `V0.1.5` after design approval, not this draft docs branch. Use C++23, clang-format, Core and Graphics test infrastructure, Windows/Linux CI, Sparkle's built-in golden comparator. No paid APIs or external game servers. Do not introduce networking protocols or unrelated framework rewrites. Never merge without explicit approval.

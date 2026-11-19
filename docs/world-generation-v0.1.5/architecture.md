@@ -1,131 +1,81 @@
-# World-generation architecture (proposed)
+# Architecture — ownership, phases and layering
 
-## The five responsibilities
+> Agreed architecture; names and exact signatures remain subject to implementation review.
+
+## Runtime flow
 
 ~~~mermaid
-flowchart TB
-  D["World definition: seed, bounds, rules, generator version"]
-  P["World / regional planning: metadata and spatial features"]
-  R["Realization: generate requested local data from a plan"]
-  C["Loaded chunks: storage, revisions, request lifecycle"]
-  V["Voxel adapter: Volume::Builder -> Volume"]
-  G["Graphics adapter: Mesher, neighboring chunks, resources"]
-  D --> P --> R --> V --> C --> G
+flowchart TD
+    E["EngineHeadless (context)"] --> O["WorldObserver : Component3D (Registry)"]
+    O --> I["ChunkInterest: XYZ radius"]
+    I --> S["WorldStreamingSystem<TChunk>"]
+    S --> R["ChunkRequester<TChunk>"]
+    R --> L["Local requester"] & N["Remote/file/mock requester"]
+    L --> G["Generator<TChunk, TGenerationData>"]
+    G --> P["Ordered virtual passes"]
+    R --> T["One spk::Task answer per chunk"]
+    T --> S
+    S --> C["ChunkCollection<TChunk> (std::map)"]
+    C --> X["TChunk + Entity3D per coordinate"]
+    C --> Q["Coalesced sync notification on Engine update"]
+    Q --> V["Optional Graphics-bound system"]
+    X --> V
+    V --> RC["Voxel::Mesher -> Voxel::Renderer or other components"]
 ~~~
 
-This is a flow diagram, **not** a mandate to define a class for every box.
+## Generic chunk and coordinates
 
-1. **World definition** contains parameters and a stable identity for
-   reproducibility; it does not own every generated cell.
-2. **Planning** supplies world- or region-scale information: height/landform,
-   biomes, roads, settlements, cave systems, reserved footprints, stable feature IDs.
-3. **Realization** queries all intersecting features and generates a requested
-   chunk payload. It must not depend on chunk request order.
-4. **Runtime** requests, caches, publishes and unloads completed chunk
-   snapshots. It can obtain chunks from a generator, persistent storage, or
-   an existing networking system.
-5. **Voxel and Graphics adapters** turn generic planning into existing
-   Voxel::Volume objects, and turn loaded volumes into rendering resources.
+`Chunk<SizeX, SizeY, SizeZ>` is a minimal **inheritable** type. The three compile-time positive `size_t` dimensions represent **world-space units**, not voxel counts. They determine spatial partitioning, independent of the representation inside `TChunk`. It does not store its chunk coordinate, any entity, geometry or `Voxel::Volume`. `Erelia::Chunk` or a voxel example may derive from this type and add anything application-specific.
 
-## Package boundaries and proposed naming
+Static helpers on the chunk type:
+- `worldToChunkCoordinate(Vector3 worldPosition) -> ChunkCoordinate` (floor division, including negatives).
+- `chunkCoordinateToWorld(ChunkCoordinate) -> Vector3` (world position of chunk origin).
+- `worldToLocalCoordinate(Vector3 worldPosition, ChunkCoordinate) -> Vector3` (world-unit position relative to that particular chunk).
 
-Use an ordinary small namespace such as spk::World (subject to review).
-Potential common concepts: Definition/Settings (world generation recipe),
-Position/Bounds, Chunk<TData>, Collection<TData>, Context, RegionPlan<TMeta>,
-FeatureIndex<TFeature>, Generator<TData>, and Requester<TData>.
+`ChunkCoordinate` uses signed 32-bit XYZ components for v0.1.5; math and bounds must check overflow. The world is sparse and effectively very large, not mathematically infinite.
 
-**These are candidate responsibilities, not an approved class list.**
-Combine or remove classes whenever a value type, function object, plain
-container or Builder already handles the requirement well. Avoid virtual
-interfaces without a concrete substitution need. A generic world-generation
-module should not require a huge template hierarchy.
+## Collection and headless entity ownership
 
-- Generic **Core** must not depend on Voxel, network or graphics.
-- The **voxel specialization** may depend on generic Core and Voxel Core.
-- The **Graphics integration** may depend on all previous modules, including
-  Voxel::Mesher and existing Engine entities. Generic Core never depends
-  on Graphics.
-- No game-specific rules, account systems or protocol-level synchronization.
+`ChunkCollection<TChunk>` (the former working `World<TChunk>`) contains a lexicographically sorted `std::map<ChunkCoordinate, ChunkEntry>`; `ChunkEntry` owns a `std::unique_ptr<TChunk>` and a `std::unique_ptr<Entity3D>`. **The map key is the sole stored spatial identity**. Existing values can be modified, but consumers cannot mutate map keys/replace entries through iterators.
 
-## World and region metadata
+`addChunk(coordinate, unique_ptr<TChunk>)` creates the entry and its Entity3D when absent. If the key exists, it **replaces only the chunk while preserving the original Entity3D and attached components**. It marks the entry for synchronization. A direct data edit can call `notifyChunkChanged(coordinate)` (conceptual name). `removeChunk` destroys its owned entity and components; the collection never needs Graphics to do so.
 
-World metadata is **not** a second voxel store. It is a compact set of
-descriptors and spatial queries sufficient to create world cells on demand.
-Suggested categories:
+The collection's Entity3D may be attached to the bound EngineHeadless scene hierarchy, including the headless server. The collection must have an explicit, safe Engine binding/lifetime contract; do not assume an unattached Entity3D is rendered or updated.
 
-- Broad fields: elevation, waterline, temperature, moisture, biome weight,
-  underground density and constraint masks.
-- Features: identifier, kind, bounds/geometry, orientation, seed or
-  parameters, generation phase and ownership.
-- Connectivity: nodes and edges for roads, waterways and cave networks;
-  links may extend across region boundaries.
-- Reservations: building footprints, road corridors and forbidden placement
-  zones to resolve feature collisions.
-- User-defined metadata: allow a strongly typed application-specific
-  metadata model rather than an unbounded list of string keys.
+The collection exposes `begin/end/rbegin/rend` (and const variants), `at(coordinate)` throwing on a missing key, and `operator[](coordinate)` with non-inserting lookup semantics to be finalized. Never expose structural insertion/erase or entity ownership through public iterators. Iteration order is coordinate lexicographic, **not** distance priority.
 
-A feature spanning several chunks or regions must have a stable, unique
-owner and be **queryable by every affected chunk**. A city is not independently
-generated by each chunk, and a cave tunnel should not reset at a boundary.
-Spatial indexes can be generated lazily and cached under an explicit policy.
+## Generation
 
-## Spatial scopes
+`Generator<TChunk, TGenerationData>` is the user-configured **synchronous generation recipe**. It owns an ordered list of `Generator::Pass` objects. User-overridden `createChunk(coordinate)` returns a `unique_ptr<TChunk>` (or null for outside a finite world). User-overridden `createGenerationData(coordinate)` constructs **fresh temporary data per call**, optionally holding non-const references to seeds, noise samplers, caches, plans or other generator-owned persistent state.
 
-- Signed integer **world coordinates** with checked operations.
-- **Chunk coordinates** and positive dimensions; conversion uses floor
-  division for negatives, not truncation toward zero.
-- **Region coordinates** are coarser planning partitions and may cover many
-  chunks (2D X/Z or 3D when necessary).
-- World bounds are optional/explicit and used for finite-world tests.
-- The same world-space position must produce the same value whether sampled
-  from the east or west neighboring chunk.
-- Infinity should not be represented by a preallocated world-sized vector.
+Every pass receives `(TChunk&, TGenerationData&)` and may freely modify either. Some passes only prepare temporary data for later passes. The library executes passes in order within one chunk request. **Sparkle does not synchronize user-defined persistent state**: passes and shared caches must be thread-safe when concurrent requests are used. Seed determinism is the algorithm author's responsibility; no cross-request completion order is guaranteed.
 
-Coordinate types should reuse existing Sparkle vector/math facilities
-where they meet overflow and sign contracts. Do not add parallel math
-libraries for planning.
+`Generator` is not a requester and does not edit the live collection. A local `ChunkRequester` wraps it in WorkerPool/Task.
 
-## Seed and ordering
+## Acquisition and streaming
 
-A stable world seed is part of the persistent identity. Different domains
-use stable derived sub-seeds (world + feature ID + stage ID + coordinate);
-sharing one mutable random stream across asynchronously generated chunks
-would make results order-dependent.
+`ChunkRequester<TChunk>` exposes one asynchronous request per chunk key; implementations may use generation, disk or networking. A successful null result means the requested coordinate has no chunk, rather than a transient failure. A failed/timed-out task may be retried under the streamer's policy.
 
-Planner stages and conflict rules are explicit: ground, excavation, terrain
-reprofiling, structures, roads and scenery must be ordered or applied with
-stable precedence. A building foundation must not depend on which chunk was
-requested first. A later stage must not overwrite user edits.
+The streaming system is bound to the collection and one requester. It finds `WorldObserver` components through the existing `EngineHeadless*` Registry (no duplicate registration layer), uses `TChunk` static coordinate conversion to find each observer's center and expands the interest radius into an inclusive XYZ box.
 
-A pure function may realize a chunk from a frozen plan and local context.
-Caches are **performance details only** and may be discarded without
-changing output.
+All observers' interests are combined by union. For each candidate coordinate, priority is its **minimum distance to an observer requesting it**. Queue missing chunks nearest first, with a configurable **limit on in-flight tasks**; replenish slots as tasks complete rather than waiting for rigid batches. Reevaluate priorities on observer movement. Never request the same coordinate twice concurrently except intentional timeout/retry supersession.
 
-## State lifetime
+A monotonically issued **requestId/requestVersion** accompanies each pending request. On completion, accept the result only if the coordinate is still desired and the version matches the current request. Previous timed-out tasks can finish; ignore obsolete results without requiring actual task cancellation. Apply accepted results by `addChunk` on the Engine update thread; worker callbacks cannot mutate live scene state.
 
-- **Generated baseline:** deterministic reconstruction from seed, recipe
-  version and descriptors.
-- **Overrides:** persistent gameplay changes or authoritative modifications
-  stored separately from the baseline; may include explicit removal.
-- **Loaded snapshot:** immutable chunk value published to consumers,
-  with revision/change notifications.
-- **Derived state:** geometry, occlusion, GPU resources; always rebuildable
-  and never part of the authoritative world state.
+Every update unloads chunks outside the union of current interests. **No LRU, distance cache or maximal retained-chunk budget** in v0.1.5. Max concurrent requests controls work submitted, not retention. Handle null results explicitly so an out-of-bounds coordinate is not retried in an endless loop.
 
-Do not retain two mirrored copies of the same packed voxel cells.
-Make generation cancellation, stale responses, invalidation, eviction and
-neighbor boundary changes explicit in the runtime contract.
+## Rendering and notifications
 
-## Existing Sparkle integration
+The collection has **one event**, meaning *synchronize this coordinate*; it carries (coordinate, `TChunk&`, `Entity3D&`). Insert/replace and explicit edit notifications are coalesced into one event per coordinate per update. Its callback runs on the Engine update thread, not the worker.
 
-Voxel::Volume::Builder already takes dimensions, accepts a Definition::Registry
-and sets or erases cells. Voxel::Volume snapshots are light to copy.
-Voxel::Mesher::outsideCell is available for neighbor awareness, and its
-bake method creates a fresh geometry. The v0.1.4 ByteStream/Message support
-transports a Volume snapshot without requiring a new protocol.
+A Graphics-only rendering system binds to a collection and first synchronizes **every chunk already present**. Then it subscribes to the same event. Its `synchronizeChunk` logic finds an existing rendering component on the Entity3D or adds one, then rebinds updated chunk-derived resources. There is no separate add/update event and no required remove event: collection removal destroys the entity and its attached components. Code that retains external references must respect that lifetime.
 
-The voxel adapter should operate on a Builder and return its build() result.
-Graphics derives geometry from the current snapshots and invalidates affected
-chunks *and their neighbors* where a boundary face changes.
+For voxels, **`Voxel::Volume` is not a renderer input by magic**: the adapter produces/reuses `Voxel::Mesher` geometry (including boundary-neighbor handling) and binds `Voxel::Renderer` using its actual Geometry/Palette APIs. Visual updates should invalidate adjacent meshing when boundary conditions change, without changing the generic collection contract.
 
-Do not add a new monolithic World::VoxelGrid or tie the planner to OpenGL.
+## Core/Graphics boundary
+
+- **Core/headless:** Chunk, coordinate math, collection, Entity3D, generator/passes, requester/Task, interest/observer, streaming and synchronization notification.
+- **Voxel Core example:** concrete chunk containing existing `Voxel::Volume` and example passes with world-unit dimensions independent of voxel size.
+- **Graphics optional:** rendering adapter, Mesher/Geometry/Palette/Renderer components, golden tests.
+
+One collection/world per Engine is the supported v0.1.5 assumption. A later feature may use `UUID` to identify multiple worlds inside one Engine and filter observers accordingly, without changing the Engine's existing context type.

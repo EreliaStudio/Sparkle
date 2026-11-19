@@ -1,115 +1,55 @@
-# Feature model: ground, scenery, caves, towns and roads
+# Generation extensibility — user-defined passes, not built-in worlds
 
-> This describes **capabilities and algorithms**, not committed concrete
-> implementations. World generation must remain game-agnostic.
+## Philosophy
 
-## Meta-structures versus chunks
+Sparkle v0.1.5 provides **how** a chunk is created, loaded, stored and shown, not **what** is in the world. Terrain, caves, cities, roads, vegetation, geometry files and gameplay content are written by the consuming game. A single chunk may contain voxel terrain plus non-voxel foliage and any other data. Chunk contains **no mandatory Entity or Volume** and owns no coordinate.
 
-A *meta-structure* is a typed descriptor of something that exists in the
-logical world, often spanning many chunks. It can represent a continuous
-landform, biome region, reserved city footprint, multi-chunk building,
-waterway, cave system or road segment.
+The prior mandatory `WorldPlan`/`RegionPlan`, universal meta-structure index, city grammar, routing and cave-planning implementation are **withdrawn from the v0.1.5 core plan**. They may reappear later as generic optional utilities if specific user-written passes demonstrate a need.
 
-A descriptor should expose (as appropriate) stable ID, world-space bounds,
-feature parameters, seed or deterministic attributes, layer/priority, and
-spatial query behavior. It should **not** contain the fully expanded voxels
-of the feature. Requesting a chunk evaluates the intersecting descriptors
-and realizes only the relevant local part.
+## Pass collaboration
 
-No requirement to force roads, trees and caves into identical inheritance
-chains; a small common spatial index may store handles to typed feature
-groups or type-erased queries only when justified.
+`Generator<TChunk, TGenerationData>` has ordered virtual passes. Each generation creates a new `TGenerationData`. Passes can write intermediate plans into this local data for later passes, or read/write **persistent** generator-owned data via references held in it.
 
-## Ground and geography
+A game might define:
 
-Generic utilities: reproducible scalar/vector fields, deterministic noise
-sampling, blend masks, bounded interpolation and quantization, exclusion
-regions and sampled height/density fields.
+~~~cpp
+struct MyGenerationData {
+    ChunkCoordinate coordinate;
+    WorldSeeds& seeds;                // Persisted configuration
+    RegionalCache& cache;             // Optional mutable shared data
+    HeightSamples heights;            // Per-request intermediate result
+    std::vector<BuildingPlan> plans;  // Per-request intermediate result
+};
 
-Voxel realization: terrain elevation, stratified ground layers, soil/rock
-IDs, water level and slope/step placement. Surface worlds use continuous
-world-coordinate sampling across chunk borders. A cave-capable world may
-add three-dimensional density fields; not every world must start from a
-heightmap.
+// Example sequence, defined by the game rather than supplied by Sparkle:
+// HeightPlanningPass -> CityPlanningPass -> TerrainVoxelPass
+// -> BuildingRealizationPass -> VegetationPass
+~~~
 
-## Climate and biomes
+The contract does not oblige every pass to touch the chunk. Stages can prepare data only. Users choose ordering, noise implementation, seed scopes, cache schemes, tie-breaking rules and how cross-chunk structures are described. They also ensure shared caches are thread-safe when needed.
 
-The planner can compute macro metadata (temperature, humidity, elevation,
-ocean distance) and assign weighted biome transitions. Biomes should
-provide constraints and distribution parameters; the generic framework
-does not ship a fixed game-specific material table. Abrupt transitions
-should be an explicit author choice rather than a boundary artifact.
+## Cross-chunk continuity
 
-## Scenery
+If a tree, cave or building crosses a boundary, passes must derive the same underlying spatial feature regardless of requested chunk order. A user-defined cache or deterministic field can be shared through the generator. Spatial descriptors should be **queryable by every intersecting chunk**, rather than belonging only to the chunk requested first.
 
-Reusable deterministic placement: distributions, spacing constraints,
-spatial exclusion masks, orientation/scale sampling, regional ownership.
-Examples: trees, rocks, ruins, decor, vegetation. A generated scenery
-object may become a separate Model3D entity **later**; world planning
-does not require Model3D or Graphics.
+This is a **sample design requirement**, not an imposed `RegionPlan` API. The demonstration should include at least one feature crossing a chunk boundary to catch request-order bugs.
 
-Multi-chunk assets are represented once and clipped/projected per chunk.
-Scatter points must not depend on load order or an unstable PRNG sequence.
+## Finite and virtually unbounded worlds
 
-## Roads and routes
+The framework supports the entire signed 32-bit chunk coordinate domain, limited by numeric type and checked conversions. A game can constrain its world arbitrarily: `createChunk` may return `nullptr` outside bounds. The requester reports that as a successful no-chunk result; streamer must not spin forever requesting the same absent coordinate.
 
-A road exists as an explicit continuous spatial feature, e.g. polyline
-or spline/corridor with width, surface, slopes and intersections. An
-optional graph planner connects points of interest, settlements and
-resource areas. Realization can reserve corridors, grade ground,
-handle river crossings and select local voxel paving.
+## Example voxel integration
 
-The graph is planned at a scope wider than a chunk; intersection and
-seam correctness follow from shared world-space geometry. Road routing
-algorithms (A*, graph heuristics, hand-authored routes) are interchangeable
-data sources, not mandatory Sparkle policy.
+A concrete `VoxelChunk` derives from the generic chunk type, contains one or more existing `spk::Voxel::Volume` values and may add unrelated game data. Voxels can be 0.5 world units or any chosen size; **chunk dimensions always describe world units**. Generator passes populate a `Voxel::Volume::Builder` and store the final immutable Volume; the example must not duplicate the current voxel cell storage.
 
-## Towns, cities and buildings
+The optional graphical adapter bakes Geometry with `Voxel::Mesher` and binds a `Voxel::Renderer` on the chunk's Entity3D; other components/child entities may be added by game-specific systems. The generic framework has no rule that one chunk means one mesh or one graphic.
 
-A hierarchy of metadata can describe settlements, zones/districts,
-street networks, lots/plots and building footprints. Deterministic
-placement uses road connectivity, terrain suitability and exclusion
-regions. A settlement and its buildings may span hundreds of chunks but
-should not allocate voxel data until requested.
+## Not in the required implementation
 
-Core should supply generic spatial primitives, constraints and an
-evaluation mechanism, not impose a single procedural-city grammar.
-Voxel-specific realizers can draw foundations, walls, openings, paths
-and scenery using existing Definition IDs.
+- Full procedural biomes, climate/weather or noise libraries.
+- Automated road or city layout, building architecture, pathfinding, cave synthesis.
+- Global hierarchical world/region planner classes and mandatory feature graphs.
+- Runtime save/load of edited terrain, character persistence or ownership semantics beyond the chunk entity.
+- A multiplayer transport protocol or a novel graphics pipeline.
 
-## Caves and underground structures
-
-Two compatible strategies: 3D density/threshold fields for volumetric
-caves, and explicit connected graphs/tunnel descriptors for authored or
-planned underground spaces. Realization carves or replaces voxel data
-through local Builder operations. Cave generation must be continuous
-at chunk boundaries and coordinate with foundations, roads and water.
-
-Potential later extensions include tunnels connecting settlements,
-subterranean roads, underground biomes and large caverns. They should
-use the same spatial plan-query model rather than a separate cave-world
-container.
-
-## Collision and precedence
-
-A deterministic realization order is proposed:
-
-1. Evaluate shared metadata, base height/density and ground materials.
-2. Apply major subtractive features (e.g. cave systems).
-3. Reserve/fill terrain works for roads and settlements.
-4. Apply infrastructure and buildings.
-5. Place secondary details and scenery subject to exclusions.
-6. Apply sparse authoritative/persisted world edits **last**.
-
-This is **a starting point**, not universally correct: tunnels may need
-to be cut through built terrain, bridges require additive geometry above
-roads, and structures may intentionally intersect. Priority and conflict
-resolution should be part of each feature's declared semantics.
-
-## Extensibility and persistence
-
-Persist seed + generator version + settings, coarse plans/feature metadata
-if needed, and sparse edits. The generator base should be reproducible;
-revising generation algorithms must define a migration policy or a
-new world version. Avoid serializing thousands of procedurally generated
-meshes and not-yet-loaded voxel chunks.
+If later PRs add reusable spatial tools, they must be optional, motivated by demonstrated needs and independently testable; they must not be prerequisites for basic chunk generation.
