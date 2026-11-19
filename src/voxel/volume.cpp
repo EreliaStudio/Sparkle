@@ -2,10 +2,10 @@
 
 #include <array>
 #include <cstddef>
-#include <span>
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -179,7 +179,6 @@ namespace spk::Voxel
 		_registry = volume._data->definitions;
 		_cells.swap(cells);
 	}
-
 
 	void Volume::Builder::load(const spk::ByteStream::Reader &reader)
 	{
