@@ -35,7 +35,6 @@ namespace spk::Model3D
 
 	Animator::Animator(ObjectHeadless &object) :
 		_object(object)
-	
 	{
 	}
 
@@ -56,7 +55,7 @@ namespace spk::Model3D
 			{
 				return keys.front();
 			}
-			// A target introduced later starts from the instance's captured pose.
+			// A target introduced later starts from the current pose captured at play().
 			const float alpha = easedTime(time / keys.front().time, keys.front().interpolation);
 			return {
 				time,
