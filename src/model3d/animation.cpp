@@ -116,7 +116,8 @@ namespace spk::Model3D
 		for (const Step::Translation &translation : step.translations)
 		{
 			validateTarget({translation.elementName, {}, Target::Property::Translation});
-			if (!std::isfinite(translation.translation.x) || !std::isfinite(translation.translation.y) || !std::isfinite(translation.translation.z))
+			if (!std::isfinite(translation.translation.x) || !std::isfinite(translation.translation.y) ||
+				!std::isfinite(translation.translation.z))
 				throw std::invalid_argument("Animation translation must be finite");
 			validateInterpolation(translation.interpolation);
 		}
