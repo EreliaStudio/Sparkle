@@ -297,9 +297,10 @@ namespace spk::Model3D
 	}
 	bool Animator::stop(const std::string &name)
 	{
-		const auto it = std::ranges::find_if(_running, [&name](const Running &r) {
-				return r.name == name;
-		});
+		const auto matchesName = [&name](const Running &running) {
+			return running.name == name;
+		};
+		const auto it = std::ranges::find_if(_running, matchesName);
 		if (it == _running.end())
 		{
 			return false;
@@ -314,9 +315,10 @@ namespace spk::Model3D
 	}
 	bool Animator::playing(const std::string &name) const noexcept
 	{
-		return std::ranges::any_of(_running, [&name](const Running &r) {
-				return r.name == name;
-		});
+		const auto matchesName = [&name](const Running &running) {
+			return running.name == name;
+		};
+		return std::ranges::any_of(_running, matchesName);
 	}
 	std::size_t Animator::activeCount() const noexcept
 	{
