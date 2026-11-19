@@ -81,7 +81,6 @@ namespace spk::Voxel::Network
 		bool _helloSent = false;
 		bool _ready = false;
 		Error _error = Error::None;
-		std::unordered_set<std::uint64_t> _unusedReserved; // Reserved for future request correlation.
 		std::vector<spk::Message> _received;
 		std::vector<ChunkPosition> _resyncing;
 
