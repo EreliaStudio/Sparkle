@@ -37,7 +37,6 @@ namespace spk::Model3D
 
 		ObjectHeadless &_object;
 		std::vector<Running> _running;
-		ObjectHeadless _referencePose;
 		Handle _nextHandle = 1;
 
 		[[nodiscard]] static Animation::Keyframe _sample(
@@ -45,7 +44,6 @@ namespace spk::Model3D
 			const StartPose &initial,
 			float time);
 		void _apply(const Running &running, float time);
-		void _restore(const Running &running);
 
 	public:
 		explicit Animator(ObjectHeadless &object);
