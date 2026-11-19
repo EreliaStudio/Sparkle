@@ -126,7 +126,10 @@ namespace spk::Model3D
 
 	Animator::Builder &Animator::Builder::addAnimation(std::string name, Animation animation)
 	{
-		if (name.empty() || !animation._data) throw std::invalid_argument("Invalid animation");
+		if (name.empty() || !animation._data)
+		{
+			throw std::invalid_argument("Invalid animation");
+		}
 		if (!_animations.emplace(std::move(name), Entry{std::move(animation), std::nullopt}).second)
 			throw std::invalid_argument("Duplicate animation name");
 		return *this;
@@ -139,15 +142,26 @@ namespace spk::Model3D
 	Animator::Builder &Animator::Builder::setExitAnimation(const std::string &name, std::string exitName)
 	{
 		const auto it = _animations.find(name);
-		if (it == _animations.end()) throw std::invalid_argument("Unknown source animation");
+		if (it == _animations.end())
+		{
+			throw std::invalid_argument("Unknown source animation");
+		}
 		it->second.exit = std::move(exitName);
 		return *this;
 	}
 	Animator Animator::Builder::build()
 	{
-		if (_default && !_animations.contains(*_default)) throw std::invalid_argument("Unknown default animation");
+		if (_default && !_animations.contains(*_default))
+		{
+			throw std::invalid_argument("Unknown default animation");
+		}
 		for (const auto &[name, entry] : _animations)
-			if (entry.exit && !_animations.contains(*entry.exit)) throw std::invalid_argument("Unknown exit animation: " + name);
+		{
+			if (entry.exit && !_animations.contains(*entry.exit))
+			{
+				throw std::invalid_argument("Unknown exit animation: " + name);
+			}
+		}
 		Animator animator;
 		animator._animations = std::move(_animations);
 		animator._default = std::move(_default);
@@ -155,15 +169,32 @@ namespace spk::Model3D
 	}
 	void Animator::_start(const std::string &name)
 	{
-		if (!_object) throw spk::Exception("Animator is not bound.");
+		if (!_object)
+		{
+			throw spk::Exception("Animator is not bound.");
+		}
 		const auto &animation = _animations.at(name).animation;
 		const auto &channels = animation._data->channels;
-		if (channels.empty()) throw std::invalid_argument("Animation has no targets");
+		if (channels.empty())
+		{
+			throw std::invalid_argument("Animation has no targets");
+		}
 		for (const auto &active : _running)
+		{
 			if (active.name != name)
+			{
 				for (const auto &channel : channels)
+				{
 					for (const auto &held : _animations.at(active.name).animation._data->channels)
-						if (channel.target == held.target) throw spk::Exception("Animation conflict: " + name + " / " + active.name);
+					{
+						if (channel.target == held.target)
+						{
+							throw spk::Exception("Animation conflict: " + name + " / " + active.name);
+						}
+					}
+				}
+			}
+		}
 		std::vector<StartPose> initial;
 		initial.reserve(channels.size());
 		for (const auto &channel : channels)
@@ -183,30 +214,51 @@ namespace spk::Model3D
 			}
 			initial.push_back(std::move(pose));
 		}
-		const auto it = std::ranges::find_if(_running, [&name](const Running &running) { return running.name == name; });
-		if (it != _running.end()) _running.erase(it);
+		const auto it = std::ranges::find_if(_running, [&name](const Running &running) {
+			return running.name == name;
+		});
+		if (it != _running.end())
+		{
+			_running.erase(it);
+		}
 		_running.push_back({name, 0.0, std::move(initial)});
 		_apply(_running.back(), 0.0f);
 	}
 	void Animator::_resumeDefault()
 	{
-		if (_running.empty() && _default) _start(*_default);
+		if (_running.empty() && _default)
+		{
+			_start(*_default);
+		}
 	}
 	void Animator::play(const std::string &name)
 	{
-		if (!_animations.contains(name)) throw std::invalid_argument("Unknown animation: " + name);
+		if (!_animations.contains(name))
+		{
+			throw std::invalid_argument("Unknown animation: " + name);
+		}
 		if (_default && name != *_default)
 		{
-			const auto it = std::ranges::find_if(_running, [this](const Running &r) { return r.name == *_default; });
-			if (it != _running.end()) _running.erase(it);
+			const auto it = std::ranges::find_if(_running, [this](const Running &r) {
+			return r.name == *_default;
+			});
+			if (it != _running.end())
+			{
+				_running.erase(it);
+			}
 		}
 		_start(name);
 	}
 	void Animator::update(float deltaSeconds)
 	{
 		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0.0f)
+		{
 			throw std::invalid_argument("Animator delta must be finite and nonnegative");
-		if (!_object) return;
+		}
+		if (!_object)
+		{
+			return;
+		}
 		_resumeDefault();
 		std::vector<std::string> finished;
 		for (auto &active : _running)
@@ -227,25 +279,46 @@ namespace spk::Model3D
 		}
 		for (const auto &name : finished)
 		{
-			const auto it = std::ranges::find_if(_running, [&name](const Running &r) { return r.name == name; });
-			if (it != _running.end()) _running.erase(it);
+			const auto it = std::ranges::find_if(_running, [&name](const Running &r) {
+			return r.name == name;
+			});
+			if (it != _running.end())
+			{
+				_running.erase(it);
+			}
 			const auto &exit = _animations.at(name).exit;
-			if (exit) _start(*exit);
+			if (exit)
+			{
+				_start(*exit);
+			}
 		}
 		_resumeDefault();
 	}
 	bool Animator::stop(const std::string &name)
 	{
-		const auto it = std::ranges::find_if(_running, [&name](const Running &r) { return r.name == name; });
-		if (it == _running.end()) return false;
+		const auto it = std::ranges::find_if(_running, [&name](const Running &r) {
+			return r.name == name;
+			});
+		if (it == _running.end())
+		{
+			return false;
+		}
 		_running.erase(it);
 		_resumeDefault();
 		return true;
 	}
-	void Animator::stopAll() { _running.clear(); }
+	void Animator::stopAll()
+	{
+		_running.clear();
+	}
 	bool Animator::playing(const std::string &name) const noexcept
 	{
-		return std::ranges::any_of(_running, [&name](const Running &r) { return r.name == name; });
+		return std::ranges::any_of(_running, [&name](const Running &r) {
+			return r.name == name;
+			});
 	}
-	std::size_t Animator::activeCount() const noexcept { return _running.size(); }
+	std::size_t Animator::activeCount() const noexcept
+	{
+		return _running.size();
+	}
 }
