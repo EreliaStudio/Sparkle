@@ -19,7 +19,7 @@
 ## Generation and Requester
 
 - User subclass generator overrides `createChunkBuilder` and `createGenerationData`; passes execute in configured order on `typename TChunk::Builder`, never directly on a finalized chunk.
-- Some passes modify only fresh local generation data; later passes consume it. Different chunk generations do not share temporary builders or data, and each generatable concrete chunk supplies a nested Builder.
+- Some passes modify only fresh local generation data; later passes consume it. Different chunk generations do not share temporary builders or data, and each generatable concrete chunk supplies a nested Builder. `build()` returns the concrete chunk by value and consumes the builder; subsequent operations on a consumed builder must be rejected.
 - Local generation data can hold user-controlled mutable references to generator-owned state; test with a user-provided synchronized cache and document that **Sparkle provides no implicit locks**.
 - Multiple configured seeds influence independent features; fixed seed/rules produce identical logical chunks regardless of request order **for deterministic example passes**.
 - Null `createChunkBuilder` skips passes and yields a successful no-chunk result. Exceptions in passes or `builder.build()` publish no partial chunk; Task failures stay distinct from absence.
@@ -39,7 +39,7 @@
 ## Voxel and Graphics example
 
 - Derived voxel chunk holds immutable `Voxel::Volume` snapshots; its nested `TChunk::Builder` owns a mutable `Voxel::Volume::Builder`. Passes update the latter and only the outer `build()` finalizes the Volume and chunk. Chunk physical size in world units remains independent of voxel count/size.
-- Adjacent and negative-coordinate volumes have coherent seam samples even when generated in reverse order. A failed build must not change an already published immutable Volume or chunk.
+- Adjacent and negative-coordinate volumes have coherent seam samples even when generated in reverse order. Test `TChunk::Builder::load(existingChunk)` then modification then `build()`; the original chunk and immutable Volume remain unchanged. A failed build must not change an already published immutable Volume or chunk.
 - Bind Graphics renderer after chunks were loaded; initial sync creates the component, later replacement reuses it and changes bound geometry/palette.
 - New, updated and removed neighbors invalidate the relevant boundary geometry; use current Mesher semantics and existing Voxel::Renderer API, without inventing Volume->Renderer direct binding.
 - Golden images: several adjacent chunks with angled camera, variety of shapes, updated ground, empty neighbors, unload/reload, and replacement; Sparkle internal comparator only.

@@ -14,7 +14,8 @@
 | `addChunk` | Coordinate + owned chunk; replace existing chunk and **retain** its Entity3D |
 | Removal | Delete chunk and its Entity3D/components; no separate rendering-removal notification |
 | Events | **One** coalesced synchronization notification per dirty chunk, during Engine update; initial bind scans all existing entries |
-| Generation | `Generator<TChunk,TGenerationData>` uses `typename TChunk::Builder`, virtual `createChunkBuilder(coord)` and `createGenerationData(coord)`, ordered `Pass::apply(TChunk::Builder&,TGenerationData&)`, then `builder.build()` |
+| Generation | `Generator<TChunk,TGenerationData>` uses `typename TChunk::Builder`, virtual `createChunkBuilder(coord)` and `createGenerationData(coord)`, ordered `Pass::apply(TChunk::Builder&,TGenerationData&)`; `builder.build()` returns `TChunk` **by value** |
+| Builder lifetime | Like `Voxel::Volume::Builder`: `TChunk::Builder::load(const TChunk&)` populates a fresh builder from an existing chunk; successful `build()` consumes the builder; a published chunk stays unchanged | 
 | Data lifetime | Fresh chunk Builder and TGenerationData per generation; TGenerationData can hold mutable references to persistent data; publish only a successfully built TChunk |
 | Seeds | Multiple explicitly configurable seeds in user-defined generation configuration; no forced single-seed derivation |
 | User concurrency | User-written generators/passes/caches responsible for their own thread safety and deterministic rules |
@@ -33,7 +34,7 @@
 class GameChunk : public spk::Chunk<32, 16, 32>
 {
 public:
-    class Builder; // Owns mutable draft data, including Volume::Builder.
+    class Builder; // load(const GameChunk&); GameChunk build(); (one-shot)
     spk::Voxel::Volume ground;
     // Other application-defined fields: foliage, structures, etc.
 };
@@ -64,7 +65,8 @@ protected:
     virtual std::unique_ptr<ChunkBuilder> createChunkBuilder(
         const ChunkCoordinate&) = 0;
     virtual TGenerationData createGenerationData(const ChunkCoordinate&) = 0;
-    // After all passes: builder.build() creates the final TChunk.
+    // After all passes: TChunk result = builder.build(); // by value
+    // Then move result to the requester's unique_ptr<TChunk>.
 };
 ~~~
 
@@ -100,7 +102,7 @@ No built-in WorldPlan/RegionPlan, procedural city/road/cave generator hierarchy,
 4. Precise Engine binding/Entity3D parentage and safe teardown order, especially when the collection is destroyed or rebound.
 5. Exact `Task::Answer` return syntax, retry/error/terminal-null bookkeeping and timeout configuration, based on existing Sparkle APIs.
 6. Whether synchronization events are flushed by `ChunkCollection::updateState` or explicitly by its binding system during Engine update; keep one callback per coordinate per frame.
-7. Exact nested `TChunk::Builder` creation/ownership, `build()` return (value or owning pointer) and whether optional rebuilding-from-existing is supported.
+7. Builder return and reconstruction are **decided**: `TChunk::Builder::build()` returns `TChunk` by value and consumes the builder; `load(const TChunk&)` can initialize a fresh builder from an existing chunk. Only precise constructors and ownership of `createChunkBuilder()` remain to confirm.
 8. Minimal concrete voxel example and renderer resource binding strategy, including neighboring-chunk rebakes.
 9. How neighboring voxel graphics are invalidated on removal while retaining the sole generic chunk-synchronization event.
 

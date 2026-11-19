@@ -5,7 +5,7 @@
 ## Scope
 - Introduce an example `VoxelChunk` deriving from `Chunk<...>`, holding existing immutable `Voxel::Volume` data and declaring a nested **`VoxelChunk::Builder`** to construct its complete contents. Users may add other volumes and non-voxel data.
 - Voxel size and number of cells are **independent of physical chunk dimensions**, which are world units.
-- Provide a small generator with ordered passes on **`VoxelChunk::Builder&`**: sample heights/noise, mutate its nested `Voxel::Volume::Builder`, add one deterministic cross-chunk feature, then finalize the Volume and entire chunk in `VoxelChunk::Builder::build()`.
+- Provide a small generator with ordered passes on **`VoxelChunk::Builder&`**: sample heights/noise, mutate its nested `Voxel::Volume::Builder`, add one deterministic cross-chunk feature, then return the entire VoxelChunk **by value** in `VoxelChunk::Builder::build()`, consuming the builder. Also provide `VoxelChunk::Builder::load(const VoxelChunk&)`, delegating to the nested `Voxel::Volume::Builder::load(const Volume&)` as appropriate.
 - Demonstrate multiple configurable seeds and fresh TGenerationData sharing optional generator-owned structures.
 - Handle finite-world limits using null `createChunkBuilder` where useful, without coupling the generic requester to voxels.
 

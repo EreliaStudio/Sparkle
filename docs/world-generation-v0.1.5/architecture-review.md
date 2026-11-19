@@ -7,7 +7,7 @@
 - Generic inheritable `Chunk<SizeX,SizeY,SizeZ>`, spatial units, static coordinate conversions and **no stored coordinate**.
 - `ChunkCollection<TChunk>` ordered by coordinates with one headless Entity3D per loaded chunk; replacement preserves entity; removal destroys entity and components.
 - One coalesced *synchronize this chunk* notification during Engine update; initial consumer binding scans all loaded entries; no dedicated removal notification required for the generic renderer.
-- `Generator<TChunk,TGenerationData>` with concrete `TChunk::Builder`; passes apply to builder and generation data; only successful final `build()` creates published TChunk. Multiple seeds and shared mutable persistent data are developer-owned.
+- `Generator<TChunk,TGenerationData>` with concrete `TChunk::Builder`; passes apply to builder and generation data; **`build()` returns TChunk by value and consumes the builder**. The Builder also exposes `load(const TChunk&)` for rebuilding from existing data, mirroring `Voxel::Volume::Builder`. Multiple seeds and shared mutable persistent data are developer-owned.
 - Task-based swappable chunk requester; per-observer XYZ radius; Registry-based WorldObserver; multi-observer streaming with concurrency cap, timeouts/versions, nearest-first priority and no retention outside interest.
 - Graphics is optional; voxel example uses existing Volume::Builder then immutable Volume, Mesher and Renderer.
 
@@ -15,10 +15,10 @@
 
 ### A. Chunk Builder and build-result ownership (PR01 / PR03)
 
-1. Exact contract for `TChunk::Builder::build()`: return a `TChunk` value, `std::unique_ptr<TChunk>`, or another ownership type? Decide once to avoid copying expensive derived chunks.
+1. **Resolved:** `TChunk::Builder::build()` returns `TChunk` by value, as in `Voxel::Volume::Builder`; the generator moves it into the ownership required by the requester. A successful `build()` consumes the builder.
 2. Is a Builder mandatory on *all* TChunk subclasses or only on concrete types used with a Generator? The agreed Generator signature requires a nested Builder; ChunkCollection itself can store externally obtained chunks.
 3. Builder creation lifecycle: `createChunkBuilder(coordinate)` proposed to return nullable owning Builder; `createGenerationData(coordinate)` is fresh per call. Define exception/absence behavior precisely.
-4. Rebuild of an existing chunk: optional `Builder(existingChunk)` / `fromChunk` convenience for immutable Volume changes, or explicitly leave this to the game's own Builder API. No generic mutable access to Volume.
+4. **Resolved:** match the existing `Voxel::Volume::Builder` API: a freshly constructed `TChunk::Builder` can `load(const TChunk&)` to start from an existing chunk. Edits occur in the builder, followed by a new `build()`. The old chunk/immutable Volume is untouched.
 
 ### B. Entity ownership and Engine binding (PR02)
 
@@ -57,4 +57,4 @@
 
 ## Proposed decision order
 
-Start with **A (Builder lifetime and build return)** and **B (entity parenting and Engine binding)**, then **C (collection API/events)**. With those stable, approve Core PR01–PR03. Next settle **D** before PR04–PR06 and **E** before PR08. A small headless voxel vertical slice should validate the chosen boundaries before adding feature algorithms.
+Builder return/rebuild behavior under **A** is settled; verify the remaining Builder factory/absence details, then prioritize **B (entity parenting and Engine binding)** and **C (collection API/events)**. With those stable, approve Core PR01–PR03. Next settle **D** before PR04–PR06 and **E** before PR08. A small headless voxel vertical slice should validate the chosen boundaries before adding feature algorithms.
