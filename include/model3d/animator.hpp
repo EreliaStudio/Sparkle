@@ -35,7 +35,7 @@ namespace spk::Model3D
 			std::vector<StartPose> initial;
 		};
 
-		ObjectHeadless &_object;
+		ObjectHeadless *_object = nullptr;
 		std::vector<Running> _running;
 		Handle _nextHandle = 1;
 
@@ -46,7 +46,10 @@ namespace spk::Model3D
 		void _apply(const Running &running, float time);
 
 	public:
-		explicit Animator(ObjectHeadless &object);
+		Animator() = default;
+		void bind(ObjectHeadless &object);
+		void unbind();
+		[[nodiscard]] bool bound() const noexcept;
 		~Animator();
 
 		Animator(const Animator &) = delete;
