@@ -342,6 +342,47 @@ TEST(Model3DAnimatorTest, RotationAndScaleOnTheSameElementCanBeIndependentClips)
 	EXPECT_TRUE(animator.playing(scaleHandle));
 }
 
+
+TEST(Model3DAnimatorTest, TranslationAndScalingOfSameElementRunIndependently)
+{
+	ObjectHeadless object(characterBlueprint());
+	Animator animator(object);
+	Animation::Builder translation;
+	translation.addStep({.time = 0.0f, .translations = {{"arm", {0, 0, 0}}}});
+	translation.addStep({.time = 1.0f, .translations = {{"arm", {4, 0, 0}}}});
+	Animation::Builder scaling;
+	scaling.addStep({.time = 0.0f, .scalings = {{"arm", {1, 1, 1}}}});
+	scaling.addStep({.time = 1.0f, .scalings = {{"arm", {1, 3, 1}, Animation::Interpolation::Quadratic}}});
+	const auto translationHandle = animator.play(translation.build());
+	const auto scalingHandle = animator.play(scaling.build());
+	animator.update(0.5f);
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{2, 0, 0}));
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.5f, 1}));
+	EXPECT_TRUE(animator.stop(translationHandle));
+	EXPECT_TRUE(animator.playing(scalingHandle));
+	animator.update(0.5f);
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{2, 0, 0}));
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 3, 1}));
+	EXPECT_FALSE(animator.playing(scalingHandle));
+}
+
+TEST(Model3DAnimatorTest, SparseKeyframeStartsAtCurrentPoseAndCompletionAppliesLastKeyframe)
+{
+	ObjectHeadless object(characterBlueprint());
+	object.element("arm").setTranslation({3, 0, 0});
+	Animator animator(object);
+	Animation::Builder builder;
+	builder.addStep({.time = 0.5f, .translations = {{"arm", {5, 0, 0}}}});
+	builder.addStep({.time = 1.0f, .translations = {{"arm", {9, 0, 0}}}});
+	const auto handle = animator.play(builder.build());
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{3, 0, 0}));
+	animator.update(0.25f);
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{4, 0, 0}));
+	animator.update(0.75f);
+	EXPECT_FALSE(animator.playing(handle));
+	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{9, 0, 0}));
+}
+
 TEST(Model3DAnimatorTest, CopiesOfBlueprintAreIndependentAndStopAllReleasesMasks)
 {
 	const auto clip = armAnimation();
