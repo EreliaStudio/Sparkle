@@ -29,6 +29,7 @@ namespace spk
 			};
 
 			RenderPass &renderPass(const RenderPass::Key &key);
+			[[nodiscard]] std::vector<RenderPass::Key> passKeys() const;
 			RenderSnapshot build();
 
 		private:

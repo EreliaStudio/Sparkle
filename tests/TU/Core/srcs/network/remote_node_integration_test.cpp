@@ -88,7 +88,7 @@ namespace
 				std::chrono::steady_clock::now() < deadline)
 			{
 				endpoint.dispatch();
-				endpoint.requests().drain(batch);
+				(void)endpoint.requests().drain(batch);
 				for (spk::RemoteNode::Endpoint::Request &request : batch)
 				{
 					requests.push_back(std::move(request));
@@ -302,7 +302,7 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		endpoint.dispatch();
 		std::vector<spk::RemoteNode::Endpoint::Request> batch;
-		endpoint.requests().drain(batch);
+		(void)endpoint.requests().drain(batch);
 		for (auto &request : batch)
 		{
 			requests.push_back(std::move(request));

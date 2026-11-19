@@ -23,7 +23,6 @@ int main()
 {
 	spk::Engine engine;
 	auto &system = engine.addSystem<DeviceSystem>();
-	spk::RenderingEngine renderingEngine(&engine);
 	spk::UpdateContext updateContext{
 		.time = std::chrono::steady_clock::duration{},
 		.deltaTime = std::chrono::milliseconds(16)};
@@ -31,6 +30,6 @@ int main()
 	spk::Mouse mouse;
 	spk::DeviceContext deviceContext{keyboard, mouse};
 
-	renderingEngine.updateState(updateContext, deviceContext);
+	engine.updateState(updateContext, deviceContext);
 	return system.updates == 1 ? 0 : 1;
 }

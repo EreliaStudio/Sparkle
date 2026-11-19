@@ -5,10 +5,12 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <stdexcept>
 #include <vector>
 
 #include "exception.hpp"
 #include "graphics/image.hpp"
+#include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/index_buffer.hpp"
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/texture.hpp"
@@ -47,6 +49,27 @@ namespace
 		vertices.validate();
 		indices.validate();
 	}
+}
+
+TEST(TextureTest, PixelSectionsUseTexelCentersAndValidateBounds)
+{
+	using Section = spk::Texture::Section;
+	const auto tile = Section::fromPixels({64, 64}, {16, 32}, {16, 16});
+	EXPECT_FLOAT_EQ(tile.anchor.x, 16.5f / 64.0f);
+	EXPECT_FLOAT_EQ(tile.anchor.y, 32.5f / 64.0f);
+	EXPECT_FLOAT_EQ(tile.size.x, 15.0f / 64.0f);
+	EXPECT_FLOAT_EQ(tile.size.y, 15.0f / 64.0f);
+
+	const auto oneTexel = Section::fromPixels({8, 8}, {7, 7}, {1, 1});
+	EXPECT_FLOAT_EQ(oneTexel.anchor.x, 7.5f / 8.0f);
+	EXPECT_FLOAT_EQ(oneTexel.size.x, 0.25f / 8.0f);
+	EXPECT_GT(oneTexel.size.y, 0.0f);
+	EXPECT_LT(oneTexel.anchor.x + oneTexel.size.x, 1.0f);
+
+	EXPECT_THROW(Section::fromPixels({0, 8}, {0, 0}, {1, 1}), std::invalid_argument);
+	EXPECT_THROW(Section::fromPixels({8, 8}, {0, 0}, {0, 1}), std::invalid_argument);
+	EXPECT_THROW(Section::fromPixels({8, 8}, {7, 0}, {2, 1}), std::out_of_range);
+	EXPECT_THROW(Section::fromPixels({8, 8}, {0, 8}, {1, 1}), std::out_of_range);
 }
 
 TEST(TextureTest, FormatDescriptorsAndClassifiersCoverEveryPublicFormat)
@@ -181,6 +204,41 @@ TEST(SamplerTest, PropertiesTextureAndBindingAreObservableInOpenGL)
 	EXPECT_EQ(value, GL_NEAREST_MIPMAP_NEAREST);
 	::glGetSamplerParameteriv(static_cast<GLuint>(samplerIdentifier), GL_TEXTURE_WRAP_S, &value);
 	EXPECT_EQ(value, GL_REPEAT);
+}
+
+TEST(SamplerTest, DepthComparisonUsesFilteredDepthReferenceAndCanBeDisabled)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset({32, 32});
+	const auto attachment = spk::Framebuffer::RenderAttachment::create2D(
+		{32, 32}, spk::Texture::Format::Depth32F);
+	spk::Sampler sampler(
+		2, spk::Sampler::Filtering::Linear, spk::Sampler::Wrap::ClampToBorder);
+	sampler.setTexture(attachment.texture());
+	sampler.setDepthComparison(spk::Sampler::DepthComparison::LessEqual);
+	sampler.validate();
+	sampler.activate(openGL.renderContext());
+
+	GLint identifier = 0;
+	glGetIntegeri_v(GL_SAMPLER_BINDING, 2, &identifier);
+	ASSERT_NE(identifier, 0);
+	GLint value = 0;
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_COMPARE_MODE, &value);
+	EXPECT_EQ(value, GL_COMPARE_REF_TO_TEXTURE);
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_COMPARE_FUNC, &value);
+	EXPECT_EQ(value, GL_LEQUAL);
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_MIN_FILTER, &value);
+	EXPECT_EQ(value, GL_LINEAR);
+	EXPECT_EQ(sampler.depthComparison(), spk::Sampler::DepthComparison::LessEqual);
+
+	sampler.setDepthComparison(spk::Sampler::DepthComparison::Disabled);
+	sampler.validate();
+	sampler.activate(openGL.renderContext());
+	glGetSamplerParameteriv(static_cast<GLuint>(identifier), GL_TEXTURE_COMPARE_MODE, &value);
+	EXPECT_EQ(value, GL_NONE);
+	EXPECT_EQ(sampler.depthComparison(), spk::Sampler::DepthComparison::Disabled);
+	EXPECT_NO_THROW(openGL.requireNoErrors());
+	openGL.reset();
 }
 
 TEST(SamplerTest, AllSettersAndCombinedPropertiesUpdateAccessors)

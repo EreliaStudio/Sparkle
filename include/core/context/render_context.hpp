@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
+#include <unordered_map>
 
-#include "core/window.hpp"
+#include "core/window_surface_render_target.hpp"
 #include "diagnostics/profiler.hpp"
 
 namespace spk
@@ -36,7 +38,18 @@ namespace spk
 
 	public:
 		Window::Surface *targetSurface;
-		Profiler &profiler = Profiler::defaultProfiler();
+		Profiler &profiler;
 		ActiveProgram _activeProgram{};
+		Window::Surface::RenderTarget activeRenderTarget;
+		std::unordered_map<std::uint64_t, std::shared_ptr<void>> imageState;
+
+		explicit RenderContext(
+			Window::Surface &surface,
+			Profiler &profiler = Profiler::defaultProfiler()) :
+			targetSurface(&surface),
+			profiler(profiler),
+			activeRenderTarget(surface.defaultRenderTarget())
+		{
+		}
 	};
 }

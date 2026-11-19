@@ -9,9 +9,9 @@
 
 namespace
 {
-	[[nodiscard]] spk::Engine *fakeEngine(std::uintptr_t value)
+	[[nodiscard]] spk::EngineHeadless *fakeEngine(std::uintptr_t value)
 	{
-		return reinterpret_cast<spk::Engine *>(value);
+		return reinterpret_cast<spk::EngineHeadless *>(value);
 	}
 }
 
@@ -91,7 +91,7 @@ TEST(EntityAttachmentTest, AttachingTheSameOwnerIsANoOp)
 	int contextEditions = 0;
 
 	auto contract = attachment.subscribeToContextEdition(
-		[&](spk::Engine *const &, spk::Engine *const &) {
+		[&](spk::EngineHeadless *const &, spk::EngineHeadless *const &) {
 			++contextEditions;
 		});
 

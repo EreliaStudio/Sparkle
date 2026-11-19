@@ -315,7 +315,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **Standard usage:** save existing clipboard text, write/read Unicode text, query availability, and restore prior contents.
 - Cover empty text, multiline/supplementary characters, non-text clipboard content, contention/open failure, and no-throw boolean/optional failure reporting.
 
-## Engine and registries
+## EngineHeadless and registries
 
 ### `spk::Registry<Type, Context>` and `Object`
 
@@ -336,7 +336,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ### `spk::EntityAttachmentCollection<T>`
 
-- **Standard usage:** through `Entity`, `Engine`, and exposed test subclasses, add typed elements, query first/all by type/predicate/regex, observe contracts, remove, and destroy exactly once.
+- **Standard usage:** through `Entity`, `EngineHeadless`, and exposed test subclasses, add typed elements, query first/all by type/predicate/regex, observe contracts, remove, and destroy exactly once.
 - Cover no matches, duplicate types/names, const queries, cache invalidation after removal, foreign removal, and callbacks that query or remove during notification.
 
 ### `spk::BehaviourCollection`
@@ -405,7 +405,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::runtime_error`]** Request an accessor with an invalid `ReferenceFrame` value.
 - **[throws `std::runtime_error`]** Request an inverse matrix with any zero-scaled axis.
 
-### `spk::Engine`
+### `spk::EngineHeadless`
 
 - **Standard usage:** add entities/systems, apply geometry, update, build the pre-scene/scene render passes, dispatch events, and remove everything.
 - Cover detached/null entity calls according to contract, duplicate add/remove, inactive entities/systems, modifications during update, root behavior, pass ordering, and destruction with populated registries.

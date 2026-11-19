@@ -10,10 +10,10 @@
 namespace spk
 {
 	class Entity;
-	class Engine;
+	class EngineHeadless;
 
 	class Component : public EntityAttachment,
-					  public Registry<Component, Engine *>::Object,
+					  public Registry<Component, EngineHeadless *>::Object,
 					  public GeometryStateTrait
 	{
 	public:

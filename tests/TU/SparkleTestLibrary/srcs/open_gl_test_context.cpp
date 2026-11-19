@@ -35,7 +35,7 @@ namespace sparkle_test
 		spk::WinAPI::Window::Class windowClass{uniqueWindowClassName()};
 		spk::Window::Native native{"OpenGL test native window"};
 		spk::Window::Surface surface{"OpenGL test surface"};
-		spk::RenderContext renderContext{.targetSurface = &surface};
+		spk::RenderContext renderContext{surface};
 		spk::Framebuffer framebuffer{{FramebufferWidth, FramebufferHeight}};
 		std::thread::id ownerThread = std::this_thread::get_id();
 
@@ -219,6 +219,28 @@ namespace sparkle_test
 			std::swap_ranges(top, top + static_cast<std::ptrdiff_t>(rowSize), bottom);
 		}
 		return result;
+	}
+
+	void OpenGLTestContext::requireNoErrors()
+	{
+		makeCurrent();
+		const GLenum error = ::glGetError();
+		if (error != GL_NO_ERROR)
+		{
+			throw std::runtime_error("OpenGL error " + std::to_string(error));
+		}
+	}
+
+	std::vector<float> OpenGLTestContext::captureFloatTexture(
+		const spk::Texture::Handle &texture,
+		spk::Vector2UInt size)
+	{
+		makeCurrent();
+		std::vector<float> pixels(static_cast<std::size_t>(size.x) * size.y * 4);
+		texture.activate(_impl->renderContext);
+		::glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+		requireNoErrors();
+		return pixels;
 	}
 
 	void OpenGLTestContext::save(const std::filesystem::path &path)

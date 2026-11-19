@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/context/update_context.hpp"
+#include "rendering/engine/engine.hpp"
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"

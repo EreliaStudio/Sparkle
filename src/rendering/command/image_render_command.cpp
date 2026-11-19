@@ -72,10 +72,12 @@ namespace spk
 		Texture::Handle texture,
 		Texture::Section section,
 		Rect2D rect,
-		float depth) :
+		float depth,
+		bool presentSRGB) :
 		_command(
 			texture,
-			_mesh(section, rect, depth, texture ? texture->size() : Vector2UInt{}))
+			_mesh(section, rect, depth, texture ? texture->size() : Vector2UInt{}),
+			presentSRGB)
 	{
 	}
 

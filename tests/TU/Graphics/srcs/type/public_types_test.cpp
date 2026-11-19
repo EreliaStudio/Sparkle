@@ -43,11 +43,15 @@ namespace
 
 	static_assert(std::is_aggregate_v<spk::Alignment>);
 	static_assert(std::is_trivially_copyable_v<spk::Alignment>);
+	static_assert(std::is_aggregate_v<spk::RGB>);
+	static_assert(std::is_trivially_copyable_v<spk::RGB>);
+	static_assert(std::is_aggregate_v<spk::RGBA>);
+	static_assert(std::is_same_v<spk::Color, spk::RGBA>);
 	static_assert(std::is_aggregate_v<spk::Color>);
 	static_assert(std::is_trivially_copyable_v<spk::Color>);
 	static_assert(std::is_aggregate_v<spk::ViewRegion>);
 	static_assert(std::is_trivially_copyable_v<spk::ViewRegion>);
-	static_assert(std::is_aggregate_v<spk::RenderContext>);
+	static_assert(!std::is_aggregate_v<spk::RenderContext>);
 	static_assert(std::is_aggregate_v<spk::UpdateContext>);
 	static_assert(std::is_trivially_copyable_v<spk::Padding<1>>);
 	static_assert(std::is_trivially_copyable_v<spk::Padding<4>>);
@@ -88,6 +92,7 @@ namespace
 	{
 		const spk::Alignment defaultAlignment{};
 		const spk::Alignment centered{spk::Alignment::Horizontal::Center, spk::Alignment::Vertical::Center};
+		const spk::RGB rgb{0.25f, 0.5f, 0.75f};
 		const spk::Color defaultColor{};
 		const spk::Color color{0.25f, 0.5f, 0.75f, 0.125f};
 		const spk::ViewRegion region{
@@ -97,6 +102,7 @@ namespace
 		EXPECT_EQ(defaultAlignment, (spk::Alignment{spk::Alignment::Horizontal::Left, spk::Alignment::Vertical::Top}));
 		EXPECT_EQ(centered.horizontal, spk::Alignment::Horizontal::Center);
 		EXPECT_EQ(centered.vertical, spk::Alignment::Vertical::Center);
+		EXPECT_EQ(rgb, (spk::RGB{0.25f, 0.5f, 0.75f}));
 		EXPECT_EQ(defaultColor, (spk::Color{0.0f, 0.0f, 0.0f, 1.0f}));
 		EXPECT_EQ(color, (spk::Color{0.25f, 0.5f, 0.75f, 0.125f}));
 		EXPECT_EQ(region.viewport, makeRect(10, 20, 100u, 50u));
@@ -171,11 +177,17 @@ namespace
 		EXPECT_FLOAT_EQ(value.after, 2.0f);
 	}
 
-	TEST(PublicTypesTest, RenderContextAggregateValueInitializationUsesNullTargetSurface)
+	TEST(PublicTypesTest, RenderContextInitializesSurfaceBoundDefaultTarget)
 	{
-		const spk::RenderContext context{};
+		static_assert(!std::is_default_constructible_v<spk::RenderContext>);
+		static_assert(!std::is_constructible_v<spk::RenderContext, spk::Window::Surface *>);
+		spk::Window::Surface surface("PublicTypesRenderContext");
+		const spk::RenderContext context{surface};
 
-		EXPECT_EQ(context.targetSurface, nullptr);
+		EXPECT_EQ(context.targetSurface, &surface);
+		EXPECT_EQ(&context.activeRenderTarget.surface(), &surface);
+		EXPECT_EQ(context.activeRenderTarget.type(), spk::Window::Surface::RenderTarget::Type::Default);
+		EXPECT_EQ(context.activeRenderTarget.size(), surface.geometry().size);
 	}
 
 	TEST(PublicTypesTest, UpdateContextExposesDurationAndInputReferenceMembers)

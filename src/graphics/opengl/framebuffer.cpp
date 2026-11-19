@@ -4,8 +4,11 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
+#include <utility>
 
 #include "core/context/render_context.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -21,7 +24,7 @@ namespace spk
 			glGenFramebuffers(1, &identifier);
 			if (identifier == 0)
 			{
-				throw std::runtime_error("Failed to create OpenGL framebuffer");
+				throw Exception("Failed to create OpenGL framebuffer");
 			}
 		}
 
@@ -34,14 +37,29 @@ namespace spk
 		}
 	};
 
-	std::unique_ptr<Texture> Framebuffer::_makeAttachment(
+	Framebuffer::RenderAttachment::RenderAttachment(
+		Texture::Handle texture,
+		std::optional<CubeMap::Face> face) :
+		_texture(std::move(texture)),
+		_face(face)
+	{
+	}
+
+	Framebuffer::RenderAttachment Framebuffer::RenderAttachment::create2D(
 		const Vector2UInt &size,
 		Texture::Format format)
 	{
-		auto result = std::unique_ptr<Texture>(new Texture(Texture::Target::Texture2D));
-		result->_allocateRenderTarget(size, format);
-		result->validate();
-		return result;
+		return RenderAttachment(Texture::_createRenderAttachment(Texture::Target::Texture2D, size, format).handle());
+	}
+
+	const Texture::Handle &Framebuffer::RenderAttachment::texture() const noexcept
+	{
+		return _texture;
+	}
+
+	std::optional<CubeMap::Face> Framebuffer::RenderAttachment::face() const noexcept
+	{
+		return _face;
 	}
 
 	GLenum Framebuffer::_depthAttachmentPoint(Texture::Format format)
@@ -70,23 +88,155 @@ namespace spk
 		}
 	}
 
+	void Framebuffer::_validateAttachments() const
+	{
+		const auto &config = state<State>();
+		_validateSize(config._size);
+		if (config._colorAttachments.empty() && !config._depthStencilAttachment)
+		{
+			throw Exception("Framebuffer requires at least one attachment");
+		}
+		std::unordered_set<GPUResource::Identifier> identities;
+		const auto validate = [&](const RenderAttachment &attachment, bool color) {
+			const auto &texture = attachment.texture();
+			if (!texture || !identities.insert(texture.identifier()).second)
+			{
+				throw Exception("Framebuffer attachment handle is missing or duplicated");
+			}
+			const bool cube = texture->target() == Texture::Target::TextureCubeMap;
+			const bool targetValid = cube || texture->target() == Texture::Target::Texture2D;
+			const bool formatValid = color ? Texture::isColorFormat(texture->format())
+										   : Texture::isDepthFormat(texture->format()) ||
+												 Texture::isDepthStencilFormat(texture->format());
+			const bool faceValid = cube == attachment.face().has_value() &&
+								   (!attachment.face() || static_cast<unsigned int>(*attachment.face()) < 6);
+			if (texture->contentSource() != Texture::ContentSource::RenderAttachment ||
+				texture->size() != config._size || !targetValid || !formatValid || !faceValid)
+			{
+				throw Exception("Framebuffer attachment has an incompatible format, target, face or size");
+			}
+		};
+		for (const auto &attachment : config._colorAttachments)
+		{
+			validate(attachment, true);
+		}
+		if (config._depthStencilAttachment)
+		{
+			validate(*config._depthStencilAttachment, false);
+		}
+	}
+
 	GPUResource::Kind Framebuffer::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Framebuffer;
 	}
 
-	Framebuffer::State::State(const State &other) :
-		GPUResource::State(other),
-		_size(other._size)
+	bool Framebuffer::State::_hasCubeAttachment() const noexcept
 	{
-		_colorAttachments.reserve(other._colorAttachments.size());
-		for (const auto &attachment : other._colorAttachments)
+		const bool cubeColor = std::any_of(
+			_colorAttachments.begin(),
+			_colorAttachments.end(),
+			[](const RenderAttachment &attachment) {
+				return attachment.face().has_value();
+			});
+		return cubeColor || (_depthStencilAttachment && _depthStencilAttachment->face().has_value());
+	}
+
+	void Framebuffer::State::_validateCapabilities() const
+	{
+		GLint maxColors = 0, maxDraw = 0, maxTexture = 0;
+		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColors);
+		glGetIntegerv(GL_MAX_DRAW_BUFFERS, &maxDraw);
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexture);
+		if (_colorAttachments.size() > static_cast<std::size_t>(std::max(0, std::min(maxColors, maxDraw))))
 		{
-			_colorAttachments.push_back(std::make_unique<Texture>(*attachment));
+			throw Exception("Framebuffer color attachments exceed GL_MAX_COLOR_ATTACHMENTS or GL_MAX_DRAW_BUFFERS");
 		}
-		if (other._depthStencilAttachment != nullptr)
+		GLint maxCube = 0;
+		if (_hasCubeAttachment())
 		{
-			_depthStencilAttachment = std::make_unique<Texture>(*other._depthStencilAttachment);
+			glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &maxCube);
+		}
+		const GLint limit = _hasCubeAttachment() ? std::min(maxTexture, maxCube) : maxTexture;
+		if (_size.x > static_cast<unsigned int>(std::max(0, limit)) ||
+			_size.y > static_cast<unsigned int>(std::max(0, limit)))
+		{
+			throw Exception("Framebuffer dimensions exceed the surface OpenGL texture-size limit");
+		}
+	}
+
+	void Framebuffer::State::_attach(GLenum point, const RenderAttachment &attachment, RenderContext &context)
+	{
+		attachment.texture().activate(context);
+		GLint identifier = 0;
+		const auto face = attachment.face();
+		glGetIntegerv(face ? GL_TEXTURE_BINDING_CUBE_MAP : GL_TEXTURE_BINDING_2D, &identifier);
+		const GLenum target = face ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + static_cast<GLenum>(*face) : GL_TEXTURE_2D;
+		glFramebufferTexture2D(GL_FRAMEBUFFER, point, target, static_cast<GLuint>(identifier), 0);
+	}
+
+	void Framebuffer::State::_attachColors(Instance &instance, RenderContext &context) const
+	{
+		const std::size_t count = std::max(instance.colorAttachmentCount, _colorAttachments.size());
+		for (std::size_t index = 0; index < count; ++index)
+		{
+			const GLenum point = GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index);
+			if (index < _colorAttachments.size())
+			{
+				_attach(point, _colorAttachments[index], context);
+			}
+			else
+			{
+				glFramebufferTexture2D(GL_FRAMEBUFFER, point, GL_TEXTURE_2D, 0, 0);
+			}
+		}
+		instance.colorAttachmentCount = _colorAttachments.size();
+	}
+
+	void Framebuffer::State::_attachDepth(Instance &instance, RenderContext &context) const
+	{
+		if (instance.depthAttachmentPoint != GL_NONE)
+		{
+			glFramebufferTexture2D(GL_FRAMEBUFFER, instance.depthAttachmentPoint, GL_TEXTURE_2D, 0, 0);
+		}
+		instance.depthAttachmentPoint = GL_NONE;
+		if (!_depthStencilAttachment)
+		{
+			return;
+		}
+		const GLenum point = _depthAttachmentPoint(_depthStencilAttachment->texture()->format());
+		_attach(point, *_depthStencilAttachment, context);
+		instance.depthAttachmentPoint = point;
+	}
+
+	void Framebuffer::State::_configureDrawBuffers() const
+	{
+		if (_colorAttachments.empty())
+		{
+			glDrawBuffer(GL_NONE);
+			glReadBuffer(GL_NONE);
+			return;
+		}
+		std::vector<GLenum> buffers;
+		buffers.reserve(_colorAttachments.size());
+		for (std::size_t index = 0; index < _colorAttachments.size(); ++index)
+		{
+			buffers.push_back(GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index));
+		}
+		glDrawBuffers(static_cast<GLsizei>(buffers.size()), buffers.data());
+		glReadBuffer(buffers.front());
+	}
+
+	void Framebuffer::State::_checkComplete() const
+	{
+		const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE)
+		{
+			throw Exception("Framebuffer is incomplete on this OpenGL surface (status " + std::to_string(status) + ")");
+		}
+		if (const GLenum error = glGetError(); error != GL_NO_ERROR)
+		{
+			throw Exception("Framebuffer attachment operation failed with OpenGL error " + std::to_string(error));
 		}
 	}
 
@@ -97,125 +247,19 @@ namespace spk
 
 	void Framebuffer::State::_synchronize(GPUResource::Instance &base, RenderContext &context) const
 	{
+		_validateCapabilities();
 		auto &instance = static_cast<Instance &>(base);
 		glBindFramebuffer(GL_FRAMEBUFFER, instance.identifier);
-
-		GLint maximumColorAttachments = 0;
-		GLint maximumDrawBuffers = 0;
-		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maximumColorAttachments);
-		glGetIntegerv(GL_MAX_DRAW_BUFFERS, &maximumDrawBuffers);
-		const auto maximumSupported = static_cast<std::size_t>(std::min(maximumColorAttachments, maximumDrawBuffers));
-		if (_colorAttachments.size() > maximumSupported)
-		{
-			throw std::out_of_range("Framebuffer color attachment count exceeds the OpenGL limit");
-		}
-
-		const std::size_t attachmentSlots = std::max(instance.colorAttachmentCount, _colorAttachments.size());
-		std::vector<GLenum> drawBuffers;
-		drawBuffers.reserve(_colorAttachments.size());
-
-		for (std::size_t index = 0; index < attachmentSlots; ++index)
-		{
-			GLuint textureIdentifier = 0;
-			if (index < _colorAttachments.size())
-			{
-				_colorAttachments[index]->activate(context);
-				GLint value = 0;
-				glGetIntegerv(GL_TEXTURE_BINDING_2D, &value);
-				textureIdentifier = static_cast<GLuint>(value);
-				drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index));
-			}
-
-			glFramebufferTexture2D(
-				GL_FRAMEBUFFER,
-				GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index),
-				GL_TEXTURE_2D,
-				textureIdentifier,
-				0);
-		}
-
-		if (instance.depthAttachmentPoint != GL_NONE)
-		{
-			glFramebufferTexture2D(
-				GL_FRAMEBUFFER,
-				instance.depthAttachmentPoint,
-				GL_TEXTURE_2D,
-				0,
-				0);
-		}
-
-		GLenum depthAttachmentPoint = GL_NONE;
-		if (_depthStencilAttachment != nullptr)
-		{
-			_depthStencilAttachment->activate(context);
-			GLint value = 0;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, &value);
-			depthAttachmentPoint = _depthAttachmentPoint(_depthStencilAttachment->format());
-			glFramebufferTexture2D(
-				GL_FRAMEBUFFER,
-				depthAttachmentPoint,
-				GL_TEXTURE_2D,
-				static_cast<GLuint>(value),
-				0);
-		}
-
-		if (drawBuffers.empty())
-		{
-			glDrawBuffer(GL_NONE);
-			glReadBuffer(GL_NONE);
-		}
-		else
-		{
-			glDrawBuffers(static_cast<GLsizei>(drawBuffers.size()), drawBuffers.data());
-			glReadBuffer(drawBuffers.front());
-		}
-
-		const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if (status != GL_FRAMEBUFFER_COMPLETE)
-		{
-			throw std::runtime_error("OpenGL framebuffer is incomplete (status " + std::to_string(status) + ")");
-		}
-
-		instance.colorAttachmentCount = _colorAttachments.size();
-		instance.depthAttachmentPoint = depthAttachmentPoint;
+		_attachColors(instance, context);
+		_attachDepth(instance, context);
+		_configureDrawBuffers();
+		_checkComplete();
 	}
 
 	void Framebuffer::State::_bind(GPUResource::Instance &base, RenderContext &) const
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, static_cast<Instance &>(base).identifier);
-	}
-
-	Framebuffer::Framebuffer(
-		const Vector2UInt &size,
-		std::vector<Texture::Format> colorFormats,
-		std::optional<Texture::Format> depthStencilFormat) :
-		GPUResource(std::shared_ptr<State>(new State()))
-	{
-		auto &content = state<State>();
-		content._size = size;
-		_validateSize(size);
-		if (colorFormats.empty() && depthStencilFormat.has_value() == false)
-		{
-			throw std::invalid_argument("Framebuffer requires at least one attachment");
-		}
-
-		content._colorAttachments.reserve(colorFormats.size());
-		for (const Texture::Format format : colorFormats)
-		{
-			if (Texture::isColorFormat(format) == false)
-			{
-				throw std::invalid_argument("Framebuffer color attachment requires a color format");
-			}
-			content._colorAttachments.push_back(_makeAttachment(size, format));
-		}
-
-		if (depthStencilFormat.has_value())
-		{
-			(void)_depthAttachmentPoint(*depthStencilFormat);
-			content._depthStencilAttachment = _makeAttachment(size, *depthStencilFormat);
-		}
-
-		validate();
+		auto &instance = static_cast<Instance &>(base);
+		glBindFramebuffer(GL_FRAMEBUFFER, instance.identifier);
 	}
 
 	Framebuffer::Framebuffer() :
@@ -223,28 +267,98 @@ namespace spk
 	{
 	}
 
+	void Framebuffer::_initialize(
+		const Vector2UInt &size,
+		std::vector<RenderAttachment> colors,
+		std::optional<RenderAttachment> depth,
+		bool shared)
+	{
+		auto &config = state<State>();
+		config._size = size;
+		config._colorAttachments = std::move(colors);
+		config._depthStencilAttachment = std::move(depth);
+		config._sharedAttachments = shared;
+		_validateAttachments();
+		validate();
+	}
+
+	Framebuffer::Framebuffer(
+		const Vector2UInt &size,
+		std::vector<Texture::Format> colorFormats,
+		std::optional<Texture::Format> depthStencilFormat) :
+		Framebuffer()
+	{
+		_validateSize(size);
+		std::vector<RenderAttachment> colors;
+		colors.reserve(colorFormats.size());
+		for (const auto format : colorFormats)
+		{
+			if (!Texture::isColorFormat(format))
+			{
+				throw std::invalid_argument("Framebuffer color attachment requires a color format");
+			}
+			colors.push_back(RenderAttachment::create2D(size, format));
+		}
+		std::optional<RenderAttachment> depth;
+		if (depthStencilFormat)
+		{
+			(void)_depthAttachmentPoint(*depthStencilFormat);
+			depth = RenderAttachment::create2D(size, *depthStencilFormat);
+		}
+		_initialize(size, std::move(colors), std::move(depth), false);
+	}
+
+	Framebuffer::Framebuffer(
+		const Vector2UInt &size,
+		std::vector<Texture::Handle> colorAttachments,
+		std::optional<Texture::Handle> depthStencilAttachment) :
+		Framebuffer()
+	{
+		std::vector<RenderAttachment> colors;
+		colors.reserve(colorAttachments.size());
+		for (auto &texture : colorAttachments)
+		{
+			colors.emplace_back(std::move(texture));
+		}
+		std::optional<RenderAttachment> depth;
+		if (depthStencilAttachment)
+		{
+			depth.emplace(std::move(*depthStencilAttachment));
+		}
+		_initialize(size, std::move(colors), std::move(depth), true);
+	}
+
+	Framebuffer::Framebuffer(
+		const Vector2UInt &size,
+		std::vector<RenderAttachment> colorAttachments,
+		std::optional<RenderAttachment> depthStencilAttachment) :
+		Framebuffer()
+	{
+		_initialize(size, std::move(colorAttachments), std::move(depthStencilAttachment), true);
+	}
+
 	void Framebuffer::resize(const Vector2UInt &size)
 	{
-		auto &content = state<State>();
 		_validateSize(size);
-		if (content._size == size)
+		const auto &config = state<State>();
+		if (config._size == size)
 		{
 			return;
 		}
-
-		for (auto &attachment : content._colorAttachments)
+		if (config._sharedAttachments)
 		{
-			attachment->_allocateRenderTarget(size, attachment->format());
-			attachment->validate();
+			throw Exception("Cannot resize a framebuffer with explicitly shared attachments");
 		}
-		if (content._depthStencilAttachment != nullptr)
+		std::vector<Texture::Format> colors;
+		for (const auto &attachment : config._colorAttachments)
 		{
-			content._depthStencilAttachment->_allocateRenderTarget(size, content._depthStencilAttachment->format());
-			content._depthStencilAttachment->validate();
+			colors.push_back(attachment.texture()->format());
 		}
-
-		content._size = size;
-		validate();
+		const auto depth = config._depthStencilAttachment
+							   ? std::optional<Texture::Format>(config._depthStencilAttachment->texture()->format())
+							   : std::nullopt;
+		Framebuffer replacement(size, std::move(colors), depth);
+		*this = std::move(replacement);
 	}
 
 	const Vector2UInt &Framebuffer::size() const noexcept
@@ -257,13 +371,14 @@ namespace spk
 		return state<State>()._colorAttachments.size();
 	}
 
-	const Texture &Framebuffer::colorAttachment(std::size_t index) const
+	const Texture::Handle &Framebuffer::colorAttachmentHandle(std::size_t index) const
 	{
-		return *state<State>()._colorAttachments.at(index);
+		return state<State>()._colorAttachments.at(index).texture();
 	}
 
-	const Texture *Framebuffer::depthStencilAttachment() const noexcept
+	std::optional<Texture::Handle> Framebuffer::depthStencilAttachmentHandle() const noexcept
 	{
-		return state<State>()._depthStencilAttachment.get();
+		const auto &attachment = state<State>()._depthStencilAttachment;
+		return attachment ? std::optional<Texture::Handle>(attachment->texture()) : std::nullopt;
 	}
 }

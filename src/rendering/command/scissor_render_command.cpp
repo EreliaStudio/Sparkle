@@ -1,7 +1,6 @@
 #include "rendering/command/scissor_render_command.hpp"
 
-#include <Windows.h>
-#include <gl/gl.h>
+#include <GL/glew.h>
 
 #include "core/context/render_context.hpp"
 
@@ -14,7 +13,7 @@ namespace spk
 
 	void ScissorRenderCommand::execute(RenderContext &renderContext) const
 	{
-		const GLint y = static_cast<GLint>(renderContext.targetSurface->geometry().size.y) - _scissor.y - static_cast<GLint>(_scissor.height);
+		const GLint y = static_cast<GLint>(renderContext.activeRenderTarget.size().y) - _scissor.y - static_cast<GLint>(_scissor.height);
 
 		::glEnable(GL_SCISSOR_TEST);
 		::glScissor(

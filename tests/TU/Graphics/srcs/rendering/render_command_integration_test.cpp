@@ -170,7 +170,7 @@ TEST(RenderCommandIntegrationTest, SnapshotResourcesRecreateAfterReleaseAndInInd
 		surface.create(native.window());
 		surface.setGeometry(viewport);
 		surface.makeCurrent();
-		spk::RenderContext context{.targetSurface = &surface};
+		spk::RenderContext context{surface};
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_DEPTH_TEST);

@@ -8,7 +8,7 @@
 namespace spk
 {
 	class Behaviour3D : public Behaviour,
-						public spk::Registry<Behaviour3D, Engine *>::Object
+						public spk::Registry<Behaviour3D, EngineHeadless *>::Object
 	{
 	public:
 		Behaviour3D(

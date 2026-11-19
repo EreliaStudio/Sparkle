@@ -75,7 +75,7 @@ void main() { outputColor = vec4(1.0); }
 		spk::WinAPI::Window::Class _windowClass{"Sparkle_Uniform_Secondary_Context"};
 		spk::Window::Native _native{"UniformSecondaryNative"};
 		spk::Window::Surface _surface{"UniformSecondarySurface"};
-		spk::RenderContext _context{.targetSurface = &_surface};
+		spk::RenderContext _context{_surface};
 
 	public:
 		SecondaryOpenGLContext()
@@ -240,8 +240,8 @@ TEST(UniformTest, ActiveProgramTrackingBelongsToEachRenderContext)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
-	spk::RenderContext first{.targetSurface = &openGL.surface()};
-	spk::RenderContext second{.targetSurface = &openGL.surface()};
+	spk::RenderContext first{openGL.surface()};
+	spk::RenderContext second{openGL.surface()};
 	spk::Program program(UniformVertexShader, UniformFragmentShader);
 	spk::Uniform<float> uniform("uFloat", 7.0f);
 
@@ -315,15 +315,13 @@ TEST(UniformTest, ProgramHandleActivationUpdatesTheRenderContext)
 	EXPECT_FLOAT_EQ(uniformFloat(activeProgram(), "uFloat"), 5.0f);
 }
 
-TEST(UniformTest, ActivationRequiresTargetSurfaceAndActiveProgram)
+TEST(UniformTest, ActivationRequiresActiveProgram)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
 	spk::Uniform<float> uniform("uFloat", 1.0f);
-	spk::RenderContext noSurface{};
-	EXPECT_THROW(uniform.activate(noSurface), std::invalid_argument);
 
-	spk::RenderContext inactiveContext{.targetSurface = &openGL.surface()};
+	spk::RenderContext inactiveContext{openGL.surface()};
 	EXPECT_THROW(uniform.activate(inactiveContext), std::logic_error);
 }
 

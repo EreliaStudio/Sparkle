@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sparkle_test/gif_comparison.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 #include "sparkle_test/paths.hpp"

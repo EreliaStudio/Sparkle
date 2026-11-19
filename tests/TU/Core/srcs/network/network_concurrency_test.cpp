@@ -227,7 +227,7 @@ TEST(NetworkConcurrencyTest, TargetedSendDoesNotReachOtherClients)
 
 	std::vector<spk::Message> secondMessages;
 	std::this_thread::sleep_for(50ms);
-	second.messages().drain(secondMessages);
+	(void)second.messages().drain(secondMessages);
 	EXPECT_TRUE(secondMessages.empty());
 
 	first.disconnect();
@@ -589,11 +589,11 @@ TEST(NetworkConcurrencyTest, SendingToUnknownConnectionDoesNotAffectConnectedCli
 	const spk::ConnectionID connection = connectAndIdentify(server, client);
 	ASSERT_NE(connection, spk::InvalidConnectionID);
 
-	EXPECT_THROW(server.connection(connection + 100000u), spk::Exception);
+	EXPECT_THROW((void)server.connection(connection + 100000u), spk::Exception);
 	std::this_thread::sleep_for(50ms);
 
 	std::vector<spk::Message> received;
-	client.messages().drain(received);
+	(void)client.messages().drain(received);
 	EXPECT_TRUE(received.empty());
 
 	client.disconnect();

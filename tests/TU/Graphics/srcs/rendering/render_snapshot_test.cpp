@@ -49,7 +49,8 @@ TEST(RenderSnapshotTest, OrdersPassesByKeyAndPreservesInsertionWithinEqualOrders
 	builder.renderPass({"equal-b", 10}).emplace<SnapshotRecordingCommand>(log, 3);
 	builder.renderPass({"late", 20}).emplace<SnapshotRecordingCommand>(log, 5);
 	const auto snapshot = builder.build();
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderSnapshotTest");
+	spk::RenderContext context{surface};
 	snapshot.execute(context);
 	EXPECT_EQ(log, (std::vector<int>{1, 2, 3, 4, 5}));
 }
@@ -61,7 +62,8 @@ TEST(RenderSnapshotTest, EmptyAndReusedBuilderProduceIndependentSnapshots)
 	std::vector<int> log;
 	builder.renderPass({"next", 0}).emplace<SnapshotRecordingCommand>(log, 1);
 	const auto populated = builder.build();
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderSnapshotTest");
+	spk::RenderContext context{surface};
 	EXPECT_NO_THROW(empty.execute(context));
 	populated.execute(context);
 	EXPECT_EQ(log, (std::vector<int>{1}));
@@ -74,7 +76,8 @@ TEST(RenderSnapshotTest, SameNameWithDifferentOrderIsRejectedWithoutLosingOrigin
 	std::vector<int> log;
 	builder.renderPass({"same", 1}).emplace<SnapshotRecordingCommand>(log, 7);
 	EXPECT_THROW(builder.renderPass({"same", 2}), spk::RenderSnapshot::Builder::InvalidRenderPassKeyError);
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderSnapshotTest");
+	spk::RenderContext context{surface};
 	builder.build().execute(context);
 	EXPECT_EQ(log, (std::vector<int>{7}));
 }
@@ -83,7 +86,8 @@ TEST(RenderSnapshotTest, FailureIdentifiesPassAndNestedCommandIndex)
 {
 	spk::RenderSnapshot::Builder builder;
 	builder.renderPass({"broken", 0}).emplace<SnapshotThrowingCommand>();
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderSnapshotTest");
+	spk::RenderContext context{surface};
 	try
 	{
 		builder.build().execute(context);

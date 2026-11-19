@@ -4,6 +4,7 @@
 #include "exception.hpp"
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <exception>
 #include <filesystem>
@@ -125,6 +126,21 @@ namespace spk::JSON
 					detail::makeErrorMessage(_file, pathFor(key), "invalid value"),
 					std::current_exception());
 			}
+		}
+
+		template <typename TType, typename TPredicate>
+			requires std::predicate<TPredicate, const TType &>
+		[[nodiscard]] TType require(
+			const std::string &key,
+			TPredicate predicate,
+			const std::string &message) const
+		{
+			TType value = require<TType>(key);
+			if (!predicate(value))
+			{
+				throw spk::Exception(detail::makeErrorMessage(_file, pathFor(key), message));
+			}
+			return value;
 		}
 
 		template <typename TType>

@@ -7,6 +7,7 @@
 
 #include "core/context/render_context.hpp"
 #include "graphics/color.hpp"
+#include "graphics/opengl/texture.hpp"
 #include "math/vector2.hpp"
 
 namespace sparkle_test
@@ -52,5 +53,7 @@ namespace sparkle_test
 		[[nodiscard]] spk::Window::Surface &surface();
 		[[nodiscard]] FramebufferImage capture();
 		void save(const std::filesystem::path &path);
+		void requireNoErrors();
+		[[nodiscard]] std::vector<float> captureFloatTexture(const spk::Texture::Handle &texture, spk::Vector2UInt size);
 	};
 }

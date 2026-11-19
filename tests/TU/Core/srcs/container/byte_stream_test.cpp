@@ -80,10 +80,10 @@ TEST(ByteStream, RejectsInvalidParentAndNestedBounds)
 	spk::ByteStream::Writer writer;
 	writer << std::uint32_t{1};
 	auto bytes = std::move(writer).build();
-	EXPECT_THROW(bytes.reader(3, 2), spk::Exception);
-	EXPECT_THROW(bytes.reader(0, 5), spk::Exception);
+	EXPECT_THROW((void)bytes.reader(3, 2), spk::Exception);
+	EXPECT_THROW((void)bytes.reader(0, 5), spk::Exception);
 	auto reader = bytes.reader();
-	EXPECT_THROW(reader.subreader(4, 5), spk::Exception);
+	EXPECT_THROW((void)reader.subreader(4, 5), spk::Exception);
 }
 
 TEST(ByteStream, ReaderIsNotWritable)

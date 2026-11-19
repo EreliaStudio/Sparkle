@@ -24,7 +24,7 @@ namespace
 		std::vector<TValue> values;
 		while (std::chrono::steady_clock::now() < deadline)
 		{
-			queue.drain(values);
+			(void)queue.drain(values);
 			if (!values.empty())
 			{
 				return values;
@@ -97,7 +97,7 @@ TEST(NetworkIntegrationTest, ExplicitDisconnectDiscardsUnreadIncomingMessages)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil(delivered, 5s));
 	client.disconnect();
 	std::vector<spk::Message> messages;
-	client.messages().drain(messages);
+	(void)client.messages().drain(messages);
 	EXPECT_TRUE(messages.empty());
 	server.stop();
 }
@@ -121,7 +121,7 @@ TEST(NetworkIntegrationTest, RemoteDisconnectDiscardsUnreadIncomingMessages)
 	};
 	ASSERT_TRUE(NetworkTestUtils::waitUntil(disconnected, 5s));
 	std::vector<spk::Message> messages;
-	client.messages().drain(messages);
+	(void)client.messages().drain(messages);
 	EXPECT_TRUE(messages.empty());
 	client.disconnect();
 }

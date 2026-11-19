@@ -74,7 +74,7 @@ namespace
 		const auto deadline = std::chrono::steady_clock::now() + 5s;
 		while (std::chrono::steady_clock::now() < deadline)
 		{
-			server.messages().drain(items);
+			(void)server.messages().drain(items);
 			if (!items.empty())
 			{
 				return items;
@@ -106,12 +106,12 @@ TEST(ClientEntityHierarchyTest, RetriesOnlyOnNewerPublicationsAndStopsAfterFourS
 	}
 	std::this_thread::sleep_for(30ms);
 	std::vector<spk::ReceivedMessage> none;
-	server.messages().drain(none);
+	(void)server.messages().drain(none);
 	EXPECT_TRUE(none.empty());
 
 	deliver(client, selection(5, {{source.uuid(), spk::UUID::null()}}));
 	std::this_thread::sleep_for(50ms);
-	server.messages().drain(none);
+	(void)server.messages().drain(none);
 	EXPECT_TRUE(none.empty());
 
 	deliver(client, selection(6, {}));
@@ -139,7 +139,7 @@ TEST(ClientEntityHierarchyTest, RejectedStopsRetriesUntilSelectionReentry)
 	deliver(client, selection(2, {{source.uuid(), spk::UUID::null()}}));
 	std::this_thread::sleep_for(40ms);
 	std::vector<spk::ReceivedMessage> none;
-	server.messages().drain(none);
+	(void)server.messages().drain(none);
 	EXPECT_TRUE(none.empty());
 
 	deliver(client, selection(3, {}));
@@ -265,7 +265,7 @@ TEST(ClientEntityHierarchyTest, IntervalPreventsRapidRetriesButNoTimerSendsByIts
 	deliver(client, selection(2, {{source.uuid(), spk::UUID::null()}}));
 	std::this_thread::sleep_for(200ms);
 	std::vector<spk::ReceivedMessage> none;
-	server.messages().drain(none);
+	(void)server.messages().drain(none);
 	EXPECT_TRUE(none.empty());
 	deliver(client, selection(3, {{source.uuid(), spk::UUID::null()}}));
 	EXPECT_EQ(requests(server).size(), 1u);
@@ -323,7 +323,7 @@ TEST(ClientEntityHierarchyTest, InternalErrorRemainsRetryableButTooLargeStopsRet
 	deliver(client, selection(3, {{source.uuid(), spk::UUID::null()}}));
 	std::this_thread::sleep_for(50ms);
 	std::vector<spk::ReceivedMessage> none;
-	server.messages().drain(none);
+	(void)server.messages().drain(none);
 	EXPECT_TRUE(none.empty());
 	client.disconnect();
 	server.stop();

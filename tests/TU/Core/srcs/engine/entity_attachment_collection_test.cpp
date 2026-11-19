@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "engine/engine.hpp"
+#include "engine/engine_headless.hpp"
 #include "engine/entity_attachment_collection.hpp"
 
 namespace
@@ -293,7 +293,7 @@ TEST(EntityAttachmentCollectionTest, CollectionDestructionDestroysEveryRemaining
 
 TEST(EntityAttachmentCollectionTest, EntityAndEnginePublicWrappersExerciseTheSameCollectionSemantics)
 {
-	spk::Engine engine;
+	spk::EngineHeadless engine;
 	spk::Entity entity("entity");
 	auto destructions = std::make_shared<int>(0);
 	int componentAdditions = 0;

@@ -55,7 +55,7 @@ if ((Test-Path "$core/lib/sparkle.lib") -or (Test-Path "$core/lib/sparkled.lib")
 # Leave SPARKLE_BUILD_TEST_LIBRARY unspecified: verify its actual default.
 $normal = Join-Path $root 'normal-install'
 Invoke-Checked cmake (@('-S', $source, '-B', "$root/normal-build", '-DSPARKLE_BUILD_TESTS=OFF',
-    '-DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE', "-DCMAKE_INSTALL_PREFIX=$normal") + $common)
+    "-DCMAKE_INSTALL_PREFIX=$normal") + $common)
 Invoke-Checked cmake @('--build', "$root/normal-build", '--parallel', '4')
 Invoke-Checked cmake @('--install', "$root/normal-build")
 Assert-LicenseFiles $normal
@@ -72,7 +72,7 @@ if (-not (Select-String -Path "$root/missing-component.log" -Pattern 'sparkle_FO
 
 $installed = Join-Path $root 'install'
 Invoke-Checked cmake (@('-S', $source, '-B', "$root/library-build", '-DSPARKLE_BUILD_TESTS=OFF',
-    '-DSPARKLE_BUILD_TEST_LIBRARY=ON', '-DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE',
+    '-DSPARKLE_BUILD_TEST_LIBRARY=ON',
     "-DCMAKE_INSTALL_PREFIX=$installed") + $common)
 Invoke-Checked cmake @('--build', "$root/library-build", '--parallel', '4')
 Invoke-Checked cmake @('--install', "$root/library-build")

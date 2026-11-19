@@ -43,6 +43,12 @@ namespace spk
 		{
 			return _columns.at(column);
 		}
+		// Matrix storage is column-major; this returns a row in logical x/y/z/w order.
+		[[nodiscard]] constexpr Vector4 row(std::size_t index) const
+			requires(SizeX == 4 && SizeY == 4)
+		{
+			return {(*this)[0][index], (*this)[1][index], (*this)[2][index], (*this)[3][index]};
+		}
 		[[nodiscard]] static constexpr Matrix identity()
 			requires(SizeX == SizeY)
 		{
@@ -53,6 +59,21 @@ namespace spk
 			}
 			return result;
 		}
+		[[nodiscard]] constexpr bool operator==(const Matrix &other) const noexcept
+		{
+			for (std::size_t column = 0; column < SizeX; ++column)
+			{
+				for (std::size_t row = 0; row < SizeY; ++row)
+				{
+					if ((*this)[column][row] != other[column][row])
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
 		[[nodiscard]] constexpr Matrix operator*(const Matrix &other) const
 			requires(SizeX == SizeY)
 		{

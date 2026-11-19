@@ -130,7 +130,7 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizationDoesNotRevealUnknownE
 	{
 		server.treatMessages();
 		std::vector<spk::Message> messages;
-		client.messages().drain(messages);
+		(void)client.messages().drain(messages);
 		if (!messages.empty())
 		{
 			ASSERT_EQ(messages.size(), 1u);
@@ -194,7 +194,7 @@ TEST(ServerEntityHierarchyTest, InitializationAuthorizesCurrentDirectAndAncestor
 		{
 			server.treatMessages();
 			std::vector<spk::Message> responses;
-			client.messages().drain(responses);
+			(void)client.messages().drain(responses);
 			for (const auto &response : responses)
 			{
 				EXPECT_EQ(response.requestID(), requestID);

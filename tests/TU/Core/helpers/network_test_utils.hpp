@@ -49,7 +49,7 @@ namespace NetworkTestUtils
 		std::vector<TValue> batch;
 		(void)waitUntil(
 			[&] {
-				queue.drain(batch);
+				(void)queue.drain(batch);
 				for (TValue &value : batch)
 				{
 					result.push_back(std::move(value));

@@ -52,7 +52,8 @@ namespace
 
 TEST(RenderPassTest, EmptyPassAndRecordingCommandsExecuteInInsertionOrder)
 {
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderPassTest");
+	spk::RenderContext context{surface};
 	spk::RenderPass empty;
 	EXPECT_NO_THROW(empty.execute(context));
 	std::vector<int> log;
@@ -66,7 +67,8 @@ TEST(RenderPassTest, EmptyPassAndRecordingCommandsExecuteInInsertionOrder)
 
 TEST(RenderPassTest, MoveConstructionAndAssignmentTransferCommandsAndLifetime)
 {
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderPassTest");
+	spk::RenderContext context{surface};
 	std::vector<int> log;
 	int destructions = 0;
 	{
@@ -84,7 +86,8 @@ TEST(RenderPassTest, MoveConstructionAndAssignmentTransferCommandsAndLifetime)
 
 TEST(RenderPassTest, CommandFailureIsWrappedWithIndexAndRetainsCause)
 {
-	spk::RenderContext context{.targetSurface = nullptr};
+	spk::Window::Surface surface("RenderPassTest");
+	spk::RenderContext context{surface};
 	std::vector<int> log;
 	spk::RenderPass pass;
 	pass.emplace<PassRecordingCommand>(log, 1);

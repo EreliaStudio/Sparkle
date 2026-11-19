@@ -56,7 +56,7 @@ namespace
 			std::vector<spk::ReceivedMessage> messages;
 			while (running)
 			{
-				node.incoming().drain(messages);
+				(void)node.incoming().drain(messages);
 				for (const auto &request : messages)
 				{
 					const RoutedPayload payload =

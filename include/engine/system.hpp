@@ -10,9 +10,9 @@
 namespace spk
 {
 	struct UpdateContext;
-	class Engine;
+	class EngineHeadless;
 
-	class System : public ContextualizableTrait<Engine *>,
+	class System : public ContextualizableTrait<EngineHeadless *>,
 				   public ActivableTrait,
 				   public NameTrait,
 				   public UpdatableTrait
@@ -23,14 +23,14 @@ namespace spk
 	public:
 		System(
 			const std::string &name = "Unnamed system",
-			Engine *engine = nullptr);
-		explicit System(Engine *engine);
+			EngineHeadless *engine = nullptr);
+		explicit System(EngineHeadless *engine);
 
 		virtual ~System() = default;
 
-		virtual void attach(Engine *engine);
+		virtual void attach(EngineHeadless *engine);
 
-		[[nodiscard]] Engine *engine();
-		[[nodiscard]] const Engine *engine() const;
+		[[nodiscard]] EngineHeadless *engine();
+		[[nodiscard]] const EngineHeadless *engine() const;
 	};
 }

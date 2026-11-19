@@ -3,6 +3,8 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <stdexcept>
+#include <type_traits>
 
 #include "math/vector3.hpp"
 
@@ -32,7 +34,7 @@ namespace spk
 		{
 		}
 
-		explicit TVector4(const JSON::Value &value) noexcept
+		explicit TVector4(const JSON::Value &value)
 		{
 			*this = fromJSON(value);
 		}
@@ -67,6 +69,14 @@ namespace spk
 			w(w)
 		{
 		}
+		// Linear interpolation; accepts extrapolation outside [0, 1].
+		[[nodiscard]] static constexpr TVector4 lerp(const TVector4 &from, const TVector4 &to, float alpha) noexcept
+			requires std::is_floating_point_v<TType>
+		{
+			const TType t = static_cast<TType>(alpha);
+			return {from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t, from.w + (to.w - from.w) * t};
+		}
+
 		[[nodiscard]] constexpr bool operator==(const TVector4 &other) const
 		{
 			return x == other.x && y == other.y && z == other.z && w == other.w;
@@ -107,6 +117,14 @@ namespace spk
 		[[nodiscard]] constexpr TVector4 operator/(const TVector4 &v) const
 		{
 			return {x / v.x, y / v.y, z / v.z, w / v.w};
+		}
+		[[nodiscard]] constexpr TVector4 operator*(TType scalar) const
+		{
+			return {x * scalar, y * scalar, z * scalar, w * scalar};
+		}
+		[[nodiscard]] constexpr TVector3<TType> xyz() const
+		{
+			return {x, y, z};
 		}
 		constexpr TVector4 &operator+=(const TVector4 &v)
 		{
@@ -159,19 +177,27 @@ namespace spk
 
 		[[nodiscard]] static TVector4 fromJSON(const JSON::Value &value)
 		{
-			const auto &array = value.asArray();
-
-			if (array.size() != 4)
+			if (value.isObject())
 			{
-				throw std::runtime_error(
-					"Expected 4 elements for TVector4");
+				const auto &object = value.asObject();
+				if (object.size() != 4 || !object.contains("x") || !object.contains("y") || !object.contains("z") ||
+					!object.contains("w"))
+				{
+					throw std::runtime_error("Expected x, y, z and w components for TVector4");
+				}
+				return {
+					object.at("x").as<TType>(),
+					object.at("y").as<TType>(),
+					object.at("z").as<TType>(),
+					object.at("w").as<TType>()};
 			}
 
-			return {
-				array[0].as<TType>(),
-				array[1].as<TType>(),
-				array[2].as<TType>(),
-				array[3].as<TType>()};
+			const auto &array = value.asArray();
+			if (array.size() != 4)
+			{
+				throw std::runtime_error("Expected 4 elements for TVector4");
+			}
+			return {array[0].as<TType>(), array[1].as<TType>(), array[2].as<TType>(), array[3].as<TType>()};
 		}
 	};
 

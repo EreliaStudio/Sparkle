@@ -26,6 +26,7 @@ add_executable(SparkleGraphicsTestSuite
 
 target_compile_features(SparkleGraphicsTestSuite PRIVATE cxx_std_23)
 target_compile_definitions(SparkleGraphicsTestSuite PRIVATE
+    SPARKLE_VOXEL_SHAPES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../Core/resources/voxel/shapes"
     SPARKLE_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
     SPARKLE_TEST_RESULTS_DIR="${CMAKE_CURRENT_BINARY_DIR}/results"
 )

@@ -495,9 +495,9 @@ TEST(HandshakeIntegration, ExpiredAndCancelledHostnameLookupsFailBeforeResolving
 	using spk::NetworkInternal::Socket;
 	std::stop_source cancellation;
 	const auto start = std::chrono::steady_clock::now();
-	EXPECT_THROW(Socket::connectTCP("sparkle-name-resolution-test.invalid", 12345, start - 1s, {}), spk::Exception);
+	EXPECT_THROW((void)Socket::connectTCP("sparkle-name-resolution-test.invalid", 12345, start - 1s, {}), spk::Exception);
 	cancellation.request_stop();
-	EXPECT_THROW(Socket::connectTCP("sparkle-name-resolution-test.invalid", 12345, start + 5s, cancellation.get_token()), spk::Exception);
+	EXPECT_THROW((void)Socket::connectTCP("sparkle-name-resolution-test.invalid", 12345, start + 5s, cancellation.get_token()), spk::Exception);
 	EXPECT_LT(std::chrono::steady_clock::now() - start, 1s);
 }
 
