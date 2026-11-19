@@ -156,13 +156,6 @@ namespace spk::Voxel::Network
 			}
 		}
 
-		[[nodiscard]] spk::Message versioned(spk::Message::Type type)
-		{
-			spk::Message::Writer writer(type);
-			put(writer, Protocol::Version, 1);
-			return std::move(writer).build();
-		}
-
 		[[nodiscard]] spk::Message errorMessage(Error error)
 		{
 			spk::Message::Writer writer(Protocol::Error);
@@ -254,15 +247,22 @@ namespace spk::Voxel::Network
 		return _world.takeChangedChunks();
 	}
 
-	void Server::_send(spk::ConnectionID recipient, const spk::Message &message)
+	bool Server::_send(spk::ConnectionID recipient, const spk::Message &message)
 	{
 		try
 		{
-			(void)_transport.sendTo(_transport.connection(recipient), message);
+			const auto transfer = _transport.sendTo(_transport.connection(recipient), message);
+			const auto status = transfer.status();
+			if (status == spk::Transfer::Status::Pending ||
+				status == spk::Transfer::Status::TransportAcknowledged)
+			{
+				return true;
+			}
 		} catch (const spk::Exception &)
 		{
-			_subscribed.erase(recipient);
 		}
+		_subscribed.erase(recipient);
+		return false;
 	}
 
 	void Server::_broadcast(const spk::Message &message)
@@ -274,13 +274,10 @@ namespace spk::Voxel::Network
 		}
 	}
 
-	void Server::_sendSnapshot(spk::ConnectionID recipient, ChunkPosition position)
+	bool Server::_sendSnapshot(spk::ConnectionID recipient, ChunkPosition position)
 	{
 		const auto *volume = _world.chunk(position);
-		if (volume != nullptr)
-		{
-			_send(recipient, snapshot(position, _world.revision(position), *volume));
-		}
+		return volume != nullptr && _send(recipient, snapshot(position, _world.revision(position), *volume));
 	}
 
 	void Server::setChunk(ChunkPosition position, Volume volume)
@@ -335,11 +332,19 @@ namespace spk::Voxel::Network
 					return;
 				}
 				_subscribed.insert(sender);
-				for (const auto position : _world.chunks())
+				const auto positions = _world.chunks();
+				for (const auto position : positions)
 				{
-					_sendSnapshot(sender, position);
+					if (!_sendSnapshot(sender, position))
+					{
+						_subscribed.erase(sender);
+						return;
+					}
 				}
-				_send(sender, versioned(Protocol::Ready));
+				spk::Message::Writer ready(Protocol::Ready);
+				put(ready, Protocol::Version, 1);
+				put(ready, positions.size(), 8);
+				(void)_send(sender, std::move(ready).build());
 				return;
 			}
 			if (!_subscribed.contains(sender))
@@ -497,7 +502,12 @@ namespace spk::Voxel::Network
 			}
 			if (type == Protocol::Ready)
 			{
+				const auto expectedCount = decoder.u64();
 				decoder.finish();
+				if (_world.chunks().size() != expectedCount)
+				{
+					throw spk::Exception("Voxel network initial snapshot count does not match");
+				}
 				_ready = true;
 				return;
 			}
