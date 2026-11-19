@@ -65,7 +65,12 @@ namespace spk::Model3D
 		{
 			std::string elementName;
 			std::string attachmentName;
-			enum class Property { Rotation, Translation, Scaling } property = Property::Rotation;
+			enum class Property
+			{
+				Rotation,
+				Translation,
+				Scaling
+			} property = Property::Rotation;
 
 			auto operator<=>(const Target &) const = default;
 		};
