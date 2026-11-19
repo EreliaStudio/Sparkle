@@ -37,17 +37,23 @@ namespace spk::Model3D
 				Interpolation interpolation = Interpolation::Linear;
 			};
 
-			struct Body
+			struct Translation
+			{
+				std::string elementName;
+				Vector3 translation{};
+				Interpolation interpolation = Interpolation::Linear;
+			};
+			struct Scaling
 			{
 				std::string elementName;
 				Vector3 scale{1.0f, 1.0f, 1.0f};
-				Vector3 translation{};
 				Interpolation interpolation = Interpolation::Linear;
 			};
 
 			float time = 0.0f;
 			std::vector<Articulation> articulations;
-			std::vector<Body> bodies;
+			std::vector<Translation> translations;
+			std::vector<Scaling> scalings;
 		};
 
 	private:
@@ -59,6 +65,7 @@ namespace spk::Model3D
 		{
 			std::string elementName;
 			std::string attachmentName;
+			enum class Property { Rotation, Translation, Scaling } property = Property::Rotation;
 
 			auto operator<=>(const Target &) const = default;
 		};
@@ -112,7 +119,8 @@ namespace spk::Model3D
 
 		// Reserve a target without providing keyframes for it.
 		Builder &reserveArticulation(std::string elementName, std::string attachmentName);
-		Builder &reserveBody(std::string elementName);
+		Builder &reserveTranslation(std::string elementName);
+		Builder &reserveScaling(std::string elementName);
 
 		// Finishes the builder; requires a final step after t=0.
 		// For a mask-only animation, use an empty step at its end time.
