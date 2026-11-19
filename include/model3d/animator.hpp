@@ -58,8 +58,8 @@ namespace spk::Model3D
 
 		Animator(const Animator &) = delete;
 		Animator &operator=(const Animator &) = delete;
-		Animator(Animator &&) = delete;
-		Animator &operator=(Animator &&) = delete;
+		Animator(Animator &&) = default;
+		Animator &operator=(Animator &&) = default;
 
 		void play(const std::string &name);
 		void update(float deltaSeconds);
