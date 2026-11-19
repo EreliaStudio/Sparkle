@@ -1,8 +1,8 @@
 #pragma once
 
 #include <compare>
-#include <optional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -91,7 +91,12 @@ namespace spk::Model3D
 			std::vector<Keyframe> keyframes;
 		};
 
-		struct Data { float duration = 0.0f; std::vector<Step> steps; std::vector<Channel> channels; };
+		struct Data
+		{
+			float duration = 0.0f;
+			std::vector<Step> steps;
+			std::vector<Channel> channels;
+		};
 		std::shared_ptr<const Data> _data;
 
 		Animation() = default;
