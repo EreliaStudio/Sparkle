@@ -908,7 +908,7 @@ namespace
 		builder.addStep({.time = 0.3f, .translations = {{"torso", {0.15f, 0.12f, 0}, Curve::Quadratic}, {"rightArm", {0.10f, 0, 0}, Curve::Cubic}, {"leftArm", {-0.10f, 0, 0}, Curve::Logarithmic}}, .scalings = {{"torso", {1, 1.5f, 1}, Curve::Quadratic}, {"rightArm", {1, 1.8f, 1}, Curve::Cubic}, {"leftArm", {1.5f, 1, 1}, Curve::Logarithmic}}});
 		builder.addStep({.time = 0.6f, .translations = {{"torso", {-0.20f, -0.15f, 0}, Curve::Cubic}, {"rightArm", {0.35f, 0, 0}, Curve::Logarithmic}, {"leftArm", {0, 0.25f, 0}, Curve::Quadratic}}, .scalings = {{"torso", {1.45f, 0.8f, 1}, Curve::Cubic}, {"rightArm", {1, 2.1f, 1}, Curve::Logarithmic}, {"leftArm", {1, 1.4f, 1}, Curve::Quadratic}}});
 		builder.addStep({.time = 0.9f, .translations = {{"torso", {0.10f, 0, 0}}, {"rightArm", {0, -0.15f, 0}}, {"leftArm", {0.20f, 0, 0}}}, .scalings = {{"torso", {0.85f, 1.1f, 1}}, {"rightArm", {1.3f, 1.2f, 1}}, {"leftArm", {1, 1, 1}}}});
-		builder.addStep({.time = 1.2f, .scalings = {{"torso", {1, 1, 1}}, {"rightArm", {1, 1, 1}}, {"leftArm", {1, 1, 1}}}});
+		builder.addStep({.time = 1.2f, .translations = {{"torso", {}}, {"rightArm", {}}, {"leftArm", {}}}, .scalings = {{"torso", {1, 1, 1}}, {"rightArm", {1, 1, 1}}, {"leftArm", {1, 1, 1}}}});
 		return builder.build();
 	}
 
