@@ -52,8 +52,8 @@ namespace spk::Voxel::Network
 		std::vector<spk::ReceivedMessage> _received;
 		EditValidator _validator;
 
-		void _send(spk::ConnectionID connection, const spk::Message &message);
-		void _sendSnapshot(spk::ConnectionID connection, ChunkPosition position);
+		bool _send(spk::ConnectionID connection, const spk::Message &message);
+		bool _sendSnapshot(spk::ConnectionID connection, ChunkPosition position);
 		void _broadcast(const spk::Message &message);
 		void _process(const spk::ReceivedMessage &received);
 
