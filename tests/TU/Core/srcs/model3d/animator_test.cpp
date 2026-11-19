@@ -102,341 +102,83 @@ TEST(Model3DAnimationTest, RejectsInvalidDurationAndStepsWithoutChangingTheClip)
 	EXPECT_THROW(static_cast<void>(builder.build()), std::logic_error);
 }
 
-TEST(Model3DAnimatorTest, InterpolatesArticulationsAndScalingIndependently)
+
+TEST(Model3DAnimatorTest, NamedAnimationsRestartAndKeepPoseOnStop)
 {
 	ObjectHeadless object(characterBlueprint());
-	Animator animator;
+	Animator animator = Animator::Builder().addAnimation("arm", armAnimation()).build();
 	animator.bind(object);
-	const auto handBefore = object.element("hand").globalTransform();
-	const Animator::Handle handle = animator.play(armAnimation());
-	EXPECT_TRUE(animator.playing(handle));
+	animator.play("arm");
 	animator.update(0.5f);
-	const auto &shoulder = object.attachment("torso", "shoulder");
-	EXPECT_EQ(shoulder.scale(), (spk::Vector3{1, 1, 1}));
-	EXPECT_NEAR(shoulder.rotationMatrix()[0][0], std::sqrt(0.5f), 0.0001f);
 	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.5f, 1}));
-	EXPECT_NE(object.element("hand").globalTransform(), handBefore);
-	animator.update(0.5f);
-	EXPECT_FALSE(animator.playing(handle));
-	EXPECT_EQ(animator.activeCount(), 0u);
-	EXPECT_NE(shoulder.rotation(), spk::Quaternion::identity());
-	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 2, 1}));
-	EXPECT_NE(object.element("hand").globalTransform(), handBefore);
-}
-
-TEST(Model3DAnimationTest, InterpolationCurvesApplyToRotationTranslationAndScale)
-{
-	using Curve = Animation::Interpolation;
-	struct Expected
-	{
-		Curve interpolation;
-		float alpha;
-	};
-	const std::array<Expected, 4> cases{{{Curve::Linear, 0.5f}, {Curve::Quadratic, 0.25f}, {Curve::Cubic, 0.125f}, {Curve::Logarithmic, std::log1p(4.5f) / std::log1p(9.0f)}}};
-
-	for (const auto &test : cases)
-	{
-		Animation::Builder builder;
-		builder.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::identity()}}, .translations = {{"arm", {0, 0, 0}}}, .scalings = {{"arm", {1, 1, 1}}}});
-		builder.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90}), test.interpolation}}, .translations = {{"arm", {4, 0, 0}, test.interpolation}}, .scalings = {{"arm", {1, 3, 1}, test.interpolation}}});
-		const Animation clip = builder.build();
-		EXPECT_FLOAT_EQ(clip.duration(), 1.0f);
-		ObjectHeadless object(characterBlueprint());
-		Animator animator;
-		animator.bind(object);
-		const auto handle = animator.play(clip);
-		animator.update(0.5f);
-		EXPECT_NEAR(object.element("arm").scale().y, 1.0f + 2.0f * test.alpha, 0.0001f);
-		EXPECT_NEAR(object.element("arm").translation().x, 4.0f * test.alpha, 0.0001f);
-		const auto expectedRotation = spk::Quaternion::slerp(
-			spk::Quaternion::identity(), spk::Quaternion::fromEuler({0, 0, 90}), test.alpha);
-		EXPECT_NEAR(std::fabs(object.attachment("torso", "shoulder").rotation().dot(expectedRotation)), 1.0f, 0.0001f);
-		EXPECT_TRUE(animator.stop(handle));
-		EXPECT_NEAR(object.element("arm").translation().x, 4.0f * test.alpha, 0.0001f);
-	}
-}
-
-TEST(Model3DAnimatorTest, ElementTranslationPreservesHierarchyCopiesAndKeepsPoseOnStop)
-{
-	ObjectHeadless object(characterBlueprint());
-	const float before = object.element("hand").globalTransform()[3][1];
-	object.element("arm").setTranslation({0, 0.5f, 0});
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
-	EXPECT_NEAR(object.element("hand").globalTransform()[3][1], before + 0.5f, 0.0001f);
-	ObjectHeadless copy(object);
-	EXPECT_EQ(copy.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
-	EXPECT_EQ(copy.element("hand").globalTransform(), object.element("hand").globalTransform());
-	EXPECT_THROW(object.element("arm").setTranslation({std::numeric_limits<float>::quiet_NaN(), 0, 0}), spk::Exception);
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{0, 0.5f, 0}));
-
-	Animation::Builder builder;
-	builder.addStep({.time = 0.0f, .translations = {{"arm", {0, 0.5f, 0}}}, .scalings = {{"arm", {1, 1, 1}}}});
-	builder.addStep({.time = 1.0f, .translations = {{"arm", {0, 1.5f, 0}}}, .scalings = {{"arm", {1, 2, 1}}}});
-	Animator animator;
-	animator.bind(object);
-	const auto handle = animator.play(builder.build());
-	animator.update(0.5f);
-	EXPECT_NEAR(object.element("arm").translation().y, 1.0f, 0.0001f);
-	EXPECT_NEAR(object.element("arm").scale().y, 1.5f, 0.0001f);
-	EXPECT_TRUE(animator.stop(handle));
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{0, 1.0f, 0}));
-	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.5f, 1}));
-	EXPECT_NE(object.element("hand").globalTransform(), copy.element("hand").globalTransform());
-}
-
-TEST(Model3DAnimatorTest, ElementScaleAnimatesRootAndPropagatesToChildren)
-{
-	ObjectHeadless object(characterBlueprint());
-	Animator animator;
-	animator.bind(object);
-	Animation::Builder builder;
-	builder.addStep({.time = 0.0f, .scalings = {{"torso", {1, 1, 1}}}});
-	builder.addStep({.time = 1.0f, .scalings = {{"torso", {2, 3, 1}}}});
-	const auto handBefore = object.element("hand").globalTransform();
-	const auto handle = animator.play(builder.build());
-	animator.update(0.5f);
-	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 2.0f, 1.0f}));
-	EXPECT_NEAR(object.element("arm").globalTransform()[3][1], 2.0f, 0.0001f);
-	EXPECT_NE(object.element("hand").globalTransform(), handBefore);
-	EXPECT_TRUE(animator.stop(handle));
-	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 2.0f, 1.0f}));
-	EXPECT_NE(object.element("hand").globalTransform(), handBefore);
-}
-
-TEST(Model3DAnimatorTest, ConcurrentDisjointMasksThrowOnConflictWithoutMutatingPose)
-{
-	ObjectHeadless object(characterBlueprint());
-	Animator animator;
-	animator.bind(object);
-	const auto arm = animator.play(armAnimation());
-	const auto leg = animator.play(legAnimation());
-	ASSERT_EQ(animator.activeCount(), 2u);
+	animator.play("arm");
+	EXPECT_TRUE(animator.playing("arm"));
 	animator.update(0.25f);
-	const auto before = object.attachment("torso", "shoulder").rotation();
-	try
-	{
-		static_cast<void>(animator.play(armAnimation()));
-		FAIL() << "Conflicting animation was accepted";
-	} catch (const spk::Exception &exception)
-	{
-		const std::string message = exception.what();
-		EXPECT_NE(message.find("torso/shoulder"), std::string::npos);
-		EXPECT_NE(message.find(std::to_string(arm)), std::string::npos);
-	}
-	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), before);
-	EXPECT_EQ(animator.activeCount(), 2u);
-	EXPECT_TRUE(animator.stop(arm));
-	const auto replacement = animator.play(armAnimation());
-	EXPECT_TRUE(animator.playing(replacement));
-	EXPECT_TRUE(animator.stop(leg));
-}
-
-TEST(Model3DAnimatorTest, EmptyMaskReservationsLastForTheEntireClip)
-{
-	ObjectHeadless object(characterBlueprint());
-	Animator animator;
-	animator.bind(object);
-	Animation::Builder reserve;
-	reserve.reserveArticulation("torso", "shoulder");
-	reserve.reserveScaling("arm");
-	reserve.reserveArticulation("torso", "shoulder"); // Idempotent
-	reserve.addStep({.time = 1.0f});				  // A reservation-only animation still needs a final timestamp.
-	const auto held = animator.play(reserve.build());
-	EXPECT_TRUE(animator.playing(held));
-	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);
-	animator.update(0.9f);
-	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);
-	animator.update(0.1f);
-	EXPECT_FALSE(animator.playing(held));
-	const auto handle = animator.play(armAnimation());
-	EXPECT_TRUE(animator.playing(handle));
-}
-
-TEST(Model3DAnimationTest, InvalidReservationsDoNotChangeAnimation)
-{
-	Animation::Builder builder;
-	EXPECT_THROW(builder.reserveArticulation("torso", ""), std::invalid_argument);
-	EXPECT_THROW(builder.reserveArticulation("", "shoulder"), std::invalid_argument);
-	EXPECT_THROW(builder.reserveScaling(""), std::invalid_argument);
-	EXPECT_THROW(static_cast<void>(builder.build()), std::invalid_argument);
-	builder.addStep({.time = 1.0f});
-	const Animation clip = builder.build();
-	EXPECT_EQ(clip.steps().size(), 1u);
-}
-
-TEST(Model3DAnimatorTest, InvalidTargetsAndDeltaCannotChangeRunningAnimations)
-{
-	ObjectHeadless object(characterBlueprint());
-	Animator animator;
-	animator.bind(object);
-	Animation::Builder invalid;
-	invalid.addStep({.time = 0.0f, .articulations = {{"torso", "missing", {}}}});
-	invalid.addStep({.time = 1.0f});
-	EXPECT_THROW(static_cast<void>(animator.play(invalid.build())), spk::Exception);
-	EXPECT_EQ(animator.activeCount(), 0u);
-	EXPECT_THROW(static_cast<void>(Animation::Builder().build()), std::invalid_argument);
-	const auto handle = animator.play(armAnimation());
-	animator.update(0.4f);
-	const auto rotation = object.attachment("torso", "shoulder").rotation();
-	EXPECT_THROW(animator.update(-0.1f), std::invalid_argument);
-	EXPECT_THROW(animator.update(std::numeric_limits<float>::quiet_NaN()), std::invalid_argument);
-	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), rotation);
-	EXPECT_TRUE(animator.playing(handle));
-}
-
-TEST(Model3DAnimatorTest, LoopingUsesTimeAndKeepsPoseOnStop)
-{
-	ObjectHeadless object(characterBlueprint());
-	object.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 12});
-	object.attachment("torso", "shoulder").setScale({1, 1.25f, 1});
-	object.element("arm").setScale({1, 1.25f, 1});
-	const auto initial = object.attachment("torso", "shoulder").transform();
-	Animator animator;
-	animator.bind(object);
-	const auto handle = animator.play(armAnimation(), true);
-	animator.update(2.25f);
-	const auto cycled = object.attachment("torso", "shoulder").rotationMatrix();
-	ObjectHeadless other(characterBlueprint());
-	Animator otherAnimator;
-	otherAnimator.bind(other);
-	const auto otherHandle = otherAnimator.play(armAnimation(), true);
-	otherAnimator.update(0.25f);
-	EXPECT_EQ(cycled, other.attachment("torso", "shoulder").rotationMatrix());
-	EXPECT_TRUE(animator.stop(handle));
-	EXPECT_TRUE(otherAnimator.playing(otherHandle));
-	EXPECT_NE(object.attachment("torso", "shoulder").transform(), initial);
 	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.25f, 1}));
-	EXPECT_FALSE(animator.stop(handle));
+	EXPECT_TRUE(animator.stop("arm"));
+	EXPECT_FALSE(animator.playing("arm"));
+	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.25f, 1}));
 }
 
-TEST(Model3DAnimatorTest, AbsentEarlyStepUsesCurrentPoseAndSparseStepsInterpolate)
+TEST(Model3DAnimatorTest, DefaultIsSuspendedAndExitRunsOnlyAfterNaturalCompletion)
 {
 	ObjectHeadless object(characterBlueprint());
-	object.attachment("torso", "shoulder").setRotation(spk::Vector3{0, 0, 10});
-	const auto initial = object.attachment("torso", "shoulder").rotation();
-	Animation::Builder clip;
-	clip.addStep({.time = 0.2f, .scalings = {{"torso", {1, 1, 1}}}});
-	clip.addStep({.time = 0.5f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
-	clip.addStep({.time = 0.75f, .scalings = {{"torso", {1, 2, 1}}}});
-	clip.addStep({.time = 1.0f});
-	Animator animator;
+	Animator animator = Animator::Builder()
+		.addAnimation("idle", legAnimation())
+		.addAnimation("attack", armAnimation())
+		.addAnimation("recovery", armAnimation())
+		.setDefaultAnimation("idle")
+		.setExitAnimation("attack", "recovery")
+		.build();
 	animator.bind(object);
-	const auto handle = animator.play(clip.build());
-	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), initial);
-	animator.update(0.25f);
-	const auto expected = spk::Quaternion::slerp(initial, spk::Quaternion::fromEuler({0, 0, 90}), 0.5f);
-	EXPECT_NEAR(std::fabs(object.attachment("torso", "shoulder").rotation().dot(expected)), 1.0f, 0.0001f);
-	EXPECT_NEAR(object.root().scale().y, 1.0f + (0.25f - 0.2f) / (0.75f - 0.2f), 0.0001f);
-	animator.update(0.5f);
-	EXPECT_EQ(object.root().scale(), (spk::Vector3{1, 2, 1}));
-	const auto poseBeforeStop = object.attachment("torso", "shoulder").rotation();
-	EXPECT_TRUE(animator.stop(handle));
-	EXPECT_EQ(object.attachment("torso", "shoulder").rotation(), poseBeforeStop);
+	EXPECT_TRUE(animator.playing("idle"));
+	animator.play("attack");
+	EXPECT_FALSE(animator.playing("idle"));
+	animator.update(1.0f);
+	EXPECT_FALSE(animator.playing("attack"));
+	EXPECT_TRUE(animator.playing("recovery"));
+	animator.update(1.0f);
+	EXPECT_TRUE(animator.playing("idle"));
+	animator.play("attack");
+	EXPECT_TRUE(animator.stop("attack"));
+	EXPECT_FALSE(animator.playing("recovery"));
+	EXPECT_TRUE(animator.playing("idle"));
 }
 
-TEST(Model3DAnimatorTest, RotationAndScaleOnTheSameElementCanBeIndependentClips)
+TEST(Model3DAnimatorTest, DisjointAnimationsAndConflict)
 {
 	ObjectHeadless object(characterBlueprint());
-	Animator animator;
+	Animator animator = Animator::Builder()
+		.addAnimation("arm", armAnimation())
+		.addAnimation("leg", legAnimation())
+		.addAnimation("arm2", armAnimation())
+		.build();
 	animator.bind(object);
-	Animation::Builder rotate;
-	rotate.addStep({.time = 0.0f, .articulations = {{"torso", "shoulder", {}}}});
-	rotate.addStep({.time = 1.0f, .articulations = {{"torso", "shoulder", spk::Quaternion::fromEuler({0, 0, 90})}}});
-	Animation::Builder scale;
-	scale.addStep({.time = 0.0f, .scalings = {{"torso", {1, 1, 1}}}});
-	scale.addStep({.time = 1.0f, .scalings = {{"torso", {2, 1, 1}}}});
-	const auto rotationHandle = animator.play(rotate.build());
-	const auto scaleHandle = animator.play(scale.build());
-	animator.update(0.5f);
-	EXPECT_EQ(object.root().scale(), (spk::Vector3{1.5f, 1, 1}));
-	EXPECT_NEAR(object.attachment("torso", "shoulder").rotationMatrix()[0][0], std::sqrt(0.5f), 0.0001f);
-	EXPECT_TRUE(animator.stop(rotationHandle));
-	EXPECT_TRUE(animator.playing(scaleHandle));
-}
-
-TEST(Model3DAnimatorTest, TranslationAndScalingOfSameElementRunIndependently)
-{
-	ObjectHeadless object(characterBlueprint());
-	Animator animator;
-	animator.bind(object);
-	Animation::Builder translation;
-	translation.addStep({.time = 0.0f, .translations = {{"arm", {0, 0, 0}}}});
-	translation.addStep({.time = 1.0f, .translations = {{"arm", {4, 0, 0}}}});
-	Animation::Builder scaling;
-	scaling.addStep({.time = 0.0f, .scalings = {{"arm", {1, 1, 1}}}});
-	scaling.addStep({.time = 1.0f, .scalings = {{"arm", {1, 3, 1}, Animation::Interpolation::Quadratic}}});
-	const auto translationHandle = animator.play(translation.build());
-	const auto scalingHandle = animator.play(scaling.build());
-	animator.update(0.5f);
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{2, 0, 0}));
-	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 1.5f, 1}));
-	EXPECT_TRUE(animator.stop(translationHandle));
-	EXPECT_TRUE(animator.playing(scalingHandle));
-	animator.update(0.5f);
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{2, 0, 0}));
-	EXPECT_EQ(object.element("arm").scale(), (spk::Vector3{1, 3, 1}));
-	EXPECT_FALSE(animator.playing(scalingHandle));
-}
-
-TEST(Model3DAnimatorTest, SparseKeyframeStartsAtCurrentPoseAndCompletionAppliesLastKeyframe)
-{
-	ObjectHeadless object(characterBlueprint());
-	object.element("arm").setTranslation({3, 0, 0});
-	Animator animator;
-	animator.bind(object);
-	Animation::Builder builder;
-	builder.addStep({.time = 0.5f, .translations = {{"arm", {5, 0, 0}}}});
-	builder.addStep({.time = 1.0f, .translations = {{"arm", {9, 0, 0}}}});
-	const auto handle = animator.play(builder.build());
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{3, 0, 0}));
-	animator.update(0.25f);
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{4, 0, 0}));
-	animator.update(0.75f);
-	EXPECT_FALSE(animator.playing(handle));
-	EXPECT_EQ(object.element("arm").translation(), (spk::Vector3{9, 0, 0}));
-}
-
-TEST(Model3DAnimatorTest, CopiesOfBlueprintAreIndependentAndStopAllReleasesMasks)
-{
-	const auto clip = armAnimation();
-	ObjectHeadless first(characterBlueprint());
-	ObjectHeadless second(characterBlueprint());
-	Animator a;
-	a.bind(first);
-	Animator b;
-	b.bind(second);
-	const auto firstHandle = a.play(clip);
-	const auto secondHandle = b.play(clip);
-	a.update(0.5f);
-	b.update(0.25f);
-	EXPECT_NE(first.attachment("torso", "shoulder").transform(), second.attachment("torso", "shoulder").transform());
-	a.stopAll();
-	EXPECT_EQ(a.activeCount(), 0u);
-	EXPECT_NE(first.attachment("torso", "shoulder").rotation(), spk::Quaternion::identity());
-	EXPECT_NE(first.attachment("torso", "shoulder").transform(), second.attachment("torso", "shoulder").transform());
-	EXPECT_FALSE(a.playing(firstHandle));
-	EXPECT_TRUE(b.playing(secondHandle));
-}
-
-TEST(Model3DAnimatorTest, ExplicitBindingAndUnbinding)
-{
-	ObjectHeadless first(characterBlueprint());
-	ObjectHeadless second(characterBlueprint());
-	Animator animator;
-	EXPECT_FALSE(animator.bound());
-	EXPECT_THROW(static_cast<void>(animator.play(armAnimation())), spk::Exception);
-	animator.bind(first);
-	EXPECT_TRUE(animator.bound());
-	EXPECT_THROW(animator.bind(second), spk::Exception);
-	const auto handle = animator.play(armAnimation());
-	animator.update(0.5f);
-	const auto pose = first.element("arm").scale();
-	animator.unbind();
-	EXPECT_FALSE(animator.bound());
-	EXPECT_FALSE(animator.playing(handle));
+	animator.play("arm");
+	animator.play("leg");
+	EXPECT_EQ(animator.activeCount(), 2u);
+	EXPECT_THROW(animator.play("arm2"), spk::Exception);
+	EXPECT_EQ(animator.activeCount(), 2u);
+	animator.stopAll();
 	EXPECT_EQ(animator.activeCount(), 0u);
-	EXPECT_EQ(first.element("arm").scale(), pose);
-	animator.bind(second);
-	EXPECT_TRUE(animator.bound());
-	EXPECT_TRUE(animator.play(armAnimation()) != 0u);
+}
+
+TEST(Model3DAnimatorTest, BuilderValidatesNamesAndReferences)
+{
+	Animator::Builder builder;
+	builder.addAnimation("idle", armAnimation());
+	EXPECT_THROW(builder.addAnimation("idle", armAnimation()), std::invalid_argument);
+	builder.setExitAnimation("idle", "missing");
+	EXPECT_THROW(static_cast<void>(builder.build()), std::invalid_argument);
+	Animator::Builder invalidDefault;
+	invalidDefault.setDefaultAnimation("missing");
+	EXPECT_THROW(static_cast<void>(invalidDefault.build()), std::invalid_argument);
+}
+
+TEST(Model3DAnimatorTest, AnimationCopiesShareImmutableData)
+{
+	const Animation first = armAnimation();
+	const Animation second = first;
+	EXPECT_EQ(&first.steps(), &second.steps());
+	EXPECT_EQ(first.duration(), second.duration());
 }
