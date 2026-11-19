@@ -550,11 +550,12 @@ TEST(VoxelNetworkTest, StalePatchCannotRollbackNewerSnapshot)
 	put(stale, 1, 4);
 	put(stale, 0, 12);
 	put(stale, edit(0, 0, 0, 12).value, 4);
-	(void)raw.sendTo(*connections.begin(), std::move(stale).build());
+	const auto transferred = raw.sendTo(*connections.begin(), std::move(stale).build());
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
-		client.update();
-		return client.world().revision(key) == 5;
+		return transferred.isComplete();
 	}, 5s));
+	ASSERT_EQ(transferred.status(), spk::Transfer::Status::Success);
+	client.update();
 	EXPECT_TRUE(client.isSynchronized());
 	EXPECT_EQ(client.world().chunk(key)->atRaw({0, 0, 0}), 0u);
 	client.disconnect();
