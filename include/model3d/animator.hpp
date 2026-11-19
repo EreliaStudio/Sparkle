@@ -76,6 +76,7 @@ namespace spk::Model3D
 	{
 		std::map<std::string, Entry> _animations;
 		std::optional<std::string> _default;
+
 	public:
 		Builder &addAnimation(std::string name, Animation animation);
 		Builder &setDefaultAnimation(std::optional<std::string> name);
