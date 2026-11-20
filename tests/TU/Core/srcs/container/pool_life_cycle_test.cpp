@@ -153,6 +153,7 @@ TEST(PoolLifeCycleTest, ReentrantFactoryReleaseCanObtainAnotherElement)
 	int created = 0;
 	int nested = 0;
 	std::vector<spk::LifeCycle::ReleaseContract> contracts;
+	spk::Pool<PooledLifeCycle> *poolPointer = nullptr;
 	spk::Pool<PooledLifeCycle> pool([&]() {
 		auto *element = new PooledLifeCycle();
 		++created;
@@ -162,13 +163,14 @@ TEST(PoolLifeCycleTest, ReentrantFactoryReleaseCanObtainAnotherElement)
 				if (nested == 0)
 				{
 					++nested;
-					auto inner = pool.obtain();
+					auto inner = poolPointer->obtain();
 					EXPECT_TRUE(inner->isAcquired());
 				}
 			}));
 		}
 		return element;
 	});
+	poolPointer = &pool;
 
 	auto outer = pool.obtain();
 	EXPECT_EQ(nested, 1);
