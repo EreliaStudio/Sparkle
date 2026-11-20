@@ -1,23 +1,18 @@
-# PR03 — Generator<TChunk,TGenerationData> and ordered virtual passes
+# PR03 — Generator et passes de génération typées
+**Couche :** Core. **Dépendances :** PR01. **État :** cahier des charges.
 
-**Layer:** Core. **Dependencies:** PR01. **Status:** design draft.
+## Contrat public
+- Generator<TChunk,TGenerationData> est une recette synchrone. Pour les types de chunk utilisés avec Generator seulement, TChunk::Builder existe ; la base spk::Chunk n'impose aucun Builder.
+- Pas de Generator::Builder de configuration : le générateur expose addPass(...) pour enregistrer définitivement et dans l'ordre des passes polymorphes. Elles sont configurées avant les générations concurrentes.
+- Pass::apply(TChunk::Builder&, const ChunkCoordinate&, TGenerationData&) est virtuelle. Les coordonnées sont disponibles dans chaque passe sans imposition de membre coordinate dans TGenerationData.
+- createChunkBuilder(const ChunkCoordinate&) retourne std::optional<typename TChunk::Builder>. Un nullopt indique un chunk définitivement absent **pour cette demande**, et évite createGenerationData ainsi que toutes les passes.
+- createGenerationData(coord) fournit une nouvelle TGenerationData pour chaque demande valide. Elle peut contenir des références aux structures persistantes de l'application, des résultats intermédiaires, des caches, des seeds optionnelles ; Sparkle n'en impose ni l'origine ni la durée de vie, ni le verrouillage.
+- Exécuter toutes les passes dans l'ordre ; puis builder.build() consomme le Builder et retourne TChunk par valeur ; generate(coord) retourne std::optional<TChunk>. Les échecs sont des spk::Exception, jamais assimilés à nullopt ; ne pas publier de résultat incomplet.
+- TChunk::Builder::load(const TChunk&) est recommandé pour les chunks construits avec Builder et requis par l'exemple voxel : nouvelle édition par reconstruction ; ce n'est pas un remplacement de l'édition directe des chunks publiés.
+- Déterminisme attendu de l'exemple : mêmes réglages pertinents + mêmes coordonnées => mêmes données, quel que soit l'ordre des requêtes. Sparkle impose l'ordre des passes mais **pas** une seed unique ni la sécurité des données partagées gérées par l'utilisateur.
 
-## Scope
-- Inheritable `Generator<TChunk,TGenerationData>` deriving the mutable construction type from **`typename TChunk::Builder`**, not from a third template argument. User-overridable `createChunkBuilder(ChunkCoordinate)` and `createGenerationData(ChunkCoordinate)`.
-- Nested polymorphic `Generator::Pass` with virtual `void apply(TChunk::Builder&,TGenerationData&)`; generator owns a configurable ordered list of passes, optionally configured through a separate generator Builder if that matches Sparkle conventions. Do not confuse the generator configuration Builder with `TChunk::Builder`.
-- Fresh **chunk Builder and generation data** on every request, potentially containing mutable references to long-lived generator-owned seeds, settings, noise samplers, caches and plans.
-- Passes may only update temporary data, or also modify the **chunk Builder**; ordering within a generation is fixed. They never operate on a published TChunk.
-- `createChunkBuilder` can return null (finite-world out-of-bounds) and then passes are skipped. When every pass succeeds, **`builder.build()` returns the finished TChunk by value** (including immutable Volume snapshots), consuming the Builder. A fresh `TChunk::Builder` supports **`load(const TChunk&)`** to initialize from a previously published chunk, as does `Voxel::Volume::Builder`. The Generator can move the value into a `unique_ptr<TChunk>` for the requester. Exceptions leave no partially generated chunk published.
-- The user is responsible for thread safety of mutable shared data and for deterministic rules; no framework-wide mutex or imposed seed derivation scheme. Multiple seeds configurable.
-
-## Required tests
-- Pass order, fresh chunk Builder/workspace lifetimes, null-builder behavior, by-value final build and one-shot consumed semantics, `load(existingChunk)` without modifying the original, exception safety and absence of partially published chunks.
-- Two independent generation calls get separate mutable builders and workspaces but can reference shared generator-owned state.
-- A deterministic example pipeline produces equal results for reversed generation order and for different scheduling using a user-controlled synchronized cache.
+## Tests
+Aucun Builder sur une classe utilisée seulement dans ChunkCollection ; passes appliquées dans l'ordre avec coord, data scratch fraîche, nullopt sans passes, exception en n'importe quelle étape, builder consommé, load et construction by-value, déterminisme sur demande en ordre inverse.
 
 ## Exclusions
-No terrain/biome/city/road/cave algorithm, requester, Task scheduler or generic RegionPlan class.
-
-## Delivery policy
-
-Draft only; implementation requires maintainer approval. Target `V0.1.5` in a dedicated PR. C++23, clang-format, Windows/Linux CI, tests appropriate to layer. No automatic merges and no unrelated API rewrite.
+Ni Task, ni WorkerPool, ni génération automatique de villes/biomes/routes/cavernes, ni contrôle centralisé des structures utilisateur.
