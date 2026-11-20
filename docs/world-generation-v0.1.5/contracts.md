@@ -50,9 +50,10 @@ private:
 };
 
 spk::ChunkCollection<GameChunk> chunks;
-chunks.addChunk({1, 0, -2}, GameChunk{/* ... */});
+GameChunk prepared = makeExampleChunk(); // Utilitaire illustratif du jeu
+chunks.addChunk({1, 0, -2}, std::move(prepared));
 GameChunk& chunk = chunks.at({1, 0, -2});
-spk::Entity3D& entity = /* chunks entry at coordinate */;
+// L'Entity3D est accessible via l'entrée de la collection.
 
 class GameGenerator : public spk::Generator<GameChunk, MyGenerationData> {
 protected:
