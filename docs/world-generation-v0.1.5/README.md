@@ -41,3 +41,5 @@ No new multiplayer protocol or server framework. Several observers in one headle
 `EngineHeadless`, `System`, `Component3D`, `Entity3D`, `Registry<T, EngineHeadless*>`, `ContextualizableTrait`, `WorkerPool`, `Task`, `ContractProvider`, `spk::Vector3Int`, `Voxel::Volume::Builder`, `Voxel::Mesher` and `Voxel::Renderer`. The voxel data/meshing pipeline already exists; do not create a duplicate dense voxel storage representation.
 
 The planning PR is [#85](https://github.com/EreliaStudio/Sparkle/pull/85) (draft, documentation only), based on `V0.1.5`. Older candidate issues #78–#83 remain withdrawn and are not part of this plan.
+
+See [spk::LifeCycle and Pool Lease integration](life-cycle-design.md) for the v0.1.5 Core lifecycle design, and [contracts](contracts.md) for agreed semantics.
