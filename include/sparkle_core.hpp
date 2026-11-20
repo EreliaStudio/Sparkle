@@ -99,3 +99,4 @@
 #include "world/chunk_collection.hpp"
 #include "world/chunk_coordinate.hpp"
 #include "world/chunk_filter.hpp"
+#include "world/generator.hpp"

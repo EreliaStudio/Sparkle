@@ -22,9 +22,9 @@ En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson,
 - Tout ajout/édition/suppression de collection attachée se fait sur le thread Engine ; aucune modification directe depuis un worker.
 
 ## Génération sans propriétaire caché
-- Le Generator<TChunk,TGenerationData> est synchrone, configurable par addPass(...) ; pas de Generator::Builder.
-- Seul un TChunk réellement généré doit fournir TChunk::Builder. createChunkBuilder(coord) : std::optional<Builder> ; nullopt = absence valide et arrêt immédiat.
-- createGenerationData(coord) fournit les données temporaires d'une demande existante ; elles peuvent référencer des données persistantes de l'utilisateur. Aucun cycle de vie ou verrou global imposé par Sparkle.
+- Le Generator<TChunk,TGenerationData> est synchrone, configurable par addPass<TPass>(...) uniquement ; ses deux hooks de création sont virtuels privés ; pas de Generator::Builder.
+- Seul un TChunk réellement généré doit fournir TChunk::Builder. _createChunkBuilder(coord) : std::optional<Builder> ; nullopt = absence valide et arrêt immédiat.
+- _createGenerationData() fournit les données temporaires d'une demande existante ; elles peuvent référencer des données persistantes de l'utilisateur. Les coordonnées sont accessibles à chaque passe, pas à cette fabrique. Aucun cycle de vie ou verrou global imposé par Sparkle.
 - Pass::apply(builder,coord,data) est appelé dans l'ordre ; builder.build() produit TChunk par valeur (Builder consommé) ; Generator::generate(coord) renvoie std::optional<TChunk>.
 - Une exception spk::Exception fait échouer la génération, sans résultat partiel. La reproductibilité provient des règles utilisateur : mêmes données/coordonnées pertinentes => même chunk, pas de seed universelle imposée.
 

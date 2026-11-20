@@ -16,8 +16,8 @@ Les décisions ci-dessous reprennent la discussion de conception ; les signature
 | Engine | Attach/detach/rebind explicite, une collection/monde par Engine, pas de mutation collection depuis worker |
 | Generator | Generator<TChunk,TGenerationData> synchrone, addPass successifs ; Pass::apply(builder, coordinate, data) virtuel |
 | Builder | Pas imposé par Chunk générique ; types utilisés avec Generator ont TChunk::Builder, build() consomme et retourne TChunk par valeur |
-| Optional | createChunkBuilder -> optional<Builder>, generate -> optional<TChunk> ; nullopt succès sans chunk |
-| Generation Data | Nouvel objet par demande, peut référencer données persistantes de l'utilisateur ; seed et verrouillage non imposés |
+| Optional | _createChunkBuilder -> optional<Builder>, generate -> optional<TChunk> ; nullopt succès sans chunk |
+| Generation Data | Nouvel objet par demande via _createGenerationData() sans coordonnée, peut référencer données persistantes de l'utilisateur ; seed et verrouillage non imposés |
 | Erreur | spk::Exception lors de génération ; Task Failed distincte de réussite nullopt ; timeout supervisé par streaming |
 | Requester | Task<std::optional<TChunk>>::Answer par chunk, sources locales/fichier/réseau possibles sans implémentation d'un protocole |
 | Transfert Task | Task::Answer::result renvoie const& ; TChunk doit être copiable à la frontière réponse→collection en l'état |
@@ -56,9 +56,9 @@ GameChunk& chunk = chunks.at({1, 0, -2});
 // L'Entity3D est accessible via l'entrée de la collection.
 
 class GameGenerator : public spk::Generator<GameChunk, MyGenerationData> {
-protected:
-    std::optional<GameChunk::Builder> createChunkBuilder(const ChunkCoordinate&) override;
-    MyGenerationData createGenerationData(const ChunkCoordinate&) override;
+private:
+    std::optional<GameChunk::Builder> _createChunkBuilder(const ChunkCoordinate&) override;
+    MyGenerationData _createGenerationData() override;
 };
 // Pass::apply(GameChunk::Builder&, const ChunkCoordinate&, MyGenerationData&);
 // generate(coordinate) -> std::optional<GameChunk>
