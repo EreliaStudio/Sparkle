@@ -114,7 +114,7 @@ namespace spk
 
 	Widget::~Widget()
 	{
-		finalizeLifeCycle();
+		terminateLifeCycle();
 		while (!children().empty())
 		{
 			children().back()->clearParent();

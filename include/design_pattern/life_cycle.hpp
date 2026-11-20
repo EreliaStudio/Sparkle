@@ -65,7 +65,7 @@ namespace spk
 		}
 
 		// Derived owners call this before their members are destroyed.
-		void finalizeLifeCycle() noexcept
+		void terminateLifeCycle() noexcept
 		{
 			const std::scoped_lock lock(_mutex);
 			if (_finalized)
@@ -120,7 +120,7 @@ namespace spk
 
 		virtual ~LifeCycle() noexcept
 		{
-			finalizeLifeCycle();
+			terminateLifeCycle();
 		}
 
 		[[nodiscard]] State state() const noexcept

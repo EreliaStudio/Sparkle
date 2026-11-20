@@ -13,7 +13,7 @@ namespace
 	struct LifeCycleProbe : spk::LifeCycle
 	{
 		using LifeCycle::acquire;
-		using LifeCycle::finalizeLifeCycle;
+		using LifeCycle::terminateLifeCycle;
 		using LifeCycle::release;
 	};
 }
@@ -58,8 +58,8 @@ TEST(LifeCycleTest, TransitionsAreIdempotentAndSubscriptionsAreDistinct)
 	probe.release();
 	EXPECT_EQ(calls, (std::vector<std::string>{"release", "acquisition", "release"}));
 
-	probe.finalizeLifeCycle();
-	probe.finalizeLifeCycle();
+	probe.terminateLifeCycle();
+	probe.terminateLifeCycle();
 	EXPECT_EQ(calls, (std::vector<std::string>{"release", "acquisition", "release", "destruction"}));
 }
 
@@ -151,7 +151,7 @@ TEST(LifeCycleTest, ReentrantTransitionsRemainConsistent)
 	EXPECT_EQ(calls, (std::vector<std::string>{"release", "acquisition"}));
 	EXPECT_TRUE(probe.isAcquired());
 
-	probe.finalizeLifeCycle();
+	probe.terminateLifeCycle();
 	EXPECT_EQ(calls, (std::vector<std::string>{"release", "acquisition", "release"}));
 	EXPECT_TRUE(probe.isReleased());
 	probe.acquire();

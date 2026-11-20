@@ -23,7 +23,7 @@ namespace spk
 
 	Entity::~Entity()
 	{
-		finalizeLifeCycle();
+		terminateLifeCycle();
 	}
 
 	void Entity::_followParentContext(Entity *parent)
