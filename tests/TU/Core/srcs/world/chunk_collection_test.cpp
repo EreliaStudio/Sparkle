@@ -217,6 +217,7 @@ TEST(ChunkCollectionTest, RemovingUnbindsFilterBeforeEntityDestruction)
 	spk::Entity3D &entity = collection.begin()->second.entity();
 	auto *filter = entity.getComponent<spk::ChunkFilter<TestChunk>>();
 	ASSERT_NE(filter, nullptr);
+	TestChunk *originalChunk = &collection.at(coordinate);
 	int calls = 0;
 	auto destruction = entity.subscribeToDestruction([&]() {
 		++calls;
@@ -224,7 +225,7 @@ TEST(ChunkCollectionTest, RemovingUnbindsFilterBeforeEntityDestruction)
 		TestChunk *located = nullptr;
 		EXPECT_FALSE(collection.tryGet(coordinate, located));
 		EXPECT_EQ(located, nullptr);
-		TestChunk *filteredChunk = &filter->chunk();
+		TestChunk *filteredChunk = originalChunk;
 		EXPECT_FALSE(filter->tryGet(filteredChunk));
 		EXPECT_EQ(filteredChunk, nullptr);
 		EXPECT_THROW((void)filter->chunk(), spk::Exception);
