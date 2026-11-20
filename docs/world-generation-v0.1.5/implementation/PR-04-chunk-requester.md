@@ -3,6 +3,7 @@
 
 ## Contrat
 - ChunkRequester<TChunk> : interface polymorphe request(ChunkCoordinate) qui rend une réponse spk::Task<std::optional<TChunk>>::Answer ; une Task par demande. Les sources futures peuvent lire disque ou réseau sans nouveau protocole requis.
+- LocalChunkRequester<TChunk,TGenerationData> : implémentation locale prenant WorkerPool& et Generator<TChunk,TGenerationData>& par constructeur ; request(coord) soumet une opération au pool, sans capturer le pointeur this. Le Requester peut être détruit avant la fin de ses réponses ; le Generator et le WorkerPool, en revanche, restent sous la responsabilité du créateur, doivent survivre aux jobs soumis et être configurés avant les appels concurrents.
 - Source locale : délègue Generator::generate(coord) à spk::WorkerPool. Le résultat est un std::optional<TChunk> : valeur => chunk, nullopt => absence valide ; Task::Failed => erreur, distincte de nullopt. WorkerPool capture les exceptions et remplit Task::Failed.
 - Aucune allocation owning-pointer obligatoire dans l'API utilisateur pour le résultat. L'actuel Task::Answer::result() ne renvoie qu'une **référence const** ; ainsi le transfert dans ChunkCollection nécessite un TChunk copiable ou une modification distincte et expressément approuvée de Task. Pour v0.1.5, le contrat des chunks prévoit la copie de valeur, sans recopier les abonnements.
 - Aucune mutation d'Engine, de ChunkCollection ou d'Entity sur un worker ; le streamer publiera sur le thread Engine.
