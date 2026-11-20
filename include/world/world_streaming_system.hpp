@@ -9,8 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include "engine/system.hpp"
+#include "core/context/update_context.hpp"
 #include "engine/registry.hpp"
+#include "engine/system.hpp"
 #include "exception.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_requester.hpp"
@@ -68,6 +69,7 @@ namespace spk
 		std::map<ChunkCoordinate, InterestState> _interest;
 		std::vector<ChunkCoordinate> _queue;
 		std::vector<InFlight> _inFlight;
+		bool _hasPlan = false;
 		std::uint64_t _lastRequestId = 0;
 		std::uint64_t _planRevision = 0;
 
@@ -103,6 +105,7 @@ namespace spk
 			_observers.clear();
 			_interest.clear();
 			_queue.clear();
+			_hasPlan = false;
 		}
 
 		void _rebuild()
@@ -179,10 +182,11 @@ namespace spk
 											  TChunk::worldToChunkCoordinate(observer->worldPosition()),
 											  observer->interest()});
 			}
-			if (snapshots != _observers)
+			if (!_hasPlan || snapshots != _observers)
 			{
 				_observers = std::move(snapshots);
 				_rebuild();
+				_hasPlan = true;
 			}
 		}
 
@@ -239,8 +243,13 @@ namespace spk
 
 		void _submit(Duration now)
 		{
-			for (const ChunkCoordinate &coordinate : _queue)
+			const std::vector<ChunkCoordinate> pending = _queue;
+			for (const ChunkCoordinate &coordinate : pending)
 			{
+				if (engine() == nullptr)
+				{
+					return;
+				}
 				if (_inFlight.size() >= _settings.maxInFlight)
 				{
 					break;
