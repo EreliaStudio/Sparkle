@@ -108,7 +108,6 @@ namespace spk
 		Container _chunks;
 		EditionProvider _editionProvider;
 
-
 	public:
 		explicit ChunkCollection(const std::string &name = "Chunk collection") :
 			_root(name)
