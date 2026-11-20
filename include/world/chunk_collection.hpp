@@ -51,10 +51,10 @@ namespace spk
 				_entity(std::make_unique<Entity3D>("Chunk", &root))
 			{
 				const ChunkWorldCoordinate origin = TChunk::chunkCoordinateToWorld(coordinate);
-				_entity->transform().place({
-					static_cast<float>(origin.x),
-					static_cast<float>(origin.y),
-					static_cast<float>(origin.z)});
+				const float x = static_cast<float>(origin.x);
+				const float y = static_cast<float>(origin.y);
+				const float z = static_cast<float>(origin.z);
+				_entity->transform().place({x, y, z});
 				_entity->addComponent<ChunkFilter<TChunk>>(_chunk);
 			}
 
@@ -332,17 +332,53 @@ namespace spk
 			return at(coordinate);
 		}
 
-		[[nodiscard]] iterator begin() noexcept { return _chunks.begin(); }
-		[[nodiscard]] const_iterator begin() const noexcept { return _chunks.begin(); }
-		[[nodiscard]] const_iterator cbegin() const noexcept { return _chunks.cbegin(); }
-		[[nodiscard]] iterator end() noexcept { return _chunks.end(); }
-		[[nodiscard]] const_iterator end() const noexcept { return _chunks.end(); }
-		[[nodiscard]] const_iterator cend() const noexcept { return _chunks.cend(); }
-		[[nodiscard]] reverse_iterator rbegin() noexcept { return _chunks.rbegin(); }
-		[[nodiscard]] const_reverse_iterator rbegin() const noexcept { return _chunks.rbegin(); }
-		[[nodiscard]] const_reverse_iterator crbegin() const noexcept { return _chunks.crbegin(); }
-		[[nodiscard]] reverse_iterator rend() noexcept { return _chunks.rend(); }
-		[[nodiscard]] const_reverse_iterator rend() const noexcept { return _chunks.rend(); }
-		[[nodiscard]] const_reverse_iterator crend() const noexcept { return _chunks.crend(); }
+		[[nodiscard]] iterator begin() noexcept
+		{
+			return _chunks.begin();
+		}
+		[[nodiscard]] const_iterator begin() const noexcept
+		{
+			return _chunks.begin();
+		}
+		[[nodiscard]] const_iterator cbegin() const noexcept
+		{
+			return _chunks.cbegin();
+		}
+		[[nodiscard]] iterator end() noexcept
+		{
+			return _chunks.end();
+		}
+		[[nodiscard]] const_iterator end() const noexcept
+		{
+			return _chunks.end();
+		}
+		[[nodiscard]] const_iterator cend() const noexcept
+		{
+			return _chunks.cend();
+		}
+		[[nodiscard]] reverse_iterator rbegin() noexcept
+		{
+			return _chunks.rbegin();
+		}
+		[[nodiscard]] const_reverse_iterator rbegin() const noexcept
+		{
+			return _chunks.rbegin();
+		}
+		[[nodiscard]] const_reverse_iterator crbegin() const noexcept
+		{
+			return _chunks.crbegin();
+		}
+		[[nodiscard]] reverse_iterator rend() noexcept
+		{
+			return _chunks.rend();
+		}
+		[[nodiscard]] const_reverse_iterator rend() const noexcept
+		{
+			return _chunks.rend();
+		}
+		[[nodiscard]] const_reverse_iterator crend() const noexcept
+		{
+			return _chunks.crend();
+		}
 	};
 }
