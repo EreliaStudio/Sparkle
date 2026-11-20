@@ -46,53 +46,81 @@ namespace spk
 				[[nodiscard]] bool operator==(const ObserverState &) const = default;
 			};
 
-			std::map<const WorldObserver *, ObserverState> _observers;
-			std::map<ChunkCoordinate, std::uint64_t> _priorities;
+			using Observers = std::map<const WorldObserver *, ObserverState>;
+			using Priorities = std::map<ChunkCoordinate, std::uint64_t>;
+
+			Observers _observers;
+			Priorities _priorities;
 			std::vector<ChunkCoordinate> _queue;
 			bool _hasPlan = false;
 			std::uint64_t _revision = 0;
 
+			[[nodiscard]] static std::uint64_t _axisDistance(std::int32_t value, std::int32_t origin, std::int32_t dimension)
+			{
+				const std::int64_t delta = static_cast<std::int64_t>(value) - origin;
+				const std::uint64_t magnitude = static_cast<std::uint64_t>(delta < 0 ? -delta : delta);
+				return magnitude * static_cast<std::uint64_t>(dimension);
+			}
+
+			static void _addDistance(std::uint64_t &distance, std::uint64_t contribution)
+			{
+				if (contribution > std::numeric_limits<std::uint64_t>::max() - distance)
+				{
+					distance = std::numeric_limits<std::uint64_t>::max();
+				}
+				else
+				{
+					distance += contribution;
+				}
+			}
+
 			[[nodiscard]] static std::uint64_t _distance(const ChunkCoordinate &coordinate, const ChunkCoordinate &center)
 			{
 				std::uint64_t distance = 0;
-				const auto appendAxis = [&distance](std::int32_t value, std::int32_t origin, std::int32_t dimension) {
-					const std::int64_t delta = static_cast<std::int64_t>(value) - origin;
-					const std::uint64_t magnitude = static_cast<std::uint64_t>(delta < 0 ? -delta : delta);
-					const std::uint64_t contribution = magnitude * static_cast<std::uint64_t>(dimension);
-					if (contribution > std::numeric_limits<std::uint64_t>::max() - distance)
-					{
-						distance = std::numeric_limits<std::uint64_t>::max();
-					}
-					else
-					{
-						distance += contribution;
-					}
-				};
-
-				appendAxis(coordinate.x, center.x, TChunk::Size.x);
-				appendAxis(coordinate.y, center.y, TChunk::Size.y);
-				appendAxis(coordinate.z, center.z, TChunk::Size.z);
+				_addDistance(distance, _axisDistance(coordinate.x, center.x, TChunk::Size.x));
+				_addDistance(distance, _axisDistance(coordinate.y, center.y, TChunk::Size.y));
+				_addDistance(distance, _axisDistance(coordinate.z, center.z, TChunk::Size.z));
 				return distance;
 			}
 
-			void _rebuild()
+			[[nodiscard]] static Observers _captureObservers(EngineHeadless *engine)
 			{
-				std::map<ChunkCoordinate, std::uint64_t> priorities;
+				Observers snapshots;
+				const auto &registered = Registry<WorldObserver, EngineHeadless *>::instance().elements(engine);
+				for (WorldObserver *observer : registered)
+				{
+					if (observer->isEffectivelyActive())
+					{
+						snapshots.emplace(observer, ObserverState{TChunk::worldToChunkCoordinate(observer->worldPosition()), observer->interest()});
+					}
+				}
+				return snapshots;
+			}
+
+			void _include(const ChunkCoordinate &coordinate, std::uint64_t priority)
+			{
+				auto [it, inserted] = _priorities.try_emplace(coordinate, priority);
+				if (!inserted)
+				{
+					it->second = std::min(it->second, priority);
+				}
+			}
+
+			void _buildPriorities()
+			{
+				_priorities.clear();
 				for (const auto &[observer, snapshot] : _observers)
 				{
 					(void)observer;
 					for (const ChunkCoordinate &coordinate : snapshot.interest.coordinates(snapshot.center))
 					{
-						const std::uint64_t distance = _distance(coordinate, snapshot.center);
-						auto [it, inserted] = priorities.try_emplace(coordinate, distance);
-						if (!inserted && distance < it->second)
-						{
-							it->second = distance;
-						}
+						_include(coordinate, _distance(coordinate, snapshot.center));
 					}
 				}
+			}
 
-				_priorities = std::move(priorities);
+			void _sortQueue()
+			{
 				_queue.clear();
 				_queue.reserve(_priorities.size());
 				for (const auto &[coordinate, priority] : _priorities)
@@ -103,24 +131,19 @@ namespace spk
 				std::stable_sort(_queue.begin(), _queue.end(), [this](const ChunkCoordinate &left, const ChunkCoordinate &right) {
 					return _priorities.at(left) < _priorities.at(right);
 				});
+			}
+
+			void _rebuild()
+			{
+				_buildPriorities();
+				_sortQueue();
 				++_revision;
 			}
 
 		public:
 			[[nodiscard]] bool refresh(EngineHeadless *engine)
 			{
-				std::map<const WorldObserver *, ObserverState> snapshots;
-				const auto &registered = Registry<WorldObserver, EngineHeadless *>::instance().elements(engine);
-				for (WorldObserver *observer : registered)
-				{
-					if (!observer->isEffectivelyActive())
-					{
-						continue;
-					}
-
-					snapshots.emplace(observer, ObserverState{TChunk::worldToChunkCoordinate(observer->worldPosition()), observer->interest()});
-				}
-
+				Observers snapshots = _captureObservers(engine);
 				if (_hasPlan && snapshots == _observers)
 				{
 					return false;
@@ -175,9 +198,132 @@ namespace spk
 				bool obsolete = false;
 			};
 
-			std::map<ChunkCoordinate, InterestState> _interest;
+			using Interests = std::map<ChunkCoordinate, InterestState>;
+			Interests _interest;
 			std::vector<InFlight> _inFlight;
 			std::uint64_t _lastRequestId = 0;
+
+			[[nodiscard]] Interests _retainInterest(const InterestPlanner &planner) const
+			{
+				Interests result;
+				for (const ChunkCoordinate &coordinate : planner.queue())
+				{
+					if (const auto it = _interest.find(coordinate); it != _interest.end())
+					{
+						result.emplace(coordinate, it->second);
+					}
+					else
+					{
+						result.try_emplace(coordinate);
+					}
+				}
+				return result;
+			}
+
+			void _invalidateOutside(const Interests &interest)
+			{
+				for (InFlight &request : _inFlight)
+				{
+					if (!interest.contains(request.coordinate))
+					{
+						request.obsolete = true;
+					}
+				}
+			}
+
+			static void _defer(InterestState &state, Duration now, const Settings &settings)
+			{
+				state.requestId = 0;
+				state.retryAfter = now + settings.retryDelay;
+			}
+
+			void _expirePending(InFlight &request, Duration now, const Settings &settings)
+			{
+				if (request.obsolete || now < request.submittedAt || now - request.submittedAt < settings.timeout)
+				{
+					return;
+				}
+
+				request.obsolete = true;
+				if (auto it = _interest.find(request.coordinate);
+					it != _interest.end() && it->second.requestId == request.id)
+				{
+					_defer(it->second, now, settings);
+				}
+			}
+
+			static void _publishResult(InFlight &request, InterestState &state, ChunkCollection<TChunk> &collection)
+			{
+				const auto &result = request.answer.result();
+				if (result.has_value())
+				{
+					collection.addChunk(request.coordinate, *result);
+				}
+				else
+				{
+					state.absent = true;
+				}
+			}
+
+			void _finish(InFlight &request, Duration now, ChunkCollection<TChunk> &collection, const Settings &settings)
+			{
+				if (request.obsolete)
+				{
+					return;
+				}
+				auto it = _interest.find(request.coordinate);
+				if (it == _interest.end() || it->second.requestId != request.id)
+				{
+					return;
+				}
+
+				it->second.requestId = 0;
+				if (request.answer.status() == Status::Completed)
+				{
+					_publishResult(request, it->second, collection);
+				}
+				else
+				{
+					_defer(it->second, now, settings);
+				}
+			}
+
+			[[nodiscard]] bool _canRequest(const ChunkCoordinate &coordinate, Duration now, const ChunkCollection<TChunk> &collection) const
+			{
+				auto it = _interest.find(coordinate);
+				return it != _interest.end() &&
+					   !it->second.absent &&
+					   it->second.requestId == 0 &&
+					   now >= it->second.retryAfter &&
+					   !collection.contains(coordinate);
+			}
+
+			void _startRequest(const ChunkCoordinate &coordinate, Duration now, ChunkRequester<TChunk> &requester, const Settings &settings)
+			{
+				if (_lastRequestId == std::numeric_limits<std::uint64_t>::max())
+				{
+					throw spk::Exception("World streaming request identifier exhausted");
+				}
+
+				const std::uint64_t id = ++_lastRequestId;
+				try
+				{
+					Answer answer = requester.request(coordinate);
+					auto it = _interest.find(coordinate);
+					const bool obsolete = it == _interest.end();
+					if (!obsolete)
+					{
+						it->second.requestId = id;
+					}
+					_inFlight.push_back(InFlight{id, coordinate, now, std::move(answer), obsolete});
+				} catch (...)
+				{
+					if (auto it = _interest.find(coordinate); it != _interest.end())
+					{
+						_defer(it->second, now, settings);
+					}
+				}
+			}
 
 		public:
 			void reserve(std::size_t count)
@@ -196,26 +342,8 @@ namespace spk
 
 			void setInterest(const InterestPlanner &planner)
 			{
-				std::map<ChunkCoordinate, InterestState> interest;
-				for (const ChunkCoordinate &coordinate : planner.queue())
-				{
-					if (const auto old = _interest.find(coordinate); old != _interest.end())
-					{
-						interest.emplace(coordinate, old->second);
-					}
-					else
-					{
-						interest.try_emplace(coordinate);
-					}
-				}
-
-				for (InFlight &request : _inFlight)
-				{
-					if (!interest.contains(request.coordinate))
-					{
-						request.obsolete = true;
-					}
-				}
+				Interests interest = _retainInterest(planner);
+				_invalidateOutside(interest);
 				_interest = std::move(interest);
 			}
 
@@ -224,48 +352,14 @@ namespace spk
 				for (std::size_t index = 0; index < _inFlight.size();)
 				{
 					InFlight &request = _inFlight[index];
-					const Status status = request.answer.status();
-
-					if (status == Status::Pending)
+					if (request.answer.status() == Status::Pending)
 					{
-						if (!request.obsolete && now >= request.submittedAt && now - request.submittedAt >= settings.timeout)
-						{
-							request.obsolete = true;
-							if (auto it = _interest.find(request.coordinate);
-								it != _interest.end() && it->second.requestId == request.id)
-							{
-								it->second.requestId = 0;
-								it->second.retryAfter = now + settings.retryDelay;
-							}
-						}
+						_expirePending(request, now, settings);
 						++index;
 						continue;
 					}
 
-					if (!request.obsolete)
-					{
-						if (auto it = _interest.find(request.coordinate);
-							it != _interest.end() && it->second.requestId == request.id)
-						{
-							it->second.requestId = 0;
-							if (status == Status::Completed)
-							{
-								const auto &result = request.answer.result();
-								if (result.has_value())
-								{
-									collection.addChunk(request.coordinate, *result);
-								}
-								else
-								{
-									it->second.absent = true;
-								}
-							}
-							else
-							{
-								it->second.retryAfter = now + settings.retryDelay;
-							}
-						}
-					}
+					_finish(request, now, collection, settings);
 					_inFlight.erase(_inFlight.begin() + static_cast<std::ptrdiff_t>(index));
 				}
 			}
@@ -282,40 +376,16 @@ namespace spk
 				const std::vector<ChunkCoordinate> pending = planner.queue();
 				for (const ChunkCoordinate &coordinate : pending)
 				{
-					if (!canSubmit())
+					if (!canSubmit() || _inFlight.size() >= settings.maxInFlight)
 					{
 						return;
 					}
-					if (_inFlight.size() >= settings.maxInFlight)
-					{
-						break;
-					}
-
-					auto it = _interest.find(coordinate);
-					if (it == _interest.end() ||
-						it->second.absent ||
-						it->second.requestId != 0 ||
-						now < it->second.retryAfter ||
-						collection.contains(coordinate))
+					if (!_canRequest(coordinate, now, collection))
 					{
 						continue;
 					}
 
-					if (_lastRequestId == std::numeric_limits<std::uint64_t>::max())
-					{
-						throw spk::Exception("World streaming request identifier exhausted");
-					}
-
-					const std::uint64_t id = ++_lastRequestId;
-					try
-					{
-						Answer answer = requester.request(coordinate);
-						it->second.requestId = id;
-						_inFlight.push_back(InFlight{id, coordinate, now, std::move(answer)});
-					} catch (...)
-					{
-						it->second.retryAfter = now + settings.retryDelay;
-					}
+					_startRequest(coordinate, now, requester, settings);
 					collect(now, collection, settings);
 				}
 			}
@@ -352,7 +422,6 @@ namespace spk
 			{
 				return;
 			}
-
 			if (_planner.refresh(engine()))
 			{
 				_scheduler.setInterest(_planner);
