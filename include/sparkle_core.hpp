@@ -96,4 +96,6 @@
 #include "voxel/definition.hpp"
 #include "voxel/shape.hpp"
 #include "world/chunk.hpp"
+#include "world/chunk_collection.hpp"
 #include "world/chunk_coordinate.hpp"
+#include "world/chunk_filter.hpp"
