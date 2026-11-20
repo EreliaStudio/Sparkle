@@ -132,7 +132,7 @@ namespace
 			return std::optional<ExampleChunk::Builder>(std::in_place, throwOnBuild);
 		}
 
-		GenerationData _createGenerationData(const Coordinate &) override
+		GenerationData _createGenerationData() override
 		{
 			++dataCalls;
 			if (throwOnData)

@@ -31,7 +31,7 @@ namespace spk
 		std::vector<std::unique_ptr<Pass>> _passes;
 
 		virtual std::optional<typename TChunk::Builder> _createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
-		virtual TGenerationData _createGenerationData(const ChunkCoordinate &coordinate) = 0;
+		virtual TGenerationData _createGenerationData() = 0;
 
 	public:
 		virtual ~Generator() = default;
@@ -56,7 +56,7 @@ namespace spk
 					return std::nullopt;
 				}
 
-				TGenerationData data = _createGenerationData(coordinate);
+				TGenerationData data = _createGenerationData();
 				for (const std::unique_ptr<Pass> &pass : _passes)
 				{
 					pass->apply(*builder, coordinate, data);
