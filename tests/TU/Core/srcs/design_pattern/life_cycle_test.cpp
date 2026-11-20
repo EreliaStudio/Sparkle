@@ -13,8 +13,8 @@ namespace
 	struct LifeCycleProbe : spk::LifeCycle
 	{
 		using LifeCycle::acquire;
-		using LifeCycle::terminateLifeCycle;
 		using LifeCycle::release;
+		using LifeCycle::terminateLifeCycle;
 	};
 }
 
