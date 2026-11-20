@@ -178,9 +178,7 @@ namespace spk
 					continue;
 				}
 
-				snapshots.emplace(observer, ObserverState{
-											  TChunk::worldToChunkCoordinate(observer->worldPosition()),
-											  observer->interest()});
+				snapshots.emplace(observer, ObserverState{TChunk::worldToChunkCoordinate(observer->worldPosition()), observer->interest()});
 			}
 			if (!_hasPlan || snapshots != _observers)
 			{
