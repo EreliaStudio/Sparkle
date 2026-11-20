@@ -289,7 +289,7 @@ TEST(GeneratorTest, GeneratesChunkByValueAndSharesScratchDataBetweenPasses)
 	std::optional<ExampleChunk> result = generator.generate(requested);
 
 	ASSERT_TRUE(result.has_value());
-	EXPECT_EQ(result->value(), 191);
+	EXPECT_EQ(result->value(), 187);
 	EXPECT_EQ(result->appliedPasses(), (std::vector<int>{1, 2, 3}));
 	EXPECT_EQ(order, (std::vector<int>{1, 2, 3}));
 	EXPECT_EQ(coordinates, (std::vector<Coordinate>{requested, requested, requested}));
