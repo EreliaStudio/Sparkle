@@ -103,7 +103,7 @@ namespace spk
 		{
 		}
 
-		LifeCycle(LifeCycle &&) noexcept :
+		LifeCycle(LifeCycle &&) :
 			LifeCycle()
 		{
 		}
