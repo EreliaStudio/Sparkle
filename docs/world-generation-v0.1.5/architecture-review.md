@@ -24,17 +24,17 @@
 
 **Resolved:** collection owns a root Entity3D with chunk children; explicit attach/detach/rebind to EngineHeadless preserves existing entities. Context-mismatched systems unbind and never reconnect automatically. Exact teardown ordering remains to validate.
 
-1. Should ChunkCollection own **one root Entity3D** parented to the EngineHeadless root, with each chunk Entity3D a child? Or attach per-chunk entities directly to the Engine root?
-2. What is the collection-to-Engine binding API, and how do attachment, detachment, rebind, destruction order and already-existing chunks work?
-3. When a chunk is replaced, the Entity3D remains; the previous chunk may be destroyed before sync flush. Rendering components must not retain references to freed old data. Decide resource lifetime strategy.
+1. **Resolved:** root Entity3D parents all chunk entities and can attach to the EngineHeadless root.
+2. **Resolved:** explicit Engine binding/unbinding/rebinding preserves all chunk entities; context mismatch drops systems' subscriptions, requiring explicit system rebind.
+3. **To verify in implementation:** replacement retains the Entity3D but destroys old chunk data; subscribed graphics code must not retain stale references.
 
 ### C. Map-like public API and update thread (PR02)
 
 **Resolved:** `operator[]` and `at` return references and throw when absent, `tryGet` returns a nullable pointer, `contains` returns bool. Iteration yields `[coordinate, entry]`, with `chunk()` and `entity()` accessors. The collection emits immediately; render-specific deduplication occurs at render time.
 
-1. `operator[](coordinate)` must **not insert**. Decide whether it returns nullable `TChunk*` or a controlled Entry handle; `at(coordinate)` throws.
-2. What do iterators expose (chunk, entity, read-only Entry view)? Ensure callers cannot change map keys or entity ownership.
-3. How does `ChunkCollection` flush its dirty set once per Engine update without accidentally requiring a Graphics system? Define behavior when changes occur before binding, during an event callback, or immediately before removal.
+1. **Resolved:** `operator[]` and `at` return `TChunk&` or throw; `tryGet` returns nullable pointer; `contains` returns bool. No implicit insertion.
+2. **Resolved:** iteration exposes `[coordinate, entry]` with `entry.chunk()` and `entry.entity()` references; no owning pointer access.
+3. **Resolved:** collection notifies immediately; renderer queues coordinates for sync on render. **To verify:** reentrant mutation and ordering during teardown.
 
 ## Essential decisions before streaming and Graphics implementation
 
@@ -47,9 +47,9 @@
 
 ### E. Neighbor-aware rendering without a second generic notification (PR02 / PR08)
 
-1. On a chunk's **removal**, its Entity3D destroys its components, but neighbors may require rebuilt voxel boundary faces. Decide how remaining neighbors are marked dirty or detected while keeping the agreed single chunk-sync event.
-2. On addition/replacement, avoid needless remeshing unless neighboring boundaries are affected. Exact policy can be Graphics-specific; the generic ChunkCollection should not know voxel occlusion rules.
-3. Implement the adapter through the *actual* existing Mesher/Renderer component APIs, not a fictional direct `setVolume` call.
+1. **Resolved conceptually:** renderer uses the chunk Entity3D lifecycle-destruction subscription; callback captures coordinate, releases external graphics resources and queues six neighbors without reading the destructing entity.
+2. On addition/replacement, the renderer invalidates boundary-dependent neighbors when needed; generic ChunkCollection has no voxel awareness.
+3. Implement the adapter using actual Mesher/Renderer APIs and verify callback ordering in C++.
 
 ## Agreed Core lifecycle prerequisite
 
