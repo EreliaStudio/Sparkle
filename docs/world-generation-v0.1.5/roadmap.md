@@ -1,35 +1,25 @@
-# Sparkle v0.1.5 — Proposed implementation PR roadmap
+# Sparkle v0.1.5 — Plan d'implémentation revu
 
-> **Documentation only, no coding authorized yet.** This replaces the previous 13-PR roadmap, which incorrectly mandated region planners, terrain/biome algorithms, settlements, roads and caves. The old issue series #78–#83 stays withdrawn.
+> Plan seulement : aucune PR d'implémentation ne peut être fusionnée sans approbation explicite. Les fichiers de conception vivent sur docs/v0.1.5-world-generation-design, base V0.1.5.
 
-Deliver a functioning **headless framework first**, then a voxel specialization and optional visual integration. PR briefs below are proposed slices, subject to explicit maintainer approval individually. No automatic merges.
+## Déroulement
+| Phase | PR | Démonstration attendue |
+| --- | --- | --- |
+| Fondation | [00](implementation/PR-00-lifecycle.md), [01](implementation/PR-01-chunk-coordinates.md) | Cycle de vie et Chunk copiable, éditable, coordonnées stables |
+| Conteneur headless | [02](implementation/PR-02-chunk-collection.md) | ChunkCollection possédant TChunk, Entity3D et ChunkFilter non propriétaire, événements |
+| Génération | [03](implementation/PR-03-generator-passes.md), [04](implementation/PR-04-chunk-requester.md) | Passes ordonnées, Builder optionnel, Task<std::optional<TChunk>> |
+| Intérêt et streaming | [05](implementation/PR-05-interest-observer.md), [06](implementation/PR-06-streaming-system.md) | Plusieurs joueurs, priorité Manhattan, timeout non annulant, éviction |
+| Surcouche voxel/Graphics | [07](implementation/PR-07-voxel-example.md), [08](implementation/PR-08-graphics-adapter.md) | Voxel::Chunk de dimensions exactes, ChunkMesher et six voisins, synchronisation |
+| Preuves d'intégration | [09](implementation/PR-09-headless-multiobserver.md), [10](implementation/PR-10-integration-validation.md) | Headless, rendering, goldens, release gate |
 
-| PR | Deliverable | Dependencies | Layer |
-| --- | --- | --- | --- |
-| **Lifecycle prerequisite (design)** | Introduce `spk::LifeCycle`; migrate Widget and Entity; adapt `Pool<T>::Lease` acquire/release notifications without changing weak-state ownership. See [lifecycle design](life-cycle-design.md). | Before Graphics 08 | Core |
-| [01](implementation/PR-01-chunk-coordinates.md) | Minimal inheritable chunk with world-unit dimensions and static signed XYZ conversions | — | Core |
-| [02](implementation/PR-02-chunk-collection.md) | Sorted ChunkCollection, headless Entity3D ownership, add/replace/remove, iteration and one immediate chunk-change notification | 01 | Core |
-| [03](implementation/PR-03-generator-passes.md) | Generator<TChunk,TData>, TChunk::Builder, fresh builder/workspace, ordered passes then final build; user seeds and persistent references | 01 | Core |
-| [04](implementation/PR-04-chunk-requester.md) | Task-backed ChunkRequester interface and local generator implementation, null/failure differentiation | 03 | Core |
-| [05](implementation/PR-05-interest-observer.md) | ChunkInterest radius and WorldObserver Component3D using the existing Engine-context Registry | 01 | Core |
-| [06](implementation/PR-06-streaming-system.md) | Multi-observer union, nearest-first scheduling, request cap/timeout/version, update-thread publication, immediate unload | 02, 04, 05 | Core |
-| [07](implementation/PR-07-voxel-example.md) | Concrete VoxelChunk and simple deterministic user-style generation passes, headless | 03, 06 | Voxel Core/example |
-| [08](implementation/PR-08-graphics-adapter.md) | Graphics-bound chunk renderer: bind-time scan, render-time dirty-coordinate deduplication, lifecycle-based cleanup and neighbor invalidation | 02, 07, lifecycle prerequisite | Graphics |
-| [09](implementation/PR-09-headless-multiobserver.md) | Server-like multi-observer scenario, fake remote requester, crossing borders, latency/timeout tests | 06, 07 | Core/integration |
-| [10](implementation/PR-10-integration-validation.md) | End-to-end demo and regression/CI validation of framework, voxel sample, update and rendering | 07–09 | Integration |
+## Vérifications de fin de phase
+Phase Fondation : abonnements copiés = aucun, opération move sûre, LifeCycle destruction contrôlée.
+Phase Conteneur : aucune Entity détruite lors du remplacement, même adresse de chunk si possible par affectation sur place, ChunkFilter jamais dangling.
+Phase Génération : aucune allocation owning-pointer imposée au consommateur, retour nullopt valide, erreurs distinctes, API Task réellement respectée.
+Phase Streaming : pas de travail recalculé sur mouvement intra-chunk, aucune boucle sur nullopt, pas de cache après sortie, pas de saturation WorkerPool par timeouts.
+Phase Graphics : aucune dépendance Graphics dans Core, remeshing chunk+six voisins sur édition, pas de référence durable aux voisins, goldens angles variés.
 
-## Milestones
+## Frontières de la release
+Sparkle fournit des mécanismes, pas des règles de génération du monde. La génération de villages, routes, cavernes, structures géographiques, la physique et la persistance gameplay restent du code utilisateur ou des versions ultérieures.
 
-- **A — Core data model:** 01–02. Chunk has no coordinate or rendering dependency. Ordered storage and entity lifetime verified.
-- **B — Generation and acquisition:** 03–04. A concrete `TChunk::Builder` and ordered passes construct the final chunk headlessly without partial publication, with a swappable Task-based requester.
-- **C — Streaming:** 05–06. One or multiple players drive chunk demand, scheduling and removal through EngineHeadless.
-- **D — Concrete example and Graphics:** 07–08. Existing Voxel::Volume and rendering components are reused. Bind after chunks exist and replace volumes safely.
-- **E — Validation:** 09–10. Multi-observer server-like usage, cross-chunk coherence, timeout/stale response behavior, visual updates and goldens.
-
-The user-defined voxel sample may demonstrate a simple continuous terrain plus one multi-chunk feature. **It does not require shipping production-grade default terrain, cities, roads or caves.**
-
-See [architecture decisions to finalize](architecture-review.md) before approving implementation signatures.
-
-## Ground rules
-
-Feature PRs target `V0.1.5` after design approval, not this draft docs branch. Use C++23, clang-format, Core and Graphics test infrastructure, Windows/Linux CI, Sparkle's built-in golden comparator. No paid APIs or external game servers. Do not introduce networking protocols or unrelated framework rewrites. Never merge without explicit approval.
+Toutes les PR visent V0.1.5, avec C++23, clang-format, CI Windows/Linux, tests locaux gratuits. Ne créer aucun nouveau protocole ni infrastructure d'annulation de Task.
