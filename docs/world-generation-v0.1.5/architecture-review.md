@@ -1,68 +1,38 @@
-# v0.1.5 — Architecture review: remaining decisions
+# Sparkle v0.1.5 — Audit de l'architecture et des PR
+État après le réexamen des 11 fiches [PR00–PR10](implementation/README.md). La conception de haut niveau est **suffisante pour découper les implémentations**, mais les points ci-dessous sont des contrôles techniques obligatoires durant leurs PR, et non de nouvelles fonctionnalités.
 
-> **Open questions only.** This checklist is deliberately smaller than the earlier speculative planning hierarchy. The agreed contracts are in [contracts.md](contracts.md). Do not silently promote recommendations below to approved design.
+## Décisions consolidées
+- Chunk<T dimensions> héritable, données libres et mutables, coordonnée stockée uniquement comme clé de map. Copie/move sans transfert d'abonnements ; chaque setter appelle notifyChunkEdition().
+- ChunkCollection possède TChunk par valeur et Entity3D headless, plus ChunkFilter non propriétaire ; édition relayée par la collection, remplacement conserve entité, suppression détruit entité/composants.
+- Generator avec addPass et apply(builder,coord,data), TGenerationData créée à chaque demande, std::optional<Builder> puis std::optional<TChunk>, pas de Builder obligatoire dans le Chunk de base.
+- Task renvoie std::optional<TChunk>, nullopt succès et absence au seul sein de l'intérêt ; échec/timeout permettent retry contrôlé. Pas d'annulation, résultat ancien toujours rejeté.
+- WorldObserver et multi-observateur ; recalcul de l'union et file seulement au franchissement de coordonnée de chunk, rayon/observateurs modifiés. Manhattan à dimensions pondérées.
+- Volume voxel exactement SX×SY×SZ, setter sur chunk mutable, Voxel::ChunkMesher par héritage de Mesher avec outsideCell() et consultation des six voisins à chaque bake. À chaque changement, rebake le chunk et six voisins.
 
-## Already agreed — do not re-open without a new requirement
+## Risques d'implémentation identifiés et affectation explicite
+| Risque / vérification | PR chargée |
+| --- | --- |
+| ContractProvider non copiable : fournir sémantique de copie/move sur Chunk sans répliquer les abonnés | 01 |
+| Conservation d'adresse lors du remplacement map et durée de vie du ChunkFilter ; reentrance des événements | 02 |
+| Destruction Entity et ordre des callbacks LifeCycle, composants attachés, Engine attach/detach | 00, 02 |
+| Builder optionnel d'un type concrete et signature virtuelle exacte apply(builder,coordinate,data) | 03 |
+| Task::Answer::result() renvoie const TResult& : copie nécessaire depuis optional<TChunk> ; vérifier les contraintes C++ | 04 |
+| WorkerPool::~WorkerPool utilise jthread, peut attendre un job bloqué ; garder ses dépendances en vie sans bloquer ~WorldStreamingSystem | 04, 06 |
+| Timeout n'interrompt pas le job réel ; compter toutes les demandes soumises non terminées dans le cap | 06 |
+| Nullopt ne doit pas être un cache LRU : conserver seulement tant que coordonnée reste intéressée | 06 |
+| Événement de disparition par LifeCycle::Destruction, sans deref de l'entité pendant callback | 00, 02, 08 |
+| Voxel::Mesher::outsideCell, indexing des faces, lookup voisin temporaire, pas de double maillage entre chunks | 08 |
+| Tests négatifs, dimensions non cubiques, multiobs, déterminisme utilisateur et goldens | 07, 09, 10 |
 
-- Generic inheritable `Chunk<SizeX,SizeY,SizeZ>`, spatial units, static coordinate conversions and **no stored coordinate**.
-- `ChunkCollection<TChunk>` ordered by coordinates with one headless Entity3D per loaded chunk; replacement preserves entity; removal destroys entity and components.
-- One immediate chunk-changed notification emitted by the collection; the renderer queues unique coordinates until the next render. Entity3D destruction is observed via `spk::LifeCycle` for neighbor invalidation, without a second generic collection event.
-- `Generator<TChunk,TGenerationData>` with concrete `TChunk::Builder`; passes apply to builder and generation data; **`build()` returns TChunk by value and consumes the builder**. The Builder also exposes `load(const TChunk&)` for rebuilding from existing data, mirroring `Voxel::Volume::Builder`. Multiple seeds and shared mutable persistent data are developer-owned.
-- Task-based swappable chunk requester; per-observer XYZ radius; Registry-based WorldObserver; multi-observer streaming with concurrency cap, timeouts/versions, nearest-first priority and no retention outside interest.
-- Graphics is optional; voxel example uses existing Volume::Builder then immutable Volume, Mesher and Renderer.
+## Points de signature à finaliser lors du code
+- Méthodes exactes de souscription Chunk et collection, noms des setters du filtre et forme de la référence non propriétaire.
+- Modes copy/move de TChunk nécessaires au contrat du conteneur et du Task ; comment autoriser un placement stable sans perdre le fournisseur d'abonnements propre à la destination.
+- Comportement des exceptions dans les callbacks, contrat de réentrance, ordre précis d'invalidation du filtre et destruction de l'entité.
+- Durée de vie réelle des objets capturés par les workers et rythme des nouvelles tentatives ; ne pas annoncer un shutdown non bloquant de WorkerPool lui-même.
+- Décision d'égalité de priorités (ordre stable), valeurs par défaut du budget et des délais de retry.
+Ces points doivent recevoir des tests dans leur PR respective ; aucun ne justifie l'ajout d'une infrastructure hors scope.
 
-## Essential decisions before the first API implementation
+## Contraintes non négociables
+Ne pas réintroduire des unique_ptr<TChunk> dans l'API utilisateur ; ne pas forcer shared_ptr<const Data> dans Chunk ; ne pas notifier la collection à chaque update Engine ; pas de cache voisin permanent ; pas de monde géographique prédéfini, réseau ou moteur physique.
 
-### A. Chunk Builder and build-result ownership (PR01 / PR03)
-
-1. **Resolved:** `TChunk::Builder::build()` returns `TChunk` by value, as in `Voxel::Volume::Builder`; the generator moves it into the ownership required by the requester. A successful `build()` consumes the builder.
-2. Is a Builder mandatory on *all* TChunk subclasses or only on concrete types used with a Generator? The agreed Generator signature requires a nested Builder; ChunkCollection itself can store externally obtained chunks.
-3. Builder creation lifecycle: `createChunkBuilder(coordinate)` proposed to return nullable owning Builder; `createGenerationData(coordinate)` is fresh per call. Define exception/absence behavior precisely.
-4. **Resolved:** match the existing `Voxel::Volume::Builder` API: a freshly constructed `TChunk::Builder` can `load(const TChunk&)` to start from an existing chunk. Edits occur in the builder, followed by a new `build()`. The old chunk/immutable Volume is untouched.
-
-### B. Entity ownership and Engine binding (PR02)
-
-**Resolved:** collection owns a root Entity3D with chunk children; explicit attach/detach/rebind to EngineHeadless preserves existing entities. Context-mismatched systems unbind and never reconnect automatically. Exact teardown ordering remains to validate.
-
-1. **Resolved:** root Entity3D parents all chunk entities and can attach to the EngineHeadless root.
-2. **Resolved:** explicit Engine binding/unbinding/rebinding preserves all chunk entities; context mismatch drops systems' subscriptions, requiring explicit system rebind.
-3. **To verify in implementation:** replacement retains the Entity3D but destroys old chunk data; subscribed graphics code must not retain stale references.
-
-### C. Map-like public API and update thread (PR02)
-
-**Resolved:** `operator[]` and `at` return references and throw when absent, `tryGet` returns a nullable pointer, `contains` returns bool. Iteration yields `[coordinate, entry]`, with `chunk()` and `entity()` accessors. The collection emits immediately; render-specific deduplication occurs at render time.
-
-1. **Resolved:** `operator[]` and `at` return `TChunk&` or throw; `tryGet` returns nullable pointer; `contains` returns bool. No implicit insertion.
-2. **Resolved:** iteration exposes `[coordinate, entry]` with `entry.chunk()` and `entry.entity()` references; no owning pointer access.
-3. **Resolved:** collection notifies immediately; renderer queues coordinates for sync on render. **To verify:** reentrant mutation and ordering during teardown.
-
-## Essential decisions before streaming and Graphics implementation
-
-### D. Requester completion and request lifecycle (PR04 / PR06)
-
-1. Verify real `spk::Task` / `Answer` signatures and WorkerPool subscription semantics, including object lifetimes and exception propagation.
-2. Timeout and retry policy: when an old task never completes, distinguish maximum logically *active requests* from actual worker jobs still running; avoid unlimited workers from repeated timeouts.
-3. Where and how are successful-null (nonexistent), temporary failure and retryable timeout results retained for currently interested coordinates, without retaining unloaded chunk data?
-4. Exact moment of publication on Engine update, and safe shutdown of in-flight callbacks.
-
-### E. Neighbor-aware rendering without a second generic notification (PR02 / PR08)
-
-1. **Resolved conceptually:** renderer uses the chunk Entity3D lifecycle-destruction subscription; callback captures coordinate, releases external graphics resources and queues six neighbors without reading the destructing entity.
-2. On addition/replacement, the renderer invalidates boundary-dependent neighbors when needed; generic ChunkCollection has no voxel awareness.
-3. Implement the adapter using actual Mesher/Renderer APIs and verify callback ordering in C++.
-
-## Agreed Core lifecycle prerequisite
-
-See [LifeCycle/Pool integration](life-cycle-design.md). The existing `Pool::Lease` weak-state mechanism already handles pool destruction with outstanding leases. We retain this ownership model and add protected lifecycle transitions at obtain/recycle/final destruction for lifecycle-aware elements. `Widget` and `Entity` migrate to the three independent events (Acquisition, Release, Destruction); `Entity` destruction enables the graphics neighbor invalidation above.
-
-## Non-blocking: settle only when implementation needs it
-
-- Public namespace spelling, helper spelling and optional Builder config syntax.
-- Exact equality/tie-breaking distance metric for the streaming queue.
-- Specific deterministic world-feature planning utilities. Cities, roads, terrain grammars and cave layouts remain **user-defined pass content**, not mandatory Core modules.
-- Multiple simultaneously loaded world instances in one Engine and world UUID filtering: explicitly **future work**, not a hidden v0.1.5 dependency.
-- Persistence of gameplay edits and disk save/load: user or future extension responsibility; no new network protocol.
-
-## Proposed decision order
-
-Builder return/rebuild behavior under **A** is settled; verify the remaining Builder factory/absence details, then prioritize **B (entity parenting and Engine binding)** and **C (collection API/events)**. With those stable, approve Core PR01–PR03. Next settle **D** before PR04–PR06 and **E** before PR08. A small headless voxel vertical slice should validate the chosen boundaries before adding feature algorithms.
+**Statut :** fiches de conception uniquement, aucune modification C++ ni autorisation de merge.
