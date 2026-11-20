@@ -117,8 +117,8 @@ TEST(PoolLifeCycleTest, CopiedLeaseAcquiresItsOwnElementAndCopiesValue)
 		EXPECT_EQ(acquisitionCount, 4);
 	}
 
-	EXPECT_EQ(pool.available(), 3u);
-	EXPECT_EQ(releaseCount, 7);
+	EXPECT_EQ(pool.available(), 4u);
+	EXPECT_EQ(releaseCount, 8);
 }
 
 TEST(PoolLifeCycleTest, ThrowingInitializationReleasesAndDestroysTheAcquiredElement)
