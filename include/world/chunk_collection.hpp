@@ -30,7 +30,7 @@ namespace spk
 			"TChunk must derive from spk::Chunk<SX, SY, SZ>");
 
 	public:
-		using EditionProvider = ContractProvider<const ChunkCoordinate &>;
+		using EditionProvider = ContractProvider<ChunkCoordinate>;
 		using EditionCallback = EditionProvider::callback_type;
 		using EditionContract = EditionProvider::Contract;
 
