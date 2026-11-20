@@ -57,10 +57,7 @@ namespace spk
 			{
 				for (std::int64_t x = minX; x <= maxX; ++x)
 				{
-					result.push_back({
-						static_cast<std::int32_t>(x),
-						static_cast<std::int32_t>(y),
-						static_cast<std::int32_t>(z)});
+					result.push_back({static_cast<std::int32_t>(x), static_cast<std::int32_t>(y), static_cast<std::int32_t>(z)});
 				}
 			}
 		}
