@@ -20,8 +20,9 @@ flowchart TD
     T --> S
     S --> C["ChunkCollection<TChunk> (std::map)"]
     C --> X["TChunk + Entity3D per coordinate"]
-    C --> Q["Coalesced sync notification on Engine update"]
-    Q --> V["Optional Graphics-bound system"]
+    C --> Q["Immediate chunk-changed notification"]
+    Q --> D["Renderer queues dirty coordinates"]
+    D --> V["Optional Graphics-bound system: sync once per render"]
     X --> V
     V --> RC["Voxel::Mesher -> Voxel::Renderer or other components"]
 ~~~
@@ -43,9 +44,9 @@ Static helpers on the chunk type:
 
 `addChunk(coordinate, unique_ptr<TChunk>)` creates the entry and its Entity3D when absent. If the key exists, it **replaces only the chunk while preserving the original Entity3D and attached components**. It marks the entry for synchronization. A direct data edit can call `notifyChunkChanged(coordinate)` (conceptual name). `removeChunk` destroys its owned entity and components; the collection never needs Graphics to do so.
 
-The collection's Entity3D may be attached to the bound EngineHeadless scene hierarchy, including the headless server. The collection must have an explicit, safe Engine binding/lifetime contract; do not assume an unattached Entity3D is rendered or updated.
+The collection owns a root `Entity3D`, parent of all chunk `Entity3D` objects. It can be constructed without an Engine, then explicitly attached, detached and rebound to an `EngineHeadless` context, preserving chunks and child entities. Systems whose Engine context no longer matches unbind automatically; if the collection later returns to the old Engine, those systems do **not** reconnect until explicitly bound again.
 
-The collection exposes `begin/end/rbegin/rend` (and const variants), `at(coordinate)` throwing on a missing key, and `operator[](coordinate)` with non-inserting lookup semantics to be finalized. Never expose structural insertion/erase or entity ownership through public iterators. Iteration order is coordinate lexicographic, **not** distance priority.
+The collection exposes `begin/end/rbegin/rend` (and const variants), `operator[]`/`at` returning `TChunk&` and throwing when absent, `tryGet` returning nullable `TChunk*`, and `contains`. None inserts. Iteration yields `[coordinate, entry]`, with `entry.chunk()` and `entry.entity()` references, protecting keys and ownership. Iteration order is lexicographic, **not** distance priority.
 
 ## Generation
 
@@ -73,11 +74,17 @@ Every update unloads chunks outside the union of current interests. **No LRU, di
 
 ## Rendering and notifications
 
-The collection has **one event**, meaning *synchronize this coordinate*; it carries (coordinate, `TChunk&`, `Entity3D&`). Insert/replace and explicit edit notifications are coalesced into one event per coordinate per update. Its callback runs on the Engine update thread, not the worker.
+The collection has **one immediate chunk-changed event** on insert, replace or explicit edit. When attached, mutations and callbacks run on the Engine thread, not worker threads. The collection performs no batching: each modification emits immediately.
 
-A Graphics-only rendering system binds to a collection and first synchronizes **every chunk already present**. Then it subscribes to the same event. Its `synchronizeChunk` logic finds an existing rendering component on the Entity3D or adds one, then rebinds updated chunk-derived resources. There is no separate add/update event and no required remove event: collection removal destroys the entity and its attached components. Code that retains external references must respect that lifetime.
+A Graphics-only rendering system binds explicitly to a collection and first queues **every chunk already present**. The collection's event callback only enqueues the changed coordinate in a set. At each render, it synchronizes each queued coordinate **once** and then renders, reusing components when present. There is no generic removal event: collection removal destroys its chunk Entity3D and owned components. The renderer observes the Entity3D `spk::LifeCycle::Destruction` event, clears external resource references and enqueues six neighboring coordinates for remeshing. It retains the coordinate separately and must not dereference the entity during destruction. All subscriptions are torn down on context mismatch/unbind and never reconnect automatically.
 
 For voxels, **`Voxel::Volume` is not a renderer input by magic**: the adapter produces/reuses `Voxel::Mesher` geometry (including boundary-neighbor handling) and binds `Voxel::Renderer` using its actual Geometry/Palette APIs. Visual updates should invalidate adjacent meshing when boundary conditions change, without changing the generic collection contract.
+
+## Core `LifeCycle` and `Pool<T>` boundary
+
+As a v0.1.5 prerequisite, [LifeCycle design](life-cycle-design.md) introduces three distinct events: Acquisition, Release and Destruction. Objects start acquired; idempotent protected transitions are callable by owning classes/`Pool<T>`. Finalization emits Release before Destruction if still acquired. `Widget` and `Entity` adopt the common lifecycle mechanism with early derived-destructor notification.
+
+For `T : LifeCycle` only, the existing generic `Pool<T>` applies release/acquire on creation/obtain, release when Lease returns, and final destruction when an outstanding Lease outlives the pool. Crucially, a Lease contains a weak reference to the pool's State and **does not extend State's lifetime**. Ownership and recycling remain exactly as implemented; ordinary types still work.
 
 ## Core/Graphics boundary
 
