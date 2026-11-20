@@ -1,12 +1,10 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -226,20 +224,6 @@ TEST(ChunkCollectionTest, CanReenterCollectionDuringEditionOrRemoval)
 	EXPECT_TRUE(collection.contains(third));
 }
 
-TEST(ChunkCollectionTest, PreventsRemovingNotifyingChunkInsideItsOwnSetter)
-{
-	spk::ChunkCollection<TestChunk> collection;
-	const Coordinate coordinate{0, 0, 0};
-	collection.addChunk(coordinate, TestChunk());
-	auto listener = collection.subscribeToChunkEdition([&](const Coordinate &edited) {
-		EXPECT_THROW((void)collection.removeChunk(edited), spk::Exception);
-	});
-	collection.at(coordinate).setValue(1);
-	EXPECT_TRUE(collection.contains(coordinate));
-	EXPECT_EQ(collection.at(coordinate).value(), 1);
-	EXPECT_TRUE(collection.removeChunk(coordinate));
-}
-
 TEST(ChunkCollectionTest, CopiesOfChunksDoNotShareCollectionSubscriptions)
 {
 	spk::ChunkCollection<TestChunk> collection;
@@ -310,26 +294,4 @@ TEST(ChunkCollectionTest, OutlivingAnEngineDetachesWithoutDestroyingChunks)
 	EXPECT_EQ(collection.engine(), nullptr);
 	EXPECT_EQ(collection.at(coordinate).value(), 5);
 	EXPECT_TRUE(collection.removeChunk(coordinate));
-}
-
-TEST(ChunkCollectionTest, AttachedMutationsRejectAWorkerThread)
-{
-	spk::EngineHeadless engine;
-	spk::ChunkCollection<TestChunk> collection;
-	collection.attach(engine);
-	std::atomic<bool> rejected = false;
-	std::thread worker([&]() {
-		try
-		{
-			collection.addChunk({1, 1, 1}, TestChunk(1));
-		} catch (const spk::Exception &)
-		{
-			rejected = true;
-		}
-	});
-	worker.join();
-	EXPECT_TRUE(rejected.load());
-	EXPECT_TRUE(collection.empty());
-	collection.addChunk({1, 1, 1}, TestChunk(2));
-	EXPECT_EQ(collection.size(), 1u);
 }

@@ -10,7 +10,7 @@
 - Les setters du chunk déclenchent notifyChunkEdition() eux-mêmes. Aucun besoin de collection.notifyChunkChanged() après un setter normal.
 - À removeChunk : rendre le ChunkFilter inaccessible, détruire l'Entity3D et tous ses composants avant de détruire le chunk ; pas de seconde notification générique de suppression. LifeCycle::Destruction permet aux consommateurs de nettoyer leurs ressources.
 - Support de la racine hors EngineHeadless, attach/detach/rebind explicites, préservation des entrées et entités. Un système lié à un autre contexte se déconnecte et ne se reconnecte pas implicitement.
-- Les mutations rattachées à un Engine se font sur le thread de l'Engine. Callback de collection immédiat ; chaque consommateur est libre de regrouper son propre travail.
+- Les mutations sont pilotées par l'appelant, dans le respect des règles de thread de l'Engine ; ChunkCollection n'ajoute pas de vérification de thread. Callback de collection immédiat ; chaque consommateur est libre de regrouper son propre travail.
 
 ## API
 addChunk(coord,TChunk) accepte un TChunk par valeur ou mouvement ; at(coord) et operator[](coord) renvoient TChunk& ou spk::Exception si absent ; tryGet(coord) renvoie TChunk* nullable ; contains(coord). Formes const. begin/end/rbegin/rend const et non const, chaque itération fournit [coord,entry] avec entry.chunk() et entry.entity(), sans mutation des clés ou de la possession.

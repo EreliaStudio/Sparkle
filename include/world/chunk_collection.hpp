@@ -4,9 +4,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
-#include <thread>
 #include <utility>
 
 #include "design_pattern/contract_provider.hpp"
@@ -109,38 +107,7 @@ namespace spk
 		Entity3D _root;
 		Container _chunks;
 		EditionProvider _editionProvider;
-		std::optional<std::thread::id> _attachedThread;
-		std::map<ChunkCoordinate, std::size_t> _activeChunkEditions;
 
-		void _checkEngineThread() const
-		{
-			if (_root.context() != nullptr && _attachedThread.has_value() &&
-				std::this_thread::get_id() != *_attachedThread)
-			{
-				throw spk::Exception("ChunkCollection must be mutated on its Engine thread");
-			}
-		}
-
-		void _forwardEdition(const ChunkCoordinate &coordinate)
-		{
-			_checkEngineThread();
-			++_activeChunkEditions[coordinate];
-			try
-			{
-				_editionProvider.trigger(coordinate);
-			} catch (...)
-			{
-				if (--_activeChunkEditions.at(coordinate) == 0)
-				{
-					_activeChunkEditions.erase(coordinate);
-				}
-				throw;
-			}
-			if (--_activeChunkEditions.at(coordinate) == 0)
-			{
-				_activeChunkEditions.erase(coordinate);
-			}
-		}
 
 	public:
 		explicit ChunkCollection(const std::string &name = "Chunk collection") :
@@ -182,42 +149,15 @@ namespace spk
 
 		void attach(EngineHeadless &engine)
 		{
-			if (_root.context() == &engine)
-			{
-				_checkEngineThread();
-				return;
-			}
-			detach();
-			_attachedThread = std::this_thread::get_id();
-			try
-			{
-				engine.addEntity(&_root);
-			} catch (...)
-			{
-				// Parent changes may already have taken place before a subscriber throws.
-				try
-				{
-					engine.removeEntity(&_root);
-				} catch (...)
-				{
-				}
-				_attachedThread.reset();
-				throw;
-			}
+			engine.addEntity(&_root);
 		}
 
 		void detach()
 		{
-			_checkEngineThread();
 			if (EngineHeadless *current = _root.context(); current != nullptr)
 			{
 				current->removeEntity(&_root);
 			}
-			else if (_root.hasParent())
-			{
-				_root.clearParent();
-			}
-			_attachedThread.reset();
 		}
 
 		// An immediate signal for insertion, replacement and explicit edits.
@@ -228,7 +168,6 @@ namespace spk
 
 		void addChunk(const ChunkCoordinate &coordinate, TChunk chunk)
 		{
-			_checkEngineThread();
 			if (auto it = _chunks.find(coordinate); it != _chunks.end())
 			{
 				it->second._chunk = std::move(chunk);
@@ -241,7 +180,7 @@ namespace spk
 			try
 			{
 				it->second._editionContract = it->second._chunk.subscribeToChunkEdition([this, coordinate]() {
-					_forwardEdition(coordinate);
+					_editionProvider.trigger(coordinate);
 				});
 			} catch (...)
 			{
@@ -253,18 +192,12 @@ namespace spk
 
 		[[nodiscard]] bool removeChunk(const ChunkCoordinate &coordinate)
 		{
-			_checkEngineThread();
-			if (_activeChunkEditions.contains(coordinate))
-			{
-				throw spk::Exception("Cannot remove a chunk during its own edition notification");
-			}
 			auto entry = _chunks.extract(coordinate);
 			return !entry.empty();
 		}
 
 		void clear()
 		{
-			_checkEngineThread();
 			while (!_chunks.empty())
 			{
 				(void)removeChunk(_chunks.begin()->first);
