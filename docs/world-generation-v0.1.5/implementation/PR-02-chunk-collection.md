@@ -1,24 +1,22 @@
-# PR02 — ChunkCollection, Entity3D ownership and single sync event
+# PR02 — ChunkCollection, ChunkFilter et entités headless
+**Couche :** Core/EngineHeadless. **Dépendances :** PR00, PR01. **État :** cahier des charges.
 
-**Layer:** Core/EngineHeadless. **Dependencies:** PR01. **Status:** design draft.
+## Possession et modèle
+- ChunkCollection<TChunk> possède une std::map<ChunkCoordinate,ChunkEntry> ordonnée lexicographiquement. Chaque entrée contient TChunk **par valeur**, une Entity3D et les contrats d'abonnement nécessaires. Les pointeurs de possession restent internes aux entités si leur API l'exige ; l'utilisateur ne doit pas donner de unique_ptr<TChunk>.
+- Une Entity3D racine de collection, et une Entity3D par chunk chargé, enfant de la racine, placée à l'origine en unités du monde. Ces entités existent sans Graphics, pour la physique future.
+- Un ChunkFilter<TChunk> : Component3D non propriétaire exposant l'accès rapide au chunk de son Entity3D. Il ne possède pas un deuxième exemplaire du chunk.
+- Adresse du TChunk stable pendant la présence de l'entrée, y compris addChunk(coord, nouveauChunk) sur une clé existante : remplacer la valeur **sur place** ou rebinder le ChunkFilter sans aucune fenêtre d'accès périmé. La même Entity3D, ses composants et son identité sont conservés.
+- La collection s'abonne à l'événement d'édition de chaque chunk, le relaie immédiatement en donnant sa coordonnée ; sur remplacement, l'ancien abonnement est résilié et le nouvel exemplaire lié. La collection notifie également insertion et remplacement. Un chunk copié ailleurs n'hérite jamais des abonnements de l'original.
+- Les setters du chunk déclenchent notifyChunkEdition() eux-mêmes. Aucun besoin de collection.notifyChunkChanged() après un setter normal.
+- À removeChunk : rendre le ChunkFilter inaccessible, détruire l'Entity3D et tous ses composants avant de détruire le chunk ; pas de seconde notification générique de suppression. LifeCycle::Destruction permet aux consommateurs de nettoyer leurs ressources.
+- Support de la racine hors EngineHeadless, attach/detach/rebind explicites, préservation des entrées et entités. Un système lié à un autre contexte se déconnecte et ne se reconnecte pas implicitement.
+- Les mutations rattachées à un Engine se font sur le thread de l'Engine. Callback de collection immédiat ; chaque consommateur est libre de regrouper son propre travail.
 
-## Scope
-- `ChunkCollection<TChunk>` using `std::map<ChunkCoordinate, ChunkEntry>` (lexicographic coordinate order). Each entry owns `unique_ptr<TChunk>` and one headless-compatible `unique_ptr<Entity3D>`.
-- `addChunk(coordinate, chunk)` inserts or **replaces chunk content, preserving existing Entity3D and its components**. `removeChunk` destroys the chunk entity/components.
-- Own a collection root Entity3D with child chunk entities. Explicit EngineHeadless attach/detach/rebind preserves loaded chunks and entities. Context-mismatched systems unbind and must reconnect explicitly; no Graphics dependencies.
-- Iteration `begin/end/rbegin/rend` and const variants, yielding `[coordinate, entry]` with `entry.chunk()` and `entry.entity()` references; never expose owning pointers. `operator[]` and `at` return `TChunk&` or throw, `tryGet` returns nullable pointer, and `contains` returns bool, all const-correct and non-inserting.
-- One immediate chunk-changed event on add, replacement and explicit modification (Engine thread when attached). No batching in the collection. Render-side batching occurs in PR08; no mandatory removal event.
-- Initial collection iteration must be available to late subscribers.
+## API
+addChunk(coord,TChunk) accepte un TChunk par valeur ou mouvement ; at(coord) et operator[](coord) renvoient TChunk& ou spk::Exception si absent ; tryGet(coord) renvoie TChunk* nullable ; contains(coord). Formes const. begin/end/rbegin/rend const et non const, chaque itération fournit [coord,entry] avec entry.chunk() et entry.entity(), sans mutation des clés ou de la possession.
 
-## Required tests
-- Ordered forward/reverse traversal and missing-key lookup; direct editing does not mutate keys or entity ownership.
-- First add creates Entity3D at chunk world origin. Same-coordinate replacement retains identical entity, existing mock component, updates data and emits one notification.
-- Many modifications => immediate event per operation. Removal destroys owned Entity3D/components, triggers lifecycle destruction for subscribers, and causes no use-after-free.
-- Headless engine attach/detach/destroy order and safe callbacks. Cross-thread publication is explicitly **not** allowed by this class.
+## Tests
+Remplacement sans recréation d'Entity3D ni de composants, stabilité du pointeur et du ChunkFilter, copies indépendantes et abonnements résiliés, absence, ordonnancement, thread attach, destruction ordonnée, Engine headless, abonnés tardifs et reentrance des callbacks.
 
 ## Exclusions
-No generator, scheduling, OpenGL, disk persistence or graphics observer.
-
-## Delivery policy
-
-Draft only; implementation requires maintainer approval. Target `V0.1.5` in a dedicated PR. C++23, clang-format, Windows/Linux CI, tests appropriate to layer. No automatic merges and no unrelated API rewrite.
+Pas de streaming, de meshing ou d'OpenGL. Le remeshing des six voisins appartient à PR08, pas à cette collection générique.
