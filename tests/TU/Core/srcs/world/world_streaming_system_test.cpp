@@ -397,6 +397,54 @@ TEST(WorldStreamingSystemTest, SynchronousSubmissionFailureDoesNotBusyRetry)
 	EXPECT_EQ(fixture.requester.requests[0].coordinate, (Coordinate{0, 0, 0}));
 }
 
+TEST(WorldStreamingSystemTest, OrderedPlanDoesNotSubmitDuplicatePendingRequests)
+{
+	Fixture fixture;
+	spk::Entity3D player("player");
+	addObserver(fixture.engine, player, {0.0f, 0.0f, 0.0f});
+	Streamer &streamer = fixture.start({.maxInFlight = 4});
+
+	fixture.tick(0ms);
+	fixture.tick(1ms);
+	fixture.tick(2ms);
+	ASSERT_EQ(fixture.requester.requests.size(), 1u);
+	EXPECT_EQ(streamer.inFlightCount(), 1u);
+
+	fixture.requester.complete(0, 17);
+	fixture.tick(3ms);
+	fixture.tick(4ms);
+	EXPECT_EQ(fixture.requester.requests.size(), 1u);
+	EXPECT_EQ(fixture.collection.at({0, 0, 0}).value(), 17);
+}
+
+TEST(WorldStreamingSystemTest, TimedOutRequestMayRetryUnderAvailablePhysicalBudget)
+{
+	Fixture fixture;
+	spk::Entity3D player("player");
+	addObserver(fixture.engine, player, {0.0f, 0.0f, 0.0f});
+	Streamer &streamer = fixture.start({.maxInFlight = 2, .timeout = 10ms, .retryDelay = 5ms});
+
+	fixture.tick(0ms);
+	fixture.tick(10ms);
+	EXPECT_EQ(streamer.inFlightCount(), 1u);
+	fixture.tick(14ms);
+	EXPECT_EQ(fixture.requester.requests.size(), 1u);
+
+	fixture.tick(15ms);
+	ASSERT_EQ(fixture.requester.requests.size(), 2u);
+	EXPECT_EQ(streamer.inFlightCount(), 2u);
+
+	fixture.requester.complete(0, 100);
+	fixture.tick(16ms);
+	EXPECT_FALSE(fixture.collection.contains({0, 0, 0}));
+	EXPECT_EQ(streamer.inFlightCount(), 1u);
+
+	fixture.requester.complete(1, 200);
+	fixture.tick(17ms);
+	EXPECT_EQ(fixture.collection.at({0, 0, 0}).value(), 200);
+	EXPECT_EQ(streamer.inFlightCount(), 0u);
+}
+
 TEST(WorldStreamingSystemTest, ExpiredPhysicalTaskOccupiesBudgetUntilSettled)
 {
 	Fixture fixture;
