@@ -95,3 +95,5 @@
 #include "voxel/cell.hpp"
 #include "voxel/definition.hpp"
 #include "voxel/shape.hpp"
+#include "world/chunk.hpp"
+#include "world/chunk_coordinate.hpp"
