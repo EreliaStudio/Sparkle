@@ -72,12 +72,10 @@ namespace spk
 					pass->apply(*builder, coordinate, data);
 				}
 				return std::move(*builder).build();
-			}
-			catch (const spk::Exception &)
+			} catch (const spk::Exception &)
 			{
 				throw;
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception("Chunk generation failed", std::current_exception());
 			}
