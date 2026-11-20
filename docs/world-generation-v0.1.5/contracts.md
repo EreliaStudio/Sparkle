@@ -10,10 +10,10 @@
 | Coordinates | Signed XYZ 32-bit `ChunkCoordinate`, floor division for negative positions; chunk **does not store** its key |
 | Conversion | Static world-to-chunk, chunk-to-world-origin and world-to-local helpers on chunk type |
 | Storage | `ChunkCollection<TChunk>` backed by ordered `std::map<ChunkCoordinate, ChunkEntry>`, chunk + headless Entity3D per entry |
-| Access | begin/end/rbegin/rend and const forms, subscript lookup and exception-throwing `at`; no bypass of structural mutations |
+| Access | `operator[]` and `at` return `TChunk&` or throw if missing; `tryGet` returns nullable `TChunk*`, `contains` checks presence, all with `const` forms. Iteration yields `[coordinate, entry]` with `entry.chunk()` and `entry.entity()`. No structural mutation through iterators. |
 | `addChunk` | Coordinate + owned chunk; replace existing chunk and **retain** its Entity3D |
-| Removal | Delete chunk and its Entity3D/components; no separate rendering-removal notification |
-| Events | **One** coalesced synchronization notification per dirty chunk, during Engine update; initial bind scans all existing entries |
+| Removal | Delete chunk and its Entity3D/components. Graphics observes entity destruction through `LifeCycle` and queues neighboring coordinates; no second generic collection notification. |
+| Events | **One** immediate chunk-changed event per add/replace/explicit modification (Engine thread when attached). Rendering alone deduplicates dirty coordinates and updates on render; initial bind scans all existing entries. |
 | Generation | `Generator<TChunk,TGenerationData>` uses `typename TChunk::Builder`, virtual `createChunkBuilder(coord)` and `createGenerationData(coord)`, ordered `Pass::apply(TChunk::Builder&,TGenerationData&)`; `builder.build()` returns `TChunk` **by value** |
 | Builder lifetime | Like `Voxel::Volume::Builder`: `TChunk::Builder::load(const TChunk&)` populates a fresh builder from an existing chunk; successful `build()` consumes the builder; a published chunk stays unchanged | 
 | Data lifetime | Fresh chunk Builder and TGenerationData per generation; TGenerationData can hold mutable references to persistent data; publish only a successfully built TChunk |
@@ -25,7 +25,13 @@
 | Streaming | Union of interests, prioritize by nearest interested observer, configurable max concurrent Task requests, timeout, request version, ignore stale responses |
 | Retention | Unload **all** chunks outside combined interest; no LRU/distance-based cache |
 | Engine worlds | **One** collection/world per Engine in v0.1.5; future world UUID only if needed |
-| Graphics | Optional system bound to collection; per-chunk Entity3D already exists; find/create components and rebind data |
+| Graphics | Optional system bound to collection; per-chunk Entity3D already exists. Renderer queues unique changed coordinates, synchronizes once per render and listens for entity destruction to invalidate neighbors. |
+
+## Additional agreed lifecycle contract
+
+`spk::LifeCycle` introduces three distinct subscription events (Acquisition, Release, Destruction), initially acquired objects, and protected idempotent `acquire()`/`release()` transitions. During final destruction, Release (if still acquired) always precedes Destruction. `Widget` and `Entity` will use the common primitive. `Pool<T>` adapts its existing obtain/return paths for lifecycle-aware elements **without replacing** the ownership/recycling logic in `Lease`: the pool's weak-state mechanism already handles a Lease outliving its pool. Ordinary element types remain supported. See [life-cycle-design.md](life-cycle-design.md) for precise ordering and tests.
+
+A collection owns one root `Entity3D` with chunk entities beneath it. Explicit EngineHeadless attach/detach/rebind preserves chunks and their entities. Systems bound to a different Engine context automatically unbind and require an explicit new bind.
 
 ## Illustrative C++ API (not final)
 
@@ -85,7 +91,7 @@ ChunkRequester<TChunk>::request(coordinate)
 - `worldToChunkCoordinate` must handle negative values by floor, not C++ truncation. For (70,-2,35) in 32-unit chunks: key (2,-1,1), world origin (64,-32,32), local (6,30,3). Coordinate conversions use world units, *not number of voxels*.
 - Generators publish no partially constructed chunk: passes only receive a fresh Builder; `builder.build()` finalizes the TChunk before handing it to the requester.
 - Replacing a chunk retains its entity and only rebinds its attached component(s) on the next synchronization.
-- Direct mutation of a chunk's own fields cannot be detected automatically; callers explicitly signal that it changed. The collection deduplicates dirty coordinates per Engine update.
+- Direct mutation of a chunk's own fields cannot be detected automatically; callers explicitly signal that it changed. The collection emits notifications immediately; the rendering system deduplicates coordinates and rebuilds once at render.
 - A bound rendering adapter must scan loaded chunks before depending on future notifications. Removal uses entity destruction; external resource holders must not retain dangling references.
 - Request timeouts and stale results are handled without requiring a cancellation API in Task. A fresh monotonically unique request version prevents old completions from superseding new requests even if interests are removed/re-added.
 - Because user-defined persistent generator state may be mutable, **Sparkle guarantees only pass order within a generation**, not deterministic outputs from nondeterministic user rules or scheduling across generations.
@@ -97,13 +103,13 @@ No built-in WorldPlan/RegionPlan, procedural city/road/cave generator hierarchy,
 ## API details to settle during implementation review
 
 1. Exact namespace and public class names, including whether a future `World` will wrap `ChunkCollection`.
-2. Whether `operator[]` returns a nullable pointer on missing keys (recommended) and whether `at` returns TChunk or ChunkEntry; it **must not implicitly create a chunk**. `at` must throw for absence.
-3. Whether iteration exposes a read-only Entry view or a stable pair of references; ensure structural map/entry ownership cannot be mutated directly.
+2. **Resolved:** `operator[]` and `at` return `TChunk&` and throw for missing keys; `tryGet` returns nullable pointer; `contains` tests presence. None inserts.
+3. **Resolved:** iteration provides `[coordinate, entry]` with `entry.chunk()` and `entry.entity()` references, without exposing unique ownership.
 4. Precise Engine binding/Entity3D parentage and safe teardown order, especially when the collection is destroyed or rebound.
 5. Exact `Task::Answer` return syntax, retry/error/terminal-null bookkeeping and timeout configuration, based on existing Sparkle APIs.
-6. Whether synchronization events are flushed by `ChunkCollection::updateState` or explicitly by its binding system during Engine update; keep one callback per coordinate per frame.
+6. **Resolved:** collection notifies immediately; renderer queues coordinates and flushes them once before each render.
 7. Builder return and reconstruction are **decided**: `TChunk::Builder::build()` returns `TChunk` by value and consumes the builder; `load(const TChunk&)` can initialize a fresh builder from an existing chunk. Only precise constructors and ownership of `createChunkBuilder()` remain to confirm.
 8. Minimal concrete voxel example and renderer resource binding strategy, including neighboring-chunk rebakes.
-9. How neighboring voxel graphics are invalidated on removal while retaining the sole generic chunk-synchronization event.
+9. **Resolved conceptually:** subscribe to Entity3D lifecycle destruction, release external graphics resources and queue six neighbors to update at next render. Validate notification order during derived destruction.
 
 These are **implementation details, not permission to revert the architectural decisions above**.
