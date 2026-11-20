@@ -30,21 +30,11 @@ namespace spk
 	private:
 		std::vector<std::unique_ptr<Pass>> _passes;
 
-	protected:
-		virtual std::optional<typename TChunk::Builder> createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
-		virtual TGenerationData createGenerationData(const ChunkCoordinate &coordinate) = 0;
+		virtual std::optional<typename TChunk::Builder> _createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
+		virtual TGenerationData _createGenerationData(const ChunkCoordinate &coordinate) = 0;
 
 	public:
 		virtual ~Generator() = default;
-
-		void addPass(std::unique_ptr<Pass> pass)
-		{
-			if (pass == nullptr)
-			{
-				throw spk::Exception("Cannot add a null generation pass");
-			}
-			_passes.push_back(std::move(pass));
-		}
 
 		template <typename TPass, typename... TArgs>
 			requires std::derived_from<TPass, Pass>
@@ -60,13 +50,13 @@ namespace spk
 		{
 			try
 			{
-				std::optional<typename TChunk::Builder> builder = createChunkBuilder(coordinate);
+				std::optional<typename TChunk::Builder> builder = _createChunkBuilder(coordinate);
 				if (!builder.has_value())
 				{
 					return std::nullopt;
 				}
 
-				TGenerationData data = createGenerationData(coordinate);
+				TGenerationData data = _createGenerationData(coordinate);
 				for (const std::unique_ptr<Pass> &pass : _passes)
 				{
 					pass->apply(*builder, coordinate, data);

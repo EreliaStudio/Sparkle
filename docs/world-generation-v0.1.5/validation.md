@@ -6,7 +6,7 @@ La responsabilité des tests figure aussi dans chaque [fiche de PR](implementati
 | 00 LifeCycle | acquisition/release idempotentes, ordre destruction, Widget/Entity, Pool<LifeCycle> et Pool<int>, Lease survivant à Pool, callbacks |
 | 01 Chunk | coordonnées négatives et limites overflow, dimensions non cubiques, setters notifient, copie/move sans héritage d'abonnements, affectation garde ses abonnements |
 | 02 Collection/Filter | stockage TChunk par valeur et pointeur stable, ChunkFilter correct, Entity3D headless, remplacement sans recréer les composants, événement relayé, suppression ordonnée |
-| 03 Generator | createChunkBuilder nullopt et aucune passe, Data fraîche, Pass::apply(builder,coord,data) dans l'ordre, build par valeur et consommant, exception sans publication |
+| 03 Generator | _createChunkBuilder nullopt et aucune passe, Data fraîche, Pass::apply(builder,coord,data) dans l'ordre, build par valeur et consommant, exception sans publication |
 | 04 Requester | Task<std::optional<TChunk>> succès non vide/vide/Failed ; copie depuis résultat const, callbacks déjà terminés, source externe factice, lifetime worker |
 | 05 Observer | position/rayon XYZ, 405 coordonnées pour rayon 4/2/4, Registry EngineHeadless, mouvement intra-chunk sans modification, rayon et attach/detach |
 | 06 Streaming | union et priorité Manhattan monde anisotrope, replanification seulement au changement centre/rayon/observers, budget réel sous timeout, retry, version stale, nullopt quitté puis réentré |

@@ -2,7 +2,6 @@
 
 #include <exception>
 #include <map>
-#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -119,8 +118,7 @@ namespace
 		const int &_seed;
 		std::vector<int> *_trace;
 
-	protected:
-		std::optional<ExampleChunk::Builder> createChunkBuilder(const Coordinate &) override
+		std::optional<ExampleChunk::Builder> _createChunkBuilder(const Coordinate &) override
 		{
 			++builderCalls;
 			if (throwOnBuilder)
@@ -134,7 +132,7 @@ namespace
 			return std::optional<ExampleChunk::Builder>(std::in_place, throwOnBuild);
 		}
 
-		GenerationData createGenerationData(const Coordinate &) override
+		GenerationData _createGenerationData(const Coordinate &) override
 		{
 			++dataCalls;
 			if (throwOnData)
@@ -495,13 +493,12 @@ TEST(GeneratorTest, ResultsRemainDeterministicRegardlessOfRequestOrder)
 	}
 }
 
-TEST(GeneratorTest, PassesAreOwnedAndNullRegistrationIsRejected)
+TEST(GeneratorTest, PassesAreOwned)
 {
 	const int seed = 0;
 	int destructions = 0;
 	{
 		ExampleGenerator generator(seed);
-		EXPECT_THROW(generator.addPass(std::unique_ptr<BaseGenerator::Pass>{}), spk::Exception);
 		LifetimePass &pass = generator.addPass<LifetimePass>(destructions);
 		(void)pass;
 		EXPECT_EQ(destructions, 0);
