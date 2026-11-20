@@ -361,8 +361,7 @@ TEST(GeneratorTest, BuilderPreparationFailureIsAnExceptionNotAnAbsentChunk)
 	{
 		(void)generator.generate({0, 0, 0});
 		FAIL() << "Expected an exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(error.cause(), nullptr);
 	}
@@ -398,8 +397,7 @@ TEST(GeneratorTest, StandardPassFailureIsWrappedWithCauseAndStopsLaterPasses)
 	{
 		(void)generator.generate({0, 0, 0});
 		FAIL() << "Expected an exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		ASSERT_NE(error.cause(), nullptr);
 		EXPECT_THROW(std::rethrow_exception(error.cause()), std::runtime_error);
@@ -419,8 +417,7 @@ TEST(GeneratorTest, SparklePassFailurePreservesOriginalException)
 	{
 		(void)generator.generate({0, 0, 0});
 		FAIL() << "Expected an exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_EQ(error.message(), "pass rejected generation");
 	}
