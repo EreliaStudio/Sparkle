@@ -10,6 +10,7 @@
 #include "container/cached_data.hpp"
 #include "core/event/event_dispatcher.hpp"
 #include "core/event/record.hpp"
+#include "design_pattern/life_cycle.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/geometry_state_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
@@ -47,7 +48,8 @@ namespace spk
 				   public spk::GeometryStateTrait,
 				   public spk::UpdatableTrait,
 				   public spk::UpdatableByDeviceTrait,
-				   public spk::RenderSnapshotContributorTrait
+				   public spk::RenderSnapshotContributorTrait,
+				   public spk::LifeCycle
 	{
 	public:
 		// Need to refactor this to make it more manageable
@@ -123,9 +125,6 @@ namespace spk
 		static CachedData<Style> defaultStyle;
 
 		using ZOrder = float;
-		using DestructionProvider = ContractProvider<Widget *>;
-		using DestructionCallback = DestructionProvider::callback_type;
-		using DestructionContract = DestructionProvider::Contract;
 
 	private:
 		using Inherence = InherenceTrait<Widget, WidgetChildComparator>;
@@ -134,7 +133,6 @@ namespace spk
 		ActivableTrait::ActivationContract _initialActivationContract;
 		ActivableTrait::DeactivationContract _deactivationContract;
 		Inherence::OnParentEditionContract _onParentEditedContract;
-		DestructionProvider _destructionProvider;
 		std::unordered_map<Widget *, ResizeableTrait::Contract> _childSizeHintEditionContracts;
 		ZOrder _zOrder = 0;
 		spk::CachedData<ZOrder> _absoluteZOrder;
@@ -201,6 +199,5 @@ namespace spk
 
 		void notifyFocusAcquired(FocusMode::Channel channel) noexcept;
 		void notifyFocusReleased(FocusMode::Channel channel) noexcept;
-		[[nodiscard]] DestructionContract subscribeToDestruction(DestructionCallback callback);
 	};
 }

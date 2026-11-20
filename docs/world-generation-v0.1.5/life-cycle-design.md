@@ -17,7 +17,7 @@ An object starts in the `Acquired` state, including ordinary `Widget` and `Entit
 
 On destruction, emit `Release` first **if and only if** the object is still acquired, followed by `Destruction` exactly once. Do not allow exceptions to escape destructors. A protected explicit finalization hook is needed at the start of `Widget` and `Entity` destruction: callbacks invoked from the base `LifeCycle` destructor alone would run after derived members are torn down. The base destructor can guard against missing finalization, without guaranteeing derived state still exists.
 
-`Widget` should migrate its existing destruction provider to this primitive while retaining an API-compatible adapter for existing callback users where feasible. `Entity` (and therefore `Entity3D`) also gains the lifecycle notification.
+`Widget` uses `LifeCycle::subscribeToDestruction(...)` directly, with a no-argument callback. Remove the previous Widget-specific destruction provider, pointer-taking callback, and compatibility adapter. Existing Widget observers must migrate to the shared lifecycle subscription. `Entity` (and therefore `Entity3D`) also gains the lifecycle notification.
 
 ## Integration with the existing generic `spk::Pool<T>`
 
@@ -46,7 +46,7 @@ The renderer subscribes to each chunk `Entity3D` destruction, retaining the asso
 - Pool: fresh/reused/copy-obtained Leases, move/replace, release and reacquire counts, ordinary non-LifeCycle elements unaffected, callbacks outside state lock.
 - Pool destruction with an outstanding Lease: leased object survives; at Lease destruction it receives Release then Destruction without insertion into a dead pool.
 - Pool clear/destruction of idle objects: destruction without duplicate release.
-- Entity/Widget: destruction notifications and compatibility where existing Widget callbacks expect an object pointer.
+- Entity/Widget: direct destruction notifications through LifeCycle, with Widget subscribers migrated to no-argument callbacks and no legacy adapter.
 - Rendering: removal enqueues neighbors and cleans external resources; no use-after-free, duplicate rebuild or auto-rebind.
 
 ## Implementation slice

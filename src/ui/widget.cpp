@@ -111,7 +111,7 @@ namespace spk
 
 	Widget::~Widget()
 	{
-		_destructionProvider.trigger(this);
+		terminateLifeCycle();
 		while (!children().empty())
 		{
 			children().back()->clearParent();
@@ -414,8 +414,4 @@ namespace spk
 		_onFocusReleased(channel);
 	}
 
-	Widget::DestructionContract Widget::subscribeToDestruction(DestructionCallback callback)
-	{
-		return _destructionProvider.subscribe(std::move(callback));
-	}
 }

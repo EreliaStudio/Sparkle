@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "design_pattern/life_cycle.hpp"
 #include "exception.hpp"
 
 namespace spk
@@ -22,6 +23,22 @@ namespace spk
 		using Factory = std::function<Element *()>;
 
 	private:
+		static void _setAcquired(Element *element)
+		{
+			if constexpr (std::derived_from<Element, LifeCycle>)
+			{
+				static_cast<LifeCycle *>(element)->acquire();
+			}
+		}
+
+		static void _setReleased(Element *element)
+		{
+			if constexpr (std::derived_from<Element, LifeCycle>)
+			{
+				static_cast<LifeCycle *>(element)->release();
+			}
+		}
+
 		class State
 		{
 		private:
@@ -89,6 +106,15 @@ namespace spk
 				if (element == nullptr)
 				{
 					throw spk::Exception("Pool factory returned a null element");
+				}
+
+				try
+				{
+					_setReleased(element);
+				} catch (...)
+				{
+					delete element;
+					throw;
 				}
 
 				return element;
@@ -170,6 +196,14 @@ namespace spk
 					return;
 				}
 
+				try
+				{
+					_setReleased(element);
+				} catch (...)
+				{
+					// A failing subscriber must not prevent returning ownership.
+				}
+
 				if (auto state = _state.lock())
 				{
 					state->recycle(element);
@@ -201,6 +235,7 @@ namespace spk
 
 				try
 				{
+					_setAcquired(element);
 					*element = *other._element;
 				} catch (...)
 				{
@@ -354,6 +389,7 @@ namespace spk
 
 			try
 			{
+				_setAcquired(element);
 				std::invoke(
 					std::forward<TOnObtain>(onObtain),
 					*element,
