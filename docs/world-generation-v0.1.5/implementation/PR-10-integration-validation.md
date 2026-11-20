@@ -1,26 +1,21 @@
-# PR10 — End-to-end sample and release validation
+# PR10 — Démonstration complète, documentation et validation de release
+**Couche :** intégration + tests Graphics. **Dépendances :** PR00–PR09. **État :** cahier des charges.
 
-**Layer:** Integration + Graphics tests. **Dependencies:** PR07–PR09. **Status:** design draft.
+## Démonstrateur complet
+Construire un exemple reproductible utilisant Chunk générique, Voxel::Chunk et son Builder, Generator + passes, ChunkRequester et WorkerPool, WorldObserver, WorldStreamingSystem, ChunkCollection + ChunkFilter, Entity3D headless, et adaptateur Graphic avec Voxel::ChunkMesher.
 
-## Scope
-- Complete example: generic Chunk base, `TChunk::Builder` with voxel Volume builder, pass-based Generator finalizing the chunk only after all passes, collection with Entity3D, local Task requester, WorldObserver-driven streaming and event-driven Graphics adapter.
-- Show loading/unloading while moving a player, replacement of chunk data while keeping entity/component identity, and a headless equivalent with two observers.
-- Exercise an intentionally limited world (null outside bounds), plus signed-coordinate large sparse-space checks.
-- Update high-quality golden images for visible voxel surfaces, including cross-chunk transitions and renderer updates.
-- Ensure docs reflect the actual public API rather than draft spellings.
+Montrer un joueur qui se déplace entre chunks, un monde limité qui retourne nullopt, deux observateurs en headless, une édition de Volume reconstruite via Builder et un setVolume qui notifie la collection. L'entité est conservée lors du remplacement et détruite lors du déchargement.
 
-## Required tests
-- Run Core headless and Graphics integration suites on Windows/Linux CI with C++23 and clang-format.
-- Regression for coordinate floor, builder pass order and failed-finalization safety, cache-free unload, timeout supersession, late subscriber scan, chunk replacement, entity teardown and cross-chunk geometry.
-- No skipped goldens. Use Sparkle's built-in comparator, not Python.
-- Verify no graphics dependency in generic world-generation library and no unapproved protocol changes.
+## Vérifications de publication
+- Toutes les décisions documentées dans contracts.md correspondent au code et au comportement réellement testé, sans ancien unique_ptr<TChunk>, nullable Builder pointer, notifications coalescées dans Core, ni taille voxel indépendante pour Voxel::Chunk.
+- Test des trois issues de demande (TChunk, nullopt, échec), du statut Pending et du timeout supervisé, de la protection contre retours tardifs, du budget physique et de la durée de vie des dépendances du WorkerPool.
+- Test copie/déplacement des chunks sans transfert des abonnements, remplacement de la valeur stable dans ChunkFilter, abonnements collection et destruction Entity/Pool.
+- Tester frontières XYZ, dimensions non cubiques, négatives, moteurs headless, composants non graphiques, rebake automatique chunk+six voisins.
+- Golden images variées de blocs voisins, géométries opaques/translucides et angles de caméra ; comparateur interne Sparkle uniquement ; aucun golden ignoré.
+- clang-format, tests GoogleTest, CI Windows/Linux, documentation des APIs finales avec exemples compilables.
 
-## Exclusions
-No large default voxel terrain catalog, road/city/cave engine, app/game-specific rules, AI or gameplay networking.
+## Hors scope
+Aucun générateur géographique intégré (routes, villes, caves, biomes, macro-plans), aucune persistance automatique des modifications, aucun protocole réseau ni système de collision prêt à l'emploi.
 
-## Release gate
-All relevant CI passing and explicit maintainer approval. No merge without approval.
-
-## Delivery policy
-
-Draft only; implementation requires maintainer approval. Target `V0.1.5` in a dedicated PR. C++23, clang-format, Windows/Linux CI, tests appropriate to layer. No automatic merges and no unrelated API rewrite.
+## Validation
+Release uniquement après validation explicite du mainteneur. Ne fusionner aucune PR automatiquement.
