@@ -1,55 +1,39 @@
-# Generation extensibility — user-defined passes, not built-in worlds
+# Sparkle v0.1.5 — Passes applicatives et extensibilité
 
-## Philosophy
+## Principe
+Sparkle fournit l'infrastructure de chunks, mais pas le contenu d'un monde : relief, bruit, routes, villes, bâtiments, végétation, cavernes et mécanismes de gameplay sont écrits par l'application. Ni WorldPlan ni RegionPlan ni index global de métastructures obligatoires dans la version.
 
-Sparkle v0.1.5 provides **how** a chunk is created, loaded, stored and shown, not **what** is in the world. Terrain, caves, cities, roads, vegetation, geometry files and gameplay content are written by the consuming game. A single chunk may contain voxel terrain plus non-voxel foliage and any other data. Chunk contains **no mandatory Entity or Volume** and owns no coordinate.
+## Generator / données de génération
+Generator<TChunk,TGenerationData> reçoit ses passes dans l'ordre via addPass. Chaque passe virtuelle reçoit (TChunk::Builder&, ChunkCoordinate, TGenerationData&) ; une passe peut remplir seulement les données intermédiaires, une autre peut modifier le Builder. Le Builder est propre à une seule génération et finalise par build(), puis est consommé.
 
-The prior mandatory `WorldPlan`/`RegionPlan`, universal meta-structure index, city grammar, routing and cave-planning implementation are **withdrawn from the v0.1.5 core plan**. They may reappear later as generic optional utilities if specific user-written passes demonstrate a need.
+L'utilisateur choisit lui-même sa seed éventuelle, ses paramètres, son cache, sa logique de région et ses règles de synchronisation. Sparkle n'impose aucun cycle de vie, ni mutex, ni single seed dans GenerationData.
 
-## Pass collaboration
-
-`Generator<TChunk, TGenerationData>` has ordered virtual passes. Each generation creates a new `TGenerationData`. Passes can write intermediate plans into this local data for later passes, or read/write **persistent** generator-owned data via references held in it.
-
-A game might define:
-
+Illustration non normative :
 ~~~cpp
-struct MyGenerationData {
-    ChunkCoordinate coordinate;
-    WorldSeeds& seeds;                // Persisted configuration
-    RegionalCache& cache;             // Optional mutable shared data
-    HeightSamples heights;            // Per-request intermediate result
-    std::vector<BuildingPlan> plans;  // Per-request intermediate result
+struct ExampleGenerationData {
+    WorldSettings& settings;        // Stockage utilisateur
+    RegionCache& cache;             // Peut être mutable : synchronization utilisateur
+    HeightSamples heights;          // Intermédiaire par demande
+    std::vector<BuildingPlan> buildings;
 };
 
-// Example sequence, defined by the game rather than supplied by Sparkle:
-// HeightPlanningPass -> CityPlanningPass -> TerrainVoxelPass
-// -> BuildingRealizationPass -> VegetationPass
+// Les passes sont enregistrées par addPass dans cet ordre :
+// HeightPlanning -> StructurePlanning -> VoxelRealization.
+// apply(chunkBuilder, coordinate, data) est appelé à chaque passe.
 ~~~
 
-The contract does not oblige every pass to touch the chunk Builder. Stages can prepare data only. Users choose ordering, noise implementation, seed scopes, cache schemes, tie-breaking rules and how cross-chunk structures are described. They also ensure shared caches are thread-safe when needed.
+La reproductibilité des données pour un même ensemble de paramètres et coordonnées est un objectif strict des passes déterministes de l'exemple ; la bibliothèque ne rend pas un générateur arbitraire déterministe si ses données externes ne le sont pas. Les informations sur les grandes structures doivent être consultables depuis tous les chunks qu'elles traversent.
 
-## Cross-chunk continuity
+## Mondes finis
+Une demande de chunk hors limites peut retourner un std::optional<Builder> vide dès createChunkBuilder : les passes ne sont pas exécutées. Le Generator produit std::optional<TChunk>{} ; le ChunkRequester retourne Task::Completed avec un résultat vide. Ce résultat n'est pas un échec et reste enregistré comme absent seulement tant que la coordonnée est intéressante.
 
-If a tree, cave or building crosses a boundary, passes must derive the same underlying spatial feature regardless of requested chunk order. A user-defined cache or deterministic field can be shared through the generator. Spatial descriptors should be **queryable by every intersecting chunk**, rather than belonging only to the chunk requested first.
+## Surcouche voxel
+spk::Voxel::Chunk<SX,SY,SZ> contient une valeur de type Voxel::Volume de dimensions exactes SX×SY×SZ. Son Builder utilise le Voxel::Volume::Builder existant. On peut éditer le chunk par setVolume(nouveauVolume), qui notifie la collection ; l'ancien Volume demeure une valeur immuable valide.
 
-This is a **sample design requirement**, not an imposed `RegionPlan` API. The demonstration should include at least one feature crossing a chunk boundary to catch request-order bugs.
+spk::Voxel::ChunkMesher exploite l'API existante du Mesher ; il cherche les six voisins au moment du bake, et outsideCell() consulte leur volume quand une face sort du chunk. L'adaptateur graphique reconstruit sans différentiel de bord le chunk modifié et ses six voisins.
 
-## Finite and virtually unbounded worlds
+## Extension headless
+Toute Entity3D de chunk existe sans Graphic Engine. Le ChunkFilter<TChunk> est une référence non propriétaire vers le chunk de la collection ; un futur composant physique ou gameplay peut utiliser le même accès. Aucun composant de collision n'est fourni par cette release.
 
-The framework supports the entire signed 32-bit chunk coordinate domain, limited by numeric type and checked conversions. A game can constrain its world arbitrarily: `createChunkBuilder` may return `nullptr` outside bounds. The requester reports that as a successful no-chunk result; streamer must not spin forever requesting the same absent coordinate.
-
-## Example voxel integration
-
-A concrete `VoxelChunk` derives from the generic chunk type, holds one or more existing immutable `spk::Voxel::Volume` values, and may add unrelated game data. **`VoxelChunk::Builder`** holds the mutable draft, including a `Voxel::Volume::Builder` on which the generator passes operate. Only its outer `build()` finalizes the Volume(s) and the chunk. Voxels can be 0.5 world units or any chosen size; **chunk dimensions always describe world units**. Do not duplicate existing voxel storage.
-
-The optional graphical adapter bakes Geometry with `Voxel::Mesher` and binds a `Voxel::Renderer` on the chunk's Entity3D; other components/child entities may be added by game-specific systems. The generic framework has no rule that one chunk means one mesh or one graphic.
-
-## Not in the required implementation
-
-- Full procedural biomes, climate/weather or noise libraries.
-- Automated road or city layout, building architecture, pathfinding, cave synthesis.
-- Global hierarchical world/region planner classes and mandatory feature graphs.
-- Runtime save/load of edited terrain, character persistence or ownership semantics beyond the chunk entity.
-- A multiplayer transport protocol or a novel graphics pipeline.
-
-If later PRs add reusable spatial tools, they must be optional, motivated by demonstrated needs and independently testable; they must not be prerequisites for basic chunk generation.
+## Hors scope
+Aucun format de sauvegarde du terrain, aucun protocole réseau, aucune IA de géographie, aucune politique de génération d'Erelia ou d'un jeu donné.
