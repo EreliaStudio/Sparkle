@@ -218,27 +218,33 @@ namespace spk
 			return _chunks.empty();
 		}
 
-		[[nodiscard]] TChunk *tryGet(const ChunkCoordinate &coordinate) noexcept
+		// Output is a non-owning pointer to the stored chunk, or nullptr on failure.
+		[[nodiscard]] bool tryGet(const ChunkCoordinate &coordinate, TChunk *&chunk) noexcept
 		{
 			if (auto it = _chunks.find(coordinate); it != _chunks.end())
 			{
-				return &it->second._chunk;
+				chunk = &it->second._chunk;
+				return true;
 			}
-			return nullptr;
+			chunk = nullptr;
+			return false;
 		}
 
-		[[nodiscard]] const TChunk *tryGet(const ChunkCoordinate &coordinate) const noexcept
+		[[nodiscard]] bool tryGet(const ChunkCoordinate &coordinate, const TChunk *&chunk) const noexcept
 		{
 			if (auto it = _chunks.find(coordinate); it != _chunks.end())
 			{
-				return &it->second._chunk;
+				chunk = &it->second._chunk;
+				return true;
 			}
-			return nullptr;
+			chunk = nullptr;
+			return false;
 		}
 
 		[[nodiscard]] TChunk &at(const ChunkCoordinate &coordinate)
 		{
-			if (TChunk *chunk = tryGet(coordinate); chunk != nullptr)
+			TChunk *chunk = nullptr;
+			if (tryGet(coordinate, chunk))
 			{
 				return *chunk;
 			}
@@ -247,7 +253,8 @@ namespace spk
 
 		[[nodiscard]] const TChunk &at(const ChunkCoordinate &coordinate) const
 		{
-			if (const TChunk *chunk = tryGet(coordinate); chunk != nullptr)
+			const TChunk *chunk = nullptr;
+			if (tryGet(coordinate, chunk))
 			{
 				return *chunk;
 			}

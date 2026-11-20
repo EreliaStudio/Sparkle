@@ -67,7 +67,9 @@ TEST(ChunkCollectionTest, OwnsChunkByValueAndHeadlessEntitiesWithFilters)
 
 	auto &[key, entry] = *collection.begin();
 	EXPECT_EQ(key, coordinate);
-	EXPECT_EQ(&entry.chunk(), collection.tryGet(coordinate));
+	TestChunk *chunk = nullptr;
+	EXPECT_TRUE(collection.tryGet(coordinate, chunk));
+	EXPECT_EQ(&entry.chunk(), chunk);
 	EXPECT_EQ(entry.entity().parent(), &collection.root());
 	EXPECT_EQ(entry.entity().transform().position(), (spk::Vector3{-64.0f, 48.0f, 32.0f}));
 
@@ -80,7 +82,9 @@ TEST(ChunkCollectionTest, OwnsChunkByValueAndHeadlessEntitiesWithFilters)
 	const auto &immutable = std::as_const(collection);
 	EXPECT_EQ(immutable.at(coordinate).value(), 42);
 	EXPECT_EQ(immutable[coordinate].value(), 42);
-	EXPECT_EQ(immutable.tryGet(coordinate), &entry.chunk());
+	const TestChunk *constChunk = nullptr;
+	EXPECT_TRUE(immutable.tryGet(coordinate, constChunk));
+	EXPECT_EQ(constChunk, &entry.chunk());
 	EXPECT_EQ(immutable.begin()->second.chunk().value(), 42);
 }
 
@@ -89,13 +93,42 @@ TEST(ChunkCollectionTest, MissingCoordinateDoesNotCreateAnEntry)
 	spk::ChunkCollection<TestChunk> collection;
 	const Coordinate missing{1, 0, -1};
 	EXPECT_FALSE(collection.contains(missing));
-	EXPECT_EQ(collection.tryGet(missing), nullptr);
-	EXPECT_EQ(std::as_const(collection).tryGet(missing), nullptr);
+	TestChunk *chunk = nullptr;
+	EXPECT_FALSE(collection.tryGet(missing, chunk));
+	EXPECT_EQ(chunk, nullptr);
+	const TestChunk *constChunk = nullptr;
+	EXPECT_FALSE(std::as_const(collection).tryGet(missing, constChunk));
+	EXPECT_EQ(constChunk, nullptr);
 	EXPECT_THROW((void)collection.at(missing), spk::Exception);
 	EXPECT_THROW((void)collection[missing], spk::Exception);
 	EXPECT_THROW((void)std::as_const(collection).at(missing), spk::Exception);
 	EXPECT_THROW((void)std::as_const(collection)[missing], spk::Exception);
 	EXPECT_TRUE(collection.empty());
+}
+
+TEST(ChunkCollectionTest, TryGetReturnsStoredAddressAndClearsOutputOnMiss)
+{
+	spk::ChunkCollection<TestChunk> collection;
+	const Coordinate present{2, 1, -3};
+	const Coordinate missing{3, 1, -3};
+	collection.addChunk(present, TestChunk(5));
+
+	TestChunk *chunk = nullptr;
+	EXPECT_TRUE(collection.tryGet(present, chunk));
+	ASSERT_NE(chunk, nullptr);
+	EXPECT_EQ(chunk->value(), 5);
+	EXPECT_EQ(chunk, &collection.at(present));
+
+	EXPECT_FALSE(collection.tryGet(missing, chunk));
+	EXPECT_EQ(chunk, nullptr);
+
+	const TestChunk *constChunk = nullptr;
+	const auto &immutable = std::as_const(collection);
+	EXPECT_TRUE(immutable.tryGet(present, constChunk));
+	ASSERT_NE(constChunk, nullptr);
+	EXPECT_EQ(constChunk, &immutable.at(present));
+	EXPECT_FALSE(immutable.tryGet(missing, constChunk));
+	EXPECT_EQ(constChunk, nullptr);
 }
 
 TEST(ChunkCollectionTest, MapIterationIsLexicographicAndNonOwning)
@@ -157,7 +190,9 @@ TEST(ChunkCollectionTest, ReplacementPreservesChunkEntityComponentsAndSubscripti
 
 	collection.addChunk(coordinate, TestChunk(99));
 
-	EXPECT_EQ(collection.tryGet(coordinate), chunk);
+	TestChunk *located = nullptr;
+	EXPECT_TRUE(collection.tryGet(coordinate, located));
+	EXPECT_EQ(located, chunk);
 	EXPECT_EQ(&collection.begin()->second.entity(), entity);
 	EXPECT_EQ(entity->getComponent<spk::ChunkFilter<TestChunk>>(), filter);
 	EXPECT_EQ(entity->getComponent<MarkerComponent>(), marker);
@@ -182,7 +217,9 @@ TEST(ChunkCollectionTest, RemovingUnbindsFilterBeforeEntityDestruction)
 	auto destruction = entity.subscribeToDestruction([&]() {
 		++calls;
 		EXPECT_FALSE(collection.contains(coordinate));
-		EXPECT_EQ(collection.tryGet(coordinate), nullptr);
+		TestChunk *located = nullptr;
+		EXPECT_FALSE(collection.tryGet(coordinate, located));
+		EXPECT_EQ(located, nullptr);
 		EXPECT_EQ(filter->tryGet(), nullptr);
 		EXPECT_THROW((void)filter->chunk(), spk::Exception);
 		EXPECT_NE(entity.getComponent<MarkerComponent>(), nullptr);
