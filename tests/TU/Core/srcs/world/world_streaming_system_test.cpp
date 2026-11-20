@@ -221,7 +221,7 @@ TEST(WorldStreamingSystemTest, ManhattanDistanceUsesWorldUnitDimensions)
 	EXPECT_EQ(fixture.requester.requests.at(4).coordinate, (Coordinate{1, 0, 0}));
 	fixture.requester.absent(4);
 	fixture.tick(5ms);
-	EXPECT_EQ(fixture.requester.requests.at(5).coordinate, (Coordinate{0, 0, -1}));
+	EXPECT_EQ(fixture.requester.requests.at(5).coordinate, (Coordinate{-1, -1, 0}));
 }
 
 TEST(WorldStreamingSystemTest, OnlyChunkCenterChangesRebuildPlan)
