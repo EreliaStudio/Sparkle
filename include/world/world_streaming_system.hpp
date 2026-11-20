@@ -60,8 +60,11 @@ namespace spk
 				_unloadUnwantedChunks();
 			}
 
-			_scheduler.collect(context.time, _planner, _collection, _settings);
-			_scheduler.submit(context.time, _planner, _collection, _requester, _settings, [this]() {
+			const auto publish = [this](const ChunkCoordinate &coordinate, const TChunk &chunk) {
+				_collection.addChunk(coordinate, chunk);
+			};
+			_scheduler.collect(context.time, _planner, _settings, publish);
+			_scheduler.submit(context.time, _planner, _collection, _requester, _settings, publish, [this]() {
 				return engine() != nullptr;
 			});
 		}

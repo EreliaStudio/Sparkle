@@ -78,8 +78,8 @@ namespace spk::detail
 			_defer(request.coordinate, now, settings);
 		}
 
-		template <typename TSettings>
-		void _settle(InFlight &request, Duration now, const WorldInterestPlanner &plan, ChunkCollection<TChunk> &collection, const TSettings &settings)
+		template <typename TSettings, typename TPublish>
+		void _settle(InFlight &request, Duration now, const WorldInterestPlanner &plan, const TSettings &settings, TPublish &&publish)
 		{
 			if (request.obsolete || !plan.contains(request.coordinate))
 			{
@@ -95,7 +95,7 @@ namespace spk::detail
 			const auto &result = request.answer.result();
 			if (result.has_value())
 			{
-				collection.addChunk(request.coordinate, *result);
+				publish(request.coordinate, *result);
 			}
 			else
 			{
@@ -164,8 +164,8 @@ namespace spk::detail
 			}
 		}
 
-		template <typename TSettings>
-		void collect(Duration now, const WorldInterestPlanner &plan, ChunkCollection<TChunk> &collection, const TSettings &settings)
+		template <typename TSettings, typename TPublish>
+		void collect(Duration now, const WorldInterestPlanner &plan, const TSettings &settings, TPublish &&publish)
 		{
 			for (std::size_t index = 0; index < _inFlight.size();)
 			{
@@ -177,18 +177,19 @@ namespace spk::detail
 					continue;
 				}
 
-				_settle(request, now, plan, collection, settings);
+				_settle(request, now, plan, settings, publish);
 				_inFlight.erase(_inFlight.begin() + static_cast<std::ptrdiff_t>(index));
 			}
 		}
 
-		template <typename TSettings, typename TCanSubmit>
+		template <typename TSettings, typename TPublish, typename TCanSubmit>
 		void submit(
 			Duration now,
 			const WorldInterestPlanner &plan,
 			ChunkCollection<TChunk> &collection,
 			ChunkRequester<TChunk> &requester,
 			const TSettings &settings,
+			TPublish &&publish,
 			TCanSubmit &&canSubmit)
 		{
 			for (std::size_t index = 0; index < plan.coordinates().size(); ++index)
@@ -205,7 +206,7 @@ namespace spk::detail
 				}
 
 				_start(coordinate, now, plan, requester, settings);
-				collect(now, plan, collection, settings);
+				collect(now, plan, settings, publish);
 			}
 		}
 
