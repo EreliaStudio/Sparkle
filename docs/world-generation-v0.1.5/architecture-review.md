@@ -6,7 +6,7 @@
 
 - Generic inheritable `Chunk<SizeX,SizeY,SizeZ>`, spatial units, static coordinate conversions and **no stored coordinate**.
 - `ChunkCollection<TChunk>` ordered by coordinates with one headless Entity3D per loaded chunk; replacement preserves entity; removal destroys entity and components.
-- One coalesced *synchronize this chunk* notification during Engine update; initial consumer binding scans all loaded entries; no dedicated removal notification required for the generic renderer.
+- One immediate chunk-changed notification emitted by the collection; the renderer queues unique coordinates until the next render. Entity3D destruction is observed via `spk::LifeCycle` for neighbor invalidation, without a second generic collection event.
 - `Generator<TChunk,TGenerationData>` with concrete `TChunk::Builder`; passes apply to builder and generation data; **`build()` returns TChunk by value and consumes the builder**. The Builder also exposes `load(const TChunk&)` for rebuilding from existing data, mirroring `Voxel::Volume::Builder`. Multiple seeds and shared mutable persistent data are developer-owned.
 - Task-based swappable chunk requester; per-observer XYZ radius; Registry-based WorldObserver; multi-observer streaming with concurrency cap, timeouts/versions, nearest-first priority and no retention outside interest.
 - Graphics is optional; voxel example uses existing Volume::Builder then immutable Volume, Mesher and Renderer.
@@ -22,11 +22,15 @@
 
 ### B. Entity ownership and Engine binding (PR02)
 
+**Resolved:** collection owns a root Entity3D with chunk children; explicit attach/detach/rebind to EngineHeadless preserves existing entities. Context-mismatched systems unbind and never reconnect automatically. Exact teardown ordering remains to validate.
+
 1. Should ChunkCollection own **one root Entity3D** parented to the EngineHeadless root, with each chunk Entity3D a child? Or attach per-chunk entities directly to the Engine root?
 2. What is the collection-to-Engine binding API, and how do attachment, detachment, rebind, destruction order and already-existing chunks work?
 3. When a chunk is replaced, the Entity3D remains; the previous chunk may be destroyed before sync flush. Rendering components must not retain references to freed old data. Decide resource lifetime strategy.
 
 ### C. Map-like public API and update thread (PR02)
+
+**Resolved:** `operator[]` and `at` return references and throw when absent, `tryGet` returns a nullable pointer, `contains` returns bool. Iteration yields `[coordinate, entry]`, with `chunk()` and `entity()` accessors. The collection emits immediately; render-specific deduplication occurs at render time.
 
 1. `operator[](coordinate)` must **not insert**. Decide whether it returns nullable `TChunk*` or a controlled Entry handle; `at(coordinate)` throws.
 2. What do iterators expose (chunk, entity, read-only Entry view)? Ensure callers cannot change map keys or entity ownership.
@@ -46,6 +50,10 @@
 1. On a chunk's **removal**, its Entity3D destroys its components, but neighbors may require rebuilt voxel boundary faces. Decide how remaining neighbors are marked dirty or detected while keeping the agreed single chunk-sync event.
 2. On addition/replacement, avoid needless remeshing unless neighboring boundaries are affected. Exact policy can be Graphics-specific; the generic ChunkCollection should not know voxel occlusion rules.
 3. Implement the adapter through the *actual* existing Mesher/Renderer component APIs, not a fictional direct `setVolume` call.
+
+## Agreed Core lifecycle prerequisite
+
+See [LifeCycle/Pool integration](life-cycle-design.md). The existing `Pool::Lease` weak-state mechanism already handles pool destruction with outstanding leases. We retain this ownership model and add protected lifecycle transitions at obtain/recycle/final destruction for lifecycle-aware elements. `Widget` and `Entity` migrate to the three independent events (Acquisition, Release, Destruction); `Entity` destruction enables the graphics neighbor invalidation above.
 
 ## Non-blocking: settle only when implementation needs it
 
