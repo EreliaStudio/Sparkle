@@ -104,3 +104,4 @@
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
 #include "world/world_observer.hpp"
+#include "world/world_streaming_system.hpp"
