@@ -1,23 +1,16 @@
-# PR07 — Concrete voxel chunk and headless generation example
+# PR07 — spk::Voxel::Chunk et démonstrateur headless
+**Couche :** Voxel Core. **Dépendances :** PR01, PR02, PR03, PR06. **État :** cahier des charges.
 
-**Layer:** Voxel Core/example. **Dependencies:** PR03 and PR06. **Status:** design draft.
+## Contrat
+- Fournir la surcouche générique spk::Voxel::Chunk<SX,SY,SZ> héritant de spk::Chunk<SX,SY,SZ>, contenant exactement un spk::Voxel::Volume de dimensions **SX × SY × SZ voxels**. Aucune résolution différente ni facteur d'échelle caché dans v0.1.5.
+- Le chunk reste modifiable, sans imposer shared_ptr<const Data> à Chunk ni à Voxel::Chunk. Seul le Volume est une valeur immuable qui partage déjà ses Data via shared_ptr<const Data>.
+- Un setter setVolume(Volume) remplace la valeur du Volume et appelle explicitement notifyChunkEdition() ; les autres setters ajoutés par un jeu suivent le même contrat. On n'édite pas les cellules d'un Volume publié sur place.
+- Voxel::Chunk::Builder utilise le Voxel::Volume::Builder existant avec dimensions exactes, supporte load(existingChunk), et build() produit Voxel::Chunk par valeur en consommant le Builder.
+- Échantillon d'une génération déterministe multi-passes avec ses propres seeds/références dans TGenerationData ; pas de seed, plan, cache ou gestion de cohérence inter-chunks imposés par Sparkle. Au moins une structure de démonstration traversant une frontière de chunk.
+- Un chunk voxel copié ou déplacé n'emporte pas les abonnements de l'autre chunk ; sa collection relayant l'événement est correctement abonnée.
 
-## Scope
-- Introduce an example `VoxelChunk` deriving from `Chunk<...>`, holding existing immutable `Voxel::Volume` data and declaring a nested **`VoxelChunk::Builder`** to construct its complete contents. Users may add other volumes and non-voxel data.
-- Voxel size and number of cells are **independent of physical chunk dimensions**, which are world units.
-- Provide a small generator with ordered passes on **`VoxelChunk::Builder&`**: sample heights/noise, mutate its nested `Voxel::Volume::Builder`, add one deterministic cross-chunk feature, then return the entire VoxelChunk **by value** in `VoxelChunk::Builder::build()`, consuming the builder. Also provide `VoxelChunk::Builder::load(const VoxelChunk&)`, delegating to the nested `Voxel::Volume::Builder::load(const Volume&)` as appropriate.
-- Demonstrate multiple configurable seeds and fresh TGenerationData sharing optional generator-owned structures.
-- Handle finite-world limits using null `createChunkBuilder` where useful, without coupling the generic requester to voxels.
-
-## Required tests
-- Existing `Voxel::Volume::Builder` and `Definition::Registry` are reused **inside the chunk Builder**; no duplicate voxel storage and no in-place edits of a published immutable Volume.
-- Neighbor continuity in XYZ including negatives, same seed/coordinate independent of request ordering, separate seeds vary output; the passes never receive published immutable Volumes as mutable inputs.
-- Multi-chunk sample feature is coherent across boundary and works when either side generated first.
-- Headless only; no volume-to-renderer direct API assumption.
+## Tests
+Dimensions 8×16×32 correspondent exactement au Volume, setter notify et remplace sans éditer l'ancien Volume, builder.load, nullopt hors carte, cohérence aux coordonnées négatives et avec ordre inverse, une structure multi-chunks reproductible, lecture depuis ChunkFilter en EngineHeadless, pas de dépendance graphique.
 
 ## Exclusions
-No mandatory city/road/cave/biome algorithms, Graphics, persistence or new serialization format.
-
-## Delivery policy
-
-Draft only; implementation requires maintainer approval. Target `V0.1.5` in a dedicated PR. C++23, clang-format, Windows/Linux CI, tests appropriate to layer. No automatic merges and no unrelated API rewrite.
+Aucun mesher (PR08), aucun moteur de terrain/biome/route/ville/caverne standard, aucun format voxel supplémentaire.
