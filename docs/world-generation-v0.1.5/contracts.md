@@ -50,8 +50,11 @@ spk::ChunkCollection<GameChunk> chunks;
 chunks.addChunk({14, 16, 18}, std::make_unique<GameChunk>());
 GameChunk& chunk = chunks.at({14, 16, 18}); // Throws if missing.
 
-// Accessor spellings and exact Entry iteration representation remain under review.
-for (const auto& [coordinate, entry] : chunks) { /* inspect */ }
+for (const auto& [coordinate, entry] : chunks) {
+    const GameChunk& item = entry.chunk();
+    const spk::Entity3D& entity = entry.entity();
+}
+GameChunk* optional = chunks.tryGet({14, 16, 18});
 ~~~
 
 ~~~cpp
@@ -105,7 +108,7 @@ No built-in WorldPlan/RegionPlan, procedural city/road/cave generator hierarchy,
 1. Exact namespace and public class names, including whether a future `World` will wrap `ChunkCollection`.
 2. **Resolved:** `operator[]` and `at` return `TChunk&` and throw for missing keys; `tryGet` returns nullable pointer; `contains` tests presence. None inserts.
 3. **Resolved:** iteration provides `[coordinate, entry]` with `entry.chunk()` and `entry.entity()` references, without exposing unique ownership.
-4. Precise Engine binding/Entity3D parentage and safe teardown order, especially when the collection is destroyed or rebound.
+4. **Resolved conceptually:** root collection Entity3D parents chunk entities; explicit attach/detach/rebind to EngineHeadless preserves them; mismatched systems unbind and require explicit rebind. Exact teardown order still needs validation.
 5. Exact `Task::Answer` return syntax, retry/error/terminal-null bookkeeping and timeout configuration, based on existing Sparkle APIs.
 6. **Resolved:** collection notifies immediately; renderer queues coordinates and flushes them once before each render.
 7. Builder return and reconstruction are **decided**: `TChunk::Builder::build()` returns `TChunk` by value and consumes the builder; `load(const TChunk&)` can initialize a fresh builder from an existing chunk. Only precise constructors and ownership of `createChunkBuilder()` remain to confirm.
