@@ -45,6 +45,7 @@ namespace spk
 			std::unique_ptr<Entity3D> _entity;
 			typename TChunk::EditionContract _editionContract;
 
+		public:
 			explicit ChunkEntry(TChunk chunk, Entity3D &root, const ChunkCoordinate &coordinate) :
 				_chunk(std::move(chunk)),
 				_entity(std::make_unique<Entity3D>("Chunk", &root))
@@ -109,6 +110,7 @@ namespace spk
 		Container _chunks;
 		EditionProvider _editionProvider;
 		std::optional<std::thread::id> _attachedThread;
+		std::map<ChunkCoordinate, std::size_t> _activeChunkEditions;
 
 		void _checkEngineThread() const
 		{
@@ -116,6 +118,27 @@ namespace spk
 				std::this_thread::get_id() != *_attachedThread)
 			{
 				throw spk::Exception("ChunkCollection must be mutated on its Engine thread");
+			}
+		}
+
+		void _forwardEdition(const ChunkCoordinate &coordinate)
+		{
+			_checkEngineThread();
+			++_activeChunkEditions[coordinate];
+			try
+			{
+				_editionProvider.trigger(coordinate);
+			} catch (...)
+			{
+				if (--_activeChunkEditions.at(coordinate) == 0)
+				{
+					_activeChunkEditions.erase(coordinate);
+				}
+				throw;
+			}
+			if (--_activeChunkEditions.at(coordinate) == 0)
+			{
+				_activeChunkEditions.erase(coordinate);
 			}
 		}
 
@@ -130,10 +153,16 @@ namespace spk
 		ChunkCollection(ChunkCollection &&) = delete;
 		ChunkCollection &operator=(ChunkCollection &&) = delete;
 
-		~ChunkCollection()
+		~ChunkCollection() noexcept
 		{
-			clear();
-			detach();
+			try
+			{
+				clear();
+				detach();
+			} catch (...)
+			{
+				// Entry and root members remain RAII-owned during teardown.
+			}
 		}
 
 		[[nodiscard]] Entity3D &root() noexcept
@@ -212,8 +241,7 @@ namespace spk
 			try
 			{
 				it->second._editionContract = it->second._chunk.subscribeToChunkEdition([this, coordinate]() {
-					_checkEngineThread();
-					_editionProvider.trigger(coordinate);
+					_forwardEdition(coordinate);
 				});
 			} catch (...)
 			{
@@ -226,6 +254,10 @@ namespace spk
 		[[nodiscard]] bool removeChunk(const ChunkCoordinate &coordinate)
 		{
 			_checkEngineThread();
+			if (_activeChunkEditions.contains(coordinate))
+			{
+				throw spk::Exception("Cannot remove a chunk during its own edition notification");
+			}
 			auto entry = _chunks.extract(coordinate);
 			return !entry.empty();
 		}
