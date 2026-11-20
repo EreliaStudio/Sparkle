@@ -1,22 +1,16 @@
-# PR01 — Inheritable Chunk and world-unit coordinate conversions
+# PR01 — Chunk générique : dimensions, coordonnées et édition
+**Couche :** Core. **Dépendances :** aucune. **État :** cahier des charges.
 
-**Layer:** Core. **Dependencies:** none. **Status:** design draft.
+## API et invariants
+- spk::Chunk<SX,SY,SZ>, base héritable, trois dimensions strictement positives fixées au compile-time et exprimées en unités du monde. Pas de coordonnée membre, pas d'Entity, pas de Volume ni de données imposées.
+- ChunkCoordinate : trois entiers signés, s'appuyant sur les types vectoriels Sparkle ; conversion worldToChunkCoordinate en floor sur les coordonnées négatives ; chunkCoordinateToWorld donne l'origine ; worldToLocalCoordinate donne les coordonnées relatives.
+- Calculs robustes aux limites int32 et aux débordements ; ne pas utiliser la troncature C++ pour les nombres négatifs.
+- Chaque Chunk porte son propre fournisseur d'événement d'édition. subscribeToChunkEdition(...) et méthode protégée notifyChunkEdition() appelée explicitement dans chaque setter d'une classe dérivée. Les données sont modifiables ; aucune immutabilité obligatoire.
+- Construction par copie ou déplacement = nouvelle instance avec fournisseur d'événements propre, sans importer d'abonnements. Affectation = ne copie jamais les abonnements de la source et préserve ceux déjà attachés à l'objet destination ; la collection signale séparément le remplacement.
+- Les méthodes de construction/affectation ne notifient pas arbitrairement le contexte d'un autre chunk ; les setters utilisateur font les notifications à chaque modification réussie.
 
-## Scope
-- Minimal `spk::Chunk<SizeX, SizeY, SizeZ>` inheritable base (dimensions fixed at compile time and expressed in **world units**, not voxel counts).
-- Static helpers `worldToChunkCoordinate(Vector3)`, `chunkCoordinateToWorld(ChunkCoordinate)`, `worldToLocalCoordinate(Vector3,ChunkCoordinate)`.
-- Signed XYZ 32-bit chunk coordinate value type/alias, using existing Sparkle math facilities wherever possible.
-- **No coordinate stored in Chunk**; no Entity3D, Volume, generator logic or renderer in the base.
-- Floor conversion for negatives and checked arithmetic; clear origin and inclusive boundary rules.
-
-## Required tests
-- Examples (70,-2,35) => chunk (2,-1,1), origin (64,-32,32), local (6,30,3) for dimensions (32,32,32).
-- Exact positive/negative boundaries, -1, large limits, invalid dimensions, round-trip properties.
-- Derived non-voxel chunk compiled and used with the same helpers.
+## Tests
+Conversions et round trips avec (-1), zéro, frontières exactes, grands nombres et trois dimensions distinctes. Chunk générique non voxel. Copie, déplacement, affectation, indépendance et conservation des abonnements de la destination. Setters qui notifient exactement quand attendu.
 
 ## Exclusions
-No collection, procedural terrain, region framework or rendering.
-
-## Delivery policy
-
-Draft only; implementation requires maintainer approval. Target `V0.1.5` in a dedicated PR. C++23, clang-format, Windows/Linux CI, tests appropriate to layer. No automatic merges and no unrelated API rewrite.
+Pas de TChunk::Builder dans cette base, pas de stockage, de génération ni de Graphics.
