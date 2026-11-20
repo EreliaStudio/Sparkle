@@ -50,8 +50,8 @@ TEST(ChunkCoordinateTest, RoundTripsExactIntegerWorldPositions)
 		const spk::ChunkWorldCoordinate origin = TestChunk::chunkCoordinateToWorld(coordinate);
 		EXPECT_EQ(TestChunk::worldToChunkCoordinate(origin), coordinate);
 		EXPECT_EQ(TestChunk::worldToLocalCoordinate(origin), (spk::Vector3Int{0, 0, 0}));
-		EXPECT_EQ(TestChunk::worldToChunkCoordinate(spk::ChunkWorldCoordinate{
-			origin.x + 31, origin.y + 15, origin.z + 7}), coordinate);
+		const spk::ChunkWorldCoordinate last{origin.x + 31, origin.y + 15, origin.z + 7};
+		EXPECT_EQ(TestChunk::worldToChunkCoordinate(last), coordinate);
 	}
 }
 
