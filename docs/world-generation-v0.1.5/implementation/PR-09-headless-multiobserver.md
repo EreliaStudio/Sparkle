@@ -1,22 +1,18 @@
-# PR09 — Headless multi-observer and pluggable requester validation
+# PR09 — Validation headless avec plusieurs observateurs et requesters
+**Couche :** Core/intégration. **Dépendances :** PR05, PR06, PR07. **État :** cahier des charges.
 
-**Layer:** Core/integration. **Dependencies:** PR06, PR07. **Status:** design draft.
+## Scénario
+- Un EngineHeadless, plusieurs Entity3D portant WorldObserver, plus des entités non observatrices. ChunkCollection<TChunk> possédant une Entity3D et son ChunkFilter par chunk.
+- Source locale et mock de source distante/fichier, utilisant la même interface ChunkRequester et les mêmes std::optional<TChunk> ; aucune implémentation de protocole réseau.
+- Déplacement des joueurs, union et séparation des intérêts, chargement/déchargement, modifications de chunk et notification via la collection ; des composants headless attachés aux entités persistent lors d'un remplacement.
 
-## Scope
-- Exercise one EngineHeadless with multiple independently moving Entity3D players each bearing WorldObserver, plus entities lacking the component.
-- A fake remote requester returns chunks with shuffled/delayed completions; optionally emulate no-chunk outside a finite domain, failed Task and timeouts. Do **not** add a new networking protocol.
-- Verify union of observers, minimum interested-distance prioritization, deduplication, request supersession and immediate unload.
-- Document extension path for later multiple worlds/UUID without implementing it.
-
-## Required tests
-- Two observers share chunks, move apart, reunite and detach; no missing shared chunks or incorrect early unload.
-- Late old response after timeout and after exit/re-entry rejected.
-- Stress test concurrent completions and Engine-thread publication; no invalid Entity3D accesses.
-- Stable deterministic voxel sample through fake requester across different ordering.
+## Tests
+- Priorité Manhattan avec dimensions anisotropes ; priorité au plus proche des observateurs intéressés et stabilité des égalités.
+- Aucune recomposition des demandes lors des mouvements intra-chunk ; recomposition sur franchissement/rayon/ajout/retrait d'observateur.
+- Réponse tardive après timeout ou sortie/réentrée rejetée, aucune annulation, budget physique sous jobs bloqués, politique de retry et rétablissement.
+- Résultat nullopt mémorisé pour la zone d'intérêt courante uniquement ; demande renouvelée après sortie puis réentrée ; Task::Failed distinct.
+- Décomposition headless des entités et des contrats sans composant graphique ; test de shutdown avec tâches encore pendantes et absence de mutation depuis worker.
+- Déterminisme des chunks de démonstration indépendamment de l'ordre de génération.
 
 ## Exclusions
-No multiplayer transport, player network synchronization, world UUID plumbing, save system or authoring of city/road algorithms.
-
-## Delivery policy
-
-Draft only; implementation requires maintainer approval. Target `V0.1.5` in a dedicated PR. C++23, clang-format, Windows/Linux CI, tests appropriate to layer. No automatic merges and no unrelated API rewrite.
+Aucun serveur réel, aucun protocole, aucun UUID multimonde, aucun nouveau cache de chunk.
