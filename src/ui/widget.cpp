@@ -89,9 +89,6 @@ namespace spk
 			return result;
 		})
 	{
-		_legacyDestructionBridge = LifeCycle::subscribeToDestruction([this]() {
-			_destructionProvider.trigger(this);
-		});
 		const Style &style = defaultStyle;
 		(void)style;
 		_initialActivationContract = subscribeToActivation([this]() {
@@ -417,8 +414,4 @@ namespace spk
 		_onFocusReleased(channel);
 	}
 
-	Widget::DestructionContract Widget::subscribeToDestruction(DestructionCallback callback)
-	{
-		return _destructionProvider.subscribe(std::move(callback));
-	}
 }

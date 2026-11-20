@@ -66,7 +66,7 @@ namespace spk
 		std::unique_ptr<RootWidget> root;
 		std::array<Widget *, FocusMode::ChannelCount> focusedWidgets{};
 		std::array<ActivableTrait::DeactivationContract, FocusMode::ChannelCount> focusedWidgetDeactivationContracts{};
-		std::array<Widget::DestructionContract, FocusMode::ChannelCount> focusedWidgetDestructionContracts{};
+		std::array<spk::LifeCycle::DestructionContract, FocusMode::ChannelCount> focusedWidgetDestructionContracts{};
 		spk::Keyboard keyboard;
 		spk::Mouse mouse;
 		spk::Profiler profiler;
@@ -143,7 +143,7 @@ namespace spk
 			_impl->focusedWidgetDeactivationContracts[index] = widget->subscribeToDeactivation([impl = _impl.get(), index, widget]() {
 				impl->forgetFocus(index, widget, true);
 			});
-			_impl->focusedWidgetDestructionContracts[index] = widget->subscribeToDestruction([impl = _impl.get(), index, widget](Widget *) {
+			_impl->focusedWidgetDestructionContracts[index] = widget->subscribeToDestruction([impl = _impl.get(), index, widget]() {
 				impl->forgetFocus(index, widget, false);
 			});
 		} catch (...)

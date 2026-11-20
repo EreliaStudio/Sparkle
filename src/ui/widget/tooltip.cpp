@@ -188,7 +188,7 @@ namespace spk
 					hide();
 				}
 			});
-			_targetDestructionContract = observed->subscribeToDestruction([this, observed](Widget *) {
+			_targetDestructionContract = observed->subscribeToDestruction([this, observed]() {
 				if (_target == observed)
 				{
 					setTarget(nullptr);
