@@ -21,6 +21,11 @@ namespace spk
 		}
 	}
 
+	Entity::~Entity()
+	{
+		finalizeLifeCycle();
+	}
+
 	void Entity::_followParentContext(Entity *parent)
 	{
 		_parentContextEditionContract.resign();

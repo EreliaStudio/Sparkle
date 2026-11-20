@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 
+#include "design_pattern/life_cycle.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/geometry_state_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
@@ -28,7 +29,8 @@ namespace spk
 				   public ComponentCollection,
 				   public BehaviourCollection,
 				   public GeometryStateTrait,
-				   public UpdatableTrait
+				   public UpdatableTrait,
+				   public LifeCycle
 	{
 	private:
 		using BehaviourCollection::registerBehaviour;
@@ -49,6 +51,7 @@ namespace spk
 
 	public:
 		Entity(const std::string &name, Entity *parent = nullptr);
+		~Entity() override;
 
 		template <typename TComponentType, typename... TArgs>
 			requires std::derived_from<TComponentType, Component>

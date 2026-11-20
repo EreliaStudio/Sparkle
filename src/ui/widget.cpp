@@ -89,6 +89,9 @@ namespace spk
 			return result;
 		})
 	{
+		_legacyDestructionBridge = LifeCycle::subscribeToDestruction([this]() {
+			_destructionProvider.trigger(this);
+		});
 		const Style &style = defaultStyle;
 		(void)style;
 		_initialActivationContract = subscribeToActivation([this]() {
@@ -111,7 +114,7 @@ namespace spk
 
 	Widget::~Widget()
 	{
-		_destructionProvider.trigger(this);
+		finalizeLifeCycle();
 		while (!children().empty())
 		{
 			children().back()->clearParent();

@@ -26,6 +26,7 @@
 #include "core/platform/chronometer.hpp"
 #include "core/platform/timer.hpp"
 #include "design_pattern/contract_provider.hpp"
+#include "design_pattern/life_cycle.hpp"
 #include "design_pattern/singleton.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/geometry_state_trait.hpp"
