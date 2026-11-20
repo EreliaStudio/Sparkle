@@ -49,6 +49,10 @@ The renderer subscribes to each chunk `Entity3D` destruction, retaining the asso
 - Entity/Widget: destruction notifications and compatibility where existing Widget callbacks expect an object pointer.
 - Rendering: removal enqueues neighbors and cleans external resources; no use-after-free, duplicate rebuild or auto-rebind.
 
+## Implementation slice
+
+This prerequisite is now **PR00**: [LifeCycle, Entity/Widget and Pool integration](implementation/PR-00-lifecycle.md). PR02 depends on it because chunk Entity3D removal needs destruction callbacks; PR08 also consumes them. The existing Pool/Lease lifetime mechanics remain unchanged.
+
 ## Delivery
 
 Document this as a small, separate Core integration prerequisite before Graphics PR08 and validate against the actual C++ APIs before implementing. No implementation is included in the docs PR.
