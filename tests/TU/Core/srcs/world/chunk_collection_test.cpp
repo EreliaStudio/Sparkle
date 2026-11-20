@@ -75,7 +75,9 @@ TEST(ChunkCollectionTest, OwnsChunkByValueAndHeadlessEntitiesWithFilters)
 
 	const auto *filter = entry.entity().getComponent<spk::ChunkFilter<TestChunk>>();
 	ASSERT_NE(filter, nullptr);
-	EXPECT_EQ(filter->tryGet(), &entry.chunk());
+	const TestChunk *filteredChunk = nullptr;
+	EXPECT_TRUE(filter->tryGet(filteredChunk));
+	EXPECT_EQ(filteredChunk, &entry.chunk());
 	EXPECT_EQ(&filter->chunk(), &entry.chunk());
 	EXPECT_EQ(filter->owner(), &entry.entity());
 
@@ -196,7 +198,9 @@ TEST(ChunkCollectionTest, ReplacementPreservesChunkEntityComponentsAndSubscripti
 	EXPECT_EQ(&collection.begin()->second.entity(), entity);
 	EXPECT_EQ(entity->getComponent<spk::ChunkFilter<TestChunk>>(), filter);
 	EXPECT_EQ(entity->getComponent<MarkerComponent>(), marker);
-	EXPECT_EQ(filter->tryGet(), chunk);
+	TestChunk *filteredChunk = nullptr;
+	EXPECT_TRUE(filter->tryGet(filteredChunk));
+	EXPECT_EQ(filteredChunk, chunk);
 	EXPECT_EQ(chunk->value(), 99);
 	EXPECT_EQ(destructionCalls, 0);
 	EXPECT_TRUE(destruction.isValid());
@@ -220,7 +224,9 @@ TEST(ChunkCollectionTest, RemovingUnbindsFilterBeforeEntityDestruction)
 		TestChunk *located = nullptr;
 		EXPECT_FALSE(collection.tryGet(coordinate, located));
 		EXPECT_EQ(located, nullptr);
-		EXPECT_EQ(filter->tryGet(), nullptr);
+		TestChunk *filteredChunk = &filter->chunk();
+		EXPECT_FALSE(filter->tryGet(filteredChunk));
+		EXPECT_EQ(filteredChunk, nullptr);
 		EXPECT_THROW((void)filter->chunk(), spk::Exception);
 		EXPECT_NE(entity.getComponent<MarkerComponent>(), nullptr);
 	});

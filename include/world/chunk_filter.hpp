@@ -29,14 +29,16 @@ namespace spk
 		{
 		}
 
-		[[nodiscard]] TChunk *tryGet() noexcept
+		[[nodiscard]] bool tryGet(TChunk *&chunk) noexcept
 		{
-			return _chunk;
+			chunk = _chunk;
+			return chunk != nullptr;
 		}
 
-		[[nodiscard]] const TChunk *tryGet() const noexcept
+		[[nodiscard]] bool tryGet(const TChunk *&chunk) const noexcept
 		{
-			return _chunk;
+			chunk = _chunk;
+			return chunk != nullptr;
 		}
 
 		[[nodiscard]] TChunk &chunk()
