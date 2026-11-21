@@ -9,7 +9,22 @@ namespace spk
 	{
 	private:
 		Chronometer _chronometer;
-		mutable State _state = State::Off;
+
+	protected:
+		void _startClock() override
+		{
+			_chronometer.start();
+		}
+
+		[[nodiscard]] Duration _stopClock() override
+		{
+			return _chronometer.stop();
+		}
+
+		void _resetClock() override
+		{
+			_chronometer.reset();
+		}
 
 	public:
 		explicit SystemTimer(Duration duration) :
@@ -17,36 +32,14 @@ namespace spk
 		{
 		}
 
-		void reset() override
-		{
-			_chronometer.reset();
-			_state = State::Off;
-		}
-
-		void start() override
-		{
-			_chronometer.start();
-			_state = State::Running;
-		}
-
-		[[nodiscard]] Duration stop() override
-		{
-			_state = State::Off;
-			return _chronometer.stop();
-		}
-
 		[[nodiscard]] Duration elapsedTime() const override
 		{
 			return _chronometer.elapsedTime();
 		}
 
-		[[nodiscard]] State state() const override
+		[[nodiscard]] bool isElapsed() const override
 		{
-			if (_state == State::Running && elapsedTime() >= duration())
-			{
-				_state = State::TimedOut;
-			}
-			return _state;
+			return elapsedTime() >= duration();
 		}
 	};
 }

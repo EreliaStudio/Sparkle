@@ -8,29 +8,17 @@ namespace spk
 	{
 	private:
 		Duration _elapsed = Duration::zero();
-		mutable State _state = State::Off;
+
+	protected:
+		void _resetClock() override
+		{
+			_elapsed = Duration::zero();
+		}
 
 	public:
 		explicit ControlledTimer(Duration duration) :
 			Timer(duration)
 		{
-		}
-
-		void reset() override
-		{
-			_elapsed = Duration::zero();
-			_state = State::Off;
-		}
-
-		void start() override
-		{
-			_state = State::Running;
-		}
-
-		[[nodiscard]] Duration stop() override
-		{
-			_state = State::Off;
-			return _elapsed;
 		}
 
 		void advance(Duration deltaTime)
@@ -39,7 +27,7 @@ namespace spk
 			{
 				throw spk::Exception("ControlledTimer cannot advance backwards");
 			}
-			if (_state != State::Off)
+			if (state() != State::Off)
 			{
 				_elapsed += deltaTime;
 			}
@@ -50,13 +38,9 @@ namespace spk
 			return _elapsed;
 		}
 
-		[[nodiscard]] State state() const override
+		[[nodiscard]] bool isElapsed() const override
 		{
-			if (_state == State::Running && _elapsed >= duration())
-			{
-				_state = State::TimedOut;
-			}
-			return _state;
+			return elapsedTime() >= duration();
 		}
 	};
 }

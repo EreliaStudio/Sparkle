@@ -79,3 +79,59 @@ TEST(TimerTest, SystemTimerUsesRealSteadyClock)
 	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
 	EXPECT_EQ(timer.elapsedTime(), 0ms);
 }
+
+TEST(TimerTest, SharedStateMachineUsesVirtualElapsedPredicate)
+{
+	spk::ControlledTimer clock(10ms);
+	spk::Timer &timer = clock;
+
+	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
+	EXPECT_FALSE(timer.isElapsed());
+
+	timer.start();
+	clock.advance(9ms);
+	EXPECT_FALSE(timer.isElapsed());
+	EXPECT_EQ(timer.state(), spk::Timer::State::Running);
+
+	clock.advance(1ms);
+	EXPECT_TRUE(timer.isElapsed());
+	EXPECT_EQ(timer.state(), spk::Timer::State::TimedOut);
+
+	clock.advance(3ms);
+	EXPECT_EQ(timer.elapsedTime(), 13ms);
+	EXPECT_EQ(timer.state(), spk::Timer::State::TimedOut);
+
+	EXPECT_EQ(timer.stop(), 13ms);
+	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
+	EXPECT_TRUE(timer.isElapsed());
+
+	timer.start();
+	EXPECT_EQ(timer.state(), spk::Timer::State::TimedOut);
+
+	timer.reset();
+	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
+	EXPECT_EQ(timer.elapsedTime(), 0ms);
+	EXPECT_FALSE(timer.isElapsed());
+}
+
+TEST(TimerTest, SharedStateMachineSupportsPolymorphicSystemTimer)
+{
+	spk::SystemTimer clock(1ms);
+	spk::Timer &timer = clock;
+
+	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
+	timer.start();
+	std::this_thread::sleep_for(5ms);
+	EXPECT_TRUE(timer.isElapsed());
+	EXPECT_EQ(timer.state(), spk::Timer::State::TimedOut);
+
+	const auto stopped = timer.stop();
+	EXPECT_GE(stopped, 1ms);
+	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
+	std::this_thread::sleep_for(3ms);
+	EXPECT_EQ(timer.elapsedTime(), stopped);
+
+	timer.reset();
+	EXPECT_EQ(timer.elapsedTime(), 0ms);
+	EXPECT_EQ(timer.state(), spk::Timer::State::Off);
+}
