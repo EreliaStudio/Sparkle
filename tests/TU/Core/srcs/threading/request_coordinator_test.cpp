@@ -205,3 +205,48 @@ TEST(RequestCoordinatorTest, OptionalEmptyResultIsAValidCompletion)
 	});
 	EXPECT_TRUE(absent);
 }
+
+TEST(RequestCoordinatorTest, SubmissionReservesBudgetBeforeReturningAnAnswer)
+{
+	Coordinator coordinator(1, 10ms);
+	spk::Task<int> first;
+	spk::Task<int> rejected;
+	EXPECT_TRUE(coordinator.request(1, 0ms, [&]() {
+		EXPECT_EQ(coordinator.inFlightCount(), 1u);
+		EXPECT_FALSE(coordinator.request(2, 0ms, [&]() {
+			return rejected.answer();
+		}));
+		return first.answer();
+	}));
+	first.validate(3);
+	coordinator.collect(1ms, [](int key, int value) {
+		EXPECT_EQ(key, 1);
+		EXPECT_EQ(value, 3);
+	});
+	EXPECT_EQ(coordinator.inFlightCount(), 0u);
+}
+
+TEST(RequestCoordinatorTest, RetainedInterestsInvalidateWithoutFreeingPhysicalBudget)
+{
+	Coordinator coordinator(1, 10ms);
+	spk::Task<int> unwanted;
+	spk::Task<int> wanted;
+	ASSERT_TRUE(coordinator.request(1, 0ms, [&]() {
+		return unwanted.answer();
+	}));
+	coordinator.retain([](int key) {
+		return key != 1;
+	});
+	EXPECT_EQ(coordinator.inFlightCount(), 1u);
+	EXPECT_FALSE(coordinator.request(2, 1ms, [&]() {
+		return wanted.answer();
+	}));
+
+	unwanted.validate(5);
+	coordinator.collect(2ms, [](int, int) {
+		FAIL() << "Invalidated answer must not publish";
+	});
+	EXPECT_TRUE(coordinator.request(2, 2ms, [&]() {
+		return wanted.answer();
+	}));
+}

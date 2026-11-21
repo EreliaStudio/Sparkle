@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -17,8 +16,8 @@
 
 namespace spk
 {
-	// Owns only state associated with submitted keys. There is no pending
-	// queue: callers walk their own priority plan and offer eligible keys.
+	// Does not queue requests: callers offer keys in priority order.
+	// Expired and invalidated workers retain their physical budget until settled.
 	template <typename TKey, typename TResult>
 	class RequestCoordinator
 	{
@@ -36,17 +35,24 @@ namespace spk
 			SubmissionFailed
 		};
 
-		// Returning nullopt disables retry until the key is invalidated.
+		// nullopt disables further attempts until the key is invalidated.
 		using RetryPolicy = std::function<std::optional<Duration>(const TKey &, Failure)>;
 
 	private:
+		enum class Phase
+		{
+			Submitting,
+			Active,
+			Waiting,
+			Disabled
+		};
+
 		struct Request
 		{
-			std::uint64_t generation = 0;
-			std::optional<Id> active;
-			std::optional<Duration> retryAt;
-			bool submitting = false;
-			bool disabled = false;
+			std::uint64_t generation;
+			Phase phase = Phase::Submitting;
+			Id id = 0;
+			Duration retryAt = Duration::zero();
 		};
 
 		std::map<TKey, Request> _requests;
@@ -58,7 +64,15 @@ namespace spk
 		RetryPolicy _retryPolicy;
 		std::uint64_t _lastGeneration = 0;
 
-		void _defer(const TKey &key, std::uint64_t generation, Failure reason, Duration now)
+		void _invalidate(const Request &request) noexcept
+		{
+			if (request.phase == Phase::Active)
+			{
+				_supervisor.invalidate(request.id);
+			}
+		}
+
+		void _fail(const TKey &key, std::uint64_t generation, Failure reason, Duration now)
 		{
 			auto it = _requests.find(key);
 			if (it == _requests.end() || it->second.generation != generation)
@@ -66,34 +80,32 @@ namespace spk
 				return;
 			}
 
-			it->second.active.reset();
-			it->second.submitting = false;
-			it->second.disabled = true;
-			it->second.retryAt.reset();
-
-			const std::optional<Duration> delay = _retryPolicy ? _retryPolicy(key, reason) : std::nullopt;
-			it = _requests.find(key);
-			if (it == _requests.end() || it->second.generation != generation)
+			// Disable first: the user-supplied policy may reenter the coordinator.
+			it->second.phase = Phase::Disabled;
+			const auto delay = _retryPolicy ? _retryPolicy(key, reason) : std::nullopt;
+			if (!delay.has_value())
 			{
 				return;
 			}
-			if (delay.has_value())
+			if (*delay < Duration::zero())
 			{
-				if (*delay < Duration::zero())
-				{
-					throw spk::Exception("RequestCoordinator retry delay cannot be negative");
-				}
+				throw spk::Exception("RequestCoordinator retry delay cannot be negative");
+			}
+
+			it = _requests.find(key);
+			if (it != _requests.end() && it->second.generation == generation)
+			{
+				it->second.phase = Phase::Waiting;
 				it->second.retryAt = now + *delay;
-				it->second.disabled = false;
 			}
 		}
 
 		void _timeoutRequest(const TKey &key, Id id)
 		{
-			const auto it = _requests.find(key);
-			if (it != _requests.end() && it->second.active == id)
+			auto it = _requests.find(key);
+			if (it != _requests.end() && it->second.phase == Phase::Active && it->second.id == id)
 			{
-				_defer(key, it->second.generation, Failure::Timeout, _now);
+				_fail(key, it->second.generation, Failure::Timeout, _now);
 			}
 		}
 
@@ -125,10 +137,7 @@ namespace spk
 			auto it = _requests.find(key);
 			if (it != _requests.end())
 			{
-				if (it->second.active.has_value())
-				{
-					_supervisor.invalidate(*it->second.active);
-				}
+				_invalidate(it->second);
 				_requests.erase(it);
 			}
 		}
@@ -136,21 +145,14 @@ namespace spk
 		template <typename TPredicate>
 		void retain(TPredicate &&isWanted)
 		{
-			for (auto it = _requests.begin(); it != _requests.end();)
-			{
-				if (!isWanted(it->first))
+			std::erase_if(_requests, [this, &isWanted](const auto &entry) {
+				if (isWanted(entry.first))
 				{
-					if (it->second.active.has_value())
-					{
-						_supervisor.invalidate(*it->second.active);
-					}
-					it = _requests.erase(it);
+					return false;
 				}
-				else
-				{
-					++it;
-				}
-			}
+				_invalidate(entry.second);
+				return true;
+			});
 		}
 
 		void invalidateAll()
@@ -166,18 +168,17 @@ namespace spk
 			_supervisor.collect([this, now, &onSuccess](Id id, const Answer &answer) {
 				for (auto it = _requests.begin(); it != _requests.end(); ++it)
 				{
-					if (it->second.active != id)
+					if (it->second.phase != Phase::Active || it->second.id != id)
 					{
 						continue;
 					}
+					const TKey key = it->first;
 					if (answer.status() == Status::Failed)
 					{
-						const TKey key = it->first;
-						_defer(key, it->second.generation, Failure::TaskFailed, now);
+						_fail(key, it->second.generation, Failure::TaskFailed, now);
 					}
 					else
 					{
-						const TKey key = it->first;
 						_requests.erase(it);
 						if constexpr (std::is_void_v<TResult>)
 						{
@@ -193,34 +194,27 @@ namespace spk
 			});
 		}
 
-		// Returns true only when a physical task has been admitted.
-		// Submission exceptions are handled as a policy-driven failure.
+		// A synchronous submission reserves budget too, including reentrant calls.
 		template <typename TSubmit>
 		[[nodiscard]] bool request(const TKey &key, Duration now, TSubmit &&submit)
 		{
-			if (_supervisor.inFlightCount() + _submitting >= _maxInFlight)
+			if (inFlightCount() >= _maxInFlight)
 			{
 				return false;
 			}
 
-			auto [it, inserted] = _requests.try_emplace(key);
-			(void)inserted;
-			Request &record = it->second;
-			if (record.active.has_value() || record.submitting || record.disabled ||
-				(record.retryAt.has_value() && now < *record.retryAt))
+			auto it = _requests.find(key);
+			if (it != _requests.end() && (it->second.phase != Phase::Waiting || now < it->second.retryAt))
 			{
 				return false;
 			}
-
 			if (_lastGeneration == std::numeric_limits<std::uint64_t>::max())
 			{
 				throw spk::Exception("RequestCoordinator generation identifier exhausted");
 			}
 
 			const std::uint64_t generation = ++_lastGeneration;
-			record.generation = generation;
-			record.submitting = true;
-			record.retryAt.reset();
+			_requests.insert_or_assign(key, Request{generation});
 			++_submitting;
 			bool submitting = true;
 			try
@@ -234,11 +228,12 @@ namespace spk
 					[this, key](Id timedOut) {
 						_timeoutRequest(key, timedOut);
 					});
+
 				it = _requests.find(key);
-				if (it != _requests.end() && it->second.generation == generation && it->second.submitting)
+				if (it != _requests.end() && it->second.generation == generation)
 				{
-					it->second.active = id;
-					it->second.submitting = false;
+					it->second.phase = Phase::Active;
+					it->second.id = id;
 				}
 				else
 				{
@@ -251,7 +246,7 @@ namespace spk
 				{
 					--_submitting;
 				}
-				_defer(key, generation, Failure::SubmissionFailed, now);
+				_fail(key, generation, Failure::SubmissionFailed, now);
 				return false;
 			}
 		}
