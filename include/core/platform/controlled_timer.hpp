@@ -36,11 +36,5 @@ namespace spk
 		[[nodiscard]] Duration elapsedTime() const override
 		{
 			return _elapsed;
-		}
-
-		[[nodiscard]] bool isElapsed() const override
-		{
-			return elapsedTime() >= duration();
-		}
-	};
+		}	};
 }

@@ -64,7 +64,10 @@ namespace spk
 		}
 
 		[[nodiscard]] virtual Duration elapsedTime() const = 0;
-		[[nodiscard]] virtual bool isElapsed() const = 0;
+		[[nodiscard]] bool isElapsed() const
+		{
+			return elapsedTime() >= duration();
+		}
 
 		[[nodiscard]] State state() const
 		{
