@@ -1,15 +1,18 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <map>
 #include <optional>
 #include <set>
+#include <vector>
 
 #include "core/context/update_context.hpp"
 #include "engine/system.hpp"
 #include "exception.hpp"
-#include "threading/request_coordinator.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_requester.hpp"
 #include "world/detail/world_interest_planner.hpp"
@@ -29,16 +32,38 @@ namespace spk
 
 	private:
 		using Duration = std::chrono::steady_clock::duration;
-		using Coordinator = RequestCoordinator<ChunkCoordinate, std::optional<TChunk>>;
+		using Answer = typename ChunkRequester<TChunk>::Answer;
+		using Status = typename Task<std::optional<TChunk>>::Status;
+
+		struct PendingRequest
+		{
+			std::uint64_t generation;
+			Duration deadline;
+			std::optional<Answer> answer;
+		};
 
 		ChunkCollection<TChunk> &_collection;
 		ChunkRequester<TChunk> &_requester;
 		Settings _settings;
 		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _collectionContextContract;
 		detail::WorldInterestPlanner _planner;
-		Coordinator _requests;
+
+		// Only the current request for a coordinate can publish its result.
+		std::map<ChunkCoordinate, PendingRequest> _pending;
+		// Old workers cannot be cancelled and still consume the physical budget.
+		std::vector<Answer> _retired;
+		std::map<ChunkCoordinate, Duration> _retryAt;
 		std::set<ChunkCoordinate> _absent;
-		std::optional<Duration> _lastUpdateTime;
+		std::size_t _submitting = 0;
+		std::uint64_t _lastGeneration = 0;
+
+		void _retire(PendingRequest &request)
+		{
+			if (request.answer.has_value() && request.answer->status() == Status::Pending)
+			{
+				_retired.push_back(std::move(*request.answer));
+			}
+		}
 
 		void _unloadUnwantedChunks()
 		{
@@ -60,8 +85,20 @@ namespace spk
 				return;
 			}
 
-			_requests.retain([this](const ChunkCoordinate &coordinate) {
-				return _planner.contains(coordinate);
+			for (auto it = _pending.begin(); it != _pending.end();)
+			{
+				if (!_planner.contains(it->first))
+				{
+					_retire(it->second);
+					it = _pending.erase(it);
+				}
+				else
+				{
+					++it;
+				}
+			}
+			std::erase_if(_retryAt, [this](const auto &entry) {
+				return !_planner.contains(entry.first);
 			});
 			std::erase_if(_absent, [this](const ChunkCoordinate &coordinate) {
 				return !_planner.contains(coordinate);
@@ -69,11 +106,122 @@ namespace spk
 			_unloadUnwantedChunks();
 		}
 
-		void _updateClock(Duration now)
+		void _collectRetired()
 		{
-			const Duration delta = _lastUpdateTime.has_value() && now > *_lastUpdateTime ? now - *_lastUpdateTime : Duration::zero();
-			_lastUpdateTime = now;
-			_requests.advance(delta);
+			std::erase_if(_retired, [](const Answer &answer) {
+				return answer.status() != Status::Pending;
+			});
+		}
+
+		void _collectPending(Duration now)
+		{
+			// Publishing can invoke user callbacks and invalidate other requests.
+			// Snapshot generations so such callbacks cannot invalidate iterators.
+			std::vector<std::pair<ChunkCoordinate, std::uint64_t>> snapshot;
+			snapshot.reserve(_pending.size());
+			for (const auto &[coordinate, request] : _pending)
+			{
+				if (request.answer.has_value())
+				{
+					snapshot.emplace_back(coordinate, request.generation);
+				}
+			}
+
+			for (const auto &[coordinate, generation] : snapshot)
+			{
+				auto it = _pending.find(coordinate);
+				if (it == _pending.end() || it->second.generation != generation)
+				{
+					continue;
+				}
+
+				const Status status = it->second.answer->status();
+				if (status == Status::Pending && now < it->second.deadline)
+				{
+					continue;
+				}
+
+				if (status == Status::Completed)
+				{
+					Answer answer = std::move(*it->second.answer);
+					_pending.erase(it);
+					if (engine() != nullptr && _planner.contains(coordinate))
+					{
+						const auto &result = answer.result();
+						if (result.has_value())
+						{
+							_collection.addChunk(coordinate, *result);
+						}
+						else
+						{
+							_absent.insert(coordinate);
+						}
+					}
+				}
+				else
+				{
+					// A timed-out task remains alive, but its result is obsolete.
+					if (status == Status::Pending)
+					{
+						_retire(it->second);
+					}
+					_pending.erase(it);
+					if (engine() != nullptr && _planner.contains(coordinate))
+					{
+						_retryAt.insert_or_assign(coordinate, now + _settings.retryDelay);
+					}
+				}
+			}
+		}
+
+		void _submit(const ChunkCoordinate &coordinate, Duration now)
+		{
+			if (_pending.contains(coordinate) || inFlightCount() >= _settings.maxInFlight)
+			{
+				return;
+			}
+			if (const auto it = _retryAt.find(coordinate); it != _retryAt.end() && now < it->second)
+			{
+				return;
+			}
+			if (_lastGeneration == std::numeric_limits<std::uint64_t>::max())
+			{
+				throw spk::Exception("World streaming generation identifier exhausted");
+			}
+
+			const std::uint64_t generation = ++_lastGeneration;
+			_pending.emplace(coordinate, PendingRequest{generation, now + _settings.timeout, std::nullopt});
+			_retryAt.erase(coordinate);
+			++_submitting;
+			bool submitting = true;
+			try
+			{
+				Answer answer = _requester.request(coordinate);
+				--_submitting;
+				submitting = false;
+
+				auto it = _pending.find(coordinate);
+				if (it != _pending.end() && it->second.generation == generation)
+				{
+					it->second.answer.emplace(std::move(answer));
+				}
+				else if (answer.status() == Status::Pending)
+				{
+					_retired.push_back(std::move(answer));
+				}
+			} catch (...)
+			{
+				if (submitting)
+				{
+					--_submitting;
+				}
+				auto it = _pending.find(coordinate);
+				if (it != _pending.end() && it->second.generation == generation)
+				{
+					_pending.erase(it);
+					_retryAt.insert_or_assign(coordinate, now + _settings.retryDelay);
+				}
+			}
 		}
 
 		void _updateState(UpdateContext &context) override
@@ -84,39 +232,24 @@ namespace spk
 			}
 
 			_refreshInterests();
-			_updateClock(context.time);
+			_collectRetired();
+			_collectPending(context.time);
 
-			const auto publish = [this](const ChunkCoordinate &coordinate, const std::optional<TChunk> &result) {
-				if (engine() == nullptr || !_planner.contains(coordinate))
-				{
-					return;
-				}
-				if (result.has_value())
-				{
-					_collection.addChunk(coordinate, *result);
-				}
-				else
-				{
-					_absent.insert(coordinate);
-				}
-			};
-
-			_requests.collect(context.time, publish);
-			for (const ChunkCoordinate &coordinate : _planner.coordinates())
+			// Index-based iteration remains valid if a publication detaches the system.
+			for (std::size_t index = 0; engine() != nullptr && index < _planner.coordinates().size(); ++index)
 			{
-				if (engine() == nullptr || _requests.inFlightCount() >= _settings.maxInFlight)
+				if (inFlightCount() >= _settings.maxInFlight)
 				{
 					break;
 				}
+				const ChunkCoordinate coordinate = _planner.coordinates()[index];
 				if (_absent.contains(coordinate) || _collection.contains(coordinate))
 				{
 					continue;
 				}
 
-				(void)_requests.request(coordinate, context.time, [this, &coordinate]() {
-					return _requester.request(coordinate);
-				});
-				_requests.collect(context.time, publish);
+				_submit(coordinate, context.time);
+				_collectPending(context.time);
 			}
 		}
 
@@ -128,14 +261,11 @@ namespace spk
 			_settings(settings),
 			_planner(TChunk::Size, [](const Vector3 &world) {
 				return TChunk::worldToChunkCoordinate(world);
-			}),
-			_requests(_settings.maxInFlight, _settings.timeout, [this](const ChunkCoordinate &, typename Coordinator::Failure) {
-				return std::optional<Duration>(_settings.retryDelay);
 			})
 		{
-			if (_settings.retryDelay <= Duration::zero())
+			if (_settings.maxInFlight == 0 || _settings.timeout <= Duration::zero() || _settings.retryDelay <= Duration::zero())
 			{
-				throw spk::Exception("World streaming requires a positive retry delay");
+				throw spk::Exception("World streaming requires a positive budget, timeout and retry delay");
 			}
 			_collectionContextContract = _collection.root().subscribeToContextEdition(
 				[this](EngineHeadless *const &, EngineHeadless *const &next) {
@@ -167,9 +297,13 @@ namespace spk
 			}
 			if (next == nullptr)
 			{
-				_requests.invalidateAll();
+				for (auto &[coordinate, request] : _pending)
+				{
+					_retire(request);
+				}
+				_pending.clear();
+				_retryAt.clear();
 				_absent.clear();
-				_lastUpdateTime.reset();
 				_planner.reset();
 			}
 			System::attach(next);
@@ -177,7 +311,9 @@ namespace spk
 
 		[[nodiscard]] std::size_t inFlightCount() const noexcept
 		{
-			return _requests.inFlightCount();
+			return _retired.size() + _submitting + std::count_if(_pending.begin(), _pending.end(), [](const auto &entry) {
+				return entry.second.answer.has_value();
+			});
 		}
 
 		[[nodiscard]] std::uint64_t planRevision() const noexcept

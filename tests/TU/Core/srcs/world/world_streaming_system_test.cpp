@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <functional>
 #include <future>
 #include <memory>
 #include <stdexcept>
@@ -60,6 +61,7 @@ namespace
 
 		std::vector<Request> requests;
 		bool failSynchronously = false;
+		std::function<void()> onSubmit;
 
 		[[nodiscard]] Answer request(const Coordinate &coordinate) override
 		{
@@ -71,6 +73,10 @@ namespace
 			auto task = std::make_shared<Task>();
 			Answer answer = task->answer();
 			requests.push_back(Request{coordinate, std::move(task)});
+			if (onSubmit)
+			{
+				onSubmit();
+			}
 			return answer;
 		}
 
@@ -620,4 +626,40 @@ TEST(WorldStreamingSystemTest, RejectsInvalidSettingsAndImplicitEngineSwitches)
 	spk::EngineHeadless other;
 	EXPECT_THROW(streamer.attach(&other), spk::Exception);
 	EXPECT_EQ(streamer.engine(), &fixture.engine);
+}
+
+TEST(WorldStreamingSystemTest, DetachingDuringSubmissionRetiresWorkerAndRetainsPhysicalBudget)
+{
+	Fixture fixture;
+	spk::Entity3D player("player");
+	addObserver(fixture.engine, player, {0.0f, 0.0f, 0.0f});
+	Streamer &streamer = fixture.start({.maxInFlight = 1});
+
+	bool detachOnce = true;
+	fixture.requester.onSubmit = [&]() {
+		if (detachOnce)
+		{
+			detachOnce = false;
+			EXPECT_EQ(streamer.inFlightCount(), 1u);
+			streamer.attach(nullptr);
+		}
+	};
+
+	fixture.tick(0ms);
+	EXPECT_EQ(streamer.engine(), nullptr);
+	EXPECT_EQ(streamer.inFlightCount(), 1u);
+	ASSERT_EQ(fixture.requester.requests.size(), 1u);
+
+	streamer.attach(&fixture.engine);
+	fixture.tick(1ms);
+	EXPECT_EQ(fixture.requester.requests.size(), 1u);
+
+	fixture.requester.complete(0, 100);
+	fixture.tick(2ms);
+	EXPECT_FALSE(fixture.collection.contains({0, 0, 0}));
+	ASSERT_EQ(fixture.requester.requests.size(), 2u);
+
+	fixture.requester.complete(1, 200);
+	fixture.tick(3ms);
+	EXPECT_EQ(fixture.collection.at({0, 0, 0}).value(), 200);
 }
