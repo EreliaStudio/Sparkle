@@ -18,8 +18,6 @@ namespace spk
 		};
 
 	private:
-		Chronometer _chrono;
-		mutable State _state = State::Off;
 		Duration _duration;
 
 	public:
@@ -32,40 +30,15 @@ namespace spk
 			}
 		}
 
-		void reset()
-		{
-			_chrono.reset();
-			_state = State::Off;
-		}
+		virtual ~Timer() = default;
 
-		void start()
-		{
-			_chrono.start();
-			_state = State::Running;
-		}
+		virtual void reset() = 0;
+		virtual void start() = 0;
+		[[nodiscard]] virtual Duration stop() = 0;
+		[[nodiscard]] virtual Duration elapsedTime() const = 0;
+		[[nodiscard]] virtual State state() const = 0;
 
-		[[nodiscard]] Duration stop()
-		{
-			_state = State::Off;
-			return _chrono.stop();
-		}
-
-		[[nodiscard]] Duration elapsedTime() const
-		{
-			return _chrono.elapsedTime();
-		}
-
-		[[nodiscard]] State state() const
-		{
-			if (_state == State::Running && elapsedTime() >= _duration)
-			{
-				_state = State::TimedOut;
-			}
-
-			return _state;
-		}
-
-		[[nodiscard]] const Duration &duration() const
+		[[nodiscard]] const Duration &duration() const noexcept
 		{
 			return _duration;
 		}

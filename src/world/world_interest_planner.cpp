@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <utility>
+#include <vector>
 
 #include "engine/registry.hpp"
 #include "exception.hpp"
@@ -13,7 +14,8 @@ namespace spk::detail
 {
 	WorldInterestPlanner::WorldInterestPlanner(Vector3Int dimensions, WorldToChunk worldToChunk) :
 		_dimensions(dimensions),
-		_worldToChunk(worldToChunk)
+		_worldToChunk(worldToChunk),
+		_coordinates(PriorityComparator{&_priorities})
 	{
 		if (_dimensions.x <= 0 || _dimensions.y <= 0 || _dimensions.z <= 0 || _worldToChunk == nullptr)
 		{
@@ -70,19 +72,16 @@ namespace spk::detail
 		}
 
 		std::vector<ChunkCoordinate> coordinates;
-		std::set<ChunkCoordinate> membership;
 		coordinates.reserve(priorities.size());
 		for (const auto &[coordinate, priority] : priorities)
 		{
 			(void)priority;
 			coordinates.push_back(coordinate);
-			membership.insert(coordinate);
 		}
-		std::stable_sort(coordinates.begin(), coordinates.end(), [&priorities](const ChunkCoordinate &left, const ChunkCoordinate &right) {
-			return priorities.at(left) < priorities.at(right);
-		});
-		_coordinates = std::move(coordinates);
-		_membership = std::move(membership);
+
+		_priorities = std::move(priorities);
+		_coordinates.clear();
+		_coordinates.pushBack(std::move(coordinates));
 	}
 
 	bool WorldInterestPlanner::refresh(EngineHeadless *engine)
@@ -104,16 +103,16 @@ namespace spk::detail
 	{
 		_observers.clear();
 		_coordinates.clear();
-		_membership.clear();
+		_priorities.clear();
 		_hasPlan = false;
 	}
 
 	bool WorldInterestPlanner::contains(const ChunkCoordinate &coordinate) const
 	{
-		return _membership.contains(coordinate);
+		return _priorities.contains(coordinate);
 	}
 
-	const std::vector<ChunkCoordinate> &WorldInterestPlanner::coordinates() const noexcept
+	const PriorityQueue<ChunkCoordinate, WorldInterestPlanner::PriorityComparator> &WorldInterestPlanner::coordinates() const noexcept
 	{
 		return _coordinates;
 	}

@@ -2,9 +2,9 @@
 
 #include <cstdint>
 #include <map>
-#include <set>
 #include <vector>
 
+#include "container/priority_queue.hpp"
 #include "math/vector3.hpp"
 #include "world/chunk_coordinate.hpp"
 #include "world/chunk_interest.hpp"
@@ -33,11 +33,23 @@ namespace spk
 			using Observers = std::map<const WorldObserver *, ObserverState>;
 			using Priorities = std::map<ChunkCoordinate, std::uint64_t>;
 
+			struct PriorityComparator
+			{
+				const Priorities *priorities;
+
+				[[nodiscard]] bool operator()(const ChunkCoordinate &left, const ChunkCoordinate &right) const
+				{
+					const auto leftPriority = priorities->at(left);
+					const auto rightPriority = priorities->at(right);
+					return leftPriority == rightPriority ? left < right : leftPriority < rightPriority;
+				}
+			};
+
 			Vector3Int _dimensions;
 			WorldToChunk _worldToChunk;
 			Observers _observers;
-			std::vector<ChunkCoordinate> _coordinates;
-			std::set<ChunkCoordinate> _membership;
+			Priorities _priorities;
+			PriorityQueue<ChunkCoordinate, PriorityComparator> _coordinates;
 			bool _hasPlan = false;
 			std::uint64_t _revision = 0;
 
@@ -52,7 +64,7 @@ namespace spk
 			void reset();
 
 			[[nodiscard]] bool contains(const ChunkCoordinate &coordinate) const;
-			[[nodiscard]] const std::vector<ChunkCoordinate> &coordinates() const noexcept;
+			[[nodiscard]] const PriorityQueue<ChunkCoordinate, PriorityComparator> &coordinates() const noexcept;
 			[[nodiscard]] std::uint64_t revision() const noexcept;
 		};
 	}
