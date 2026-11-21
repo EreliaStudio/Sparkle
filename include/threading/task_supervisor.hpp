@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -8,7 +7,6 @@
 #include <list>
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include "core/platform/timer.hpp"
 #include "exception.hpp"
@@ -16,8 +14,7 @@
 
 namespace spk
 {
-	// All methods other than Task::Answer completion are called on the owning
-	// thread. No business callback is subscribed to the worker's completion.
+	// Answers and timers are polled on the owning thread, never on workers.
 	template <typename TResult>
 	class TaskSupervisor
 	{
@@ -33,7 +30,6 @@ namespace spk
 			Id id;
 			Answer answer;
 			std::unique_ptr<Timer> timer;
-			TimeoutCallback onTimeout;
 			bool valid = true;
 		};
 
@@ -42,7 +38,7 @@ namespace spk
 		bool _collecting = false;
 
 	public:
-		[[nodiscard]] Id watch(Answer answer, std::unique_ptr<Timer> timer, TimeoutCallback onTimeout = {})
+		[[nodiscard]] Id watch(Answer answer, std::unique_ptr<Timer> timer)
 		{
 			if (timer == nullptr)
 			{
@@ -54,7 +50,7 @@ namespace spk
 			}
 			timer->start();
 			const Id id = ++_lastId;
-			_entries.push_back(Entry{id, std::move(answer), std::move(timer), std::move(onTimeout)});
+			_entries.push_back(Entry{id, std::move(answer), std::move(timer)});
 			return id;
 		}
 
@@ -90,53 +86,46 @@ namespace spk
 			}
 		}
 
-		// Polling and callbacks occur only on the caller's thread. Completed
-		// entries are removed before dispatch, so callbacks can add new work.
+		// Only tasks present at entry are collected. Callbacks may add tasks.
 		template <typename TCallback>
-		void collect(TCallback &&onSettled)
+		void collect(TCallback &&onSettled, const TimeoutCallback &onTimeout = {})
 		{
-			if (_collecting)
+			if (_collecting || _entries.empty())
 			{
 				return;
 			}
 			_collecting = true;
+			const Id lastId = _entries.back().id;
 			try
 			{
-				std::vector<Id> snapshot;
-				snapshot.reserve(_entries.size());
-				for (const Entry &entry : _entries)
+				for (auto it = _entries.begin(); it != _entries.end();)
 				{
-					snapshot.push_back(entry.id);
-				}
+					auto current = it++;
+					const bool last = current->id == lastId;
 
-				for (Id id : snapshot)
-				{
-					auto it = std::find_if(_entries.begin(), _entries.end(), [id](const Entry &entry) {
-						return entry.id == id;
-					});
-					if (it == _entries.end())
+					if (current->answer.status() != Status::Pending)
 					{
-						continue;
-					}
-
-					if (it->answer.status() != Status::Pending)
-					{
-						const bool valid = it->valid;
-						Answer answer = it->answer;
-						_entries.erase(it);
+						const bool valid = current->valid;
+						const Id id = current->id;
+						Answer answer = current->answer;
+						_entries.erase(current);
 						if (valid)
 						{
 							onSettled(id, answer);
 						}
 					}
-					else if (it->valid && it->timer->state() == Timer::State::TimedOut)
+					else if (current->valid && current->timer->state() == Timer::State::TimedOut)
 					{
-						it->valid = false;
-						TimeoutCallback callback = std::move(it->onTimeout);
-						if (callback)
+						current->valid = false;
+						if (onTimeout)
 						{
-							callback(id);
+							onTimeout(current->id);
 						}
+					}
+
+					if (last)
+					{
+						break;
 					}
 				}
 			} catch (...)

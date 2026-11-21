@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -16,8 +17,7 @@
 
 namespace spk
 {
-	// Does not queue requests: callers offer keys in priority order.
-	// Expired and invalidated workers retain their physical budget until settled.
+	// Callers supply keys in priority order; no secondary queue is maintained.
 	template <typename TKey, typename TResult>
 	class RequestCoordinator
 	{
@@ -35,7 +35,6 @@ namespace spk
 			SubmissionFailed
 		};
 
-		// nullopt disables further attempts until the key is invalidated.
 		using RetryPolicy = std::function<std::optional<Duration>(const TKey &, Failure)>;
 
 	private:
@@ -60,9 +59,15 @@ namespace spk
 		std::size_t _maxInFlight;
 		std::size_t _submitting = 0;
 		Duration _timeout;
-		Duration _now = Duration::zero();
 		RetryPolicy _retryPolicy;
 		std::uint64_t _lastGeneration = 0;
+
+		[[nodiscard]] auto _find(Id id)
+		{
+			return std::find_if(_requests.begin(), _requests.end(), [id](const auto &entry) {
+				return entry.second.phase == Phase::Active && entry.second.id == id;
+			});
+		}
 
 		void _invalidate(const Request &request) noexcept
 		{
@@ -80,7 +85,8 @@ namespace spk
 				return;
 			}
 
-			// Disable first: the user-supplied policy may reenter the coordinator.
+			// A retry policy can reenter this coordinator. Disable first, then
+			// verify the generation again before applying the policy's answer.
 			it->second.phase = Phase::Disabled;
 			const auto delay = _retryPolicy ? _retryPolicy(key, reason) : std::nullopt;
 			if (!delay.has_value())
@@ -97,15 +103,6 @@ namespace spk
 			{
 				it->second.phase = Phase::Waiting;
 				it->second.retryAt = now + *delay;
-			}
-		}
-
-		void _timeoutRequest(const TKey &key, Id id)
-		{
-			auto it = _requests.find(key);
-			if (it != _requests.end() && it->second.phase == Phase::Active && it->second.id == id)
-			{
-				_fail(key, it->second.generation, Failure::Timeout, _now);
 			}
 		}
 
@@ -164,37 +161,40 @@ namespace spk
 		template <typename TCallback>
 		void collect(Duration now, TCallback &&onSuccess)
 		{
-			_now = now;
-			_supervisor.collect([this, now, &onSuccess](Id id, const Answer &answer) {
-				for (auto it = _requests.begin(); it != _requests.end(); ++it)
-				{
-					if (it->second.phase != Phase::Active || it->second.id != id)
+			_supervisor.collect(
+				[this, now, &onSuccess](Id id, const Answer &answer) {
+					auto it = _find(id);
+					if (it == _requests.end())
 					{
-						continue;
+						return;
 					}
 					const TKey key = it->first;
 					if (answer.status() == Status::Failed)
 					{
 						_fail(key, it->second.generation, Failure::TaskFailed, now);
+						return;
+					}
+
+					_requests.erase(it);
+					if constexpr (std::is_void_v<TResult>)
+					{
+						onSuccess(key);
 					}
 					else
 					{
-						_requests.erase(it);
-						if constexpr (std::is_void_v<TResult>)
-						{
-							onSuccess(key);
-						}
-						else
-						{
-							onSuccess(key, answer.result());
-						}
+						onSuccess(key, answer.result());
 					}
-					return;
-				}
-			});
+				},
+				[this, now](Id id) {
+					auto it = _find(id);
+					if (it != _requests.end())
+					{
+						_fail(it->first, it->second.generation, Failure::Timeout, now);
+					}
+				});
 		}
 
-		// A synchronous submission reserves budget too, including reentrant calls.
+		// Submissions count against the budget even before watch() returns.
 		template <typename TSubmit>
 		[[nodiscard]] bool request(const TKey &key, Duration now, TSubmit &&submit)
 		{
@@ -222,12 +222,7 @@ namespace spk
 				Answer answer = submit();
 				--_submitting;
 				submitting = false;
-				const Id id = _supervisor.watch(
-					std::move(answer),
-					std::make_unique<ControlledTimer>(_timeout),
-					[this, key](Id timedOut) {
-						_timeoutRequest(key, timedOut);
-					});
+				const Id id = _supervisor.watch(std::move(answer), std::make_unique<ControlledTimer>(_timeout));
 
 				it = _requests.find(key);
 				if (it != _requests.end() && it->second.generation == generation)

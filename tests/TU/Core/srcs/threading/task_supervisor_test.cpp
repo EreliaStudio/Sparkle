@@ -45,13 +45,16 @@ TEST(TaskSupervisorTest, TimeoutFiresOnceAndLateAnswerStillOccupiesPhysicalSlot)
 	auto *clock = timer.get();
 	int timeouts = 0;
 	int results = 0;
-	const auto id = supervisor.watch(task.answer(), std::move(timer), [&](auto) {
-		++timeouts;
-	});
+	const auto id = supervisor.watch(task.answer(), std::move(timer));
 	clock->advance(10ms);
-	supervisor.collect([&](auto, const auto &) {
-		++results;
-	});
+	supervisor.collect(
+		[&](auto, const auto &) {
+			++results;
+		},
+		[&](auto timedOutId) {
+			EXPECT_EQ(timedOutId, id);
+			++timeouts;
+		});
 	EXPECT_EQ(timeouts, 1);
 	EXPECT_EQ(supervisor.inFlightCount(), 1u);
 
