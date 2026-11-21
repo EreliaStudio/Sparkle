@@ -311,9 +311,15 @@ namespace spk
 
 		[[nodiscard]] std::size_t inFlightCount() const noexcept
 		{
-			return _retired.size() + _submitting + std::count_if(_pending.begin(), _pending.end(), [](const auto &entry) {
-				return entry.second.answer.has_value();
-			});
+			std::size_t count = _retired.size() + _submitting;
+			for (const auto &entry : _pending)
+			{
+				if (entry.second.answer.has_value())
+				{
+					++count;
+				}
+			}
+			return count;
 		}
 
 		[[nodiscard]] std::uint64_t planRevision() const noexcept
