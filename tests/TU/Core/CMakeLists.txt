@@ -30,3 +30,4 @@ set_target_properties(SparkleCoreTestSuite PROPERTIES CXX_EXTENSIONS OFF)
 gtest_discover_tests(SparkleCoreTestSuite
     TEST_PREFIX "Core."
 )
+

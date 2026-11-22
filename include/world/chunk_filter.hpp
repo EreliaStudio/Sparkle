@@ -3,7 +3,7 @@
 #include "engine/component3d.hpp"
 #include "exception.hpp"
 
-namespace spk
+namespace spk::World
 {
 	template <typename TChunk>
 	class ChunkCollection;

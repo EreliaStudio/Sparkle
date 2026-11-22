@@ -1,16 +1,67 @@
-# PR07 — spk::Voxel::Chunk et démonstrateur headless
-**Couche :** Voxel Core. **Dépendances :** PR01, PR02, PR03, PR06. **État :** cahier des charges.
+# PR07 — `spk::Voxel::Chunk` et génération headless testée
 
-## Contrat
-- Fournir la surcouche générique spk::Voxel::Chunk<SX,SY,SZ> héritant de spk::Chunk<SX,SY,SZ>, contenant exactement un spk::Voxel::Volume de dimensions **SX × SY × SZ voxels**. Aucune résolution différente ni facteur d'échelle caché dans v0.1.5.
-- Le chunk reste modifiable, sans imposer shared_ptr<const Data> à Chunk ni à Voxel::Chunk. Seul le Volume est une valeur immuable qui partage déjà ses Data via shared_ptr<const Data>.
-- Un setter setVolume(Volume) remplace la valeur du Volume et appelle explicitement notifyChunkEdition() ; les autres setters ajoutés par un jeu suivent le même contrat. On n'édite pas les cellules d'un Volume publié sur place.
-- Voxel::Chunk::Builder utilise le Voxel::Volume::Builder existant avec dimensions exactes, supporte load(existingChunk), et build() produit Voxel::Chunk par valeur en consommant le Builder.
-- Échantillon d'une génération déterministe multi-passes avec ses propres seeds/références dans TGenerationData ; pas de seed, plan, cache ou gestion de cohérence inter-chunks imposés par Sparkle. Au moins une structure de démonstration traversant une frontière de chunk.
-- Un chunk voxel copié ou déplacé n'emporte pas les abonnements de l'autre chunk ; sa collection relayant l'événement est correctement abonnée.
+**Couche :** Voxel Core. **Dépendances :** PR01, PR02, PR03, PR06. **État :** implémenté sur la branche PR07.
 
-## Tests
-Dimensions 8×16×32 correspondent exactement au Volume, setter notify et remplace sans éditer l'ancien Volume, builder.load, nullopt hors carte, cohérence aux coordonnées négatives et avec ordre inverse, une structure multi-chunks reproductible, lecture depuis ChunkFilter en EngineHeadless, pas de dépendance graphique.
+## API du chunk
+
+`include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>`, dérivé de `spk::World::Chunk<SX, SY, SZ>`.
+
+- Le constructeur par défaut crée un `Volume` vide (air) aux dimensions fixes du chunk.
+- `volume() const` donne accès au snapshot immuable du volume.
+- `setVolume(Volume)` vérifie les dimensions, remplace le snapshot et notifie chaque remplacement valide, même si les cellules sont identiques. La première affectation utilise cette même API.
+- La copie et le déplacement du chunk ne transfèrent pas les abonnements aux notifications ; l'affectation conserve les abonnements de la destination.
+- Il n'existe pas de `Chunk::Builder`. Les voxels sont préparés par `Volume::Builder`, puis affectés au chunk.
+
+```cpp
+using Chunk = spk::Voxel::Chunk<8, 16, 32>;
+Chunk chunk;
+
+spk::Voxel::Volume::Builder builder({8, 16, 32});
+builder.bind(definitions);
+builder.set({7, 4, 5}, 2);
+chunk.setVolume(builder.build());
+
+spk::Voxel::Volume::Builder edit(chunk.volume().dimensions());
+edit.load(chunk.volume());
+edit.erase({7, 4, 5});
+chunk.setVolume(edit.build());
+```
+
+## Cas pratique : un TU Core autonome
+
+Le cas de génération procédurale se trouve **uniquement** dans `tests/TU/Core/srcs/world/voxel_chunk_test.cpp`. Il ne crée pas d'API d'exemple dans `include/`, de namespace `sparkle_world_generation_example`, ni d'exécutable de démonstration autonome.
+
+Le TU définit localement :
+
+- Deux définitions de voxels, pour le sol et le mur.
+- `TerrainPass` : terrain déterministe dépendant des coordonnées mondiales et d'une seed.
+- `WallPass` : mur entre X=-2 et X=10, Y=3 et Y=5, Z=5, qui traverse les frontières des chunks X=-1, 0 et 1.
+- `WorldGenerator` : deux passes et zone finie de trois chunks ; hors zone, `generate()` renvoie `std::nullopt`.
+- Un montage `EngineHeadless` + `WorldObserver` + `WorkerPool` + `LocalChunkRequester` + `WorldStreamingSystem` + `ChunkCollection` + `ChunkFilter`.
+
+`spk::World::Generator<TChunk, TGenerationData, TBuilder>` accepte un builder distinct du chunk : par défaut `TChunk::Builder` pour les usages existants, et ici `Volume::Builder`. Après les passes, le générateur construit un `TChunk` par défaut et affecte le volume obtenu avec `setVolume()`. Les générateurs dont le builder retourne directement un `TChunk` conservent leur chemin précédent.
+
+## Vérifications des TU
+
+- Dimensions non cubiques 8×16×32, volume initial vide, lecture hors dimensions et rejet des volumes de dimensions incompatibles.
+- Construction et modification par `Volume::Builder`, conservation du snapshot précédent, consommation du builder et absence d'un `Chunk::Builder`.
+- Notifications à chaque `setVolume()` valide ; copies, déplacements, affectations et abonnements indépendants.
+- Relais d'édition dans `ChunkCollection`, maintien de `ChunkFilter` lors du remplacement et absence de chunks hors de la zone.
+- Déterminisme entre générations en ordre normal et inversé, coordonnées négatives et mur traversant plusieurs chunks.
+- **Vérification exhaustive du type de chaque cellule** des trois chunks générés : air, terrain ou mur, selon la position mondiale.
+- Chargement asynchrone des trois chunks par le streaming dans le moteur headless, puis validation des données reçues.
+
+## Compilation et exécution
+
+```bash
+cmake -S . -B build/core-example -G Ninja \
+  -DSPARKLE_BUILD_GRAPHICS=OFF -DSPARKLE_BUILD_TESTS=ON
+cmake --build build/core-example --target SparkleCoreTestSuite
+ctest --test-dir build/core-example -R 'VoxelChunkTest|VoxelChunkDemoTest' --output-on-failure
+```
+
+Les dépendances GoogleTest et les options de toolchain habituelles de Sparkle sont nécessaires.
 
 ## Exclusions
-Aucun mesher (PR08), aucun moteur de terrain/biome/route/ville/caverne standard, aucun format voxel supplémentaire.
+
+La PR07 n'introduit aucun rendu graphique, meshing inter-chunks, golden image, sauvegarde, réseau, biomes, villes, routes ou cavernes. Le rendu visuel et ses golden images restent prévus en PR08.

@@ -7,7 +7,7 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 
-namespace spk
+namespace spk::World
 {
 	WorldObserver::WorldObserver(ChunkInterest interest) :
 		Component3D("World observer"),

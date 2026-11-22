@@ -7,7 +7,7 @@
 
 namespace
 {
-	class EditableChunk : public spk::Chunk<32, 16, 8>
+	class EditableChunk : public spk::World::Chunk<32, 16, 8>
 	{
 	private:
 		int _value = 0;
@@ -134,9 +134,9 @@ TEST(ChunkTest, AssignmentsPreserveDestinationSubscriptionsWithoutNotifying)
 
 TEST(ChunkTest, DestructionInvalidatesOwnSubscriptions)
 {
-	spk::Chunk<1, 1, 1>::EditionContract contract;
+	spk::World::Chunk<1, 1, 1>::EditionContract contract;
 	{
-		auto chunk = std::make_unique<spk::Chunk<1, 1, 1>>();
+		auto chunk = std::make_unique<spk::World::Chunk<1, 1, 1>>();
 		contract = chunk->subscribeToChunkEdition([]() {
 		});
 		EXPECT_TRUE(contract.isValid());
@@ -149,7 +149,7 @@ TEST(ChunkTest, SubscriberCanResignDuringNotification)
 	EditableChunk chunk;
 	int firstCalls = 0;
 	int secondCalls = 0;
-	spk::Chunk<32, 16, 8>::EditionContract second;
+	spk::World::Chunk<32, 16, 8>::EditionContract second;
 	auto first = chunk.subscribeToChunkEdition([&]() {
 		++firstCalls;
 		second.resign();

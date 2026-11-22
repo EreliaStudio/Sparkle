@@ -16,7 +16,7 @@
 #include "world/chunk_coordinate.hpp"
 #include "world/chunk_filter.hpp"
 
-namespace spk
+namespace spk::World
 {
 	// A headless, value-owning collection. No chunk, entity or component ownership
 	// escapes through the collection's public API.
@@ -25,7 +25,7 @@ namespace spk
 	{
 		static_assert(
 			std::derived_from<TChunk, Chunk<TChunk::Size.x, TChunk::Size.y, TChunk::Size.z>>,
-			"TChunk must derive from spk::Chunk<SX, SY, SZ>");
+			"TChunk must derive from spk::World::Chunk<SX, SY, SZ>");
 
 	public:
 		using EditionProvider = ContractProvider<ChunkCoordinate>;

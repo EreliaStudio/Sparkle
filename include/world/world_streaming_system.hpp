@@ -21,7 +21,7 @@
 #include "world/chunk_requester.hpp"
 #include "world/world_observer.hpp"
 
-namespace spk
+namespace spk::World
 {
 	template <typename TChunk>
 	class WorldStreamingSystem : public System

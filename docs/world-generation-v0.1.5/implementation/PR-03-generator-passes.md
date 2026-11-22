@@ -2,7 +2,7 @@
 **Couche :** Core. **Dépendances :** PR01. **État :** cahier des charges.
 
 ## Contrat public
-- Generator<TChunk,TGenerationData> est une recette synchrone. Pour les types de chunk utilisés avec Generator seulement, TChunk::Builder existe ; la base spk::Chunk n'impose aucun Builder.
+- Generator<TChunk,TGenerationData> est une recette synchrone. Pour les types de chunk utilisés avec Generator seulement, TChunk::Builder existe ; la base spk::World::Chunk n'impose aucun Builder.
 - Pas de Generator::Builder de configuration : le générateur expose uniquement addPass<TPass>(...) pour créer et posséder les passes (pas de surcharge prenant std::unique_ptr) pour enregistrer définitivement et dans l'ordre des passes polymorphes. Elles sont configurées avant les générations concurrentes.
 - Pass::apply(TChunk::Builder&, const ChunkCoordinate&, TGenerationData&) est virtuelle. Les coordonnées sont disponibles dans chaque passe sans imposition de membre coordinate dans TGenerationData.
 - Le hook virtuel privé _createChunkBuilder(const ChunkCoordinate&) retourne std::optional<typename TChunk::Builder>. Un nullopt indique un chunk définitivement absent **pour cette demande**, et évite _createGenerationData ainsi que toutes les passes.

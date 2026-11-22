@@ -5,7 +5,7 @@
 Fournir une infrastructure réutilisable pour gérer des chunks, leurs entités headless, la génération par passes, les demandes asynchrones, le streaming multi-observateurs et un adaptateur de rendu voxel optionnel. Sparkle ne définit ni biomes, ni routes, ni villes, ni cavernes, ni planification géographique obligatoire.
 
 ## Modèle retenu
-- spk::Chunk<SX,SY,SZ> est une base héritable, sans données de jeu ni coordonnée membre ; les dimensions indiquent les unités du monde. Les setters de chaque chunk modifiable appellent notifyChunkEdition().
+- spk::World::Chunk<SX,SY,SZ> est une base héritable, sans données de jeu ni coordonnée membre ; les dimensions indiquent les unités du monde. Les setters de chaque chunk modifiable appellent notifyChunkEdition().
 - ChunkCollection<TChunk> possède ses chunks par valeur et une Entity3D + ChunkFilter<TChunk> non propriétaire par coordonnée ; toutes les éditions sont relayées immédiatement avec la coordonnée. Fonctionne en EngineHeadless.
 - Les événements de copie/déplacement restent attachés aux instances, ne suivent jamais les chunks copiés. Le remplacement d'une entrée préserve son Entity3D.
 - Generator<TChunk,TGenerationData> reçoit des passes via addPass, chaque apply(builder, coordinate, data) travaillant sur des données temporaires. createChunkBuilder et generate retournent std::optional ; nullopt est un succès sans chunk.
