@@ -12,17 +12,19 @@
 
 namespace spk
 {
-	template <typename TChunk, typename TGenerationData>
+	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
 	class Generator
 	{
 	public:
+		using Builder = TBuilder;
+
 		class Pass
 		{
 		public:
 			virtual ~Pass() = default;
 
 			virtual void apply(
-				typename TChunk::Builder &builder,
+				Builder &builder,
 				const ChunkCoordinate &coordinate,
 				TGenerationData &data) = 0;
 		};
@@ -30,7 +32,7 @@ namespace spk
 	private:
 		std::vector<std::unique_ptr<Pass>> _passes;
 
-		virtual std::optional<typename TChunk::Builder> _createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
+		virtual std::optional<Builder> _createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
 		virtual TGenerationData _createGenerationData() = 0;
 
 	public:
@@ -50,7 +52,7 @@ namespace spk
 		{
 			try
 			{
-				std::optional<typename TChunk::Builder> builder = _createChunkBuilder(coordinate);
+				std::optional<Builder> builder = _createChunkBuilder(coordinate);
 				if (!builder.has_value())
 				{
 					return std::nullopt;
@@ -61,7 +63,7 @@ namespace spk
 				{
 					pass->apply(*builder, coordinate, data);
 				}
-				return std::move(*builder).build();
+				return TChunk(std::move(*builder).build());
 			} catch (const spk::Exception &)
 			{
 				throw;
