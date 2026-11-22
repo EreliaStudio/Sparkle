@@ -111,7 +111,6 @@ namespace spk::Voxel
 				key.tolerance);
 		}
 
-
 		struct PolygonGroups
 		{
 			std::array<std::vector<const Polygon *>, 6> outer;
@@ -190,7 +189,6 @@ namespace spk::Voxel
 			}
 			return std::move(builder).build();
 		}
-
 
 		struct PreparedVolume
 		{
