@@ -4,7 +4,7 @@
 
 namespace spk::Voxel
 {
-	class RenderingSystem final : public spk::RenderingSystem
+	class RenderingSystem : public spk::RenderingSystem
 	{
 	public:
 		RenderingSystem();
