@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "design_pattern/contract_provider.hpp"
@@ -39,13 +40,13 @@ namespace spk
 		private:
 			// Member order ensures the Entity3D and its components die before
 			// the referenced chunk, even if the collection is simply destroyed.
-			TChunk _chunk;
+			std::unique_ptr<TChunk> _chunk;
 			std::unique_ptr<Entity3D> _entity;
 			typename TChunk::EditionContract _editionContract;
 
 		public:
 			explicit ChunkEntry(TChunk chunk, Entity3D &root, const ChunkCoordinate &coordinate) :
-				_chunk(std::move(chunk)),
+				_chunk(std::make_unique<TChunk>(std::move(chunk))),
 				_entity(std::make_unique<Entity3D>("Chunk", &root))
 			{
 				const ChunkWorldCoordinate origin = TChunk::chunkCoordinateToWorld(coordinate);
@@ -53,7 +54,7 @@ namespace spk
 				const float y = static_cast<float>(origin.y);
 				const float z = static_cast<float>(origin.z);
 				_entity->transform().place({x, y, z});
-				_entity->addComponent<ChunkFilter<TChunk>>(_chunk);
+				_entity->addComponent<ChunkFilter<TChunk>>(*_chunk);
 			}
 
 		public:
@@ -77,12 +78,12 @@ namespace spk
 
 			[[nodiscard]] TChunk &chunk() noexcept
 			{
-				return _chunk;
+				return *_chunk;
 			}
 
 			[[nodiscard]] const TChunk &chunk() const noexcept
 			{
-				return _chunk;
+				return *_chunk;
 			}
 
 			[[nodiscard]] Entity3D &entity() noexcept
@@ -169,7 +170,22 @@ namespace spk
 		{
 			if (auto it = _chunks.find(coordinate); it != _chunks.end())
 			{
-				it->second._chunk = std::move(chunk);
+				if constexpr (std::is_move_assignable_v<TChunk>)
+				{
+					*it->second._chunk = std::move(chunk);
+				}
+				else
+				{
+					auto replacement = std::make_unique<TChunk>(std::move(chunk));
+					auto contract = replacement->subscribeToChunkEdition([this, coordinate]() {
+						_editionProvider.trigger(coordinate);
+					});
+					it->second._editionContract.resign();
+					auto *filter = it->second._entity->template getComponent<ChunkFilter<TChunk>>();
+					filter->_chunk = replacement.get();
+					it->second._chunk = std::move(replacement);
+					it->second._editionContract = std::move(contract);
+				}
 				_editionProvider.trigger(coordinate);
 				return;
 			}
@@ -178,7 +194,7 @@ namespace spk
 			(void)inserted;
 			try
 			{
-				it->second._editionContract = it->second._chunk.subscribeToChunkEdition([this, coordinate]() {
+				it->second._editionContract = it->second._chunk->subscribeToChunkEdition([this, coordinate]() {
 					_editionProvider.trigger(coordinate);
 				});
 			} catch (...)
@@ -223,7 +239,7 @@ namespace spk
 		{
 			if (auto it = _chunks.find(coordinate); it != _chunks.end())
 			{
-				chunk = &it->second._chunk;
+				chunk = it->second._chunk.get();
 				return true;
 			}
 			chunk = nullptr;
@@ -234,7 +250,7 @@ namespace spk
 		{
 			if (auto it = _chunks.find(coordinate); it != _chunks.end())
 			{
-				chunk = &it->second._chunk;
+				chunk = it->second._chunk.get();
 				return true;
 			}
 			chunk = nullptr;
