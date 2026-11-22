@@ -8,14 +8,18 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <utility>
 #include <vector>
 
+#include "container/priority_queue.hpp"
 #include "core/context/update_context.hpp"
+#include "engine/registry.hpp"
 #include "engine/system.hpp"
 #include "exception.hpp"
 #include "world/chunk_collection.hpp"
+#include "world/chunk_interest.hpp"
 #include "world/chunk_requester.hpp"
-#include "world/detail/world_interest_planner.hpp"
+#include "world/world_observer.hpp"
 
 namespace spk
 {
@@ -35,171 +39,264 @@ namespace spk
 		using Answer = typename ChunkRequester<TChunk>::Answer;
 		using Status = typename Task<std::optional<TChunk>>::Status;
 
-		struct PendingRequest
+		// Owns the desired chunk union and its priority order, not task state.
+		class InterestPlan
 		{
-			std::uint64_t generation;
-			Duration deadline;
-			std::optional<Answer> answer;
-		};
-
-		ChunkCollection<TChunk> &_collection;
-		ChunkRequester<TChunk> &_requester;
-		Settings _settings;
-		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _collectionContextContract;
-		detail::WorldInterestPlanner _planner;
-
-		// Only the current request for a coordinate can publish its result.
-		std::map<ChunkCoordinate, PendingRequest> _pending;
-		// Old workers cannot be cancelled and still consume the physical budget.
-		std::vector<Answer> _retired;
-		std::map<ChunkCoordinate, Duration> _retryAt;
-		std::set<ChunkCoordinate> _absent;
-		std::size_t _submitting = 0;
-		std::uint64_t _lastGeneration = 0;
-
-		void _retire(PendingRequest &request)
-		{
-			if (request.answer.has_value() && request.answer->status() == Status::Pending)
+		private:
+			struct ObserverState
 			{
-				_retired.push_back(std::move(*request.answer));
-			}
-		}
+				ChunkCoordinate center;
+				ChunkInterest interest;
 
-		void _unloadUnwantedChunks()
-		{
-			for (auto it = _collection.begin(); it != _collection.end();)
+				[[nodiscard]] bool operator==(const ObserverState &) const = default;
+			};
+
+			using Observers = std::map<const WorldObserver *, ObserverState>;
+			using Priorities = std::map<ChunkCoordinate, std::uint64_t>;
+
+			struct Comparator
 			{
-				const ChunkCoordinate coordinate = it->first;
-				++it;
-				if (!_planner.contains(coordinate))
+				const Priorities *priorities;
+
+				[[nodiscard]] bool operator()(const ChunkCoordinate &left, const ChunkCoordinate &right) const
 				{
-					(void)_collection.removeChunk(coordinate);
+					const auto a = priorities->at(left);
+					const auto b = priorities->at(right);
+					return a == b ? left < right : a < b;
+				}
+			};
+
+			Observers _observers;
+			Priorities _priorities;
+			PriorityQueue<ChunkCoordinate, Comparator> _coordinates;
+			bool _initialized = false;
+			std::uint64_t _revision = 0;
+
+			[[nodiscard]] static Observers _capture(EngineHeadless *engine)
+			{
+				Observers states;
+				const auto &registered = Registry<WorldObserver, EngineHeadless *>::instance().elements(engine);
+				for (WorldObserver *observer : registered)
+				{
+					if (observer->isEffectivelyActive())
+					{
+						states.emplace(observer, ObserverState{TChunk::worldToChunkCoordinate(observer->worldPosition()), observer->interest()});
+					}
+				}
+				return states;
+			}
+
+			[[nodiscard]] static std::uint64_t _axisDistance(std::int32_t value, std::int32_t center, std::int32_t size)
+			{
+				const std::int64_t difference = static_cast<std::int64_t>(value) - center;
+				const std::uint64_t magnitude = static_cast<std::uint64_t>(difference < 0 ? -difference : difference);
+				return magnitude * static_cast<std::uint64_t>(size);
+			}
+
+			[[nodiscard]] static std::uint64_t _distance(const ChunkCoordinate &coordinate, const ChunkCoordinate &center)
+			{
+				std::uint64_t distance = 0;
+				const auto add = [&distance](std::uint64_t value) {
+					distance += std::min(value, std::numeric_limits<std::uint64_t>::max() - distance);
+				};
+				add(_axisDistance(coordinate.x, center.x, TChunk::Size.x));
+				add(_axisDistance(coordinate.y, center.y, TChunk::Size.y));
+				add(_axisDistance(coordinate.z, center.z, TChunk::Size.z));
+				return distance;
+			}
+
+			static void _extend(Priorities &priorities, const ObserverState &state)
+			{
+				for (const ChunkCoordinate &coordinate : state.interest.coordinates(state.center))
+				{
+					const std::uint64_t distance = _distance(coordinate, state.center);
+					auto [it, inserted] = priorities.try_emplace(coordinate, distance);
+					if (!inserted)
+					{
+						it->second = std::min(it->second, distance);
+					}
 				}
 			}
-		}
 
-		void _refreshInterests()
-		{
-			if (!_planner.refresh(engine()))
+			void _rebuild(const Observers &observers)
 			{
-				return;
+				Priorities priorities;
+				for (const auto &[observer, state] : observers)
+				{
+					(void)observer;
+					_extend(priorities, state);
+				}
+
+				std::vector<ChunkCoordinate> coordinates;
+				coordinates.reserve(priorities.size());
+				for (const auto &[coordinate, distance] : priorities)
+				{
+					(void)distance;
+					coordinates.push_back(coordinate);
+				}
+
+				_priorities = std::move(priorities);
+				_coordinates.clear();
+				_coordinates.pushBack(std::move(coordinates));
 			}
 
-			for (auto it = _pending.begin(); it != _pending.end();)
+		public:
+			InterestPlan() :
+				_coordinates(Comparator{&_priorities})
 			{
-				if (!_planner.contains(it->first))
+			}
+
+			[[nodiscard]] bool refresh(EngineHeadless *engine)
+			{
+				Observers current = _capture(engine);
+				if (_initialized && current == _observers)
 				{
+					return false;
+				}
+				_rebuild(current);
+				_observers = std::move(current);
+				_initialized = true;
+				++_revision;
+				return true;
+			}
+
+			void reset()
+			{
+				_observers.clear();
+				_priorities.clear();
+				_coordinates.clear();
+				_initialized = false;
+			}
+
+			[[nodiscard]] bool contains(const ChunkCoordinate &coordinate) const
+			{
+				return _priorities.contains(coordinate);
+			}
+
+			[[nodiscard]] const auto &coordinates() const noexcept
+			{
+				return _coordinates;
+			}
+
+			[[nodiscard]] std::uint64_t revision() const noexcept
+			{
+				return _revision;
+			}
+		};
+
+		// Owns only this system's task lifetimes, retries and absence cache.
+		class Requests
+		{
+		private:
+			struct Pending
+			{
+				std::uint64_t generation;
+				Duration deadline;
+				std::optional<Answer> answer;
+			};
+
+			using PendingMap = std::map<ChunkCoordinate, Pending>;
+
+			PendingMap _pending;
+			std::vector<Answer> _retired;
+			std::map<ChunkCoordinate, Duration> _retryAt;
+			std::set<ChunkCoordinate> _absent;
+			std::size_t _submitting = 0;
+			std::uint64_t _lastGeneration = 0;
+
+			void _retire(Pending &request)
+			{
+				if (request.answer.has_value() && request.answer->status() == Status::Pending)
+				{
+					_retired.push_back(std::move(*request.answer));
+				}
+			}
+
+			void _prunePending(const InterestPlan &interest)
+			{
+				for (auto it = _pending.begin(); it != _pending.end();)
+				{
+					if (interest.contains(it->first))
+					{
+						++it;
+						continue;
+					}
 					_retire(it->second);
 					it = _pending.erase(it);
 				}
-				else
-				{
-					++it;
-				}
 			}
-			std::erase_if(_retryAt, [this](const auto &entry) {
-				return !_planner.contains(entry.first);
-			});
-			std::erase_if(_absent, [this](const ChunkCoordinate &coordinate) {
-				return !_planner.contains(coordinate);
-			});
-			_unloadUnwantedChunks();
-		}
 
-		void _collectRetired()
-		{
-			std::erase_if(_retired, [](const Answer &answer) {
-				return answer.status() != Status::Pending;
-			});
-		}
-
-		void _collectPending(Duration now)
-		{
-			// Publishing can invoke user callbacks and invalidate other requests.
-			// Snapshot generations so such callbacks cannot invalidate iterators.
-			std::vector<std::pair<ChunkCoordinate, std::uint64_t>> snapshot;
-			snapshot.reserve(_pending.size());
-			for (const auto &[coordinate, request] : _pending)
+			void _pruneCache(const InterestPlan &interest)
 			{
-				if (request.answer.has_value())
-				{
-					snapshot.emplace_back(coordinate, request.generation);
-				}
+				std::erase_if(_retryAt, [&interest](const auto &entry) {
+					return !interest.contains(entry.first);
+				});
+				std::erase_if(_absent, [&interest](const ChunkCoordinate &coordinate) {
+					return !interest.contains(coordinate);
+				});
 			}
 
-			for (const auto &[coordinate, generation] : snapshot)
+			[[nodiscard]] std::vector<std::pair<ChunkCoordinate, std::uint64_t>> _snapshot() const
+			{
+				std::vector<std::pair<ChunkCoordinate, std::uint64_t>> snapshot;
+				snapshot.reserve(_pending.size());
+				for (const auto &[coordinate, request] : _pending)
+				{
+					if (request.answer.has_value())
+					{
+						snapshot.emplace_back(coordinate, request.generation);
+					}
+				}
+				return snapshot;
+			}
+
+			void _fail(const ChunkCoordinate &coordinate, PendingMap::iterator it, Duration retryAt)
+			{
+				_retire(it->second);
+				_pending.erase(it);
+				_retryAt.insert_or_assign(coordinate, retryAt);
+			}
+
+			template <typename TCallback>
+			void _poll(const ChunkCoordinate &coordinate, std::uint64_t generation, Duration now, Duration retryDelay, TCallback &onResult)
 			{
 				auto it = _pending.find(coordinate);
 				if (it == _pending.end() || it->second.generation != generation)
 				{
-					continue;
+					return;
 				}
 
 				const Status status = it->second.answer->status();
 				if (status == Status::Pending && now < it->second.deadline)
 				{
-					continue;
+					return;
 				}
-
-				if (status == Status::Completed)
+				if (status != Status::Completed)
 				{
-					Answer answer = std::move(*it->second.answer);
-					_pending.erase(it);
-					if (engine() != nullptr && _planner.contains(coordinate))
-					{
-						const auto &result = answer.result();
-						if (result.has_value())
-						{
-							_collection.addChunk(coordinate, *result);
-						}
-						else
-						{
-							_absent.insert(coordinate);
-						}
-					}
+					_fail(coordinate, it, now + retryDelay);
+					return;
 				}
-				else
+
+				Answer answer = std::move(*it->second.answer);
+				_pending.erase(it);
+				onResult(coordinate, answer.result());
+			}
+
+			[[nodiscard]] std::uint64_t _begin(const ChunkCoordinate &coordinate, Duration deadline)
+			{
+				if (_lastGeneration == std::numeric_limits<std::uint64_t>::max())
 				{
-					// A timed-out task remains alive, but its result is obsolete.
-					if (status == Status::Pending)
-					{
-						_retire(it->second);
-					}
-					_pending.erase(it);
-					if (engine() != nullptr && _planner.contains(coordinate))
-					{
-						_retryAt.insert_or_assign(coordinate, now + _settings.retryDelay);
-					}
+					throw spk::Exception("World streaming generation identifier exhausted");
 				}
-			}
-		}
-
-		void _submit(const ChunkCoordinate &coordinate, Duration now)
-		{
-			if (_pending.contains(coordinate) || inFlightCount() >= _settings.maxInFlight)
-			{
-				return;
-			}
-			if (const auto it = _retryAt.find(coordinate); it != _retryAt.end() && now < it->second)
-			{
-				return;
-			}
-			if (_lastGeneration == std::numeric_limits<std::uint64_t>::max())
-			{
-				throw spk::Exception("World streaming generation identifier exhausted");
+				const std::uint64_t generation = ++_lastGeneration;
+				_pending.emplace(coordinate, Pending{generation, deadline, std::nullopt});
+				_retryAt.erase(coordinate);
+				++_submitting;
+				return generation;
 			}
 
-			const std::uint64_t generation = ++_lastGeneration;
-			_pending.emplace(coordinate, PendingRequest{generation, now + _settings.timeout, std::nullopt});
-			_retryAt.erase(coordinate);
-			++_submitting;
-			bool submitting = true;
-			try
+			void _accept(const ChunkCoordinate &coordinate, std::uint64_t generation, Answer answer)
 			{
-				Answer answer = _requester.request(coordinate);
-				--_submitting;
-				submitting = false;
-
 				auto it = _pending.find(coordinate);
 				if (it != _pending.end() && it->second.generation == generation)
 				{
@@ -209,17 +306,168 @@ namespace spk
 				{
 					_retired.push_back(std::move(answer));
 				}
-			} catch (...)
+			}
+
+			void _reject(const ChunkCoordinate &coordinate, std::uint64_t generation, Duration retryAt)
 			{
-				if (submitting)
-				{
-					--_submitting;
-				}
 				auto it = _pending.find(coordinate);
 				if (it != _pending.end() && it->second.generation == generation)
 				{
 					_pending.erase(it);
-					_retryAt.insert_or_assign(coordinate, now + _settings.retryDelay);
+					_retryAt.insert_or_assign(coordinate, retryAt);
+				}
+			}
+
+		public:
+			void retain(const InterestPlan &interest)
+			{
+				_prunePending(interest);
+				_pruneCache(interest);
+			}
+
+			void reset()
+			{
+				for (auto &[coordinate, request] : _pending)
+				{
+					(void)coordinate;
+					_retire(request);
+				}
+				_pending.clear();
+				_retryAt.clear();
+				_absent.clear();
+			}
+
+			void collectRetired()
+			{
+				std::erase_if(_retired, [](const Answer &answer) {
+					return answer.status() != Status::Pending;
+				});
+			}
+
+			template <typename TCallback>
+			void collect(Duration now, Duration retryDelay, TCallback &&onResult)
+			{
+				for (const auto &[coordinate, generation] : _snapshot())
+				{
+					_poll(coordinate, generation, now, retryDelay, onResult);
+				}
+			}
+
+			[[nodiscard]] bool canSubmit(const ChunkCoordinate &coordinate, Duration now, std::size_t budget) const
+			{
+				if (inFlightCount() >= budget || _pending.contains(coordinate) || _absent.contains(coordinate))
+				{
+					return false;
+				}
+				const auto it = _retryAt.find(coordinate);
+				return it == _retryAt.end() || now >= it->second;
+			}
+
+			void submit(const ChunkCoordinate &coordinate, Duration now, const Settings &settings, ChunkRequester<TChunk> &requester)
+			{
+				const std::uint64_t generation = _begin(coordinate, now + settings.timeout);
+				bool submitting = true;
+				try
+				{
+					Answer answer = requester.request(coordinate);
+					--_submitting;
+					submitting = false;
+					_accept(coordinate, generation, std::move(answer));
+				} catch (...)
+				{
+					if (submitting)
+					{
+						--_submitting;
+					}
+					_reject(coordinate, generation, now + settings.retryDelay);
+				}
+			}
+
+			void markAbsent(const ChunkCoordinate &coordinate)
+			{
+				_absent.insert(coordinate);
+			}
+
+			[[nodiscard]] std::size_t inFlightCount() const noexcept
+			{
+				std::size_t count = _retired.size() + _submitting;
+				for (const auto &[coordinate, request] : _pending)
+				{
+					(void)coordinate;
+					if (request.answer.has_value())
+					{
+						++count;
+					}
+				}
+				return count;
+			}
+		};
+
+		ChunkCollection<TChunk> &_collection;
+		ChunkRequester<TChunk> &_requester;
+		Settings _settings;
+		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _collectionContextContract;
+		InterestPlan _interest;
+		Requests _requests;
+
+		void _unloadUnwanted()
+		{
+			for (auto it = _collection.begin(); it != _collection.end();)
+			{
+				const ChunkCoordinate coordinate = it->first;
+				++it;
+				if (!_interest.contains(coordinate))
+				{
+					(void)_collection.removeChunk(coordinate);
+				}
+			}
+		}
+
+		void _refreshInterests()
+		{
+			if (_interest.refresh(engine()))
+			{
+				_requests.retain(_interest);
+				_unloadUnwanted();
+			}
+		}
+
+		void _publish(const ChunkCoordinate &coordinate, const std::optional<TChunk> &result)
+		{
+			if (engine() == nullptr || !_interest.contains(coordinate))
+			{
+				return;
+			}
+			if (result.has_value())
+			{
+				_collection.addChunk(coordinate, *result);
+			}
+			else
+			{
+				_requests.markAbsent(coordinate);
+			}
+		}
+
+		void _collect(Duration now)
+		{
+			_requests.collect(now, _settings.retryDelay, [this](const ChunkCoordinate &coordinate, const std::optional<TChunk> &result) {
+				_publish(coordinate, result);
+			});
+		}
+
+		void _schedule(Duration now)
+		{
+			for (std::size_t index = 0; engine() != nullptr && index < _interest.coordinates().size(); ++index)
+			{
+				if (_requests.inFlightCount() >= _settings.maxInFlight)
+				{
+					break;
+				}
+				const ChunkCoordinate coordinate = _interest.coordinates()[index];
+				if (!_collection.contains(coordinate) && _requests.canSubmit(coordinate, now, _settings.maxInFlight))
+				{
+					_requests.submit(coordinate, now, _settings, _requester);
+					_collect(now);
 				}
 			}
 		}
@@ -230,27 +478,10 @@ namespace spk
 			{
 				return;
 			}
-
 			_refreshInterests();
-			_collectRetired();
-			_collectPending(context.time);
-
-			// Index-based iteration remains valid if a publication detaches the system.
-			for (std::size_t index = 0; engine() != nullptr && index < _planner.coordinates().size(); ++index)
-			{
-				if (inFlightCount() >= _settings.maxInFlight)
-				{
-					break;
-				}
-				const ChunkCoordinate coordinate = _planner.coordinates()[index];
-				if (_absent.contains(coordinate) || _collection.contains(coordinate))
-				{
-					continue;
-				}
-
-				_submit(coordinate, context.time);
-				_collectPending(context.time);
-			}
+			_requests.collectRetired();
+			_collect(context.time);
+			_schedule(context.time);
 		}
 
 	public:
@@ -258,10 +489,7 @@ namespace spk
 			System("World streaming"),
 			_collection(collection),
 			_requester(requester),
-			_settings(settings),
-			_planner(TChunk::Size, [](const Vector3 &world) {
-				return TChunk::worldToChunkCoordinate(world);
-			})
+			_settings(settings)
 		{
 			if (_settings.maxInFlight == 0 || _settings.timeout <= Duration::zero() || _settings.retryDelay <= Duration::zero())
 			{
@@ -297,34 +525,20 @@ namespace spk
 			}
 			if (next == nullptr)
 			{
-				for (auto &[coordinate, request] : _pending)
-				{
-					_retire(request);
-				}
-				_pending.clear();
-				_retryAt.clear();
-				_absent.clear();
-				_planner.reset();
+				_requests.reset();
+				_interest.reset();
 			}
 			System::attach(next);
 		}
 
 		[[nodiscard]] std::size_t inFlightCount() const noexcept
 		{
-			std::size_t count = _retired.size() + _submitting;
-			for (const auto &entry : _pending)
-			{
-				if (entry.second.answer.has_value())
-				{
-					++count;
-				}
-			}
-			return count;
+			return _requests.inFlightCount();
 		}
 
 		[[nodiscard]] std::uint64_t planRevision() const noexcept
 		{
-			return _planner.revision();
+			return _interest.revision();
 		}
 	};
 }
