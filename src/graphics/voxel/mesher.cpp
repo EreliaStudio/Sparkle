@@ -23,6 +23,13 @@ namespace spk::Voxel
 		using Polygon = Shape::Polygon;
 		using Position = spk::Vector3UInt;
 		using SlotIndices = std::map<std::string, std::uint32_t>;
+		struct ResolvedSlot
+		{
+			std::string geometricKey;
+			std::uint32_t materialIndex;
+			bool opaque;
+		};
+		using ResolvedSlots = std::vector<ResolvedSlot>;
 		using MeshVertices = std::vector<Geometry::Vertex>;
 
 		constexpr std::array<Face, 6> Faces{
@@ -155,16 +162,20 @@ namespace spk::Voxel
 
 		void emit(
 			const Polygon &polygon,
-			const Definition &definition,
 			Position position,
-			const SlotIndices &indices,
+			const ResolvedSlots &slots,
 			MeshVertices &opaque,
 			MeshVertices &translucent,
 			float tolerance)
 		{
-			const auto &slot = definition.slot(polygon.slotKey);
-			const auto index = indices.at(slot.name);
-			emit(slot.opacity == 1.0f ? opaque : translucent, polygon, position, index, tolerance);
+			const auto entry = std::find_if(slots.begin(), slots.end(), [&](const ResolvedSlot &slot) {
+				return slot.geometricKey == polygon.slotKey;
+			});
+			if (entry == slots.end())
+			{
+				throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+			}
+			emit(entry->opaque ? opaque : translucent, polygon, position, entry->materialIndex, tolerance);
 		}
 
 		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertices &vertices)
@@ -184,6 +195,8 @@ namespace spk::Voxel
 		struct PreparedVolume
 		{
 			std::vector<Cell> cells;
+			std::vector<std::size_t> definitionIndices;
+			std::vector<Definition> definitions;
 			std::vector<Definition::Slot> slots;
 		};
 
@@ -191,8 +204,9 @@ namespace spk::Voxel
 		{
 			PreparedVolume result;
 			const auto dimensions = volume.dimensions();
-			result.cells.reserve(static_cast<std::size_t>(dimensions.x) * dimensions.y * dimensions.z);
-			std::vector<Definition> seenDefinitions;
+			const auto count = static_cast<std::size_t>(dimensions.x) * dimensions.y * dimensions.z;
+			result.cells.reserve(count);
+			result.definitionIndices.reserve(count);
 			std::map<std::string, float> names;
 			for (std::uint32_t z = 0; z < dimensions.z; ++z)
 			{
@@ -202,11 +216,10 @@ namespace spk::Voxel
 					{
 						Cell cell = volume.at({x, y, z});
 						const auto &definition = cell.definition();
-						if (std::none_of(seenDefinitions.begin(), seenDefinitions.end(), [&](const Definition &seen) {
-								return seen == definition;
-							}))
+						const auto found = std::find(result.definitions.begin(), result.definitions.end(), definition);
+						if (found == result.definitions.end())
 						{
-							seenDefinitions.push_back(definition);
+							result.definitions.push_back(definition);
 							for (const auto &[geometricKey, slot] : definition.slots())
 							{
 								(void)geometricKey;
@@ -217,6 +230,7 @@ namespace spk::Voxel
 								}
 							}
 						}
+						result.definitionIndices.push_back(std::find(result.definitions.begin(), result.definitions.end(), definition) - result.definitions.begin());
 						result.cells.push_back(std::move(cell));
 					}
 				}
@@ -277,6 +291,18 @@ namespace spk::Voxel
 	{
 		auto prepared = prepare(volume);
 		const auto indices = indexSlots(prepared.slots);
+		std::vector<ResolvedSlots> materials;
+		materials.reserve(prepared.definitions.size());
+		for (const auto &definition : prepared.definitions)
+		{
+			ResolvedSlots resolved;
+			resolved.reserve(definition.slots().size());
+			for (const auto &[geometricKey, slot] : definition.slots())
+			{
+				resolved.push_back({geometricKey, indices.at(slot.name), slot.opacity == 1.0f});
+			}
+			materials.push_back(std::move(resolved));
+		}
 		MeshVertices opaque;
 		MeshVertices translucent;
 		const auto dimensions = volume.dimensions();
@@ -290,6 +316,7 @@ namespace spk::Voxel
 					const Position position{x, y, z};
 					const auto cellIndex = (static_cast<std::size_t>(z) * dimensions.y + y) * dimensions.x + x;
 					const Cell &cell = prepared.cells[cellIndex];
+					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
 					if (cell.isAir() || cell.definition().shape().empty())
 					{
 						continue;
@@ -328,14 +355,14 @@ namespace spk::Voxel
 						{
 							for (const auto &fragment : visible(cell, *blocker, face, _tolerance, _cache).fragments())
 							{
-								emit(fragment, cell.definition(), position, indices, opaque, translucent, _tolerance);
+								emit(fragment, position, resolved, opaque, translucent, _tolerance);
 							}
 						}
 						else
 						{
 							for (const Polygon *polygon : faces.outer[static_cast<std::size_t>(face)])
 							{
-								emit(*polygon, cell.definition(), position, indices, opaque, translucent, _tolerance);
+								emit(*polygon, position, resolved, opaque, translucent, _tolerance);
 							}
 						}
 					}
@@ -343,7 +370,7 @@ namespace spk::Voxel
 					{
 						for (const Polygon *polygon : faces.inner)
 						{
-							emit(*polygon, cell.definition(), position, indices, opaque, translucent, _tolerance);
+							emit(*polygon, position, resolved, opaque, translucent, _tolerance);
 						}
 					}
 				}
