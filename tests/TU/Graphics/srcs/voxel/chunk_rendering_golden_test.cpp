@@ -344,7 +344,9 @@ TEST(VoxelChunkGoldenTest, ThreeAdjacentChunksMatchSingleVolumeAtObliqueCamera)
 	const auto actual = sparkle_test::resultImagePath(category, "three_chunks_oblique");
 	const auto reference = sparkle_test::resultImagePath(category, "three_chunks_reference");
 	const auto diff = sparkle_test::resultImagePath(category, "three_chunks_difference");
-	const auto comparison = sparkle_test::compareImages(actual, reference, diff);
+	const auto comparisonActual = sparkle_test::resultImagePath(category, "three_chunks_for_comparison");
+	std::filesystem::copy_file(actual, comparisonActual, std::filesystem::copy_options::overwrite_existing);
+	const auto comparison = sparkle_test::compareImages(comparisonActual, reference, diff);
 	EXPECT_TRUE(comparison.matches) << comparison.differentPixelCount << " pixels differ between chunked and monolithic rendering";
 	gl.reset();
 }
