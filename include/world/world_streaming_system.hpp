@@ -51,12 +51,12 @@ namespace spk
 				[[nodiscard]] bool operator==(const ObserverState &) const = default;
 			};
 
-			using Observers = std::map<const WorldObserver *, ObserverState>;
-			using Priorities = std::map<ChunkCoordinate, std::uint64_t>;
+			using ObserverStateCollection = std::map<const WorldObserver *, ObserverState>;
+			using ChunkPriorityCollection = std::map<ChunkCoordinate, std::uint64_t>;
 
 			struct Comparator
 			{
-				const Priorities *priorities;
+				const ChunkPriorityCollection *priorities;
 
 				[[nodiscard]] bool operator()(const ChunkCoordinate &left, const ChunkCoordinate &right) const
 				{
@@ -66,15 +66,15 @@ namespace spk
 				}
 			};
 
-			Observers _observers;
-			Priorities _priorities;
+			ObserverStateCollection _observers;
+			ChunkPriorityCollection _priorities;
 			PriorityQueue<ChunkCoordinate, Comparator> _coordinates;
 			bool _initialized = false;
 			std::uint64_t _revision = 0;
 
-			[[nodiscard]] static Observers _capture(EngineHeadless *engine)
+			[[nodiscard]] static ObserverStateCollection _capture(EngineHeadless *engine)
 			{
-				Observers states;
+				ObserverStateCollection states;
 				const auto &registered = Registry<WorldObserver, EngineHeadless *>::instance().elements(engine);
 				for (WorldObserver *observer : registered)
 				{
@@ -105,7 +105,7 @@ namespace spk
 				return distance;
 			}
 
-			static void _extend(Priorities &priorities, const ObserverState &state)
+			static void _extend(ChunkPriorityCollection &priorities, const ObserverState &state)
 			{
 				for (const ChunkCoordinate &coordinate : state.interest.coordinates(state.center))
 				{
@@ -118,9 +118,9 @@ namespace spk
 				}
 			}
 
-			void _rebuild(const Observers &observers)
+			void _rebuild(const ObserverStateCollection &observers)
 			{
-				Priorities priorities;
+				ChunkPriorityCollection priorities;
 				for (const auto &[observer, state] : observers)
 				{
 					(void)observer;
@@ -148,7 +148,7 @@ namespace spk
 
 			[[nodiscard]] bool refresh(EngineHeadless *engine)
 			{
-				Observers current = _capture(engine);
+				ObserverStateCollection current = _capture(engine);
 				if (_initialized && current == _observers)
 				{
 					return false;
