@@ -16,7 +16,7 @@ namespace spk::Voxel
 		class Builder;
 
 	private:
-		Volume _volume;
+		const Volume _volume;
 
 	public:
 		explicit Chunk(Volume volume) :
@@ -30,23 +30,14 @@ namespace spk::Voxel
 
 		Chunk(const Chunk &) = default;
 		Chunk(Chunk &&) = default;
-		Chunk &operator=(const Chunk &) = default;
-		Chunk &operator=(Chunk &&) = default;
+		Chunk &operator=(const Chunk &) = delete;
+		Chunk &operator=(Chunk &&) = delete;
 
 		[[nodiscard]] const Volume &volume() const noexcept
 		{
 			return _volume;
 		}
 
-		void setVolume(Volume volume)
-		{
-			if (volume.dimensions() != spk::Vector3UInt{SX, SY, SZ})
-			{
-				throw spk::Exception("Voxel Chunk Volume dimensions do not match the Chunk size");
-			}
-			_volume = std::move(volume);
-			this->notifyChunkEdition();
-		}
 	};
 
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
