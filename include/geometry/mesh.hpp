@@ -115,7 +115,9 @@ namespace spk
 			{
 				_check();
 				const auto count = _content->layout.vertexBuffer().count();
-				if (std::any_of(indices.begin(), indices.end(), [count](Index index) { return index >= count; }))
+				if (std::any_of(indices.begin(), indices.end(), [count](Index index) {
+						return index >= count;
+					}))
 				{
 					throw std::out_of_range("Mesh index references a missing vertex");
 				}
