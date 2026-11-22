@@ -58,7 +58,7 @@ Le démonstrateur est construit avec les tests Core et ne nécessite aucune API 
 cmake -S . -B build/core-example -G Ninja \
   -DSPARKLE_BUILD_GRAPHICS=OFF -DSPARKLE_BUILD_TESTS=ON
 cmake --build build/core-example --target SparkleVoxelWorldDemo SparkleCoreTestSuite
-ctest --test-dir build/core-example -R 'Core\\.(VoxelChunkTest|VoxelChunkDemoTest|VoxelWorldDemo)' --output-on-failure
+ctest --test-dir build/core-example -R 'VoxelChunkTest|VoxelChunkDemoTest|VoxelWorldDemo' --output-on-failure
 ```
 
 Les dépendances GoogleTest et les options de toolchain habituelles de Sparkle restent nécessaires pour le configure.
