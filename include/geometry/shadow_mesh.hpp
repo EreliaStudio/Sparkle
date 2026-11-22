@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <utility>
+#include <vector>
 
 #include "exception.hpp"
 #include "geometry/mesh.hpp"
@@ -38,6 +39,8 @@ namespace spk::ShadowMap
 			{
 				throw spk::Exception("ShadowMap mesh requires triangle indices");
 			}
+			std::vector<spk::Vector3> positions;
+			positions.reserve(vertices.size());
 			for (const auto &vertex : vertices)
 			{
 				const spk::Vector3 position = std::invoke(extractor, vertex);
@@ -45,7 +48,7 @@ namespace spk::ShadowMap
 				{
 					throw spk::Exception("ShadowMap mesh position must be finite");
 				}
-				(void)builder.addVertex(position);
+				positions.push_back(position);
 			}
 			for (const auto index : indices)
 			{
@@ -53,8 +56,9 @@ namespace spk::ShadowMap
 				{
 					throw spk::Exception("ShadowMap mesh index is out of bounds");
 				}
-				builder.addIndex(index);
 			}
+			(void)builder.addVertices(positions);
+			builder.addIndices(indices);
 			return std::move(builder).build();
 		}
 	};
