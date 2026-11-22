@@ -141,7 +141,7 @@ TEST(VoxelChunkTest, NonCubicDimensionsAreExactlyThoseOfTheVolume)
 	EXPECT_THROW(chunk.setVolume(Volume::Builder({8, 16, 31}).build()), spk::Exception);
 }
 
-TEST(VoxelChunkTest, SetVolumeReplacesSnapshotAndOnlySignalsActualChanges)
+TEST(VoxelChunkTest, SetVolumeAlwaysSignalsReplacement)
 {
 	Chunk chunk = makeChunk();
 	const Volume original = chunk.volume();
@@ -151,15 +151,15 @@ TEST(VoxelChunkTest, SetVolumeReplacesSnapshotAndOnlySignalsActualChanges)
 	});
 
 	chunk.setVolume(original);
-	EXPECT_EQ(editions, 0);
-	chunk.setVolume(changedVolume(chunk));
 	EXPECT_EQ(editions, 1);
+	chunk.setVolume(changedVolume(chunk));
+	EXPECT_EQ(editions, 2);
 	EXPECT_EQ(chunk.volume().atRaw({1, 2, 3}), Volume::PackedCell::encode(2, spk::Voxel::Cell::HorizontalOrientation::XPositive, spk::Voxel::Cell::VerticalOrientation::YPositive));
 	EXPECT_EQ(original.atRaw({1, 2, 3}), Volume::PackedCell::Air);
 	chunk.setVolume(chunk.volume());
-	EXPECT_EQ(editions, 1);
+	EXPECT_EQ(editions, 3);
 	EXPECT_THROW(chunk.setVolume(Volume::Builder({2, 2, 2}).build()), spk::Exception);
-	EXPECT_EQ(editions, 1);
+	EXPECT_EQ(editions, 3);
 	EXPECT_TRUE(subscription.isValid());
 }
 
