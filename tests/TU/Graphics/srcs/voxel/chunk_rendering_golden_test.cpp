@@ -370,4 +370,3 @@ TEST(VoxelChunkGoldenTest, ThreeAdjacentChunksMatchSingleVolumeAtObliqueCamera)
 	EXPECT_TRUE(goldenComparison.matches) << goldenComparison.differentPixelCount << " pixels differ from the checked-in PR08 golden";
 	gl.reset();
 }
-

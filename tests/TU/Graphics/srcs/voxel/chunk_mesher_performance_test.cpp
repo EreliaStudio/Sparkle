@@ -102,25 +102,17 @@ namespace
 						break;
 					case Pattern::HollowRooms:
 					{
-						const bool shell = x == 0 || x + 1 == width || z == 0 || z + 1 == depth ||
-							y == 0 || y + 1 == height;
-						const bool partition = (x == width / 2 || z == depth / 2) &&
-							y > 0 && y < height / 2;
-						const bool doorway = y <= 3 && (
-							(z == 0 && x >= width / 2 - 1 && x <= width / 2 + 1) ||
-							(x == width / 2 && z >= depth / 3 && z <= depth / 3 + 2) ||
-							(z == depth / 2 && x >= width / 3 && x <= width / 3 + 2));
-						const bool skylight = y + 1 == height &&
-							x > width / 3 && x < 2 * width / 3 &&
-							z > depth / 3 && z < 2 * depth / 3;
+						const bool shell = x == 0 || x + 1 == width || z == 0 || z + 1 == depth || y == 0 || y + 1 == height;
+						const bool partition = (x == width / 2 || z == depth / 2) && y > 0 && y < height / 2;
+						const bool doorway = y <= 3 && ((z == 0 && x >= width / 2 - 1 && x <= width / 2 + 1) || (x == width / 2 && z >= depth / 3 && z <= depth / 3 + 2) || (z == depth / 2 && x >= width / 3 && x <= width / 3 + 2));
+						const bool skylight = y + 1 == height && x > width / 3 && x < 2 * width / 3 && z > depth / 3 && z < 2 * depth / 3;
 						filled = (shell || partition) && !doorway && !skylight;
 						break;
 					}
 					case Pattern::TerracedCaves:
 					{
 						const auto level = height / 4 + (x / 4 + z / 5) % (height / 2 + 1);
-						const bool cavern = x > 2 && x + 3 < width && z > 2 && z + 3 < depth &&
-							y > 1 && y < level && (x * 3 + z * 5 + y * 7) % 19 < 4;
+						const bool cavern = x > 2 && x + 3 < width && z > 2 && z + 3 < depth && y > 1 && y < level && (x * 3 + z * 5 + y * 7) % 19 < 4;
 						filled = y <= level && !cavern;
 						break;
 					}
@@ -235,14 +227,7 @@ namespace
 	// with three vertices per triangle. Material names do not change opaque occlusion.
 	[[nodiscard]] FaceOracle countExposedFaces(const VolumeModel &model)
 	{
-		constexpr std::array<std::array<int, 3>, 6> Directions{{
-			{{-1, 0, 0}},
-			{{1, 0, 0}},
-			{{0, -1, 0}},
-			{{0, 1, 0}},
-			{{0, 0, -1}},
-			{{0, 0, 1}}
-		}};
+		constexpr std::array<std::array<int, 3>, 6> Directions{std::array{-1, 0, 0}, std::array{1, 0, 0}, std::array{0, -1, 0}, std::array{0, 1, 0}, std::array{0, 0, -1}, std::array{0, 0, 1}};
 		FaceOracle result;
 		for (std::uint32_t z = 0; z < model.dimensions.z; ++z)
 		{
@@ -413,6 +398,7 @@ namespace
 		constexpr std::int32_t Side = 16;
 		using Chunk = spk::Voxel::Chunk<Side, Side, Side>;
 		const auto registry = makeRegistry();
+		constexpr std::array<std::uint32_t, 4> DefinitionIds{1, 3, 4, 5};
 		const std::array<std::size_t, 4> perShapeVertices{
 			isolatedShapeVertices(loadShape("cube")),
 			isolatedShapeVertices(loadShape("slab")),
@@ -429,7 +415,7 @@ namespace
 				for (std::uint32_t x = 0; x < Side; x += 3)
 				{
 					const std::size_t index = (x / 3 + y / 3 + z / 3) % perShapeVertices.size();
-					builder.set({x, y, z}, static_cast<std::uint32_t>(index + 1 == 2 ? 3 : index + 1 == 3 ? 4 : index + 1 == 4 ? 5 : 1));
+					builder.set({x, y, z}, DefinitionIds[index]);
 					expectedVertices += perShapeVertices[index];
 					++occupied;
 				}
