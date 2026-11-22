@@ -29,14 +29,14 @@ namespace sparkle_world_generation_example
 		std::int64_t seed;
 	};
 
-	using Generator = spk::Generator<Chunk, GenerationData>;
+	using Generator = spk::Generator<Chunk, GenerationData, spk::Voxel::Volume::Builder>;
 
 	class TerrainPass final : public Generator::Pass
 	{
 	public:
-		void apply(Chunk::Builder &builder, const spk::ChunkCoordinate &coordinate, GenerationData &data) override
+		void apply(Generator::Builder &volume, const spk::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = builder.volumeBuilder();
+
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -60,9 +60,9 @@ namespace sparkle_world_generation_example
 	class WallPass final : public Generator::Pass
 	{
 	public:
-		void apply(Chunk::Builder &builder, const spk::ChunkCoordinate &coordinate, GenerationData &) override
+		void apply(Generator::Builder &volume, const spk::ChunkCoordinate &coordinate, GenerationData &) override
 		{
-			auto &volume = builder.volumeBuilder();
+
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
@@ -84,13 +84,13 @@ namespace sparkle_world_generation_example
 		Registry _definitions;
 		std::int64_t _seed;
 
-		[[nodiscard]] std::optional<Chunk::Builder> _createChunkBuilder(const spk::ChunkCoordinate &coordinate) override
+		[[nodiscard]] std::optional<Generator::Builder> _createChunkBuilder(const spk::ChunkCoordinate &coordinate) override
 		{
 			if (coordinate.x < -1 || coordinate.x > 1 || coordinate.y != 0 || coordinate.z != 0)
 			{
 				return std::nullopt;
 			}
-			return Chunk::Builder{};
+			return Generator::Builder(spk::Vector3UInt{Chunk::Size});
 		}
 
 		[[nodiscard]] GenerationData _createGenerationData() override
