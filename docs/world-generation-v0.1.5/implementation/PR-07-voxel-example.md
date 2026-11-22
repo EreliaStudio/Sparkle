@@ -7,23 +7,24 @@
 `include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>` héritant de `spk::Chunk<SX, SY, SZ>`.
 
 - Chaque chunk possède exactement un `Voxel::Volume` aux dimensions fixes `SX × SY × SZ`. Le constructeur et `setVolume(Volume)` rejettent les dimensions incompatibles.
-- `volume() const` expose le snapshot immuable. `setVolume(Volume)` valide les dimensions, remplace systématiquement le volume et notifie chaque remplacement valide, même lorsque le contenu est identique. Aucune comparaison de voxels n'est effectuée.
-- Le stockage immuable partagé du `Volume` existant n'est pas modifié. La copie / construction par déplacement du chunk n'importe aucune souscription ; l'affectation conserve les souscriptions de destination, conformément à `spk::Chunk`.
-- Les mutations se font sur un nouveau `Volume` construit par le Builder. Ni `Chunk` ni `Volume` ne sont dotés de nouvelles couches de stockage.
+- `volume() const` permet de lire le volume sans exposer sa mutation interne ; `setVolume(Volume)` le remplace et notifie chaque remplacement valide, même lorsque le contenu est identique. Aucune comparaison de cellules n'est effectuée.
+- Le volume lui-même reste un snapshot immuable et partagé, produit par `Volume::Builder`. Un chunk peut recevoir successivement plusieurs snapshots.
+- Les copies et déplacements d'un chunk ne transfèrent pas les souscriptions d'édition ; les affectations conservent celles de la destination, conformément à `spk::Chunk`.
+- Il n'existe **pas** de `Chunk::Builder` : seul `Volume::Builder` est nécessaire pour construire ou reconstruire le contenu voxel. Les futures métadonnées du chunk sont indépendantes de ce volume.
 
-Le `Chunk::Builder` construit son `Volume::Builder` aux dimensions exactes du chunk. `volumeBuilder()` donne accès directement aux opérations existantes `bind`, `set`, `erase` et aux autres opérations du Volume. `load(const Chunk&)` charge un snapshot existant, puis `std::move(builder).build()` retourne un chunk par valeur et consomme le Builder.
+Exemple de création et de remplacement :
 
 ```cpp
 using Chunk = spk::Voxel::Chunk<8, 16, 32>;
-Chunk::Builder builder;
-builder.volumeBuilder().bind(definitions);
-builder.volumeBuilder().set({7, 4, 5}, 2);
-Chunk chunk = std::move(builder).build();
+spk::Voxel::Volume::Builder builder({8, 16, 32});
+builder.bind(definitions);
+builder.set({7, 4, 5}, 2);
+Chunk chunk(builder.build());
 
-Chunk::Builder edit;
-edit.load(chunk);
-edit.volumeBuilder().erase({7, 4, 5});
-chunk.setVolume(std::move(edit).build().volume());
+spk::Voxel::Volume::Builder edit(chunk.volume().dimensions());
+edit.load(chunk.volume());
+edit.erase({7, 4, 5});
+chunk.setVolume(edit.build());
 ```
 
 ## Exemple de génération
@@ -34,6 +35,8 @@ chunk.setVolume(std::move(edit).build().volume());
 - `TerrainPass` : hauteur déterministe en coordonnées mondiales, valable pour les X négatifs.
 - `WallPass` : mur continu de X=-2 à X=10, Y=3 à Y=5, Z=5. Il traverse les frontières des chunks X=-1/0/1.
 - `WorldGenerator` : enregistre les deux passes par `addPass<TerrainPass>()` puis `addPass<WallPass>()` ; renvoie `std::nullopt` hors de la zone de trois chunks.
+
+`spk::Generator<TChunk, TGenerationData, TBuilder>` accepte un type de builder indépendant du chunk. Son paramètre `TBuilder` conserve `TChunk::Builder` par défaut pour compatibilité avec d'autres types de chunk. Ici, les passes reçoivent directement un `Voxel::Volume::Builder` ; après les passes, le générateur construit `Chunk` depuis le `Volume` résultant.
 
 Les passes reçoivent le même `GenerationData` par requête. Le mur utilise `worldToChunkCoordinate` et `worldToLocalCoordinate` du chunk pour décider et placer chaque cellule ; l'ordre des requêtes ne change donc jamais le résultat.
 
@@ -65,8 +68,8 @@ Les dépendances GoogleTest et les options de toolchain habituelles de Sparkle r
 
 ## Couverture automatisée
 
-`tests/TU/Core/srcs/world/voxel_chunk_demo_test.cpp` couvre les dimensions non cubiques 8×16×32, les mauvaises dimensions, les snapshots inchangés après édition, `Builder::load`, la consommation du Builder, la copie et le déplacement avec souscriptions isolées, le relais de `ChunkCollection`, les filtres après remplacement, `nullopt` hors zone, l'ordre inversé de génération, les coordonnées mondiales négatives, les frontières du mur et la publication asynchrone sur le thread du moteur.
+`tests/TU/Core/srcs/world/voxel_chunk_demo_test.cpp` couvre les dimensions non cubiques 8×16×32, les mauvaises dimensions, le remplacement systématiquement notifié du volume, les snapshots originaux inchangés après édition via `Volume::Builder`, le chargement et la consommation du `Volume::Builder`, l'absence de `Chunk::Builder`, la copie et le déplacement avec souscriptions isolées, le relais de `ChunkCollection`, les filtres après remplacement, `nullopt` hors zone, l'ordre inversé de génération, les coordonnées mondiales négatives, les frontières du mur et la publication asynchrone sur le thread du moteur.
 
 ## Exclusions
 
-Aucun mesher ou voisinage graphique (PR08), OpenGL, système de biomes, villes, routes ou cavernes, sauvegarde, collision, networking ou changement du streaming Core n'est introduit.
+Aucun mesher ou voisinage graphique (PR08), OpenGL, système de biomes, villes, routes ou cavernes, sauvegarde, collision, networking ou changement du streaming Core au-delà de l'adaptation du template `Generator` n'est introduit.
