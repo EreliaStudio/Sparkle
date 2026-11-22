@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 #include "voxel/chunk.hpp"
 #include "voxel/mesher.hpp"
@@ -23,26 +24,50 @@ namespace spk::Voxel
 			switch (face)
 			{
 			case Shape::Face::NegativeX:
+				if (neighbor.x == std::numeric_limits<std::int32_t>::min())
+				{
+					return {};
+				}
 				--neighbor.x;
 				position.x = SX - 1;
 				break;
 			case Shape::Face::PositiveX:
+				if (neighbor.x == std::numeric_limits<std::int32_t>::max())
+				{
+					return {};
+				}
 				++neighbor.x;
 				position.x = 0;
 				break;
 			case Shape::Face::NegativeY:
+				if (neighbor.y == std::numeric_limits<std::int32_t>::min())
+				{
+					return {};
+				}
 				--neighbor.y;
 				position.y = SY - 1;
 				break;
 			case Shape::Face::PositiveY:
+				if (neighbor.y == std::numeric_limits<std::int32_t>::max())
+				{
+					return {};
+				}
 				++neighbor.y;
 				position.y = 0;
 				break;
 			case Shape::Face::NegativeZ:
+				if (neighbor.z == std::numeric_limits<std::int32_t>::min())
+				{
+					return {};
+				}
 				--neighbor.z;
 				position.z = SZ - 1;
 				break;
 			case Shape::Face::PositiveZ:
+				if (neighbor.z == std::numeric_limits<std::int32_t>::max())
+				{
+					return {};
+				}
 				++neighbor.z;
 				position.z = 0;
 				break;
