@@ -10,7 +10,7 @@
 #include "exception.hpp"
 #include "world/chunk_coordinate.hpp"
 
-namespace spk
+namespace spk::World
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
 	class Chunk

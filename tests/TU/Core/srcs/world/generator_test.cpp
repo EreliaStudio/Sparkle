@@ -15,9 +15,9 @@
 
 namespace
 {
-	using Coordinate = spk::ChunkCoordinate;
+	using Coordinate = spk::World::ChunkCoordinate;
 
-	class ExampleChunk : public spk::Chunk<32, 16, 32>
+	class ExampleChunk : public spk::World::Chunk<32, 16, 32>
 	{
 	public:
 		class Builder;
@@ -110,7 +110,7 @@ namespace
 		std::vector<int> *trace = nullptr;
 	};
 
-	using BaseGenerator = spk::Generator<ExampleChunk, GenerationData>;
+	using BaseGenerator = spk::World::Generator<ExampleChunk, GenerationData>;
 
 	class ExampleGenerator : public BaseGenerator
 	{
@@ -255,7 +255,7 @@ namespace
 		}
 	};
 
-	class CollectionOnlyChunk : public spk::Chunk<3, 5, 7>
+	class CollectionOnlyChunk : public spk::World::Chunk<3, 5, 7>
 	{
 	private:
 		int _value;
@@ -508,7 +508,7 @@ TEST(GeneratorTest, PassesAreOwned)
 
 TEST(GeneratorTest, ChunkCollectionSupportsChunkTypesWithoutBuilder)
 {
-	spk::ChunkCollection<CollectionOnlyChunk> collection;
+	spk::World::ChunkCollection<CollectionOnlyChunk> collection;
 	const Coordinate coordinate{-2, 0, 3};
 	collection.addChunk(coordinate, CollectionOnlyChunk(42));
 

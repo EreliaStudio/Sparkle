@@ -10,7 +10,7 @@
 #include "exception.hpp"
 #include "world/chunk_coordinate.hpp"
 
-namespace spk
+namespace spk::World
 {
 	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
 	class Generator
@@ -63,7 +63,7 @@ namespace spk
 				{
 					pass->apply(*builder, coordinate, data);
 				}
-				if constexpr (std::same_as<decltype(std::declval<Builder &>().build()), TChunk>)
+				if constexpr (std::same_as<decltype(std::declval<Builder &&>().build()), TChunk>)
 				{
 					return std::move(*builder).build();
 				}

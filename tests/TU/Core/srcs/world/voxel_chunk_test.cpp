@@ -29,9 +29,9 @@ namespace
 	using namespace std::chrono_literals;
 
 	using Chunk = spk::Voxel::Chunk<8, 16, 32>;
-	using Coordinate = spk::ChunkCoordinate;
+	using Coordinate = spk::World::ChunkCoordinate;
 	using Volume = spk::Voxel::Volume;
-	using Streaming = spk::WorldStreamingSystem<Chunk>;
+	using Streaming = spk::World::WorldStreamingSystem<Chunk>;
 	using Registry = spk::Voxel::Definition::Registry;
 
 	[[nodiscard]] Registry makeDefinitions()
@@ -52,7 +52,7 @@ namespace
 		std::int64_t seed;
 	};
 
-	using Generator = spk::Generator<Chunk, GenerationData, Volume::Builder>;
+	using Generator = spk::World::Generator<Chunk, GenerationData, Volume::Builder>;
 
 	class TerrainPass final : public Generator::Pass
 	{
@@ -88,7 +88,7 @@ namespace
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
 				{
-					const spk::ChunkWorldCoordinate world{x, y, 5};
+					const spk::World::ChunkWorldCoordinate world{x, y, 5};
 					if (Chunk::worldToChunkCoordinate(world) != coordinate)
 					{
 						continue;
@@ -173,12 +173,12 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] const Chunk &chunkAtWorld(const spk::ChunkCollection<Chunk> &collection, const spk::ChunkWorldCoordinate &world)
+	[[nodiscard]] const Chunk &chunkAtWorld(const spk::World::ChunkCollection<Chunk> &collection, const spk::World::ChunkWorldCoordinate &world)
 	{
 		return collection.at(Chunk::worldToChunkCoordinate(world));
 	}
 
-	[[nodiscard]] bool isSolid(const spk::ChunkCollection<Chunk> &collection, const spk::ChunkWorldCoordinate &world)
+	[[nodiscard]] bool isSolid(const spk::World::ChunkCollection<Chunk> &collection, const spk::World::ChunkWorldCoordinate &world)
 	{
 		const auto local = Chunk::worldToLocalCoordinate(world);
 		return !chunkAtWorld(collection, world).volume().at(spk::Vector3UInt(local)).isAir();
@@ -190,15 +190,15 @@ namespace
 		spk::EngineHeadless engine;
 		WorldGenerator generator{17};
 		spk::WorkerPool workers{2};
-		spk::LocalChunkRequester<Chunk, GenerationData> requester{workers, generator};
-		spk::ChunkCollection<Chunk> collection;
+		spk::World::LocalChunkRequester<Chunk, GenerationData, Volume::Builder> requester{workers, generator};
+		spk::World::ChunkCollection<Chunk> collection;
 		spk::Entity3D player{"Voxel observer"};
 
 		StreamingFixture()
 		{
 			collection.attach(engine);
 			player.transform().place({0.0f, 0.0f, 5.0f});
-			player.addComponent<spk::WorldObserver>(spk::ChunkInterest({1, 0, 0}));
+			player.addComponent<spk::World::WorldObserver>(spk::World::ChunkInterest({1, 0, 0}));
 			engine.addEntity(&player);
 			engine.addSystem<Streaming>(collection, requester);
 		}
@@ -329,7 +329,7 @@ TEST(VoxelChunkTest, CopiesMovesAndAssignmentsKeepIndependentEditionSubscription
 TEST(VoxelChunkTest, CollectionRelaysChunkEditionAndPreservesFilterAcrossReplacement)
 {
 	spk::EngineHeadless engine;
-	spk::ChunkCollection<Chunk> collection;
+	spk::World::ChunkCollection<Chunk> collection;
 	collection.attach(engine);
 	const Coordinate coordinate{-1, 0, 0};
 	int editions = 0;
@@ -341,7 +341,7 @@ TEST(VoxelChunkTest, CollectionRelaysChunkEditionAndPreservesFilterAcrossReplace
 	collection.addChunk(coordinate, makeChunk());
 	ASSERT_EQ(editions, 1);
 	auto &entry = collection.begin()->second;
-	auto *filter = entry.entity().getComponent<spk::ChunkFilter<Chunk>>();
+	auto *filter = entry.entity().getComponent<spk::World::ChunkFilter<Chunk>>();
 	ASSERT_NE(filter, nullptr);
 	EXPECT_EQ(&filter->chunk(), &collection.at(coordinate));
 
@@ -349,7 +349,7 @@ TEST(VoxelChunkTest, CollectionRelaysChunkEditionAndPreservesFilterAcrossReplace
 	EXPECT_EQ(editions, 2);
 	collection.addChunk(coordinate, makeChunk());
 	EXPECT_EQ(editions, 3);
-	EXPECT_EQ(entry.entity().getComponent<spk::ChunkFilter<Chunk>>(), filter);
+	EXPECT_EQ(entry.entity().getComponent<spk::World::ChunkFilter<Chunk>>(), filter);
 	EXPECT_EQ(&filter->chunk(), &collection.at(coordinate));
 	collection.at(coordinate).setVolume(changedVolume(collection.at(coordinate)));
 	EXPECT_EQ(editions, 4);
@@ -417,7 +417,7 @@ TEST(VoxelChunkDemoTest, GeneratedChunksMatchTerrainAndWallAtEveryCell)
 TEST(VoxelChunkDemoTest, NegativeWorldCoordinatesAndStructureCrossChunkBoundaries)
 {
 	WorldGenerator generator(17);
-	spk::ChunkCollection<Chunk> collection;
+	spk::World::ChunkCollection<Chunk> collection;
 	for (const Coordinate &coordinate : std::vector<Coordinate>{{1, 0, 0}, {-1, 0, 0}, {0, 0, 0}})
 	{
 		std::optional<Chunk> chunk = generator.generate(coordinate);
@@ -425,8 +425,8 @@ TEST(VoxelChunkDemoTest, NegativeWorldCoordinatesAndStructureCrossChunkBoundarie
 		collection.addChunk(coordinate, std::move(*chunk));
 	}
 
-	EXPECT_EQ(Chunk::worldToChunkCoordinate(spk::ChunkWorldCoordinate{-1, 4, 5}), (Coordinate{-1, 0, 0}));
-	EXPECT_EQ(Chunk::worldToLocalCoordinate(spk::ChunkWorldCoordinate{-1, 4, 5}), (spk::Vector3Int{7, 4, 5}));
+	EXPECT_EQ(Chunk::worldToChunkCoordinate(spk::World::ChunkWorldCoordinate{-1, 4, 5}), (Coordinate{-1, 0, 0}));
+	EXPECT_EQ(Chunk::worldToLocalCoordinate(spk::World::ChunkWorldCoordinate{-1, 4, 5}), (spk::Vector3Int{7, 4, 5}));
 	for (std::int64_t x = -8; x <= 15; ++x)
 	{
 		EXPECT_TRUE(isSolid(collection, {x, 0, 5}));
@@ -454,7 +454,7 @@ TEST(VoxelChunkDemoTest, HeadlessEngineStreamsGeneratedChunksToLiveChunkFilters)
 	EXPECT_EQ(editions, 3);
 	for (const auto &[coordinate, entry] : fixture.collection)
 	{
-		const auto *filter = entry.entity().getComponent<spk::ChunkFilter<Chunk>>();
+		const auto *filter = entry.entity().getComponent<spk::World::ChunkFilter<Chunk>>();
 		ASSERT_NE(filter, nullptr);
 		const Chunk *chunk = nullptr;
 		ASSERT_TRUE(filter->tryGet(chunk));

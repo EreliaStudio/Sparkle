@@ -10,7 +10,7 @@
 namespace spk::Voxel
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
-	class Chunk : public spk::Chunk<SX, SY, SZ>
+	class Chunk : public spk::World::Chunk<SX, SY, SZ>
 	{
 	private:
 		Volume _volume;

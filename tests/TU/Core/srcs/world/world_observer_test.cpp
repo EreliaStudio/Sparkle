@@ -18,13 +18,13 @@
 
 namespace
 {
-	using Coordinate = spk::ChunkCoordinate;
-	using ObserverRegistry = spk::Registry<spk::WorldObserver, spk::EngineHeadless *>;
-	using TestChunk = spk::Chunk<16, 8, 32>;
+	using Coordinate = spk::World::ChunkCoordinate;
+	using ObserverRegistry = spk::Registry<spk::World::WorldObserver, spk::EngineHeadless *>;
+	using TestChunk = spk::World::Chunk<16, 8, 32>;
 
-	static_assert(std::derived_from<spk::WorldObserver, spk::Component3D>);
+	static_assert(std::derived_from<spk::World::WorldObserver, spk::Component3D>);
 
-	[[nodiscard]] Coordinate centerOf(const spk::WorldObserver &observer)
+	[[nodiscard]] Coordinate centerOf(const spk::World::WorldObserver &observer)
 	{
 		return TestChunk::worldToChunkCoordinate(observer.worldPosition());
 	}
@@ -32,15 +32,15 @@ namespace
 
 TEST(ChunkInterestTest, RejectsNegativeRadiusOnEachAxis)
 {
-	EXPECT_THROW((void)spk::ChunkInterest({-1, 0, 0}), spk::Exception);
-	EXPECT_THROW((void)spk::ChunkInterest({0, -1, 0}), spk::Exception);
-	EXPECT_THROW((void)spk::ChunkInterest({0, 0, -1}), spk::Exception);
-	EXPECT_EQ(spk::ChunkInterest().radius(), (spk::Vector3Int{0, 0, 0}));
+	EXPECT_THROW((void)spk::World::ChunkInterest({-1, 0, 0}), spk::Exception);
+	EXPECT_THROW((void)spk::World::ChunkInterest({0, -1, 0}), spk::Exception);
+	EXPECT_THROW((void)spk::World::ChunkInterest({0, 0, -1}), spk::Exception);
+	EXPECT_EQ(spk::World::ChunkInterest().radius(), (spk::Vector3Int{0, 0, 0}));
 }
 
 TEST(ChunkInterestTest, RadiusIsInclusiveAndHasFourHundredAndFiveCoordinates)
 {
-	const spk::ChunkInterest interest({4, 2, 4});
+	const spk::World::ChunkInterest interest({4, 2, 4});
 	const Coordinate center{-3, 5, -7};
 	const std::vector<Coordinate> coords = interest.coordinates(center);
 	const std::set<Coordinate> unique(coords.begin(), coords.end());
@@ -59,7 +59,7 @@ TEST(ChunkInterestTest, RadiusIsInclusiveAndHasFourHundredAndFiveCoordinates)
 TEST(ChunkInterestTest, ZeroRadiusRequestsOnlyItsCenter)
 {
 	const Coordinate center{13, -7, 2};
-	const std::vector<Coordinate> coords = spk::ChunkInterest().coordinates(center);
+	const std::vector<Coordinate> coords = spk::World::ChunkInterest().coordinates(center);
 
 	ASSERT_EQ(coords.size(), 1u);
 	EXPECT_EQ(coords.front(), center);
@@ -67,18 +67,18 @@ TEST(ChunkInterestTest, ZeroRadiusRequestsOnlyItsCenter)
 
 TEST(ChunkInterestTest, BoundaryOverflowThrowsInsteadOfWrappingCoordinates)
 {
-	const spk::ChunkInterest interest({1, 1, 1});
+	const spk::World::ChunkInterest interest({1, 1, 1});
 	EXPECT_THROW((void)interest.coordinates({std::numeric_limits<std::int32_t>::max(), 0, 0}), spk::Exception);
 	EXPECT_THROW((void)interest.coordinates({0, std::numeric_limits<std::int32_t>::min(), 0}), spk::Exception);
 	EXPECT_THROW((void)interest.coordinates({0, 0, std::numeric_limits<std::int32_t>::max()}), spk::Exception);
 
 	const Coordinate nearLimit{std::numeric_limits<std::int32_t>::max() - 1, 0, 0};
-	EXPECT_EQ(spk::ChunkInterest({1, 0, 0}).coordinates(nearLimit).size(), 3u);
+	EXPECT_EQ(spk::World::ChunkInterest({1, 0, 0}).coordinates(nearLimit).size(), 3u);
 }
 
 TEST(WorldObserverTest, DetachedObserverDoesNotHaveAWorldPosition)
 {
-	spk::WorldObserver observer;
+	spk::World::WorldObserver observer;
 	EXPECT_EQ(observer.context(), nullptr);
 	EXPECT_EQ(observer.owner(), nullptr);
 	EXPECT_THROW((void)observer.worldPosition(), spk::Exception);
@@ -89,7 +89,7 @@ TEST(WorldObserverTest, RegistryTracksOnlyObserverComponentsInTheEngine)
 	spk::EngineHeadless engine;
 	spk::Entity3D player("player");
 	spk::Entity3D spectator("spectator");
-	auto &observer = player.addComponent<spk::WorldObserver>(spk::ChunkInterest({2, 1, 3}));
+	auto &observer = player.addComponent<spk::World::WorldObserver>(spk::World::ChunkInterest({2, 1, 3}));
 	engine.addEntity(&player);
 	engine.addEntity(&spectator);
 
@@ -97,7 +97,7 @@ TEST(WorldObserverTest, RegistryTracksOnlyObserverComponentsInTheEngine)
 	EXPECT_EQ(observer.owner(), &player);
 	EXPECT_TRUE(registry.elements(&engine).contains(&observer));
 	EXPECT_EQ(registry.elements(&engine).size(), 1u);
-	EXPECT_EQ(spectator.getComponent<spk::WorldObserver>(), nullptr);
+	EXPECT_EQ(spectator.getComponent<spk::World::WorldObserver>(), nullptr);
 
 	engine.removeEntity(&player);
 	EXPECT_FALSE(registry.elements(&engine).contains(&observer));
@@ -117,18 +117,18 @@ TEST(WorldObserverTest, AdditionRemovalAndRebindingAreObservedByTheExistingRegis
 	int firstAdditions = 0;
 	int firstRemovals = 0;
 	int secondAdditions = 0;
-	auto onFirstAdd = registry.subscribeToAddition(&first, [&](spk::EngineHeadless *const &, spk::WorldObserver *) {
+	auto onFirstAdd = registry.subscribeToAddition(&first, [&](spk::EngineHeadless *const &, spk::World::WorldObserver *) {
 		++firstAdditions;
 	});
-	auto onFirstRemove = registry.subscribeToRemoval(&first, [&](spk::EngineHeadless *const &, spk::WorldObserver *) {
+	auto onFirstRemove = registry.subscribeToRemoval(&first, [&](spk::EngineHeadless *const &, spk::World::WorldObserver *) {
 		++firstRemovals;
 	});
-	auto onSecondAdd = registry.subscribeToAddition(&second, [&](spk::EngineHeadless *const &, spk::WorldObserver *) {
+	auto onSecondAdd = registry.subscribeToAddition(&second, [&](spk::EngineHeadless *const &, spk::World::WorldObserver *) {
 		++secondAdditions;
 	});
 
 	first.addEntity(&player);
-	auto &observer = player.addComponent<spk::WorldObserver>();
+	auto &observer = player.addComponent<spk::World::WorldObserver>();
 	EXPECT_EQ(firstAdditions, 1);
 	EXPECT_TRUE(registry.elements(&first).contains(&observer));
 
@@ -148,8 +148,8 @@ TEST(WorldObserverTest, MultipleObserversAreTrackedIndependently)
 	spk::EngineHeadless engine;
 	spk::Entity3D firstPlayer("first");
 	spk::Entity3D secondPlayer("second");
-	auto &first = firstPlayer.addComponent<spk::WorldObserver>(spk::ChunkInterest({1, 2, 3}));
-	auto &second = secondPlayer.addComponent<spk::WorldObserver>(spk::ChunkInterest({4, 0, 2}));
+	auto &first = firstPlayer.addComponent<spk::World::WorldObserver>(spk::World::ChunkInterest({1, 2, 3}));
+	auto &second = secondPlayer.addComponent<spk::World::WorldObserver>(spk::World::ChunkInterest({4, 0, 2}));
 
 	engine.addEntity(&firstPlayer);
 	engine.addEntity(&secondPlayer);
@@ -169,7 +169,7 @@ TEST(WorldObserverTest, WorldPositionIncludesParentTransformsAndReparenting)
 	spk::Entity3D originalParent("original");
 	spk::Entity3D otherParent("other");
 	spk::Entity3D child("child", &originalParent);
-	auto &observer = child.addComponent<spk::WorldObserver>();
+	auto &observer = child.addComponent<spk::World::WorldObserver>();
 	originalParent.transform().place({20.0f, 15.0f, 8.0f});
 	child.transform().place({3.0f, 1.0f, -5.0f});
 	EXPECT_EQ(observer.worldPosition(), (spk::Vector3{23.0f, 16.0f, 3.0f}));
@@ -182,7 +182,7 @@ TEST(WorldObserverTest, WorldPositionIncludesParentTransformsAndReparenting)
 TEST(WorldObserverTest, IntraChunkMovementPreservesCenterWhileBoundaryCrossingChangesIt)
 {
 	spk::Entity3D entity("observer");
-	auto &observer = entity.addComponent<spk::WorldObserver>(spk::ChunkInterest({1, 1, 1}));
+	auto &observer = entity.addComponent<spk::World::WorldObserver>(spk::World::ChunkInterest({1, 1, 1}));
 	entity.transform().place({-0.5f, 7.0f, -0.5f});
 
 	const Coordinate initial = centerOf(observer);
@@ -200,25 +200,25 @@ TEST(WorldObserverTest, IntraChunkMovementPreservesCenterWhileBoundaryCrossingCh
 TEST(WorldObserverTest, InterestChangesNotifyOnceAndDoNotNotifyForEquivalentValues)
 {
 	spk::Entity3D entity("observer");
-	auto &observer = entity.addComponent<spk::WorldObserver>();
+	auto &observer = entity.addComponent<spk::World::WorldObserver>();
 	int calls = 0;
-	auto contract = observer.subscribeToInterestEdition([&](const spk::WorldObserver &changed) {
+	auto contract = observer.subscribeToInterestEdition([&](const spk::World::WorldObserver &changed) {
 		EXPECT_EQ(&changed, &observer);
 		++calls;
 	});
 
-	observer.setInterest(spk::ChunkInterest({0, 0, 0}));
+	observer.setInterest(spk::World::ChunkInterest({0, 0, 0}));
 	EXPECT_EQ(calls, 0);
-	observer.setInterest(spk::ChunkInterest({4, 2, 4}));
+	observer.setInterest(spk::World::ChunkInterest({4, 2, 4}));
 	EXPECT_EQ(calls, 1);
 	EXPECT_EQ(observer.interest().coordinates({0, 0, 0}).size(), 405u);
-	observer.setInterest(spk::ChunkInterest({4, 2, 4}));
+	observer.setInterest(spk::World::ChunkInterest({4, 2, 4}));
 	EXPECT_EQ(calls, 1);
-	observer.setInterest(spk::ChunkInterest({1, 0, 1}));
+	observer.setInterest(spk::World::ChunkInterest({1, 0, 1}));
 	EXPECT_EQ(calls, 2);
 	EXPECT_TRUE(contract.isValid());
 
-	EXPECT_THROW((void)spk::ChunkInterest({-1, 0, 0}), spk::Exception);
+	EXPECT_THROW((void)spk::World::ChunkInterest({-1, 0, 0}), spk::Exception);
 	EXPECT_EQ(observer.interest().radius(), (spk::Vector3Int{1, 0, 1}));
 	EXPECT_EQ(calls, 2);
 }

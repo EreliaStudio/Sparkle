@@ -5,7 +5,7 @@
 
 #include "exception.hpp"
 
-namespace spk
+namespace spk::World
 {
 	ChunkInterest::ChunkInterest(Vector3Int radius) :
 		_radius(radius)

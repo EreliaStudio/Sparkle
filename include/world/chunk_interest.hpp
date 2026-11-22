@@ -4,7 +4,7 @@
 
 #include "world/chunk_coordinate.hpp"
 
-namespace spk
+namespace spk::World
 {
 	class ChunkInterest
 	{

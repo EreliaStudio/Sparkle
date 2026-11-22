@@ -6,7 +6,7 @@
 #include "math/vector3.hpp"
 #include "world/chunk_interest.hpp"
 
-namespace spk
+namespace spk::World
 {
 	class WorldObserver : public Component3D,
 						  public Registry<WorldObserver, EngineHeadless *>::Object

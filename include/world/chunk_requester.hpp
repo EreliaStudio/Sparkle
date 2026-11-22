@@ -5,7 +5,7 @@
 #include "threading/task.hpp"
 #include "world/chunk_coordinate.hpp"
 
-namespace spk
+namespace spk::World
 {
 	template <typename TChunk>
 	class ChunkRequester

@@ -26,9 +26,9 @@
 namespace
 {
 	using namespace std::chrono_literals;
-	using Coordinate = spk::ChunkCoordinate;
+	using Coordinate = spk::World::ChunkCoordinate;
 
-	class TestChunk : public spk::Chunk<16, 8, 32>
+	class TestChunk : public spk::World::Chunk<16, 8, 32>
 	{
 	private:
 		int _value;
@@ -48,9 +48,9 @@ namespace
 	using Result = std::optional<TestChunk>;
 	using Task = spk::Task<Result>;
 	using Answer = Task::Answer;
-	using Streamer = spk::WorldStreamingSystem<TestChunk>;
+	using Streamer = spk::World::WorldStreamingSystem<TestChunk>;
 
-	class ControlledRequester : public spk::ChunkRequester<TestChunk>
+	class ControlledRequester : public spk::World::ChunkRequester<TestChunk>
 	{
 	public:
 		struct Request
@@ -96,7 +96,7 @@ namespace
 		}
 	};
 
-	class ImmediateRequester : public spk::ChunkRequester<TestChunk>
+	class ImmediateRequester : public spk::World::ChunkRequester<TestChunk>
 	{
 	public:
 		std::vector<Coordinate> requested;
@@ -114,7 +114,7 @@ namespace
 	{
 	public:
 		spk::EngineHeadless engine;
-		spk::ChunkCollection<TestChunk> collection;
+		spk::World::ChunkCollection<TestChunk> collection;
 		ControlledRequester requester;
 
 		Fixture()
@@ -143,14 +143,14 @@ namespace
 		}
 	};
 
-	spk::WorldObserver &addObserver(
+	spk::World::WorldObserver &addObserver(
 		spk::EngineHeadless &engine,
 		spk::Entity3D &entity,
 		const spk::Vector3 &worldPosition,
 		const spk::Vector3Int &radius = {0, 0, 0})
 	{
 		entity.transform().place(worldPosition);
-		auto &observer = entity.addComponent<spk::WorldObserver>(spk::ChunkInterest(radius));
+		auto &observer = entity.addComponent<spk::World::WorldObserver>(spk::World::ChunkInterest(radius));
 		engine.addEntity(&entity);
 		return observer;
 	}
@@ -252,11 +252,11 @@ TEST(WorldStreamingSystemTest, OnlyChunkCenterChangesRebuildPlan)
 	ASSERT_EQ(fixture.requester.requests.size(), 2u);
 	EXPECT_EQ(fixture.requester.requests.at(1).coordinate, (Coordinate{-2, 0, 0}));
 
-	observer.setInterest(spk::ChunkInterest({1, 0, 0}));
+	observer.setInterest(spk::World::ChunkInterest({1, 0, 0}));
 	fixture.tick(3ms);
 	EXPECT_EQ(streamer.planRevision(), 3u);
 
-	observer.setInterest(spk::ChunkInterest({1, 0, 0}));
+	observer.setInterest(spk::World::ChunkInterest({1, 0, 0}));
 	fixture.tick(4ms);
 	EXPECT_EQ(streamer.planRevision(), 3u);
 }
@@ -553,7 +553,7 @@ TEST(WorldStreamingSystemTest, OutsideChunksAreEvictedImmediatelyWithTheirEntiti
 TEST(WorldStreamingSystemTest, CompletedImmediatelyDoesNotConsumeEntireFrameBudget)
 {
 	spk::EngineHeadless engine;
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	collection.attach(engine);
 	ImmediateRequester requester;
 	spk::Entity3D player("player");

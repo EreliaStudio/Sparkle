@@ -16,9 +16,9 @@
 
 namespace
 {
-	using Coordinate = spk::ChunkCoordinate;
+	using Coordinate = spk::World::ChunkCoordinate;
 
-	class TestChunk : public spk::Chunk<32, 16, 8>
+	class TestChunk : public spk::World::Chunk<32, 16, 8>
 	{
 	private:
 		int _value = 0;
@@ -56,7 +56,7 @@ namespace
 
 TEST(ChunkCollectionTest, OwnsChunkByValueAndHeadlessEntitiesWithFilters)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{-2, 3, 4};
 	collection.addChunk(coordinate, TestChunk(42));
 
@@ -73,7 +73,7 @@ TEST(ChunkCollectionTest, OwnsChunkByValueAndHeadlessEntitiesWithFilters)
 	EXPECT_EQ(entry.entity().parent(), &collection.root());
 	EXPECT_EQ(entry.entity().transform().position(), (spk::Vector3{-64.0f, 48.0f, 32.0f}));
 
-	const auto *filter = entry.entity().getComponent<spk::ChunkFilter<TestChunk>>();
+	const auto *filter = entry.entity().getComponent<spk::World::ChunkFilter<TestChunk>>();
 	ASSERT_NE(filter, nullptr);
 	const TestChunk *filteredChunk = nullptr;
 	EXPECT_TRUE(filter->tryGet(filteredChunk));
@@ -92,7 +92,7 @@ TEST(ChunkCollectionTest, OwnsChunkByValueAndHeadlessEntitiesWithFilters)
 
 TEST(ChunkCollectionTest, MissingCoordinateDoesNotCreateAnEntry)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate missing{1, 0, -1};
 	EXPECT_FALSE(collection.contains(missing));
 	TestChunk *chunk = nullptr;
@@ -110,7 +110,7 @@ TEST(ChunkCollectionTest, MissingCoordinateDoesNotCreateAnEntry)
 
 TEST(ChunkCollectionTest, TryGetReturnsStoredAddressAndClearsOutputOnMiss)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate present{2, 1, -3};
 	const Coordinate missing{3, 1, -3};
 	collection.addChunk(present, TestChunk(5));
@@ -135,7 +135,7 @@ TEST(ChunkCollectionTest, TryGetReturnsStoredAddressAndClearsOutputOnMiss)
 
 TEST(ChunkCollectionTest, MapIterationIsLexicographicAndNonOwning)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	collection.addChunk({1, 0, 0}, TestChunk(3));
 	collection.addChunk({-1, 0, 0}, TestChunk(1));
 	collection.addChunk({0, 0, 0}, TestChunk(2));
@@ -152,7 +152,7 @@ TEST(ChunkCollectionTest, MapIterationIsLexicographicAndNonOwning)
 
 TEST(ChunkCollectionTest, PublishesAdditionReplacementAndSuccessfulEditsImmediately)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{1, 2, 3};
 	std::vector<Coordinate> events;
 	auto subscription = collection.subscribeToChunkEdition([&](const Coordinate &edited) {
@@ -173,13 +173,13 @@ TEST(ChunkCollectionTest, PublishesAdditionReplacementAndSuccessfulEditsImmediat
 
 TEST(ChunkCollectionTest, ReplacementPreservesChunkEntityComponentsAndSubscriptions)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{4, -1, 2};
 	collection.addChunk(coordinate, TestChunk(1));
 	auto &entry = collection.begin()->second;
 	TestChunk *chunk = &entry.chunk();
 	spk::Entity3D *entity = &entry.entity();
-	auto *filter = entity->getComponent<spk::ChunkFilter<TestChunk>>();
+	auto *filter = entity->getComponent<spk::World::ChunkFilter<TestChunk>>();
 	MarkerComponent *marker = &entity->addComponent<MarkerComponent>();
 	int destructionCalls = 0;
 	int directEdits = 0;
@@ -196,7 +196,7 @@ TEST(ChunkCollectionTest, ReplacementPreservesChunkEntityComponentsAndSubscripti
 	EXPECT_TRUE(collection.tryGet(coordinate, located));
 	EXPECT_EQ(located, chunk);
 	EXPECT_EQ(&collection.begin()->second.entity(), entity);
-	EXPECT_EQ(entity->getComponent<spk::ChunkFilter<TestChunk>>(), filter);
+	EXPECT_EQ(entity->getComponent<spk::World::ChunkFilter<TestChunk>>(), filter);
 	EXPECT_EQ(entity->getComponent<MarkerComponent>(), marker);
 	TestChunk *filteredChunk = nullptr;
 	EXPECT_TRUE(filter->tryGet(filteredChunk));
@@ -211,11 +211,11 @@ TEST(ChunkCollectionTest, ReplacementPreservesChunkEntityComponentsAndSubscripti
 
 TEST(ChunkCollectionTest, RemovingUnbindsFilterBeforeEntityDestruction)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{1, 1, 1};
 	collection.addChunk(coordinate, TestChunk(8));
 	spk::Entity3D &entity = collection.begin()->second.entity();
-	auto *filter = entity.getComponent<spk::ChunkFilter<TestChunk>>();
+	auto *filter = entity.getComponent<spk::World::ChunkFilter<TestChunk>>();
 	ASSERT_NE(filter, nullptr);
 	TestChunk *originalChunk = &collection.at(coordinate);
 	int calls = 0;
@@ -243,7 +243,7 @@ TEST(ChunkCollectionTest, RemovingUnbindsFilterBeforeEntityDestruction)
 
 TEST(ChunkCollectionTest, CanReenterCollectionDuringEditionOrRemoval)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate first{1, 0, 0};
 	const Coordinate second{2, 0, 0};
 	const Coordinate third{3, 0, 0};
@@ -270,7 +270,7 @@ TEST(ChunkCollectionTest, CanReenterCollectionDuringEditionOrRemoval)
 
 TEST(ChunkCollectionTest, CopiesOfChunksDoNotShareCollectionSubscriptions)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{0, 0, 0};
 	collection.addChunk(coordinate, TestChunk(3));
 	int calls = 0;
@@ -296,11 +296,11 @@ TEST(ChunkCollectionTest, ExplicitAttachDetachAndRebindPreserveEntries)
 {
 	spk::EngineHeadless firstEngine;
 	spk::EngineHeadless secondEngine;
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{1, -2, 3};
 	collection.addChunk(coordinate, TestChunk(17));
 	spk::Entity3D *entity = &collection.begin()->second.entity();
-	auto *filter = entity->getComponent<spk::ChunkFilter<TestChunk>>();
+	auto *filter = entity->getComponent<spk::World::ChunkFilter<TestChunk>>();
 	EXPECT_EQ(collection.engine(), nullptr);
 
 	collection.attach(firstEngine);
@@ -327,7 +327,7 @@ TEST(ChunkCollectionTest, ExplicitAttachDetachAndRebindPreserveEntries)
 
 TEST(ChunkCollectionTest, OutlivingAnEngineDetachesWithoutDestroyingChunks)
 {
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{0, 0, 0};
 	collection.addChunk(coordinate, TestChunk(5));
 	{

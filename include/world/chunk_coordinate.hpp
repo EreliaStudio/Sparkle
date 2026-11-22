@@ -4,7 +4,7 @@
 
 #include "math/vector3.hpp"
 
-namespace spk
+namespace spk::World
 {
 	// Signed chunk indices are independent of their position in world units.
 	using ChunkCoordinate = Vector3Int;

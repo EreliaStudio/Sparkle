@@ -22,9 +22,9 @@
 
 namespace
 {
-	using Coordinate = spk::ChunkCoordinate;
+	using Coordinate = spk::World::ChunkCoordinate;
 
-	class TestChunk : public spk::Chunk<8, 4, 6>
+	class TestChunk : public spk::World::Chunk<8, 4, 6>
 	{
 	public:
 		class Builder;
@@ -66,7 +66,7 @@ namespace
 		int seed = 0;
 	};
 
-	using Generator = spk::Generator<TestChunk, GenerationData>;
+	using Generator = spk::World::Generator<TestChunk, GenerationData>;
 	using Result = std::optional<TestChunk>;
 	using Task = spk::Task<Result>;
 	using Answer = Task::Answer;
@@ -147,7 +147,7 @@ namespace
 		}
 	};
 
-	class RemoteRequester : public spk::ChunkRequester<TestChunk>
+	class RemoteRequester : public spk::World::ChunkRequester<TestChunk>
 	{
 	public:
 		[[nodiscard]] Answer request(const Coordinate &coordinate) override
@@ -185,7 +185,7 @@ TEST(ChunkRequesterTest, LocalSourceGeneratesAChunkOnAWorker)
 	TestGenerator generator(40);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 	const Coordinate coordinate{2, -3, 4};
 
 	Answer answer = requester.request(coordinate);
@@ -202,7 +202,7 @@ TEST(ChunkRequesterTest, AbsentChunkIsSuccessfulAndDoesNotBuildGenerationData)
 	TestGenerator generator(40);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 
 	const Answer answer = requester.request({-1, 0, 0});
 
@@ -217,7 +217,7 @@ TEST(ChunkRequesterTest, SparkleGenerationExceptionBecomesFailedTask)
 	TestGenerator generator(8);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 
 	const Answer answer = requester.request({-2, 0, 0});
 
@@ -240,7 +240,7 @@ TEST(ChunkRequesterTest, StandardPassExceptionIsStoredAsFailureWithOriginalCause
 	TestGenerator generator(8);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 
 	const Answer answer = requester.request({99, 0, 0});
 
@@ -262,7 +262,7 @@ TEST(ChunkRequesterTest, PassFailureDoesNotStopSubsequentRequests)
 	TestGenerator generator(5);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 
 	const Answer failed = requester.request({98, 0, 0});
 	const Answer succeeded = requester.request({3, 4, 5});
@@ -280,8 +280,8 @@ TEST(ChunkRequesterTest, CopiesCompletedValueIntoCollectionOnlyOnCallingThread)
 	TestGenerator generator(6);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
-	spk::ChunkCollection<TestChunk> collection;
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::ChunkCollection<TestChunk> collection;
 	const Coordinate coordinate{1, 2, 3};
 
 	const Answer answer = requester.request(coordinate);
@@ -303,7 +303,7 @@ TEST(ChunkRequesterTest, CompletedTaskCallbackIsInvokedImmediately)
 	TestGenerator generator(1);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 
 	const Answer answer = requester.request({1, 0, 0});
 	ASSERT_TRUE(waitUntilSettled(answer));
@@ -321,7 +321,7 @@ TEST(ChunkRequesterTest, CompletedTaskCallbackIsInvokedImmediately)
 
 TEST(ChunkRequesterTest, RemoteSourceUsesSameInterfaceWithoutGeneratorOrPool)
 {
-	std::unique_ptr<spk::ChunkRequester<TestChunk>> requester = std::make_unique<RemoteRequester>();
+	std::unique_ptr<spk::World::ChunkRequester<TestChunk>> requester = std::make_unique<RemoteRequester>();
 	const Answer available = requester->request({51, 0, 0});
 	const Answer absent = requester->request({0, 0, 0});
 	const Answer failed = requester->request({-3, 0, 0});
@@ -346,7 +346,7 @@ TEST(ChunkRequesterTest, InFlightTaskDoesNotDependOnRequesterLifetime)
 	spk::WorkerPool workers(1u);
 	std::optional<Answer> answer;
 	{
-		spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+		spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 		answer.emplace(requester.request({0, 0, 0}));
 	}
 
@@ -369,7 +369,7 @@ TEST(ChunkRequesterTest, ResignedInFlightSubscriptionDoesNotCallDestroyedConsume
 	TestGenerator generator(27);
 	generator.addPass<BlockingPass>(entered, gate);
 	spk::WorkerPool workers(1u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 
 	const Answer answer = requester.request({0, 0, 0});
 	auto consumerAlive = std::make_shared<std::atomic<bool>>(true);
@@ -397,7 +397,7 @@ TEST(ChunkRequesterTest, IndependentRequestsKeepTheirOwnCoordinates)
 	TestGenerator generator(30);
 	generator.addPass<FillPass>();
 	spk::WorkerPool workers(4u);
-	spk::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<TestChunk, GenerationData> requester(workers, generator);
 	const std::vector<Coordinate> coordinates{{0, 0, 0}, {3, -7, 2}, {7, 5, -8}, {2, 0, 4}};
 	std::vector<Answer> answers;
 

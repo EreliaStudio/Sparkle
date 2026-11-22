@@ -4,17 +4,17 @@
 #include "world/chunk_requester.hpp"
 #include "world/generator.hpp"
 
-namespace spk
+namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData>
+	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
 	class LocalChunkRequester : public ChunkRequester<TChunk>
 	{
 	private:
 		WorkerPool &_workerPool;
-		Generator<TChunk, TGenerationData> &_generator;
+		Generator<TChunk, TGenerationData, TBuilder> &_generator;
 
 	public:
-		LocalChunkRequester(WorkerPool &workerPool, Generator<TChunk, TGenerationData> &generator) :
+		LocalChunkRequester(WorkerPool &workerPool, Generator<TChunk, TGenerationData, TBuilder> &generator) :
 			_workerPool(workerPool),
 			_generator(generator)
 		{
