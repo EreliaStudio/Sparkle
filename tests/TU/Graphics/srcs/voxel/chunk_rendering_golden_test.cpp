@@ -46,14 +46,24 @@ namespace
 		return builder.build();
 	}
 
+	[[nodiscard]] spk::Voxel::Definition definition(const spk::Voxel::Shape &shape, const char *material, float opacity = 1.0f)
+	{
+		spk::Voxel::Definition::SlotMapping mapping;
+		for (const auto &slot : shape.slots())
+		{
+			mapping.emplace(slot.name, spk::Voxel::Definition::Slot{material, opacity});
+		}
+		return {shape, std::move(mapping)};
+	}
+
 	[[nodiscard]] spk::Voxel::Definition::Registry definitions()
 	{
 		spk::Voxel::Definition::Registry::Builder builder;
 		const auto cube = shape("cube");
-		builder.add(1, spk::Voxel::Definition(cube, {{"surface", {"stone", 1.0f}}}));
-		builder.add(2, spk::Voxel::Definition(cube, {{"surface", {"glass", 0.45f}}}));
-		builder.add(3, spk::Voxel::Definition(shape("slab"), {{"surface", {"stone", 1.0f}}, {"profile", {"stone", 1.0f}}}));
-		builder.add(4, spk::Voxel::Definition(shape("slope"), {{"surface", {"stone", 1.0f}}, {"profile", {"stone", 1.0f}}}));
+		builder.add(1, definition(cube, "stone"));
+		builder.add(2, definition(cube, "glass", 0.45f));
+		builder.add(3, definition(shape("slab"), "stone"));
+		builder.add(4, definition(shape("slope"), "stone"));
 		return builder.build();
 	}
 
