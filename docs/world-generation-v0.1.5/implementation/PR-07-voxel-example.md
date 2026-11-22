@@ -7,7 +7,7 @@
 `include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>` héritant de `spk::Chunk<SX, SY, SZ>`.
 
 - Chaque chunk possède exactement un `Voxel::Volume` aux dimensions fixes `SX × SY × SZ`. Le constructeur et `setVolume(Volume)` rejettent les dimensions incompatibles.
-- `volume() const` expose le snapshot immuable. `setVolume(Volume)` remplace le snapshot et notifie uniquement si le contenu visible (cellules, orientations et définitions utilisées) change. La comparaison complète des cellules évite les notifications d'un remplacement identique : son coût est proportionnel au nombre de voxels.
+- `volume() const` expose le snapshot immuable. `setVolume(Volume)` valide les dimensions, remplace systématiquement le volume et notifie chaque remplacement valide, même lorsque le contenu est identique. Aucune comparaison de voxels n'est effectuée.
 - Le stockage immuable partagé du `Volume` existant n'est pas modifié. La copie / construction par déplacement du chunk n'importe aucune souscription ; l'affectation conserve les souscriptions de destination, conformément à `spk::Chunk`.
 - Les mutations se font sur un nouveau `Volume` construit par le Builder. Ni `Chunk` ni `Volume` ne sont dotés de nouvelles couches de stockage.
 
