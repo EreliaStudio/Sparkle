@@ -33,24 +33,30 @@ namespace
 	using WorldGenerator = sparkle_world_generation_example::WorldGenerator;
 	using Streaming = spk::WorldStreamingSystem<Chunk>;
 
-	static_assert(std::is_same_v<decltype(std::declval<Chunk::Builder &&>().build()), Chunk>);
+	template <typename T>
+	concept HasChunkBuilder = requires { typename T::Builder; };
+
+	static_assert(!HasChunkBuilder<Chunk>);
 	static_assert(std::is_copy_constructible_v<Chunk>);
 	static_assert(std::is_move_constructible_v<Chunk>);
+	static_assert(std::is_copy_assignable_v<Chunk>);
+	static_assert(std::is_move_assignable_v<Chunk>);
+	static_assert(std::is_same_v<decltype(std::declval<Chunk &>().volume()), const Volume &>);
 
 	[[nodiscard]] Chunk makeChunk(std::uint32_t id = 1)
 	{
-		Chunk::Builder builder;
-		builder.volumeBuilder().bind(sparkle_world_generation_example::makeDefinitions());
-		builder.volumeBuilder().set({0, 0, 0}, id);
-		return std::move(builder).build();
+		Volume::Builder builder({8, 16, 32});
+		builder.bind(sparkle_world_generation_example::makeDefinitions());
+		builder.set({0, 0, 0}, id);
+		return Chunk(builder.build());
 	}
 
 	[[nodiscard]] Volume changedVolume(const Chunk &chunk)
 	{
-		Chunk::Builder builder;
-		builder.load(chunk);
-		builder.volumeBuilder().set({1, 2, 3}, 2);
-		return std::move(builder).build().volume();
+		Volume::Builder builder(chunk.volume().dimensions());
+		builder.load(chunk.volume());
+		builder.set({1, 2, 3}, 2);
+		return builder.build();
 	}
 
 	[[nodiscard]] std::vector<std::uint32_t> snapshot(const Chunk &chunk)
@@ -130,8 +136,8 @@ namespace
 TEST(VoxelChunkTest, NonCubicDimensionsAreExactlyThoseOfTheVolume)
 {
 	using NonCubic = spk::Voxel::Chunk<8, 16, 32>;
-	NonCubic::Builder builder;
-	NonCubic chunk = std::move(builder).build();
+	Volume::Builder builder({8, 16, 32});
+	NonCubic chunk(builder.build());
 
 	EXPECT_EQ(NonCubic::Size, (spk::Vector3Int{8, 16, 32}));
 	EXPECT_EQ(chunk.volume().dimensions(), (spk::Vector3UInt{8, 16, 32}));
@@ -163,21 +169,21 @@ TEST(VoxelChunkTest, SetVolumeAlwaysSignalsReplacement)
 	EXPECT_TRUE(subscription.isValid());
 }
 
-TEST(VoxelChunkTest, BuilderLoadsExistingSnapshotAndIsConsumedByBuild)
+TEST(VoxelChunkTest, VolumeBuilderLoadsExistingSnapshotAndIsConsumedByBuild)
 {
 	Chunk source = makeChunk();
 	const auto first = source.volume().atRaw({0, 0, 0});
-	Chunk::Builder builder;
-	builder.load(source);
-	builder.volumeBuilder().erase({0, 0, 0});
-	builder.volumeBuilder().set({7, 15, 31}, 2);
-	Chunk changed = std::move(builder).build();
+	Volume::Builder builder(source.volume().dimensions());
+	builder.load(source.volume());
+	builder.erase({0, 0, 0});
+	builder.set({7, 15, 31}, 2);
+	Chunk changed(builder.build());
 
 	EXPECT_EQ(source.volume().atRaw({0, 0, 0}), first);
 	EXPECT_EQ(changed.volume().atRaw({0, 0, 0}), Volume::PackedCell::Air);
 	EXPECT_FALSE(changed.volume().at({7, 15, 31}).isAir());
-	EXPECT_THROW((void)std::move(builder).build(), spk::Exception);
-	EXPECT_THROW(builder.load(source), spk::Exception);
+	EXPECT_THROW((void)builder.build(), spk::Exception);
+	EXPECT_THROW(builder.load(source.volume()), spk::Exception);
 }
 
 TEST(VoxelChunkTest, CopiesMovesAndAssignmentsKeepIndependentEditionSubscriptions)
