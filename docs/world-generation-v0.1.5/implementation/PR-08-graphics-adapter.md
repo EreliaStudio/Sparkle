@@ -45,7 +45,7 @@ Timing is for CPU `Mesher::bake()` (including geometry construction), not GPU re
 - Three adjacent chunks, shown from an angled camera and rendered using the real Engine graphics pipeline.
 - **Image comparison:** the chunked image is compared pixel-by-pixel with an equivalent, independently meshed single-volume scene in the same camera and lighting configuration. Both screenshots and any difference image are saved to `results/rendering/voxel-chunks` and uploaded to the visual comparison artifacts.
 
-This image comparison uses a runtime-generated single-volume reference, not a checked-in static PNG baseline. Existing voxel-scene golden tests continue to validate the rendering pipeline against committed PNG goldens.
+The test validates **both** the independently meshed runtime reference and the checked-in static PNG baseline at `tests/TU/Graphics/resources/expectedImages/rendering/voxel-chunks/three_chunks_oblique.png`. This 320×240 golden was captured from the passing Windows Release build and verified to match the passing Debug build exactly. Nonempty image assertions prevent an all-black result from passing.
 
 ## Exclusions
 

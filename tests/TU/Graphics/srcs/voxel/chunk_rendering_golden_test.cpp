@@ -184,6 +184,13 @@ namespace
 		widget.buildRenderSnapshot(builder);
 		builder.build().execute(gl.renderContext());
 		gl.requireNoErrors();
+		const auto image = gl.capture();
+		std::size_t visiblePixels = 0;
+		for (std::size_t offset = 0; offset < image.pixels.size(); offset += 4)
+		{
+			visiblePixels += image.pixels[offset] > 18 || image.pixels[offset + 1] > 18 || image.pixels[offset + 2] > 18;
+		}
+		EXPECT_GT(visiblePixels, 0u) << name << " rendered nothing";
 		gl.save(sparkle_test::resultImagePath("rendering/voxel-chunks", name));
 		gl.reset();
 	}
@@ -354,6 +361,16 @@ TEST(VoxelChunkGoldenTest, ThreeAdjacentChunksMatchSingleVolumeAtObliqueCamera)
 	std::filesystem::copy_file(actual, comparisonActual, std::filesystem::copy_options::overwrite_existing);
 	const auto comparison = sparkle_test::compareImages(comparisonActual, reference, diff);
 	EXPECT_TRUE(comparison.matches) << comparison.differentPixelCount << " pixels differ between chunked and monolithic rendering";
+
+	const auto checkedInGolden = sparkle_test::expectedImagePath(category, "three_chunks_oblique");
+	ASSERT_TRUE(std::filesystem::exists(checkedInGolden)) << "Missing PR08 golden image: " << checkedInGolden;
+	const auto staticComparisonActual = sparkle_test::resultImagePath(category, "three_chunks_for_static_comparison");
+	std::filesystem::copy_file(actual, staticComparisonActual, std::filesystem::copy_options::overwrite_existing);
+	const auto goldenComparison = sparkle_test::compareImages(
+		staticComparisonActual,
+		checkedInGolden,
+		sparkle_test::resultImagePath(category, "three_chunks_golden_difference"));
+	EXPECT_TRUE(goldenComparison.matches) << goldenComparison.differentPixelCount << " pixels differ from the checked-in PR08 golden";
 	gl.reset();
 }
 
