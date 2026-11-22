@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -197,4 +198,30 @@ TEST(MeshTest, VertexIndexOverflowIsRejectedBeforeMutation)
 {
 	BoundaryMesh::Builder builder;
 	EXPECT_THROW((void)builder.addVertex({1.0f, 2.0f}), std::overflow_error);
+}
+
+TEST(MeshTest, BatchedVerticesAndIndicesPreservePayloadAndValidateBounds)
+{
+	SimpleMesh::Builder builder;
+	const std::array<SimpleVertex, 3> vertices{{{0.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 1.0f}}};
+	const std::array<SimpleVertex, 1> extra{{{2.0f, 2.0f}}};
+	EXPECT_EQ(builder.addVertices(vertices), 0u);
+	EXPECT_EQ(builder.addVertices(extra), 3u);
+	const std::array<std::uint32_t, 6> indices{{0, 1, 2, 2, 1, 3}};
+	builder.addIndices(indices);
+	const std::array<std::uint32_t, 1> invalid{{4}};
+	EXPECT_THROW(builder.addIndices(invalid), std::out_of_range);
+	const auto mesh = std::move(builder).build();
+	EXPECT_EQ(mesh.vertexCount(), 4u);
+	EXPECT_EQ(mesh.indexCount(), indices.size());
+	EXPECT_EQ(mesh.layout().vertexBuffer().cast<SimpleVertex>()[3].y, 2.0f);
+	const auto actual = mesh.layout().indexBuffer().cast<std::uint32_t>();
+	EXPECT_TRUE(std::equal(actual.begin(), actual.end(), indices.begin()));
+}
+
+TEST(MeshTest, BatchVertexIndexOverflowIsRejectedBeforeMutation)
+{
+	BoundaryMesh::Builder builder;
+	const std::array<SimpleVertex, 1> vertices{{{1.0f, 2.0f}}};
+	EXPECT_THROW((void)builder.addVertices(vertices), std::overflow_error);
 }
