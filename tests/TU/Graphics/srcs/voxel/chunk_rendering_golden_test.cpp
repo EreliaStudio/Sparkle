@@ -379,6 +379,8 @@ TEST(VoxelChunkPerformanceTest, ReportsVertexCountsAndMeshingTimePerChunkAndVoxe
 		chunk.setVolume(builder.build());
 		collection.addChunk({-1, 0, 0}, std::move(chunk));
 		spk::Voxel::ChunkMesher<S, S, S> mesher(collection, {-1, 0, 0});
+		spk::Voxel::Occlusion::Cache cache;
+		mesher.attachCache(cache);
 		const auto &volume = collection.at({-1, 0, 0}).volume();
 		std::chrono::nanoseconds elapsed{0};
 		std::size_t vertices = 0;
@@ -403,6 +405,11 @@ TEST(VoxelChunkPerformanceTest, ReportsVertexCountsAndMeshingTimePerChunkAndVoxe
 		EXPECT_GT(elapsed.count(), 0);
 		EXPECT_GT(vertices, 0u);
 		EXPECT_GT(triangles, 0u);
+		if (!sparse)
+		{
+			EXPECT_EQ(vertices, static_cast<std::size_t>(36) * S * S);
+			EXPECT_EQ(triangles, static_cast<std::size_t>(12) * S * S);
+		}
 	};
 	benchmark.template operator()<8>("solid", false);
 	benchmark.template operator()<16>("solid", false);
