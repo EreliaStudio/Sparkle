@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <numeric>
 #include <optional>
 #include <string>
 #include <utility>
@@ -21,6 +22,7 @@ namespace spk::Voxel
 		using Polygon = Shape::Polygon;
 		using Position = spk::Vector3UInt;
 		using SlotIndices = std::map<std::string, std::uint32_t>;
+		using MeshVertices = std::vector<Geometry::Vertex>;
 
 		constexpr std::array<Face, 6> Faces{
 			Face::NegativeX,
@@ -109,7 +111,7 @@ namespace spk::Voxel
 		}
 
 		void emit(
-			Geometry::SurfaceMesh::Builder &builder,
+			MeshVertices &verticesOut,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -127,13 +129,9 @@ namespace spk::Voxel
 				{
 					continue;
 				}
-				auto add = [&](const Shape::Vertex &vertex) {
-					return builder.addVertex({vertex.position + translation, vertex.normal.value_or(polygon.geometricNormal), vertex.uv, materialIndex});
-				};
-				const auto first = add(a);
-				const auto second = add(b);
-				const auto third = add(c);
-				builder.addTriangle(first, second, third);
+				verticesOut.push_back({a.position + translation, a.normal.value_or(polygon.geometricNormal), a.uv, materialIndex});
+				verticesOut.push_back({b.position + translation, b.normal.value_or(polygon.geometricNormal), b.uv, materialIndex});
+				verticesOut.push_back({c.position + translation, c.normal.value_or(polygon.geometricNormal), c.uv, materialIndex});
 			}
 		}
 
@@ -142,13 +140,26 @@ namespace spk::Voxel
 			const Definition &definition,
 			Position position,
 			const SlotIndices &indices,
-			Geometry::SurfaceMesh::Builder &opaque,
-			Geometry::SurfaceMesh::Builder &translucent,
+			MeshVertices &opaque,
+			MeshVertices &translucent,
 			float tolerance)
 		{
 			const auto &slot = definition.slot(polygon.slotKey);
 			const auto index = indices.at(slot.name);
 			emit(slot.opacity == 1.0f ? opaque : translucent, polygon, position, index, tolerance);
+		}
+
+		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertices &vertices)
+		{
+			Geometry::SurfaceMesh::Builder builder;
+			if (!vertices.empty())
+			{
+				(void)builder.addVertices(vertices);
+				std::vector<Geometry::SurfaceMesh::Index> indices(vertices.size());
+				std::iota(indices.begin(), indices.end(), 0U);
+				builder.addIndices(indices);
+			}
+			return std::move(builder).build();
 		}
 
 		[[nodiscard]] std::vector<Definition::Slot> collectSlots(const Volume &volume)
@@ -229,8 +240,8 @@ namespace spk::Voxel
 	{
 		const auto slots = collectSlots(volume);
 		const auto indices = indexSlots(slots);
-		Geometry::SurfaceMesh::Builder opaque;
-		Geometry::SurfaceMesh::Builder translucent;
+		MeshVertices opaque;
+		MeshVertices translucent;
 		const auto dimensions = volume.dimensions();
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -286,10 +297,10 @@ namespace spk::Voxel
 				}
 			}
 		}
-		Geometry::SurfaceMesh opaqueMesh = std::move(opaque).build();
+		Geometry::SurfaceMesh opaqueMesh = buildSurface(opaque);
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
 		});
-		return Geometry(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
+		return Geometry(std::move(opaqueMesh), buildSurface(translucent), std::move(depth), slots);
 	}
 }
