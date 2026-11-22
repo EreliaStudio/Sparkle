@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -434,6 +435,182 @@ namespace
 	}
 }
 
+	// The seeded stress corpus deliberately favors expensive, highly fragmented
+	// 16^3 chunks rather than terrain-shaped chunks with hidden internal faces.
+	// The limit is a PERFORMANCE CONTRACT: failing is an optimization task, not
+	// a reason to silently relax the budget.
+	constexpr std::uint64_t RandomSeed = 0x9E3779B97F4A7C15ULL;
+	constexpr std::size_t RandomCases = 256;
+	constexpr std::size_t RandomBakeSamples = 3;
+	constexpr auto ChunkBakeBudget = std::chrono::milliseconds(5);
+
+	class RandomGenerator
+	{
+	private:
+		std::uint64_t _state;
+
+	public:
+		explicit RandomGenerator(std::uint64_t seed) :
+			_state(seed)
+		{
+		}
+
+		[[nodiscard]] std::uint32_t next() noexcept
+		{
+			_state ^= _state >> 12;
+			_state ^= _state << 25;
+			_state ^= _state >> 27;
+			return static_cast<std::uint32_t>((_state * 2685821657736338717ULL) >> 32);
+		}
+	};
+
+	enum class RandomContent
+	{
+		OpaqueCubes,
+		MixedShapes
+	};
+
+	// Test the genuine chunk mesher, not a mock: volume creation, RNG, and
+	// correctness assertions happen outside the timed bake() interval.
+	void measureRandomizedChunks(RandomContent content)
+	{
+		constexpr std::int32_t Side = 16;
+		using Chunk = spk::Voxel::Chunk<Side, Side, Side>;
+		const auto registry = makeRegistry();
+		spk::World::ChunkCollection<Chunk> collection;
+		const Coordinate coordinate{-1, 2, -3};
+		spk::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, coordinate);
+		spk::Voxel::Occlusion::Cache cache;
+		mesher.attachCache(cache);
+
+		constexpr std::array orientations{
+			spk::Voxel::Cell::HorizontalOrientation::XPositive,
+			spk::Voxel::Cell::HorizontalOrientation::ZPositive,
+			spk::Voxel::Cell::HorizontalOrientation::XNegative,
+			spk::Voxel::Cell::HorizontalOrientation::ZNegative};
+		constexpr auto BudgetNs = std::chrono::duration_cast<std::chrono::nanoseconds>(ChunkBakeBudget).count();
+		std::vector<std::chrono::nanoseconds> medians;
+		medians.reserve(RandomCases);
+		std::size_t totalVertices = 0;
+		std::size_t totalTriangles = 0;
+		std::size_t totalOccupied = 0;
+		std::size_t exceeding = 0;
+		std::size_t worstCase = 0;
+		std::chrono::nanoseconds largestIndividual{0};
+
+		for (std::size_t caseIndex = 0; caseIndex < RandomCases; ++caseIndex)
+		{
+			const auto seed = RandomSeed + caseIndex * 0xD1B54A32D192ED03ULL +
+				(content == RandomContent::MixedShapes ? 0xABC98388FB8FAC03ULL : 0ULL);
+			RandomGenerator rng(seed);
+			// Vary density from 35% to 80%. The 45%-60% region leaves
+			// many independent faces; high density stresses shape clipping.
+			const std::uint32_t density = 35 + rng.next() % 46;
+			VolumeModel model({Side, Side, Side});
+			Volume::Builder builder({Side, Side, Side});
+			builder.bind(registry);
+			for (std::uint32_t z = 0; z < Side; ++z)
+			{
+				for (std::uint32_t y = 0; y < Side; ++y)
+				{
+					for (std::uint32_t x = 0; x < Side; ++x)
+					{
+						const bool occupied = rng.next() % 100 < density;
+						if (!occupied)
+						{
+							continue;
+						}
+						const auto id = content == RandomContent::OpaqueCubes ? 1u + rng.next() % 2u : 1u + rng.next() % 5u;
+						model.set(x, y, z, static_cast<std::uint8_t>(id));
+						const auto horizontal = orientations[rng.next() % orientations.size()];
+						const auto vertical = rng.next() % 2u == 0u ?
+							spk::Voxel::Cell::VerticalOrientation::YPositive :
+							spk::Voxel::Cell::VerticalOrientation::YNegative;
+						builder.set({x, y, z}, id, horizontal, vertical);
+					}
+				}
+			}
+			const auto expected = content == RandomContent::OpaqueCubes ?
+				std::optional<FaceOracle>(countExposedFaces(model)) : std::nullopt;
+			const std::size_t occupied = static_cast<std::size_t>(std::count_if(
+				model.cells.begin(),
+				model.cells.end(),
+				[](std::uint8_t value) { return value != 0; }));
+			totalOccupied += occupied;
+			Chunk chunk;
+			chunk.setVolume(builder.build());
+			collection.addChunk(coordinate, std::move(chunk));
+			const auto &volume = collection.at(coordinate).volume();
+			std::array<std::chrono::nanoseconds, RandomBakeSamples> samples{};
+			MeshCounts first{};
+			for (std::size_t sample = 0; sample < samples.size(); ++sample)
+			{
+				const auto start = Clock::now();
+				const auto result = countMesh(mesher.bake(volume));
+				samples[sample] = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - start);
+				if (sample == 0)
+				{
+					first = result;
+				}
+				else
+				{
+					EXPECT_EQ(result.vertices, first.vertices) << "seed=" << seed;
+					EXPECT_EQ(result.triangles, first.triangles) << "seed=" << seed;
+				}
+				if (samples[sample] > largestIndividual)
+				{
+					largestIndividual = samples[sample];
+				}
+			}
+			if (expected.has_value())
+			{
+				EXPECT_EQ(first.vertices, expected->vertices()) << "seed=" << seed;
+				EXPECT_EQ(first.triangles, expected->triangles()) << "seed=" << seed;
+			}
+			EXPECT_GT(first.vertices, 0u) << "seed=" << seed;
+			EXPECT_EQ(first.vertices, first.opaqueVertices + first.transparentVertices);
+			EXPECT_EQ(first.triangles * 3, first.vertices);
+			totalVertices += first.vertices;
+			totalTriangles += first.triangles;
+			std::sort(samples.begin(), samples.end());
+			medians.push_back(samples[samples.size() / 2]);
+			if (medians.back().count() > BudgetNs)
+			{
+				++exceeding;
+			}
+			if (medians.back() > medians[worstCase])
+			{
+				worstCase = caseIndex;
+			}
+		}
+
+		std::vector<std::chrono::nanoseconds> sorted = medians;
+		std::sort(sorted.begin(), sorted.end());
+		const auto overallMedian = sorted[sorted.size() / 2];
+		const auto p95 = sorted[(sorted.size() * 95) / 100];
+		const auto p99 = sorted[(sorted.size() * 99) / 100];
+		std::cout << std::fixed << std::setprecision(3)
+				  << "\n[Chunk randomized stress] " << (content == RandomContent::OpaqueCubes ? "opaque cubes" : "mixed shapes")
+				  << " | seed=" << RandomSeed
+				  << " | cases=" << RandomCases
+				  << " | voxels/case=" << Side * Side * Side
+				  << " | avg occupied=" << totalOccupied / RandomCases
+				  << " | avg vertices=" << totalVertices / RandomCases
+				  << " | avg triangles=" << totalTriangles / RandomCases
+				  << " | median=" << static_cast<double>(overallMedian.count()) / 1000000.0 << " ms"
+				  << " | p95=" << static_cast<double>(p95.count()) / 1000000.0 << " ms"
+				  << " | p99=" << static_cast<double>(p99.count()) / 1000000.0 << " ms"
+				  << " | worst case median=" << static_cast<double>(medians[worstCase].count()) / 1000000.0 << " ms"
+				  << " | longest individual bake=" << static_cast<double>(largestIndividual.count()) / 1000000.0 << " ms"
+				  << " | over budget=" << exceeding << "/" << RandomCases
+				  << " | budget=" << ChunkBakeBudget.count() << " ms\n";
+		EXPECT_EQ(exceeding, 0u)
+			<< "Chunk meshing exceeded " << ChunkBakeBudget.count() << " ms for "
+			<< exceeding << " random cases, worst case index " << worstCase
+			<< ". Do not increase the performance budget: optimize the mesher.";
+	}
+
+
 TEST(VoxelChunkPerformanceTest, Solid8)
 {
 	measureSingle<8, 8, 8>("Solid 8^3", Pattern::Solid);
@@ -482,4 +659,14 @@ TEST(VoxelChunkPerformanceTest, JoinedCaveChunks)
 TEST(VoxelChunkPerformanceTest, MixedSlabSlopeStair)
 {
 	measureMixedShapes();
+}
+
+TEST(VoxelChunkPerformanceTest, RandomizedHighExposureCubes16HardBudget)
+{
+	measureRandomizedChunks(RandomContent::OpaqueCubes);
+}
+
+TEST(VoxelChunkPerformanceTest, RandomizedMixedShapes16HardBudget)
+{
+	measureRandomizedChunks(RandomContent::MixedShapes);
 }

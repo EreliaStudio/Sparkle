@@ -37,7 +37,17 @@ Every test **asserts vertex and triangle counts**, rather than just printing a n
 
 Each test warms the occlusion cache twice, then measures **seven meshing passes**, printing the median and the measured range in the **GoogleTest output**, together with chunks, voxels, occupied voxels, generated vertices and triangles, **ms/chunk** and **ns/voxel**. There is **no CSV file**. On Release CI, a dedicated `ctest --verbose` step prints these results directly in the Actions log for easy review. The full Graphics test suite also runs the TU in Debug and Release.
 
-Timing covers CPU `Mesher::bake()` (including geometry construction), not GPU rendering, uploads, world generation, streaming or scheduling. There is no platform-dependent pass/fail timing threshold; results vary by machine, compiler, cache state and workload.
+Timing covers CPU `Mesher::bake()` (including geometry construction), not GPU rendering, uploads, world generation, streaming or scheduling.
+
+### Hard budget: randomized 16³ worst-case chunk meshing
+
+The performance TU adds **two seeded stress tests with 256 distinct chunks each**: (1) randomized opaque cubes with two materials and high face exposure, and (2) randomized cubes/slabs/slopes/stairs with independent random horizontal/vertical orientations. All 4,096 cells in each chunk are randomized; occupancy varies from 35% to 80%. The generator uses a fixed 64-bit seed, so every run replays the identical 512 chunks. Each test independently validates mesh counts (including exact visible-face counts for cube-only chunks), and reports median, P95, P99, maximum per-case median, and maximum observed single bake.
+
+**Hard CI contract:** each chunk's median across three consecutive bakes must be **no more than 5 ms** under the Release Windows CI configuration; one case above this limit fails its whole test. No results are hidden behind the overall median. The `ChunkMesher` reuses the shared occlusion cache, as the runtime adapter does; volume creation, random generation, and geometric assertions are not timed.
+
+The **5 ms target is a design requirement**, not an existing demonstrated capability. A failing test is actionable evidence of a performance bottleneck; do not silently increase the threshold to get green CI. The maximum single elapsed bake is reported separately, since OS scheduling interruptions mean a wall-clock upper bound on arbitrary machines cannot be guaranteed by unit tests. The release build's fixed hardware/runners and per-case median provide a repeatable regression check.
+
+Other deterministic geometry tests continue reporting timings without thresholds.
 
 ## Tests and golden image evidence
 
