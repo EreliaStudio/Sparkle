@@ -63,7 +63,16 @@ namespace spk
 				{
 					pass->apply(*builder, coordinate, data);
 				}
-				return TChunk(std::move(*builder).build());
+				if constexpr (std::same_as<decltype(std::declval<Builder &>().build()), TChunk>)
+				{
+					return std::move(*builder).build();
+				}
+				else
+				{
+					TChunk chunk;
+					chunk.setVolume(std::move(*builder).build());
+					return chunk;
+				}
 			} catch (const spk::Exception &)
 			{
 				throw;
