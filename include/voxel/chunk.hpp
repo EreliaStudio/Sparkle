@@ -18,30 +18,6 @@ namespace spk::Voxel
 	private:
 		Volume _volume;
 
-		[[nodiscard]] static bool _equal(const Volume &left, const Volume &right)
-		{
-			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(SZ); ++z)
-			{
-				for (std::uint32_t y = 0; y < static_cast<std::uint32_t>(SY); ++y)
-				{
-					for (std::uint32_t x = 0; x < static_cast<std::uint32_t>(SX); ++x)
-					{
-						const spk::Vector3UInt position{x, y, z};
-						const auto packed = left.atRaw(position);
-						if (packed != right.atRaw(position))
-						{
-							return false;
-						}
-						if (Volume::PackedCell::definitionId(packed) != 0 && !(left.at(position).definition() == right.at(position).definition()))
-						{
-							return false;
-						}
-					}
-				}
-			}
-			return true;
-		}
-
 	public:
 		explicit Chunk(Volume volume) :
 			_volume(std::move(volume))
@@ -67,10 +43,6 @@ namespace spk::Voxel
 			if (volume.dimensions() != spk::Vector3UInt{SX, SY, SZ})
 			{
 				throw spk::Exception("Voxel Chunk Volume dimensions do not match the Chunk size");
-			}
-			if (_equal(_volume, volume))
-			{
-				return;
 			}
 			_volume = std::move(volume);
 			this->notifyChunkEdition();
