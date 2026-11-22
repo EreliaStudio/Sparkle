@@ -16,13 +16,9 @@ namespace spk::Voxel
 		Volume _volume;
 
 	public:
-		explicit Chunk(Volume volume) :
-			_volume(std::move(volume))
+		Chunk() :
+			_volume(Volume::Builder({SX, SY, SZ}).build())
 		{
-			if (_volume.dimensions() != spk::Vector3UInt{SX, SY, SZ})
-			{
-				throw spk::Exception("Voxel Chunk Volume dimensions do not match the Chunk size");
-			}
 		}
 
 		Chunk(const Chunk &) = default;
