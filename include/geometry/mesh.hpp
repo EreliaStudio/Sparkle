@@ -1,6 +1,11 @@
 #pragma once
 
+#include <algorithm>
+#include <limits>
 #include <memory>
+#include <span>
+#include <stdexcept>
+#include <utility>
 
 #include "graphics/opengl/layout_buffer.hpp"
 
@@ -88,6 +93,33 @@ namespace spk
 				_content->layout.vertexBuffer().pushBack(vertex);
 
 				return static_cast<Index>(vertexCount);
+			}
+
+			// Batch writes avoid per-element GPU buffer state validation and resizing.
+			[[nodiscard]] Index addVertices(std::span<const Vertex> vertices)
+			{
+				_check();
+				_initializeAttributes();
+
+				const std::size_t first = _vertexCount();
+				if (first > std::numeric_limits<Index>::max() ||
+					vertices.size() > std::numeric_limits<Index>::max() - first)
+				{
+					throw std::overflow_error("Mesh vertex index overflow");
+				}
+				_content->layout.vertexBuffer().insert(vertices);
+				return static_cast<Index>(first);
+			}
+
+			void addIndices(std::span<const Index> indices)
+			{
+				_check();
+				const auto count = _content->layout.vertexBuffer().count();
+				if (std::any_of(indices.begin(), indices.end(), [count](Index index) { return index >= count; }))
+				{
+					throw std::out_of_range("Mesh index references a missing vertex");
+				}
+				_content->layout.indexBuffer().insert(indices);
 			}
 
 			void addIndex(Index index)
