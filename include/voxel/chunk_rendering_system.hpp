@@ -65,6 +65,7 @@ namespace spk::Voxel
 		std::map<Coordinate, Tracked> _tracked;
 		std::set<Coordinate> _dirty;
 		Statistics _lastStatistics;
+		Occlusion::Cache _occlusionCache;
 
 		void _mark(const Coordinate &coordinate)
 		{
@@ -182,6 +183,7 @@ namespace spk::Voxel
 			_tracked.clear();
 			_dirty.clear();
 			_palette.reset();
+			_occlusionCache.clear();
 			_collection = nullptr;
 		}
 
@@ -217,6 +219,7 @@ namespace spk::Voxel
 
 				ChunkType &chunk = _collection->at(coordinate);
 				ChunkMesher<SX, SY, SZ> mesher(*_collection, coordinate);
+				mesher.attachCache(_occlusionCache);
 				const auto start = std::chrono::steady_clock::now();
 				Geometry geometry = mesher.bake(chunk.volume());
 				next.meshingTime += std::chrono::duration_cast<std::chrono::nanoseconds>(
