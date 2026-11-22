@@ -185,7 +185,7 @@ namespace spk
 		};
 
 		// Owns only this system's task lifetimes, retries and absence cache.
-		class Requests
+		class ChunkRequestManager
 		{
 		private:
 			struct Pending
@@ -408,7 +408,7 @@ namespace spk
 		Settings _settings;
 		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _collectionContextContract;
 		InterestPlan _interest;
-		Requests _requests;
+		ChunkRequestManager _requestManager;
 
 		void _unloadUnwanted()
 		{
@@ -427,7 +427,7 @@ namespace spk
 		{
 			if (_interest.refresh(engine()))
 			{
-				_requests.retain(_interest);
+				_requestManager.retain(_interest);
 				_unloadUnwanted();
 			}
 		}
@@ -444,13 +444,13 @@ namespace spk
 			}
 			else
 			{
-				_requests.markAbsent(coordinate);
+				_requestManager.markAbsent(coordinate);
 			}
 		}
 
 		void _collect(Duration now)
 		{
-			_requests.collect(now, _settings.retryDelay, [this](const ChunkCoordinate &coordinate, const std::optional<TChunk> &result) {
+			_requestManager.collect(now, _settings.retryDelay, [this](const ChunkCoordinate &coordinate, const std::optional<TChunk> &result) {
 				_publish(coordinate, result);
 			});
 		}
@@ -459,14 +459,14 @@ namespace spk
 		{
 			for (std::size_t index = 0; engine() != nullptr && index < _interest.coordinates().size(); ++index)
 			{
-				if (_requests.inFlightCount() >= _settings.maxInFlight)
+				if (_requestManager.inFlightCount() >= _settings.maxInFlight)
 				{
 					break;
 				}
 				const ChunkCoordinate coordinate = _interest.coordinates()[index];
-				if (!_collection.contains(coordinate) && _requests.canSubmit(coordinate, now, _settings.maxInFlight))
+				if (!_collection.contains(coordinate) && _requestManager.canSubmit(coordinate, now, _settings.maxInFlight))
 				{
-					_requests.submit(coordinate, now, _settings, _requester);
+					_requestManager.submit(coordinate, now, _settings, _requester);
 					_collect(now);
 				}
 			}
@@ -479,7 +479,7 @@ namespace spk
 				return;
 			}
 			_refreshInterests();
-			_requests.collectRetired();
+			_requestManager.collectRetired();
 			_collect(context.time);
 			_schedule(context.time);
 		}
@@ -525,7 +525,7 @@ namespace spk
 			}
 			if (next == nullptr)
 			{
-				_requests.reset();
+				_requestManager.reset();
 				_interest.reset();
 			}
 			System::attach(next);
@@ -533,7 +533,7 @@ namespace spk
 
 		[[nodiscard]] std::size_t inFlightCount() const noexcept
 		{
-			return _requests.inFlightCount();
+			return _requestManager.inFlightCount();
 		}
 
 		[[nodiscard]] std::uint64_t planRevision() const noexcept
