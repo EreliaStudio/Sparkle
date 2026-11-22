@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <future>
 #include <limits>
 #include <optional>
 #include <string>
@@ -856,5 +857,27 @@ TEST(MesherMaterialIndices, GeometryCopiesKeepTheirOriginalSlotIndices)
 	{
 		EXPECT_LT(vertex.materialIndex, copy.materialSlots().size());
 		EXPECT_EQ(copy.materialSlot(vertex.materialIndex).name, source.materialSlot(vertex.materialIndex).name);
+	}
+}
+
+TEST(MesherTest, ConcurrentBakesCanShareAnOcclusionCache)
+{
+	const auto cube = definition(fixture("cube"), "stone_");
+	const auto slab = definition(fixture("slab"), "stone_");
+	const auto volume = pair(cube, {}, slab, {}, Face::PositiveX);
+	const auto expected = Mesher().bake(volume);
+	Occlusion::Cache cache;
+	std::vector<std::future<Geometry>> jobs;
+	for (int index = 0; index < 8; ++index)
+	{
+		jobs.push_back(std::async(std::launch::async, [&]() {
+			Mesher mesher;
+			mesher.attachCache(cache);
+			return mesher.bake(volume);
+		}));
+	}
+	for (auto &job : jobs)
+	{
+		expectEqual(expected, job.get());
 	}
 }
