@@ -500,8 +500,7 @@ namespace
 
 		for (std::size_t caseIndex = 0; caseIndex < RandomCases; ++caseIndex)
 		{
-			const auto seed = RandomSeed + caseIndex * 0xD1B54A32D192ED03ULL +
-				(content == RandomContent::MixedShapes ? 0xABC98388FB8FAC03ULL : 0ULL);
+			const auto seed = RandomSeed + caseIndex * 0xD1B54A32D192ED03ULL + (content == RandomContent::MixedShapes ? 0xABC98388FB8FAC03ULL : 0ULL);
 			RandomGenerator rng(seed);
 			// Randomly populated near-checkerboards expose almost all faces;
 			// unconstrained random densities exercise ordinary fragmentation.
@@ -509,6 +508,7 @@ namespace
 			const std::uint32_t density = 35 + rng.next() % 46;
 			const bool fragmented = caseIndex % 4 == 1;
 			VolumeModel model({Side, Side, Side});
+			std::size_t occupiedCells = 0;
 			Volume::Builder builder({Side, Side, Side});
 			builder.bind(registry);
 			for (std::uint32_t z = 0; z < Side; ++z)
@@ -518,30 +518,26 @@ namespace
 					for (std::uint32_t x = 0; x < Side; ++x)
 					{
 						const auto roll = rng.next() % 100;
-						const bool occupied = fragmented ?
-							((x + y + z) % 2 == 0 ? roll < 94 : roll < 3) :
-							roll < density;
-						if (!occupied)
+						const bool isOccupied = fragmented ? ((x + y + z) % 2 == 0 ? roll < 94 : roll < 3) : roll < density;
+						if (!isOccupied)
 						{
 							continue;
 						}
 						const auto id = content == RandomContent::OpaqueCubes ? 1u + rng.next() % 2u : 1u + rng.next() % 5u;
 						model.set(x, y, z, static_cast<std::uint8_t>(id));
+						++occupiedCells;
 						const auto horizontal = orientations[rng.next() % orientations.size()];
-						const auto vertical = rng.next() % 2u == 0u ?
-							spk::Voxel::Cell::VerticalOrientation::YPositive :
-							spk::Voxel::Cell::VerticalOrientation::YNegative;
+						const auto vertical = rng.next() % 2u == 0u ? spk::Voxel::Cell::VerticalOrientation::YPositive : spk::Voxel::Cell::VerticalOrientation::YNegative;
 						builder.set({x, y, z}, id, horizontal, vertical);
 					}
 				}
 			}
-			const auto expected = content == RandomContent::OpaqueCubes ?
-				std::optional<FaceOracle>(countExposedFaces(model)) : std::nullopt;
-			const std::size_t occupied = static_cast<std::size_t>(std::count_if(
-				model.cells.begin(),
-				model.cells.end(),
-				[](std::uint8_t value) { return value != 0; }));
-			totalOccupied += occupied;
+			std::optional<FaceOracle> expected;
+			if (content == RandomContent::OpaqueCubes)
+			{
+				expected = countExposedFaces(model);
+			}
+			totalOccupied += occupiedCells;
 			Chunk chunk;
 			chunk.setVolume(builder.build());
 			collection.addChunk(coordinate, std::move(chunk));
