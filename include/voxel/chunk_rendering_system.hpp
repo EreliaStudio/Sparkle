@@ -68,20 +68,33 @@ namespace spk::Voxel
 		void _mark(const Coordinate &coordinate)
 		{
 			_dirty.insert(coordinate);
+		}
 			constexpr auto Min = std::numeric_limits<std::int32_t>::min();
 			constexpr auto Max = std::numeric_limits<std::int32_t>::max();
 			if (coordinate.x > Min)
+			{
 				_dirty.insert({coordinate.x - 1, coordinate.y, coordinate.z});
+			}
 			if (coordinate.x < Max)
+			{
 				_dirty.insert({coordinate.x + 1, coordinate.y, coordinate.z});
+			}
 			if (coordinate.y > Min)
+			{
 				_dirty.insert({coordinate.x, coordinate.y - 1, coordinate.z});
+			}
 			if (coordinate.y < Max)
+			{
 				_dirty.insert({coordinate.x, coordinate.y + 1, coordinate.z});
+			}
 			if (coordinate.z > Min)
+			{
 				_dirty.insert({coordinate.x, coordinate.y, coordinate.z - 1});
+			}
 			if (coordinate.z < Max)
+			{
 				_dirty.insert({coordinate.x, coordinate.y, coordinate.z + 1});
+			}
 		}
 
 		void _track()
@@ -92,7 +105,9 @@ namespace spk::Voxel
 				present.insert(coordinate);
 				auto found = _tracked.find(coordinate);
 				if (found != _tracked.end() && found->second.entity == &entry.entity() && found->second.destruction.isValid())
+				{
 					continue;
+				}
 				_tracked.erase(coordinate);
 				const bool ownsRenderer = entry.entity().getComponent<Renderer>() == nullptr;
 				auto destruction = entry.entity().subscribeToDestruction([this, coordinate]() {
@@ -103,9 +118,13 @@ namespace spk::Voxel
 			for (auto it = _tracked.begin(); it != _tracked.end();)
 			{
 				if (!present.contains(it->first))
+				{
 					it = _tracked.erase(it);
+				}
 				else
+				{
 					++it;
+				}
 			}
 		}
 
