@@ -17,7 +17,7 @@
 #include "container/polymorphic_container.hpp"
 #include "container/rolling_statistic.hpp"
 #include "core/platform/chronometer.hpp"
-#include "core/platform/timer.hpp"
+#include "core/platform/system_timer.hpp"
 
 namespace spk
 {
@@ -272,7 +272,7 @@ namespace spk
 
 		private:
 			Statistics _stats;
-			Timer _timer;
+			SystemTimer _timer;
 			TType _value{};
 
 			void _refreshIfNecessary()
