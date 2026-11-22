@@ -29,7 +29,7 @@ chunk.setVolume(edit.build());
 
 ## Cas pratique : un TU Core autonome
 
-Le cas de génération procédurale se trouve **uniquement** dans `tests/TU/Core/srcs/world/voxel_chunk_demo_test.cpp`. Il ne crée pas d'API d'exemple dans `include/`, de namespace `sparkle_world_generation_example`, ni d'exécutable de démonstration autonome.
+Le cas de génération procédurale se trouve **uniquement** dans `tests/TU/Core/srcs/world/voxel_chunk_test.cpp`. Il ne crée pas d'API d'exemple dans `include/`, de namespace `sparkle_world_generation_example`, ni d'exécutable de démonstration autonome.
 
 Le TU définit localement :
 
