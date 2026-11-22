@@ -386,6 +386,34 @@ TEST(VoxelChunkDemoTest, GeneratingInReverseOrderProducesIdenticalVolumes)
 	}
 }
 
+TEST(VoxelChunkDemoTest, GeneratedChunksMatchTerrainAndWallAtEveryCell)
+{
+	WorldGenerator generator(17);
+	for (std::int32_t chunkX = -1; chunkX <= 1; ++chunkX)
+	{
+		const Coordinate coordinate{chunkX, 0, 0};
+		const std::optional<Chunk> chunk = generator.generate(coordinate);
+		ASSERT_TRUE(chunk.has_value());
+
+		for (std::uint32_t z = 0; z < 32; ++z)
+		{
+			for (std::uint32_t y = 0; y < 16; ++y)
+			{
+				for (std::uint32_t x = 0; x < 8; ++x)
+				{
+					const std::int64_t worldX = static_cast<std::int64_t>(chunkX) * 8 + x;
+					const std::int64_t value = worldX * 13 + static_cast<std::int64_t>(z) * 7 + 17;
+					const std::int64_t height = (value % 3 + 3) % 3;
+					const bool wall = worldX >= -2 && worldX <= 10 && y >= 3 && y <= 5 && z == 5;
+					const std::uint32_t expected = wall ? 2 : (y <= height ? 1 : 0);
+					const std::uint32_t actual = Volume::PackedCell::definitionId(chunk->volume().atRaw({x, y, z}));
+					EXPECT_EQ(actual, expected) << "world=(" << worldX << ", " << y << ", " << z << ")";
+				}
+			}
+		}
+	}
+}
+
 TEST(VoxelChunkDemoTest, NegativeWorldCoordinatesAndStructureCrossChunkBoundaries)
 {
 	WorldGenerator generator(17);
