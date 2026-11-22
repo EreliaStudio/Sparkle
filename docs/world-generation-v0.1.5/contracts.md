@@ -1,5 +1,5 @@
 # Sparkle v0.1.5 — Contrats normatifs proposés
-Les décisions ci-dessous reprennent la discussion de conception ; les signatures exactes seront confirmées par les PR. Ne pas rétablir un ancien contrat contredisant cette table.
+Les décisions ci-dessous reprennent la discussion de conception et les ajustements validés pendant PR07. `spk::World` est un namespace, pas une classe. Ne pas rétablir un ancien contrat contredisant cette table.
 
 | Sujet | Contrat |
 | --- | --- |
@@ -14,8 +14,8 @@ Les décisions ci-dessous reprennent la discussion de conception ; les signature
 | Collection events | S'abonne à chaque chunk, relaie immédiatement édition + signal insertion/remplacement, avec coord ; pas de notification de suppression générique séparée |
 | Remove | Entity3D/composants détruits avant chunk ; notification LifeCycle::Destruction disponible |
 | Engine | Attach/detach/rebind explicite, une collection/monde par Engine, pas de mutation collection depuis worker |
-| Generator | Generator<TChunk,TGenerationData> synchrone, addPass successifs ; Pass::apply(builder, coordinate, data) virtuel |
-| Builder | Pas imposé par Chunk générique ; types utilisés avec Generator ont TChunk::Builder, build() consomme et retourne TChunk par valeur |
+| Generator | `spk::World::Generator<TChunk,TGenerationData,TBuilder>` synchrone, addPass successifs ; Pass::apply(builder, coordinate, data) virtuel |
+| Builder | Pas imposé par Chunk ; par défaut `TBuilder = TChunk::Builder` mais un builder distinct peut produire un Volume, ensuite affecté avec `setVolume()` |
 | Optional | _createChunkBuilder -> optional<Builder>, generate -> optional<TChunk> ; nullopt succès sans chunk |
 | Generation Data | Nouvel objet par demande via _createGenerationData() sans coordonnée, peut référencer données persistantes de l'utilisateur ; seed et verrouillage non imposés |
 | Erreur | spk::Exception lors de génération ; Task Failed distincte de réussite nullopt ; timeout supervisé par streaming |
@@ -29,7 +29,7 @@ Les décisions ci-dessous reprennent la discussion de conception ; les signature
 | Timeout | Résultat tardif ignoré, pas d'annulation ; retry sous budget, ID monotone et contrôle d'intérêt/version |
 | Nullopt cache | Absent mémorisé seulement tant que coordonnée intéressée, oublié à la sortie, redemandé à la réentrée |
 | Éviction | Tout chunk hors union retiré immédiatement ; pas de LRU |
-| Voxel Chunk | Volume exact SX×SY×SZ, chunk mutable via setVolume et notifications, Volume lui-même immuable |
+| Voxel Chunk | Construit par défaut avec Volume air SX×SY×SZ, modifiable via setVolume avec notifications ; ni `Chunk::Builder` ni constructeur prenant Volume |
 | ChunkMesher | Dérive de Mesher, outsideCell cherche voisins lors de chaque bake ; aucune conservation durable |
 | Render sync | Bind scanne collection, événement immediate → dirty set, rebuild à render une fois par coord |
 | Six voisins | À toute modification, reconstruire chunk + six voisins sans différentiel de frontières ; destruction invalide six voisins |
@@ -57,10 +57,10 @@ GameChunk& chunk = chunks.at({1, 0, -2});
 
 class GameGenerator : public spk::World::Generator<GameChunk, MyGenerationData> {
 private:
-    std::optional<GameChunk::Builder> _createChunkBuilder(const ChunkCoordinate&) override;
+    std::optional<GameChunk::Builder> _createChunkBuilder(const spk::World::ChunkCoordinate&) override;
     MyGenerationData _createGenerationData() override;
 };
-// Pass::apply(GameChunk::Builder&, const ChunkCoordinate&, MyGenerationData&);
+// Pass::apply(GameChunk::Builder&, const spk::World::ChunkCoordinate&, MyGenerationData&);
 // generate(coordinate) -> std::optional<GameChunk>
 // request(coordinate) -> spk::Task<std::optional<GameChunk>>::Answer
 ~~~
