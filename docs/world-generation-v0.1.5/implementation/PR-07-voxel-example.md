@@ -1,25 +1,25 @@
-# PR07 — `spk::Voxel::Chunk` et démonstrateur headless
+# PR07 — `spk::Voxel::Chunk` et génération headless testée
 
 **Couche :** Voxel Core. **Dépendances :** PR01, PR02, PR03, PR06. **État :** implémenté sur la branche PR07.
 
-## Type public
+## API du chunk
 
-`include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>` héritant de `spk::Chunk<SX, SY, SZ>`.
+`include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>`, dérivé de `spk::Chunk<SX, SY, SZ>`.
 
-- Chaque chunk possède exactement un `Voxel::Volume` aux dimensions fixes `SX × SY × SZ`. Le constructeur et `setVolume(Volume)` rejettent les dimensions incompatibles.
-- `volume() const` permet de lire le volume sans exposer sa mutation interne ; `setVolume(Volume)` le remplace et notifie chaque remplacement valide, même lorsque le contenu est identique. Aucune comparaison de cellules n'est effectuée.
-- Le volume lui-même reste un snapshot immuable et partagé, produit par `Volume::Builder`. Un chunk peut recevoir successivement plusieurs snapshots.
-- Les copies et déplacements d'un chunk ne transfèrent pas les souscriptions d'édition ; les affectations conservent celles de la destination, conformément à `spk::Chunk`.
-- Il n'existe **pas** de `Chunk::Builder` : seul `Volume::Builder` est nécessaire pour construire ou reconstruire le contenu voxel. Les futures métadonnées du chunk sont indépendantes de ce volume.
-
-Exemple de création et de remplacement :
+- Le constructeur par défaut crée un `Volume` vide (air) aux dimensions fixes du chunk.
+- `volume() const` donne accès au snapshot immuable du volume.
+- `setVolume(Volume)` vérifie les dimensions, remplace le snapshot et notifie chaque remplacement valide, même si les cellules sont identiques. La première affectation utilise cette même API.
+- La copie et le déplacement du chunk ne transfèrent pas les abonnements aux notifications ; l'affectation conserve les abonnements de la destination.
+- Il n'existe pas de `Chunk::Builder`. Les voxels sont préparés par `Volume::Builder`, puis affectés au chunk.
 
 ```cpp
 using Chunk = spk::Voxel::Chunk<8, 16, 32>;
+Chunk chunk;
+
 spk::Voxel::Volume::Builder builder({8, 16, 32});
 builder.bind(definitions);
 builder.set({7, 4, 5}, 2);
-Chunk chunk(builder.build());
+chunk.setVolume(builder.build());
 
 spk::Voxel::Volume::Builder edit(chunk.volume().dimensions());
 edit.load(chunk.volume());
@@ -27,49 +27,41 @@ edit.erase({7, 4, 5});
 chunk.setVolume(edit.build());
 ```
 
-## Exemple de génération
+## Cas pratique : un TU Core autonome
 
-`examples/world_generation/voxel_world.hpp` définit uniquement des types propres au démonstrateur :
+Le cas de génération procédurale se trouve **uniquement** dans `tests/TU/Core/srcs/world/voxel_chunk_demo_test.cpp`. Il ne crée pas d'API d'exemple dans `include/`, de namespace `sparkle_world_generation_example`, ni d'exécutable de démonstration autonome.
 
-- `GenerationData` : références aux définitions de cellules et seed du terrain.
-- `TerrainPass` : hauteur déterministe en coordonnées mondiales, valable pour les X négatifs.
-- `WallPass` : mur continu de X=-2 à X=10, Y=3 à Y=5, Z=5. Il traverse les frontières des chunks X=-1/0/1.
-- `WorldGenerator` : enregistre les deux passes par `addPass<TerrainPass>()` puis `addPass<WallPass>()` ; renvoie `std::nullopt` hors de la zone de trois chunks.
+Le TU définit localement :
 
-`spk::Generator<TChunk, TGenerationData, TBuilder>` accepte un type de builder indépendant du chunk. Son paramètre `TBuilder` conserve `TChunk::Builder` par défaut pour compatibilité avec d'autres types de chunk. Ici, les passes reçoivent directement un `Voxel::Volume::Builder` ; après les passes, le générateur construit `Chunk` depuis le `Volume` résultant.
+- Deux définitions de voxels, pour le sol et le mur.
+- `TerrainPass` : terrain déterministe dépendant des coordonnées mondiales et d'une seed.
+- `WallPass` : mur entre X=-2 et X=10, Y=3 et Y=5, Z=5, qui traverse les frontières des chunks X=-1, 0 et 1.
+- `WorldGenerator` : deux passes et zone finie de trois chunks ; hors zone, `generate()` renvoie `std::nullopt`.
+- Un montage `EngineHeadless` + `WorldObserver` + `WorkerPool` + `LocalChunkRequester` + `WorldStreamingSystem` + `ChunkCollection` + `ChunkFilter`.
 
-Les passes reçoivent le même `GenerationData` par requête. Le mur utilise `worldToChunkCoordinate` et `worldToLocalCoordinate` du chunk pour décider et placer chaque cellule ; l'ordre des requêtes ne change donc jamais le résultat.
+`spk::Generator<TChunk, TGenerationData, TBuilder>` accepte un builder distinct du chunk : par défaut `TChunk::Builder` pour les usages existants, et ici `Volume::Builder`. Après les passes, le générateur construit un `TChunk` par défaut et affecte le volume obtenu avec `setVolume()`. Les générateurs dont le builder retourne directement un `TChunk` conservent leur chemin précédent.
 
-`examples/world_generation/headless_voxel_world.cpp` est un exécutable sans Graphics montrant la chaîne :
+## Vérifications des TU
 
-```
-WorldGenerator
-  → LocalChunkRequester<Chunk, GenerationData>
-  → WorkerPool
-  → WorldStreamingSystem<Chunk>
-  → ChunkCollection<Chunk>
-  → Entity3D / ChunkFilter<Chunk>
-```
-
-L'observateur surveille les chunks X=-1/0/1. Le streamer ne publie les réponses des workers que pendant `EngineHeadless::updateState()`. L'exécutable vérifie que le mur est présent aux frontières.
+- Dimensions non cubiques 8×16×32, volume initial vide, lecture hors dimensions et rejet des volumes de dimensions incompatibles.
+- Construction et modification par `Volume::Builder`, conservation du snapshot précédent, consommation du builder et absence d'un `Chunk::Builder`.
+- Notifications à chaque `setVolume()` valide ; copies, déplacements, affectations et abonnements indépendants.
+- Relais d'édition dans `ChunkCollection`, maintien de `ChunkFilter` lors du remplacement et absence de chunks hors de la zone.
+- Déterminisme entre générations en ordre normal et inversé, coordonnées négatives et mur traversant plusieurs chunks.
+- **Vérification exhaustive du type de chaque cellule** des trois chunks générés : air, terrain ou mur, selon la position mondiale.
+- Chargement asynchrone des trois chunks par le streaming dans le moteur headless, puis validation des données reçues.
 
 ## Compilation et exécution
-
-Le démonstrateur est construit avec les tests Core et ne nécessite aucune API réseau, OpenGL ou service externe.
 
 ```bash
 cmake -S . -B build/core-example -G Ninja \
   -DSPARKLE_BUILD_GRAPHICS=OFF -DSPARKLE_BUILD_TESTS=ON
-cmake --build build/core-example --target SparkleVoxelWorldDemo SparkleCoreTestSuite
-ctest --test-dir build/core-example -R 'VoxelChunkTest|VoxelChunkDemoTest|VoxelWorldDemo' --output-on-failure
+cmake --build build/core-example --target SparkleCoreTestSuite
+ctest --test-dir build/core-example -R 'VoxelChunkTest|VoxelChunkDemoTest' --output-on-failure
 ```
 
-Les dépendances GoogleTest et les options de toolchain habituelles de Sparkle restent nécessaires pour le configure.
-
-## Couverture automatisée
-
-`tests/TU/Core/srcs/world/voxel_chunk_demo_test.cpp` couvre les dimensions non cubiques 8×16×32, les mauvaises dimensions, le remplacement systématiquement notifié du volume, les snapshots originaux inchangés après édition via `Volume::Builder`, le chargement et la consommation du `Volume::Builder`, l'absence de `Chunk::Builder`, la copie et le déplacement avec souscriptions isolées, le relais de `ChunkCollection`, les filtres après remplacement, `nullopt` hors zone, l'ordre inversé de génération, les coordonnées mondiales négatives, les frontières du mur et la publication asynchrone sur le thread du moteur.
+Les dépendances GoogleTest et les options de toolchain habituelles de Sparkle sont nécessaires.
 
 ## Exclusions
 
-Aucun mesher ou voisinage graphique (PR08), OpenGL, système de biomes, villes, routes ou cavernes, sauvegarde, collision, networking ou changement du streaming Core au-delà de l'adaptation du template `Generator` n'est introduit.
+La PR07 n'introduit aucun rendu graphique, meshing inter-chunks, golden image, sauvegarde, réseau, biomes, villes, routes ou cavernes. Le rendu visuel et ses golden images restent prévus en PR08.
