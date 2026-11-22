@@ -41,8 +41,7 @@ namespace
 	[[nodiscard]] spk::Voxel::Shape shape(const char *name)
 	{
 		spk::Voxel::Shape::Builder builder;
-		builder.addFromJSON(spk::JSON::Value::loadFromFile(
-			std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (std::string(name) + ".json")));
+		builder.addFromJSON(spk::JSON::Value::loadFromFile(std::filesystem::path(SPARKLE_VOXEL_SHAPES_DIR) / (std::string(name) + ".json")));
 		return builder.build();
 	}
 
@@ -214,8 +213,7 @@ namespace
 TEST(VoxelChunkMesherTest, AllSixAdjacentChunksHideInternalOpaqueFaces)
 {
 	const auto registry = definitions();
-	const std::array<Coordinate, 6> directions{Coordinate{-1, 0, 0}, Coordinate{1, 0, 0},
-		Coordinate{0, -1, 0}, Coordinate{0, 1, 0}, Coordinate{0, 0, -1}, Coordinate{0, 0, 1}};
+	const std::array<Coordinate, 6> directions{Coordinate{-1, 0, 0}, Coordinate{1, 0, 0}, Coordinate{0, -1, 0}, Coordinate{0, 1, 0}, Coordinate{0, 0, -1}, Coordinate{0, 0, 1}};
 	const std::array<spk::Vector3UInt, 6> sourcePositions{
 		spk::Vector3UInt{0, 1, 1}, {3, 1, 1}, {1, 0, 1}, {1, 3, 1}, {1, 1, 0}, {1, 1, 3}};
 	const std::array<spk::Vector3UInt, 6> adjacentPositions{
@@ -357,8 +355,7 @@ TEST(VoxelChunkPerformanceTest, ReportsVertexCountsAndMeshingTimePerChunkAndVoxe
 	const auto output = sparkle_test::freshResultFilePath("metrics", "chunk_meshing.csv");
 	std::ofstream report(output);
 	report << "size,pattern,voxels,vertices,triangles,mean_ns_per_chunk,mean_ns_per_voxel\n";
-	const auto benchmark = [&]<std::int32_t S>(const char *pattern, bool sparse)
-	{
+	const auto benchmark = [&]<std::int32_t S>(const char *pattern, bool sparse) {
 		using BenchChunk = spk::Voxel::Chunk<S, S, S>;
 		spk::World::ChunkCollection<BenchChunk> collection;
 		Volume::Builder builder({S, S, S});
