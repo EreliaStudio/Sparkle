@@ -61,6 +61,7 @@ namespace spk::Voxel
 		Collection *_collection = nullptr;
 		std::optional<spk::Palette> _palette;
 		typename Collection::EditionContract _edition;
+		LifeCycle::DestructionContract _collectionDestruction;
 		std::map<Coordinate, Tracked> _tracked;
 		std::set<Coordinate> _dirty;
 		Statistics _lastStatistics;
@@ -153,6 +154,9 @@ namespace spk::Voxel
 			_edition = collection.subscribeToChunkEdition([this](const Coordinate &coordinate) {
 				_mark(coordinate);
 			});
+			_collectionDestruction = collection.root().subscribeToDestruction([this]() {
+				unbind();
+			});
 			for (const auto &[coordinate, entry] : collection)
 			{
 				(void)entry;
@@ -162,6 +166,7 @@ namespace spk::Voxel
 
 		void unbind()
 		{
+			_collectionDestruction.resign();
 			_edition.resign();
 			for (auto &[coordinate, tracked] : _tracked)
 			{
