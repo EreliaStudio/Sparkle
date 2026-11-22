@@ -492,6 +492,7 @@ namespace
 		std::vector<std::chrono::nanoseconds> medians;
 		medians.reserve(RandomCases);
 		std::size_t totalVertices = 0;
+		std::size_t largestGeometry = 0;
 		std::size_t totalTriangles = 0;
 		std::size_t totalOccupied = 0;
 		std::size_t exceeding = 0;
@@ -503,9 +504,11 @@ namespace
 			const auto seed = RandomSeed + caseIndex * 0xD1B54A32D192ED03ULL +
 				(content == RandomContent::MixedShapes ? 0xABC98388FB8FAC03ULL : 0ULL);
 			RandomGenerator rng(seed);
-			// Vary density from 35% to 80%. The 45%-60% region leaves
-			// many independent faces; high density stresses shape clipping.
+			// Randomly populated near-checkerboards expose almost all faces;
+			// unconstrained random densities exercise ordinary fragmentation.
+			// Both cases still independently randomize every voxel.
 			const std::uint32_t density = 35 + rng.next() % 46;
+			const bool fragmented = caseIndex % 4 == 1;
 			VolumeModel model({Side, Side, Side});
 			Volume::Builder builder({Side, Side, Side});
 			builder.bind(registry);
@@ -515,7 +518,10 @@ namespace
 				{
 					for (std::uint32_t x = 0; x < Side; ++x)
 					{
-						const bool occupied = rng.next() % 100 < density;
+						const auto roll = rng.next() % 100;
+						const bool occupied = fragmented ?
+							((x + y + z) % 2 == 0 ? roll < 94 : roll < 3) :
+							roll < density;
 						if (!occupied)
 						{
 							continue;
@@ -571,6 +577,7 @@ namespace
 			EXPECT_EQ(first.vertices, first.opaqueVertices + first.transparentVertices);
 			EXPECT_EQ(first.triangles * 3, first.vertices);
 			totalVertices += first.vertices;
+			largestGeometry = std::max(largestGeometry, first.vertices);
 			totalTriangles += first.triangles;
 			std::sort(samples.begin(), samples.end());
 			medians.push_back(samples[samples.size() / 2]);
@@ -596,6 +603,7 @@ namespace
 				  << " | voxels/case=" << Side * Side * Side
 				  << " | avg occupied=" << totalOccupied / RandomCases
 				  << " | avg vertices=" << totalVertices / RandomCases
+				  << " | most vertices=" << largestGeometry
 				  << " | avg triangles=" << totalTriangles / RandomCases
 				  << " | median=" << static_cast<double>(overallMedian.count()) / 1000000.0 << " ms"
 				  << " | p95=" << static_cast<double>(p95.count()) / 1000000.0 << " ms"
@@ -604,6 +612,7 @@ namespace
 				  << " | longest individual bake=" << static_cast<double>(largestIndividual.count()) / 1000000.0 << " ms"
 				  << " | over budget=" << exceeding << "/" << RandomCases
 				  << " | budget=" << ChunkBakeBudget.count() << " ms\n";
+		EXPECT_GT(largestGeometry, 60000u) << "The randomized stress corpus must include a near-worst-case face count";
 		EXPECT_EQ(exceeding, 0u)
 			<< "Chunk meshing exceeded " << ChunkBakeBudget.count() << " ms for "
 			<< exceeding << " random cases, worst case index " << worstCase
