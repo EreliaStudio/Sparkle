@@ -97,6 +97,11 @@ namespace
 		{
 			builder.set({2, 1, 1}, 3);
 			builder.set({3, 1, 2}, 4);
+			builder.set({3, 1, 3}, 2);
+		}
+		if (coordinate == 1)
+		{
+			builder.set({0, 1, 3}, 2);
 		}
 		Chunk chunk;
 		chunk.setVolume(builder.build());
@@ -335,6 +340,7 @@ TEST(VoxelChunkGoldenTest, ThreeAdjacentChunksMatchSingleVolumeAtObliqueCamera)
 		EXPECT_EQ(system.lastStatistics().chunks, 3u);
 		EXPECT_EQ(system.lastStatistics().voxels, 192u);
 		EXPECT_GT(system.lastStatistics().opaqueTriangles, 0u);
+		EXPECT_GT(system.lastStatistics().translucentTriangles, 0u);
 		system.unbind();
 		chunked.engine.removeSystem(system);
 		chunks.detach();
