@@ -36,7 +36,6 @@ namespace sparkle_world_generation_example
 	public:
 		void apply(Generator::Builder &volume, const spk::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
-
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -62,7 +61,6 @@ namespace sparkle_world_generation_example
 	public:
 		void apply(Generator::Builder &volume, const spk::ChunkCoordinate &coordinate, GenerationData &) override
 		{
-
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
