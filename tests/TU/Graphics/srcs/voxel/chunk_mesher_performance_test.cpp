@@ -433,7 +433,6 @@ namespace
 			return countMesh(mesher.bake(collection.at({0, 0, 0}).volume()));
 		});
 	}
-}
 
 	// The seeded stress corpus deliberately favors expensive, highly fragmented
 	// 16^3 chunks rather than terrain-shaped chunks with hidden internal faces.
@@ -618,7 +617,7 @@ namespace
 			<< exceeding << " random cases, worst case index " << worstCase
 			<< ". Do not increase the performance budget: optimize the mesher.";
 	}
-
+}
 
 TEST(VoxelChunkPerformanceTest, Solid8)
 {
