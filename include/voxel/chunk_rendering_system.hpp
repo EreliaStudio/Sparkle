@@ -68,7 +68,6 @@ namespace spk::Voxel
 		void _mark(const Coordinate &coordinate)
 		{
 			_dirty.insert(coordinate);
-		}
 			constexpr auto Min = std::numeric_limits<std::int32_t>::min();
 			constexpr auto Max = std::numeric_limits<std::int32_t>::max();
 			if (coordinate.x > Min)
