@@ -19,7 +19,6 @@ target_compile_definitions(SparkleCoreTestSuite PRIVATE
 target_include_directories(SparkleCoreTestSuite PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/helpers
     ${SPARKLE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/examples/world_generation
 )
 target_link_libraries(SparkleCoreTestSuite
     PRIVATE
@@ -32,13 +31,3 @@ gtest_discover_tests(SparkleCoreTestSuite
     TEST_PREFIX "Core."
 )
 
-add_executable(SparkleVoxelWorldDemo
-    ${CMAKE_SOURCE_DIR}/examples/world_generation/headless_voxel_world.cpp
-)
-target_compile_features(SparkleVoxelWorldDemo PRIVATE cxx_std_23)
-target_include_directories(SparkleVoxelWorldDemo PRIVATE
-    ${CMAKE_SOURCE_DIR}/examples/world_generation
-)
-target_link_libraries(SparkleVoxelWorldDemo PRIVATE sparkle::core)
-add_dependencies(SparkleCoreTestSuite SparkleVoxelWorldDemo)
-add_test(NAME Core.VoxelWorldDemo COMMAND SparkleVoxelWorldDemo)
