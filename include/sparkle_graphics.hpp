@@ -113,6 +113,8 @@
 #include "ui/widget/toggle_switch.hpp"
 #include "ui/widget/tooltip.hpp"
 #include "ui/widget/workspace.hpp"
+#include "voxel/chunk_mesher.hpp"
+#include "voxel/chunk_rendering_system.hpp"
 #include "voxel/geometry.hpp"
 #include "voxel/mesher.hpp"
 #include "voxel/renderer.hpp"
