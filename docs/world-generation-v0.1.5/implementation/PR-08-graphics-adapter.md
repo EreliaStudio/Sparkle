@@ -31,13 +31,17 @@ Rendering requires a Graphics Engine. A Core-only headless world creates no rend
 - Opaque and translucent triangle counts.
 - CPU meshing time (`std::chrono::nanoseconds`), normalized as `millisecondsPerChunk()` and `nanosecondsPerVoxel()`.
 
-A Graphics GoogleTest benchmark tests solid and sparse 8³, 16³ and 32³ workloads over five repetitions, printing vertex/triangle counts and measured timings. Results are written to `tests/TU/Graphics/results/metrics/chunk_meshing.csv` on the test runner and included in the `graphics-unit-tests-*` GitHub Actions artifacts.
+A **dedicated Graphics TU** — `tests/TU/Graphics/srcs/voxel/chunk_mesher_performance_test.cpp` — covers deterministic, realistic workloads: solid chunks at 8³/16³/32³; a hollow building with rooms and doorways; terraced terrain with caves; bridges and towers; a 3D checkerboard; non-cubic terrain (8×16×24); four neighboring cave chunks spanning negative coordinates; and an isolated mix of cube, slab, slope and stair shapes.
 
-Timing is for CPU `Mesher::bake()` (including geometry construction), not GPU rendering, uploads, world generation, streaming, or scheduling. There is no platform-dependent pass/fail timing threshold; timings vary by hardware, compiler, cache state, and workload.
+Every test **asserts vertex and triangle counts**, rather than just printing a number. For complex opaque-cube volumes, an **independent face-counting oracle** examines the occupied cells and computes how many quad faces must remain visible (six vertices and two triangles per face). For mixed geometric shapes, the expected vertex count is independently derived from the source shape polygons, with shapes isolated by air to make the expectation exact. The joined-world test counts faces across *all* chunks globally, detecting unremoved internal chunk boundaries. These are correctness checks; timing results are informational.
+
+Each test warms the occlusion cache twice, then measures **seven meshing passes**, printing the median and the measured range in the **GoogleTest output**, together with chunks, voxels, occupied voxels, generated vertices and triangles, **ms/chunk** and **ns/voxel**. There is **no CSV file**. On Release CI, a dedicated `ctest --verbose` step prints these results directly in the Actions log for easy review. The full Graphics test suite also runs the TU in Debug and Release.
+
+Timing covers CPU `Mesher::bake()` (including geometry construction), not GPU rendering, uploads, world generation, streaming or scheduling. There is no platform-dependent pass/fail timing threshold; results vary by machine, compiler, cache state and workload.
 
 ## Tests and golden image evidence
 
-`tests/TU/Graphics/srcs/voxel/chunk_rendering_golden_test.cpp` covers:
+`tests/TU/Graphics/srcs/voxel/chunk_rendering_golden_test.cpp` remains focused on rendering and golden image correctness; it covers:
 
 - Every axis and direction, including negative coordinates: two touching opaque cubes remove the internal faces (36 → 30 vertices per cube), and those faces return when a neighbor disappears.
 - Translucent cells and partially occluding slab/slope boundaries.

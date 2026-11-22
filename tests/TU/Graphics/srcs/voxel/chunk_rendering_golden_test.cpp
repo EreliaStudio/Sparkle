@@ -2,12 +2,9 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <span>
 #include <string>
@@ -374,71 +371,3 @@ TEST(VoxelChunkGoldenTest, ThreeAdjacentChunksMatchSingleVolumeAtObliqueCamera)
 	gl.reset();
 }
 
-TEST(VoxelChunkPerformanceTest, ReportsVertexCountsAndMeshingTimePerChunkAndVoxel)
-{
-	const auto registry = definitions();
-	const auto output = sparkle_test::freshResultFilePath("metrics", "chunk_meshing.csv");
-	std::ofstream report(output);
-	report << "size,pattern,voxels,vertices,triangles,mean_ns_per_chunk,mean_ns_per_voxel\n";
-	const auto benchmark = [&]<std::int32_t S>(const char *pattern, bool sparse) {
-		using BenchChunk = spk::Voxel::Chunk<S, S, S>;
-		spk::World::ChunkCollection<BenchChunk> collection;
-		Volume::Builder builder({S, S, S});
-		builder.bind(registry);
-		for (std::uint32_t z = 0; z < S; ++z)
-		{
-			for (std::uint32_t y = 0; y < S; ++y)
-			{
-				for (std::uint32_t x = 0; x < S; ++x)
-				{
-					if (!sparse || (x * 17 + y * 7 + z * 11) % 31 == 0)
-					{
-						builder.set({x, y, z}, 1);
-					}
-				}
-			}
-		}
-		BenchChunk chunk;
-		chunk.setVolume(builder.build());
-		collection.addChunk({-1, 0, 0}, std::move(chunk));
-		spk::Voxel::ChunkMesher<S, S, S> mesher(collection, {-1, 0, 0});
-		spk::Voxel::Occlusion::Cache cache;
-		mesher.attachCache(cache);
-		const auto &volume = collection.at({-1, 0, 0}).volume();
-		std::chrono::nanoseconds elapsed{0};
-		std::size_t vertices = 0;
-		std::size_t triangles = 0;
-		constexpr int Repetitions = 5;
-		for (int repeat = 0; repeat < Repetitions; ++repeat)
-		{
-			const auto start = std::chrono::steady_clock::now();
-			const auto geometry = mesher.bake(volume);
-			elapsed += std::chrono::duration_cast<std::chrono::nanoseconds>(
-				std::chrono::steady_clock::now() - start);
-			vertices = geometry.opaqueMesh().vertexCount() + geometry.transparentMesh().vertexCount();
-			triangles = (geometry.opaqueMesh().indexCount() + geometry.transparentMesh().indexCount()) / 3;
-		}
-		const std::size_t voxels = static_cast<std::size_t>(S) * S * S;
-		const double meanNs = static_cast<double>(elapsed.count()) / Repetitions;
-		report << S << ',' << pattern << ',' << voxels << ',' << vertices << ',' << triangles
-			   << ',' << meanNs << ',' << meanNs / voxels << '\n';
-		std::cout << "ChunkMesher " << S << "^3 " << pattern << ": "
-				  << vertices << " vertices, " << triangles << " triangles, "
-				  << meanNs / 1000000.0 << " ms/chunk, " << meanNs / voxels << " ns/voxel\n";
-		EXPECT_GT(elapsed.count(), 0);
-		EXPECT_GT(vertices, 0u);
-		EXPECT_GT(triangles, 0u);
-		if (!sparse)
-		{
-			EXPECT_EQ(vertices, static_cast<std::size_t>(36) * S * S);
-			EXPECT_EQ(triangles, static_cast<std::size_t>(12) * S * S);
-		}
-	};
-	benchmark.template operator()<8>("solid", false);
-	benchmark.template operator()<16>("solid", false);
-	benchmark.template operator()<32>("solid", false);
-	benchmark.template operator()<16>("sparse", true);
-	benchmark.template operator()<32>("sparse", true);
-	report.flush();
-	EXPECT_TRUE(std::filesystem::exists(output));
-}
