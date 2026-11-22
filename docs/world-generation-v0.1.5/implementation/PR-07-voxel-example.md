@@ -4,7 +4,7 @@
 
 ## API du chunk
 
-`include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>`, dérivé de `spk::Chunk<SX, SY, SZ>`.
+`include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>`, dérivé de `spk::World::Chunk<SX, SY, SZ>`.
 
 - Le constructeur par défaut crée un `Volume` vide (air) aux dimensions fixes du chunk.
 - `volume() const` donne accès au snapshot immuable du volume.
@@ -39,7 +39,7 @@ Le TU définit localement :
 - `WorldGenerator` : deux passes et zone finie de trois chunks ; hors zone, `generate()` renvoie `std::nullopt`.
 - Un montage `EngineHeadless` + `WorldObserver` + `WorkerPool` + `LocalChunkRequester` + `WorldStreamingSystem` + `ChunkCollection` + `ChunkFilter`.
 
-`spk::Generator<TChunk, TGenerationData, TBuilder>` accepte un builder distinct du chunk : par défaut `TChunk::Builder` pour les usages existants, et ici `Volume::Builder`. Après les passes, le générateur construit un `TChunk` par défaut et affecte le volume obtenu avec `setVolume()`. Les générateurs dont le builder retourne directement un `TChunk` conservent leur chemin précédent.
+`spk::World::Generator<TChunk, TGenerationData, TBuilder>` accepte un builder distinct du chunk : par défaut `TChunk::Builder` pour les usages existants, et ici `Volume::Builder`. Après les passes, le générateur construit un `TChunk` par défaut et affecte le volume obtenu avec `setVolume()`. Les générateurs dont le builder retourne directement un `TChunk` conservent leur chemin précédent.
 
 ## Vérifications des TU
 

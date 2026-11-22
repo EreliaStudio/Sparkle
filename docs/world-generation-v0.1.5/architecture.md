@@ -6,7 +6,7 @@ WorldObserver (Component3D + EngineHeadless Registry) → WorldStreamingSystem<T
 En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson, puis les composants de rendu sont actualisés.
 
 ## Types et coordonnées
-- spk::Chunk<SX,SY,SZ> est une base héritable dont les dimensions positives compile-time sont en unités du monde ; ne possède pas sa coordonnée, ses données applicatives ni une Entity.
+- spk::World::Chunk<SX,SY,SZ> est une base héritable dont les dimensions positives compile-time sont en unités du monde ; ne possède pas sa coordonnée, ses données applicatives ni une Entity.
 - ChunkCoordinate est un triplet signé, avec conversions static worldToChunkCoordinate (floor pour les négatifs), chunkCoordinateToWorld (origine), worldToLocalCoordinate ; vérification des débordements.
 - Un Chunk est mutable. Il expose un événement propre et la méthode protégée notifyChunkEdition(), que chaque setter de classe dérivée appelle explicitement après une vraie modification.
 - Copie/déplacement construction : créer un nouveau fournisseur de notification, jamais transférer les souscriptions de l'original. Affectation d'une valeur existante : conserver les souscriptions de la destination, sans importer celles de la source ; la collection signale le remplacement.

@@ -2,7 +2,7 @@
 **Couche :** Core. **Dépendances :** aucune. **État :** cahier des charges.
 
 ## API et invariants
-- spk::Chunk<SX,SY,SZ>, base héritable, trois dimensions strictement positives fixées au compile-time et exprimées en unités du monde. Pas de coordonnée membre, pas d'Entity, pas de Volume ni de données imposées.
+- spk::World::Chunk<SX,SY,SZ>, base héritable, trois dimensions strictement positives fixées au compile-time et exprimées en unités du monde. Pas de coordonnée membre, pas d'Entity, pas de Volume ni de données imposées.
 - ChunkCoordinate : trois entiers signés, s'appuyant sur les types vectoriels Sparkle ; conversion worldToChunkCoordinate en floor sur les coordonnées négatives ; chunkCoordinateToWorld donne l'origine ; worldToLocalCoordinate donne les coordonnées relatives.
 - Calculs robustes aux limites int32 et aux débordements ; ne pas utiliser la troncature C++ pour les nombres négatifs.
 - Chaque Chunk porte son propre fournisseur d'événement d'édition. subscribeToChunkEdition(...) et méthode protégée notifyChunkEdition() appelée explicitement dans chaque setter d'une classe dérivée. Les données sont modifiables ; aucune immutabilité obligatoire.

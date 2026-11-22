@@ -3,7 +3,7 @@ Les décisions ci-dessous reprennent la discussion de conception ; les signature
 
 | Sujet | Contrat |
 | --- | --- |
-| Chunk | spk::Chunk<SX,SY,SZ> héritable, dimensions positives d'unités monde, coordonnée hors de l'objet |
+| Chunk | spk::World::Chunk<SX,SY,SZ> héritable, dimensions positives d'unités monde, coordonnée hors de l'objet |
 | ChunkCoordinate | XYZ signés, conversion floor négatif, monde/local avec contrôles de débordement |
 | Modification | TChunk est mutable ; chaque setter appelle explicitement notifyChunkEdition(), événement par instance |
 | Copie/move | Un nouvel objet ne reprend jamais les abonnements source ; affectation conserve les abonnements propres à la destination |
@@ -38,7 +38,7 @@ Les décisions ci-dessous reprennent la discussion de conception ; les signature
 
 ## Esquisse API (les types finaux peuvent varier)
 ~~~cpp
-class GameChunk : public spk::Chunk<32, 16, 32> {
+class GameChunk : public spk::World::Chunk<32, 16, 32> {
 public:
     class Builder;
     void setSomething(Value value) {
@@ -49,13 +49,13 @@ private:
     Value _value;
 };
 
-spk::ChunkCollection<GameChunk> chunks;
+spk::World::ChunkCollection<GameChunk> chunks;
 GameChunk prepared = makeExampleChunk(); // Utilitaire illustratif du jeu
 chunks.addChunk({1, 0, -2}, std::move(prepared));
 GameChunk& chunk = chunks.at({1, 0, -2});
 // L'Entity3D est accessible via l'entrée de la collection.
 
-class GameGenerator : public spk::Generator<GameChunk, MyGenerationData> {
+class GameGenerator : public spk::World::Generator<GameChunk, MyGenerationData> {
 private:
     std::optional<GameChunk::Builder> _createChunkBuilder(const ChunkCoordinate&) override;
     MyGenerationData _createGenerationData() override;
