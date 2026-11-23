@@ -44,7 +44,7 @@ namespace spk::Voxel
 			return {cell.horizontalOrientation(), cell.verticalOrientation()};
 		}
 
-		[[nodiscard]] std::optional<Position> neighborPosition(Position position, Position dimensions, Face face)
+		[[nodiscard]] std::optional<std::size_t> neighborIndex(Position position, Position dimensions, std::size_t index, const std::array<std::size_t, 3> &strides, Face face)
 		{
 			const std::size_t axis = static_cast<std::size_t>(face) / 2;
 			const bool positive = (static_cast<unsigned>(face) & 1U) != 0;
@@ -54,17 +54,13 @@ namespace spk::Voxel
 				{
 					return std::nullopt;
 				}
-				++position.data[axis];
+				return index + strides[axis];
 			}
-			else
+			if (position.data[axis] == 0)
 			{
-				if (position.data[axis] == 0)
-				{
-					return std::nullopt;
-				}
-				--position.data[axis];
+				return std::nullopt;
 			}
-			return position;
+			return index - strides[axis];
 		}
 
 		[[nodiscard]] const Definition &boundaryCube()
@@ -161,6 +157,7 @@ namespace spk::Voxel
 
 		struct CellTemplate
 		{
+			Cell cell;
 			std::array<SurfaceTriangles, 6> outer;
 			SurfaceTriangles inner;
 			bool hasInner = false;
@@ -275,7 +272,7 @@ namespace spk::Voxel
 
 		struct PreparedVolume
 		{
-			std::vector<Cell> cells;
+			std::vector<Volume::PackedCell::Storage> cells;
 			std::size_t occupied = 0;
 			std::vector<std::size_t> definitionIndices;
 			std::vector<Definition> definitions;
@@ -290,32 +287,49 @@ namespace spk::Voxel
 			result.cells.reserve(count);
 			result.definitionIndices.reserve(count);
 			MaterialOpacityCollection names;
+			std::vector<std::pair<Definition::Registry::ID, std::size_t>> registeredDefinitions;
+			std::vector<bool> hasGeometry;
 			for (std::uint32_t z = 0; z < dimensions.z; ++z)
 			{
 				for (std::uint32_t y = 0; y < dimensions.y; ++y)
 				{
 					for (std::uint32_t x = 0; x < dimensions.x; ++x)
 					{
-						Cell cell = volume.at({x, y, z});
-						result.occupied += !cell.isAir() && !cell.definition().shape().empty();
-						const auto &definition = cell.definition();
-						const auto found = std::find(result.definitions.begin(), result.definitions.end(), definition);
-						const std::size_t definitionIndex = static_cast<std::size_t>(found - result.definitions.begin());
-						if (found == result.definitions.end())
+						const auto packed = volume.atRaw({x, y, z});
+						const auto id = Volume::PackedCell::definitionId(packed);
+						const auto found = std::find_if(registeredDefinitions.begin(), registeredDefinitions.end(), [id](const auto &entry) {
+							return entry.first == id;
+						});
+						std::size_t definitionIndex;
+						if (found == registeredDefinitions.end())
 						{
-							result.definitions.push_back(definition);
-							for (const auto &[geometricKey, slot] : definition.slots())
+							const auto cell = volume.at({x, y, z});
+							const auto &definition = cell.definition();
+							const auto existing = std::find(result.definitions.begin(), result.definitions.end(), definition);
+							definitionIndex = static_cast<std::size_t>(existing - result.definitions.begin());
+							registeredDefinitions.emplace_back(id, definitionIndex);
+							if (existing == result.definitions.end())
 							{
-								(void)geometricKey;
-								auto [it, inserted] = names.try_emplace(slot.name, slot.opacity);
-								if (!inserted && it->second != slot.opacity)
+								result.definitions.push_back(definition);
+								hasGeometry.push_back(!definition.isAir() && !definition.shape().empty());
+								for (const auto &[geometricKey, slot] : definition.slots())
 								{
-									throw spk::Exception("Voxel Geometry material slot has conflicting opacity: " + slot.name);
+									(void)geometricKey;
+									auto [it, inserted] = names.try_emplace(slot.name, slot.opacity);
+									if (!inserted && it->second != slot.opacity)
+									{
+										throw spk::Exception("Voxel Geometry material slot has conflicting opacity: " + slot.name);
+									}
 								}
 							}
 						}
+						else
+						{
+							definitionIndex = found->second;
+						}
+						result.occupied += hasGeometry[definitionIndex];
 						result.definitionIndices.push_back(definitionIndex);
-						result.cells.push_back(std::move(cell));
+						result.cells.push_back(packed);
 					}
 				}
 			}
@@ -392,17 +406,26 @@ namespace spk::Voxel
 		MeshVertexContainer translucent;
 		const auto dimensions = volume.dimensions();
 		CellTemplateContainer templates(prepared.definitions.size());
-		auto getTemplate = [&](std::size_t index) -> CellTemplate & {
-			const Cell &cell = prepared.cells[index];
+		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
+		std::vector<CellTemplate *> cellTemplates(prepared.cells.size(), nullptr);
+		for (std::size_t index = 0; index < prepared.cells.size(); ++index)
+		{
 			const auto id = prepared.definitionIndices[index];
-			const auto orientationValue = orientation(cell);
+			const auto &definition = prepared.definitions[id];
+			if (definition.isAir() || definition.shape().empty())
+			{
+				continue;
+			}
+			const auto packed = prepared.cells[index];
+			const Shape::Orientation orientationValue{Volume::PackedCell::horizontal(packed), Volume::PackedCell::vertical(packed)};
 			auto &entry = templates[id][orientationIndex(orientationValue)];
 			if (!entry)
 			{
-				entry.emplace(buildCellTemplate(cell.definition().shape().instance(orientationValue), materials[id], _tolerance));
+				entry.emplace(buildCellTemplate(definition.shape().instance(orientationValue), materials[id], _tolerance));
+				entry->cell = Cell(definition, orientationValue.horizontal, orientationValue.vertical);
 			}
-			return *entry;
-		};
+			cellTemplates[index] = &*entry;
+		}
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
 			for (std::uint32_t y = 0; y < dimensions.y; ++y)
@@ -411,13 +434,13 @@ namespace spk::Voxel
 				{
 					const Position position{x, y, z};
 					const auto cellIndex = (static_cast<std::size_t>(z) * dimensions.y + y) * dimensions.x + x;
-					const Cell &cell = prepared.cells[cellIndex];
 					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
-					if (cell.isAir() || cell.definition().shape().empty())
+					if (cellTemplates[cellIndex] == nullptr)
 					{
 						continue;
 					}
-					const auto &faces = getTemplate(cellIndex);
+					const auto &faces = *cellTemplates[cellIndex];
+					const Cell &cell = faces.cell;
 					bool closed = faces.hasInner;
 					for (const auto face : Faces)
 					{
@@ -428,16 +451,16 @@ namespace spk::Voxel
 						{
 							continue;
 						}
-						const auto adjacent = neighborPosition(position, dimensions, face);
+						const auto adjacent = neighborIndex(position, dimensions, cellIndex, strides, face);
 						std::optional<OutsideCell> outside;
 						const Cell *blocker;
 						std::optional<std::size_t> blockerIndex;
 						bool occupied;
 						if (adjacent)
 						{
-							blockerIndex = (static_cast<std::size_t>(adjacent->z) * dimensions.y + adjacent->y) * dimensions.x + adjacent->x;
-							blocker = &prepared.cells[*blockerIndex];
-							occupied = !blocker->isAir();
+							blockerIndex = *adjacent;
+							occupied = cellTemplates[*blockerIndex] != nullptr;
+							blocker = occupied ? &cellTemplates[*blockerIndex]->cell : nullptr;
 						}
 						else
 						{
@@ -445,7 +468,7 @@ namespace spk::Voxel
 							blocker = &outside->cell;
 							occupied = outside->state == OutsideCell::State::Occupied && !blocker->isAir();
 						}
-						CellTemplate *blockerTemplates = occupied && blockerIndex ? &getTemplate(*blockerIndex) : nullptr;
+						CellTemplate *blockerTemplates = occupied && blockerIndex ? cellTemplates[*blockerIndex] : nullptr;
 						// Without an opposing boundary polygon, this neighbor cannot clip
 						// the source face. Reuse the prepared triangles unchanged.
 						const bool blockerCanOcclude = blockerTemplates == nullptr || blockerTemplates->hasOuter[faceIndex ^ 1U];
@@ -480,7 +503,8 @@ namespace spk::Voxel
 								}
 								else
 								{
-									for (const auto &triangle : visible(cell, *blocker, face, _tolerance, _cache).triangles())
+									const auto visibility = visible(cell, *blocker, face, _tolerance, _cache);
+									for (const auto &triangle : visibility.triangles())
 									{
 										emit(triangle, position, resolved, opaque, translucent, _tolerance);
 									}

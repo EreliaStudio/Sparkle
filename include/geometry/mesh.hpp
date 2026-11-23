@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <functional>
-#include <numeric>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <span>
 #include <stdexcept>
 #include <utility>

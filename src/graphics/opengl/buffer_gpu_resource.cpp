@@ -60,8 +60,9 @@ namespace spk
 			return;
 		}
 		const std::size_t offset = _size;
-		resize(_size + size);
+		_storage.resize(_unitCount(_size + size));
 		std::memcpy(data() + offset, source, size);
+		_size += size;
 	}
 
 	void BufferGPUResource::State::Storage::clear()

@@ -231,7 +231,8 @@ TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
 	SimpleMesh::Builder builder;
 	EXPECT_EQ(builder.addGeneratedVertices(4, [](std::size_t index) {
 		return SimpleVertex{static_cast<float>(index), static_cast<float>(index * index)};
-	}), 0u);
+	}),
+			  0u);
 	builder.addSequentialIndices(4);
 	const auto mesh = std::move(builder).build();
 	EXPECT_EQ(mesh.vertexCount(), 4u);
@@ -249,7 +250,10 @@ TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
 TEST(MeshTest, GeneratedVertexOverflowAndSequentialIndexBoundsAreRejected)
 {
 	BoundaryMesh::Builder overflow;
-	EXPECT_THROW((void)overflow.addGeneratedVertices(1, [](std::size_t) { return SimpleVertex{1.0f, 2.0f}; }), std::overflow_error);
+	EXPECT_THROW((void)overflow.addGeneratedVertices(1, [](std::size_t) {
+		return SimpleVertex{1.0f, 2.0f};
+	}),
+				 std::overflow_error);
 
 	SimpleMesh::Builder builder;
 	EXPECT_THROW(builder.addSequentialIndices(1), std::out_of_range);

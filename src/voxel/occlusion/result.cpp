@@ -53,8 +53,8 @@ namespace spk::Voxel::Occlusion
 		for (const auto &polygon : result->fragments)
 		{
 			const std::size_t slotIndex = source != nullptr
-				? slotIndexCollection.at(polygon.slotKey)
-				: std::numeric_limits<std::size_t>::max();
+											  ? slotIndexCollection.at(polygon.slotKey)
+											  : std::numeric_limits<std::size_t>::max();
 			const auto &vertices = polygon.vertices;
 			for (std::size_t i = 1; i + 1 < vertices.size(); ++i)
 			{
