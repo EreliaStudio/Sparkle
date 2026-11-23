@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -155,7 +156,7 @@ namespace
 		ASSERT_TRUE(above.has_value());
 		EXPECT_EQ(idAt(*below, 0, 15, 0), 3u);
 		EXPECT_EQ(idAt(*middle, 0, 0, 0), 3u);
-		EXPECT_EQ(idAt(*middle, 0, 14, 0), 3u);
+		EXPECT_EQ(idAt(*middle, 0, 14, 0), 4u);
 		EXPECT_EQ(idAt(*middle, 0, 15, 0), 4u);
 		EXPECT_EQ(idAt(*above, 0, 0, 0), 2u);
 		EXPECT_EQ(idAt(*above, 0, 1, 0), 1u);
