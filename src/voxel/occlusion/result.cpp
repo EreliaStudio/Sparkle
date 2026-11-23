@@ -29,14 +29,13 @@ namespace spk::Voxel::Occlusion
 				const auto &b = vertices[i];
 				const auto &c = vertices[i + 1];
 				const auto cross = (b.position - a.position).cross(c.position - a.position);
-				result->triangles.push_back({
-					{{
-						{a.position, a.normal.value_or(polygon.geometricNormal), a.uv},
-						{b.position, b.normal.value_or(polygon.geometricNormal), b.uv},
-						{c.position, c.normal.value_or(polygon.geometricNormal), c.uv},
-					}},
-					polygon.slotKey,
-					cross.length()});
+				Triangle triangle;
+				triangle.vertices[0] = {a.position, a.normal.value_or(polygon.geometricNormal), a.uv};
+				triangle.vertices[1] = {b.position, b.normal.value_or(polygon.geometricNormal), b.uv};
+				triangle.vertices[2] = {c.position, c.normal.value_or(polygon.geometricNormal), c.uv};
+				triangle.slotKey = polygon.slotKey;
+				triangle.crossLength = cross.length();
+				result->triangles.push_back(std::move(triangle));
 			}
 		}
 		_data = std::move(result);
