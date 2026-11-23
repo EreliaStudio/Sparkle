@@ -7,6 +7,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -299,7 +300,7 @@ namespace spk::Voxel
 
 		struct PreparedVolume
 		{
-			std::vector<Volume::PackedCell::Storage> cells;
+			std::span<const Volume::PackedCell::Storage> cells;
 			std::size_t occupied = 0;
 			std::vector<std::size_t> definitionIndices;
 			std::vector<Definition> definitions;
@@ -311,18 +312,19 @@ namespace spk::Voxel
 			PreparedVolume result;
 			const auto dimensions = volume.dimensions();
 			const auto count = static_cast<std::size_t>(dimensions.x) * dimensions.y * dimensions.z;
-			result.cells.reserve(count);
+			result.cells = volume.packedCells();
 			result.definitionIndices.reserve(count);
 			MaterialOpacityCollection names;
 			std::vector<std::pair<Definition::Registry::ID, std::size_t>> registeredDefinitions;
 			std::vector<bool> hasGeometry;
+			std::size_t cellIndex = 0;
 			for (std::uint32_t z = 0; z < dimensions.z; ++z)
 			{
 				for (std::uint32_t y = 0; y < dimensions.y; ++y)
 				{
 					for (std::uint32_t x = 0; x < dimensions.x; ++x)
 					{
-						const auto packed = volume.atRaw({x, y, z});
+						const auto packed = result.cells[cellIndex++];
 						const auto id = Volume::PackedCell::definitionId(packed);
 						const auto found = std::find_if(registeredDefinitions.begin(), registeredDefinitions.end(), [id](const auto &entry) {
 							return entry.first == id;
@@ -356,7 +358,6 @@ namespace spk::Voxel
 						}
 						result.occupied += hasGeometry[definitionIndex];
 						result.definitionIndices.push_back(definitionIndex);
-						result.cells.push_back(packed);
 					}
 				}
 			}

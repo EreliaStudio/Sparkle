@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "container/byte_stream.hpp"
@@ -74,6 +75,7 @@ namespace spk::Voxel
 		[[nodiscard]] Cell at(spk::Vector3UInt position) const;
 		[[nodiscard]] Cell operator[](spk::Vector3UInt position) const;
 		[[nodiscard]] PackedCell::Storage atRaw(spk::Vector3UInt position) const;
+		[[nodiscard]] std::span<const PackedCell::Storage> packedCells() const noexcept;
 	};
 
 	// A self-contained voxel payload, independent of Message headers and transport.
