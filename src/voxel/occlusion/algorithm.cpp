@@ -101,68 +101,98 @@ namespace spk::Voxel::Occlusion
 			return vertex;
 		}
 
-		std::vector<Vertex> clip(
+		struct PolygonPartition
+		{
+			std::vector<Vertex> outside;
+			std::vector<Vertex> inside;
+		};
+
+		[[nodiscard]] PolygonPartition split(
 			const std::vector<Vertex> &input,
 			const spk::Vector2 &a,
 			const spk::Vector2 &b,
 			Face face,
 			float sign,
-			bool inside,
 			float tolerance)
 		{
-			std::vector<Vertex> output;
+			PolygonPartition result;
 			if (input.empty())
 			{
-				return output;
+				return result;
 			}
-			output.reserve(input.size() + 1);
+			result.outside.reserve(input.size() + 1);
+			result.inside.reserve(input.size() + 1);
 			auto distance = [&](const Vertex &vertex) {
 				const float distance = sign * cross(a, b, project(vertex.position, face));
 				return std::abs(distance) <= tolerance ? 0.0f : distance;
 			};
+			const float firstDistance = distance(input.front());
+			float dp = firstDistance;
 			for (std::size_t i = 0; i < input.size(); ++i)
 			{
 				const auto &p = input[i];
 				const auto &q = input[(i + 1) % input.size()];
-				float dp = distance(p);
-				float dq = distance(q);
-				bool pin = inside ? dp >= 0.0f : dp < 0.0f;
-				bool qin = inside ? dq >= 0.0f : dq < 0.0f;
+				const float dq = i + 1 < input.size() ? distance(q) : firstDistance;
+				const bool pin = dp >= 0.0f;
+				const bool qin = dq >= 0.0f;
 				if (pin)
 				{
-					output.push_back(p);
+					result.inside.push_back(p);
+				}
+				else
+				{
+					result.outside.push_back(p);
 				}
 				if (pin != qin && std::abs(dp - dq) > 1.0e-12f)
 				{
-					output.push_back(interpolate(p, q, std::clamp(dp / (dp - dq), 0.0f, 1.0f)));
+					const auto intersection = interpolate(p, q, std::clamp(dp / (dp - dq), 0.0f, 1.0f));
+					result.inside.push_back(intersection);
+					result.outside.push_back(intersection);
 				}
+				dp = dq;
 			}
-			return output;
+			return result;
+		}
+
+		struct ProjectedOccluder
+		{
+			std::vector<spk::Vector2> vertices;
+			float winding;
+		};
+
+		[[nodiscard]] ProjectedOccluder projectOccluder(const Polygon &polygon, Face face)
+		{
+			ProjectedOccluder result;
+			result.vertices.reserve(polygon.vertices.size());
+			for (const auto &vertex : polygon.vertices)
+			{
+				result.vertices.push_back(project(vertex.position, face));
+			}
+			result.winding = area(polygon.vertices, face) >= 0 ? 1.0f : -1.0f;
+			return result;
 		}
 
 		std::vector<Polygon> subtract(
 			const Polygon &source,
-			const Polygon &blocker,
+			const ProjectedOccluder &blocker,
 			Face face,
-			const spk::Vector3 &translation,
 			float tolerance)
 		{
 			std::vector<Polygon> visible;
 			visible.reserve(blocker.vertices.size());
 			auto remainder = source.vertices;
-			const float sign = area(blocker.vertices, face) >= 0 ? 1.0f : -1.0f;
 			for (std::size_t i = 0; i < blocker.vertices.size() && remainder.size() >= 3; ++i)
 			{
-				auto a = project(blocker.vertices[i].position + translation, face);
-				auto b = project(blocker.vertices[(i + 1) % blocker.vertices.size()].position + translation, face);
-				auto outside = clip(remainder, a, b, face, sign, false, tolerance);
-				if (outside.size() >= 3 && std::abs(area(outside, face)) > tolerance * tolerance)
+				const auto &a = blocker.vertices[i];
+				const auto &b = blocker.vertices[(i + 1) % blocker.vertices.size()];
+				auto pieces = split(remainder, a, b, face, blocker.winding, tolerance);
+				if (pieces.outside.size() >= 3 && std::abs(area(pieces.outside, face)) > tolerance * tolerance)
 				{
 					Polygon fragment = source;
-					fragment.vertices = std::move(outside);
+					fragment.vertices = std::move(pieces.outside);
 					visible.push_back(std::move(fragment));
 				}
-				remainder = clip(remainder, a, b, face, sign, true, tolerance);
+				remainder = std::move(pieces.inside);
 			}
 			return visible;
 		}
@@ -209,12 +239,14 @@ namespace spk::Voxel::Occlusion
 				{
 					continue;
 				}
-				// Translate the clipping edges on demand, without copying the blocker polygon.
+				// Projection omits the face-normal axis, so the neighboring cell's
+				// translation does not change these edges.
+				const auto projected = projectOccluder(occluder, direction);
 				std::vector<Polygon> next;
 				next.reserve(current.size());
 				for (const auto &fragment : current)
 				{
-					auto pieces = subtract(fragment, occluder, direction, translation, tolerance);
+					auto pieces = subtract(fragment, projected, direction, tolerance);
 					next.insert(next.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
 				}
 				current = std::move(next);

@@ -392,6 +392,52 @@ TEST(MesherGeometry, StandaloneShapesProduceExactShadowSurfacesInEveryOrientatio
 	}
 }
 
+TEST(MesherGeometry, IsolatedInteriorCellMatchesTranslatedStandaloneGeometry)
+{
+	const spk::Vector3 translation{1, 1, 1};
+	for (const char *name : Names)
+	{
+		const Shape shape = fixture(name);
+		for (const auto orientation : Orientations)
+		{
+			for (const float opacity : {1.0f, 0.5f})
+			{
+				SCOPED_TRACE(::testing::Message() << name << " orientation " << static_cast<unsigned>(orientation.horizontal) << "/" << static_cast<unsigned>(orientation.vertical) << " opacity " << opacity);
+				const Definition material = uniformDefinition(shape, "isolated", opacity);
+				Volume::Builder builder({3, 3, 3});
+				builder.bind(registry({material}));
+				builder.set({1, 1, 1}, 1, orientation.horizontal, orientation.vertical);
+				const Geometry interior = Mesher().bake(builder.build());
+				const Geometry standalone = Mesher().bake(single(material, orientation));
+				ASSERT_EQ(interior.materialSlots().size(), standalone.materialSlots().size());
+				for (std::size_t index = 0; index < interior.materialSlots().size(); ++index)
+				{
+					EXPECT_EQ(interior.materialSlots()[index].name, standalone.materialSlots()[index].name);
+					EXPECT_FLOAT_EQ(interior.materialSlots()[index].opacity, standalone.materialSlots()[index].opacity);
+				}
+				auto compare = [&](const Geometry::SurfaceMesh &actual, const Geometry::SurfaceMesh &expected) {
+					EXPECT_EQ(indices(actual), indices(expected));
+					const auto a = vertices(actual);
+					const auto b = vertices(expected);
+					ASSERT_EQ(a.size(), b.size());
+					for (std::size_t index = 0; index < a.size(); ++index)
+					{
+						EXPECT_EQ(a[index].position, b[index].position + translation);
+						EXPECT_EQ(a[index].normal, b[index].normal);
+						EXPECT_EQ(a[index].uv, b[index].uv);
+						EXPECT_EQ(a[index].materialIndex, b[index].materialIndex);
+					}
+				};
+				compare(interior.opaqueMesh(), standalone.opaqueMesh());
+				compare(interior.transparentMesh(), standalone.transparentMesh());
+				EXPECT_EQ(interior.depthMesh().indexCount(), standalone.depthMesh().indexCount());
+				EXPECT_EQ(interior.depthMesh().vertexCount(), standalone.depthMesh().vertexCount());
+				expectShadowGeometryMatchesOpaque(interior);
+			}
+		}
+	}
+}
+
 TEST(MesherGeometry, AdjacentCubesHaveNoInternalShadowFacesInAnyDirection)
 {
 	const Shape cube = fixture("cube");

@@ -160,6 +160,7 @@ namespace spk::Voxel
 			Cell cell;
 			std::array<SurfaceTriangles, 6> outer;
 			SurfaceTriangles inner;
+			std::optional<SurfaceTriangles> isolated;
 			bool hasInner = false;
 			std::array<bool, 6> hasOuter{};
 			std::array<std::optional<bool>, 6> fullyOccludes{};
@@ -194,6 +195,32 @@ namespace spk::Voxel
 				}
 				emit(polygon, {0, 0, 0}, slots, surface->opaque, surface->translucent, tolerance);
 			}
+			return result;
+		}
+
+		[[nodiscard]] const SurfaceTriangles &isolatedTriangles(CellTemplate &entry)
+		{
+			if (entry.isolated.has_value())
+			{
+				return *entry.isolated;
+			}
+			auto &result = entry.isolated.emplace();
+			std::size_t opaqueCount = entry.inner.opaque.size();
+			std::size_t translucentCount = entry.inner.translucent.size();
+			for (const auto &face : entry.outer)
+			{
+				opaqueCount += face.opaque.size();
+				translucentCount += face.translucent.size();
+			}
+			result.opaque.reserve(opaqueCount);
+			result.translucent.reserve(translucentCount);
+			for (const auto &face : entry.outer)
+			{
+				result.opaque.insert(result.opaque.end(), face.opaque.begin(), face.opaque.end());
+				result.translucent.insert(result.translucent.end(), face.translucent.begin(), face.translucent.end());
+			}
+			result.opaque.insert(result.opaque.end(), entry.inner.opaque.begin(), entry.inner.opaque.end());
+			result.translucent.insert(result.translucent.end(), entry.inner.translucent.begin(), entry.inner.translucent.end());
 			return result;
 		}
 
@@ -434,12 +461,28 @@ namespace spk::Voxel
 				{
 					const Position position{x, y, z};
 					const auto cellIndex = (static_cast<std::size_t>(z) * dimensions.y + y) * dimensions.x + x;
-					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
 					if (cellTemplates[cellIndex] == nullptr)
 					{
 						continue;
 					}
-					const auto &faces = *cellTemplates[cellIndex];
+					auto &faces = *cellTemplates[cellIndex];
+					// Interior cells without geometrically occupied neighbors cannot
+					// have clipped faces or a closed inner shell. Emit their complete
+					// surface in one batch, preserving face and material order.
+					if (x > 0 && x + 1 < dimensions.x &&
+						y > 0 && y + 1 < dimensions.y &&
+						z > 0 && z + 1 < dimensions.z &&
+						cellTemplates[cellIndex - strides[0]] == nullptr &&
+						cellTemplates[cellIndex + strides[0]] == nullptr &&
+						cellTemplates[cellIndex - strides[1]] == nullptr &&
+						cellTemplates[cellIndex + strides[1]] == nullptr &&
+						cellTemplates[cellIndex - strides[2]] == nullptr &&
+						cellTemplates[cellIndex + strides[2]] == nullptr)
+					{
+						appendTranslated(opaque, translucent, isolatedTriangles(faces), position);
+						continue;
+					}
+					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
 					const Cell &cell = faces.cell;
 					bool closed = faces.hasInner;
 					for (const auto face : Faces)

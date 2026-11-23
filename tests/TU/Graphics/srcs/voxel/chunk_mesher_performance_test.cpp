@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -472,7 +474,7 @@ namespace
 
 	// Test the genuine chunk mesher, not a mock: volume creation, RNG, and
 	// correctness assertions happen outside the timed bake() interval.
-	void measureRandomizedChunks(RandomContent content)
+	void measureRandomizedChunks(RandomContent content, std::optional<std::size_t> replayIndex = std::nullopt)
 	{
 		constexpr std::int32_t Side = 16;
 		using Chunk = spk::Voxel::Chunk<Side, Side, Side>;
@@ -588,6 +590,37 @@ namespace
 			{
 				worstCase = caseIndex;
 			}
+			if (replayIndex == caseIndex)
+			{
+				// Keep the original corpus and its shared-cache prefix intact.
+				// Run a separate cold cache and repeated warm bakes only in this diagnostic test.
+				spk::Voxel::Occlusion::Cache isolatedCache;
+				mesher.attachCache(isolatedCache);
+				const auto coldStart = Clock::now();
+				const auto coldCounts = countMesh(mesher.bake(volume));
+				const auto coldTime = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - coldStart);
+				EXPECT_EQ(coldCounts.vertices, first.vertices);
+				EXPECT_EQ(coldCounts.triangles, first.triangles);
+				std::array<std::chrono::nanoseconds, 21> warmSamples{};
+				for (auto &sample : warmSamples)
+				{
+					const auto warmStart = Clock::now();
+					const auto counts = countMesh(mesher.bake(volume));
+					sample = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - warmStart);
+					EXPECT_EQ(counts.vertices, first.vertices);
+					EXPECT_EQ(counts.triangles, first.triangles);
+				}
+				mesher.attachCache(cache);
+				std::sort(warmSamples.begin(), warmSamples.end());
+				std::cout << std::fixed << std::setprecision(3)
+						  << "\n[Chunk case replay] index=" << caseIndex
+						  << " | seed=" << seed
+						  << " | original shared-cache median=" << static_cast<double>(medians.back().count()) / 1000000.0 << " ms"
+						  << " | isolated cold=" << static_cast<double>(coldTime.count()) / 1000000.0 << " ms"
+						  << " | isolated warm median=" << static_cast<double>(warmSamples[warmSamples.size() / 2].count()) / 1000000.0 << " ms"
+						  << " | isolated warm range=" << static_cast<double>(warmSamples.front().count()) / 1000000.0
+						  << ".." << static_cast<double>(warmSamples.back().count()) / 1000000.0 << " ms\n";
+			}
 		}
 
 		std::vector<std::chrono::nanoseconds> sorted = medians;
@@ -626,10 +659,13 @@ namespace
 		}
 		EXPECT_GT(largestGeometry, 60000u) << "The randomized stress corpus must include a near-worst-case face count";
 #if defined(NDEBUG)
-		EXPECT_EQ(exceeding, 0u)
-			<< "Chunk meshing exceeded " << ChunkBakeBudget.count() << " ms for "
-			<< exceeding << " random cases, worst case index " << worstCase
-			<< ". Do not increase the performance budget: optimize the mesher.";
+		if (!replayIndex.has_value())
+		{
+			EXPECT_EQ(exceeding, 0u)
+				<< "Chunk meshing exceeded " << ChunkBakeBudget.count() << " ms for "
+				<< exceeding << " random cases, worst case index " << worstCase
+				<< ". Do not increase the performance budget: optimize the mesher.";
+		}
 #else
 		std::cout << "[Chunk randomized stress] Performance budget is enforced only in optimized Release builds.\n";
 #endif
@@ -694,4 +730,26 @@ TEST(VoxelChunkPerformanceTest, RandomizedHighExposureCubes16HardBudget)
 TEST(VoxelChunkPerformanceTest, RandomizedMixedShapes16HardBudget)
 {
 	measureRandomizedChunks(RandomContent::MixedShapes);
+}
+
+TEST(VoxelChunkPerformanceTest, ReplaySpecificRandomCase)
+{
+	const char *value = std::getenv("SPARKLE_VOXEL_REPLAY_CASE");
+	if (value == nullptr)
+	{
+		GTEST_SKIP() << "Set SPARKLE_VOXEL_REPLAY_CASE=25 or 149 to investigate one randomized case.";
+	}
+	const std::string_view text(value);
+	std::size_t index = 0;
+	const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), index);
+	ASSERT_EQ(error, std::errc{});
+	ASSERT_EQ(end, text.data() + text.size());
+	ASSERT_LT(index, RandomCases);
+	const char *content = std::getenv("SPARKLE_VOXEL_REPLAY_CONTENT");
+	RandomContent mode = RandomContent::MixedShapes;
+	if (content != nullptr && std::string_view(content) == "cubes")
+	{
+		mode = RandomContent::OpaqueCubes;
+	}
+	measureRandomizedChunks(mode, index);
 }
