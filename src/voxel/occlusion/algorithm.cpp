@@ -101,26 +101,31 @@ namespace spk::Voxel::Occlusion
 			return vertex;
 		}
 
-		std::vector<Vertex> clip(
+		struct SplitPolygons
+		{
+			std::vector<Vertex> outside;
+			std::vector<Vertex> inside;
+		};
+
+		[[nodiscard]] SplitPolygons split(
 			const std::vector<Vertex> &input,
 			const spk::Vector2 &a,
 			const spk::Vector2 &b,
 			Face face,
 			float sign,
-			bool inside,
 			float tolerance)
 		{
-			std::vector<Vertex> output;
+			SplitPolygons result;
 			if (input.empty())
 			{
-				return output;
+				return result;
 			}
-			output.reserve(input.size() + 1);
+			result.outside.reserve(input.size() + 1);
+			result.inside.reserve(input.size() + 1);
 			auto distance = [&](const Vertex &vertex) {
 				const float distance = sign * cross(a, b, project(vertex.position, face));
 				return std::abs(distance) <= tolerance ? 0.0f : distance;
 			};
-			// An edge's ending vertex is the next edge's starting vertex.
 			const float firstDistance = distance(input.front());
 			float dp = firstDistance;
 			for (std::size_t i = 0; i < input.size(); ++i)
@@ -128,19 +133,25 @@ namespace spk::Voxel::Occlusion
 				const auto &p = input[i];
 				const auto &q = input[(i + 1) % input.size()];
 				const float dq = i + 1 < input.size() ? distance(q) : firstDistance;
-				const bool pin = inside ? dp >= 0.0f : dp < 0.0f;
-				const bool qin = inside ? dq >= 0.0f : dq < 0.0f;
+				const bool pin = dp >= 0.0f;
+				const bool qin = dq >= 0.0f;
 				if (pin)
 				{
-					output.push_back(p);
+					result.inside.push_back(p);
+				}
+				else
+				{
+					result.outside.push_back(p);
 				}
 				if (pin != qin && std::abs(dp - dq) > 1.0e-12f)
 				{
-					output.push_back(interpolate(p, q, std::clamp(dp / (dp - dq), 0.0f, 1.0f)));
+					const auto intersection = interpolate(p, q, std::clamp(dp / (dp - dq), 0.0f, 1.0f));
+					result.inside.push_back(intersection);
+					result.outside.push_back(intersection);
 				}
 				dp = dq;
 			}
-			return output;
+			return result;
 		}
 
 		std::vector<Polygon> subtract(
@@ -158,14 +169,14 @@ namespace spk::Voxel::Occlusion
 			{
 				auto a = project(blocker.vertices[i].position + translation, face);
 				auto b = project(blocker.vertices[(i + 1) % blocker.vertices.size()].position + translation, face);
-				auto outside = clip(remainder, a, b, face, sign, false, tolerance);
-				if (outside.size() >= 3 && std::abs(area(outside, face)) > tolerance * tolerance)
+				auto pieces = split(remainder, a, b, face, sign, tolerance);
+				if (pieces.outside.size() >= 3 && std::abs(area(pieces.outside, face)) > tolerance * tolerance)
 				{
 					Polygon fragment = source;
-					fragment.vertices = std::move(outside);
+					fragment.vertices = std::move(pieces.outside);
 					visible.push_back(std::move(fragment));
 				}
-				remainder = clip(remainder, a, b, face, sign, true, tolerance);
+				remainder = std::move(pieces.inside);
 			}
 			return visible;
 		}
