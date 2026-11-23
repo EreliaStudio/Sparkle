@@ -414,6 +414,10 @@ namespace spk::Voxel
 
 	Geometry Mesher::bake(const Volume &volume) const
 	{
+		// Reuse repeated occlusion queries within this bake, even without an attached cache.
+		// A caller-supplied cache still takes precedence and persists across bakes.
+		Occlusion::Cache bakeCache;
+		Occlusion::Cache *cache = _cache != nullptr ? _cache : &bakeCache;
 		auto prepared = prepare(volume);
 		const auto indices = indexSlots(prepared.slots);
 		std::vector<ResolvedSlotContainer> materials;
@@ -523,13 +527,13 @@ namespace spk::Voxel
 								auto &cached = blockerTemplates->fullyOccludes[faceIndex];
 								if (!cached)
 								{
-									cached = visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty();
+									cached = visible(Cell(boundaryCube()), *blocker, face, _tolerance, cache).empty();
 								}
 								fullyOccluded = *cached;
 							}
 							else
 							{
-								fullyOccluded = visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty();
+								fullyOccluded = visible(Cell(boundaryCube()), *blocker, face, _tolerance, cache).empty();
 							}
 						}
 						if (closed && (!occupied || !fullyOccluded))
@@ -546,7 +550,7 @@ namespace spk::Voxel
 								}
 								else
 								{
-									const auto visibility = visible(cell, *blocker, face, _tolerance, _cache);
+									const auto visibility = visible(cell, *blocker, face, _tolerance, cache);
 									for (const auto &triangle : visibility.triangles())
 									{
 										emit(triangle, position, resolved, opaque, translucent, _tolerance);
