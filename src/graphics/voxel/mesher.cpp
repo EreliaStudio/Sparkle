@@ -8,6 +8,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -158,6 +159,7 @@ namespace spk::Voxel
 		struct CellTemplate
 		{
 			Cell cell;
+			std::size_t templateIndex = 0;
 			std::array<SurfaceTriangles, 6> outer;
 			SurfaceTriangles inner;
 			std::optional<SurfaceTriangles> isolated;
@@ -433,6 +435,7 @@ namespace spk::Voxel
 		MeshVertexContainer translucent;
 		const auto dimensions = volume.dimensions();
 		CellTemplateContainer templates(prepared.definitions.size());
+		const std::size_t templateCount = templates.size() * 8;
 		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
 		std::vector<CellTemplate *> cellTemplates(prepared.cells.size(), nullptr);
 		for (std::size_t index = 0; index < prepared.cells.size(); ++index)
@@ -445,14 +448,29 @@ namespace spk::Voxel
 			}
 			const auto packed = prepared.cells[index];
 			const Shape::Orientation orientationValue{Volume::PackedCell::horizontal(packed), Volume::PackedCell::vertical(packed)};
-			auto &entry = templates[id][orientationIndex(orientationValue)];
+			const std::size_t orientedIndex = orientationIndex(orientationValue);
+			auto &entry = templates[id][orientedIndex];
 			if (!entry)
 			{
 				entry.emplace(buildCellTemplate(definition.shape().instance(orientationValue), materials[id], _tolerance));
 				entry->cell = Cell(definition, orientationValue.horizontal, orientationValue.vertical);
+				entry->templateIndex = id * 8 + orientedIndex;
 			}
 			cellTemplates[index] = &*entry;
 		}
+		// Cache identical oriented source/blocker queries for the duration of this bake.
+		std::unordered_map<std::size_t, Occlusion::Result> visibilityCache;
+		auto cachedVisible = [&](const CellTemplate &source, const CellTemplate &blocker, Face face) -> Occlusion::Result {
+			const std::size_t key =
+				(source.templateIndex * templateCount + blocker.templateIndex) * Faces.size() + static_cast<std::size_t>(face);
+			if (const auto found = visibilityCache.find(key); found != visibilityCache.end())
+			{
+				return found->second;
+			}
+			auto result = visible(source.cell, blocker.cell, face, _tolerance, _cache);
+			visibilityCache.emplace(key, result);
+			return result;
+		};
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
 			for (std::uint32_t y = 0; y < dimensions.y; ++y)
@@ -546,7 +564,10 @@ namespace spk::Voxel
 								}
 								else
 								{
-									const auto visibility = visible(cell, *blocker, face, _tolerance, _cache);
+									// External neighbors may depend on the coordinate; only cache chunk-local pairs.
+									const auto visibility = blockerTemplates != nullptr
+														? cachedVisible(faces, *blockerTemplates, face)
+														: visible(cell, *blocker, face, _tolerance, _cache);
 									for (const auto &triangle : visibility.triangles())
 									{
 										emit(triangle, position, resolved, opaque, translucent, _tolerance);
