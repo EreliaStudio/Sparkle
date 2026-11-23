@@ -224,26 +224,22 @@ namespace spk::Voxel
 			return result;
 		}
 
-		void appendTranslated(Geometry::SurfaceMesh::Builder &output, const MeshVertexContainer &input, Position position)
+		void appendTranslated(MeshVertexContainer &output, const MeshVertexContainer &input, Position position)
 		{
 			if (input.empty())
 			{
 				return;
 			}
+			const auto offset = output.size();
+			output.insert(output.end(), input.begin(), input.end());
 			const spk::Vector3 translation(position);
-			(void)output.addVertices(input, [translation](std::span<Geometry::Vertex> vertices) {
-				for (auto &vertex : vertices)
-				{
-					vertex.position += translation;
-				}
-			});
+			for (std::size_t i = offset; i < output.size(); ++i)
+			{
+				output[i].position += translation;
+			}
 		}
 
-		void appendTranslated(
-			Geometry::SurfaceMesh::Builder &opaque,
-			Geometry::SurfaceMesh::Builder &translucent,
-			const SurfaceTriangles &triangles,
-			Position position)
+		void appendTranslated(MeshVertexContainer &opaque, MeshVertexContainer &translucent, const SurfaceTriangles &triangles, Position position)
 		{
 			appendTranslated(opaque, triangles.opaque, position);
 			appendTranslated(translucent, triangles.translucent, position);
@@ -258,8 +254,8 @@ namespace spk::Voxel
 			const Occlusion::Result::Triangle &triangle,
 			Position position,
 			const ResolvedSlotContainer &slots,
-			Geometry::SurfaceMesh::Builder &opaque,
-			Geometry::SurfaceMesh::Builder &translucent,
+			MeshVertexContainer &opaque,
+			MeshVertexContainer &translucent,
 			float tolerance)
 		{
 			if (triangle.crossLength <= 2.0 * tolerance * tolerance)
@@ -284,11 +280,10 @@ namespace spk::Voxel
 			}
 			auto &output = entry->opaque ? opaque : translucent;
 			const spk::Vector3 translation(position);
-			const std::array<Geometry::Vertex, 3> vertices{
-				Geometry::Vertex{triangle.vertices[0].position + translation, triangle.vertices[0].normal, triangle.vertices[0].uv, entry->materialIndex},
-				Geometry::Vertex{triangle.vertices[1].position + translation, triangle.vertices[1].normal, triangle.vertices[1].uv, entry->materialIndex},
-				Geometry::Vertex{triangle.vertices[2].position + translation, triangle.vertices[2].normal, triangle.vertices[2].uv, entry->materialIndex}};
-			(void)output.addVertices(vertices);
+			for (const auto &vertex : triangle.vertices)
+			{
+				output.push_back({vertex.position + translation, vertex.normal, vertex.uv, entry->materialIndex});
+			}
 		}
 
 		[[nodiscard]] Geometry::SurfaceMesh buildSurface(Geometry::SurfaceMesh::Builder &builder)
@@ -449,6 +444,22 @@ namespace spk::Voxel
 		{
 			translucent.reserve(expectedVertices, expectedVertices);
 		}
+		MeshVertexContainer opaqueScratch;
+		MeshVertexContainer translucentScratch;
+		opaqueScratch.reserve(128);
+		translucentScratch.reserve(128);
+		const auto flush = [&]() {
+			if (!opaqueScratch.empty())
+			{
+				(void)opaque.addVertices(opaqueScratch);
+				opaqueScratch.clear();
+			}
+			if (!translucentScratch.empty())
+			{
+				(void)translucent.addVertices(translucentScratch);
+				translucentScratch.clear();
+			}
+		};
 		const auto dimensions = volume.dimensions();
 		CellTemplateContainer templates(prepared.definitions.size());
 		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
@@ -497,7 +508,8 @@ namespace spk::Voxel
 						cellTemplates[cellIndex - strides[2]] == nullptr &&
 						cellTemplates[cellIndex + strides[2]] == nullptr)
 					{
-						appendTranslated(opaque, translucent, isolatedTriangles(faces), position);
+						appendTranslated(opaqueScratch, translucentScratch, isolatedTriangles(faces), position);
+						flush();
 						continue;
 					}
 					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
@@ -560,27 +572,28 @@ namespace spk::Voxel
 							{
 								if (!blockerCanOcclude)
 								{
-									appendTranslated(opaque, translucent, faceTriangles, position);
+									appendTranslated(opaqueScratch, translucentScratch, faceTriangles, position);
 								}
 								else
 								{
 									const auto visibility = visible(cell, *blocker, face, _tolerance, _cache);
 									for (const auto &triangle : visibility.triangles())
 									{
-										emit(triangle, position, resolved, opaque, translucent, _tolerance);
+										emit(triangle, position, resolved, opaqueScratch, translucentScratch, _tolerance);
 									}
 								}
 							}
 						}
 						else
 						{
-							appendTranslated(opaque, translucent, faceTriangles, position);
+							appendTranslated(opaqueScratch, translucentScratch, faceTriangles, position);
 						}
 					}
 					if (!closed)
 					{
-						appendTranslated(opaque, translucent, faces.inner, position);
+						appendTranslated(opaqueScratch, translucentScratch, faces.inner, position);
 					}
+					flush();
 				}
 			}
 		}
