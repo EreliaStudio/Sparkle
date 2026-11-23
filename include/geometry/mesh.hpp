@@ -80,7 +80,6 @@ namespace spk
 
 			virtual ~Builder() = default;
 
-
 			[[nodiscard]] std::size_t vertexCount() const
 			{
 				_check();
@@ -119,7 +118,6 @@ namespace spk
 				_content->layout.vertexBuffer().insert(vertices);
 				return static_cast<Index>(first);
 			}
-
 
 			// Append a contiguous batch, then modify only the appended region in place.
 			// This retains the bulk copy while avoiding a separate output container.
