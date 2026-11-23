@@ -203,10 +203,12 @@ namespace spk::Voxel
 			{
 				return;
 			}
+			const auto offset = output.size();
+			output.insert(output.end(), input.begin(), input.end());
 			const spk::Vector3 translation(position);
-			for (const auto &vertex : input)
+			for (std::size_t i = offset; i < output.size(); ++i)
 			{
-				output.push_back({vertex.position + translation, vertex.normal, vertex.uv, vertex.materialIndex});
+				output[i].position += translation;
 			}
 		}
 
