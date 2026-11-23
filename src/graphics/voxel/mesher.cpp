@@ -20,7 +20,16 @@ namespace spk::Voxel
 		using Face = Shape::Face;
 		using Polygon = Shape::Polygon;
 		using Position = spk::Vector3UInt;
-		using SlotIndices = std::map<std::string, std::uint32_t>;
+		using SlotIndexCollection = std::map<std::string, std::uint32_t>;
+		using MaterialOpacityCollection = std::map<std::string, float>;
+		struct ResolvedSlot
+		{
+			std::string geometricKey;
+			std::uint32_t materialIndex;
+			bool opaque;
+		};
+		using ResolvedSlotContainer = std::vector<ResolvedSlot>;
+		using MeshVertexContainer = std::vector<Geometry::Vertex>;
 
 		constexpr std::array<Face, 6> Faces{
 			Face::NegativeX,
@@ -35,7 +44,7 @@ namespace spk::Voxel
 			return {cell.horizontalOrientation(), cell.verticalOrientation()};
 		}
 
-		[[nodiscard]] std::optional<Position> neighborPosition(Position position, Position dimensions, Face face)
+		[[nodiscard]] std::optional<std::size_t> neighborIndex(Position position, Position dimensions, std::size_t index, const std::array<std::size_t, 3> &strides, Face face)
 		{
 			const std::size_t axis = static_cast<std::size_t>(face) / 2;
 			const bool positive = (static_cast<unsigned>(face) & 1U) != 0;
@@ -45,17 +54,13 @@ namespace spk::Voxel
 				{
 					return std::nullopt;
 				}
-				++position.data[axis];
+				return index + strides[axis];
 			}
-			else
+			if (position.data[axis] == 0)
 			{
-				if (position.data[axis] == 0)
-				{
-					return std::nullopt;
-				}
-				--position.data[axis];
+				return std::nullopt;
 			}
-			return position;
+			return index - strides[axis];
 		}
 
 		[[nodiscard]] const Definition &boundaryCube()
@@ -101,15 +106,8 @@ namespace spk::Voxel
 				key.tolerance);
 		}
 
-		[[nodiscard]] bool hasInnerShell(const Shape::Instance &instance)
-		{
-			return std::any_of(instance.triangles().begin(), instance.triangles().end(), [](const Polygon &polygon) {
-				return polygon.shell == Shape::Shell::Inner;
-			});
-		}
-
 		void emit(
-			Geometry::SurfaceMesh::Builder &builder,
+			MeshVertexContainer &verticesOut,
 			const Polygon &polygon,
 			Position position,
 			std::uint32_t materialIndex,
@@ -127,63 +125,225 @@ namespace spk::Voxel
 				{
 					continue;
 				}
-				auto add = [&](const Shape::Vertex &vertex) {
-					return builder.addVertex({vertex.position + translation, vertex.normal.value_or(polygon.geometricNormal), vertex.uv, materialIndex});
-				};
-				const auto first = add(a);
-				const auto second = add(b);
-				const auto third = add(c);
-				builder.addTriangle(first, second, third);
+				verticesOut.push_back({a.position + translation, a.normal.value_or(polygon.geometricNormal), a.uv, materialIndex});
+				verticesOut.push_back({b.position + translation, b.normal.value_or(polygon.geometricNormal), b.uv, materialIndex});
+				verticesOut.push_back({c.position + translation, c.normal.value_or(polygon.geometricNormal), c.uv, materialIndex});
 			}
 		}
 
 		void emit(
 			const Polygon &polygon,
-			const Definition &definition,
 			Position position,
-			const SlotIndices &indices,
-			Geometry::SurfaceMesh::Builder &opaque,
-			Geometry::SurfaceMesh::Builder &translucent,
+			const ResolvedSlotContainer &slots,
+			MeshVertexContainer &opaque,
+			MeshVertexContainer &translucent,
 			float tolerance)
 		{
-			const auto &slot = definition.slot(polygon.slotKey);
-			const auto index = indices.at(slot.name);
-			emit(slot.opacity == 1.0f ? opaque : translucent, polygon, position, index, tolerance);
+			const auto entry = std::find_if(slots.begin(), slots.end(), [&](const ResolvedSlot &slot) {
+				return slot.geometricKey == polygon.slotKey;
+			});
+			if (entry == slots.end())
+			{
+				throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+			}
+			emit(entry->opaque ? opaque : translucent, polygon, position, entry->materialIndex, tolerance);
 		}
 
-		[[nodiscard]] std::vector<Definition::Slot> collectSlots(const Volume &volume)
+		struct SurfaceTriangles
 		{
-			std::map<std::string, float> names;
+			MeshVertexContainer opaque;
+			MeshVertexContainer translucent;
+		};
+
+		struct CellTemplate
+		{
+			Cell cell;
+			std::array<SurfaceTriangles, 6> outer;
+			SurfaceTriangles inner;
+			bool hasInner = false;
+			std::array<bool, 6> hasOuter{};
+			std::array<std::optional<bool>, 6> fullyOccludes{};
+		};
+
+		using OrientedCellTemplateContainer = std::array<std::optional<CellTemplate>, 8>;
+		using CellTemplateContainer = std::vector<OrientedCellTemplateContainer>;
+
+		[[nodiscard]] CellTemplate buildCellTemplate(
+			const Shape::Instance &instance,
+			const ResolvedSlotContainer &slots,
+			float tolerance)
+		{
+			CellTemplate result;
+			for (const Polygon &polygon : instance.triangles())
+			{
+				SurfaceTriangles *surface;
+				if (polygon.shell == Shape::Shell::Inner)
+				{
+					result.hasInner = true;
+					surface = &result.inner;
+				}
+				else if (polygon.boundary)
+				{
+					const auto faceIndex = static_cast<std::size_t>(*polygon.boundary);
+					result.hasOuter[faceIndex] = true;
+					surface = &result.outer[faceIndex];
+				}
+				else
+				{
+					continue;
+				}
+				emit(polygon, {0, 0, 0}, slots, surface->opaque, surface->translucent, tolerance);
+			}
+			return result;
+		}
+
+		void appendTranslated(MeshVertexContainer &output, const MeshVertexContainer &input, Position position)
+		{
+			if (input.empty())
+			{
+				return;
+			}
+			const auto offset = output.size();
+			output.insert(output.end(), input.begin(), input.end());
+			const spk::Vector3 translation(position);
+			for (std::size_t i = offset; i < output.size(); ++i)
+			{
+				output[i].position += translation;
+			}
+		}
+
+		void appendTranslated(MeshVertexContainer &opaque, MeshVertexContainer &translucent, const SurfaceTriangles &triangles, Position position)
+		{
+			appendTranslated(opaque, triangles.opaque, position);
+			appendTranslated(translucent, triangles.translucent, position);
+		}
+
+		[[nodiscard]] std::size_t orientationIndex(Shape::Orientation value)
+		{
+			return (static_cast<unsigned>(value.vertical) * 4) + static_cast<unsigned>(value.horizontal) / 90;
+		}
+
+		void emit(
+			const Occlusion::Result::Triangle &triangle,
+			Position position,
+			const ResolvedSlotContainer &slots,
+			MeshVertexContainer &opaque,
+			MeshVertexContainer &translucent,
+			float tolerance)
+		{
+			if (triangle.crossLength <= 2.0 * tolerance * tolerance)
+			{
+				return;
+			}
+			const ResolvedSlot *entry = nullptr;
+			if (triangle.slotIndex < slots.size())
+			{
+				entry = &slots[triangle.slotIndex];
+			}
+			else
+			{
+				const auto found = std::find_if(slots.begin(), slots.end(), [&](const ResolvedSlot &slot) {
+					return slot.geometricKey == triangle.slotKey;
+				});
+				if (found == slots.end())
+				{
+					throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+				}
+				entry = &*found;
+			}
+			auto &output = entry->opaque ? opaque : translucent;
+			const spk::Vector3 translation(position);
+			for (const auto &vertex : triangle.vertices)
+			{
+				output.push_back({vertex.position + translation, vertex.normal, vertex.uv, entry->materialIndex});
+			}
+		}
+
+		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertexContainer &vertices)
+		{
+			Geometry::SurfaceMesh::Builder builder;
+			if (!vertices.empty())
+			{
+				(void)builder.addVertices(vertices);
+				builder.addSequentialIndices(vertices.size());
+			}
+			return std::move(builder).build();
+		}
+
+		struct PreparedVolume
+		{
+			std::vector<Volume::PackedCell::Storage> cells;
+			std::size_t occupied = 0;
+			std::vector<std::size_t> definitionIndices;
+			std::vector<Definition> definitions;
+			std::vector<Definition::Slot> slots;
+		};
+
+		[[nodiscard]] PreparedVolume prepare(const Volume &volume)
+		{
+			PreparedVolume result;
 			const auto dimensions = volume.dimensions();
+			const auto count = static_cast<std::size_t>(dimensions.x) * dimensions.y * dimensions.z;
+			result.cells.reserve(count);
+			result.definitionIndices.reserve(count);
+			MaterialOpacityCollection names;
+			std::vector<std::pair<Definition::Registry::ID, std::size_t>> registeredDefinitions;
+			std::vector<bool> hasGeometry;
 			for (std::uint32_t z = 0; z < dimensions.z; ++z)
 			{
 				for (std::uint32_t y = 0; y < dimensions.y; ++y)
 				{
 					for (std::uint32_t x = 0; x < dimensions.x; ++x)
 					{
-						for (const auto &[geometricKey, slot] : volume.at({x, y, z}).definition().slots())
+						const auto packed = volume.atRaw({x, y, z});
+						const auto id = Volume::PackedCell::definitionId(packed);
+						const auto found = std::find_if(registeredDefinitions.begin(), registeredDefinitions.end(), [id](const auto &entry) {
+							return entry.first == id;
+						});
+						std::size_t definitionIndex;
+						if (found == registeredDefinitions.end())
 						{
-							(void)geometricKey;
-							auto [it, inserted] = names.try_emplace(slot.name, slot.opacity);
-							if (!inserted && it->second != slot.opacity)
+							const auto cell = volume.at({x, y, z});
+							const auto &definition = cell.definition();
+							const auto existing = std::find(result.definitions.begin(), result.definitions.end(), definition);
+							definitionIndex = static_cast<std::size_t>(existing - result.definitions.begin());
+							registeredDefinitions.emplace_back(id, definitionIndex);
+							if (existing == result.definitions.end())
 							{
-								throw spk::Exception("Voxel Geometry material slot has conflicting opacity: " + slot.name);
+								result.definitions.push_back(definition);
+								hasGeometry.push_back(!definition.isAir() && !definition.shape().empty());
+								for (const auto &[geometricKey, slot] : definition.slots())
+								{
+									(void)geometricKey;
+									auto [it, inserted] = names.try_emplace(slot.name, slot.opacity);
+									if (!inserted && it->second != slot.opacity)
+									{
+										throw spk::Exception("Voxel Geometry material slot has conflicting opacity: " + slot.name);
+									}
+								}
 							}
 						}
+						else
+						{
+							definitionIndex = found->second;
+						}
+						result.occupied += hasGeometry[definitionIndex];
+						result.definitionIndices.push_back(definitionIndex);
+						result.cells.push_back(packed);
 					}
 				}
 			}
-			std::vector<Definition::Slot> result;
+			result.slots.reserve(names.size());
 			for (const auto &[name, opacity] : names)
 			{
-				result.push_back({name, opacity});
+				result.slots.push_back({name, opacity});
 			}
 			return result;
 		}
 
-		[[nodiscard]] SlotIndices indexSlots(const std::vector<Definition::Slot> &slots)
+		[[nodiscard]] SlotIndexCollection indexSlots(const std::vector<Definition::Slot> &slots)
 		{
-			SlotIndices result;
+			SlotIndexCollection result;
 			for (std::size_t i = 0; i < slots.size(); ++i)
 			{
 				if (i > std::numeric_limits<std::uint32_t>::max())
@@ -227,11 +387,45 @@ namespace spk::Voxel
 
 	Geometry Mesher::bake(const Volume &volume) const
 	{
-		const auto slots = collectSlots(volume);
-		const auto indices = indexSlots(slots);
-		Geometry::SurfaceMesh::Builder opaque;
-		Geometry::SurfaceMesh::Builder translucent;
+		auto prepared = prepare(volume);
+		const auto indices = indexSlots(prepared.slots);
+		std::vector<ResolvedSlotContainer> materials;
+		materials.reserve(prepared.definitions.size());
+		for (const auto &definition : prepared.definitions)
+		{
+			ResolvedSlotContainer resolved;
+			resolved.reserve(definition.slots().size());
+			for (const auto &[geometricKey, slot] : definition.slots())
+			{
+				resolved.push_back({geometricKey, indices.at(slot.name), slot.opacity == 1.0f});
+			}
+			materials.push_back(std::move(resolved));
+		}
+		MeshVertexContainer opaque;
+		opaque.reserve(std::min<std::size_t>(prepared.occupied, 2500) * 40);
+		MeshVertexContainer translucent;
 		const auto dimensions = volume.dimensions();
+		CellTemplateContainer templates(prepared.definitions.size());
+		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
+		std::vector<CellTemplate *> cellTemplates(prepared.cells.size(), nullptr);
+		for (std::size_t index = 0; index < prepared.cells.size(); ++index)
+		{
+			const auto id = prepared.definitionIndices[index];
+			const auto &definition = prepared.definitions[id];
+			if (definition.isAir() || definition.shape().empty())
+			{
+				continue;
+			}
+			const auto packed = prepared.cells[index];
+			const Shape::Orientation orientationValue{Volume::PackedCell::horizontal(packed), Volume::PackedCell::vertical(packed)};
+			auto &entry = templates[id][orientationIndex(orientationValue)];
+			if (!entry)
+			{
+				entry.emplace(buildCellTemplate(definition.shape().instance(orientationValue), materials[id], _tolerance));
+				entry->cell = Cell(definition, orientationValue.horizontal, orientationValue.vertical);
+			}
+			cellTemplates[index] = &*entry;
+		}
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
 			for (std::uint32_t y = 0; y < dimensions.y; ++y)
@@ -239,57 +433,100 @@ namespace spk::Voxel
 				for (std::uint32_t x = 0; x < dimensions.x; ++x)
 				{
 					const Position position{x, y, z};
-					const Cell cell = volume.at(position);
-					if (cell.isAir() || cell.definition().shape().empty())
+					const auto cellIndex = (static_cast<std::size_t>(z) * dimensions.y + y) * dimensions.x + x;
+					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
+					if (cellTemplates[cellIndex] == nullptr)
 					{
 						continue;
 					}
-					const auto &instance = cell.definition().shape().instance(orientation(cell));
-					bool closed = hasInnerShell(instance);
+					const auto &faces = *cellTemplates[cellIndex];
+					const Cell &cell = faces.cell;
+					bool closed = faces.hasInner;
 					for (const auto face : Faces)
 					{
-						const auto adjacent = neighborPosition(position, dimensions, face);
-						const OutsideCell outside = adjacent ? OutsideCell{OutsideCell::State::Occupied, volume.at(*adjacent)} : outsideCell(position, face);
-						const bool occupied = outside.state == OutsideCell::State::Occupied && !outside.cell.isAir();
-						if (closed && (!occupied || !visible(Cell(boundaryCube()), outside.cell, face, _tolerance, _cache).empty()))
+						const auto faceIndex = static_cast<std::size_t>(face);
+						const auto &faceTriangles = faces.outer[faceIndex];
+						const bool hasFace = !faceTriangles.opaque.empty() || !faceTriangles.translucent.empty();
+						if (!closed && !hasFace)
+						{
+							continue;
+						}
+						const auto adjacent = neighborIndex(position, dimensions, cellIndex, strides, face);
+						std::optional<OutsideCell> outside;
+						const Cell *blocker;
+						std::optional<std::size_t> blockerIndex;
+						bool occupied;
+						if (adjacent)
+						{
+							blockerIndex = *adjacent;
+							occupied = cellTemplates[*blockerIndex] != nullptr;
+							blocker = occupied ? &cellTemplates[*blockerIndex]->cell : nullptr;
+						}
+						else
+						{
+							outside.emplace(outsideCell(position, face));
+							blocker = &outside->cell;
+							occupied = outside->state == OutsideCell::State::Occupied && !blocker->isAir();
+						}
+						CellTemplate *blockerTemplates = occupied && blockerIndex ? cellTemplates[*blockerIndex] : nullptr;
+						// Without an opposing boundary polygon, this neighbor cannot clip
+						// the source face. Reuse the prepared triangles unchanged.
+						const bool blockerCanOcclude = blockerTemplates == nullptr || blockerTemplates->hasOuter[faceIndex ^ 1U];
+						bool fullyOccluded = false;
+						if (occupied && blockerCanOcclude && (closed || hasFace))
+						{
+							if (blockerTemplates != nullptr)
+							{
+								auto &cached = blockerTemplates->fullyOccludes[faceIndex];
+								if (!cached)
+								{
+									cached = visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty();
+								}
+								fullyOccluded = *cached;
+							}
+							else
+							{
+								fullyOccluded = visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty();
+							}
+						}
+						if (closed && (!occupied || !fullyOccluded))
 						{
 							closed = false;
 						}
 						if (occupied)
 						{
-							for (const auto &fragment : visible(cell, outside.cell, face, _tolerance, _cache).fragments())
+							if (hasFace && !fullyOccluded)
 							{
-								emit(fragment, cell.definition(), position, indices, opaque, translucent, _tolerance);
+								if (!blockerCanOcclude)
+								{
+									appendTranslated(opaque, translucent, faceTriangles, position);
+								}
+								else
+								{
+									const auto visibility = visible(cell, *blocker, face, _tolerance, _cache);
+									for (const auto &triangle : visibility.triangles())
+									{
+										emit(triangle, position, resolved, opaque, translucent, _tolerance);
+									}
+								}
 							}
 						}
 						else
 						{
-							for (const auto &polygon : instance.triangles())
-							{
-								if (polygon.shell == Shape::Shell::Outer && polygon.boundary == face)
-								{
-									emit(polygon, cell.definition(), position, indices, opaque, translucent, _tolerance);
-								}
-							}
+							appendTranslated(opaque, translucent, faceTriangles, position);
 						}
 					}
 					if (!closed)
 					{
-						for (const auto &polygon : instance.triangles())
-						{
-							if (polygon.shell == Shape::Shell::Inner)
-							{
-								emit(polygon, cell.definition(), position, indices, opaque, translucent, _tolerance);
-							}
-						}
+						appendTranslated(opaque, translucent, faces.inner, position);
 					}
 				}
 			}
 		}
-		Geometry::SurfaceMesh opaqueMesh = std::move(opaque).build();
+		Geometry::SurfaceMesh opaqueMesh = buildSurface(opaque);
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
 		});
-		return Geometry(std::move(opaqueMesh), std::move(translucent).build(), std::move(depth), slots);
+		return Geometry(std::move(opaqueMesh), buildSurface(translucent), std::move(depth), std::move(prepared.slots));
 	}
 }

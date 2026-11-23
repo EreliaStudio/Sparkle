@@ -115,6 +115,7 @@ namespace spk::Voxel::Occlusion
 			{
 				return output;
 			}
+			output.reserve(input.size() + 1);
 			auto distance = [&](const Vertex &vertex) {
 				const float distance = sign * cross(a, b, project(vertex.position, face));
 				return std::abs(distance) <= tolerance ? 0.0f : distance;
@@ -143,15 +144,17 @@ namespace spk::Voxel::Occlusion
 			const Polygon &source,
 			const Polygon &blocker,
 			Face face,
+			const spk::Vector3 &translation,
 			float tolerance)
 		{
 			std::vector<Polygon> visible;
+			visible.reserve(blocker.vertices.size());
 			auto remainder = source.vertices;
 			const float sign = area(blocker.vertices, face) >= 0 ? 1.0f : -1.0f;
 			for (std::size_t i = 0; i < blocker.vertices.size() && remainder.size() >= 3; ++i)
 			{
-				auto a = project(blocker.vertices[i].position, face);
-				auto b = project(blocker.vertices[(i + 1) % blocker.vertices.size()].position, face);
+				auto a = project(blocker.vertices[i].position + translation, face);
+				auto b = project(blocker.vertices[(i + 1) % blocker.vertices.size()].position + translation, face);
 				auto outside = clip(remainder, a, b, face, sign, false, tolerance);
 				if (outside.size() >= 3 && std::abs(area(outside, face)) > tolerance * tolerance)
 				{
@@ -206,15 +209,12 @@ namespace spk::Voxel::Occlusion
 				{
 					continue;
 				}
-				Polygon translated = occluder;
-				for (auto &vertex : translated.vertices)
-				{
-					vertex.position += translation;
-				}
+				// Translate the clipping edges on demand, without copying the blocker polygon.
 				std::vector<Polygon> next;
+				next.reserve(current.size());
 				for (const auto &fragment : current)
 				{
-					auto pieces = subtract(fragment, translated, direction, tolerance);
+					auto pieces = subtract(fragment, occluder, direction, translation, tolerance);
 					next.insert(next.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
 				}
 				current = std::move(next);
@@ -225,6 +225,6 @@ namespace spk::Voxel::Occlusion
 			}
 			fragments.insert(fragments.end(), std::make_move_iterator(current.begin()), std::make_move_iterator(current.end()));
 		}
-		return Result(std::move(fragments));
+		return Result(std::move(fragments), source);
 	}
 }

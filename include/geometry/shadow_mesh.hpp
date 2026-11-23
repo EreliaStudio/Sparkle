@@ -38,23 +38,22 @@ namespace spk::ShadowMap
 			{
 				throw spk::Exception("ShadowMap mesh requires triangle indices");
 			}
-			for (const auto &vertex : vertices)
-			{
-				const spk::Vector3 position = std::invoke(extractor, vertex);
+			(void)builder.addGeneratedVertices(vertices.size(), [&](std::size_t index) {
+				const spk::Vector3 position = std::invoke(extractor, vertices[index]);
 				if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z))
 				{
 					throw spk::Exception("ShadowMap mesh position must be finite");
 				}
-				(void)builder.addVertex(position);
-			}
+				return position;
+			});
 			for (const auto index : indices)
 			{
 				if (index >= vertices.size())
 				{
 					throw spk::Exception("ShadowMap mesh index is out of bounds");
 				}
-				builder.addIndex(index);
 			}
+			builder.addIndices(indices);
 			return std::move(builder).build();
 		}
 	};

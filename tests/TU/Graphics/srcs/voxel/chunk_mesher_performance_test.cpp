@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -490,6 +491,8 @@ namespace
 		constexpr auto BudgetNs = std::chrono::duration_cast<std::chrono::nanoseconds>(ChunkBakeBudget).count();
 		std::vector<std::chrono::nanoseconds> medians;
 		medians.reserve(RandomCases);
+		std::vector<MeshCounts> caseCounts;
+		caseCounts.reserve(RandomCases);
 		std::size_t totalVertices = 0;
 		std::size_t largestGeometry = 0;
 		std::size_t totalTriangles = 0;
@@ -571,6 +574,7 @@ namespace
 			EXPECT_GT(first.vertices, 0u) << "seed=" << seed;
 			EXPECT_EQ(first.vertices, first.opaqueVertices + first.transparentVertices);
 			EXPECT_EQ(first.triangles * 3, first.vertices);
+			caseCounts.push_back(first);
 			totalVertices += first.vertices;
 			largestGeometry = std::max(largestGeometry, first.vertices);
 			totalTriangles += first.triangles;
@@ -607,6 +611,19 @@ namespace
 				  << " | longest individual bake=" << static_cast<double>(largestIndividual.count()) / 1000000.0 << " ms"
 				  << " | over budget=" << exceeding << "/" << RandomCases
 				  << " | budget=" << ChunkBakeBudget.count() << " ms\n";
+		std::array<std::size_t, RandomCases> slowestCases;
+		std::iota(slowestCases.begin(), slowestCases.end(), 0);
+		std::partial_sort(slowestCases.begin(), slowestCases.begin() + 10, slowestCases.end(), [&](std::size_t a, std::size_t b) {
+			return medians[a] > medians[b];
+		});
+		for (std::size_t rank = 0; rank < 10; ++rank)
+		{
+			const auto index = slowestCases[rank];
+			std::cout << "[Chunk slow case] index=" << index
+					  << " | median=" << static_cast<double>(medians[index].count()) / 1000000.0 << " ms"
+					  << " | vertices=" << caseCounts[index].vertices
+					  << " | triangles=" << caseCounts[index].triangles << '\n';
+		}
 		EXPECT_GT(largestGeometry, 60000u) << "The randomized stress corpus must include a near-worst-case face count";
 #if defined(NDEBUG)
 		EXPECT_EQ(exceeding, 0u)

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <future>
 #include <limits>
 #include <optional>
 #include <string>
@@ -856,5 +857,50 @@ TEST(MesherMaterialIndices, GeometryCopiesKeepTheirOriginalSlotIndices)
 	{
 		EXPECT_LT(vertex.materialIndex, copy.materialSlots().size());
 		EXPECT_EQ(copy.materialSlot(vertex.materialIndex).name, source.materialSlot(vertex.materialIndex).name);
+	}
+}
+
+TEST(MesherTest, ConcurrentBakesCanShareAnOcclusionCache)
+{
+	const auto cube = definition(fixture("cube"), "stone_");
+	const auto slab = definition(fixture("slab"), "stone_");
+	const auto volume = pair(cube, {}, slab, {}, Face::PositiveX);
+	const auto expected = Mesher().bake(volume);
+	Occlusion::Cache cache;
+	std::vector<std::future<Geometry>> jobs;
+	for (int index = 0; index < 8; ++index)
+	{
+		jobs.push_back(std::async(std::launch::async, [&]() {
+			Mesher mesher;
+			mesher.attachCache(cache);
+			return mesher.bake(volume);
+		}));
+	}
+	for (auto &job : jobs)
+	{
+		expectEqual(expected, job.get());
+	}
+}
+
+TEST(MesherTest, SparseRegistryIdsAliasingOneDefinitionPreserveOrientedGeometry)
+{
+	const auto shared = definition(fixture("stair"), "shared_", 0.5f);
+	Definition::Registry::Builder sparse;
+	sparse.add(7, shared);
+	sparse.add(Volume::PackedCell::MaxDefinitionId, shared);
+	sparse.add(12345, definition(fixture("cube"), "unused_"));
+	const auto sparseRegistry = sparse.build();
+	const auto denseRegistry = registry({shared});
+	for (const auto orientationValue : Orientations)
+	{
+		Volume::Builder actual({3, 2, 1});
+		actual.bind(sparseRegistry);
+		actual.set({0, 0, 0}, 7, orientationValue.horizontal, orientationValue.vertical);
+		actual.set({1, 0, 0}, Volume::PackedCell::MaxDefinitionId, orientationValue.horizontal, orientationValue.vertical);
+		Volume::Builder expected({3, 2, 1});
+		expected.bind(denseRegistry);
+		expected.set({0, 0, 0}, 1, orientationValue.horizontal, orientationValue.vertical);
+		expected.set({1, 0, 0}, 1, orientationValue.horizontal, orientationValue.vertical);
+		expectEqual(Mesher().bake(actual.build()), Mesher().bake(expected.build()));
 	}
 }
