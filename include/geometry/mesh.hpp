@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
+#include <numeric>
 #include <limits>
 #include <memory>
 #include <span>
@@ -111,6 +113,30 @@ namespace spk
 				return static_cast<Index>(first);
 			}
 
+			// Populate the final vertex buffer directly when the source requires a conversion.
+			template <typename TGenerator>
+			[[nodiscard]] Index addGeneratedVertices(std::size_t count, TGenerator &&generator)
+			{
+				_check();
+				_initializeAttributes();
+
+				const std::size_t first = _vertexCount();
+				if (first > std::numeric_limits<Index>::max() ||
+					count > std::numeric_limits<Index>::max() - first)
+				{
+					throw std::overflow_error("Mesh vertex index overflow");
+				}
+
+				auto &buffer = _content->layout.vertexBuffer();
+				buffer.template resize<Vertex>(first + count);
+				auto output = buffer.template cast<Vertex>().subspan(first, count);
+				for (std::size_t index = 0; index < count; ++index)
+				{
+					output[index] = std::invoke(generator, index);
+				}
+				return static_cast<Index>(first);
+			}
+
 			void addIndices(std::span<const Index> indices)
 			{
 				_check();
@@ -122,6 +148,26 @@ namespace spk
 					throw std::out_of_range("Mesh index references a missing vertex");
 				}
 				_content->layout.indexBuffer().insert(indices);
+			}
+
+			// Avoid an intermediate allocation when each vertex is already one triangle-list index.
+			void addSequentialIndices(std::size_t count)
+			{
+				_check();
+				if (count > _vertexCount() || count > std::numeric_limits<Index>::max())
+				{
+					throw std::out_of_range("Mesh sequential index references a missing vertex");
+				}
+
+				auto &buffer = _content->layout.indexBuffer();
+				const std::size_t previousCount = buffer.count();
+				if (count > std::numeric_limits<std::size_t>::max() - previousCount)
+				{
+					throw std::overflow_error("Mesh index count overflow");
+				}
+				buffer.template resize<Index>(previousCount + count);
+				auto output = buffer.template cast<Index>().subspan(previousCount, count);
+				std::iota(output.begin(), output.end(), Index{0});
 			}
 
 			void addIndex(Index index)

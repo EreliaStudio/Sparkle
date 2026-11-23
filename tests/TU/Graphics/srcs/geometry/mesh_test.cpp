@@ -225,3 +225,36 @@ TEST(MeshTest, BatchVertexIndexOverflowIsRejectedBeforeMutation)
 	const std::array<SimpleVertex, 1> vertices{{{1.0f, 2.0f}}};
 	EXPECT_THROW((void)builder.addVertices(vertices), std::overflow_error);
 }
+
+TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
+{
+	SimpleMesh::Builder builder;
+	EXPECT_EQ(builder.addGeneratedVertices(4, [](std::size_t index) {
+		return SimpleVertex{static_cast<float>(index), static_cast<float>(index * index)};
+	}), 0u);
+	builder.addSequentialIndices(4);
+	const auto mesh = std::move(builder).build();
+	EXPECT_EQ(mesh.vertexCount(), 4u);
+	EXPECT_EQ(mesh.indexCount(), 4u);
+	const auto vertices = mesh.layout().vertexBuffer().cast<SimpleVertex>();
+	const auto indices = mesh.layout().indexBuffer().cast<std::uint32_t>();
+	for (std::size_t index = 0; index < 4; ++index)
+	{
+		EXPECT_FLOAT_EQ(vertices[index].x, static_cast<float>(index));
+		EXPECT_FLOAT_EQ(vertices[index].y, static_cast<float>(index * index));
+		EXPECT_EQ(indices[index], index);
+	}
+}
+
+TEST(MeshTest, GeneratedVertexOverflowAndSequentialIndexBoundsAreRejected)
+{
+	BoundaryMesh::Builder overflow;
+	EXPECT_THROW((void)overflow.addGeneratedVertices(1, [](std::size_t) { return SimpleVertex{1.0f, 2.0f}; }), std::overflow_error);
+
+	SimpleMesh::Builder builder;
+	EXPECT_THROW(builder.addSequentialIndices(1), std::out_of_range);
+	(void)builder.addVertex({1.0f, 2.0f});
+	EXPECT_THROW(builder.addSequentialIndices(2), std::out_of_range);
+	builder.addSequentialIndices(1);
+	EXPECT_EQ(std::move(builder).build().indexCount(), 1u);
+}

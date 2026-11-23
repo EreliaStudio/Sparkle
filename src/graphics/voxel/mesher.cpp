@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <limits>
 #include <map>
-#include <numeric>
 #include <optional>
 #include <string>
 #include <utility>
@@ -239,12 +238,21 @@ namespace spk::Voxel
 			{
 				return;
 			}
-			const auto entry = std::find_if(slots.begin(), slots.end(), [&](const ResolvedSlot &slot) {
-				return slot.geometricKey == triangle.slotKey;
-			});
-			if (entry == slots.end())
+			const ResolvedSlot *entry = nullptr;
+			if (triangle.slotIndex < slots.size())
 			{
-				throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+				entry = &slots[triangle.slotIndex];
+			}
+			else
+			{
+				const auto found = std::find_if(slots.begin(), slots.end(), [&](const ResolvedSlot &slot) {
+					return slot.geometricKey == triangle.slotKey;
+				});
+				if (found == slots.end())
+				{
+					throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+				}
+				entry = &*found;
 			}
 			auto &output = entry->opaque ? opaque : translucent;
 			const spk::Vector3 translation(position);
@@ -260,9 +268,7 @@ namespace spk::Voxel
 			if (!vertices.empty())
 			{
 				(void)builder.addVertices(vertices);
-				std::vector<Geometry::SurfaceMesh::Index> indices(vertices.size());
-				std::iota(indices.begin(), indices.end(), 0U);
-				builder.addIndices(indices);
+				builder.addSequentialIndices(vertices.size());
 			}
 			return std::move(builder).build();
 		}
@@ -294,6 +300,7 @@ namespace spk::Voxel
 						result.occupied += !cell.isAir() && !cell.definition().shape().empty();
 						const auto &definition = cell.definition();
 						const auto found = std::find(result.definitions.begin(), result.definitions.end(), definition);
+						const std::size_t definitionIndex = static_cast<std::size_t>(found - result.definitions.begin());
 						if (found == result.definitions.end())
 						{
 							result.definitions.push_back(definition);
@@ -307,7 +314,7 @@ namespace spk::Voxel
 								}
 							}
 						}
-						result.definitionIndices.push_back(std::find(result.definitions.begin(), result.definitions.end(), definition) - result.definitions.begin());
+						result.definitionIndices.push_back(definitionIndex);
 						result.cells.push_back(std::move(cell));
 					}
 				}
