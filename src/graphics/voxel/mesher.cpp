@@ -444,15 +444,17 @@ namespace spk::Voxel
 		{
 			translucent.reserve(expectedVertices, expectedVertices);
 		}
+		// Keep the staging region small while amortizing final-buffer writes.
+		constexpr std::size_t ScratchLimit = 2048;
 		MeshVertexContainer opaqueScratch;
 		MeshVertexContainer translucentScratch;
 		if (hasOpaque)
 		{
-			opaqueScratch.reserve(128);
+			opaqueScratch.reserve(ScratchLimit);
 		}
 		if (hasTranslucent)
 		{
-			translucentScratch.reserve(128);
+			translucentScratch.reserve(ScratchLimit);
 		}
 		const auto flush = [&]() {
 			if (!opaqueScratch.empty())
@@ -464,6 +466,12 @@ namespace spk::Voxel
 			{
 				(void)translucent.addVertices(translucentScratch);
 				translucentScratch.clear();
+			}
+		};
+		const auto flushIfFull = [&]() {
+			if (opaqueScratch.size() + translucentScratch.size() >= ScratchLimit)
+			{
+				flush();
 			}
 		};
 		const auto dimensions = volume.dimensions();
@@ -515,7 +523,7 @@ namespace spk::Voxel
 						cellTemplates[cellIndex + strides[2]] == nullptr)
 					{
 						appendTranslated(opaqueScratch, translucentScratch, isolatedTriangles(faces), position);
-						flush();
+						flushIfFull();
 						continue;
 					}
 					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
@@ -599,10 +607,11 @@ namespace spk::Voxel
 					{
 						appendTranslated(opaqueScratch, translucentScratch, faces.inner, position);
 					}
-					flush();
+					flushIfFull();
 				}
 			}
 		}
+		flush();
 		Geometry::SurfaceMesh opaqueMesh = buildSurface(opaque);
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
