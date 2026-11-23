@@ -446,8 +446,14 @@ namespace spk::Voxel
 		}
 		MeshVertexContainer opaqueScratch;
 		MeshVertexContainer translucentScratch;
-		opaqueScratch.reserve(128);
-		translucentScratch.reserve(128);
+		if (hasOpaque)
+		{
+			opaqueScratch.reserve(128);
+		}
+		if (hasTranslucent)
+		{
+			translucentScratch.reserve(128);
+		}
 		const auto flush = [&]() {
 			if (!opaqueScratch.empty())
 			{
