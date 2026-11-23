@@ -378,6 +378,32 @@ namespace spk::Voxel
 		MeshVertices translucent;
 		const auto dimensions = volume.dimensions();
 		std::vector<std::array<std::optional<CellTemplates>, 8>> templates(prepared.definitions.size());
+		// A chunk uses the same oriented definition pairs many times. Keep a
+		// bake-local lookup to avoid repeated hashing and locking in the shared
+		// occlusion cache. Bound the dense table for volumes with many definitions.
+		const std::size_t variantCount = prepared.definitions.size() * 8;
+		std::vector<std::optional<Occlusion::Result>> localOcclusions;
+		if (variantCount <= 64)
+		{
+			localOcclusions.resize(variantCount * variantCount * Faces.size());
+		}
+		auto cachedVisible = [&](std::size_t sourceIndex, std::size_t blockerIndex, Face face) -> Occlusion::Result {
+			const Cell &source = prepared.cells[sourceIndex];
+			const Cell &blocker = prepared.cells[blockerIndex];
+			if (!localOcclusions.empty())
+			{
+				const auto sourceVariant = prepared.definitionIndices[sourceIndex] * 8 + orientationIndex(orientation(source));
+				const auto blockerVariant = prepared.definitionIndices[blockerIndex] * 8 + orientationIndex(orientation(blocker));
+				const auto offset = (sourceVariant * variantCount + blockerVariant) * Faces.size() + static_cast<std::size_t>(face);
+				auto &entry = localOcclusions[offset];
+				if (!entry)
+				{
+					entry.emplace(visible(source, blocker, face, _tolerance, _cache));
+				}
+				return *entry;
+			}
+			return visible(source, blocker, face, _tolerance, _cache);
+		};
 		auto getTemplates = [&](std::size_t index) -> CellTemplates & {
 			const Cell &cell = prepared.cells[index];
 			const auto id = prepared.definitionIndices[index];
@@ -449,9 +475,12 @@ namespace spk::Voxel
 						}
 						if (occupied)
 						{
-							if (!fullyOccluded)
+							if (hasFace && !fullyOccluded)
 							{
-								for (const auto &triangle : visible(cell, *blocker, face, _tolerance, _cache).triangles())
+								const auto result = blockerIndex
+									? cachedVisible(cellIndex, *blockerIndex, face)
+									: visible(cell, *blocker, face, _tolerance, _cache);
+								for (const auto &triangle : result.triangles())
 								{
 									emit(triangle, position, resolved, opaque, translucent, _tolerance);
 								}
