@@ -120,14 +120,16 @@ namespace spk::Voxel::Occlusion
 				const float distance = sign * cross(a, b, project(vertex.position, face));
 				return std::abs(distance) <= tolerance ? 0.0f : distance;
 			};
+			// An edge's ending vertex is the next edge's starting vertex.
+			const float firstDistance = distance(input.front());
+			float dp = firstDistance;
 			for (std::size_t i = 0; i < input.size(); ++i)
 			{
 				const auto &p = input[i];
 				const auto &q = input[(i + 1) % input.size()];
-				float dp = distance(p);
-				float dq = distance(q);
-				bool pin = inside ? dp >= 0.0f : dp < 0.0f;
-				bool qin = inside ? dq >= 0.0f : dq < 0.0f;
+				const float dq = i + 1 < input.size() ? distance(q) : firstDistance;
+				const bool pin = inside ? dp >= 0.0f : dp < 0.0f;
+				const bool qin = inside ? dq >= 0.0f : dq < 0.0f;
 				if (pin)
 				{
 					output.push_back(p);
@@ -136,6 +138,7 @@ namespace spk::Voxel::Occlusion
 				{
 					output.push_back(interpolate(p, q, std::clamp(dp / (dp - dq), 0.0f, 1.0f)));
 				}
+				dp = dq;
 			}
 			return output;
 		}
