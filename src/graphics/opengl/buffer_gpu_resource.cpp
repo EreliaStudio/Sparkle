@@ -46,6 +46,12 @@ namespace spk
 		{
 			std::memset(data() + previousSize, 0, size - previousSize);
 		}
+		// Keep the padding initialized too: growing the vector can move whole units.
+		const std::size_t paddedSize = _storage.size() * sizeof(StorageUnit);
+		if (paddedSize > size)
+		{
+			std::memset(data() + size, 0, paddedSize - size);
+		}
 	}
 
 	void BufferGPUResource::State::Storage::reserve(std::size_t size)
@@ -63,6 +69,11 @@ namespace spk
 		_storage.resize(_unitCount(_size + size));
 		std::memcpy(data() + offset, source, size);
 		_size += size;
+		const std::size_t paddedSize = _storage.size() * sizeof(StorageUnit);
+		if (paddedSize > _size)
+		{
+			std::memset(data() + _size, 0, paddedSize - _size);
+		}
 	}
 
 	void BufferGPUResource::State::Storage::clear()

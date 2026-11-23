@@ -33,7 +33,17 @@ namespace spk
 			class Storage
 			{
 			private:
-				std::vector<std::max_align_t> _storage;
+				// Each byte is initialized by resize() or append(). Avoid initializing
+				// whole allocation blocks before append() immediately overwrites them.
+				struct alignas(std::max_align_t) StorageUnit
+				{
+					std::byte bytes[sizeof(std::max_align_t)];
+
+					StorageUnit() noexcept {}
+				};
+				static_assert(sizeof(StorageUnit) == sizeof(std::max_align_t));
+
+				std::vector<StorageUnit> _storage;
 				std::size_t _size = 0;
 
 				[[nodiscard]] static std::size_t _unitCount(std::size_t size) noexcept;
