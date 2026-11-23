@@ -9,8 +9,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <iterator>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <set>
@@ -331,7 +331,7 @@ namespace
 		{
 			return;
 		}
-		std::vector<unsigned char> bytes(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+		std::vector<unsigned char> bytes{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 		constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 		std::string encoded;
 		encoded.reserve(((bytes.size() + 2) / 3) * 4);
