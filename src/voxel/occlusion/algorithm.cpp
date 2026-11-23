@@ -101,13 +101,13 @@ namespace spk::Voxel::Occlusion
 			return vertex;
 		}
 
-		struct SplitPolygons
+		struct PolygonPartition
 		{
 			std::vector<Vertex> outside;
 			std::vector<Vertex> inside;
 		};
 
-		[[nodiscard]] SplitPolygons split(
+		[[nodiscard]] PolygonPartition split(
 			const std::vector<Vertex> &input,
 			const spk::Vector2 &a,
 			const spk::Vector2 &b,
@@ -115,7 +115,7 @@ namespace spk::Voxel::Occlusion
 			float sign,
 			float tolerance)
 		{
-			SplitPolygons result;
+			PolygonPartition result;
 			if (input.empty())
 			{
 				return result;
