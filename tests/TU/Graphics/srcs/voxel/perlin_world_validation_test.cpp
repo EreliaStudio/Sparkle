@@ -374,8 +374,6 @@ namespace
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
 		EXPECT_EQ(pixels.size, terrain::ImageSize);
 	}
-
-
 }
 
 TEST(PerlinWorldIntegration, NegativeCoordinatesAndGenerationOrderAreDeterministic)
