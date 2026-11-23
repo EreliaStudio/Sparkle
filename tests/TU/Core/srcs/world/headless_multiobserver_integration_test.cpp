@@ -344,7 +344,6 @@ TEST(HeadlessMultiObserverIntegrationTest, OverlapMovementRadiusAndChunkEntityLi
 	EXPECT_TRUE(direct.isValid());
 }
 
-
 TEST(HeadlessMultiObserverIntegrationTest, SeparatingObserversExpandsInterestAndForgetsOnlyExitedAbsences)
 {
 	ControlledFixture fixture;
