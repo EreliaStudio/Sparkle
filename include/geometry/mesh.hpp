@@ -113,6 +113,19 @@ namespace spk
 				return static_cast<Index>(first);
 			}
 
+
+			// Append a contiguous batch, then modify only the appended region in place.
+			// This retains the bulk copy while avoiding a separate output container.
+			template <typename TModifier>
+				requires std::invocable<TModifier, std::span<Vertex>>
+			[[nodiscard]] Index addVertices(std::span<const Vertex> vertices, TModifier &&modifier)
+			{
+				const Index first = addVertices(vertices);
+				auto appended = _content->layout.vertexBuffer().template cast<Vertex>().subspan(first, vertices.size());
+				std::invoke(std::forward<TModifier>(modifier), appended);
+				return first;
+			}
+
 			// Populate the final vertex buffer directly when the source requires a conversion.
 			template <typename TGenerator>
 			[[nodiscard]] Index addGeneratedVertices(std::size_t count, TGenerator &&generator)
