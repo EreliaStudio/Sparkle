@@ -175,22 +175,54 @@ TEST(PerlinTest, InvalidInputsAreRejectedWithoutCorruptingConfiguration)
 	const float nan = std::numeric_limits<float>::quiet_NaN();
 	const float infinity = std::numeric_limits<float>::infinity();
 
-	expectInvalid([&] { noise.setOctaves(0); });
-	expectInvalid([&] { noise.setOctaves(-1); });
-	expectInvalid([&] { noise.setOctaves(33); });
-	expectInvalid([&] { noise.setPersistence(-0.1f); });
-	expectInvalid([&] { noise.setPersistence(nan); });
-	expectInvalid([&] { noise.setLacunarity(0.0f); });
-	expectInvalid([&] { noise.setLacunarity(infinity); });
-	expectInvalid([&] { noise.setFrequency(0.0f); });
-	expectInvalid([&] { noise.setFrequency(nan); });
-	expectInvalid([&] { noise.setInterpolation(static_cast<spk::Perlin::Interpolation>(99)); });
-	expectInvalid([&] { noise.sample1D(nan); });
-	expectInvalid([&] { noise.sample2D(0.0f, infinity); });
-	expectInvalid([&] { noise.sample3D(0.0f, 0.0f, -infinity); });
-	expectInvalid([&] { noise.sample1D(0.0f, 2.0f, 1.0f); });
-	expectInvalid([&] { noise.sample2D(0.0f, 0.0f, 0.0f, nan); });
-	expectInvalid([&] { noise.sample3D(0.0f, 0.0f, 0.0f, -infinity, 1.0f); });
+	expectInvalid([&]() {
+		noise.setOctaves(0);
+	});
+	expectInvalid([&]() {
+		noise.setOctaves(-1);
+	});
+	expectInvalid([&]() {
+		noise.setOctaves(33);
+	});
+	expectInvalid([&]() {
+		noise.setPersistence(-0.1f);
+	});
+	expectInvalid([&]() {
+		noise.setPersistence(nan);
+	});
+	expectInvalid([&]() {
+		noise.setLacunarity(0.0f);
+	});
+	expectInvalid([&]() {
+		noise.setLacunarity(infinity);
+	});
+	expectInvalid([&]() {
+		noise.setFrequency(0.0f);
+	});
+	expectInvalid([&]() {
+		noise.setFrequency(nan);
+	});
+	expectInvalid([&]() {
+		noise.setInterpolation(static_cast<spk::Perlin::Interpolation>(99));
+	});
+	expectInvalid([&]() {
+		(void)noise.sample1D(nan);
+	});
+	expectInvalid([&]() {
+		(void)noise.sample2D(0.0f, infinity);
+	});
+	expectInvalid([&]() {
+		(void)noise.sample3D(0.0f, 0.0f, -infinity);
+	});
+	expectInvalid([&]() {
+		(void)noise.sample1D(0.0f, 2.0f, 1.0f);
+	});
+	expectInvalid([&]() {
+		(void)noise.sample2D(0.0f, 0.0f, 0.0f, nan);
+	});
+	expectInvalid([&]() {
+		(void)noise.sample3D(0.0f, 0.0f, 0.0f, -infinity, 1.0f);
+	});
 	EXPECT_FLOAT_EQ(noise.sample2D(0.375f, -2.125f), before);
 	EXPECT_EQ(noise.octaves(), 3);
 
@@ -258,7 +290,13 @@ TEST(PerlinPerformanceTest, ReportOneTwoAndThreeDimensionalSampleCosts)
 		EXPECT_TRUE(std::isfinite(checksum));
 		EXPECT_GT(checksum, 0.0);
 	};
-	benchmark("1D", [&](float x) { return noise.sample1D(x); });
-	benchmark("2D", [&](float x) { return noise.sample2D(x, x * 0.61f); });
-	benchmark("3D", [&](float x) { return noise.sample3D(x, x * 0.61f, x * 0.13f); });
+	benchmark("1D", [&](float x) {
+		return noise.sample1D(x);
+	});
+	benchmark("2D", [&](float x) {
+		return noise.sample2D(x, x * 0.61f);
+	});
+	benchmark("3D", [&](float x) {
+		return noise.sample3D(x, x * 0.61f, x * 0.13f);
+	});
 }
