@@ -110,7 +110,6 @@ namespace spk::Voxel
 				key.tolerance);
 		}
 
-
 		void emit(
 			MeshVertices &verticesOut,
 			const Polygon &polygon,
@@ -153,7 +152,6 @@ namespace spk::Voxel
 			}
 			emit(entry->opaque ? opaque : translucent, polygon, position, entry->materialIndex, tolerance);
 		}
-
 
 		struct SurfaceTriangles
 		{
@@ -396,9 +394,10 @@ namespace spk::Voxel
 							blocker = &outside->cell;
 							occupied = outside->state == OutsideCell::State::Occupied && !blocker->isAir();
 						}
+						const auto &faceTriangles = faces.outer[static_cast<std::size_t>(face)];
+						const bool hasFace = !faceTriangles.opaque.empty() || !faceTriangles.translucent.empty();
 						bool fullyOccluded = false;
-						if (occupied && (closed || !faces.outer[static_cast<std::size_t>(face)].opaque.empty() ||
-								!faces.outer[static_cast<std::size_t>(face)].translucent.empty()))
+						if (occupied && (closed || hasFace))
 						{
 							if (blockerIndex)
 							{
@@ -430,7 +429,7 @@ namespace spk::Voxel
 						}
 						else
 						{
-							appendTranslated(opaque, translucent, faces.outer[static_cast<std::size_t>(face)], position);
+							appendTranslated(opaque, translucent, faceTriangles, position);
 						}
 					}
 					if (!closed)
