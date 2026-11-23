@@ -434,7 +434,7 @@ namespace spk::Voxel
 							blocker = &outside->cell;
 							occupied = outside->state == OutsideCell::State::Occupied && !blocker->isAir();
 						}
-						const CellTemplates *blockerTemplates = occupied && blockerIndex ? &getTemplates(*blockerIndex) : nullptr;
+						CellTemplates *blockerTemplates = occupied && blockerIndex ? &getTemplates(*blockerIndex) : nullptr;
 						// Without an opposing boundary polygon, this neighbor cannot clip
 						// the source face. Reuse the prepared triangles unchanged.
 						const bool blockerCanOcclude = blockerTemplates == nullptr || blockerTemplates->hasOuter[faceIndex ^ 1U];
