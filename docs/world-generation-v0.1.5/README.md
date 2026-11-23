@@ -22,6 +22,7 @@ Fournir une infrastructure réutilisable pour gérer des chunks, leurs entités 
 6. [Tests et validation](validation.md)
 7. [Passes applicatives](features.md)
 8. [LifeCycle et Pool](life-cycle-design.md)
+9. [Biomes — décisions d'architecture et questions ouvertes](biome-architecture.md) (conception exploratoire, sans implémentation)
 
 ## Réutilisation du code Sparkle
 EngineHeadless, Entity3D, Component3D, Registry, System, WorkerPool, Task, ContractProvider, Vector3Int, Voxel::Volume::Builder, Voxel::Mesher et Voxel::Renderer. Ne pas remplacer ces briques, et ne pas ajouter de protocole de réseau.
