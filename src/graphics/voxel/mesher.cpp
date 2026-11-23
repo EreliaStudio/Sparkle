@@ -220,7 +220,6 @@ namespace spk::Voxel
 			return (static_cast<unsigned>(value.vertical) * 4) + static_cast<unsigned>(value.horizontal) / 90;
 		}
 
-
 		void emit(
 			const Occlusion::Result::Triangle &triangle,
 			Position position,
