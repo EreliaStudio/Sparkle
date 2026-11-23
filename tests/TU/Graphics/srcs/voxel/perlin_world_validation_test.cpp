@@ -119,7 +119,8 @@ namespace
 		bool graphicsActive = true;
 		std::int64_t tickTime = 0;
 
-		explicit Scene(bool stream = false) :
+		explicit Scene(bool stream = false, terrain::Generator::Settings settings = {}) :
+			generator(definitions, settings),
 			view(createView()),
 			graphics(engine.addSystem<ChunkGraphics>()),
 			shadowSystem(engine.addSystem<spk::ShadowMap::RenderingSystem>())
@@ -425,7 +426,7 @@ TEST(PerlinWorldIntegration, NegativeCoordinatesAndGenerationOrderAreDeterminist
 			const Chunk *chunk = neighbors[side];
 			const std::uint32_t localX = side == 0 ? 15u : 0u;
 			const auto globalX = side == 0 ? -1 : 0;
-			const auto top = static_cast<std::uint32_t>(terrain::height(globalX, static_cast<std::int32_t>(z)));
+			const auto top = static_cast<std::uint32_t>(generator.height(globalX, static_cast<std::int32_t>(z)));
 			EXPECT_NE(chunk->volume().atRaw({localX, top, z}), spk::Voxel::Volume::PackedCell::Air);
 			if (top < 15)
 			{
@@ -453,6 +454,76 @@ TEST(PerlinWorldGolden, ObliqueCameraAndOutlinedShapes)
 	scene.verifyShadow();
 }
 
+TEST(PerlinWorldGolden, FpsGroundForward)
+{
+	Scene scene;
+	scene.fill(2);
+	const float cameraHeight = static_cast<float>(scene.generator.height(4, -8)) + 1.8f;
+	scene.setCamera({4.0f, cameraHeight, -8.0f}, {23.0f, cameraHeight + 2.0f, 14.0f});
+	expectGolden(scene, "fps_ground_forward");
+	scene.verifyShadow();
+}
+
+TEST(PerlinWorldGolden, FpsHillside)
+{
+	Scene scene;
+	scene.fill(2);
+	const float cameraHeight = static_cast<float>(scene.generator.height(-27, -16)) + 1.8f;
+	scene.setCamera({-27.0f, cameraHeight, -16.0f}, {-3.0f, 13.0f, 3.0f});
+	expectGolden(scene, "fps_hillside");
+	scene.verifyShadow();
+}
+
+TEST(PerlinWorldGolden, SkyTopDownHeightfield)
+{
+	Scene scene;
+	scene.fill(2);
+	scene.setCamera({8.0f, 86.0f, 11.0f}, {0.0f, 8.0f, 0.0f});
+	expectGolden(scene, "topdown_heightfield");
+	scene.verifyShadow();
+}
+
+TEST(PerlinWorldGolden, RuggedTerrainOverview)
+{
+	terrain::Generator::Settings settings;
+	settings.seed = terrain::Seed + 123u;
+	settings.broadFrequency = 0.082f;
+	settings.broadAmplitude = 10.5f;
+	settings.detailFrequency = 0.23f;
+	settings.detailAmplitude = 5.0f;
+	Scene scene(false, settings);
+	scene.fill(2);
+	scene.setCamera({44.0f, 49.0f, 51.0f}, {0.0f, 8.0f, 0.0f});
+	expectGolden(scene, "rugged_overview");
+	scene.verifyShadow();
+}
+
+TEST(PerlinWorldGolden, LowlandTerrainOverview)
+{
+	terrain::Generator::Settings settings;
+	settings.seed = terrain::Seed + 456u;
+	settings.broadFrequency = 0.034f;
+	settings.broadAmplitude = 3.2f;
+	settings.detailFrequency = 0.12f;
+	settings.detailAmplitude = 1.1f;
+	settings.baseHeight = 6.0f;
+	settings.minimumHeight = 2;
+	settings.maximumHeight = 12;
+	Scene scene(false, settings);
+	scene.fill(2);
+	scene.setCamera({47.0f, 37.0f, 50.0f}, {0.0f, 6.0f, 0.0f});
+	expectGolden(scene, "lowland_overview");
+	scene.verifyShadow();
+}
+
+TEST(PerlinWorldGolden, SameWorldWithoutShadows)
+{
+	Scene scene;
+	scene.fill(2);
+	scene.sun.setCastsShadows(false);
+	expectGolden(scene, "overview_without_shadows");
+}
+
 TEST(PerlinWorldGolden, EditedChunkAndSixNeighborRemeshing)
 {
 	Scene scene;
@@ -468,7 +539,7 @@ TEST(PerlinWorldGolden, EditedChunkAndSixNeighborRemeshing)
 	{
 		for (std::uint32_t z = 5; z <= 10; ++z)
 		{
-			edit.erase({x, static_cast<std::uint32_t>(terrain::height(static_cast<int>(x), static_cast<int>(z))), z});
+			edit.erase({x, static_cast<std::uint32_t>(scene.generator.height(static_cast<int>(x), static_cast<int>(z))), z});
 		}
 	}
 	original->setVolume(edit.build());
