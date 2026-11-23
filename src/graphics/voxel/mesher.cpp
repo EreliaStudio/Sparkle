@@ -224,22 +224,26 @@ namespace spk::Voxel
 			return result;
 		}
 
-		void appendTranslated(MeshVertexContainer &output, const MeshVertexContainer &input, Position position)
+		void appendTranslated(Geometry::SurfaceMesh::Builder &output, const MeshVertexContainer &input, Position position)
 		{
 			if (input.empty())
 			{
 				return;
 			}
-			const auto offset = output.size();
-			output.insert(output.end(), input.begin(), input.end());
 			const spk::Vector3 translation(position);
-			for (std::size_t i = offset; i < output.size(); ++i)
-			{
-				output[i].position += translation;
-			}
+			(void)output.addVertices(input, [translation](std::span<Geometry::Vertex> vertices) {
+				for (auto &vertex : vertices)
+				{
+					vertex.position += translation;
+				}
+			});
 		}
 
-		void appendTranslated(MeshVertexContainer &opaque, MeshVertexContainer &translucent, const SurfaceTriangles &triangles, Position position)
+		void appendTranslated(
+			Geometry::SurfaceMesh::Builder &opaque,
+			Geometry::SurfaceMesh::Builder &translucent,
+			const SurfaceTriangles &triangles,
+			Position position)
 		{
 			appendTranslated(opaque, triangles.opaque, position);
 			appendTranslated(translucent, triangles.translucent, position);
@@ -254,8 +258,8 @@ namespace spk::Voxel
 			const Occlusion::Result::Triangle &triangle,
 			Position position,
 			const ResolvedSlotContainer &slots,
-			MeshVertexContainer &opaque,
-			MeshVertexContainer &translucent,
+			Geometry::SurfaceMesh::Builder &opaque,
+			Geometry::SurfaceMesh::Builder &translucent,
 			float tolerance)
 		{
 			if (triangle.crossLength <= 2.0 * tolerance * tolerance)
@@ -280,19 +284,19 @@ namespace spk::Voxel
 			}
 			auto &output = entry->opaque ? opaque : translucent;
 			const spk::Vector3 translation(position);
-			for (const auto &vertex : triangle.vertices)
-			{
-				output.push_back({vertex.position + translation, vertex.normal, vertex.uv, entry->materialIndex});
-			}
+			const std::array<Geometry::Vertex, 3> vertices{
+				Geometry::Vertex{triangle.vertices[0].position + translation, triangle.vertices[0].normal, triangle.vertices[0].uv, entry->materialIndex},
+				Geometry::Vertex{triangle.vertices[1].position + translation, triangle.vertices[1].normal, triangle.vertices[1].uv, entry->materialIndex},
+				Geometry::Vertex{triangle.vertices[2].position + translation, triangle.vertices[2].normal, triangle.vertices[2].uv, entry->materialIndex}};
+			(void)output.addVertices(vertices);
 		}
 
-		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertexContainer &vertices)
+		[[nodiscard]] Geometry::SurfaceMesh buildSurface(Geometry::SurfaceMesh::Builder &builder)
 		{
-			Geometry::SurfaceMesh::Builder builder;
-			if (!vertices.empty())
+			const auto count = builder.vertexCount();
+			if (count != 0)
 			{
-				(void)builder.addVertices(vertices);
-				builder.addSequentialIndices(vertices.size());
+				builder.addSequentialIndices(count);
 			}
 			return std::move(builder).build();
 		}
@@ -428,9 +432,23 @@ namespace spk::Voxel
 			}
 			materials.push_back(std::move(resolved));
 		}
-		MeshVertexContainer opaque;
-		opaque.reserve(std::min<std::size_t>(prepared.occupied, 2500) * 40);
-		MeshVertexContainer translucent;
+		Geometry::SurfaceMesh::Builder opaque;
+		Geometry::SurfaceMesh::Builder translucent;
+		const auto expectedVertices = std::min<std::size_t>(prepared.occupied, 2500) * 40;
+		const bool hasOpaque = std::any_of(prepared.slots.begin(), prepared.slots.end(), [](const Definition::Slot &slot) {
+			return slot.opacity == 1.0f;
+		});
+		const bool hasTranslucent = std::any_of(prepared.slots.begin(), prepared.slots.end(), [](const Definition::Slot &slot) {
+			return slot.opacity != 1.0f;
+		});
+		if (hasOpaque)
+		{
+			opaque.reserve(expectedVertices, expectedVertices);
+		}
+		if (hasTranslucent && !hasOpaque)
+		{
+			translucent.reserve(expectedVertices, expectedVertices);
+		}
 		const auto dimensions = volume.dimensions();
 		CellTemplateContainer templates(prepared.definitions.size());
 		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
