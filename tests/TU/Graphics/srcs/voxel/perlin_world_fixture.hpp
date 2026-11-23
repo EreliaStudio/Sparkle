@@ -14,6 +14,7 @@
 #include "container/json/object.hpp"
 #include "graphics/opengl/texture.hpp"
 #include "math/perlin.hpp"
+#include "voxel/pass/perlin_terrain_pass.hpp"
 #include "voxel/chunk.hpp"
 #include "voxel/definition.hpp"
 #include "voxel/palette.hpp"
@@ -42,38 +43,10 @@ namespace sparkle_test::perlin_world
 		return value ^ (value >> 16);
 	}
 
-	// This fixture shares the same math implementation as production world generation.
-	// Both noise fields are constructed once per generated chunk rather than once
-	// per voxel sample. All samples use absolute world coordinates.
+	// Perlin is configured by the production pass, not implemented by this fixture.
 	struct GenerationData
 	{
-		std::uint32_t seed;
-		spk::Perlin broad;
-		spk::Perlin detail;
-
-		explicit GenerationData(std::uint32_t seedValue) :
-			seed(seedValue),
-			broad(seedValue),
-			detail(seedValue + 17u)
-		{
-			broad.setOctaves(1);
-			broad.setFrequency(0.055f);
-			detail.setOctaves(1);
-			detail.setFrequency(0.16f);
-		}
 	};
-
-	[[nodiscard]] inline int height(std::int32_t x, std::int32_t z, const GenerationData &data)
-	{
-		const float broad = data.broad.sample2D(static_cast<float>(x), static_cast<float>(z), -1.0f, 1.0f);
-		const float detail = data.detail.sample2D(static_cast<float>(x), static_cast<float>(z), -1.0f, 1.0f);
-		return std::clamp(static_cast<int>(std::floor(8.5f + broad * 9.0f + detail * 3.5f)), 3, 15);
-	}
-
-	[[nodiscard]] inline int height(std::int32_t x, std::int32_t z, std::uint32_t seed = Seed)
-	{
-		return height(x, z, GenerationData(seed));
-	}
 
 	[[nodiscard]] inline spk::Voxel::Shape shape(const char *name)
 	{
@@ -154,52 +127,28 @@ namespace sparkle_test::perlin_world
 		return result.build();
 	}
 
+	// Keep the test-owned palette/shapes separate from Sparkle's reusable pass.
 	using GeneratorBase = spk::World::Generator<Chunk, GenerationData, Builder>;
-
-	class TerrainPass final : public GeneratorBase::Pass
-	{
-	public:
-		void apply(Builder &builder, const Coordinate &coordinate, GenerationData &data) override
-		{
-			for (std::uint32_t z = 0; z < 16; ++z)
-			{
-				for (std::uint32_t x = 0; x < 16; ++x)
-				{
-					const auto gx = coordinate.x * 16 + static_cast<std::int32_t>(x);
-					const auto gz = coordinate.z * 16 + static_cast<std::int32_t>(z);
-					const int top = height(gx, gz, data);
-					for (std::uint32_t y = 0; y <= static_cast<std::uint32_t>(top); ++y)
-					{
-						const auto gy = coordinate.y * 16 + static_cast<std::int32_t>(y);
-						if (gy > top)
-						{
-							break;
-						}
-						std::uint32_t id = gy == top ? (top <= 5 ? 4u : 1u) : (gy >= top - 3 ? 2u : 3u);
-						if (gy == top && top > 5 && gx % 13 == 0 && gz % 11 == 0)
-						{
-							id = 5; // Slope showcase, with distinct profile texture.
-						}
-						else if (gy == top && top > 5 && gx % 17 == 0 && gz % 7 == 0)
-						{
-							id = 6; // Slab showcase.
-						}
-						else if (gy == top && top > 5 && gx % 19 == 0 && gz % 13 == 0)
-						{
-							id = 7; // Stair showcase.
-						}
-						builder.set({x, y, z}, id);
-					}
-				}
-			}
-		}
-	};
+	using TerrainPass = spk::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
 
 	class Generator final : public GeneratorBase
 	{
+	public:
+		struct Settings
+		{
+			std::uint32_t seed = Seed;
+			float broadFrequency = 0.055f;
+			float broadAmplitude = 9.0f;
+			float detailFrequency = 0.16f;
+			float detailAmplitude = 3.5f;
+			float baseHeight = 8.5f;
+			std::int32_t minimumHeight = 3;
+			std::int32_t maximumHeight = 15;
+		};
+
 	private:
 		const Registry &_registry;
-		std::uint32_t _seed;
+		TerrainPass *_terrain = nullptr;
 
 		[[nodiscard]] std::optional<Builder> _createChunkBuilder(const Coordinate &coordinate) override
 		{
@@ -214,15 +163,58 @@ namespace sparkle_test::perlin_world
 
 		[[nodiscard]] GenerationData _createGenerationData() override
 		{
-			return GenerationData(_seed);
+			return {};
 		}
 
 	public:
-		explicit Generator(const Registry &definitions, std::uint32_t seed = Seed) :
-			_registry(definitions),
-			_seed(seed)
+		explicit Generator(const Registry &definitions, Settings settings) :
+			_registry(definitions)
 		{
-			addPass<TerrainPass>();
+			auto &terrain = addPass<TerrainPass>();
+			_terrain = &terrain;
+			terrain.setBaseHeight(settings.baseHeight);
+			terrain.setHeightRange(settings.minimumHeight, settings.maximumHeight);
+			spk::Perlin broad(settings.seed);
+			broad.setOctaves(1);
+			broad.setFrequency(settings.broadFrequency);
+			terrain.addNoiseLayer(std::move(broad), settings.broadAmplitude);
+			spk::Perlin detail(settings.seed + 17u);
+			detail.setOctaves(1);
+			detail.setFrequency(settings.detailFrequency);
+			terrain.addNoiseLayer(std::move(detail), settings.detailAmplitude);
+			terrain.setSurfaceVoxel(1);
+			terrain.setSubsurfaceLayers({{2, 3}});
+			terrain.setDeepVoxel(3);
+			// The special voxel silhouettes here are purely demonstration data.
+			terrain.setSurfaceSelector([](std::int64_t x, std::int64_t z, std::int32_t height) -> std::uint32_t {
+				if (height <= 5)
+				{
+					return 4;
+				}
+				if (x % 13 == 0 && z % 11 == 0)
+				{
+					return 5;
+				}
+				if (x % 17 == 0 && z % 7 == 0)
+				{
+					return 6;
+				}
+				if (x % 19 == 0 && z % 13 == 0)
+				{
+					return 7;
+				}
+				return 1;
+			});
+		}
+
+		explicit Generator(const Registry &definitions, std::uint32_t seed = Seed) :
+			Generator(definitions, Settings{.seed = seed})
+		{
+		}
+
+		[[nodiscard]] std::int32_t height(std::int64_t worldX, std::int64_t worldZ) const
+		{
+			return _terrain->computeHeight(worldX, worldZ);
 		}
 	};
 }
