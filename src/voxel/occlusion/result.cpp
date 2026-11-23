@@ -50,6 +50,16 @@ namespace spk::Voxel::Occlusion
 			}
 		}
 
+		std::size_t triangleCount = 0;
+		for (const auto &polygon : result->fragments)
+		{
+			if (polygon.vertices.size() > 2)
+			{
+				triangleCount += polygon.vertices.size() - 2;
+			}
+		}
+		result->triangles.reserve(triangleCount);
+
 		for (const auto &polygon : result->fragments)
 		{
 			const std::size_t slotIndex = source != nullptr

@@ -297,17 +297,11 @@ namespace spk::Voxel
 			return std::move(builder).build();
 		}
 
-		struct PreparedCell
-		{
-			Volume::PackedCell::Storage packed;
-			std::uint32_t definitionIndex;
-			CellTemplate *cellTemplate = nullptr;
-		};
-
 		struct PreparedVolume
 		{
-			std::vector<PreparedCell> cells;
+			std::vector<Volume::PackedCell::Storage> cells;
 			std::size_t occupied = 0;
+			std::vector<std::size_t> definitionIndices;
 			std::vector<Definition> definitions;
 			std::vector<Definition::Slot> slots;
 		};
@@ -318,6 +312,7 @@ namespace spk::Voxel
 			const auto dimensions = volume.dimensions();
 			const auto count = static_cast<std::size_t>(dimensions.x) * dimensions.y * dimensions.z;
 			result.cells.reserve(count);
+			result.definitionIndices.reserve(count);
 			MaterialOpacityCollection names;
 			std::vector<std::pair<Definition::Registry::ID, std::size_t>> registeredDefinitions;
 			std::vector<bool> hasGeometry;
@@ -360,7 +355,8 @@ namespace spk::Voxel
 							definitionIndex = found->second;
 						}
 						result.occupied += hasGeometry[definitionIndex];
-						result.cells.push_back({packed, static_cast<std::uint32_t>(definitionIndex)});
+						result.definitionIndices.push_back(definitionIndex);
+						result.cells.push_back(packed);
 					}
 				}
 			}
@@ -438,16 +434,16 @@ namespace spk::Voxel
 		const auto dimensions = volume.dimensions();
 		CellTemplateContainer templates(prepared.definitions.size());
 		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
+		std::vector<CellTemplate *> cellTemplates(prepared.cells.size(), nullptr);
 		for (std::size_t index = 0; index < prepared.cells.size(); ++index)
 		{
-			auto &preparedCell = prepared.cells[index];
-			const auto id = preparedCell.definitionIndex;
+			const auto id = prepared.definitionIndices[index];
 			const auto &definition = prepared.definitions[id];
 			if (definition.isAir() || definition.shape().empty())
 			{
 				continue;
 			}
-			const auto packed = preparedCell.packed;
+			const auto packed = prepared.cells[index];
 			const Shape::Orientation orientationValue{Volume::PackedCell::horizontal(packed), Volume::PackedCell::vertical(packed)};
 			auto &entry = templates[id][orientationIndex(orientationValue)];
 			if (!entry)
@@ -455,7 +451,7 @@ namespace spk::Voxel
 				entry.emplace(buildCellTemplate(definition.shape().instance(orientationValue), materials[id], _tolerance));
 				entry->cell = Cell(definition, orientationValue.horizontal, orientationValue.vertical);
 			}
-			preparedCell.cellTemplate = &*entry;
+			cellTemplates[index] = &*entry;
 		}
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
@@ -465,28 +461,28 @@ namespace spk::Voxel
 				{
 					const Position position{x, y, z};
 					const auto cellIndex = (static_cast<std::size_t>(z) * dimensions.y + y) * dimensions.x + x;
-					if (prepared.cells[cellIndex].cellTemplate == nullptr)
+					if (cellTemplates[cellIndex] == nullptr)
 					{
 						continue;
 					}
-					auto &faces = *prepared.cells[cellIndex].cellTemplate;
+					auto &faces = *cellTemplates[cellIndex];
 					// Interior cells without geometrically occupied neighbors cannot
 					// have clipped faces or a closed inner shell. Emit their complete
 					// surface in one batch, preserving face and material order.
 					if (x > 0 && x + 1 < dimensions.x &&
 						y > 0 && y + 1 < dimensions.y &&
 						z > 0 && z + 1 < dimensions.z &&
-						prepared.cells[cellIndex - strides[0]].cellTemplate == nullptr &&
-						prepared.cells[cellIndex + strides[0]].cellTemplate == nullptr &&
-						prepared.cells[cellIndex - strides[1]].cellTemplate == nullptr &&
-						prepared.cells[cellIndex + strides[1]].cellTemplate == nullptr &&
-						prepared.cells[cellIndex - strides[2]].cellTemplate == nullptr &&
-						prepared.cells[cellIndex + strides[2]].cellTemplate == nullptr)
+						cellTemplates[cellIndex - strides[0]] == nullptr &&
+						cellTemplates[cellIndex + strides[0]] == nullptr &&
+						cellTemplates[cellIndex - strides[1]] == nullptr &&
+						cellTemplates[cellIndex + strides[1]] == nullptr &&
+						cellTemplates[cellIndex - strides[2]] == nullptr &&
+						cellTemplates[cellIndex + strides[2]] == nullptr)
 					{
 						appendTranslated(opaque, translucent, isolatedTriangles(faces), position);
 						continue;
 					}
-					const auto &resolved = materials[prepared.cells[cellIndex].definitionIndex];
+					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
 					const Cell &cell = faces.cell;
 					bool closed = faces.hasInner;
 					for (const auto face : Faces)
@@ -506,8 +502,8 @@ namespace spk::Voxel
 						if (adjacent)
 						{
 							blockerIndex = *adjacent;
-							occupied = prepared.cells[*blockerIndex].cellTemplate != nullptr;
-							blocker = occupied ? &prepared.cells[*blockerIndex].cellTemplate->cell : nullptr;
+							occupied = cellTemplates[*blockerIndex] != nullptr;
+							blocker = occupied ? &cellTemplates[*blockerIndex]->cell : nullptr;
 						}
 						else
 						{
@@ -515,7 +511,7 @@ namespace spk::Voxel
 							blocker = &outside->cell;
 							occupied = outside->state == OutsideCell::State::Occupied && !blocker->isAir();
 						}
-						CellTemplate *blockerTemplates = occupied && blockerIndex ? prepared.cells[*blockerIndex].cellTemplate : nullptr;
+						CellTemplate *blockerTemplates = occupied && blockerIndex ? cellTemplates[*blockerIndex] : nullptr;
 						// Without an opposing boundary polygon, this neighbor cannot clip
 						// the source face. Reuse the prepared triangles unchanged.
 						const bool blockerCanOcclude = blockerTemplates == nullptr || blockerTemplates->hasOuter[faceIndex ^ 1U];
