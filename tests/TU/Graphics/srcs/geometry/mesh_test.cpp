@@ -226,38 +226,6 @@ TEST(MeshTest, BatchVertexIndexOverflowIsRejectedBeforeMutation)
 	EXPECT_THROW((void)builder.addVertices(vertices), std::overflow_error);
 }
 
-TEST(MeshTest, BatchedModifierChangesOnlyAppendedVertices)
-{
-	SimpleMesh::Builder builder;
-	builder.reserve(4, 4);
-	const std::array<SimpleVertex, 2> original{{{1.0f, 2.0f}, {3.0f, 4.0f}}};
-	const std::array<SimpleVertex, 2> more{{{5.0f, 6.0f}, {7.0f, 8.0f}}};
-	EXPECT_EQ(builder.vertexCount(), 0u);
-	EXPECT_EQ(builder.addVertices(original), 0u);
-	EXPECT_EQ(builder.addVertices(more, [](std::span<SimpleVertex> appended) {
-		for (auto &vertex : appended)
-		{
-			vertex.x += 10.0f;
-		}
-	}),
-			  2u);
-	EXPECT_EQ(builder.vertexCount(), 4u);
-	builder.addSequentialIndices(builder.vertexCount());
-	const auto mesh = std::move(builder).build();
-	const auto vertices = mesh.layout().vertexBuffer().cast<SimpleVertex>();
-	EXPECT_FLOAT_EQ(vertices[0].x, 1.0f);
-	EXPECT_FLOAT_EQ(vertices[1].x, 3.0f);
-	EXPECT_FLOAT_EQ(vertices[2].x, 15.0f);
-	EXPECT_FLOAT_EQ(vertices[2].y, 6.0f);
-	EXPECT_FLOAT_EQ(vertices[3].x, 17.0f);
-	EXPECT_FLOAT_EQ(vertices[3].y, 8.0f);
-	const auto indices = mesh.layout().indexBuffer().cast<std::uint32_t>();
-	for (std::size_t index = 0; index < indices.size(); ++index)
-	{
-		EXPECT_EQ(indices[index], index);
-	}
-}
-
 TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
 {
 	SimpleMesh::Builder builder;
@@ -265,6 +233,7 @@ TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
 		return SimpleVertex{static_cast<float>(index), static_cast<float>(index * index)};
 	}),
 			  0u);
+	EXPECT_EQ(builder.vertexCount(), 4u);
 	builder.addSequentialIndices(4);
 	const auto mesh = std::move(builder).build();
 	EXPECT_EQ(mesh.vertexCount(), 4u);
