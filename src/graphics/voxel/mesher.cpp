@@ -220,6 +220,34 @@ namespace spk::Voxel
 			return (static_cast<unsigned>(value.vertical) * 4) + static_cast<unsigned>(value.horizontal) / 90;
 		}
 
+
+		void emit(
+			const Occlusion::Result::Triangle &triangle,
+			Position position,
+			const ResolvedSlots &slots,
+			MeshVertices &opaque,
+			MeshVertices &translucent,
+			float tolerance)
+		{
+			if (triangle.crossLength <= 2.0 * tolerance * tolerance)
+			{
+				return;
+			}
+			const auto entry = std::find_if(slots.begin(), slots.end(), [&](const ResolvedSlot &slot) {
+				return slot.geometricKey == triangle.slotKey;
+			});
+			if (entry == slots.end())
+			{
+				throw spk::Exception("Voxel Definition references an unmapped geometric slot");
+			}
+			auto &output = entry->opaque ? opaque : translucent;
+			const spk::Vector3 translation(position);
+			for (const auto &vertex : triangle.vertices)
+			{
+				output.push_back({vertex.position + translation, vertex.normal, vertex.uv, entry->materialIndex});
+			}
+		}
+
 		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertices &vertices)
 		{
 			Geometry::SurfaceMesh::Builder builder;
@@ -236,6 +264,7 @@ namespace spk::Voxel
 		struct PreparedVolume
 		{
 			std::vector<Cell> cells;
+			std::size_t occupied = 0;
 			std::vector<std::size_t> definitionIndices;
 			std::vector<Definition> definitions;
 			std::vector<Definition::Slot> slots;
@@ -256,6 +285,7 @@ namespace spk::Voxel
 					for (std::uint32_t x = 0; x < dimensions.x; ++x)
 					{
 						Cell cell = volume.at({x, y, z});
+						result.occupied += !cell.isAir() && !cell.definition().shape().empty();
 						const auto &definition = cell.definition();
 						const auto found = std::find(result.definitions.begin(), result.definitions.end(), definition);
 						if (found == result.definitions.end())
@@ -345,6 +375,7 @@ namespace spk::Voxel
 			materials.push_back(std::move(resolved));
 		}
 		MeshVertices opaque;
+		opaque.reserve(std::min<std::size_t>(prepared.occupied, 2500) * 40);
 		MeshVertices translucent;
 		const auto dimensions = volume.dimensions();
 		std::vector<std::array<std::optional<CellTemplates>, 8>> templates(prepared.definitions.size());
@@ -421,9 +452,9 @@ namespace spk::Voxel
 						{
 							if (!fullyOccluded)
 							{
-								for (const auto &fragment : visible(cell, *blocker, face, _tolerance, _cache).fragments())
+								for (const auto &triangle : visible(cell, *blocker, face, _tolerance, _cache).triangles())
 								{
-									emit(fragment, position, resolved, opaque, translucent, _tolerance);
+									emit(triangle, position, resolved, opaque, translucent, _tolerance);
 								}
 							}
 						}
