@@ -139,11 +139,6 @@ namespace spk::Voxel
 		return _data->cells[cellOffset(position, _data->dimensions)];
 	}
 
-	std::span<const Volume::PackedCell::Storage> Volume::packedCells() const noexcept
-	{
-		return _data->cells;
-	}
-
 	Cell Volume::at(spk::Vector3UInt position) const
 	{
 		const auto packed = atRaw(position);
