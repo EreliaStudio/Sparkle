@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <charconv>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -746,8 +746,10 @@ TEST(VoxelChunkPerformanceTest, ReplaySpecificRandomCase)
 	ASSERT_EQ(end, text.data() + text.size());
 	ASSERT_LT(index, RandomCases);
 	const char *content = std::getenv("SPARKLE_VOXEL_REPLAY_CONTENT");
-	const RandomContent mode = content != nullptr && std::string_view(content) == "cubes"
-									   ? RandomContent::OpaqueCubes
-									   : RandomContent::MixedShapes;
+	RandomContent mode = RandomContent::MixedShapes;
+	if (content != nullptr && std::string_view(content) == "cubes")
+	{
+		mode = RandomContent::OpaqueCubes;
+	}
 	measureRandomizedChunks(mode, index);
 }
