@@ -477,9 +477,7 @@ namespace spk::Voxel
 						{
 							if (hasFace && !fullyOccluded)
 							{
-								const auto result = blockerIndex
-									? cachedVisible(cellIndex, *blockerIndex, face)
-									: visible(cell, *blocker, face, _tolerance, _cache);
+								const auto result = blockerIndex ? cachedVisible(cellIndex, *blockerIndex, face) : visible(cell, *blocker, face, _tolerance, _cache);
 								for (const auto &triangle : result.triangles())
 								{
 									emit(triangle, position, resolved, opaque, translucent, _tolerance);
