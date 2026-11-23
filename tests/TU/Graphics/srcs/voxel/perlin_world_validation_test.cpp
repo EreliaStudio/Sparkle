@@ -30,7 +30,6 @@
 #include "rendering/render_snapshot.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/rendering_system.hpp"
-#include "sparkle_test/gif_comparison.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 #include "sparkle_test/paths.hpp"
@@ -376,24 +375,7 @@ namespace
 		EXPECT_EQ(pixels.size, terrain::ImageSize);
 	}
 
-	void expectAnimatedGolden(const std::vector<sparkle_test::FramebufferImage> &frames, const std::string &name)
-	{
-		const auto expected = sparkle_test::expectedImagesDirectory() / GoldenCategory / (name + "_expected.gif");
-		const auto actual = sparkle_test::freshResultFilePath(GoldenCategory, name + "_actual.gif");
-		const auto diagnostics = sparkle_test::resultsDirectory() / GoldenCategory / (name + "_frames");
-		sparkle_test::GifComparisonOptions options;
-		options.image.rgbTolerance = 24;
-		options.maximumDifferentPixelsPerFrame = 150;
-		if (!std::filesystem::exists(expected))
-		{
-			sparkle_test::saveAnimationGif(frames, actual, options.frameDelayMs);
-			emitGoldenCandidate(actual, name + "_expected.gif");
-			FAIL() << "Missing approved Perlin world GIF: " << expected << "; actual " << actual;
-			return;
-		}
-		const auto result = sparkle_test::compareAnimationGif(frames, expected, actual, diagnostics, options);
-		EXPECT_TRUE(result.matches) << "Golden GIF changed: " << actual;
-	}
+
 }
 
 TEST(PerlinWorldIntegration, NegativeCoordinatesAndGenerationOrderAreDeterministic)
@@ -553,22 +535,45 @@ TEST(PerlinWorldGolden, EditedChunkAndSixNeighborRemeshing)
 	scene.verifyShadow();
 }
 
-TEST(PerlinWorldGolden, TwoObserversStreamingAnimatedGIF)
+// Each movement stage gets its own PNG, so a streaming regression identifies
+// the precise observer position rather than failing an entire animation.
+void checkStreamingStep(int lastStep, const std::string &goldenName)
 {
 	Scene scene(true);
-	std::vector<sparkle_test::FramebufferImage> frames;
-	for (int step = 0; step < 4; ++step)
+	for (int step = 0; step <= lastStep; ++step)
 	{
 		const float shift = static_cast<float>(step * 16);
 		scene.firstObserver.transform().place({shift - 16.0f, 8, 0});
 		scene.secondObserver.transform().place({shift, 8, 0});
 		scene.waitForStreaming();
 		EXPECT_EQ(scene.chunks.size(), scene.desiredChunks());
-		scene.setCamera({shift + 28.0f, 35, 42}, {shift, 7, 0});
-		frames.push_back(scene.capture());
-		scene.verifyShadow();
+		if (step == lastStep)
+		{
+			scene.setCamera({shift + 28.0f, 35, 42}, {shift, 7, 0});
+			expectGolden(scene, goldenName);
+			scene.verifyShadow();
+		}
 	}
-	expectAnimatedGolden(frames, "streaming");
+}
+
+TEST(PerlinWorldGolden, TwoObserversStreamingInitial)
+{
+	checkStreamingStep(0, "streaming_initial");
+}
+
+TEST(PerlinWorldGolden, TwoObserversStreamingOneChunk)
+{
+	checkStreamingStep(1, "streaming_one_chunk");
+}
+
+TEST(PerlinWorldGolden, TwoObserversStreamingTwoChunks)
+{
+	checkStreamingStep(2, "streaming_two_chunks");
+}
+
+TEST(PerlinWorldGolden, TwoObserversStreamingThreeChunks)
+{
+	checkStreamingStep(3, "streaming_three_chunks");
 }
 
 TEST(PerlinWorldPerformance, GenerationOnly49Chunks)
