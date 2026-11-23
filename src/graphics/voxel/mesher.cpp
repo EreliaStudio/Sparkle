@@ -565,9 +565,15 @@ namespace spk::Voxel
 								else
 								{
 									// External neighbors may depend on the coordinate; only cache chunk-local pairs.
-									const auto visibility = blockerTemplates != nullptr
-														? cachedVisible(faces, *blockerTemplates, face)
-														: visible(cell, *blocker, face, _tolerance, _cache);
+									Occlusion::Result visibility;
+									if (blockerTemplates != nullptr)
+									{
+										visibility = cachedVisible(faces, *blockerTemplates, face);
+									}
+									else
+									{
+										visibility = visible(cell, *blocker, face, _tolerance, _cache);
+									}
 									for (const auto &triangle : visibility.triangles())
 									{
 										emit(triangle, position, resolved, opaque, translucent, _tolerance);
