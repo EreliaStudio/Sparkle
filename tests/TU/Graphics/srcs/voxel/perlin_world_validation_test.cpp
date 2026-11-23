@@ -7,10 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <numeric>
 #include <set>
@@ -322,38 +320,6 @@ namespace
 		}
 	};
 
-	// Temporary candidate transport for the initial, explicitly reviewed PNG/GIF
-	// references. The CI run remains red when a reference is missing.
-	void emitGoldenCandidate(const std::filesystem::path &filename, const std::string &destination)
-	{
-		std::ifstream input(filename, std::ios::binary);
-		if (!input)
-		{
-			return;
-		}
-		std::vector<unsigned char> bytes{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-		constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-		std::string encoded;
-		encoded.reserve(((bytes.size() + 2) / 3) * 4);
-		for (std::size_t index = 0; index < bytes.size(); index += 3)
-		{
-			const std::uint32_t a = bytes[index];
-			const std::uint32_t b = index + 1 < bytes.size() ? bytes[index + 1] : 0;
-			const std::uint32_t c = index + 2 < bytes.size() ? bytes[index + 2] : 0;
-			const std::uint32_t word = (a << 16) | (b << 8) | c;
-			encoded.push_back(alphabet[(word >> 18) & 63]);
-			encoded.push_back(alphabet[(word >> 12) & 63]);
-			encoded.push_back(index + 1 < bytes.size() ? alphabet[(word >> 6) & 63] : '=');
-			encoded.push_back(index + 2 < bytes.size() ? alphabet[word & 63] : '=');
-		}
-		std::cout << "SPARKLE_GOLDEN_BEGIN:" << destination << ':' << bytes.size() << '\n';
-		for (std::size_t offset = 0; offset < encoded.size(); offset += 3072)
-		{
-			std::cout << "SPARKLE_GOLDEN_DATA:" << encoded.substr(offset, 3072) << '\n';
-		}
-		std::cout << "SPARKLE_GOLDEN_END:" << destination << '\n';
-	}
-
 	void expectGolden(Scene &scene, const std::string &name)
 	{
 		const auto pixels = scene.capture();
@@ -361,10 +327,6 @@ namespace
 		const auto actual = sparkle_test::resultImagePath(GoldenCategory, name);
 		gl.save(actual);
 		const auto expected = sparkle_test::expectedImagePath(GoldenCategory, name);
-		if (!std::filesystem::exists(expected))
-		{
-			emitGoldenCandidate(actual, name + ".png");
-		}
 		ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing approved Perlin world golden: " << expected << "; actual " << actual;
 		sparkle_test::ImageComparisonOptions tolerance;
 		tolerance.rgbTolerance = 8;
