@@ -14,10 +14,10 @@
 #include "container/json/object.hpp"
 #include "graphics/opengl/texture.hpp"
 #include "math/perlin.hpp"
-#include "voxel/pass/perlin_terrain_pass.hpp"
 #include "voxel/chunk.hpp"
 #include "voxel/definition.hpp"
 #include "voxel/palette.hpp"
+#include "voxel/pass/perlin_terrain_pass.hpp"
 #include "world/generator.hpp"
 
 namespace sparkle_test::perlin_world
