@@ -384,11 +384,14 @@ namespace
 		sparkle_test::GifComparisonOptions options;
 		options.image.rgbTolerance = 24;
 		options.maximumDifferentPixelsPerFrame = 150;
-		const auto result = sparkle_test::compareAnimationGif(frames, expected, actual, diagnostics, options);
 		if (!std::filesystem::exists(expected))
 		{
+			sparkle_test::saveAnimationGif(frames, actual, options.frameDelayMs);
 			emitGoldenCandidate(actual, name + "_expected.gif");
+			FAIL() << "Missing approved Perlin world GIF: " << expected << "; actual " << actual;
+			return;
 		}
+		const auto result = sparkle_test::compareAnimationGif(frames, expected, actual, diagnostics, options);
 		EXPECT_TRUE(result.matches) << "Golden GIF changed: " << actual;
 	}
 }
