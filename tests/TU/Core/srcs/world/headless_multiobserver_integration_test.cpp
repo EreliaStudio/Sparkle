@@ -344,6 +344,51 @@ TEST(HeadlessMultiObserverIntegrationTest, OverlapMovementRadiusAndChunkEntityLi
 	EXPECT_TRUE(direct.isValid());
 }
 
+
+TEST(HeadlessMultiObserverIntegrationTest, SeparatingObserversExpandsInterestAndForgetsOnlyExitedAbsences)
+{
+	ControlledFixture fixture;
+	spk::Entity3D first("First");
+	spk::Entity3D second("Second");
+	addObserver(fixture.engine, first, {0.0f, 0.0f, 0.0f}, {1, 0, 0});
+	addObserver(fixture.engine, second, {0.0f, 0.0f, 0.0f}, {1, 0, 0});
+	Streamer &streamer = fixture.start({.maxInFlight = 8});
+
+	fixture.tick(0ms);
+	ASSERT_EQ(fixture.requester.requests.size(), 3u);
+	EXPECT_EQ(fixture.requester.requests[0].coordinate, (Coordinate{0, 0, 0}));
+	EXPECT_EQ(fixture.requester.requests[1].coordinate, (Coordinate{-1, 0, 0}));
+	EXPECT_EQ(fixture.requester.requests[2].coordinate, (Coordinate{1, 0, 0}));
+	for (std::size_t index = 0; index < 3; ++index)
+	{
+		fixture.requester.absent(index);
+	}
+	fixture.tick(1ms);
+
+	second.transform().place({48.0f, 0.0f, 0.0f});
+	fixture.tick(2ms);
+	ASSERT_EQ(fixture.requester.requests.size(), 6u);
+	EXPECT_EQ(fixture.requester.requests[3].coordinate, (Coordinate{3, 0, 0}));
+	EXPECT_EQ(fixture.requester.requests[4].coordinate, (Coordinate{2, 0, 0}));
+	EXPECT_EQ(fixture.requester.requests[5].coordinate, (Coordinate{4, 0, 0}));
+	for (std::size_t index = 3; index < 6; ++index)
+	{
+		fixture.requester.absent(index);
+	}
+	fixture.tick(3ms);
+
+	second.transform().place({0.0f, 0.0f, 0.0f});
+	fixture.tick(4ms);
+	EXPECT_EQ(fixture.requester.requests.size(), 6u);
+	second.transform().place({48.0f, 0.0f, 0.0f});
+	fixture.tick(5ms);
+	ASSERT_EQ(fixture.requester.requests.size(), 9u);
+	EXPECT_EQ(fixture.requester.requests[6].coordinate, (Coordinate{3, 0, 0}));
+	EXPECT_EQ(fixture.requester.requests[7].coordinate, (Coordinate{2, 0, 0}));
+	EXPECT_EQ(fixture.requester.requests[8].coordinate, (Coordinate{4, 0, 0}));
+	EXPECT_EQ(streamer.planRevision(), 4u);
+}
+
 TEST(HeadlessMultiObserverIntegrationTest, ReprioritizesOnlyUnsubmittedChunksByNearestInterestedObserver)
 {
 	ControlledFixture fixture;
@@ -552,12 +597,16 @@ TEST(HeadlessMultiObserverIntegrationTest, LocalWorkerShutdownDoesNotWaitForBloc
 	collection.attach(engine);
 	spk::Entity3D player("Player");
 	addObserver(engine, player, {0.0f, 0.0f, 0.0f});
-	Streamer &streamer = engine.addSystem<Streamer>(collection, requester, Streamer::Settings{.maxInFlight = 1});
+	Streamer &streamer = engine.addSystem<Streamer>(collection, requester, Streamer::Settings{.maxInFlight = 1, .timeout = 10ms, .retryDelay = 5ms});
 
 	spk::UpdateContext context{.time = 0ms, .deltaTime = 1ms};
 	engine.updateState(context);
 	EXPECT_EQ(enteredFuture.wait_for(5s), std::future_status::ready);
 	EXPECT_EQ(streamer.inFlightCount(), 1u);
+	context.time = 10ms;
+	engine.updateState(context);
+	EXPECT_EQ(streamer.inFlightCount(), 1u);
+	EXPECT_TRUE(collection.empty());
 
 	engine.removeSystem(streamer);
 	EXPECT_TRUE(collection.empty());
