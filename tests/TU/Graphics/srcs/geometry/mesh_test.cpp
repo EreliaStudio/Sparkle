@@ -117,7 +117,6 @@ TEST(MeshTest, MissingVertexIndicesAndConsumedBuilderAreRejected)
 	EXPECT_THROW(builder.addIndex(1), std::out_of_range);
 	auto mesh = std::move(builder).build();
 	EXPECT_THROW((void)builder.addVertex({1.0f, 1.0f}), std::logic_error);
-	EXPECT_THROW((void)builder.vertexCount(), std::logic_error);
 	EXPECT_THROW(builder.reserve(1, 1), std::logic_error);
 }
 
@@ -234,7 +233,6 @@ TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
 		return SimpleVertex{static_cast<float>(index), static_cast<float>(index * index)};
 	}),
 			  0u);
-	EXPECT_EQ(builder.vertexCount(), 4u);
 	builder.addSequentialIndices(4);
 	const auto mesh = std::move(builder).build();
 	EXPECT_EQ(mesh.vertexCount(), 4u);

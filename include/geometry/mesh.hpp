@@ -80,12 +80,6 @@ namespace spk
 
 			virtual ~Builder() = default;
 
-			[[nodiscard]] std::size_t vertexCount() const
-			{
-				_check();
-				return _vertexCount();
-			}
-
 			[[nodiscard]] Index addVertex(const Vertex &vertex)
 			{
 				_check();

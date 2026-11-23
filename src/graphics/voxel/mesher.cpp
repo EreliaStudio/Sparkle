@@ -286,12 +286,13 @@ namespace spk::Voxel
 			}
 		}
 
-		[[nodiscard]] Geometry::SurfaceMesh buildSurface(Geometry::SurfaceMesh::Builder &builder)
+		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertexContainer &vertices)
 		{
-			const auto count = builder.vertexCount();
-			if (count != 0)
+			Geometry::SurfaceMesh::Builder builder;
+			if (!vertices.empty())
 			{
-				builder.addSequentialIndices(count);
+				(void)builder.addVertices(vertices);
+				builder.addSequentialIndices(vertices.size());
 			}
 			return std::move(builder).build();
 		}
@@ -427,53 +428,9 @@ namespace spk::Voxel
 			}
 			materials.push_back(std::move(resolved));
 		}
-		Geometry::SurfaceMesh::Builder opaque;
-		Geometry::SurfaceMesh::Builder translucent;
-		const auto expectedVertices = std::min<std::size_t>(prepared.occupied, 2500) * 40;
-		const bool hasOpaque = std::any_of(prepared.slots.begin(), prepared.slots.end(), [](const Definition::Slot &slot) {
-			return slot.opacity == 1.0f;
-		});
-		const bool hasTranslucent = std::any_of(prepared.slots.begin(), prepared.slots.end(), [](const Definition::Slot &slot) {
-			return slot.opacity != 1.0f;
-		});
-		if (hasOpaque)
-		{
-			opaque.reserve(expectedVertices, expectedVertices);
-		}
-		if (hasTranslucent && !hasOpaque)
-		{
-			translucent.reserve(expectedVertices, expectedVertices);
-		}
-		// Keep the staging region small while amortizing final-buffer writes.
-		constexpr std::size_t ScratchLimit = 2048;
-		MeshVertexContainer opaqueScratch;
-		MeshVertexContainer translucentScratch;
-		if (hasOpaque)
-		{
-			opaqueScratch.reserve(ScratchLimit);
-		}
-		if (hasTranslucent)
-		{
-			translucentScratch.reserve(ScratchLimit);
-		}
-		const auto flush = [&]() {
-			if (!opaqueScratch.empty())
-			{
-				(void)opaque.addVertices(opaqueScratch);
-				opaqueScratch.clear();
-			}
-			if (!translucentScratch.empty())
-			{
-				(void)translucent.addVertices(translucentScratch);
-				translucentScratch.clear();
-			}
-		};
-		const auto flushIfFull = [&]() {
-			if (opaqueScratch.size() + translucentScratch.size() >= ScratchLimit)
-			{
-				flush();
-			}
-		};
+		MeshVertexContainer opaque;
+		opaque.reserve(std::min<std::size_t>(prepared.occupied, 2500) * 40);
+		MeshVertexContainer translucent;
 		const auto dimensions = volume.dimensions();
 		CellTemplateContainer templates(prepared.definitions.size());
 		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
@@ -522,8 +479,7 @@ namespace spk::Voxel
 						cellTemplates[cellIndex - strides[2]] == nullptr &&
 						cellTemplates[cellIndex + strides[2]] == nullptr)
 					{
-						appendTranslated(opaqueScratch, translucentScratch, isolatedTriangles(faces), position);
-						flushIfFull();
+						appendTranslated(opaque, translucent, isolatedTriangles(faces), position);
 						continue;
 					}
 					const auto &resolved = materials[prepared.definitionIndices[cellIndex]];
@@ -586,32 +542,30 @@ namespace spk::Voxel
 							{
 								if (!blockerCanOcclude)
 								{
-									appendTranslated(opaqueScratch, translucentScratch, faceTriangles, position);
+									appendTranslated(opaque, translucent, faceTriangles, position);
 								}
 								else
 								{
 									const auto visibility = visible(cell, *blocker, face, _tolerance, _cache);
 									for (const auto &triangle : visibility.triangles())
 									{
-										emit(triangle, position, resolved, opaqueScratch, translucentScratch, _tolerance);
+										emit(triangle, position, resolved, opaque, translucent, _tolerance);
 									}
 								}
 							}
 						}
 						else
 						{
-							appendTranslated(opaqueScratch, translucentScratch, faceTriangles, position);
+							appendTranslated(opaque, translucent, faceTriangles, position);
 						}
 					}
 					if (!closed)
 					{
-						appendTranslated(opaqueScratch, translucentScratch, faces.inner, position);
+						appendTranslated(opaque, translucent, faces.inner, position);
 					}
-					flushIfFull();
 				}
 			}
 		}
-		flush();
 		Geometry::SurfaceMesh opaqueMesh = buildSurface(opaque);
 		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
 			return vertex.position;
