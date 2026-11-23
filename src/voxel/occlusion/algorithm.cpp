@@ -154,22 +154,38 @@ namespace spk::Voxel::Occlusion
 			return result;
 		}
 
+		struct ProjectedOccluder
+		{
+			std::vector<spk::Vector2> vertices;
+			float winding;
+		};
+
+		[[nodiscard]] ProjectedOccluder projectOccluder(const Polygon &polygon, Face face)
+		{
+			ProjectedOccluder result;
+			result.vertices.reserve(polygon.vertices.size());
+			for (const auto &vertex : polygon.vertices)
+			{
+				result.vertices.push_back(project(vertex.position, face));
+			}
+			result.winding = area(polygon.vertices, face) >= 0 ? 1.0f : -1.0f;
+			return result;
+		}
+
 		std::vector<Polygon> subtract(
 			const Polygon &source,
-			const Polygon &blocker,
+			const ProjectedOccluder &blocker,
 			Face face,
-			const spk::Vector3 &translation,
 			float tolerance)
 		{
 			std::vector<Polygon> visible;
 			visible.reserve(blocker.vertices.size());
 			auto remainder = source.vertices;
-			const float sign = area(blocker.vertices, face) >= 0 ? 1.0f : -1.0f;
 			for (std::size_t i = 0; i < blocker.vertices.size() && remainder.size() >= 3; ++i)
 			{
-				auto a = project(blocker.vertices[i].position + translation, face);
-				auto b = project(blocker.vertices[(i + 1) % blocker.vertices.size()].position + translation, face);
-				auto pieces = split(remainder, a, b, face, sign, tolerance);
+				const auto &a = blocker.vertices[i];
+				const auto &b = blocker.vertices[(i + 1) % blocker.vertices.size()];
+				auto pieces = split(remainder, a, b, face, blocker.winding, tolerance);
 				if (pieces.outside.size() >= 3 && std::abs(area(pieces.outside, face)) > tolerance * tolerance)
 				{
 					Polygon fragment = source;
@@ -223,12 +239,14 @@ namespace spk::Voxel::Occlusion
 				{
 					continue;
 				}
-				// Translate the clipping edges on demand, without copying the blocker polygon.
+				// Projection omits the face-normal axis, so the neighboring cell's
+				// translation does not change these edges.
+				const auto projected = projectOccluder(occluder, direction);
 				std::vector<Polygon> next;
 				next.reserve(current.size());
 				for (const auto &fragment : current)
 				{
-					auto pieces = subtract(fragment, occluder, direction, translation, tolerance);
+					auto pieces = subtract(fragment, projected, direction, tolerance);
 					next.insert(next.end(), std::make_move_iterator(pieces.begin()), std::make_move_iterator(pieces.end()));
 				}
 				current = std::move(next);
