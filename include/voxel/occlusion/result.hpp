@@ -28,6 +28,8 @@ namespace spk::Voxel::Occlusion
 			double crossLength;
 		};
 
+		using TriangleContainer = std::vector<Triangle>;
+
 	private:
 		struct Storage;
 		std::shared_ptr<const Storage> _data;
@@ -37,7 +39,7 @@ namespace spk::Voxel::Occlusion
 		explicit Result(Data fragments);
 
 		[[nodiscard]] const Data &fragments() const noexcept;
-		[[nodiscard]] const std::vector<Triangle> &triangles() const noexcept;
+		[[nodiscard]] const TriangleContainer &triangles() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
 	};
 }

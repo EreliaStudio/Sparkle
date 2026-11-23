@@ -8,7 +8,7 @@ namespace spk::Voxel::Occlusion
 	struct Result::Storage
 	{
 		Data fragments;
-		std::vector<Triangle> triangles;
+		TriangleContainer triangles;
 	};
 
 	Result::Result() :
@@ -46,7 +46,7 @@ namespace spk::Voxel::Occlusion
 		return _data->fragments;
 	}
 
-	const std::vector<Result::Triangle> &Result::triangles() const noexcept
+	const Result::TriangleContainer &Result::triangles() const noexcept
 	{
 		return _data->triangles;
 	}
