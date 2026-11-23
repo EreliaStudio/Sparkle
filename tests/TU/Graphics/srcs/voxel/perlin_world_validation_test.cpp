@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -330,7 +331,7 @@ namespace
 		{
 			return;
 		}
-		std::vector<unsigned char> bytes(std::istreambuf_iterator<char>(input), {});
+		std::vector<unsigned char> bytes(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
 		constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 		std::string encoded;
 		encoded.reserve(((bytes.size() + 2) / 3) * 4);
@@ -345,12 +346,12 @@ namespace
 			encoded.push_back(index + 1 < bytes.size() ? alphabet[(word >> 6) & 63] : '=');
 			encoded.push_back(index + 2 < bytes.size() ? alphabet[word & 63] : '=');
 		}
-		std::cout << "SPARKLE_GOLDEN_BEGIN:" << destination << ':' << bytes.size() << '\\n';
+		std::cout << "SPARKLE_GOLDEN_BEGIN:" << destination << ':' << bytes.size() << '\n';
 		for (std::size_t offset = 0; offset < encoded.size(); offset += 3072)
 		{
-			std::cout << "SPARKLE_GOLDEN_DATA:" << encoded.substr(offset, 3072) << '\\n';
+			std::cout << "SPARKLE_GOLDEN_DATA:" << encoded.substr(offset, 3072) << '\n';
 		}
-		std::cout << "SPARKLE_GOLDEN_END:" << destination << '\\n';
+		std::cout << "SPARKLE_GOLDEN_END:" << destination << '\n';
 	}
 
 	void expectGolden(Scene &scene, const std::string &name)
