@@ -239,7 +239,8 @@ TEST(MeshTest, BatchedModifierChangesOnlyAppendedVertices)
 		{
 			vertex.x += 10.0f;
 		}
-	}), 2u);
+	}),
+			  2u);
 	EXPECT_EQ(builder.vertexCount(), 4u);
 	builder.addSequentialIndices(builder.vertexCount());
 	const auto mesh = std::move(builder).build();
