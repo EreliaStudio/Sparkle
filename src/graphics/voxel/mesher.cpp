@@ -9,7 +9,6 @@
 #include <numeric>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -111,28 +110,6 @@ namespace spk::Voxel
 				key.tolerance);
 		}
 
-		struct PolygonGroups
-		{
-			std::array<std::vector<const Polygon *>, 6> outer;
-			std::vector<const Polygon *> inner;
-		};
-
-		[[nodiscard]] PolygonGroups groupPolygons(const Shape::Instance &instance)
-		{
-			PolygonGroups result;
-			for (const auto &polygon : instance.triangles())
-			{
-				if (polygon.shell == Shape::Shell::Inner)
-				{
-					result.inner.push_back(&polygon);
-				}
-				else if (polygon.boundary)
-				{
-					result.outer[static_cast<std::size_t>(*polygon.boundary)].push_back(&polygon);
-				}
-			}
-			return result;
-		}
 
 		void emit(
 			MeshVertices &verticesOut,
@@ -175,6 +152,74 @@ namespace spk::Voxel
 				throw spk::Exception("Voxel Definition references an unmapped geometric slot");
 			}
 			emit(entry->opaque ? opaque : translucent, polygon, position, entry->materialIndex, tolerance);
+		}
+
+
+		struct SurfaceTriangles
+		{
+			MeshVertices opaque;
+			MeshVertices translucent;
+		};
+
+		struct CellTemplates
+		{
+			std::array<SurfaceTriangles, 6> outer;
+			SurfaceTriangles inner;
+			bool hasInner = false;
+			std::array<std::optional<bool>, 6> fullyOccludes{};
+		};
+
+		[[nodiscard]] CellTemplates buildCellTemplates(
+			const Shape::Instance &instance,
+			const ResolvedSlots &slots,
+			float tolerance)
+		{
+			CellTemplates result;
+			for (const Polygon &polygon : instance.triangles())
+			{
+				SurfaceTriangles *surface;
+				if (polygon.shell == Shape::Shell::Inner)
+				{
+					result.hasInner = true;
+					surface = &result.inner;
+				}
+				else if (polygon.boundary)
+				{
+					surface = &result.outer[static_cast<std::size_t>(*polygon.boundary)];
+				}
+				else
+				{
+					continue;
+				}
+				emit(polygon, {0, 0, 0}, slots, surface->opaque, surface->translucent, tolerance);
+			}
+			return result;
+		}
+
+		void appendTranslated(MeshVertices &output, const MeshVertices &input, Position position)
+		{
+			if (input.empty())
+			{
+				return;
+			}
+			const auto offset = output.size();
+			output.insert(output.end(), input.begin(), input.end());
+			const spk::Vector3 translation(position);
+			for (std::size_t i = offset; i < output.size(); ++i)
+			{
+				output[i].position += translation;
+			}
+		}
+
+		void appendTranslated(MeshVertices &opaque, MeshVertices &translucent, const SurfaceTriangles &triangles, Position position)
+		{
+			appendTranslated(opaque, triangles.opaque, position);
+			appendTranslated(translucent, triangles.translucent, position);
+		}
+
+		[[nodiscard]] std::size_t orientationIndex(Shape::Orientation value)
+		{
+			return (static_cast<unsigned>(value.vertical) * 4) + static_cast<unsigned>(value.horizontal) / 90;
 		}
 
 		[[nodiscard]] Geometry::SurfaceMesh buildSurface(const MeshVertices &vertices)
@@ -304,7 +349,18 @@ namespace spk::Voxel
 		MeshVertices opaque;
 		MeshVertices translucent;
 		const auto dimensions = volume.dimensions();
-		std::unordered_map<const Shape::Instance *, PolygonGroups> polygons;
+		std::vector<std::array<std::optional<CellTemplates>, 8>> templates(prepared.definitions.size());
+		auto getTemplates = [&](std::size_t index) -> CellTemplates & {
+			const Cell &cell = prepared.cells[index];
+			const auto id = prepared.definitionIndices[index];
+			const auto orientationValue = orientation(cell);
+			auto &entry = templates[id][orientationIndex(orientationValue)];
+			if (!entry)
+			{
+				entry.emplace(buildCellTemplates(cell.definition().shape().instance(orientationValue), materials[id], _tolerance));
+			}
+			return *entry;
+		};
 		for (std::uint32_t z = 0; z < dimensions.z; ++z)
 		{
 			for (std::uint32_t y = 0; y < dimensions.y; ++y)
@@ -319,24 +375,19 @@ namespace spk::Voxel
 					{
 						continue;
 					}
-					const auto &instance = cell.definition().shape().instance(orientation(cell));
-					const auto [group, inserted] = polygons.try_emplace(&instance);
-					if (inserted)
-					{
-						group->second = groupPolygons(instance);
-					}
-					const auto &faces = group->second;
-					bool closed = !faces.inner.empty();
+					const auto &faces = getTemplates(cellIndex);
+					bool closed = faces.hasInner;
 					for (const auto face : Faces)
 					{
 						const auto adjacent = neighborPosition(position, dimensions, face);
 						std::optional<OutsideCell> outside;
 						const Cell *blocker;
+						std::optional<std::size_t> blockerIndex;
 						bool occupied;
 						if (adjacent)
 						{
-							const auto index = (static_cast<std::size_t>(adjacent->z) * dimensions.y + adjacent->y) * dimensions.x + adjacent->x;
-							blocker = &prepared.cells[index];
+							blockerIndex = (static_cast<std::size_t>(adjacent->z) * dimensions.y + adjacent->y) * dimensions.x + adjacent->x;
+							blocker = &prepared.cells[*blockerIndex];
 							occupied = !blocker->isAir();
 						}
 						else
@@ -345,31 +396,46 @@ namespace spk::Voxel
 							blocker = &outside->cell;
 							occupied = outside->state == OutsideCell::State::Occupied && !blocker->isAir();
 						}
-						if (closed && (!occupied || !visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty()))
+						bool fullyOccluded = false;
+						if (occupied && (closed || !faces.outer[static_cast<std::size_t>(face)].opaque.empty() ||
+								!faces.outer[static_cast<std::size_t>(face)].translucent.empty()))
+						{
+							if (blockerIndex)
+							{
+								auto &cached = getTemplates(*blockerIndex).fullyOccludes[static_cast<std::size_t>(face)];
+								if (!cached)
+								{
+									cached = visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty();
+								}
+								fullyOccluded = *cached;
+							}
+							else
+							{
+								fullyOccluded = visible(Cell(boundaryCube()), *blocker, face, _tolerance, _cache).empty();
+							}
+						}
+						if (closed && (!occupied || !fullyOccluded))
 						{
 							closed = false;
 						}
 						if (occupied)
 						{
-							for (const auto &fragment : visible(cell, *blocker, face, _tolerance, _cache).fragments())
+							if (!fullyOccluded)
 							{
-								emit(fragment, position, resolved, opaque, translucent, _tolerance);
+								for (const auto &fragment : visible(cell, *blocker, face, _tolerance, _cache).fragments())
+								{
+									emit(fragment, position, resolved, opaque, translucent, _tolerance);
+								}
 							}
 						}
 						else
 						{
-							for (const Polygon *polygon : faces.outer[static_cast<std::size_t>(face)])
-							{
-								emit(*polygon, position, resolved, opaque, translucent, _tolerance);
-							}
+							appendTranslated(opaque, translucent, faces.outer[static_cast<std::size_t>(face)], position);
 						}
 					}
 					if (!closed)
 					{
-						for (const Polygon *polygon : faces.inner)
-						{
-							emit(*polygon, position, resolved, opaque, translucent, _tolerance);
-						}
+						appendTranslated(opaque, translucent, faces.inner, position);
 					}
 				}
 			}
