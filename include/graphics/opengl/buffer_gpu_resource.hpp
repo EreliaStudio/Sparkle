@@ -39,7 +39,9 @@ namespace spk
 				{
 					std::byte bytes[sizeof(std::max_align_t)];
 
-					StorageUnit() noexcept {}
+					StorageUnit() noexcept
+					{
+					}
 				};
 				static_assert(sizeof(StorageUnit) == sizeof(std::max_align_t));
 
