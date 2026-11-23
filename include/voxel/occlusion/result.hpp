@@ -12,7 +12,6 @@ namespace spk::Voxel::Occlusion
 	class Result final
 	{
 	public:
-
 		using Data = std::vector<Shape::Polygon>;
 
 		struct Vertex
