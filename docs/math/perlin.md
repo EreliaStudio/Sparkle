@@ -62,7 +62,7 @@ invalid inputs, reseeding, and concurrent const access. A separate
 dimension, without unstable wall-clock assertions.
 
 ```sh
-ctest --test-dir build -R 'Core\\.Perlin' --output-on-failure
+ctest --test-dir build -R 'Core[.]Perlin' --output-on-failure
 ```
 
 The Core test suite runs on Windows and Linux in Debug and Release through
