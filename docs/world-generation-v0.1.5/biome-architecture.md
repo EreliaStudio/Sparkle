@@ -158,6 +158,14 @@ A placement algorithm may consult a persistent finite map or deterministic world
 - The design should preserve deterministic generation across independent chunks and avoid recomputing the same biome decision in unrelated downstream passes.
 - Mutable-after-setup behavior and cache invalidation are not designed yet.
 
+### Approved initial ground-generation scope (2026-11-24)
+
+The first implementation phase will focus on **heightmaps, biome placement/selection, biome-driven terrain-height generators, and voxel strata**. This phase is meant to develop reusable world-generation infrastructure while progressively enriching the existing Sparkle chunk-rendering/golden-image validation world. The validation scene is an evolving example of a fuller world, **not** a special-purpose permanent substitute for production APIs.
+
+Only **after** these ground-generation building blocks are defined, implemented, and validated will the discussion move to **prefab placement passes** (trees, rocks, scenery, and subsequently buildings or other structures). Arbitrary 3D/volumetric terrain, such as cave geometry, overhangs, and floating-island undersides, is intentionally deferred; the generic interfaces should not preclude such future extensions.
+
+This scope decision does not settle the previously proposed alternatives concerning whether to replace the existing Perlin fixture immediately or retain it as a parallel regression baseline. Golden-image and chunk-streaming regression coverage should be preserved.
+
 ## 8. Outstanding architectural questions — not decisions
 
 1. **Storage contract for smooth transitions:** The agreed assignment map has a single dominant biome per column, but smooth height blending also needs neighboring biome candidates, boundary distance, weights, or an equivalent query mechanism. Define this without silently reintroducing blended material strata.
