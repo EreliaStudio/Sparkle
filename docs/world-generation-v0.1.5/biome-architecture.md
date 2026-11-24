@@ -7,7 +7,7 @@
 
 Sparkle provides reusable generation components, not a fixed geography or game design. It must also provide a ready-to-use voxel world: voxel support is a first-class specialization, not something every game must implement again.
 
-The core principle is to generalize only what is shared at the relevant level. Biome identity, spatial distribution, terrain shape, material composition and decoration are separate concerns. A more specialized layer may reuse the layer below; the lower layer never depends on the upper one. Existing chunk generation, streaming and scheduling contracts are unchanged.
+The core principle is to generalize only what is shared at the relevant level. Biome identity, spatial distribution, terrain shape, material composition and decoration are separate concerns. A more specialized layer may reuse the layer below; the lower layer never depends on the upper one. Existing chunk generation and scheduling behavior is preserved; the interest-notification extension in §8.1 is explicitly approved and extends the streaming/requester/generator contracts.
 
 ### 1.1 Three levels of abstraction (validated)
 
@@ -174,7 +174,7 @@ Example, in index order: `{forest, 3}, {nullptr, 0}, {mountain, 5}, {desert, 2}`
 
 ### 3.2 Reusable surface distribution pass — responsibilities validated (B1)
 
-The surface pass implements `apply(builder, coordinate, data)` using the existing generator, not a replacement generator. It owns the common X/Z traversal, sampling, allocation/recycling, cell reset, validation, in-place normalization and publication of the resulting lease to `TGenerationData`. The strategy supplies relative influences for an absolute world X/Z position directly in the destination cell. A strategy may consult a precomputed finite map or compute from seed/coordinates without persistent per-position state.
+The surface pass implements `apply(builder, coordinate, data)` using the existing generator, not a replacement generator. The following computation is performed on a cache miss for the shared horizontal region rather than repeated for every vertical chunk (E4, §8.1). It owns the common X/Z traversal, sampling, allocation/recycling, cell reset, validation, in-place normalization and publication of the resulting lease to `TGenerationData`. The strategy supplies relative influences for an absolute world X/Z position directly in the destination cell. A strategy may consult a precomputed finite map or compute from seed/coordinates without persistent per-position state.
 
 The surface pass calls the generic foundation for validation and normalization of each filled cell. No separate voxel distribution algorithm or voxel distribution class is required merely because the definitions are voxel biomes: the surface distribution behavior is reused. A game or specialized consumer may still provide the necessary configuration and strategy hooks. Voxel-specific behavior starts with material/strata application. Height combination is a separate surface pass, not part of distribution.
 
@@ -185,7 +185,7 @@ The surface pass calls the generic foundation for validation and normalization o
 - `_gridConfiguration(chunkCoordinate, const TGenerationData &data)` returns the surface influence `Grid::Configuration`, describing the requested 2D world extent and sample spacing.
 - `_gridDestination(TGenerationData &data)` returns a mutable reference to the destination `Grid::Lease` in the caller's generation data.
 
-Names and exact C++ declarations follow Sparkle conventions. The reusable pass handles obtaining/resetting the grid, sampling, validation/normalization and moving the completed lease into the destination. The developer does not allocate the grid or expose a required layout of `TGenerationData`. No separate origin hook is required by this pattern; the exact origin derivation, sample counts, spatial alignment and boundary rules are to be settled in B3/B4. Publication on failure and later edits remain E2.
+Names and exact C++ declarations follow Sparkle conventions. The reusable pass handles obtaining/resetting the grid, sampling, validation/normalization and moving the completed lease into the destination. The developer does not allocate the grid or expose a required layout of `TGenerationData`. No separate origin hook is required by this pattern; the exact origin derivation, sample counts, spatial alignment and boundary rules are to be settled in B3/B4. Publication on failure and later edits remain E2. The two-hook responsibility split is validated; the exact destination ownership/type must be reconciled with shared column data in E4. A single move-only grid lease cannot be moved into several per-chunk data objects.
 
 Domain origin, sample spacing semantics, edge behavior, initialization and deterministic concurrency contracts remain B3–B6. The pass does not generate heights, apply materials, or implement Voronoi math. There is no mandatory subscription/ContractProvider or global biome map.
 
@@ -347,12 +347,41 @@ flowchart TD
     G --> H[Existing meshing and rendering]
 ```
 
-All passes use the existing `World::Generator<TChunk,TGenerationData,TBuilder>::Pass::apply(builder, coordinate, data)` integration. Each request has temporary generation data, with leases retained until consumers finish; no whole-world allocation is required. A strategy may retain its own shared precomputed state. The existing generator, chunk requests and streaming interfaces are not redesigned.
+All passes use the existing `World::Generator<TChunk,TGenerationData,TBuilder>::Pass::apply(builder, coordinate, data)` integration. Per-request generation data remains temporary, but computed surface data is shared across interested vertical chunks as defined in §8.1. Leases remain valid until their consumers finish; no whole-world allocation is required. The existing generation and scheduling pipeline remains, with an approved extension for interest notifications. The exact shared-data ownership and publication interface remains open (E2/E4/C7).
 
 The first ground-generation phase includes distribution, heightmaps, biome height combination and voxel strata, progressively enriching the existing golden-image world. Later prefabs (trees, rocks, scenery, buildings), caves and volumetric topology are separate concerns. Whether the old Perlin fixture is replaced or retained alongside new goldens remains open. No implementation PR breakdown has been approved.
 
+### 8.1 Observer-driven surface generation data — validated principle (E4, 24 November 2026)
+
+**Objective.** Do not recompute biome placement, continuous heights or other purely X/Z-dependent generation results for every vertical chunk. A horizontal chunk column is identified by the chunk coordinates X/Z (e.g. a 16 × 16 footprint for 16³ chunks), not by one individual voxel column. All vertical chunks of that footprint may reuse the same computed surface grids. The generator remains dimension-independent; only the surface specialization interprets a chunk coordinate as an X/Z column.
+
+**Existing integration point (verified against V0.1.5).** `WorldStreamingSystem<TChunk>::InterestPlan` maintains the union of chunk coordinates required by all active observers. Its `refresh()` rebuilds that union only when captured observer states change; the previous union is currently replaced by the new one. `WorldStreamingSystem::_refreshInterests()` uses the refreshed plan to prune requests and unload unwanted chunks. `ChunkRequester<TChunk>` currently exposes only `request(coordinate)`; `LocalChunkRequester` forwards generation to `Generator::generate(coordinate)` through the worker pool. `Generator::Pass` currently exposes only `apply()` and generation data is created per request.
+
+**Approved notification path.** Extend that existing architecture, without adding a second observer system:
+
+```mermaid
+flowchart TD
+    A[WorldStreamingSystem / InterestPlan] -->|Interest added or removed| B[ChunkRequester]
+    B --> C[LocalChunkRequester]
+    C --> D[World Generator]
+    D --> E[Generation passes]
+    E --> F[Surface column interest and shared data]
+```
+
+- Detect changes by comparing the previous and new **union** of interested XYZ chunk coordinates, not by comparing the loaded chunk collection or completed tasks. A coordinate newly in the union triggers `retain(coordinate)`; a coordinate removed from it triggers `release(coordinate)`. These names express the approved semantics; exact declarations are still open.
+- `ChunkRequester` receives these notifications independently of `request()`. `LocalChunkRequester` forwards them to `Generator`, which makes them available to its generation passes. No generation pass needs to know observers, the engine, the streaming system or the chunk collection. The generic notification carries a complete `ChunkCoordinate` and does not impose a column abstraction.
+- Count distinct interested XYZ chunks per horizontal X/Z column in the surface specialization. Multiple observers interested in the same chunk do not cause duplicate retains. As long as at least one interested chunk remains in a column, preserve its computed surface data. On transition to zero the column is no longer needed by streaming; reclaim its data once no queued/running consumer still holds it. Returning to an observed column after reclamation may require recomputation.
+- The observed-column set is the retention policy, not the set of successfully generated chunks. Changes to interest, including observer removal/deactivation and streaming detach/reset, must balance notifications. Request failure, retry, timeout, absence or completion is not itself a release of observer interest.
+- Separate per-request chunk generation data from shared surface generation results. Compute shared influences/heights once for an active column and reuse them across vertical chunks and observers; use the same principle for any future purely X/Z-dependent results where justified. No permanent world-sized cache.
+- Concurrent requests must not compute the same shared result redundantly or free storage while a consumer is using it. Reclamation must account for outstanding jobs even after interest is withdrawn or a request times out. No waiting on unrelated regions should be required by the design; exact synchronization and job ownership remain open.
+- Distinguish logical cache reclamation from physical memory reclamation: returning grid leases to the existing pools makes storage reusable but does not necessarily reduce resident memory. The previously approved no-trimming pool policy can retain a high-water mark. Any stricter memory bound or trimming policy remains a separate decision.
+
+**Open design details (not approved by this section).** Choose the precise interest-delta API and dispatch order (including simultaneous changes within a column), optional/default hooks and behavior of non-local requesters, lazy versus eager generation, direct generator calls without streaming, owner and typed access to shared data, lifetime guards, single-flight computation and failure/retry behavior, configuration identity/invalidation, and mutable pre-publication versus read-only shared results. In particular, resolve the two-hook destination contract (B2/C7) and the interaction of custom height edits with shared grids (E2). No implementation, changes to C++ headers, or new PR are authorized by this decision.
+
+Relevant existing headers: [world_streaming_system.hpp](../../include/world/world_streaming_system.hpp), [chunk_requester.hpp](../../include/world/chunk_requester.hpp), [local_chunk_requester.hpp](../../include/world/local_chunk_requester.hpp), [generator.hpp](../../include/world/generator.hpp).
+
 ## 9. Validation and next discussions
 
-Keep the stable IDs in [open questions](biome-open-questions.md). A1–A5, C2 and C4 are resolved in the revised surface scope. Remaining priorities are pass foundations and hooks (B), height sampling/orchestration (C/D), voxel type and layer integration (E), tests (F), then independent implementation planning. Tests cover fixed-capacity cells, validation, exact ordering, dominant selection, two substitutable strategies, shared boundaries and negative coordinates, height blending, memory recycling/concurrency, and specialized voxel golden images. Core must not depend on Graphics.
+Keep the stable IDs in [open questions](biome-open-questions.md). A1–A5, B1/B2, C2 and C4 are resolved at the responsibility/contract level; E4 has an approved retention and notification principle, but its precise API and shared-data lifetime contract remain open. Prioritize E4/E2/E3 shared-data and interest propagation details before finalizing B3/B4, C7 and voxel integration, then tests (F) and independent implementation planning. Tests cover fixed-capacity cells, validation, exact ordering, dominant selection, two substitutable strategies, shared boundaries and negative coordinates, height blending, memory recycling/concurrency, and specialized voxel golden images. Core must not depend on Graphics.
 
 References: [existing contracts](contracts.md), [chunk architecture](architecture.md), [application passes](features.md), [PR #99](https://github.com/EreliaStudio/Sparkle/pull/99).
