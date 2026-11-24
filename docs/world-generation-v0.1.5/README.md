@@ -15,9 +15,9 @@ Fournir une infrastructure réutilisable pour gérer des chunks, leurs entités 
 
 ## Périmètre des documents
 
-Les contrats historiques PR00–PR10 décrivent le socle de chunks et de streaming déjà traité ; leurs exclusions de biomes s'appliquaient à **ces PR**, et ne signifient pas que Sparkle doit exclure les biomes à l'avenir. La **nouvelle conception** porte sur une distribution générique d'influences pondérées, leur utilisation pour des hauteurs génériques, puis les couches spécialisées (notamment voxel). Voronoï et distribution procédurale infinie restent des exemples de stratégies, pas des choix imposés par `spk::World`.
+Les contrats historiques PR00–PR10 décrivent le socle de chunks et de streaming déjà traité ; leurs exclusions de biomes s'appliquaient à **ces PR**, et ne signifient pas que Sparkle doit exclure les biomes à l'avenir. La **nouvelle conception** distingue trois niveaux : le socle de biomes génériques sans dimension imposée, les biomes surfaciques de World (distribution X/Z, grille d'influences et combinaison des hauteurs), puis les biomes voxel (strates et application concrète). La génération volumétrique est reportée et formera, si nécessaire, une branche distincte. Voronoï et distribution procédurale infinie restent des exemples de stratégies, pas des choix imposés par `spk::World`.
 
-La passe générique normalisera les poids bruts fournis par les hooks : cette responsabilité est validée. Les signatures et politiques de validation restantes sont encore ouvertes.
+La passe surfacique normalisera les poids bruts fournis par les hooks : stockage, validation, normalisation, dominant et ordre sont validés (A1–A5). SurfaceBiome fournit la hauteur absolue (C2) et la fusion utilise une somme pondérée (C4). Les signatures des passes et les questions d'intégration restantes sont ouvertes.
 
 ## Lecture
 1. [Contrats actuels](contracts.md)
