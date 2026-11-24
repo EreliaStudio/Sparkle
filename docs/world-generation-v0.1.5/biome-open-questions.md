@@ -28,7 +28,7 @@
 
 **A5. Ordre des influences — RÉSOLUE (24 novembre 2026).** La passe générique conserve exactement les indices des influences renseignées par le hook. La validation et la normalisation ne trient, ne compactent ni ne déplacent les entrées ; seuls les poids sont normalisés. Les emplacements nuls et les biomes de poids nul peuvent se trouver à n'importe quel indice. Aucun ordre obligatoire ni préfixe contigu de biomes renseignés ; les consommateurs parcourent les cellules sans s'arrêter au premier pointeur nul. Le premier maximum strictement positif reste dominant selon A4. Une passe ultérieure peut modifier explicitement les indices ; la validation après édition relève d'E2. Voir [contrat A5](biome-architecture.md#a5--influence-ordering-validated-2026-11-24).
 
-**Le groupe A (A1–A5) est entièrement résolu.** Les groupes B à F et le contrat détaillé de `CapacityPool` restent à traiter.
+**Le groupe A (A1–A5) est entièrement résolu.** C4 (fusion des hauteurs) est également résolue ; les autres questions des groupes B à F et le contrat détaillé de `CapacityPool` restent à traiter.
 
 ## B — Passes de distribution : hooks et coordonnées (générique)
 
@@ -52,7 +52,7 @@
 
 **C3. Passe de hauteur unique ou distincte.** Comment conserver la passe documentée `HeightMapGenerationPass` liée à une seule `HeightMap`, tout en permettant une passe générique qui orchestre plusieurs sources pondérées ? Réutilisation, adaptation et responsabilités à préciser.
 
-**C4. Fusion des hauteurs.** Quel contrat de fusion après normalisation ? Quels modes de transition sont nécessaires dans le cœur générique (dure, pondérée), où vivent les paramètres éventuels, et que faire lorsque plusieurs sources contribuent à la même position ? Ne pas y intégrer de mathématique Voronoï.
+**C4. Fusion des hauteurs — RÉSOLUE (24 novembre 2026).** À une même position mondiale, chaque biome fournit sa hauteur absolue continue comme s'il était seul. La passe calcule `H = somme(poids_i * hauteur_i)` pour les influences de poids strictement positif. Les poids étant déjà normalisés selon A3, aucune division supplémentaire (ni par le nombre de biomes ni par la capacité) n'est nécessaire. Exemple : 20 × 0,75 + 100 × 0,25 = 40. Une évolution progressive des poids permet une transition douce entre sources continues ; un changement brutal de poids peut produire une falaise. La distribution contrôle ces transitions, sans mode de fusion distinct dans le cœur générique. Les strates restent celles du dominant. En l'absence de contribution positive, la passe qui nécessite un biome lève une `spk::Exception` (A4). Les interfaces des sources, leur évaluation et le traitement des erreurs restent ouverts (C1–C3, C5–C7, E2). Voir [contrat C4](biome-architecture.md#c4--weighted-height-combination-validated-2026-11-24).
 
 **C5. Cas sans hauteur disponible.** A4 impose une `spk::Exception` lorsqu'une passe nécessite un biome utilisable et qu'aucune contribution positive n'existe. Quel traitement adopter pour une source absente, une hauteur non finie, ou une influence négligeable ? Qui décide de ne pas modifier une grille existante dans les autres cas ?
 
