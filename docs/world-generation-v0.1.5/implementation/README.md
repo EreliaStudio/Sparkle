@@ -1,5 +1,7 @@
 # Sparkle v0.1.5 — Fiches de PR révisées
-Cahier des charges **documentation uniquement** ; les PR sont proposées, pas encore autorisées pour implémentation. Base de livraison : branche V0.1.5 ; validation explicite requise avant toute fusion.
+Fiches historiques de planification des PR00–PR10, initialement écrites comme cahier des charges **documentation uniquement** sur la branche V0.1.5. Plusieurs briques ont depuis été implémentées ; vérifier les PR et le code actuel pour leur état. Validation explicite requise avant toute fusion.
+
+**Portée :** l'exclusion de biomes ci-dessous ne concernait que ce lot historique. La conception des futures passes génériques de biomes/hauteur, et leur utilisation dans une couche voxel directement réutilisable, est suivie dans [biome-architecture.md](../biome-architecture.md) et [biome-open-questions.md](../biome-open-questions.md).
 
 ## Découpage (11 PR de code prévues)
 | PR | Mission | Dépendances |
