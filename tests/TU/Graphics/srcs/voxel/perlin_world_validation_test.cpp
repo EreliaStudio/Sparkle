@@ -41,6 +41,7 @@
 #include "world/world_streaming_system.hpp"
 
 #include "perlin_world_fixture.hpp"
+#include "biome_world_fixture.hpp"
 
 namespace
 {
@@ -625,4 +626,74 @@ TEST(PerlinWorldPerformance, ColorRenderWithoutShadows)
 	});
 	gl.requireNoErrors();
 	gl.reset();
+}
+
+namespace
+{
+	void captureBiomeWorld(const std::string &name, bool hard, spk::Vector3 camera, spk::Vector3 target, bool edit = false)
+	{
+		Scene scene;
+		sparkle_test::biome_world::Generator generator(scene.definitions, hard, edit);
+		for (int z = -2; z <= 2; ++z)
+		{
+			for (int x = -2; x <= 2; ++x)
+			{
+				// Retain the full column before generating the vertical stack.
+				for (int y = 0; y <= 1; ++y)
+				{
+					generator.retain({x, y, z});
+				}
+				for (int y = 0; y <= 1; ++y)
+				{
+					const auto chunk = generator.generate({x, y, z});
+					ASSERT_TRUE(chunk.has_value());
+					scene.chunks.addChunk({x, y, z}, *chunk);
+				}
+				for (int y = 0; y <= 1; ++y)
+				{
+					generator.release({x, y, z});
+				}
+			}
+		}
+		scene.refreshCasters();
+		scene.setCamera(camera, target);
+		const auto pixels = scene.capture();
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto actual = sparkle_test::resultImagePath("rendering/biome-world", name);
+		gl.save(actual);
+		const auto expected = sparkle_test::expectedImagePath("rendering/biome-world", name);
+		ASSERT_TRUE(std::filesystem::exists(expected)) << "Review and promote rendered biome baseline: " << actual;
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		tolerance.alphaTolerance = 8;
+		const auto result = sparkle_test::compareImages(actual, expected,
+			sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
+		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
+		EXPECT_EQ(pixels.size, terrain::ImageSize);
+	}
+}
+
+TEST(BiomeWorldGolden, SmoothThreeBiomeOverview)
+{
+	captureBiomeWorld("smooth_overview", false, {52, 52, 60}, {0, 9, 0});
+}
+
+TEST(BiomeWorldGolden, HardBiomeBoundaries)
+{
+	captureBiomeWorld("hard_boundaries", true, {52, 52, 60}, {0, 9, 0});
+}
+
+TEST(BiomeWorldGolden, TopDownBiomeDistribution)
+{
+	captureBiomeWorld("top_down", false, {4, 105, 8}, {0, 10, 0});
+}
+
+TEST(BiomeWorldGolden, StrataAndCliffsFromBelow)
+{
+	captureBiomeWorld("strata_cliffs", true, {-47, 17, 40}, {0, 12, 0});
+}
+
+TEST(BiomeWorldGolden, CustomHeightModification)
+{
+	captureBiomeWorld("custom_height_edit", false, {52, 52, 60}, {0, 9, 0}, true);
 }

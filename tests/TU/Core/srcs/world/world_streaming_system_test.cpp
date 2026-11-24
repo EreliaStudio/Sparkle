@@ -60,6 +60,10 @@ namespace
 		};
 
 		std::vector<Request> requests;
+		std::vector<std::pair<bool, Coordinate>> interests;
+
+		void retain(const Coordinate &coordinate) override { interests.emplace_back(true, coordinate); }
+		void release(const Coordinate &coordinate) noexcept override { interests.emplace_back(false, coordinate); }
 		bool failSynchronously = false;
 		std::function<void()> onSubmit;
 
@@ -662,4 +666,26 @@ TEST(WorldStreamingSystemTest, DetachingDuringSubmissionRetiresWorkerAndRetainsP
 	fixture.requester.complete(1, 200);
 	fixture.tick(3ms);
 	EXPECT_EQ(fixture.collection.at({0, 0, 0}).value(), 200);
+}
+
+TEST(WorldStreamingSystemTest, InterestNotificationsFollowUnionAndRetainBeforeRelease)
+{
+	Fixture fixture;
+	spk::Entity3D first("first");
+	spk::Entity3D second("second");
+	addObserver(fixture.engine, first, {0, 0, 0});
+	auto &observer = addObserver(fixture.engine, second, {0, 0, 0});
+	auto &streamer = fixture.start();
+	using Event = std::pair<bool, Coordinate>;
+	fixture.tick(0ms);
+	ASSERT_EQ(fixture.requester.interests, (std::vector<Event>{{true, {0, 0, 0}}}));
+	observer.deactivate();
+	fixture.tick(1ms);
+	EXPECT_EQ(fixture.requester.interests.size(), 1u);
+	first.transform().place({0, 8, 0});
+	fixture.tick(2ms);
+	ASSERT_EQ(fixture.requester.interests, (std::vector<Event>{{true, {0, 0, 0}}, {true, {0, 1, 0}}, {false, {0, 0, 0}}}));
+	streamer.attach(nullptr);
+	EXPECT_EQ(fixture.requester.interests.back(), (Event{false, {0, 1, 0}}));
+	EXPECT_EQ(fixture.requester.interests.size(), 4u);
 }
