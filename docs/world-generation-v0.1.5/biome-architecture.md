@@ -72,7 +72,7 @@ These cases are architectural tests, not engine-predefined biome types.
 
 ## 4. Confirmed decisions
 
-The numbered entries follow the design conversation. **Question 20 was not decided; it was superseded/reframed by subsequent terrain-height-generator discussions.** Therefore this document does not pretend that all 24 numbers denote approvals.
+The numbered entries follow the design conversation. **Question 20 was explicitly revisited and validated after decisions 21–24.** All decisions 1–24 are now recorded; the detailed C++ interfaces remain open.
 
 ### 4.1 Voxel strata (decisions 1–12)
 
@@ -111,8 +111,9 @@ A stratum's thickness Perlin configuration is independent from its material-sele
 
 **Important nuance:** The game may request a "biome per chunk" visual/style mode by assigning the *same biome* to all columns within a chunk-sized area. The canonical output can still be the per-column 2D map. Whether a separate coarser representation is useful is unconfirmed.
 
-### 4.3 Terrain height and transitions (decisions 21–24)
+### 4.3 Terrain height and transitions (decisions 20–24)
 
+20. **Dedicated terrain-height pass.** After biome placement, a separate terrain-height pass evaluates the selected biome's `spk::World::TerrainHeightGenerator` (and any neighboring influences needed for placement-defined transitions), and writes an **absolute surface-height map into the current chunk's `TGenerationData`**. The subsequent voxel biome application pass reads that stored map to apply surface-relative strata. Computing height inside the voxel application pass is not the selected design. The height-map data representation and behavior for unassigned biome columns are still open.
 21. **Biome-selected height-generator instance.** Each voxel biome references its own `spk::World::TerrainHeightGenerator` via a common abstract interface; multiple biomes may share one instance. The terrain pass invokes the selected biome's algorithm.
 22. **Absolute height.** The generator returns final absolute world elevation at a position, not only a relative offset added to a biome-owned base height. Base height belongs to generator configuration.
 23. **Configurable height transitions.** Hard boundaries and smoothly blended biome elevations must both be supported. **Material selection stays discrete** even when height is blended.
@@ -120,18 +121,16 @@ A stratum's thickness Perlin configuration is independent from its material-sele
 
 Height selection/blending and material selection are distinct operations. Hard transitions permit tiered cliffs; smooth transitions permit plains-to-mountains blending.
 
-**Question 20 (superseded/not chosen):** Earlier alternatives for obtaining terrain surface height were a shared heightmap in `TGenerationData`, a callback/provider, or detection from existing geometry. The discussion then introduced a standalone, biome-selected `TerrainHeightGenerator` and did not settle where computed heights are cached or passed between generation phases. Do **not** label one of the older alternatives as approved.
-
 ## 5. Proposed pass flow (conceptual; API still open)
 
 The intended *logical* flow is:
 
 1. **Biome placement:** use a selectable distribution algorithm to assign each X/Z column a non-owning biome reference (or no assignment), writing to per-chunk `TGenerationData`. It may also supply the boundary/transition information needed for height blending.
-2. **Terrain-height evaluation:** for each relevant position, call one or more `TerrainHeightGenerator` instances belonging to the selected/neighboring biomes; apply placement-defined hard or smooth transitions.
-3. **Voxel strata application:** use each column's dominant biome and its strata to populate ground materials relative to the computed surface elevation, without mixing strata across biome boundaries.
+2. **Dedicated terrain-height pass:** for each relevant X/Z column, call one or more `TerrainHeightGenerator` instances associated with selected/neighboring biomes, apply the hard or smooth transitions specified by placement, and **write the computed absolute height into a temporary per-chunk height map in `TGenerationData`**.
+3. **Voxel strata application:** read the precomputed height map from `TGenerationData`; use each column's dominant biome and its strata to populate ground materials relative to that surface elevation, without mixing strata across biome boundaries.
 4. **Further world passes:** add caves/voids, vegetation, prefabs, roads, towns, dungeons, scenery, etc., with coherent access to biome information.
 
-This is a **responsibility model**, not a final mandate for exactly four C++ passes. In particular, the boundary between height evaluation and voxel filling, the stage ordering with caves/structures, and the location of shared height data are open.
+The **separate height-generation pass and its `TGenerationData` height-map output are confirmed (Q20)**. This is still a responsibility model rather than a finalized set of concrete C++ pass types: exact API signatures, data-layout choices, and ordering relative to caves/structures remain open.
 
 The existing `spk::World::Generator<TChunk,TGenerationData,TBuilder>` already executes passes in order with `apply(builder, coordinate, data)` and creates generation data per chunk request. The current `spk::Voxel::PerlinTerrainPass` combines height evaluation and material layering; it is an implementation reference **not a constraint on this design**. No breaking changes to this API have been approved.
 
@@ -162,8 +161,8 @@ A placement algorithm may consult a persistent finite map or deterministic world
 ## 8. Outstanding architectural questions — not decisions
 
 1. **Storage contract for smooth transitions:** The agreed assignment map has a single dominant biome per column, but smooth height blending also needs neighboring biome candidates, boundary distance, weights, or an equivalent query mechanism. Define this without silently reintroducing blended material strata.
-2. **Height result contract:** Float/double/integer return type, world coordinate types, seed/configuration ownership, batch evaluation, and how a height value is shared or cached between passes.
-3. **Application pass API:** Whether height evaluation and voxel filling are separate concrete passes; dependency on `TGenerationData`; behavior of finite strata and unassigned columns; interaction with preexisting voxels.
+2. **Height result contract:** Float/double/integer return type, world coordinate types, seed/configuration ownership, batch evaluation, height-map layout in `TGenerationData`, and handling of columns with no biome. The **existence of a dedicated height pass and its temporary height map is already decided (Q20)**.
+3. **Application pass API:** Concrete interfaces and `TGenerationData` access for the already-separated height and voxel application passes; behavior of finite strata and unassigned columns; interaction with preexisting voxels.
 4. **Stratum semantics:** Thickness-to-integer rounding, unlimited-depth representation, per-stratum noise offsets, validation of weights, and how weighted noise maps to proportions.
 5. **Type names and extensibility:** Exact `spk::Voxel::Biome` vs `spk::Voxel::World::Biome` name; polymorphism and lifetime-safe references; custom behaviors for biome-specific decoration and multi-chunk structures.
 6. **Placement strategies:** Which reusable algorithms ship first, detailed APIs, finite-map boundaries and seed management; how environmental preferences are represented without making climate mandatory.
