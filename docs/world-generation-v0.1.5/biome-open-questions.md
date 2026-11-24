@@ -1,7 +1,7 @@
 # Sparkle v0.1.5 — Questions ouvertes : biomes et génération du monde
 
 > **Statut :** inventaire documentaire pour des discussions futures, établi le 24 novembre 2026.
-> **Ce document ne tranche aucune question**, ne fixe pas de nouvelle API C++, ne demande pas d'implémenter un algorithme particulier et n'autorise ni PR de code ni fusion.
+> **Ce document distingue les questions ouvertes des décisions explicitement validées.** Il ne demande pas d'implémenter un algorithme particulier et n'autorise ni PR de code ni fusion.
 > **Source des décisions validées :** [Biome architecture](biome-architecture.md), surtout §§3, 4.4 et 4.5. Les anciens contrats de chunks et de génération restent documentés dans [contracts.md](contracts.md).
 
 ## Périmètre et architecture retenue
@@ -18,7 +18,7 @@
 
 ## A — Contrat de résultat de distribution (générique)
 
-**A1. Type d'une influence.** Quelle représentation publique adopter pour `BiomeInfluence` (pointeur const non possédant, référence enveloppée, autre) ? La collection peut-elle contenir une influence nulle, ou seulement être vide ?
+**A1. Type d'une influence — RÉSOLUE (24 novembre 2026).** Le type public est `spk::World::Biome::Influence`, une structure imbriquée simple, copiable et affectable, composée de `const Biome *biome` et `float weight`. Le pointeur brut est non propriétaire ; une influence nulle est une erreur signalée par `spk::Exception` dans la passe générique, tandis qu'une collection vide représente une position sans biome. Le développeur garantit la durée de vie, la stabilité d'adresse et l'absence de modification des définitions pendant leur utilisation par les jobs. Aucun contrôle de durée de vie ni validation interne de la structure. Le poids reste relatif avant normalisation et normalisé après la passe générique. Voir [le contrat validé A1](biome-architecture.md#a1--influence-record-validated-2026-11-24). A2 (stockage), A3 (validation des poids), A4 (dominant), A5 (ordre) et E3 (propriété et partage au niveau du système) restent ouvertes.
 
 **A2. Collection et stockage.** Quel conteneur représente les influences à une position (vecteur réutilisable, petite capacité inline, autre), et quel conteneur porte ces listes sur tout le domaine échantillonné ? Comment permettre zéro, un ou plusieurs biomes sans limite fixe ni allocation par échantillon imposée ?
 
@@ -84,7 +84,7 @@ Les choix suivants sont **déjà arrêtés** et ne sont pas à rouvrir : taille 
 
 ## F — Tests, validation et critères d'acceptation (à écrire avant les PR)
 
-**F1. Normalisation et validation.** Jeux d'essais zéro/un/plusieurs biomes, valeurs 3/5/2 → 0,3/0,5/0,2, somme nulle, valeurs invalides, doublons et égalités ; la décision du moteur de normaliser est établie, les autres résultats attendus attendent les règles correspondantes.
+**F1. Normalisation et validation.** Jeux d'essais zéro/un/plusieurs biomes, rejet d'un pointeur de biome nul (validé par A1), valeurs 3/5/2 → 0,3/0,5/0,2, somme nulle, valeurs invalides, doublons et égalités ; la décision du moteur de normaliser est établie, les autres résultats attendus attendent les règles correspondantes.
 
 **F2. Test de hook substituable.** Deux stratégies fictives de calcul, une passe générique commune ; vérifier que le parcours, la normalisation, le stockage, la publication et la libération ne sont pas réimplémentés par les stratégies.
 
