@@ -1,5 +1,5 @@
 # Sparkle v0.1.5 — Architecture et responsabilités
-Statut : conception, PR draft #85. Le C++ n'est pas encore implémenté ; les noms de signatures restent illustratifs.
+Statut : architecture historique des PR00–PR10 (draft #85). Les signatures non confirmées sont illustratives ; certains composants décrits ont depuis été implémentés. Pour les nouvelles fonctionnalités biome/hauteur, voir [biome-architecture.md](biome-architecture.md) et l'[inventaire des questions ouvertes](biome-open-questions.md).
 
 ## Chaîne fonctionnelle
 WorldObserver (Component3D + EngineHeadless Registry) → WorldStreamingSystem<TChunk> (union, file Manhattan, gestion des requêtes) → ChunkRequester<TChunk> (Task<std::optional<TChunk>>) → Generator<TChunk,TGenerationData> ou source externe → ChunkCollection<TChunk> (TChunk + Entity3D/ChunkFilter) → consommateurs headless / adaptateur Graphics.
@@ -43,6 +43,10 @@ En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson,
 - Identifiants de requête monotones ; rejet si intérêt retiré ou version obsolète. Retry temporisé seulement sur échec/timeout.
 - Une coordonnée avec réponse nullopt est mémorisée absente **seulement pendant la période d'intérêt courante**, sans retry ; une sortie de l'intérêt supprime cette mémoire, une réentrée crée une nouvelle demande.
 - Décharger immédiatement les chunks hors de l'union. Aucun cache LRU, persistance automatique ou protocole réseau.
+
+## Extension de conception après PR00–PR10
+
+Les composants `spk::World` restent indépendants de la représentation du terrain. Le nouveau pipeline envisagé ajoute une **distribution générique d'influences de biomes pondérées**, une **génération/combinaison générique de hauteurs**, puis des consommateurs spécialisés, dont la génération d'un monde voxel 3D directement utilisable. Une stratégie définit ses influences dans un hook ; Sparkle gère le parcours spatial, les résultats temporaires et leur normalisation. La structure et les signatures exactes, ainsi que l'intégration à plusieurs sources de hauteur, restent à définir. Les algorithmes Voronoï et procéduraux sont des cas d'utilisation, pas des dépendances obligatoires.
 
 ## Voxel et Graphics
 - spk::Voxel::Chunk<SX,SY,SZ> hérite de spk::World::Chunk<SX,SY,SZ> et contient un Voxel::Volume de dimensions exactes SX×SY×SZ. Le chunk est modifiable, mais le Volume lui-même est une valeur immuable, dont les Data sont déjà partagées de manière const ; setVolume remplace la valeur puis notifie.
