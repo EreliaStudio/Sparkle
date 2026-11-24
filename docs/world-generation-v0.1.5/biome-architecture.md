@@ -180,7 +180,14 @@ The surface pass calls the generic foundation for validation and normalization o
 
 **B1 — Distribution strategy hook (validated 2026-11-24).** The reusable surface distribution pass declares a pure virtual hook, conceptually `void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination)`. The input is absolute world X/Z; the output is the actual mutable fixed-capacity surface influence cell, initially reset to empty slots. There is no returned container, additional per-call context or height calculation. The developer derives a custom pass and implements the hook, choosing its own configuration and state (e.g. one or more Perlin fields, a seed, a finite map or another placement algorithm). It fills relative weights; the reusable pass delegates validation and normalization to the generic foundation. The hook name is illustrative, and const qualification/concurrent access details remain B6. The exact class and typed cell declarations remain to be aligned with Sparkle conventions.
 
-Configuration/destination, domain origin, sample spacing, edge behavior, initialization and deterministic concurrency contracts remain B2–B6. The pass does not generate heights, apply materials, or implement Voronoi math. There is no mandatory subscription/ContractProvider or global biome map.
+**B2 — Configuration and destination hooks (validated 2026-11-24).** Follow the two-hook pattern already approved for `HeightMapGenerationPass`. In addition to the B1 strategy hook, the reusable surface distribution pass declares two abstract hooks:
+
+- `_gridConfiguration(chunkCoordinate, const TGenerationData &data)` returns the surface influence `Grid::Configuration`, describing the requested 2D world extent and sample spacing.
+- `_gridDestination(TGenerationData &data)` returns a mutable reference to the destination `Grid::Lease` in the caller's generation data.
+
+Names and exact C++ declarations follow Sparkle conventions. The reusable pass handles obtaining/resetting the grid, sampling, validation/normalization and moving the completed lease into the destination. The developer does not allocate the grid or expose a required layout of `TGenerationData`. No separate origin hook is required by this pattern; the exact origin derivation, sample counts, spatial alignment and boundary rules are to be settled in B3/B4. Publication on failure and later edits remain E2.
+
+Domain origin, sample spacing semantics, edge behavior, initialization and deterministic concurrency contracts remain B3–B6. The pass does not generate heights, apply materials, or implement Voronoi math. There is no mandatory subscription/ContractProvider or global biome map.
 
 ## 4. Independent height sources and grids — validated design
 
