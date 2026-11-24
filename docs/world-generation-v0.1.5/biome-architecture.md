@@ -106,10 +106,10 @@ A stratum's thickness Perlin configuration is independent from its material-sele
 15. **Direct references rather than IDs.** Placement data refers to shared biome objects directly, with no ID-resolution requirement.
 16. **External ownership.** The developer/world setup owns biome instances. Placement results store **non-owning references**; referenced objects must outlive all relevant generation work.
 17. **Temporary per-chunk storage.** The placement pass writes its results into the existing `TGenerationData` of `spk::World::Generator`. An external, persistent Voronoi/world map may still be the placement algorithm's *input*, without requiring persistent biome output storage.
-18. **2D biome assignment per voxel column.** The temporary output stores a biome reference per chunk-local X/Z column. A `16×16×16` voxel chunk would contain 256 entries. Vertical chunks at the same world X/Z must resolve the same biome, using absolute coordinates.
-19. **Unassigned columns are allowed.** A missing biome reference (conceptually nullable) means biome application skips that column. No mandatory fallback biome.
+18. **2D spatial sampling, historically recorded as one dominant assignment.** The original design stored one biome reference per X/Z position. This single-reference **storage model is superseded as a design target** by the multi-influence proposal in §4.5; sampling positions remain world-space and independent of vertical chunk coordinates. A single dominant biome may still be derived from those influences for consumers that need one.
+19. **Unassigned positions are allowed.** An empty influence result denotes no biome assignment; there is no mandatory fallback biome. The consequences for downstream terrain/application passes remain to be defined.
 
-**Important nuance:** The game may request a "biome per chunk" visual/style mode by assigning the *same biome* to all columns within a chunk-sized area. The canonical output can still be the per-column 2D map. Whether a separate coarser representation is useful is unconfirmed.
+**Important nuance:** A game can deliberately return the same influences for every position in a coarse area, but the generic contract must not impose region/chunk-aligned boundaries. A per-position sampled 2D result remains the design target; coarser sampling or storage optimizations are not yet approved.
 
 ### 4.3 Terrain height and transitions (decisions 20–24)
 
@@ -207,9 +207,56 @@ The intended public generation API is:
 - `apply()` then move-assigns the returned `Lease` into the referenced destination. The intermediate grid is subsequently accessible to custom passes that alter the terrain, followed by voxel/mesh application passes. No changes to the existing `Generator` template or a concept constraining `TGenerationData` are needed.
 - Specific signatures for coordinates and error handling when unbound should be finalized against actual Sparkle headers before implementation.
 
+### 4.5 Proposed generic biome-distribution contract — under discussion (2026-11-24)
+
+> **Design proposal, not a validated C++ API or an implementation authorization.** This section captures the latest direction of the conversation and identifies precisely what remains to approve. The generic `spk::World` layer must not know about voxels, materials, Voronoi, Poisson-disk placement, climate, or particular noise algorithms.
+
+#### General responsibility split
+
+- A reusable, generic **distribution pass** owns all work common to distribution strategies: traversing a configured 2D world-space sampling domain, resolving sample positions from world-space origin and sampling interval, reusing temporary output/scratch storage, validating influence results, deriving a deterministic dominant influence when requested, and publishing sampled influences in `TGenerationData`.
+- A strategy-specific subclass (or a game-defined implementation satisfying the same hook contract) supplies **only the distribution algorithm** through a hook that answers: for this absolute world X/Z position, which biome definitions have what relative influence?
+- The pass does not compute terrain height, select materials, choose how a world is divided into regions, or subscribe to modification events.
+- The current `World::Generator<TChunk,TGenerationData,TBuilder>::Pass::apply(builder, coordinate, data)` is the integration point; do not change the existing generator API merely to introduce biome placement.
+
+#### Conceptual result type
+
+- A dedicated `BiomeInfluence` record is preferred over a tuple: a **non-owning reference/pointer to a shared `spk::World::Biome` definition** and a **weight**. The concrete pointer/reference/nullable representation and storage container are still open.
+- One sampled world-space position can return **zero, one, or multiple** influences. The result must not be artificially limited to the two closest biomes, a fixed number of entries, or a Voronoi-specific boundary concept.
+- When several biomes contribute, downstream height evaluation can blend their independent height sources by normalized weights; a downstream consumer needing one biome can select the dominant influence. The generic distribution result itself is independent of what those consumers do.
+- Prefer temporary, per-generation-request storage in `TGenerationData`. Strategy-specific preprocessing/state (e.g. precomputed finite-world regions) may be held separately by the strategy and shared safely across generation requests. Never require a world-wide per-position allocation.
+- No mandatory numeric biome IDs, biome registry, climate fields, seed policy, or ownership transfer. Referenced biome definitions must outlive concurrent jobs.
+
+#### Extension hooks (illustrative, not signatures)
+
+The generic reusable pass is responsible for **implementing** `apply()`; games should not have to copy a position loop, allocate a map, normalize weights, or write values manually. Minimum conceptual customization points:
+
+1. **Sampling configuration/destination adapters** that supply the 2D world-space extent, sample spacing, and destination in the caller's `TGenerationData`, following existing configurable-pass patterns. How these are expressed (virtual hooks or a bound context) is open.
+2. **A required distribution hook** such as `_sampleInfluences(worldPosition, reusableOutput)`. It fills a temporary list of `BiomeInfluence` records. Returning a fresh heap-allocated vector per position must not be mandated.
+3. **Optional strategy initialization/preprocessing** for algorithms needing a world-level layout. Such state is prepared by the strategy's owner independently of chunk generation; no mandatory per-chunk or global precomputation hook is required in the generic pass.
+
+**Proposed shared normalization policy (pending approval):** reject invalid/negative/non-finite weights and null biome references; aggregate repeated references or report them as invalid according to a rule still to decide; ignore zero-weight entries; normalize positive weights to sum to 1; preserve an empty result as unassigned; make tie-breaking deterministic without requiring numeric IDs. Exact validation/tie semantics need a separate decision before implementation.
+
+A `ContractProvider` subscription mechanism is **not required** for the initial generation pipeline. It can be added only if later designs genuinely require live configuration-change notification or cache invalidation; generation may assume stable definitions while jobs execute.
+
+#### Why both example strategies fit
+
+- A finite-world Voronoi strategy can precompute one or more sites per biome in externally held state and answer the same world-position sampling hook. This generic section does **not** define Poisson-disk placement, boundary distortion or transition distance.
+- A seed-derived, infinite procedural strategy can compute influences directly from absolute coordinates and its own algorithm without holding a global map. It uses the **same** hook and output representation.
+- Neither example is an implementation requirement or an approved concrete distribution-pass algorithm.
+
+#### Generic contract tests to specify
+
+- Empty, single, and multiple influences; normalization and invalid values; deterministic dominance including ties.
+- Coordinates and sampling that cross chunk bounds and negative world positions without aligning biome boundaries to chunks.
+- Different strategy hooks generating the same observable temporary result shape; stable results independent of chunk-generation order.
+- Valid non-owning-reference lifetimes and read-only concurrent generation; no forced per-position heap allocation.
+- A mock strategy proving that the base pass—not user code—performs traversal, transient storage, validation and publication.
+
+**Pending decisions:** exact record/list/map types, how the pass receives output storage and sample configuration, repeated-biome handling, tie-breaking policy, and how the multi-biome result connects to the separate generic height-combination pass.
+
 ## 5. Proposed pass flow (heightmap API confirmed; biome integration still open)
 
-1. **Biome placement:** assign a dominant biome or no biome for each X/Z column in `TGenerationData`, optionally with terrain-height transition metadata.
+1. **Biome placement:** produce zero or more biome influences with weights at each configured world-space X/Z sample into `TGenerationData`; a dominant biome is derived when needed by downstream consumers. The generic contract proposal is detailed in §4.5 and is not yet final.
 2. **Generic heightmap generation:** the bound `HeightMapGenerationPass` gets the grid world-space `Configuration` and lease destination through two subclass hooks. It derives the world origin from chunk coordinate × world-space grid size and calls `HeightMap::generate(configuration, origin)`, which handles all sampling and static pool selection. It stores the resulting `Grid::Lease` in `TGenerationData`.
 3. **Optional custom grid-modification passes:** edit heights in the transient grid (e.g. lower the edge of a finite island, level a road/town) without subclassing or mutating the procedural `HeightMap`.
 4. **Voxel strata/terrain application:** use final sampled heights and dominant biome strata to populate voxel columns; other consumers may use height interpolation for non-voxel surfaces.
@@ -255,7 +302,7 @@ This scope decision does not settle the previously proposed alternatives concern
 
 ## 8. Outstanding architectural questions — not decisions
 
-1. **Storage contract for smooth transitions:** The agreed assignment map has a single dominant biome per column, but smooth height blending also needs neighboring biome candidates, boundary distance, weights, or an equivalent query mechanism. Define this without silently reintroducing blended material strata.
+1. **Multi-influence storage and hook contract:** Resolve §4.5's proposed list-of-biomes-with-weights representation, shared validation/normalization, adapter hooks, duplicate handling, tie policy, and efficient temporary storage. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
 2. **Remaining HeightMap integration details:** The primary procedural/grid contract is **confirmed in §4.4**. Still to settle: exact C++ type/alias names; representation of `Grid`'s storage; numeric edge cases for floating-point divisibility tolerance; reference semantics for `at()` at boundaries; handling unassigned biome columns; voxel integer rounding; and how biome-selected height algorithms and blending integrate with the current `HeightMap` design.
 3. **Application pass API:** Concrete interfaces and `TGenerationData` access for the already-separated height and voxel application passes; behavior of finite strata and unassigned columns; interaction with preexisting voxels.
 4. **Stratum semantics:** Thickness-to-integer rounding, unlimited-depth representation, per-stratum noise offsets, validation of weights, and how weighted noise maps to proportions.
@@ -266,7 +313,7 @@ This scope decision does not settle the previously proposed alternatives concern
 
 ## 9. Suggested next design discussion
 
-Continue **one question at a time**. The `HeightMap::Grid` size/scale/boundary/access contract and static tiered pool design are established in §4.4. The next architectural challenge is reconciling the concrete, Perlin-layered `HeightMap` with biome-selected height generation and smooth/hard biome transitions: *how do consumers discover neighboring height sources and blending contributions while retaining exactly one dominant biome for stratum application?*
+Continue **one question at a time**. First agree on the proposed generic multi-influence distribution contract (§4.5), keeping it algorithm-independent and non-voxel-specific. Then reconcile the concrete, Perlin-layered `HeightMap` (§4.4) with a separate generic pass that can combine biome-specific height sources. Any voxel application remains downstream of these generic concerns.
 
 No implementation PR breakdown has been approved yet.
 
