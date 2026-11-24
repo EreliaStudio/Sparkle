@@ -1,6 +1,8 @@
 # Sparkle v0.1.5 — Contrats normatifs proposés
 Les décisions ci-dessous reprennent la discussion de conception et les ajustements validés pendant PR07. `spk::World` est un namespace, pas une classe. Ne pas rétablir un ancien contrat contredisant cette table.
 
+**Limite de portée :** cette table est le contrat historique des composants de chunks/streaming PR00–PR10. Elle ne décrit pas encore les futures passes génériques de biomes et de HeightMap : voir [biome-architecture.md](biome-architecture.md) et [biome-open-questions.md](biome-open-questions.md). Les futures briques génériques resteront indépendantes de `spk::Voxel`, lequel demeure un consommateur spécialisé de premier plan. La normalisation des poids fournis par les hooks de distribution est validée comme responsabilité de la passe générique.
+
 | Sujet | Contrat |
 | --- | --- |
 | Chunk | spk::World::Chunk<SX,SY,SZ> héritable, dimensions positives d'unités monde, coordonnée hors de l'objet |
@@ -34,7 +36,7 @@ Les décisions ci-dessous reprennent la discussion de conception et les ajusteme
 | Render sync | Bind scanne collection, événement immediate → dirty set, rebuild à render une fois par coord |
 | Six voisins | À toute modification, reconstruire chunk + six voisins sans différentiel de frontières ; destruction invalide six voisins |
 | Lifecycle | Acquisition/Release/Destruction distincts ; Widget, Entity et Pool<T> adaptés sans changer possession Lease |
-| Exclusions | Ni save, collision, réseau, biomes/villes/routes/cavernes, ni gestion multimonde |
+| Exclusions du périmètre PR00–PR10 | Ni save, collision, réseau, biomes/villes/routes/cavernes, ni gestion multimonde **dans ces PR historiques** |
 
 ## Esquisse API (les types finaux peuvent varier)
 ~~~cpp
