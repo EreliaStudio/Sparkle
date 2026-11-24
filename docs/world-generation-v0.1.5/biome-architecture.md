@@ -1,6 +1,7 @@
-# Sparkle v0.1.5 — Biome architecture: agreed concepts and open questions
+# Sparkle v0.1.5 — Biome architecture: design record and validated principles
 
-> **Status:** design record, not an implementation specification.
+> **Status:** evolving design record. Validated decisions are explicitly identified; proposals and C++ signatures remain non-normative until approved.
+> **Open questions:** see [biome-open-questions.md](biome-open-questions.md), maintained separately so later discussions can address each issue without implying a decision.
 >
 > **Branch:** `design/v0.1.5-biome-architecture` (based on `V0.1.5`).
 >
@@ -16,9 +17,9 @@ The user specifically wants:
 - A first **biome placement pass** writing biome assignments into temporary generation data.
 - Subsequent passes that **apply biome-driven height generation and voxel strata**, with later extension points for scenery and structures.
 - Multiple interchangeable placement strategies, including manual layouts, Voronoi, environmental suitability, and competing noise fields.
-- A minimal generic `spk::World` layer, with voxel specialization and game-specific extensions.
+- A reusable, representation-agnostic `spk::World` layer, **plus first-class, ready-to-use voxel-world building blocks** in `spk::Voxel`, with game-specific extensions where needed. Voxel is a primary intended Sparkle use case, not a restriction of `spk::World`.
 
-Do not infer a fully finalized C++ API from these principles.
+Do not infer a fully finalized C++ API from these principles. References to voxel or particular spatial algorithms are welcome as examples and specialized components, but must not make the generic layer depend on them.
 
 ## 2. Three concrete target games
 
@@ -56,13 +57,13 @@ These cases are architectural tests, not engine-predefined biome types.
 - The generic placement concept associates spatial positions with biome definitions; no mandatory registry or numeric biome ID.
 - The generic biome/placement layer should not require climate, a particular mesh algorithm, or a particular ground representation. A separately defined, concrete `spk::World::HeightMap` now offers a Perlin-based generic height source and transient sampled grids (see §4.4). How the previously proposed abstract `TerrainHeightGenerator` and biome-selected sources integrate with it is still to be reconciled; neither concept should be silently conflated.
 
-### 3.2 Voxel layer
+### 3.2 Voxel layer: first-class consumer of generic world data
 
 - A proposed `spk::Voxel::Biome` (exact namespace/name remains open; `spk::Voxel::World::Biome` was also mentioned) inherits the generic biome and holds:
   1. A **non-owning reference** to a generic terrain-height generator.
   2. An **ordered collection of voxel ground strata**.
 - Strata define ground composition; height generators define terrain elevation and shape. A biome therefore influences both the shape and the material appearance of generated terrain.
-- Voxel generation consumes results but must not be tied to greedy meshing; other voxel meshing methods should be able to use the same biome descriptions, subject to representation-specific adapters.
+- Sparkle should provide directly usable voxel-world generation facilities, not force games to reimplement them. This is a specialized consumer layer: the generic distribution and height contracts remain independent of voxel representation. Voxel generation must not be tied to greedy meshing; other voxel meshing methods should be able to use the same biome descriptions, subject to representation-specific adapters.
 
 ### 3.3 Game-specific layer
 
@@ -72,7 +73,7 @@ These cases are architectural tests, not engine-predefined biome types.
 
 ## 4. Confirmed decisions
 
-The numbered entries follow the design conversation. **Question 20 was explicitly revisited and validated after decisions 21–24.** Decisions 1–24 remain recorded. Subsequent HeightMap-specific decisions, with more concrete API contracts, appear in §4.4.
+The numbered entries preserve the design conversation. **Question 20 was explicitly revisited and validated after decisions 21–24.** Decisions 1–24 remain recorded, including historical wording about a single dominant assignment; the later multi-influence decision supersedes that storage assumption. HeightMap-specific decisions appear in §4.4. **A newly confirmed decision is that Sparkle, rather than each strategy, normalizes raw biome influence weights**; see §4.5.
 
 ### 4.1 Voxel strata (decisions 1–12)
 
@@ -228,13 +229,13 @@ The intended public generation API is:
 
 #### Extension hooks (illustrative, not signatures)
 
-The generic reusable pass is responsible for **implementing** `apply()`; games should not have to copy a position loop, allocate a map, normalize weights, or write values manually. Minimum conceptual customization points:
+The generic reusable pass is responsible for **implementing** `apply()`; games should not have to copy a position loop, allocate a map, normalize weights, or write values manually. Reusable work belongs in Sparkle; hooks are reserved for genuinely strategy-specific choices. Minimum conceptual customization points:
 
 1. **Sampling configuration/destination adapters** that supply the 2D world-space extent, sample spacing, and destination in the caller's `TGenerationData`, following existing configurable-pass patterns. How these are expressed (virtual hooks or a bound context) is open.
 2. **A required distribution hook** such as `_sampleInfluences(worldPosition, reusableOutput)`. It fills a temporary list of `BiomeInfluence` records. Returning a fresh heap-allocated vector per position must not be mandated.
 3. **Optional strategy initialization/preprocessing** for algorithms needing a world-level layout. Such state is prepared by the strategy's owner independently of chunk generation; no mandatory per-chunk or global precomputation hook is required in the generic pass.
 
-**Proposed shared normalization policy (pending approval):** reject invalid/negative/non-finite weights and null biome references; aggregate repeated references or report them as invalid according to a rule still to decide; ignore zero-weight entries; normalize positive weights to sum to 1; preserve an empty result as unassigned; make tie-breaking deterministic without requiring numeric IDs. Exact validation/tie semantics need a separate decision before implementation.
+**Confirmed shared normalization responsibility (2026-11-24):** the strategy hook may return arbitrary **relative** weights (e.g. 3, 5, 2); the reusable Sparkle pass converts them into normalized weights summing to 1 (e.g. 0.3, 0.5, 0.2) before handing them to downstream consumers. Strategy code must not be required to repeat normalization. **Still open:** precise validation for negative/non-finite weights and null biome references; zero-weight removal; duplicate biome entries; an all-zero result; floating-point tolerance; deterministic tie-breaking without mandatory IDs. None of these unspecified details is silently approved by the normalization decision.
 
 A `ContractProvider` subscription mechanism is **not required** for the initial generation pipeline. It can be added only if later designs genuinely require live configuration-change notification or cache invalidation; generation may assume stable definitions while jobs execute.
 
@@ -252,7 +253,7 @@ A `ContractProvider` subscription mechanism is **not required** for the initial 
 - Valid non-owning-reference lifetimes and read-only concurrent generation; no forced per-position heap allocation.
 - A mock strategy proving that the base pass—not user code—performs traversal, transient storage, validation and publication.
 
-**Pending decisions:** exact record/list/map types, how the pass receives output storage and sample configuration, repeated-biome handling, tie-breaking policy, and how the multi-biome result connects to the separate generic height-combination pass.
+**Pending decisions:** exact record/list/map types, how the pass receives output storage and sample configuration, invalid/duplicate weight handling, tie-breaking policy, and how the multi-biome result connects to the separate generic height-combination pass. The normalization *responsibility* itself is no longer pending. See [open questions](biome-open-questions.md).
 
 ## 5. Proposed pass flow (heightmap API confirmed; biome integration still open)
 
@@ -268,7 +269,7 @@ The existing `spk::World::Generator<TChunk,TGenerationData,TBuilder>` already ca
 
 ## 6. Candidate reusable biome-placement algorithms (not yet approved as final APIs)
 
-All candidates should have an equivalent observable output: per-column biome assignments and, where applicable, transition metadata. Their internal computation may differ.
+All candidates should have the same observable, **multi-influence** output contract at each configured world-space X/Z sample; they differ only in how they compute influences. The exact output data structure is pending. The examples below inform generic requirements; they are not a request to implement or specify each algorithm now.
 
 - **Manual/explicit regions:** regions or tiles predetermined by the game; useful for the finite tiered world.
 - **Finite Voronoi regions:** sites distributed over a bounded map; Poisson-disk sampling is a candidate for well-spaced site positions; assign selected biome definitions to sites/cells. A **biome per chunk** behavior and a **biome per voxel column** behavior should both be expressible (potentially as different sampling granularities into the same per-column output).
@@ -302,7 +303,9 @@ This scope decision does not settle the previously proposed alternatives concern
 
 ## 8. Outstanding architectural questions — not decisions
 
-1. **Multi-influence storage and hook contract:** Resolve §4.5's proposed list-of-biomes-with-weights representation, shared validation/normalization, adapter hooks, duplicate handling, tie policy, and efficient temporary storage. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
+This is a historical summary kept for context. The **current, categorized and independently actionable inventory** is [biome-open-questions.md](biome-open-questions.md). It deliberately leaves details unanswered for future focused discussions. **Weight normalization by the generic pass is confirmed**, not an open choice.
+
+1. **Multi-influence storage and hook contract:** Resolve §4.5's proposed list-of-biomes-with-weights representation, shared validation (other than already-approved normalization responsibility), adapter hooks, duplicate handling, tie policy, and efficient temporary storage. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
 2. **Remaining HeightMap integration details:** The primary procedural/grid contract is **confirmed in §4.4**. Still to settle: exact C++ type/alias names; representation of `Grid`'s storage; numeric edge cases for floating-point divisibility tolerance; reference semantics for `at()` at boundaries; handling unassigned biome columns; voxel integer rounding; and how biome-selected height algorithms and blending integrate with the current `HeightMap` design.
 3. **Application pass API:** Concrete interfaces and `TGenerationData` access for the already-separated height and voxel application passes; behavior of finite strata and unassigned columns; interaction with preexisting voxels.
 4. **Stratum semantics:** Thickness-to-integer rounding, unlimited-depth representation, per-stratum noise offsets, validation of weights, and how weighted noise maps to proportions.
@@ -313,13 +316,14 @@ This scope decision does not settle the previously proposed alternatives concern
 
 ## 9. Suggested next design discussion
 
-Continue **one question at a time**. First agree on the proposed generic multi-influence distribution contract (§4.5), keeping it algorithm-independent and non-voxel-specific. Then reconcile the concrete, Perlin-layered `HeightMap` (§4.4) with a separate generic pass that can combine biome-specific height sources. Any voxel application remains downstream of these generic concerns.
+Future design discussions should take one item at a time from [the open-questions inventory](biome-open-questions.md), rather than reopen settled requirements. The generic multi-influence distribution contract (§4.5) and concrete Perlin-layered `HeightMap` (§4.4) need an explicit integration contract. The voxel-specific implementation is a supported first-class destination for those generic results, not a dependency of the generic types.
 
 No implementation PR breakdown has been approved yet.
 
 ## References
 
 - [World generation overview](README.md)
+- [Open questions: generic distribution, height orchestration, voxel integration and tests](biome-open-questions.md)
 - [Existing generation contracts](contracts.md)
 - [Existing world architecture](architecture.md)
 - [Existing terrain generation implementation](../../include/voxel/pass/perlin_terrain_pass.hpp)
