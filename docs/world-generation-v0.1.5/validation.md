@@ -32,5 +32,17 @@ Mêmes coordonnées + mêmes données utilisateur => même contenu de démonstra
 ### Durée de vie
 Ne pas bloquer la destruction du streamer pour attendre une tâche ; en revanche un WorkerPool externe peut bloquer sa propre destruction à cause de std::jthread. Les tests distinguent ces deux responsabilités et gardent les dépendances des closures vivantes.
 
+## Validation à spécifier pour les nouvelles briques (non incluse dans PR00–PR10)
+
+Cette section est un **inventaire de tests à rédiger**, et non une matrice normative déjà approuvée. Elle concerne les nouvelles passes sans modifier les critères historiques ci-dessus :
+
+- **Distribution générique :** stratégies factices substituables, parcours et destination gérés par la passe, zéro/un/plusieurs biomes, poids relatifs et normalisation par Sparkle (3, 5, 2 → 0,3, 0,5, 0,2), validations des données invalides dès que les règles seront arrêtées.
+- **Coordonnées et déterminisme :** mêmes résultats aux mêmes X/Z mondiaux, dans les chunks voisins, négatifs et générés dans un ordre quelconque ; aucune obligation de frontière alignée sur les chunks.
+- **Sources de hauteur :** HeightMap et Grid (configurations, échantillons aux bords, interpolation, pool), orchestration de sources propres à plusieurs biomes et modification ultérieure de la grille dès que leur contrat sera défini.
+- **Mémoire et concurrence :** références non propriétaires correctement maintenues en vie, réutilisation des buffers et Leases, thread safety des échantillons, absence d'allocations inutiles, benchmarks descriptifs.
+- **Couche voxel spécialisée :** tests de consommation des influences, hauteurs et strates, puis régressions graphiques et golden images dans les TU dédiés ; la logique voxel reste hors des TU de distribution générique.
+
+Voir [questions ouvertes](biome-open-questions.md), section F, pour les scénarios sans résultat attendu encore validé.
+
 ## Gate
 Aucun test de rendu exclu sans accord, aucun merge automatique. Tous les modules compatibles CI et revue explicite avant release.
