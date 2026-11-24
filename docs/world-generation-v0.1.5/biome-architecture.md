@@ -56,9 +56,9 @@ Voronoi, procedural noise, manual regions, environmental suitability, cellular a
 
 A definition is shared across many regions; placement stores non-owning const pointers, not copies or numeric IDs. The developer owns definitions, keeps addresses stable and guarantees lifetime until queued/executing jobs and all consumers have finished. No mutation of the definitions while they are read by generation work. A timeout does not end this obligation. Sparkle does not track these lifetimes automatically (E3).
 
-### 2.2 Generic pass foundation
+### 2.2 Generic pass foundation — responsibilities validated (B1)
 
-The common biome-pass layer contains only dimension-independent behavior that proves reusable. It must not own an X/Z traversal, surface grid, height query, material selection or a 3D grid. The concrete responsibilities and C++ interfaces are to be identified without speculative abstractions. Coordinate-independent weight rules below may be reused, without prescribing a generic implementation now.
+The generic biome-pass foundation owns the dimension-independent processing of one influence cell: validate the full cell, reject invalid weights and duplicate non-null biome pointers, normalize valid weights in place and preserve all slot indices. The exact rules are A3/A5; no extra buffer, sorting, or compaction is introduced. The same behavior can be reused by a future volumetric distribution. It knows neither coordinates nor spatial dimensionality, and does not own a grid, spatial traversal, allocation policy, height generation or material selection. The exact C++ class name, typed cell interface and helper signatures remain open.
 
 ## 3. Surface layer — distribution result and pass responsibilities
 
@@ -172,11 +172,13 @@ Example, in index order: `{forest, 3}, {nullptr, 0}, {mountain, 5}, {desert, 2}`
 
 **A1–A5 are resolved.** The surface distribution result semantics are settled; exact names, pass hooks, spatial sampling/access, height orchestration and broader lifecycle questions remain open.
 
-### 3.2 Reusable surface distribution pass
+### 3.2 Reusable surface distribution pass — responsibilities validated (B1)
 
 The surface pass implements `apply(builder, coordinate, data)` using the existing generator, not a replacement generator. It owns the common X/Z traversal, sampling, allocation/recycling, cell reset, validation, in-place normalization and publication of the resulting lease to `TGenerationData`. The strategy supplies relative influences for an absolute world X/Z position directly in the destination cell. A strategy may consult a precomputed finite map or compute from seed/coordinates without persistent per-position state.
 
-Exact hook signatures, configuration/destination, domain origin, sample spacing, edge behavior, initialization and deterministic concurrency contracts remain B1–B6. The pass does not generate heights, apply materials, or implement Voronoi math. There is no mandatory subscription/ContractProvider or global biome map.
+The surface pass calls the generic foundation for validation and normalization of each filled cell. No separate voxel distribution algorithm or voxel distribution class is required merely because the definitions are voxel biomes: the surface distribution behavior is reused. A game or specialized consumer may still provide the necessary configuration and strategy hooks. Voxel-specific behavior starts with material/strata application. Height combination is a separate surface pass, not part of distribution.
+
+Exact hook signatures, typed cell API, configuration/destination, domain origin, sample spacing, edge behavior, initialization and deterministic concurrency contracts remain B1–B6. The pass does not generate heights, apply materials, or implement Voronoi math. There is no mandatory subscription/ContractProvider or global biome map.
 
 ## 4. Independent height sources and grids — validated design
 
