@@ -108,13 +108,13 @@ A stratum's thickness Perlin configuration is independent from its material-sele
 16. **External ownership.** The developer/world setup owns biome instances. Placement results store **non-owning references**; referenced objects must outlive all relevant generation work.
 17. **Temporary per-chunk storage.** The placement pass writes its results into the existing `TGenerationData` of `spk::World::Generator`. An external, persistent Voronoi/world map may still be the placement algorithm's *input*, without requiring persistent biome output storage.
 18. **2D spatial sampling, historically recorded as one dominant assignment.** The original design stored one biome reference per X/Z position. This single-reference **storage model is superseded as a design target** by the multi-influence proposal in §4.5; sampling positions remain world-space and independent of vertical chunk coordinates. A single dominant biome may still be derived from those influences for consumers that need one.
-19. **Unassigned positions are allowed.** A cell with all biome pointers null denotes no biome assignment (A2 revises the earlier empty-list representation); there is no mandatory fallback biome. The consequences for downstream terrain/application passes remain to be defined.
+19. **Unassigned positions are allowed.** A cell with all biome pointers null denotes no biome assignment (A2 revises the earlier empty-list representation); there is no mandatory fallback biome. A4 requires a downstream pass that needs a usable biome to throw if none exists; other consumer-specific handling remains open.
 
 **Important nuance:** A game can deliberately return the same influences for every position in a coarse area, but the generic contract must not impose region/chunk-aligned boundaries. A per-position sampled 2D result remains the design target; coarser sampling remains open; the fixed-capacity cell storage is now approved in A2.
 
 ### 4.3 Terrain height and transitions (decisions 20–24)
 
-20. **Dedicated terrain-height pass.** After biome placement, a separate terrain-height pass evaluates the selected biome's `spk::World::TerrainHeightGenerator` (and any neighboring influences needed for placement-defined transitions), and writes an **absolute surface-height map into the current chunk's `TGenerationData`**. The subsequent voxel biome application pass reads that stored map to apply surface-relative strata. Computing height inside the voxel application pass is not the selected design. The height-map storage representation has since been refined to a transient `HeightMap::Grid` held through a pooled `Lease` (see §4.4); behavior for unassigned biome columns remains open.
+20. **Dedicated terrain-height pass.** After biome placement, a separate terrain-height pass evaluates the selected biome's `spk::World::TerrainHeightGenerator` (and any neighboring influences needed for placement-defined transitions), and writes an **absolute surface-height map into the current chunk's `TGenerationData`**. The subsequent voxel biome application pass reads that stored map to apply surface-relative strata. Computing height inside the voxel application pass is not the selected design. The height-map storage representation has since been refined to a transient `HeightMap::Grid` held through a pooled `Lease` (see §4.4); A4 requires an exception when a consumer needs a biome and no positive contribution exists; other consumer-specific cases remain open.
 21. **Biome-selected height-generator instance.** Each voxel biome references its own `spk::World::TerrainHeightGenerator` via a common abstract interface; multiple biomes may share one instance. The terrain pass invokes the selected biome's algorithm.
 22. **Absolute, continuous height.** The generic height-generation algorithm produces an absolute **continuous** world elevation, not an integer voxel altitude or only a relative offset added to a biome-owned base height. Base height belongs to generator configuration. Voxel consumers are responsible for conversion to discrete voxel coordinates; the conversion and rounding rule remain undecided.
 23. **Configurable height transitions.** Hard boundaries and smoothly blended biome elevations must both be supported. **Material selection stays discrete** even when height is blended.
@@ -214,7 +214,7 @@ The intended public generation API is:
 
 #### General responsibility split
 
-- A reusable, generic **distribution pass** owns all work common to distribution strategies: traversing a configured 2D world-space sampling domain, resolving sample positions from world-space origin and sampling interval, writing directly into pooled grid cells, validating influence results, deriving a deterministic dominant influence when requested, and publishing sampled influences in `TGenerationData`.
+- A reusable, generic **distribution pass** owns all work common to distribution strategies: traversing a configured 2D world-space sampling domain, resolving sample positions from world-space origin and sampling interval, writing directly into pooled grid cells, validating influence results, providing results from which the grid can derive a deterministic dominant biome on request, and publishing sampled influences in `TGenerationData`.
 - A strategy-specific subclass (or a game-defined implementation satisfying the same hook contract) supplies **only the distribution algorithm** through a hook that answers: for this absolute world X/Z position, which biome definitions have what relative influence?
 - The pass does not compute terrain height, select materials, choose how a world is divided into regions, or subscribe to modification events.
 - The current `World::Generator<TChunk,TGenerationData,TBuilder>::Pass::apply(builder, coordinate, data)` is the integration point; do not change the existing generator API merely to introduce biome placement.
@@ -253,7 +253,7 @@ namespace spk::World
 - `biome` is a raw, non-owning pointer to an existing definition, read-only through the influence. The pointer itself and the weight may be reassigned. **Revised during A2:** a null pointer is valid and denotes an unused slot, not an error. The default empty slot is `{nullptr, 0.0f}`; a cell with only null biome pointers represents an unassigned position. Null slots are not biome contributions and are excluded from normalization. A3 requires the weight of every null slot to equal zero; any other value is an error. The aggregate itself performs no validation.
 - `weight` is a `float`, representing a relative weight in raw hook output and a normalized weight in published output. The same record is used for both stages. The generic pass owns validation and normalization according to the approved A3 contract below.
 - The developer owns the biome definitions and chooses their storage. Each referenced definition must remain alive at a stable address for as long as any influence referring to it may be used, including queued or executing generation work and downstream consumers. Definitions must not be modified while used by generation jobs. A timeout alone does not end the lifetime obligation if a job is still running. Sparkle does not track lifetimes or automatically manage ownership.
-- A2 subsequently settles the container and direct-output shape. A1 does not choose an ordering, a dominance rule, the complete hook signature, a concrete biome destructor, or a global reconfiguration/lifetime protocol (A4–A5, B1, B6, E3 remain open).
+- A2 subsequently settles the container and direct-output shape. A1 does not choose an ordering, a dominance rule, the complete hook signature, a concrete biome destructor, or a global reconfiguration/lifetime protocol (A5, B1, B6, E3 remain open; A4 resolves dominance below).
 
 #### A2 — Fixed-capacity influence grid and pooling (validated 2026-11-24)
 
@@ -281,6 +281,8 @@ private:
 public:
     Cell &at(const spk::Vector2 &position);
     const Cell &at(const spk::Vector2 &position) const;
+
+    [[nodiscard]] const Biome *dominant(const spk::Vector2 &position) const;
 };
 ```
 
@@ -308,9 +310,26 @@ Biome uniqueness is by pointer identity, not by biome contents or a mandatory ID
 - Accumulate the weights of non-null biomes into a `double` sum.
 - If the sum is zero, leave the entire valid cell unchanged, including its non-null zero-weight references. An all-null cell is valid and is also left unchanged.
 - If the sum is positive, divide each non-null weight by the sum in `double` and convert the result back to `float`. Null slots remain unused. No arbitrary equal redistribution and no correction of the final weight to force an exact sum of 1. The normalized sum is 1 mathematically, subject to floating-point rounding; test comparisons must account for rounding.
-- Perform the operation on the existing fixed-capacity cell without a second influence buffer. Ordering and dominant selection remain separate questions (A4/A5). Validation/normalization scheduling after arbitrary downstream edits remains E2.
+- Perform the operation on the existing fixed-capacity cell without a second influence buffer. Ordering remains a separate question (A5); dominant selection is settled by A4 below. Validation/normalization scheduling after arbitrary downstream edits remains E2.
 
 Examples: weights 3, 5, 2 become approximately 0.3, 0.5, 0.2; weights 0, 0 for two distinct non-null biomes remain 0, 0; two references to the same non-null biome are rejected even if both weights are zero. The precise test tolerance may be chosen when the numerical tests are implemented; it is not an exact-sum invariant.
+
+#### A4 — Dominant biome selection (validated 2026-11-24)
+
+The public query belongs to `spk::World::Biome::Influence::Grid<TCapacity>`:
+
+```cpp
+[[nodiscard]] const Biome *dominant(const spk::Vector2 &position) const;
+```
+
+- The query reads the current cell at the supplied position and scans its slots in increasing array index order. Coordinate and bounds semantics follow the cell access contract to be finalized in B4.
+- Only non-null biome pointers with strictly positive weights are eligible. The result is the non-owning pointer to the biome with the greatest stored weight. Exact equal positive weights select the first encountered eligible entry (strict `>`, not `>=`); no epsilon tie, ID, priority or pointer-address ordering is needed.
+- If there is no eligible entry (all slots null or all weights zero), return `nullptr`. A valid distribution may have such a cell; absence of a dominant alone is not an exception from this query.
+- A consumer that requires a usable biome to perform its task must throw `spk::Exception` if none is available. This includes biome-dependent height generation and voxel strata application when they require a contributing biome. Do not silently select a zero-weight biome or invent a fallback. C5 still settles other cases such as missing height sources and non-finite heights.
+- Compute the result on demand in O(TCapacity) time, with constant auxiliary storage, no allocation, no sorting and no cached dominant. Direct valid cell edits are reflected in the next query. The query does not revalidate the entire distribution; validation/normalization after downstream edits remains E2.
+- A5 remains open: the tie is resolved using the actual stored cell order, not a newly prescribed order of strategy output.
+
+Examples: weights 0.4, 0.4, 0.2 select the first 0.4 biome; all-zero weights with non-null pointers produce `nullptr`; an all-null cell also produces `nullptr`.
 
 #### Extension hooks (illustrative, not signatures)
 
@@ -320,7 +339,7 @@ The generic reusable pass is responsible for **implementing** `apply()`; games s
 2. **A required distribution hook** such as `_sampleInfluences(worldPosition, cell)`. It fills the destination `Grid<TCapacity>::Cell` directly by mutable reference, with the same compile-time capacity as the pass (A2).
 3. **Optional strategy initialization/preprocessing** for algorithms needing a world-level layout. Such state is prepared by the strategy's owner independently of chunk generation; no mandatory per-chunk or global precomputation hook is required in the generic pass.
 
-**Confirmed shared normalization responsibility (2026-11-24):** the strategy hook may return arbitrary **relative** weights (e.g. 3, 5, 2); the reusable Sparkle pass converts the non-null contributions into normalized weights summing to 1 for a usable nonempty result (e.g. 0.3, 0.5, 0.2) before handing them to downstream consumers. Strategy code must not be required to repeat normalization. The validation and zero-sum rules are now settled in A3 above. Dominant selection (including ties) and influence ordering remain open in A4/A5.
+**Confirmed shared normalization responsibility (2026-11-24):** the strategy hook may return arbitrary **relative** weights (e.g. 3, 5, 2); the reusable Sparkle pass converts the non-null contributions into normalized weights summing to 1 for a usable nonempty result (e.g. 0.3, 0.5, 0.2) before handing them to downstream consumers. Strategy code must not be required to repeat normalization. The validation and zero-sum rules are now settled in A3 above. Dominant selection is settled in A4; influence ordering remains open in A5.
 
 A `ContractProvider` subscription mechanism is **not required** for the initial generation pipeline. It can be added only if later designs genuinely require live configuration-change notification or cache invalidation; generation may assume stable definitions while jobs execute.
 
@@ -332,13 +351,13 @@ A `ContractProvider` subscription mechanism is **not required** for the initial 
 
 #### Generic contract tests to specify
 
-- All-null, single, and multiple populated slots; direct cell output, configurable capacities, recycled-cell reset; A3 validation including invalid null-slot weights, negative/non-finite weights, duplicate non-null pointers even at zero weight, preserved zero-weight entries, zero-sum cells, and double-intermediate normalization (including large finite float weights); deterministic dominance including ties remains subject to A4.
+- All-null, single, and multiple populated slots; direct cell output, configurable capacities, recycled-cell reset; A3 validation including invalid null-slot weights, negative/non-finite weights, duplicate non-null pointers even at zero weight, preserved zero-weight entries, zero-sum cells, and double-intermediate normalization (including large finite float weights); A4 tests include first equal positive maximum, null/zero entries, all-zero and all-null cells, edits reflected without a cache, and exceptions from consumers requiring a biome.
 - Coordinates and sampling that cross chunk bounds and negative world positions without aligning biome boundaries to chunks.
 - Different strategy hooks generating the same observable temporary result shape; stable results independent of chunk-generation order.
 - Valid non-owning-reference lifetimes and read-only concurrent generation; no forced per-position heap allocation.
 - A mock strategy proving that the base pass—not user code—performs traversal, transient storage, validation and publication.
 
-**Pending decisions:** spatial configuration and access details (the record and cell/grid storage are settled by A1/A2), how the pass receives output storage and sample configuration, tie-breaking and ordering policy, and how the multi-biome result connects to the separate generic height-combination pass. Validation and normalization are settled by A3. See [open questions](biome-open-questions.md).
+**Pending decisions:** spatial configuration and access details (the record and cell/grid storage are settled by A1/A2), how the pass receives output storage and sample configuration, ordering policy, and how the multi-biome result connects to the separate generic height-combination pass. Validation and normalization are settled by A3; dominant selection by A4. See [open questions](biome-open-questions.md).
 
 ## 5. Proposed pass flow (heightmap API confirmed; biome integration still open)
 
@@ -390,9 +409,9 @@ This scope decision does not settle the previously proposed alternatives concern
 
 This is a historical summary kept for context. The **current, categorized and independently actionable inventory** is [biome-open-questions.md](biome-open-questions.md). It deliberately leaves details unanswered for future focused discussions. **Weight normalization by the generic pass is confirmed**, not an open choice.
 
-1. **Multi-influence storage and hook contract:** A1–A3 settled the individual `Biome::Influence` record, pooled fixed-capacity grid and distribution validation/normalization; resolve adapter hooks, spatial access, ordering and tie policy. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
-2. **Remaining HeightMap integration details:** The primary procedural/grid contract is **confirmed in §4.4**. Still to settle: exact C++ type/alias names; representation of `Grid`'s storage; numeric edge cases for floating-point divisibility tolerance; reference semantics for `at()` at boundaries; handling unassigned biome columns; voxel integer rounding; and how biome-selected height algorithms and blending integrate with the current `HeightMap` design.
-3. **Application pass API:** Concrete interfaces and `TGenerationData` access for the already-separated height and voxel application passes; behavior of finite strata and unassigned columns; interaction with preexisting voxels.
+1. **Multi-influence storage and hook contract:** A1–A4 settled the individual `Biome::Influence` record, pooled fixed-capacity grid, distribution validation/normalization and dominant query; resolve adapter hooks, spatial access and ordering. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
+2. **Remaining HeightMap integration details:** The primary procedural/grid contract is **confirmed in §4.4**. Still to settle: exact C++ type/alias names; representation of `Grid`'s storage; numeric edge cases for floating-point divisibility tolerance; reference semantics for `at()` at boundaries; consumer-specific handling beyond the A4 requirement to throw when a usable biome is required but absent; voxel integer rounding; and how biome-selected height algorithms and blending integrate with the current `HeightMap` design.
+3. **Application pass API:** Concrete interfaces and `TGenerationData` access for the already-separated height and voxel application passes; behavior of finite strata and remaining consumer-specific cases beyond A4; interaction with preexisting voxels.
 4. **Stratum semantics:** Thickness-to-integer rounding, unlimited-depth representation, per-stratum noise offsets, validation of weights, and how weighted noise maps to proportions.
 5. **Type names and extensibility:** Exact `spk::Voxel::Biome` vs `spk::Voxel::World::Biome` name; polymorphism and lifetime-safe references; custom behaviors for biome-specific decoration and multi-chunk structures.
 6. **Placement strategies:** Which reusable algorithms ship first, detailed APIs, finite-map boundaries and seed management; how environmental preferences are represented without making climate mandatory.
