@@ -1,6 +1,6 @@
 # Sparkle v0.1.5 — Plan d'implémentation revu
 
-> Plan seulement : aucune PR d'implémentation ne peut être fusionnée sans approbation explicite. Les fichiers de conception vivent sur docs/v0.1.5-world-generation-design, base V0.1.5.
+> Plan historique des PR00–PR10, rédigé lors des premières étapes du socle de chunks. Il ne constitue **pas** le plan des futures PR biome/hauteur. Aucune fusion sans approbation explicite. Le travail de conception biome est maintenant suivi dans [biome-architecture.md](biome-architecture.md) sur la branche `design/v0.1.5-biome-architecture`.
 
 ## Déroulement
 | Phase | PR | Démonstration attendue |
@@ -18,6 +18,10 @@ Phase Conteneur : aucune Entity détruite lors du remplacement, même adresse de
 Phase Génération : aucune allocation owning-pointer imposée au consommateur, retour nullopt valide, erreurs distinctes, API Task réellement respectée.
 Phase Streaming : pas de travail recalculé sur mouvement intra-chunk, aucune boucle sur nullopt, pas de cache après sortie, pas de saturation WorkerPool par timeouts.
 Phase Graphics : aucune dépendance Graphics dans Core, remeshing chunk+six voisins sur édition, pas de référence durable aux voisins, goldens angles variés.
+
+## Prochaine phase de conception (sans PR d'implémentation planifiée)
+
+L'objectif est de compléter les contrats de distribution pondérée, de raccordement aux sources de hauteur et de données temporaires génériques avant de découper des PR. La couche voxel doit ensuite pouvoir offrir des composants de génération directement réutilisables, tout en restant distincte de `spk::World`. Les exemples Voronoï/procéduraux ne sont pas à détailler dans cette phase. Les points restant à discuter sont recensés dans [biome-open-questions.md](biome-open-questions.md) : ce document n'approuve aucun calendrier ni arbitrage.
 
 ## Frontières de la release
 Sparkle fournit des mécanismes, pas des règles de génération du monde. La génération de villages, routes, cavernes, structures géographiques, la physique et la persistance gameplay restent du code utilisateur ou des versions ultérieures.
