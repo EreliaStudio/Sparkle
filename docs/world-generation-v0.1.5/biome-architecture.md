@@ -52,15 +52,15 @@ These cases are architectural tests, not engine-predefined biome types.
 ### 3.1 Generic world layer
 
 - `spk::World::Biome`: an **empty generic base**, with no mandatory identifier or environmental fields. A polymorphic destructor may be needed, but its API has not been finalized.
-- `spk::World::TerrainHeightGenerator`: a separate **generic abstract height-generation algorithm**. It is **not** under `spk::Voxel`, and must not depend on voxels or on biome types.
+- `spk::World::SurfaceBiome`: a generic specialization of `Biome` exposing a pure virtual `float groundHeight(const spk::Vector2 &worldPosition) const` (world X/Z). The biome chooses how to calculate its absolute continuous ground height. A separate `TerrainHeightGenerator` interface is no longer a mandatory dependency of the biome or combination pass; whether it has independent utility remains open (C1).
 - A height generator evaluates the **absolute world elevation** for an X/Z position. Base altitude is a property of the generator's configuration, **not** a value that the biome is required to add.
 - The generic placement concept associates spatial positions with biome definitions; no mandatory registry or numeric biome ID.
-- The generic biome/placement layer should not require climate, a particular mesh algorithm, or a particular ground representation. A separately defined, concrete `spk::World::HeightMap` now offers a Perlin-based generic height source and transient sampled grids (see §4.4). How the previously proposed abstract `TerrainHeightGenerator` and biome-selected sources integrate with it is still to be reconciled; neither concept should be silently conflated.
+- The generic biome/placement layer should not require climate, a particular mesh algorithm, or a particular ground representation. A separately defined, concrete `spk::World::HeightMap` now offers a Perlin-based generic height source and transient sampled grids (see §4.4). A `SurfaceBiome` may use a concrete `HeightMap`, a constant, or a custom algorithm internally. The exact efficient point-sampling API of `HeightMap` remains to be settled (C1/C6).
 
 ### 3.2 Voxel layer: first-class consumer of generic world data
 
 - A proposed `spk::Voxel::Biome` (exact namespace/name remains open; `spk::Voxel::World::Biome` was also mentioned) inherits the generic biome and holds:
-  1. A **non-owning reference** to a generic terrain-height generator.
+  1. For surface terrain, the `SurfaceBiome` height contract; no mandatory height-generator member. The precise voxel specialization/inheritance arrangement remains open.
   2. An **ordered collection of voxel ground strata**.
 - Strata define ground composition; height generators define terrain elevation and shape. A biome therefore influences both the shape and the material appearance of generated terrain.
 - Sparkle should provide directly usable voxel-world generation facilities, not force games to reimplement them. This is a specialized consumer layer: the generic distribution and height contracts remain independent of voxel representation. Voxel generation must not be tied to greedy meshing; other voxel meshing methods should be able to use the same biome descriptions, subject to representation-specific adapters.
@@ -122,11 +122,17 @@ A stratum's thickness Perlin configuration is independent from its material-sele
 
 Height selection/blending and material selection are distinct operations. Hard transitions permit tiered cliffs; smooth transitions permit plains-to-mountains blending.
 
+#### C2 — Surface biome height contract (validated 2026-11-24)
+
+`spk::World::Biome` remains a generic base with no required terrain-height method. A new generic (non-voxel) `spk::World::SurfaceBiome` derives from it and exposes a pure virtual `float groundHeight(const spk::Vector2 &worldPosition) const` query, returning the absolute continuous elevation at world X/Z. Exact signature spelling follows Sparkle conventions. Each concrete surface biome is responsible for its own algorithm: it may use a `HeightMap`, a constant, or custom logic, with optional sharing or composition of height sources. No mandatory source member, adapter or registry is imposed. The combination pass consumes this contract and remains ignorant of the algorithm (C4). The historical mandatory `TerrainHeightGenerator` reference in decisions 20–21 is superseded by this interface. How a consumer obtains/checks the surface specialization from generic influence pointers remains open (C3/C5); the generic grid remains unchanged. The concrete `HeightMap` stays non-polymorphic; its point-evaluation API and any independent role for a separate abstract height source remain open (C1/C6).
+
+The dimensionality of biome distribution is independent of terrain geometry: a future 2D distribution may feed a volumetric terrain generator, and a future 3D distribution may assign different biomes along one vertical column. Do not introduce a `VolumetricBiome`, density contract or 3D grid API now. These remain deferred under E5.
+
 #### C4 — Weighted height combination (validated 2026-11-24)
 
 Each contributing biome supplies its own absolute continuous terrain height `h_i(p)` at the same world-space position `p`, as though that biome were the only one present. The single generic combination rule is `H(p) = sum_i(w_i(p) * h_i(p))`, over the strictly positive normalized influences. For arbitrary relative weights the weighted mean would divide by their sum, but A3 already normalizes them; do not divide again by the number of biomes or by the grid capacity. Floating-point rounding follows A3. For example, heights 20 and 100 with normalized weights 0.75 and 0.25 yield 40.
 
-The placement strategy controls the spatial evolution of the weights: smoothly varying weights can blend continuous terrain sources, while abrupt one-hot weight changes can yield hard transitions. No separate hard/smooth blending mode or transition parameter is required by the generic height combiner. The sources remain independent and unaware of neighboring biomes. Material strata still use only the dominant biome. Zero-weight and null slots make no contribution; if there is no positive influence, a height consumer that requires a biome throws under A4. The mapping from biomes to sources (C1/C2), orchestration (C3/C7), handling missing/invalid sources (C5), efficient evaluation (C6), and revalidation after downstream edits (E2) remain open.
+The placement strategy controls the spatial evolution of the weights: smoothly varying weights can blend continuous terrain sources, while abrupt one-hot weight changes can yield hard transitions. No separate hard/smooth blending mode or transition parameter is required by the generic height combiner. The sources remain independent and unaware of neighboring biomes. Material strata still use only the dominant biome. Zero-weight and null slots make no contribution; if there is no positive influence, a height consumer that requires a biome throws under A4. The surface biome query is fixed in C2; reusable height-source integration (C1), orchestration (C3/C7), handling missing/invalid sources (C5), efficient evaluation (C6), and revalidation after downstream edits (E2) remain open.
 
 ### 4.4 HeightMap, Grid and generic generation pass — confirmed design (2026-11-24)
 
@@ -386,7 +392,7 @@ A `ContractProvider` subscription mechanism is **not required** for the initial 
 4. **Voxel strata/terrain application:** use final sampled heights and dominant biome strata to populate voxel columns; other consumers may use height interpolation for non-voxel surfaces.
 5. **Future world passes:** vegetation, prefabs, caves, roads, buildings etc., with coherent biome input.
 
-**Still unresolved:** Earlier decisions envisaged each voxel biome referring to a generic `TerrainHeightGenerator` and having placement-controlled hard/smooth height transitions. The newly approved simple concrete `HeightMap` (with its own named Perlin layers) is **not yet reconciled** with biome-specific algorithms and height-source orchestration. C4 now fixes the weighted combination formula and leaves the source interfaces and implementation open. Do not quietly equate the two or claim that blending has been implemented.
+**Still unresolved:** C2 fixes the `SurfaceBiome` height query and C4 fixes the weighted combination formula. The concrete `HeightMap` remains non-polymorphic; its efficient point evaluation, any independent role for a separate abstract height generator, and pass orchestration/type compatibility remain open (C1/C3/C5/C6/C7). Neither the new contract nor blending has been implemented.
 
 The existing `spk::World::Generator<TChunk,TGenerationData,TBuilder>` already calls passes in order with `apply(builder, coordinate, data)`. The current `spk::Voxel::PerlinTerrainPass` remains an implementation reference, not a constraint. No breaking change to `Generator` has been approved.
 
