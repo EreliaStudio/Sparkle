@@ -9,7 +9,7 @@
 - `spk::World` fournit des composants de génération **génériques et réutilisables**, sans dépendre du type de terrain ou de son mode de représentation.
 - `spk::Voxel` est un **cas d'utilisation majeur et une couche spécialisée de Sparkle** : à terme, il doit proposer un monde voxel 3D directement utilisable et des passes adaptées, sans qu'un jeu ait à les recoder.
 - Les exemples de stratégies de placement (Voronoï fini, champs de bruit procéduraux, règles climatiques, placement manuel, etc.) servent à vérifier la généralité des interfaces. Leur conception interne et leur implémentation sont **reportées**.
-- La sortie visée pour chaque position de l'espace X/Z est une **collection de références vers des biomes avec leurs poids**, éventuellement vide. Un biome dominant peut être déduit pour les consommateurs qui en ont besoin.
+- La sortie visée pour chaque position de l'espace X/Z est une **cellule de capacité fixe configurable à la compilation**, contenant des références vers des biomes avec leurs poids et des emplacements nuls inutilisés (A2). Un biome dominant peut être déduit pour les consommateurs qui en ont besoin.
 - **Décision déjà validée :** les hooks de distribution produisent des poids *relatifs* ; la **passe générique normalise elle-même ces poids**. Exemple : 3/5/2 devient 0,3/0,5/0,2. Ne pas rouvrir la répartition de cette responsabilité.
 - Le générateur existant enchaîne des `Pass::apply(builder, coordinate, TGenerationData&)` et fournit des données temporaires par demande. Son interface générale ne doit pas être refondue sans nécessité constatée.
 - Les références aux définitions de biomes restent non propriétaires ; l'instance propriétaire est sous la responsabilité du développeur. Aucune registry ni ID numérique obligatoire.
@@ -18,11 +18,11 @@
 
 ## A — Contrat de résultat de distribution (générique)
 
-**A1. Type d'une influence — RÉSOLUE (24 novembre 2026).** Le type public est `spk::World::Biome::Influence`, une structure imbriquée simple, copiable et affectable, composée de `const Biome *biome` et `float weight`. Le pointeur brut est non propriétaire ; une influence nulle est une erreur signalée par `spk::Exception` dans la passe générique, tandis qu'une collection vide représente une position sans biome. Le développeur garantit la durée de vie, la stabilité d'adresse et l'absence de modification des définitions pendant leur utilisation par les jobs. Aucun contrôle de durée de vie ni validation interne de la structure. Le poids reste relatif avant normalisation et normalisé après la passe générique. Voir [le contrat validé A1](biome-architecture.md#a1--influence-record-validated-2026-11-24). A2 (stockage), A3 (validation des poids), A4 (dominant), A5 (ordre) et E3 (propriété et partage au niveau du système) restent ouvertes.
+**A1. Type d'une influence — RÉSOLUE (24 novembre 2026).** Le type public est `spk::World::Biome::Influence`, une structure imbriquée simple, copiable et affectable, composée de `const Biome *biome` et `float weight`. Le pointeur brut est non propriétaire. **Révision validée pendant A2 :** `nullptr` représente un emplacement inutilisé, et non une erreur ; une cellule entièrement nulle représente une position sans biome. L'état vide par défaut est `{nullptr, 0.0f}` ; les emplacements nuls ne contribuent pas à la normalisation. Le développeur garantit la durée de vie, la stabilité d'adresse et l'absence de modification des définitions pendant leur utilisation par les jobs. Aucun contrôle de durée de vie ni validation interne de la structure. Le poids reste relatif avant normalisation et normalisé après la passe générique. Voir [le contrat validé A1](biome-architecture.md#a1--influence-record-validated-2026-11-24). A2 (stockage) est également résolue. A3 (validation des poids), A4 (dominant), A5 (ordre) et E3 (propriété et partage au niveau du système) restent ouvertes.
 
-**A2. Collection et stockage.** Quel conteneur représente les influences à une position (vecteur réutilisable, petite capacité inline, autre), et quel conteneur porte ces listes sur tout le domaine échantillonné ? Comment permettre zéro, un ou plusieurs biomes sans limite fixe ni allocation par échantillon imposée ?
+**A2. Collection et stockage — RÉSOLUE (24 novembre 2026).** `spk::World::Biome::Influence::Grid<TCapacity>` stocke un vecteur contigu de cellules `std::array<Biome::Influence, TCapacity>`. La capacité positive est choisie à la compilation par le développeur et partagée avec la passe de distribution, sans maximum arbitraire ni valeur par défaut imposée. Le hook écrit directement dans la cellule mutable, sans vecteur temporaire ni transfert. Les emplacements inutilisés sont nuls ; les cellules recyclées sont réinitialisées avant calcul. Accès direct mutable et const via `at(position)` ; règles spatiales encore ouvertes (B3/B4). Grilles recyclées via des pools statiques par spécialisation et par capacité en puissances de deux (nombre total de cellules), avec `Lease`. Le mécanisme commun sera extrait dans `spk::CapacityPool<TElement>`, utilisé aussi par HeightMap::Grid, avec une PR indépendante à définir. Voir [contrat A2](biome-architecture.md#a2--fixed-capacity-influence-grid-and-pooling-validated-2026-11-24).
 
-**A3. Nettoyage/validation des poids bruts.** Quelle règle appliquer aux poids négatifs, NaN, infinis, aux poids nuls, aux doublons d'un même biome et à une liste non vide dont la somme est nulle ? Quelles situations entraînent `spk::Exception`, suppression ou agrégation d'entrées ? La **normalisation par Sparkle n'est pas en question** ; ses règles de validation détaillées le sont.
+**A3. Nettoyage/validation des poids bruts.** Quelle règle appliquer aux poids négatifs, NaN, infinis, aux poids nuls, aux doublons d'un même biome et aux poids des emplacements nuls et à une cellule ayant des biomes renseignés mais dont la somme des poids est nulle ? Les emplacements nuls sont déjà reconnus comme absents par A2. Quelles situations entraînent `spk::Exception`, suppression ou agrégation d'entrées ? La **normalisation par Sparkle n'est pas en question** ; ses règles de validation détaillées le sont.
 
 **A4. Sélection du dominant.** Quel contrat d'égalité pour des poids identiques : premier élément fourni, ordre stable explicite, règle de comparaison indépendante de l'ordre ? Éviter d'imposer un ID de biome qui a déjà été rejeté.
 
@@ -30,13 +30,13 @@
 
 ## B — Passes de distribution : hooks et coordonnées (générique)
 
-**B1. Signature minimale du hook de calcul.** Quelles entrées exactes (position mondiale X/Z, contexte optionnel) et quelle sortie réutilisable ? Le passage d'un conteneur de sortie mutable est envisagé pour éviter une allocation par position, mais la signature n'est pas validée.
+**B1. Signature minimale du hook de calcul.** Quelles entrées exactes (position mondiale X/Z, contexte optionnel) ? A2 impose une référence mutable vers la cellule de destination de capacité template commune ; la signature complète reste ouverte.
 
 **B2. Hooks de configuration/destination.** De quelle manière une passe générique obtient-elle l'étendue 2D, le pas d'échantillonnage, l'origine et la destination dans `TGenerationData` sans imposer la structure de données du jeu ? Nombre et signatures des hooks à finaliser.
 
 **B3. Coordonnées et résolution.** Quelle règle garantit une même distribution à une même position mondiale, y compris aux limites de chunks et aux coordonnées négatives ? Comment choisir la résolution de distribution indépendamment des algorithmes de placement, sans dégrader la précision requise par le consommateur ?
 
-**B4. Règles d'accès aux résultats.** Échantillons aux deux extrémités ou domaine semi-ouvert, accès hors limites, accès discret/interpolé et compatibilité éventuelle avec `HeightMap::Grid` : quelles règles sont nécessaires pour que deux passes puissent partager le même domaine ?
+**B4. Règles d'accès aux résultats.** A2 a validé l'accès direct mutable et const à la cellule via `at(position)` ; Échantillons aux deux extrémités ou domaine semi-ouvert, accès hors limites, accès discret/interpolé et compatibilité éventuelle avec `HeightMap::Grid` : quelles règles sont nécessaires pour que deux passes puissent partager le même domaine ?
 
 **B5. Initialisation facultative des stratégies.** Une stratégie ayant un état de monde fini peut-elle initialiser cet état séparément de `apply()` ? Quels hooks sont réellement génériques, et lesquels doivent rester une responsabilité de l'implémentation de stratégie ?
 
@@ -52,7 +52,7 @@
 
 **C4. Fusion des hauteurs.** Quel contrat de fusion après normalisation ? Quels modes de transition sont nécessaires dans le cœur générique (dure, pondérée), où vivent les paramètres éventuels, et que faire lorsque plusieurs sources contribuent à la même position ? Ne pas y intégrer de mathématique Voronoï.
 
-**C5. Cas sans hauteur disponible.** Quel résultat produire pour une distribution vide, une source absente, une hauteur non finie, ou une influence négligeable ? Qui décide de ne pas modifier une grille existante et qui signale l'erreur ?
+**C5. Cas sans hauteur disponible.** Quel résultat produire pour une cellule sans biome, une source absente, une hauteur non finie, ou une influence négligeable ? Qui décide de ne pas modifier une grille existante et qui signale l'erreur ?
 
 **C6. Échantillonnage efficace.** Faut-il générer des grilles complètes par source influente ou évaluer uniquement les positions ayant un poids utile ? Comment garantir un résultat identique, gérer les faibles poids et établir les benchmarks, sans anticiper l'optimisation par une règle prématurée ?
 
@@ -84,7 +84,7 @@ Les choix suivants sont **déjà arrêtés** et ne sont pas à rouvrir : taille 
 
 ## F — Tests, validation et critères d'acceptation (à écrire avant les PR)
 
-**F1. Normalisation et validation.** Jeux d'essais zéro/un/plusieurs biomes, rejet d'un pointeur de biome nul (validé par A1), valeurs 3/5/2 → 0,3/0,5/0,2, somme nulle, valeurs invalides, doublons et égalités ; la décision du moteur de normaliser est établie, les autres résultats attendus attendent les règles correspondantes.
+**F1. Normalisation et validation.** Jeux d'essais zéro/un/plusieurs biomes, acceptation des emplacements nuls et exclusion de la normalisation (A1 révisée par A2), valeurs 3/5/2 → 0,3/0,5/0,2, somme nulle, valeurs invalides, doublons et égalités ; la décision du moteur de normaliser est établie, les autres résultats attendus attendent les règles correspondantes.
 
 **F2. Test de hook substituable.** Deux stratégies fictives de calcul, une passe générique commune ; vérifier que le parcours, la normalisation, le stockage, la publication et la libération ne sont pas réimplémentés par les stratégies.
 
@@ -92,7 +92,7 @@ Les choix suivants sont **déjà arrêtés** et ne sont pas à rouvrir : taille 
 
 **F4. HeightMap/combinaison.** Source unique, sources multiples, fusion pondérée, valeurs continues, grilles intercalées, cas vides, exceptions et absence d'écriture partielle publiée.
 
-**F5. Pools/performance.** Compter les allocations, observer la réutilisation des `Lease`, comparer évaluations par position et par grilles et vérifier la concurrence. Les budgets chiffrés et scénarios représentatifs restent à définir.
+**F5. Pools/performance.** Tester les capacités configurables, l'écriture directe, la remise à zéro et le recyclage des grilles ; compter les allocations, observer la réutilisation des `Lease`, comparer évaluations par position et par grilles et vérifier la concurrence. Les budgets chiffrés et scénarios représentatifs restent à définir.
 
 **F6. Intégration spécialisée sans couplage du cœur.** Décrire séparément les TU Core génériques et les tests plus spécifiques (dont voxel et golden images) qui prouveront la réutilisation du résultat ; aucune dépendance de Graphics requise dans Core.
 
