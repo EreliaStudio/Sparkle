@@ -118,7 +118,7 @@ namespace spk::World
 				}
 			}
 
-			void _rebuild(const ObserverStateCollection &observers)
+			void _rebuild(const ObserverStateCollection &observers, ChunkRequester<TChunk> &requester)
 			{
 				ChunkPriorityCollection priorities;
 				for (const auto &[observer, state] : observers)
@@ -135,9 +135,53 @@ namespace spk::World
 					coordinates.push_back(coordinate);
 				}
 
-				_priorities = std::move(priorities);
-				_coordinates.clear();
-				_coordinates.pushBack(std::move(coordinates));
+				std::vector<ChunkCoordinate> retained;
+				std::vector<ChunkCoordinate> released;
+				auto old = _priorities.begin();
+				auto next = priorities.begin();
+				while (old != _priorities.end() || next != priorities.end())
+				{
+					if (next == priorities.end() || (old != _priorities.end() && old->first < next->first))
+					{
+						released.push_back((old++)->first);
+					}
+					else if (old == _priorities.end() || next->first < old->first)
+					{
+						retained.push_back((next++)->first);
+					}
+					else
+					{
+						++old;
+						++next;
+					}
+				}
+
+				auto previousQueue = std::move(_coordinates);
+				_priorities.swap(priorities);
+				std::size_t count = 0;
+				try
+				{
+					_coordinates = PriorityQueue<ChunkCoordinate, Comparator>(Comparator{&_priorities});
+					_coordinates.pushBack(std::move(coordinates));
+					for (; count < retained.size(); ++count)
+					{
+						requester.retain(retained[count]);
+					}
+				}
+				catch (...)
+				{
+					while (count != 0)
+					{
+						requester.release(retained[--count]);
+					}
+					_priorities.swap(priorities);
+					_coordinates = std::move(previousQueue);
+					throw;
+				}
+				for (const auto &coordinate : released)
+				{
+					requester.release(coordinate);
+				}
 			}
 
 		public:
@@ -146,22 +190,27 @@ namespace spk::World
 			{
 			}
 
-			[[nodiscard]] bool refresh(EngineHeadless *engine)
+			[[nodiscard]] bool refresh(EngineHeadless *engine, ChunkRequester<TChunk> &requester)
 			{
 				ObserverStateCollection current = _capture(engine);
 				if (_initialized && current == _observers)
 				{
 					return false;
 				}
-				_rebuild(current);
+				_rebuild(current, requester);
 				_observers = std::move(current);
 				_initialized = true;
 				++_revision;
 				return true;
 			}
 
-			void reset()
+			void reset(ChunkRequester<TChunk> &requester) noexcept
 			{
+				for (const auto &[coordinate, priority] : _priorities)
+				{
+					(void)priority;
+					requester.release(coordinate);
+				}
 				_observers.clear();
 				_priorities.clear();
 				_coordinates.clear();
@@ -425,7 +474,7 @@ namespace spk::World
 
 		void _refreshInterests()
 		{
-			if (_interest.refresh(engine()))
+			if (_interest.refresh(engine(), _requester))
 			{
 				_requestManager.retain(_interest);
 				_unloadUnwanted();
@@ -504,6 +553,11 @@ namespace spk::World
 				});
 		}
 
+		~WorldStreamingSystem() override
+		{
+			_interest.reset(_requester);
+		}
+
 		WorldStreamingSystem(const WorldStreamingSystem &) = delete;
 		WorldStreamingSystem &operator=(const WorldStreamingSystem &) = delete;
 		WorldStreamingSystem(WorldStreamingSystem &&) = delete;
@@ -526,7 +580,7 @@ namespace spk::World
 			if (next == nullptr)
 			{
 				_requestManager.reset();
-				_interest.reset();
+				_interest.reset(_requester);
 			}
 			System::attach(next);
 		}

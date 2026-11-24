@@ -20,9 +20,13 @@ namespace spk::World
 		{
 		}
 
+		void retain(const ChunkCoordinate &coordinate) override { _generator.retain(coordinate); }
+		void release(const ChunkCoordinate &coordinate) noexcept override { _generator.release(coordinate); }
+
 		[[nodiscard]] typename ChunkRequester<TChunk>::Answer request(const ChunkCoordinate &coordinate) override
 		{
-			return _workerPool.submit([generator = &_generator, coordinate]() {
+			return _workerPool.submit([generator = &_generator, coordinate, reservation = _generator.reserve(coordinate)]() mutable {
+				auto job = std::move(reservation);
 				return generator->generate(coordinate);
 			});
 		}

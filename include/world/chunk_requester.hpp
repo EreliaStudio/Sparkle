@@ -16,6 +16,9 @@ namespace spk::World
 
 		virtual ~ChunkRequester() = default;
 
+		virtual void retain(const ChunkCoordinate &) {}
+		virtual void release(const ChunkCoordinate &) noexcept {}
+
 		[[nodiscard]] virtual Answer request(const ChunkCoordinate &coordinate) = 0;
 	};
 }

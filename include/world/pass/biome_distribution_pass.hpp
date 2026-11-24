@@ -9,8 +9,7 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
-	class BiomeDistributionPass : public Generator<TChunk, TGenerationData, TBuilder>::Pass
+	class BiomeDistribution
 	{
 	protected:
 		// Validate the entire cell before changing any weight. The order and
@@ -57,5 +56,10 @@ namespace spk::World
 				}
 			}
 		}
+	};
+
+	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
+	class BiomeDistributionPass : public Generator<TChunk, TGenerationData, TBuilder>::Pass, protected BiomeDistribution
+	{
 	};
 }
