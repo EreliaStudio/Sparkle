@@ -122,6 +122,12 @@ A stratum's thickness Perlin configuration is independent from its material-sele
 
 Height selection/blending and material selection are distinct operations. Hard transitions permit tiered cliffs; smooth transitions permit plains-to-mountains blending.
 
+#### C4 — Weighted height combination (validated 2026-11-24)
+
+Each contributing biome supplies its own absolute continuous terrain height `h_i(p)` at the same world-space position `p`, as though that biome were the only one present. The single generic combination rule is `H(p) = sum_i(w_i(p) * h_i(p))`, over the strictly positive normalized influences. For arbitrary relative weights the weighted mean would divide by their sum, but A3 already normalizes them; do not divide again by the number of biomes or by the grid capacity. Floating-point rounding follows A3. For example, heights 20 and 100 with normalized weights 0.75 and 0.25 yield 40.
+
+The placement strategy controls the spatial evolution of the weights: smoothly varying weights can blend continuous terrain sources, while abrupt one-hot weight changes can yield hard transitions. No separate hard/smooth blending mode or transition parameter is required by the generic height combiner. The sources remain independent and unaware of neighboring biomes. Material strata still use only the dominant biome. Zero-weight and null slots make no contribution; if there is no positive influence, a height consumer that requires a biome throws under A4. The mapping from biomes to sources (C1/C2), orchestration (C3/C7), handling missing/invalid sources (C5), efficient evaluation (C6), and revalidation after downstream edits (E2) remain open.
+
 ### 4.4 HeightMap, Grid and generic generation pass — confirmed design (2026-11-24)
 
 The later discussion supersedes older, exploratory alternatives elsewhere in this document. This section records **confirmed decisions**, not yet compiled or implemented code. Precise header/type names remain to be checked against existing Sparkle conventions.
@@ -223,7 +229,7 @@ The intended public generation API is:
 
 - The public record is **`spk::World::Biome::Influence`**, a nested aggregate containing a non-owning `const Biome *biome` and a `float weight`. A1 is resolved and its null-pointer rule has been explicitly revised by A2 (see the validated contracts below).
 - One sampled world-space position can return **zero, one, or multiple** influences. Each cell has a fixed compile-time capacity chosen by the developer, with no engine-imposed maximum or mandatory value; unused slots have null biome pointers.
-- When several biomes contribute, downstream height evaluation can blend their independent height sources by normalized weights; a downstream consumer needing one biome can select the dominant influence. The generic distribution result itself is independent of what those consumers do.
+- When several biomes contribute, downstream height evaluation combines their independent height sources by normalized weights (C4); a downstream consumer needing one biome can select the dominant influence. The generic distribution result itself is independent of what those consumers do.
 - Prefer temporary, per-generation-request storage in `TGenerationData`. Strategy-specific preprocessing/state (e.g. precomputed finite-world regions) may be held separately by the strategy and shared safely across generation requests. Never require a world-wide per-position allocation.
 - No mandatory numeric biome IDs, biome registry, climate fields, seed policy, or ownership transfer. Referenced biome definitions must outlive concurrent jobs.
 
@@ -380,7 +386,7 @@ A `ContractProvider` subscription mechanism is **not required** for the initial 
 4. **Voxel strata/terrain application:** use final sampled heights and dominant biome strata to populate voxel columns; other consumers may use height interpolation for non-voxel surfaces.
 5. **Future world passes:** vegetation, prefabs, caves, roads, buildings etc., with coherent biome input.
 
-**Still unresolved:** Earlier decisions envisaged each voxel biome referring to a generic `TerrainHeightGenerator` and having placement-controlled hard/smooth height transitions. The newly approved simple concrete `HeightMap` (with its own named Perlin layers) is **not yet reconciled** with biome-specific algorithms and transition blending. Do not quietly equate the two or claim multi-biome blending has been implemented/designed.
+**Still unresolved:** Earlier decisions envisaged each voxel biome referring to a generic `TerrainHeightGenerator` and having placement-controlled hard/smooth height transitions. The newly approved simple concrete `HeightMap` (with its own named Perlin layers) is **not yet reconciled** with biome-specific algorithms and height-source orchestration. C4 now fixes the weighted combination formula and leaves the source interfaces and implementation open. Do not quietly equate the two or claim that blending has been implemented.
 
 The existing `spk::World::Generator<TChunk,TGenerationData,TBuilder>` already calls passes in order with `apply(builder, coordinate, data)`. The current `spk::Voxel::PerlinTerrainPass` remains an implementation reference, not a constraint. No breaking change to `Generator` has been approved.
 
