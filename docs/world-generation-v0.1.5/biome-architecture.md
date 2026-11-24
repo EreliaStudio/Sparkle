@@ -221,21 +221,46 @@ The intended public generation API is:
 
 #### Conceptual result type
 
-- A dedicated `BiomeInfluence` record is preferred over a tuple: a **non-owning reference/pointer to a shared `spk::World::Biome` definition** and a **weight**. The concrete pointer/reference/nullable representation and storage container are still open.
+- The public record is **`spk::World::Biome::Influence`**, a nested aggregate containing a non-owning `const Biome *biome` and a `float weight`. A1 is resolved (see the validated contract below); the collection and storage remain open (A2).
 - One sampled world-space position can return **zero, one, or multiple** influences. The result must not be artificially limited to the two closest biomes, a fixed number of entries, or a Voronoi-specific boundary concept.
 - When several biomes contribute, downstream height evaluation can blend their independent height sources by normalized weights; a downstream consumer needing one biome can select the dominant influence. The generic distribution result itself is independent of what those consumers do.
 - Prefer temporary, per-generation-request storage in `TGenerationData`. Strategy-specific preprocessing/state (e.g. precomputed finite-world regions) may be held separately by the strategy and shared safely across generation requests. Never require a world-wide per-position allocation.
 - No mandatory numeric biome IDs, biome registry, climate fields, seed policy, or ownership transfer. Referenced biome definitions must outlive concurrent jobs.
+
+#### A1 — Influence record (validated 2026-11-24)
+
+The exact public record is nested directly inside the generic biome definition, not a standalone `World::BiomeInfluence` type. The following C++23 declaration illustrates the approved record only; the rest of the enclosing `Biome` API (including its destructor) is not settled here.
+
+```cpp
+namespace spk::World
+{
+    class Biome
+    {
+    public:
+        struct Influence
+        {
+            const Biome *biome;
+            float weight;
+        };
+    };
+}
+```
+
+- `Influence` is a simple aggregate, copyable and assignable by value, with public members. No custom constructor, accessor, ownership mechanism, subscription or internal validation. It does not depend on coordinates, voxels, a distribution algorithm or a biome registry.
+- `biome` is a raw, non-owning pointer to an existing definition, read-only through the influence. The pointer itself and the weight may be reassigned. A null pointer is **invalid**: the generic distribution pass must report it with `spk::Exception` before publishing results, including when the associated weight is zero. An empty collection alone represents an unassigned position; no sentinel influence or fallback biome is required. The aggregate itself does not enforce validity.
+- `weight` is a `float`, representing a relative weight in raw hook output and a normalized weight in published output. The same record is used for both stages. The generic pass owns normalization; rules for negative, non-finite, zero, duplicate or all-zero weights and numerical tolerance remain open (A3).
+- The developer owns the biome definitions and chooses their storage. Each referenced definition must remain alive at a stable address for as long as any influence referring to it may be used, including queued or executing generation work and downstream consumers. Definitions must not be modified while used by generation jobs. A timeout alone does not end the lifetime obligation if a job is still running. Sparkle does not track lifetimes or automatically manage ownership.
+- A1 does not choose a container, an ordering, a dominance rule, a hook signature, a concrete biome destructor, or a global reconfiguration/lifetime protocol. These remain separate design questions (A2–A5, B1, B6, E3).
 
 #### Extension hooks (illustrative, not signatures)
 
 The generic reusable pass is responsible for **implementing** `apply()`; games should not have to copy a position loop, allocate a map, normalize weights, or write values manually. Reusable work belongs in Sparkle; hooks are reserved for genuinely strategy-specific choices. Minimum conceptual customization points:
 
 1. **Sampling configuration/destination adapters** that supply the 2D world-space extent, sample spacing, and destination in the caller's `TGenerationData`, following existing configurable-pass patterns. How these are expressed (virtual hooks or a bound context) is open.
-2. **A required distribution hook** such as `_sampleInfluences(worldPosition, reusableOutput)`. It fills a temporary list of `BiomeInfluence` records. Returning a fresh heap-allocated vector per position must not be mandated.
+2. **A required distribution hook** such as `_sampleInfluences(worldPosition, reusableOutput)`. It fills a temporary list of `Biome::Influence` records. Returning a fresh heap-allocated vector per position must not be mandated.
 3. **Optional strategy initialization/preprocessing** for algorithms needing a world-level layout. Such state is prepared by the strategy's owner independently of chunk generation; no mandatory per-chunk or global precomputation hook is required in the generic pass.
 
-**Confirmed shared normalization responsibility (2026-11-24):** the strategy hook may return arbitrary **relative** weights (e.g. 3, 5, 2); the reusable Sparkle pass converts them into normalized weights summing to 1 (e.g. 0.3, 0.5, 0.2) before handing them to downstream consumers. Strategy code must not be required to repeat normalization. **Still open:** precise validation for negative/non-finite weights and null biome references; zero-weight removal; duplicate biome entries; an all-zero result; floating-point tolerance; deterministic tie-breaking without mandatory IDs. None of these unspecified details is silently approved by the normalization decision.
+**Confirmed shared normalization responsibility (2026-11-24):** the strategy hook may return arbitrary **relative** weights (e.g. 3, 5, 2); the reusable Sparkle pass converts them into normalized weights summing to 1 (e.g. 0.3, 0.5, 0.2) before handing them to downstream consumers. Strategy code must not be required to repeat normalization. **Still open:** precise validation for negative/non-finite weights (null biome references are already errors under A1); zero-weight removal; duplicate biome entries; an all-zero result; floating-point tolerance; deterministic tie-breaking without mandatory IDs. None of these unspecified details is silently approved by the normalization decision.
 
 A `ContractProvider` subscription mechanism is **not required** for the initial generation pipeline. It can be added only if later designs genuinely require live configuration-change notification or cache invalidation; generation may assume stable definitions while jobs execute.
 
@@ -253,7 +278,7 @@ A `ContractProvider` subscription mechanism is **not required** for the initial 
 - Valid non-owning-reference lifetimes and read-only concurrent generation; no forced per-position heap allocation.
 - A mock strategy proving that the base pass—not user code—performs traversal, transient storage, validation and publication.
 
-**Pending decisions:** exact record/list/map types, how the pass receives output storage and sample configuration, invalid/duplicate weight handling, tie-breaking policy, and how the multi-biome result connects to the separate generic height-combination pass. The normalization *responsibility* itself is no longer pending. See [open questions](biome-open-questions.md).
+**Pending decisions:** exact list/map types (the record is settled by A1), how the pass receives output storage and sample configuration, invalid/duplicate weight handling, tie-breaking policy, and how the multi-biome result connects to the separate generic height-combination pass. The normalization *responsibility* itself is no longer pending. See [open questions](biome-open-questions.md).
 
 ## 5. Proposed pass flow (heightmap API confirmed; biome integration still open)
 
@@ -305,7 +330,7 @@ This scope decision does not settle the previously proposed alternatives concern
 
 This is a historical summary kept for context. The **current, categorized and independently actionable inventory** is [biome-open-questions.md](biome-open-questions.md). It deliberately leaves details unanswered for future focused discussions. **Weight normalization by the generic pass is confirmed**, not an open choice.
 
-1. **Multi-influence storage and hook contract:** Resolve §4.5's proposed list-of-biomes-with-weights representation, shared validation (other than already-approved normalization responsibility), adapter hooks, duplicate handling, tie policy, and efficient temporary storage. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
+1. **Multi-influence storage and hook contract:** A1 settled the individual `Biome::Influence` record; resolve the remaining collection representation in §4.5, shared validation (other than already-approved normalization responsibility), adapter hooks, duplicate handling, tie policy, and efficient temporary storage. Downstream consumers may derive a dominant biome but must not force a single entry in the distribution result.
 2. **Remaining HeightMap integration details:** The primary procedural/grid contract is **confirmed in §4.4**. Still to settle: exact C++ type/alias names; representation of `Grid`'s storage; numeric edge cases for floating-point divisibility tolerance; reference semantics for `at()` at boundaries; handling unassigned biome columns; voxel integer rounding; and how biome-selected height algorithms and blending integrate with the current `HeightMap` design.
 3. **Application pass API:** Concrete interfaces and `TGenerationData` access for the already-separated height and voxel application passes; behavior of finite strata and unassigned columns; interaction with preexisting voxels.
 4. **Stratum semantics:** Thickness-to-integer rounding, unlimited-depth representation, per-stratum noise offsets, validation of weights, and how weighted noise maps to proportions.
