@@ -88,6 +88,7 @@ namespace spk::World
 
 	protected:
 		virtual Data _createSurfaceData() { return {}; }
+		virtual void _finalizeSurfaceData(const spk::Vector2Int &, Data &) {}
 		virtual Handle &_surfaceDestination(TGenerationData &data) = 0;
 
 	public:
@@ -126,6 +127,7 @@ namespace spk::World
 					{
 						pass->apply(key, *building);
 					}
+					_finalizeSurfaceData(key, *building);
 					entry->result = std::move(building);
 				}
 				result = entry->result;
