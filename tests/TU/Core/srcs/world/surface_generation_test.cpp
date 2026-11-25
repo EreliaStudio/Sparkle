@@ -13,7 +13,7 @@
 #include "world/height_map.hpp"
 #include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
-#include "world/pass/surface_generation_pass.hpp"
+#include "voxel/biome_surface_data.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
 #include "world/surface_biome.hpp"
 
@@ -43,31 +43,8 @@ namespace
 		int value;
 	};
 
-	struct SurfaceData
-	{
-		using InfluenceGrid = spk::World::SurfaceBiome::Influence::Grid<2>;
-		InfluenceGrid::Lease influences;
-		HeightMap::Grid::Lease heights;
-		int value = 0;
-	};
-	struct Data
-	{
-		using Surface = SurfaceData;
-		std::shared_ptr<const Surface> surface;
-		int value = 0;
-	};
-
-	using GeneratorBase = spk::World::Generator<Chunk, Data>;
-	using SurfaceBase = spk::World::SurfaceGenerationPass<Chunk, Data>;
-
-	class Surface : public SurfaceBase
-	{
-	protected:
-		Handle &_surfaceDestination(Data &data) override
-		{
-			return data.surface;
-		}
-	};
+	using SurfaceData = spk::Voxel::BiomeSurfaceData<2>;
+	using ColumnCache = spk::Voxel::BiomeGenerationData<2>;
 
 	class Distribution : public spk::World::SurfaceBiomeDistributionPass<SurfaceData, 2>
 	{
@@ -108,64 +85,6 @@ namespace
 		}
 	};
 
-	class CountPass : public spk::World::SurfacePass<SurfaceData>
-	{
-	private:
-		std::atomic<int> &_calls;
-		std::atomic<bool> &_fail;
-
-	public:
-		CountPass(std::atomic<int> &calls, std::atomic<bool> &fail) :
-			_calls(calls),
-			_fail(fail)
-		{
-		}
-		void apply(const spk::Vector2Int &, SurfaceData &data) override
-		{
-			++_calls;
-			if (_fail.exchange(false))
-			{
-				throw spk::Exception("Injected surface failure");
-			}
-			data.value = static_cast<int>(data.heights->at({0, 0}));
-		}
-	};
-
-	class Application : public GeneratorBase::Pass
-	{
-	public:
-		void apply(const Coordinate &, Data &data) override
-		{
-			data.value = data.surface->value;
-		}
-	};
-
-	class Generator : public GeneratorBase
-	{
-	protected:
-		std::optional<Data> _createGenerationData(const Coordinate &) override
-		{
-			return Data{};
-		}
-
-		Chunk _instantiateChunk(Data &data) override
-		{
-			return {data.value};
-		}
-
-	public:
-		std::atomic<int> calls{0};
-		std::atomic<bool> fail{false};
-
-		Generator()
-		{
-			auto &surface = addPass<Surface>();
-			surface.addPass<Distribution>();
-			surface.addPass<Combination>(CombinationBase::Combination::Weighted);
-			surface.addPass<CountPass>(calls, fail);
-			addPass<Application>();
-		}
-	};
 }
 
 namespace
@@ -295,45 +214,59 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
 }
 
-TEST(SurfaceGenerationTest, ConcurrentVerticalJobsShareOneWeightedHeight)
+TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 {
-	Generator generator;
-	generator.retain({-1, 0, 2});
-	generator.retain({-1, 1, 2});
+	ColumnCache cache;
+	Distribution distribution;
+	Combination combination(CombinationBase::Combination::Weighted);
+	std::atomic<int> calls{0};
+	const auto build = [&](SurfaceData &column) {
+		++calls;
+		distribution.apply({-1, 2}, column);
+		combination.apply({-1, 2}, column);
+	};
 	auto first = std::async(std::launch::async, [&] {
-		return generator.generate({-1, 0, 2});
+		return cache.obtainColumn({-1, 2}, build);
 	});
 	auto second = std::async(std::launch::async, [&] {
-		return generator.generate({-1, 1, 2});
+		return cache.obtainColumn({-1, 2}, build);
 	});
-	EXPECT_EQ(first.get()->value, 40);
-	EXPECT_EQ(second.get()->value, 40);
-	EXPECT_EQ(generator.calls.load(), 1);
-	generator.release({-1, 0, 2});
-	EXPECT_EQ(generator.generate({-1, 1, 2})->value, 40);
-	EXPECT_EQ(generator.calls.load(), 1);
-	generator.release({-1, 1, 2});
-	EXPECT_EQ(generator.generate({-1, 0, 2})->value, 40);
-	EXPECT_EQ(generator.calls.load(), 2);
+	auto a = first.get();
+	auto b = second.get();
+	EXPECT_EQ(a.get(), b.get());
+	EXPECT_FLOAT_EQ(a->heights->at({0, 0}), 40);
+	EXPECT_EQ(calls.load(), 1);
+	cache.flush();
+	EXPECT_EQ(cache.columnCount(), 1u);
+	a.reset();
+	b.reset();
+	EXPECT_FLOAT_EQ(cache.obtainColumn({-1, 2}, build)->heights->at({0, 0}), 40);
+	EXPECT_EQ(calls.load(), 1);
+	cache.flush();
+	EXPECT_EQ(cache.columnCount(), 0u);
+	EXPECT_FLOAT_EQ(cache.obtainColumn({-1, 2}, build)->heights->at({0, 0}), 40);
+	EXPECT_EQ(calls.load(), 2);
 }
 
-TEST(SurfaceGenerationTest, QueuedReservationSurvivesLastInterestAndFailedBuildRetries)
+TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 {
-	Generator generator;
-	generator.retain({0, 0, 0});
-	EXPECT_EQ(generator.generate({0, 0, 0})->value, 40);
-	{
-		auto reservation = generator.reserve({0, 1, 0});
-		generator.release({0, 0, 0});
-		EXPECT_EQ(generator.generate({0, 1, 0})->value, 40);
-		EXPECT_EQ(generator.calls.load(), 1);
-	}
-	generator.retain({0, 0, 0});
-	generator.fail = true;
-	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
-	EXPECT_EQ(generator.generate({0, 0, 0})->value, 40);
-	EXPECT_EQ(generator.calls.load(), 3);
-	generator.release({0, 0, 0});
+	ColumnCache cache;
+	Distribution distribution;
+	Combination combination(CombinationBase::Combination::Weighted);
+	int calls = 0;
+	const auto build = [&](SurfaceData &column) {
+		distribution.apply({0, 0}, column);
+		if (++calls == 1)
+		{
+			throw spk::Exception("Injected column failure");
+		}
+		combination.apply({0, 0}, column);
+	};
+	EXPECT_THROW((void)cache.obtainColumn({0, 0}, build), spk::Exception);
+	EXPECT_FLOAT_EQ(cache.obtainColumn({0, 0}, build)->heights->at({0, 0}), 40);
+	EXPECT_EQ(calls, 2);
+	EXPECT_FLOAT_EQ(cache.obtainColumn({0, 0}, build)->heights->at({0, 0}), 40);
+	EXPECT_EQ(calls, 2);
 }
 
 TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
@@ -436,26 +369,31 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 	EXPECT_EQ(data.heights.get(), previous);
 }
 
-TEST(SurfaceGenerationTest, DifferentColumnsHaveIndependentCacheLifetimes)
+TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 {
-	Generator generator;
-	generator.retain({-1, 0, 0});
-	generator.retain({0, 0, 0});
-	auto a = std::async(std::launch::async, [&] {
-		return generator.generate({-1, 0, 0});
+	ColumnCache cache;
+	std::promise<void> entered;
+	std::promise<void> resume;
+	auto ready = entered.get_future();
+	auto gate = resume.get_future().share();
+	auto building = std::async(std::launch::async, [&] {
+		return cache.obtainColumn({-1, 0}, [&](SurfaceData &) {
+			entered.set_value();
+			gate.wait();
+		});
 	});
-	auto b = std::async(std::launch::async, [&] {
-		return generator.generate({0, 0, 0});
-	});
-	ASSERT_TRUE(a.get());
-	ASSERT_TRUE(b.get());
-	EXPECT_EQ(generator.calls.load(), 2);
-	generator.release({-1, 0, 0});
-	EXPECT_TRUE(generator.generate({0, 2, 0}));
-	EXPECT_EQ(generator.calls.load(), 2);
-	EXPECT_TRUE(generator.generate({-1, 0, 0}));
-	EXPECT_EQ(generator.calls.load(), 3);
-	generator.release({0, 0, 0});
+	ready.wait();
+	auto idle = cache.obtainColumn({0, 0}, [](SurfaceData &) {});
+	idle.reset();
+	cache.flush();
+	EXPECT_EQ(cache.columnCount(), 1u);
+	resume.set_value();
+	auto active = building.get();
+	cache.flush();
+	EXPECT_EQ(cache.columnCount(), 1u);
+	active.reset();
+	cache.flush();
+	EXPECT_EQ(cache.columnCount(), 0u);
 }
 
 namespace

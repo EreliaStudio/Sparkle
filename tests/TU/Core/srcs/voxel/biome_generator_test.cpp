@@ -89,8 +89,6 @@ namespace
 TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
 {
 	Generator generator;
-	generator.retain({-2, 0, -1});
-	generator.retain({-2, 1, -1});
 	auto first = std::async(std::launch::async, [&] {
 		return generator.generate({-2, 0, -1});
 	});
@@ -107,8 +105,11 @@ TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
 	EXPECT_EQ(idAt(*upper, 0, 0, 0), 2u);
 	EXPECT_EQ(idAt(*upper, 0, 1, 0), 1u);
 	EXPECT_EQ(idAt(*upper, 0, 2, 0), 0u);
-	generator.release({-2, 0, -1});
-	generator.release({-2, 1, -1});
+	ASSERT_TRUE(generator.generate({-2, 1, -1}).has_value());
+	EXPECT_EQ(generator.samples.load(), 289);
+	EXPECT_EQ(generator.generationData().activeChunkCount(), 0u);
+	generator.flush();
+	EXPECT_EQ(generator.generationData().columnCount(), 0u);
 	ASSERT_TRUE(generator.generate({-2, 1, -1}).has_value());
 	EXPECT_EQ(generator.samples.load(), 578);
 }
@@ -314,6 +315,7 @@ TEST(VoxelBiomeGeneratorTest, FiniteAndEmptyStrataLeaveUnfilledVoxels)
 	EXPECT_EQ(idAt(*upper, 0, 1, 0), 1u);
 	EXPECT_EQ(idAt(*upper, 0, 2, 0), 0u);
 	generator.biome().strata().clear();
+	generator.flush();
 	const auto empty = generator.generate({0, 1, 0});
 	ASSERT_TRUE(empty);
 	for (std::uint32_t y = 0; y < 16; ++y)
@@ -378,26 +380,21 @@ TEST(VoxelBiomeGeneratorTest, DifferentGridScalesUseExpectedSampleCounts)
 	for (const auto &[scale, expected] : std::array<std::pair<float, int>, 4>{{{0.5f, 1089}, {1, 289}, {2, 81}, {4, 25}}})
 	{
 		Generator generator(scale);
-		generator.retain({-1, 0, 1});
-		generator.retain({-1, 1, 1});
 		const auto upper = generator.generate({-1, 1, 1});
 		const auto lower = generator.generate({-1, 0, 1});
 		ASSERT_TRUE(upper && lower);
 		EXPECT_EQ(generator.samples.load(), expected);
 		EXPECT_EQ(idAt(*upper, 15, 1, 15), 1u);
 		EXPECT_EQ(idAt(*lower, 15, 15, 15), 2u);
-		generator.release({-1, 0, 1});
-		generator.release({-1, 1, 1});
 	}
 	EXPECT_THROW((void)Generator(3.0f), spk::Exception);
 }
 
-TEST(VoxelBiomeGeneratorTest, LocalRequesterRetainsQueuedColumnAfterObserverRelease)
+TEST(VoxelBiomeGeneratorTest, LocalRequesterReusesCachedColumnWithoutObserver)
 {
 	Generator generator;
 	spk::WorkerPool workers(1);
 	spk::World::LocalChunkRequester<Chunk, Generator::GenerationData> requester(workers, generator);
-	requester.retain({0, 0, 0});
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	std::promise<void> unblock;
 	auto gate = unblock.get_future().share();
@@ -406,11 +403,36 @@ TEST(VoxelBiomeGeneratorTest, LocalRequesterRetainsQueuedColumnAfterObserverRele
 		return 0;
 	});
 	auto upper = requester.request({0, 1, 0});
-	requester.release({0, 0, 0});
 	unblock.set_value();
 	EXPECT_EQ(blocker.get(), 0);
 	ASSERT_TRUE(upper.get());
 	EXPECT_EQ(generator.samples.load(), 289);
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
+	EXPECT_EQ(generator.samples.load(), 289);
+	EXPECT_EQ(generator.generationData().activeChunkCount(), 0u);
+	generator.flush();
+	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	EXPECT_EQ(generator.samples.load(), 578);
+}
+
+TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesUseIndependentChunkScratch)
+{
+	Generator generator;
+	std::promise<void> start;
+	auto gate = start.get_future().share();
+	auto first = std::async(std::launch::async, [&] {
+		gate.wait();
+		return generator.generate({0, 0, 0});
+	});
+	auto second = std::async(std::launch::async, [&] {
+		gate.wait();
+		return generator.generate({0, 0, 0});
+	});
+	start.set_value();
+	const auto a = first.get();
+	const auto b = second.get();
+	ASSERT_TRUE(a && b);
+	EXPECT_EQ(idAt(*a, 0, 15, 0), idAt(*b, 0, 15, 0));
+	EXPECT_EQ(generator.samples.load(), 289);
+	EXPECT_EQ(generator.generationData().activeChunkCount(), 0u);
 }
