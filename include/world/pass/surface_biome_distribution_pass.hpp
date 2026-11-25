@@ -32,7 +32,7 @@ namespace spk::World
 				{
 					auto &cell = grid->sample({x, z});
 					_computeBiomePlacement(origin + grid->localPosition({x, z}), cell);
-					_normalize(cell);
+					_normalize(cell.elements);
 				}
 			}
 			_gridDestination(data) = std::move(grid);
