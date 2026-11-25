@@ -639,18 +639,11 @@ namespace
 		{
 			for (int x = -2; x <= 2; ++x)
 			{
-				// Retain the full column before generating the vertical stack.
-				for (int y = 0; y <= 1; ++y)
-				{
-				}
 				for (int y = 0; y <= 1; ++y)
 				{
 					const auto chunk = generator.generate({x, y, z});
 					ASSERT_TRUE(chunk.has_value());
 					scene.chunks.addChunk({x, y, z}, *chunk);
-				}
-				for (int y = 0; y <= 1; ++y)
-				{
 				}
 			}
 		}
@@ -705,10 +698,6 @@ namespace
 		Scene scene;
 		validation::Generator generator(scene.definitions, settings);
 		const auto coordinates = view.coordinates();
-		// Deliberately retain every vertical coordinate before running any generation.
-		for (const auto &coordinate : coordinates)
-		{
-		}
 		auto generationOrder = coordinates;
 		if (view.reverseOrder)
 		{
@@ -750,9 +739,6 @@ namespace
 				}
 			}
 			scene.chunks.addChunk(coordinate, *chunk);
-		}
-		for (const auto &coordinate : coordinates)
-		{
 		}
 		ASSERT_GT(visibleVoxels, 0u);
 		ASSERT_EQ(scene.chunks.size(), coordinates.size());
