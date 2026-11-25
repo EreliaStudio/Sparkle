@@ -58,8 +58,8 @@ namespace spk::World
 		}
 	};
 
-	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
-	class BiomeDistributionPass : public Generator<TChunk, TGenerationData, TBuilder>::Pass, protected BiomeDistribution
+	template <typename TChunk, typename TGenerationData>
+	class BiomeDistributionPass : public Generator<TChunk, TGenerationData>::Pass, protected BiomeDistribution
 	{
 	};
 }

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "voxel/biome.hpp"
+#include "voxel/volume.hpp"
 #include "world/height_map.hpp"
 
 namespace spk::Voxel
@@ -72,6 +73,7 @@ namespace spk::Voxel
 	struct BiomeGenerationData
 	{
 		using Surface = BiomeSurfaceData<TCapacity>;
+		Volume::Builder builder;
 		std::shared_ptr<const Surface> surface;
 	};
 }

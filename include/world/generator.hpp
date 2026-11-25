@@ -13,12 +13,10 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
+	template <typename TChunk, typename TGenerationData>
 	class Generator
 	{
 	public:
-		using Builder = TBuilder;
-
 		class Pass
 		{
 		public:
@@ -38,7 +36,6 @@ namespace spk::World
 			}
 
 			virtual void apply(
-				Builder &builder,
 				const ChunkCoordinate &coordinate,
 				TGenerationData &data) = 0;
 		};
@@ -46,8 +43,9 @@ namespace spk::World
 	private:
 		std::vector<std::unique_ptr<Pass>> _passes;
 
-		virtual std::optional<Builder> _createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
-		virtual TGenerationData _createGenerationData() = 0;
+	protected:
+		virtual std::optional<TGenerationData> _createGenerationData(const ChunkCoordinate &coordinate) = 0;
+		virtual TChunk _instantiateChunk(TGenerationData &data) = 0;
 
 	public:
 		virtual ~Generator() = default;
@@ -148,27 +146,16 @@ namespace spk::World
 			try
 			{
 				auto job = reserve(coordinate);
-				std::optional<Builder> builder = _createChunkBuilder(coordinate);
-				if (!builder.has_value())
+				auto data = _createGenerationData(coordinate);
+				if (!data.has_value())
 				{
 					return std::nullopt;
 				}
-
-				TGenerationData data = _createGenerationData();
 				for (const std::unique_ptr<Pass> &pass : _passes)
 				{
-					pass->apply(*builder, coordinate, data);
+					pass->apply(coordinate, *data);
 				}
-				if constexpr (std::same_as<decltype(std::declval<Builder &&>().build()), TChunk>)
-				{
-					return std::move(*builder).build();
-				}
-				else
-				{
-					TChunk chunk;
-					chunk.setVolume(std::move(*builder).build());
-					return chunk;
-				}
+				return _instantiateChunk(*data);
 			} catch (const spk::Exception &)
 			{
 				throw;

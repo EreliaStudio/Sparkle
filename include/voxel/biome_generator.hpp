@@ -10,22 +10,21 @@ namespace spk::Voxel
 	// Ready-to-use voxel terrain pipeline. Derive to supply the placement strategy.
 	// Additional surface passes run after height combination and before publication.
 	template <typename TChunk, std::size_t TCapacity>
-	class BiomeGenerator : public World::Generator<TChunk, BiomeGenerationData<TCapacity>, Volume::Builder>
+	class BiomeGenerator : public World::Generator<TChunk, BiomeGenerationData<TCapacity>>
 	{
 	public:
 		using GenerationData = BiomeGenerationData<TCapacity>;
 		using SurfaceData = typename GenerationData::Surface;
 		using InfluenceGrid = typename SurfaceData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
-		using Builder = Volume::Builder;
 		using HeightCombination = typename World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>::Combination;
 
 	private:
-		using SurfaceBase = World::SurfaceGenerationPass<TChunk, GenerationData, SurfaceData, Builder>;
+		using SurfaceBase = World::SurfaceGenerationPass<TChunk, GenerationData>;
 		using DistributionBase = World::SurfaceBiomeDistributionPass<SurfaceData, TCapacity>;
 		using CombinationBase = World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>;
 		using StrataBase = StrataGenerationPass<SurfaceData, TCapacity>;
-		using ApplicationBase = StrataApplicationPass<TChunk, GenerationData, Builder>;
+		using ApplicationBase = StrataApplicationPass<TChunk, GenerationData>;
 
 		class Distribution : public DistributionBase
 		{
@@ -118,16 +117,18 @@ namespace spk::Voxel
 	protected:
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
 
-		std::optional<Builder> _createChunkBuilder(const World::ChunkCoordinate &) override
+		std::optional<GenerationData> _createGenerationData(const World::ChunkCoordinate &) override
 		{
-			Builder builder({static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.y), static_cast<std::uint32_t>(TChunk::Size.z)});
-			builder.bind(_registry);
-			return builder;
+			GenerationData data{Volume::Builder({static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.y), static_cast<std::uint32_t>(TChunk::Size.z)}), {}};
+			data.builder.bind(_registry);
+			return data;
 		}
 
-		GenerationData _createGenerationData() override
+		TChunk _instantiateChunk(GenerationData &data) override
 		{
-			return {};
+			TChunk chunk;
+			chunk.setVolume(data.builder.build());
+			return chunk;
 		}
 
 	public:

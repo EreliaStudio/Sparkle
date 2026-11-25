@@ -17,8 +17,8 @@ namespace spk::Voxel
 	// A reusable heightfield pass for real voxel chunks. All noise is sampled in
 	// absolute world coordinates, so generation is independent of chunk order.
 	// This pass only writes solid cells; subsequent passes may add decorations.
-	template <typename TChunk, typename TGenerationData, typename TBuilder = Volume::Builder>
-	class PerlinTerrainPass final : public World::Generator<TChunk, TGenerationData, TBuilder>::Pass
+	template <typename TChunk, typename TGenerationData>
+	class PerlinTerrainPass final : public World::Generator<TChunk, TGenerationData>::Pass
 	{
 	public:
 		struct NoiseLayer
@@ -141,9 +141,9 @@ namespace spk::Voxel
 			return static_cast<std::int32_t>(std::floor(clamped));
 		}
 
-		void apply(TBuilder &builder, const World::ChunkCoordinate &coordinate, TGenerationData &data) override
+		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
-			(void)data;
+			auto &builder = data.builder;
 			const World::ChunkWorldCoordinate origin = TChunk::chunkCoordinateToWorld(coordinate);
 			for (std::int32_t z = 0; z < TChunk::Size.z; ++z)
 			{

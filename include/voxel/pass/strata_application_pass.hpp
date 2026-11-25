@@ -5,16 +5,17 @@
 
 namespace spk::Voxel
 {
-	template <typename TChunk, typename TGenerationData, typename TBuilder = Volume::Builder>
-	class StrataApplicationPass : public World::Generator<TChunk, TGenerationData, TBuilder>::Pass
+	template <typename TChunk, typename TGenerationData>
+	class StrataApplicationPass : public World::Generator<TChunk, TGenerationData>::Pass
 	{
 	protected:
 		virtual const World::HeightMap::Grid &_heights(const TGenerationData &data) = 0;
 		virtual const StrataGrid::Grid &_strata(const TGenerationData &data) = 0;
 
 	public:
-		void apply(TBuilder &builder, const World::ChunkCoordinate &coordinate, TGenerationData &data) override
+		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
+			auto &builder = data.builder;
 			const auto &heights = _heights(data);
 			const auto &strata = _strata(data);
 			const auto origin = TChunk::chunkCoordinateToWorld(coordinate);

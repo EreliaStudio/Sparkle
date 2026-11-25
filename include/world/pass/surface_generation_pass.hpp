@@ -24,12 +24,12 @@ namespace spk::World
 
 	// Owns the surface construction pipeline and publishes one immutable result per
 	// column. Interest and job reservations are independent reference counts.
-	template <typename TChunk, typename TGenerationData, typename TSurfaceData, typename TBuilder = typename TChunk::Builder>
-	class SurfaceGenerationPass : public Generator<TChunk, TGenerationData, TBuilder>::Pass
+	template <typename TChunk, typename TGenerationData>
+	class SurfaceGenerationPass : public Generator<TChunk, TGenerationData>::Pass
 	{
 	public:
-		using Pass = SurfacePass<TSurfaceData>;
-		using SurfaceDataType = TSurfaceData;
+		using SurfaceDataType = typename TGenerationData::Surface;
+		using Pass = SurfacePass<SurfaceDataType>;
 		using Handle = std::shared_ptr<const SurfaceDataType>;
 
 	private:
@@ -124,7 +124,7 @@ namespace spk::World
 			_release(coordinate, &Entry::jobs);
 		}
 
-		void apply(TBuilder &, const ChunkCoordinate &coordinate, TGenerationData &data) override
+		void apply(const ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
 			std::shared_ptr<Entry> entry;
 			const auto key = _key(coordinate);

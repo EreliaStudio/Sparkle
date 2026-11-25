@@ -5,8 +5,8 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
-	class HeightMapGenerationPass : public Generator<TChunk, TGenerationData, TBuilder>::Pass
+	template <typename TChunk, typename TGenerationData>
+	class HeightMapGenerationPass : public Generator<TChunk, TGenerationData>::Pass
 	{
 	private:
 		const HeightMap *_heightMap = nullptr;
@@ -21,7 +21,7 @@ namespace spk::World
 			_heightMap = &heightMap;
 		}
 
-		void apply(TBuilder &, const ChunkCoordinate &coordinate, TGenerationData &data) override
+		void apply(const ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
 			if (_heightMap == nullptr)
 			{
