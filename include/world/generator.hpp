@@ -39,10 +39,6 @@ namespace spk::World
 		{
 			return true;
 		}
-		virtual void _applyPass(Pass &pass, const ChunkCoordinate &coordinate, TGenerationData &data)
-		{
-			pass.apply(coordinate, data);
-		}
 		virtual TChunk _instantiateChunk(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
 		virtual void _cleanGenerationData(const ChunkCoordinate &, TGenerationData &) noexcept
 		{
@@ -82,7 +78,7 @@ namespace spk::World
 				{
 					for (const auto &pass : _passes)
 					{
-						_applyPass(*pass, coordinate, _generationData);
+						pass->apply(coordinate, _generationData);
 					}
 					result.emplace(_instantiateChunk(coordinate, _generationData));
 				} catch (...)

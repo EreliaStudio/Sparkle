@@ -7,6 +7,7 @@
 #include <future>
 #include <limits>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include "voxel/biome_generator.hpp"
@@ -146,10 +147,14 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 		std::vector<int> &_trace;
 
 	protected:
-		void _applySurface(const spk::Vector2Int &coordinate, Data &) override
+		void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
 		{
 			EXPECT_EQ(coordinate, (spk::Vector2Int{3, -2}));
 			_trace.push_back(1);
+			if (!data.columnReady(coordinate))
+			{
+				_trace.push_back(3);
+			}
 		}
 
 	public:
@@ -184,10 +189,45 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 	generator.addPass<ChunkProbe>(trace);
 	ASSERT_TRUE(generator.generate({3, 0, -2}));
 	ASSERT_TRUE(generator.generate({3, 1, -2}));
-	EXPECT_EQ(trace, (std::vector<int>{1, 2, 2}));
+	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 1, 2}));
 	generator.flush();
 	ASSERT_TRUE(generator.generate({3, 2, -2}));
-	EXPECT_EQ(trace, (std::vector<int>{1, 2, 2, 1, 2}));
+	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 1, 2, 1, 3, 2}));
+}
+
+TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
+{
+	class FailingPass : public Generator::SurfacePass
+	{
+	private:
+		bool _first = true;
+
+	protected:
+		void _applySurface(const spk::Vector2Int &coordinate, Generator::GenerationData &data) override
+		{
+			if (data.columnReady(coordinate))
+			{
+				return;
+			}
+			auto &height = data.column(coordinate).heights->sample({0, 0});
+			EXPECT_FLOAT_EQ(height, 17.75f);
+			height += 1.0f;
+			if (std::exchange(_first, false))
+			{
+				throw spk::Exception("Injected surface failure");
+			}
+		}
+	};
+
+	Generator generator;
+	generator.addPass<FailingPass>();
+	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
+	EXPECT_EQ(generator.activeChunkCount(), 0u);
+	EXPECT_EQ(generator.samples.load(), 289);
+	ASSERT_TRUE(generator.generate({0, 0, 0}));
+	EXPECT_EQ(generator.samples.load(), 578);
+	ASSERT_TRUE(generator.generate({0, 1, 0}));
+	EXPECT_EQ(generator.samples.load(), 578);
 }
 
 TEST(VoxelBiomeGeneratorTest, FiniteStrataAndCustomMaterialSelection)

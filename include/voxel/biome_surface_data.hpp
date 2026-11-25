@@ -159,7 +159,15 @@ namespace spk::Voxel
 			return chunk(coordinate)._columnLock.owns_lock();
 		}
 
-		// Mutable X/Z access is reserved for the surface passes of that first job.
+		// Ready columns are read-only to generation jobs; in-place editing passes
+		// consult this state before changing their cached result.
+		[[nodiscard]] bool columnReady(const spk::Vector2Int &coordinate) const
+		{
+			const std::scoped_lock lock(_mutex);
+			return _columns.at(coordinate)._ready;
+		}
+
+		// Surface passes may write only while their active job owns the column lock.
 		[[nodiscard]] ColumnData &column(const spk::Vector2Int &coordinate)
 		{
 			const std::scoped_lock lock(_mutex);
@@ -187,7 +195,8 @@ namespace spk::Voxel
 		{
 			if (needsSurfaceGeneration(coordinate))
 			{
-				column(spk::Vector2Int{coordinate.x, coordinate.z})._ready = true;
+				const std::scoped_lock lock(_mutex);
+				_columns.at({coordinate.x, coordinate.z})._ready = true;
 			}
 		}
 

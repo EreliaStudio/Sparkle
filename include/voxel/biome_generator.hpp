@@ -32,6 +32,14 @@ namespace spk::Voxel
 			BiomeGenerator &_generator;
 
 		protected:
+			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
+			{
+				if (!data.column(coordinate).influences)
+				{
+					DistributionBase::_applySurface(coordinate, data);
+				}
+			}
+
 			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &) override
 			{
 				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, _generator._scale};
@@ -58,6 +66,14 @@ namespace spk::Voxel
 			using CombinationBase::CombinationBase;
 
 		protected:
+			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
+			{
+				if (!data.column(coordinate).heights)
+				{
+					CombinationBase::_applySurface(coordinate, data);
+				}
+			}
+
 			const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).influences;
@@ -72,6 +88,14 @@ namespace spk::Voxel
 		class Strata : public StrataBase
 		{
 		protected:
+			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
+			{
+				if (!data.column(coordinate).strata)
+				{
+					StrataBase::_applySurface(coordinate, data);
+				}
+			}
+
 			const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).influences;
@@ -106,14 +130,6 @@ namespace spk::Voxel
 		{
 			data.prepare(coordinate, spk::Vector3UInt{TChunk::Size}, _registry);
 			return true;
-		}
-
-		void _applyPass(typename World::Generator<TChunk, GenerationData>::Pass &pass, const World::ChunkCoordinate &coordinate, GenerationData &data) override
-		{
-			if (dynamic_cast<SurfacePass *>(&pass) == nullptr || data.needsSurfaceGeneration(coordinate))
-			{
-				pass.apply(coordinate, data);
-			}
 		}
 
 		TChunk _instantiateChunk(const World::ChunkCoordinate &coordinate, GenerationData &data) override
