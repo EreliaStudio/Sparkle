@@ -94,7 +94,7 @@ namespace sparkle_test::biome_world
 
 	public:
 		Generator(const perlin_world::Registry &registry, bool hard, bool edit) :
-			BiomeGenerator(registry),
+			BiomeGenerator(registry, HeightCombination::Weighted),
 			_hard(hard)
 		{
 			_boundary.setFrequency(0.055f);

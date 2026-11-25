@@ -96,8 +96,12 @@ namespace
 		}
 	};
 
-	class Combination : public spk::World::SurfaceHeightCombinationPass<SurfaceData, 2>
+	using CombinationBase = spk::World::SurfaceHeightCombinationPass<SurfaceData, 2>;
+	class Combination : public CombinationBase
 	{
+	public:
+		using CombinationBase::CombinationBase;
+
 	protected:
 		const InfluenceGrid &_influences(const SurfaceData &data) override
 		{
@@ -161,7 +165,7 @@ namespace
 		{
 			auto &surface = addPass<Surface>();
 			surface.addPass<Distribution>();
-			surface.addPass<Combination>();
+			surface.addPass<Combination>(CombinationBase::Combination::Weighted);
 			surface.addPass<CountPass>(calls, fail);
 			addPass<Application>();
 		}
@@ -317,7 +321,7 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 	data.heights = HeightMap::Grid::obtain({{2, 2}, 1}, {});
 	data.heights->at({0, 0}) = 99;
 	const auto *old = data.heights.get();
-	Combination pass;
+	Combination pass(CombinationBase::Combination::Weighted);
 	EXPECT_THROW(pass.apply({}, data), spk::Exception);
 	EXPECT_EQ(data.heights.get(), old);
 	ConstantBiome valid(20);
@@ -403,7 +407,7 @@ TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
 	grid->sample({1, 0}) = {{{&b, 1}, {&a, 0}}};
 	grid->sample({0, 1}) = {{{&b, 0}, {&a, 1}}};
 	grid->sample({1, 1}) = {{{&a, 0}, {&b, 1}}};
-	const auto cell = grid->interpolate({3, 1});
+	const auto cell = grid->interpolate({3, 1}, Grid::Interpolation::Bilinear);
 	EXPECT_EQ(cell[0].biome, &a);
 	EXPECT_FLOAT_EQ(cell[0].weight, 0.25f);
 	EXPECT_EQ(cell[1].biome, &b);
@@ -423,7 +427,7 @@ TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
 	grid->sample({1, 0})[0] = {&b, 1};
 	grid->sample({0, 1})[0] = {&c, 1};
 	grid->sample({1, 1})[0] = {&d, 1};
-	const auto center = grid->interpolate({2, 2});
+	const auto center = grid->interpolate({2, 2}, Grid::Interpolation::Bilinear);
 	EXPECT_EQ(center[0].biome, &a);
 	EXPECT_EQ(center[1].biome, &b);
 	EXPECT_EQ(center[2].biome, &c);
@@ -447,8 +451,8 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 	EXPECT_EQ(right->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
 	{
-		const auto l = left->interpolate({4, z});
-		const auto r = right->interpolate({0, z});
+		const auto l = left->interpolate({4, z}, Grid::Interpolation::Bilinear);
+		const auto r = right->interpolate({0, z}, Grid::Interpolation::Bilinear);
 		for (std::size_t i = 0; i < l.size(); ++i)
 		{
 			EXPECT_EQ(l[i].biome, r[i].biome);
@@ -574,4 +578,60 @@ TEST(SurfaceGridTest, LocalPositionUsesSampleCoordinates)
 	EXPECT_FLOAT_EQ(endpoint.y, 6.0f);
 	EXPECT_THROW((void)grid->localPosition({9, 0}), spk::Exception);
 	EXPECT_THROW((void)grid->localPosition({0, 13}), spk::Exception);
+}
+
+TEST(SurfaceGridTest, HighestInterpolationKeepsOnlyTheStrongestInterpolatedBiome)
+{
+	using Grid = SurfaceData::InfluenceGrid;
+	ConstantBiome a(20), b(100);
+	auto grid = Grid::obtain({{8, 8}, 8}, {});
+	grid->sample({0, 0})[0] = grid->sample({0, 1})[0] = {&a, 1};
+	grid->sample({1, 0})[0] = grid->sample({1, 1})[0] = {&b, 1};
+	const auto floor = grid->interpolate({6, 4}, Grid::Interpolation::Floor);
+	EXPECT_EQ(floor[0].biome, &a);
+	const auto highest = grid->interpolate({6, 4}, Grid::Interpolation::Highest);
+	EXPECT_EQ(highest[0].biome, &b);
+	EXPECT_FLOAT_EQ(highest[0].weight, 1);
+	for (std::size_t i = 1; i < highest.size(); ++i)
+	{
+		EXPECT_EQ(highest[i].biome, nullptr);
+		EXPECT_FLOAT_EQ(highest[i].weight, 0);
+	}
+	EXPECT_EQ(grid->dominant({6, 4}, Grid::Interpolation::Highest), &b);
+	EXPECT_EQ(grid->interpolate({4, 4}, Grid::Interpolation::Highest)[0].biome, &a);
+	EXPECT_FLOAT_EQ(grid->interpolate({6, 4}, Grid::Interpolation::Bilinear)[0].weight, 0.25f);
+	auto empty = Grid::obtain({{8, 8}, 8}, {});
+	EXPECT_EQ(empty->interpolate({4, 4}, Grid::Interpolation::Highest)[0].biome, nullptr);
+	EXPECT_THROW((void)grid->interpolate({9, 4}, Grid::Interpolation::Highest), spk::Exception);
+}
+
+TEST(SurfaceGenerationTest, HighestHeightCombinationUsesWeightRatherThanHeight)
+{
+	using Mode = CombinationBase::Combination;
+	ConstantBiome low(20), high(100), invalid(std::numeric_limits<float>::quiet_NaN());
+	SurfaceData data;
+	data.influences = SurfaceData::InfluenceGrid::obtain({{1, 1}, 1}, {});
+	for (std::uint32_t z = 0; z < 2; ++z)
+	{
+		for (std::uint32_t x = 0; x < 2; ++x)
+		{
+			data.influences->sample({x, z}) = {{{&low, 0.75f}, {&high, 0.25f}}};
+		}
+	}
+	Combination weighted(Mode::Weighted);
+	Combination highest(Mode::Highest);
+	weighted.apply({}, data);
+	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 40);
+	highest.apply({}, data);
+	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 20);
+	data.influences->sample({0, 0}) = {{{&low, 0.5f}, {&invalid, 0.5f}}};
+	EXPECT_NO_THROW(highest.apply({}, data));
+	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 20);
+	const auto *previous = data.heights.get();
+	data.influences->sample({0, 0})[1].weight = 0.75f;
+	EXPECT_THROW(highest.apply({}, data), spk::Exception);
+	EXPECT_EQ(data.heights.get(), previous);
+	data.influences->sample({0, 0}) = {};
+	EXPECT_THROW(highest.apply({}, data), spk::Exception);
+	EXPECT_EQ(data.heights.get(), previous);
 }

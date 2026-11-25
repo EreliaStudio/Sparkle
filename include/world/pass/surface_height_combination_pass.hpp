@@ -12,12 +12,29 @@ namespace spk::World
 	public:
 		using InfluenceGrid = SurfaceBiome::Influence::Grid<TCapacity>;
 		using Grid = HeightMap::Grid;
+		enum class Combination
+		{
+			Weighted,
+			Highest
+		};
+
+	private:
+		Combination _combination;
 
 	protected:
 		virtual const InfluenceGrid &_influences(const TSurfaceData &data) = 0;
 		virtual Grid::Lease &_gridDestination(TSurfaceData &data) = 0;
 
 	public:
+		explicit SurfaceHeightCombinationPass(Combination combination) :
+			_combination(combination)
+		{
+			if (combination != Combination::Weighted && combination != Combination::Highest)
+			{
+				throw spk::Exception("Unknown biome height combination");
+			}
+		}
+
 		void apply(const spk::Vector2Int &, TSurfaceData &data) override
 		{
 			const auto &influences = _influences(data);
@@ -31,17 +48,39 @@ namespace spk::World
 					double height = 0.0;
 					bool found = false;
 					const auto position = grid->worldOrigin() + grid->localPosition({x, z});
-					for (const auto &influence : influences.sample({x, z}))
+					const auto &cell = influences.sample({x, z});
+					if (_combination == Combination::Highest)
 					{
-						if (influence.biome != nullptr && influence.weight > 0.0f)
+						const SurfaceBiome *winner = nullptr;
+						float weight = 0.0f;
+						for (const auto &influence : cell)
 						{
-							const float value = influence.biome->groundHeight(position);
-							if (!std::isfinite(value))
+							if (influence.biome != nullptr && influence.weight > weight)
 							{
-								throw spk::Exception("Biome returned a non-finite height");
+								winner = influence.biome;
+								weight = influence.weight;
 							}
-							height += static_cast<double>(influence.weight) * value;
+						}
+						if (winner != nullptr)
+						{
+							height = winner->groundHeight(position);
 							found = true;
+						}
+					}
+					else
+					{
+						for (const auto &influence : cell)
+						{
+							if (influence.biome != nullptr && influence.weight > 0.0f)
+							{
+								const float value = influence.biome->groundHeight(position);
+								if (!std::isfinite(value))
+								{
+									throw spk::Exception("Biome returned a non-finite height");
+								}
+								height += static_cast<double>(influence.weight) * value;
+								found = true;
+							}
 						}
 					}
 					if (!found || !std::isfinite(static_cast<float>(height)))

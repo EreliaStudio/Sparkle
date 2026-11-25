@@ -18,6 +18,7 @@ namespace spk::Voxel
 		using InfluenceGrid = typename SurfaceData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
 		using Builder = Volume::Builder;
+		using HeightCombination = typename World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>::Combination;
 
 	private:
 		using SurfaceBase = World::SurfaceGenerationPass<TChunk, GenerationData, SurfaceData, Builder>;
@@ -54,6 +55,9 @@ namespace spk::Voxel
 
 		class Combination : public CombinationBase
 		{
+		public:
+			using CombinationBase::CombinationBase;
+
 		protected:
 			const InfluenceGrid &_influences(const SurfaceData &data) override
 			{
@@ -127,14 +131,14 @@ namespace spk::Voxel
 		}
 
 	public:
-		explicit BiomeGenerator(const Definition::Registry &registry, float scale = 1.0f) :
+		explicit BiomeGenerator(const Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
 			_registry(registry),
 			_scale(scale),
 			_surface(&this->template addPass<Surface>())
 		{
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			_surface->template addPass<Distribution>(*this);
-			_surface->template addPass<Combination>();
+			_surface->template addPass<Combination>(combination);
 			this->template addPass<Application>();
 		}
 

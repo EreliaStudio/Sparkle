@@ -13,7 +13,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 - World::SurfaceGenerationPass: owns child passes and one entry per active horizontal column.
 - Voxel::Biome: ordered strata, weighted/Perlin/custom material selection, finite/infinite thickness.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
-  Additional surface steps run after weighted height combination and before strata publication.
+  Additional surface steps run after the selected height combination and before strata publication.
   Existing PerlinTerrainPass and existing golden tests are not replaced.
 
 ## Lifetime and threading
@@ -38,11 +38,13 @@ No LRU or trimming is introduced.
 
 - Both grid kinds use inclusive endpoints, floor direct access, identical world origins.
   Influence and blended-height sample spacing are the same; voxel strata are sampled at
-  unit spacing and consume the floor-selected influence cell. Configuration is fixed
+  unit spacing and use explicit bilinear dominance. Configuration is fixed
   during all active interests/jobs. No runtime invalidation API yet; detach and drain
   before changing definitions. Float world positions retain the existing Perlin precision limit.
-- Height blending evaluates only positive influences, uses double accumulation, rejects
-  missing positive contributions and non-finite heights. Custom edits run inside the
+- Height combination is explicitly selected at construction: Weighted sums normalized
+  positive influences with double accumulation; Highest evaluates only the biome with
+  the greatest positive weight (first slot wins ties). Both reject missing contributions
+  and non-finite results. This choice is independent of spatial influence interpolation. Custom edits run inside the
   construction pipeline, before the result is published as shared_ptr<const SurfaceData>.
 - Voxel height is floored. Depth zero means the top voxel. Finite strata have positive
   integer thickness; the final stratum may be infinite. Missing finite layers leave the
@@ -102,8 +104,10 @@ three independently configurable Perlin fields and exposes warp1D, warp2D and
 warp3D. Each axis samples the original input position at the requested dimension;
 the 2D result is unchanged by the addition of the third field.
 Influence grids interpolate by biome identity, not slot index, preserving up to
-four cells' distinct biomes. Bilinear dominance is the default; Floor remains
-explicitly selectable. Exact grid-node ties retain first positive slot order.
+four cells' distinct biomes. Interpolation is explicit: Floor copies the floor cell,
+Bilinear combines neighboring influences, and Highest selects the strongest bilinear
+influence and assigns it weight 1, clearing other entries. Empty cells remain empty.
+Exact ties retain first positive encounter order.
 Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
 interpolation, 3D slices and optional coordinate warping from the voxel renderer.
 Existing terrain goldens affected by this algorithm change must be refreshed

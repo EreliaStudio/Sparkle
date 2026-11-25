@@ -290,7 +290,7 @@ namespace sparkle_test::biome_validation
 
 	public:
 		Generator(const perlin_world::Registry &registry, Settings settings) :
-			BiomeGenerator(registry, settings.scale),
+			BiomeGenerator(registry, HeightCombination::Weighted, settings.scale),
 			_settings(settings),
 			_first(settings, 1, 0, 107),
 			_second(settings, 4, -12, 211),

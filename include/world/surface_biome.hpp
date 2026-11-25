@@ -34,7 +34,8 @@ namespace spk::World
 		enum class Interpolation
 		{
 			Floor,
-			Bilinear
+			Bilinear,
+			Highest
 		};
 		// Four neighboring cells may contain completely different biomes.
 		using InterpolatedCell = std::array<Influence, 4 * TCapacity>;
@@ -51,8 +52,19 @@ namespace spk::World
 			});
 		}
 
-		[[nodiscard]] InterpolatedCell interpolate(const spk::Vector2 &position) const
+		[[nodiscard]] InterpolatedCell interpolate(const spk::Vector2 &position, Interpolation interpolation) const
 		{
+			if (interpolation == Interpolation::Floor)
+			{
+				InterpolatedCell result{};
+				const auto &cell = this->at(position);
+				std::copy(cell.begin(), cell.end(), result.begin());
+				return result;
+			}
+			if (interpolation != Interpolation::Bilinear && interpolation != Interpolation::Highest)
+			{
+				throw spk::Exception("Unknown biome influence interpolation");
+			}
 			const auto dimensions = this->sampleSize();
 			const auto &config = this->configuration();
 			const double x = this->_sampleAxis(position.x, config.size.x, dimensions.x);
@@ -97,6 +109,24 @@ namespace spk::World
 			{
 				result[i].weight = static_cast<float>(weights[i]);
 			}
+			if (interpolation == Interpolation::Highest)
+			{
+				const SurfaceBiome *winner = nullptr;
+				float weight = 0.0f;
+				for (const auto &influence : result)
+				{
+					if (influence.biome != nullptr && influence.weight > weight)
+					{
+						winner = influence.biome;
+						weight = influence.weight;
+					}
+				}
+				result = {};
+				if (winner != nullptr)
+				{
+					result[0] = {winner, 1.0f};
+				}
+			}
 			return result;
 		}
 
@@ -120,7 +150,8 @@ namespace spk::World
 			case Interpolation::Floor:
 				return select(this->at(position));
 			case Interpolation::Bilinear:
-				return select(interpolate(position));
+			case Interpolation::Highest:
+				return select(interpolate(position, Interpolation::Bilinear));
 			}
 			throw spk::Exception("Unknown biome influence interpolation");
 		}

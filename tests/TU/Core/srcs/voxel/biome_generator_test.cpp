@@ -75,7 +75,7 @@ namespace
 		}
 
 		explicit Generator(float scale = 1.0f) :
-			BiomeGenerator(registry(), scale)
+			BiomeGenerator(registry(), HeightCombination::Weighted, scale)
 		{
 		}
 	};
