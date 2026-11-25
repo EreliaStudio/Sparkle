@@ -15,6 +15,7 @@
 #include "voxel/definition.hpp"
 #include "voxel/pass/perlin_terrain_pass.hpp"
 #include "voxel/volume.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 
 namespace
@@ -25,7 +26,12 @@ namespace
 
 	struct GenerationData
 	{
-		Builder builder;
+		spk::World::ChunkGenerationDataCollection<Builder> builders;
+
+		Builder &builder(const Coordinate &coordinate)
+		{
+			return builders.at(coordinate);
+		}
 	};
 
 	using GeneratorBase = spk::World::Generator<Chunk, GenerationData>;
@@ -49,19 +55,25 @@ namespace
 	private:
 		spk::Voxel::Definition::Registry _registry = registry();
 
-		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			(void)coordinate;
 			Builder builder({16, 16, 16});
 			builder.bind(_registry);
-			return GenerationData{std::move(builder)};
+			data.builders.emplace(coordinate, std::move(builder));
+			return true;
 		}
 
-		[[nodiscard]] Chunk _instantiateChunk(GenerationData &data) override
+		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			Chunk chunk;
-			chunk.setVolume(data.builder.build());
+			chunk.setVolume(data.builder(coordinate).build());
 			return chunk;
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			data.builders.erase(coordinate);
 		}
 
 	public:

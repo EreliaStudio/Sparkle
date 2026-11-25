@@ -17,6 +17,7 @@
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_requester.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
 
@@ -47,7 +48,9 @@ namespace
 	struct GenerationData
 	{
 		int seed = 0;
-		int value = 0;
+		spk::World::ChunkGenerationDataCollection<int> values;
+
+		explicit GenerationData(int seedValue) : seed(seedValue) {}
 	};
 
 	using Generator = spk::World::Generator<TestChunk, GenerationData>;
@@ -59,10 +62,9 @@ namespace
 	class TestGenerator : public Generator
 	{
 	private:
-		int _seed;
 		std::atomic<int> _dataCalls = 0;
 
-		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			_dataCalls.fetch_add(1, std::memory_order_relaxed);
 			if (coordinate.x == -2)
@@ -71,19 +73,25 @@ namespace
 			}
 			if (coordinate.x == -1)
 			{
-				return std::nullopt;
+				return false;
 			}
-			return GenerationData{_seed, 0};
+			data.values.emplace(coordinate, 0);
+			return true;
 		}
 
-		[[nodiscard]] TestChunk _instantiateChunk(GenerationData &data) override
+		[[nodiscard]] TestChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			return TestChunk(data.value);
+			return TestChunk(data.values.at(coordinate));
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			data.values.erase(coordinate);
 		}
 
 	public:
 		explicit TestGenerator(int seed) :
-			_seed(seed)
+			Generator(seed)
 		{
 		}
 
@@ -106,7 +114,7 @@ namespace
 			{
 				throw std::runtime_error("Expected standard exception");
 			}
-			data.value = data.seed + coordinate.x + coordinate.y + coordinate.z;
+			data.values.at(coordinate) = data.seed + coordinate.x + coordinate.y + coordinate.z;
 		}
 	};
 
@@ -123,11 +131,11 @@ namespace
 		{
 		}
 
-		void apply(const Coordinate &, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			_entered.set_value();
 			_release.wait();
-			data.value = data.seed;
+			data.values.at(coordinate) = data.seed;
 		}
 	};
 

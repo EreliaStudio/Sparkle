@@ -18,6 +18,7 @@
 #include "voxel/definition.hpp"
 #include "voxel/palette.hpp"
 #include "voxel/pass/perlin_terrain_pass.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 
 namespace sparkle_test::perlin_world
@@ -46,7 +47,12 @@ namespace sparkle_test::perlin_world
 	// Perlin is configured by the production pass, not implemented by this fixture.
 	struct GenerationData
 	{
-		Builder builder;
+		spk::World::ChunkGenerationDataCollection<Builder> builders;
+
+		Builder &builder(const Coordinate &coordinate)
+		{
+			return builders.at(coordinate);
+		}
 	};
 
 	[[nodiscard]] inline spk::Voxel::Shape shape(const char *name)
@@ -151,22 +157,28 @@ namespace sparkle_test::perlin_world
 		const Registry &_registry;
 		TerrainPass *_terrain = nullptr;
 
-		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate.y != 0 || coordinate.x < -4 || coordinate.x > 4 || coordinate.z < -4 || coordinate.z > 4)
 			{
-				return std::nullopt;
+				return false;
 			}
 			Builder builder({16, 16, 16});
 			builder.bind(_registry);
-			return GenerationData{std::move(builder)};
+			data.builders.emplace(coordinate, std::move(builder));
+			return true;
 		}
 
-		[[nodiscard]] Chunk _instantiateChunk(GenerationData &data) override
+		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			Chunk chunk;
-			chunk.setVolume(data.builder.build());
+			chunk.setVolume(data.builder(coordinate).build());
 			return chunk;
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			data.builders.erase(coordinate);
 		}
 
 	public:

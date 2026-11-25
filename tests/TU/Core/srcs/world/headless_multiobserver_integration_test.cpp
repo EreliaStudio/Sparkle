@@ -25,6 +25,7 @@
 #include "world/chunk_filter.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/chunk_requester.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
 #include "world/world_observer.hpp"
@@ -66,7 +67,7 @@ namespace
 
 	struct GenerationData
 	{
-		int value = 0;
+		spk::World::ChunkGenerationDataCollection<int> values;
 	};
 
 	using Generator = spk::World::Generator<IntegrationChunk, GenerationData>;
@@ -80,18 +81,23 @@ namespace
 	class IntegrationGenerator : public Generator
 	{
 	private:
-		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate == Coordinate{9, 0, 0})
 			{
-				return std::nullopt;
+				return false;
 			}
-			return GenerationData{};
+			data.values.emplace(coordinate, 0);
+			return true;
 		}
 
-		[[nodiscard]] IntegrationChunk _instantiateChunk(GenerationData &data) override
+		[[nodiscard]] IntegrationChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			return IntegrationChunk(data.value);
+			return IntegrationChunk(data.values.at(coordinate));
+		}
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			data.values.erase(coordinate);
 		}
 	};
 
@@ -100,7 +106,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			data.value = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
+			data.values.at(coordinate) = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
 		}
 	};
 
@@ -109,7 +115,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			data.value = data.value * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
+			data.values.at(coordinate) = data.values.at(coordinate) * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
 		}
 	};
 
@@ -557,11 +563,11 @@ TEST(HeadlessMultiObserverIntegrationTest, LocalWorkerShutdownDoesNotWaitForBloc
 		{
 		}
 
-		void apply(const Coordinate &, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			_entered.set_value();
 			_release.wait();
-			data.value = 77;
+			data.values.at(coordinate) = 77;
 		}
 	};
 

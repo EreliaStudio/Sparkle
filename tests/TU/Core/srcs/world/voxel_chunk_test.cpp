@@ -19,6 +19,7 @@
 #include "world/chunk_collection.hpp"
 #include "world/chunk_filter.hpp"
 #include "world/chunk_interest.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
 #include "world/world_observer.hpp"
@@ -48,9 +49,15 @@ namespace
 
 	struct GenerationData
 	{
-		const Registry &definitions;
+		Registry definitions;
 		std::int64_t seed;
-		Volume::Builder builder;
+		spk::World::ChunkGenerationDataCollection<Volume::Builder> builders;
+
+		GenerationData(const Registry &registry, std::int64_t seedValue) :
+			definitions(registry),
+			seed(seedValue)
+		{
+		}
 	};
 
 	using Generator = spk::World::Generator<Chunk, GenerationData>;
@@ -60,7 +67,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = data.builder;
+			auto &volume = data.builders.at(coordinate);
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -86,7 +93,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = data.builder;
+			auto &volume = data.builders.at(coordinate);
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
@@ -105,29 +112,31 @@ namespace
 	class WorldGenerator final : public Generator
 	{
 	private:
-		Registry _definitions;
-		std::int64_t _seed;
-
-		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate.x < -1 || coordinate.x > 1 || coordinate.y != 0 || coordinate.z != 0)
 			{
-				return std::nullopt;
+				return false;
 			}
-			return GenerationData{_definitions, _seed, Volume::Builder(spk::Vector3UInt{Chunk::Size})};
+			data.builders.emplace(coordinate, spk::Vector3UInt{Chunk::Size});
+			return true;
 		}
 
-		[[nodiscard]] Chunk _instantiateChunk(GenerationData &data) override
+		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			Chunk chunk;
-			chunk.setVolume(data.builder.build());
+			chunk.setVolume(data.builders.at(coordinate).build());
 			return chunk;
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			data.builders.erase(coordinate);
 		}
 
 	public:
 		explicit WorldGenerator(std::int64_t seed) :
-			_definitions(makeDefinitions()),
-			_seed(seed)
+			Generator(makeDefinitions(), seed)
 		{
 			addPass<TerrainPass>();
 			addPass<WallPass>();

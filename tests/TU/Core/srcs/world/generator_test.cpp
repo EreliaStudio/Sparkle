@@ -12,6 +12,7 @@
 
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 
 namespace
@@ -48,11 +49,22 @@ namespace
 	struct GenerationData
 	{
 		const int &seed;
-		int scratch = 0;
-		std::vector<int> *trace = nullptr;
-		int value = 0;
-		std::vector<int> appliedPasses;
-		std::unique_ptr<int> moveOnly = std::make_unique<int>(0);
+		std::vector<int> *trace;
+		struct ChunkData
+		{
+			int scratch = 0;
+			int value = 0;
+			std::vector<int> appliedPasses;
+			std::unique_ptr<int> moveOnly = std::make_unique<int>(0);
+		};
+		spk::World::ChunkGenerationDataCollection<ChunkData> chunks;
+		int completed = 0;
+
+		GenerationData(const int &seedValue, std::vector<int> *traceValue) :
+			seed(seedValue),
+			trace(traceValue)
+		{
+		}
 	};
 
 	static_assert(!std::is_copy_constructible_v<GenerationData>);
@@ -61,10 +73,7 @@ namespace
 	class ExampleGenerator : public BaseGenerator
 	{
 	private:
-		const int &_seed;
-		std::vector<int> *_trace;
-
-		std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
+		bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			++dataCalls;
 			lastCoordinate = coordinate;
@@ -74,22 +83,32 @@ namespace
 			}
 			if (absent)
 			{
-				return std::nullopt;
+				return false;
 			}
-			return GenerationData{_seed, 0, _trace, 0, {}, std::make_unique<int>(0)};
+			data.chunks.emplace(coordinate);
+			return true;
 		}
 
-		ExampleChunk _instantiateChunk(GenerationData &data) override
+		ExampleChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			++instantiationCalls;
 			if (throwOnBuild)
 			{
 				throw spk::Exception("Chunk construction failed");
 			}
-			return ExampleChunk(data.value, std::move(data.appliedPasses));
+			auto &chunk = data.chunks.at(coordinate);
+			++data.completed;
+			return ExampleChunk(chunk.value, std::move(chunk.appliedPasses));
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			++cleanupCalls;
+			data.chunks.erase(coordinate);
 		}
 
 	public:
+		int cleanupCalls = 0;
 		int instantiationCalls = 0;
 		Coordinate lastCoordinate{};
 		int dataCalls = 0;
@@ -98,8 +117,7 @@ namespace
 		bool throwOnBuild = false;
 
 		explicit ExampleGenerator(const int &seed, std::vector<int> *trace = nullptr) :
-			_seed(seed),
-			_trace(trace)
+			BaseGenerator(seed, trace)
 		{
 		}
 	};
@@ -121,14 +139,15 @@ namespace
 
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
+			auto &chunk = data.chunks.at(coordinate);
 			_coordinates.push_back(coordinate);
 			if (_initialScratch != nullptr)
 			{
-				_initialScratch->push_back(data.scratch);
+				_initialScratch->push_back(chunk.scratch);
 			}
-			data.scratch = data.scratch * 10 + _number;
-			data.value += data.scratch + data.seed + coordinate.x - coordinate.y + coordinate.z;
-			data.appliedPasses.push_back(_number);
+			chunk.scratch = chunk.scratch * 10 + _number;
+			chunk.value += chunk.scratch + data.seed + coordinate.x - coordinate.y + coordinate.z;
+			chunk.appliedPasses.push_back(_number);
 			if (data.trace != nullptr)
 			{
 				data.trace->push_back(_number);
@@ -243,7 +262,7 @@ TEST(GeneratorTest, GeneratesChunkByValueAndSharesScratchDataBetweenPasses)
 	EXPECT_EQ(generator.dataCalls, 1);
 }
 
-TEST(GeneratorTest, EachRequestHasFreshGenerationData)
+TEST(GeneratorTest, PersistentGenerationDataHasFreshRequestScratch)
 {
 	const int seed = 7;
 	std::vector<Coordinate> coordinates;
@@ -266,6 +285,9 @@ TEST(GeneratorTest, EachRequestHasFreshGenerationData)
 	EXPECT_NE(firstResult->value(), secondResult->value());
 	EXPECT_EQ(generator.instantiationCalls, 3);
 	EXPECT_EQ(generator.dataCalls, 3);
+	EXPECT_EQ(generator.cleanupCalls, 3);
+	EXPECT_EQ(generator.generationData().completed, 3);
+	EXPECT_EQ(generator.generationData().chunks.count(), 0u);
 }
 
 TEST(GeneratorTest, AbsentChunkSkipsAllPassesAndInstantiation)
@@ -279,6 +301,7 @@ TEST(GeneratorTest, AbsentChunkSkipsAllPassesAndInstantiation)
 	EXPECT_FALSE(generator.generate({9, 8, 7}).has_value());
 	EXPECT_EQ(generator.instantiationCalls, 0);
 	EXPECT_EQ(generator.dataCalls, 1);
+	EXPECT_EQ(generator.cleanupCalls, 0);
 	EXPECT_EQ(calls, 0);
 }
 
@@ -331,6 +354,8 @@ TEST(GeneratorTest, StandardPassFailureIsWrappedWithCauseAndStopsLaterPasses)
 	EXPECT_EQ(calls, 1);
 	EXPECT_EQ(laterCalls, 0);
 	EXPECT_EQ(generator.instantiationCalls, 0);
+	EXPECT_EQ(generator.cleanupCalls, 1);
+	EXPECT_EQ(generator.generationData().chunks.count(), 0u);
 }
 
 TEST(GeneratorTest, SparklePassFailurePreservesOriginalException)
@@ -363,8 +388,9 @@ TEST(GeneratorTest, FinalConstructionFailureIsAnException)
 	EXPECT_EQ(coordinates, (std::vector<Coordinate>{{1, 2, 3}}));
 	EXPECT_EQ(generator.instantiationCalls, 1);
 	EXPECT_EQ(generator.dataCalls, 1);
+	EXPECT_EQ(generator.cleanupCalls, 1);
+	EXPECT_EQ(generator.generationData().chunks.count(), 0u);
 }
-
 
 TEST(GeneratorTest, ResultsRemainDeterministicRegardlessOfRequestOrder)
 {
