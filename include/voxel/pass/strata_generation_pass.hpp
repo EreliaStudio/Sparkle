@@ -10,7 +10,7 @@ namespace spk::Voxel
 	{
 	public:
 		using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
-		using Grid = StrataGrid::Grid;
+		using Grid = Strata::Grid;
 
 	protected:
 		virtual const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
@@ -30,7 +30,7 @@ namespace spk::Voxel
 					{
 						throw spk::Exception("Voxel strata require a dominant voxel biome");
 					}
-					grid->buildCell(x, z, *biome);
+					grid->buildCell({x, z}, *biome);
 				}
 			}
 			_gridDestination(coordinate, data) = std::move(grid);

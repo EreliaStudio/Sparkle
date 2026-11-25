@@ -100,7 +100,7 @@ namespace spk::Voxel
 			{
 				return *data.column(coordinate).influences;
 			}
-			StrataGrid::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+			Strata::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
 				return data.column(coordinate).strata;
 			}
@@ -113,7 +113,7 @@ namespace spk::Voxel
 			{
 				return *data.column(coordinate).heights;
 			}
-			const StrataGrid::Grid &_strata(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
+			const Strata::Grid &_strata(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).strata;
 			}

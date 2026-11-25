@@ -10,7 +10,7 @@ namespace spk::Voxel
 	{
 	protected:
 		virtual const World::HeightMap::Grid &_heights(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
-		virtual const StrataGrid::Grid &_strata(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
+		virtual const Strata::Grid &_strata(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
 
 	public:
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override

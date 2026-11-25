@@ -576,3 +576,62 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 	EXPECT_EQ(generator.samples.load(), 289);
 	EXPECT_EQ(generator.activeChunkCount(), 0u);
 }
+
+TEST(VoxelStrataGridTest, RebuildingCellsReclaimsLayersAndPreservesNeighbors)
+{
+	Biome biome;
+	Biome shorter;
+	shorter.strata().resize(1);
+	shorter.strata().front().materials = {{4, 1}};
+	Biome empty;
+	empty.strata().clear();
+	auto grid = spk::Voxel::Strata::Grid::obtain({{2, 0}, 1.0f}, {0, 0});
+
+	grid->buildCell({0, 0}, biome);
+	grid->buildCell({1, 0}, biome);
+	grid->buildCell({2, 0}, empty);
+	ASSERT_EQ(grid->layers({0, 0}).size(), 3u);
+	EXPECT_TRUE(grid->layers({2, 0}).empty());
+
+	grid->buildCell({0, 0}, shorter);
+	ASSERT_EQ(grid->layers({0, 0}).size(), 1u);
+	EXPECT_EQ(grid->layers({0, 0}).front().voxelID, 4u);
+	ASSERT_EQ(grid->layers({1, 0}).size(), 3u);
+	EXPECT_EQ(grid->layers({1, 0})[2].voxelID, 3u);
+	EXPECT_EQ(grid->sample({1, 0}).offset, 0u);
+	EXPECT_EQ(grid->sample({0, 0}).offset, 3u);
+	EXPECT_TRUE(grid->layers({2, 0}).empty());
+
+	grid->buildCell({0, 0}, shorter);
+	EXPECT_EQ(grid->sample({0, 0}).offset, 3u);
+	grid->buildCell({0, 0}, empty);
+	EXPECT_TRUE(grid->layers({0, 0}).empty());
+	grid->buildCell({2, 0}, shorter);
+	EXPECT_EQ(grid->sample({2, 0}).offset, 3u);
+	grid->buildCell({1, 0}, empty);
+	EXPECT_EQ(grid->sample({2, 0}).offset, 0u);
+	grid->buildCell({0, 0}, biome);
+	EXPECT_EQ(grid->sample({0, 0}).offset, 1u);
+	ASSERT_EQ(grid->layers({0, 0}).size(), 3u);
+	EXPECT_EQ(grid->layers({0, 0})[1].voxelID, 2u);
+	EXPECT_EQ(grid->layers({2, 0}).front().voxelID, 4u);
+}
+
+TEST(VoxelStrataGridTest, FailedBuildPreservesCellsAndRollsBackAppendedLayers)
+{
+	Biome biome;
+	Biome invalid;
+	invalid.strata()[1].materials.clear();
+	auto grid = spk::Voxel::Strata::Grid::obtain({{1, 0}, 1.0f}, {0, 0});
+	grid->buildCell({0, 0}, biome);
+	EXPECT_THROW(grid->buildCell({0, 0}, invalid), spk::Exception);
+	ASSERT_EQ(grid->layers({0, 0}).size(), 3u);
+	EXPECT_EQ(grid->layers({0, 0})[1].voxelID, 2u);
+	EXPECT_THROW(grid->buildCell({1, 0}, invalid), spk::Exception);
+	EXPECT_TRUE(grid->layers({1, 0}).empty());
+	EXPECT_THROW(grid->buildCell({2, 0}, biome), spk::Exception);
+	grid->buildCell({1, 0}, biome);
+	EXPECT_EQ(grid->sample({1, 0}).offset, 3u);
+	ASSERT_EQ(grid->layers({1, 0}).size(), 3u);
+	EXPECT_EQ(grid->layers({1, 0})[2].voxelID, 3u);
+}
