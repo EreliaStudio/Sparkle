@@ -51,16 +51,7 @@ namespace spk::World
 					const auto &cell = influences.sample({x, z});
 					if (_combination == Combination::Highest)
 					{
-						const SurfaceBiome *winner = nullptr;
-						float weight = 0.0f;
-						for (const auto &influence : cell)
-						{
-							if (influence.biome != nullptr && influence.weight > weight)
-							{
-								winner = influence.biome;
-								weight = influence.weight;
-							}
-						}
+						const auto *winner = cell.dominant();
 						if (winner != nullptr)
 						{
 							height = winner->groundHeight(position);
