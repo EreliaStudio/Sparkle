@@ -54,12 +54,12 @@ namespace sparkle_test::biome_world
 		spk::Perlin _boundary{123};
 		bool _hard;
 
-		class FlattenRoad : public spk::World::SurfacePass<SurfaceData>
+		class FlattenRoad : public spk::World::SurfacePass<GenerationData>
 		{
 		public:
-			void apply(const spk::Vector2Int &, SurfaceData &data) override
+			void apply(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				auto &grid = *data.heights;
+				auto &grid = *data.column(coordinate).heights;
 				const auto layout = grid.sampleSize();
 				for (std::uint32_t z = 0; z < layout.y; ++z)
 				{

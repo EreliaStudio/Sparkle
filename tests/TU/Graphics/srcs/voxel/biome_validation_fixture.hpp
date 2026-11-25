@@ -235,12 +235,12 @@ namespace sparkle_test::biome_validation
 		Biome _third;
 		spk::Perlin _regions{913};
 
-		class Terrace final : public spk::World::SurfacePass<SurfaceData>
+		class Terrace final : public spk::World::SurfacePass<GenerationData>
 		{
 		public:
-			void apply(const spk::Vector2Int &, SurfaceData &data) override
+			void apply(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				auto &grid = *data.heights;
+				auto &grid = *data.column(coordinate).heights;
 				const auto layout = grid.sampleSize();
 				for (std::uint32_t z = 0; z < layout.y; ++z)
 				{

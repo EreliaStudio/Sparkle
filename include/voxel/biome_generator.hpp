@@ -22,12 +22,12 @@ namespace spk::Voxel
 		using SurfaceData = typename GenerationData::ColumnData;
 		using InfluenceGrid = typename SurfaceData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
-		using HeightCombination = typename World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>::Combination;
+		using HeightCombination = typename World::SurfaceHeightCombinationPass<GenerationData, TCapacity>::Combination;
 
 	private:
-		using DistributionBase = World::SurfaceBiomeDistributionPass<SurfaceData, TCapacity>;
-		using CombinationBase = World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>;
-		using StrataBase = StrataGenerationPass<SurfaceData, TCapacity>;
+		using DistributionBase = World::SurfaceBiomeDistributionPass<GenerationData, TCapacity>;
+		using CombinationBase = World::SurfaceHeightCombinationPass<GenerationData, TCapacity>;
+		using StrataBase = StrataGenerationPass<GenerationData, TCapacity>;
 		using ApplicationBase = StrataApplicationPass<TChunk, GenerationData>;
 
 		class Distribution : public DistributionBase
@@ -36,13 +36,13 @@ namespace spk::Voxel
 			BiomeGenerator &_generator;
 
 		protected:
-			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const SurfaceData &) override
+			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &) override
 			{
 				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, _generator._scale};
 			}
-			typename InfluenceGrid::Lease &_gridDestination(SurfaceData &data) override
+			typename InfluenceGrid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				return data.influences;
+				return data.column(coordinate).influences;
 			}
 			void _computeBiomePlacement(const spk::Vector2 &position, Cell &destination) override
 			{
@@ -62,26 +62,26 @@ namespace spk::Voxel
 			using CombinationBase::CombinationBase;
 
 		protected:
-			const InfluenceGrid &_influences(const SurfaceData &data) override
+			const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
-				return *data.influences;
+				return *data.column(coordinate).influences;
 			}
-			World::HeightMap::Grid::Lease &_gridDestination(SurfaceData &data) override
+			World::HeightMap::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				return data.heights;
+				return data.column(coordinate).heights;
 			}
 		};
 
 		class Strata : public StrataBase
 		{
 		protected:
-			const InfluenceGrid &_influences(const SurfaceData &data) override
+			const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
-				return *data.influences;
+				return *data.column(coordinate).influences;
 			}
-			StrataGrid::Grid::Lease &_gridDestination(SurfaceData &data) override
+			StrataGrid::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				return data.strata;
+				return data.column(coordinate).strata;
 			}
 		};
 
@@ -90,7 +90,7 @@ namespace spk::Voxel
 		class ColumnPass : public World::Generator<TChunk, GenerationData>::Pass
 		{
 		private:
-			using Pass = World::SurfacePass<SurfaceData>;
+			using Pass = World::SurfacePass<GenerationData>;
 			std::vector<std::unique_ptr<Pass>> _passes;
 			Strata _strata;
 
@@ -108,12 +108,12 @@ namespace spk::Voxel
 			void apply(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 			{
 				const spk::Vector2Int key{coordinate.x, coordinate.z};
-				data.prepareColumn(coordinate, [&](SurfaceData &column) {
+				data.prepareColumn(coordinate, [&](GenerationData &generationData) {
 					for (auto &pass : _passes)
 					{
-						pass->apply(key, column);
+						pass->apply(key, generationData);
 					}
-					_strata.apply(key, column);
+					_strata.apply(key, generationData);
 				});
 			}
 		};

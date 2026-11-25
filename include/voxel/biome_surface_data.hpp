@@ -122,7 +122,7 @@ namespace spk::Voxel
 		}
 
 		// The active chunk protects its column from flush until clean().
-		// Build under a per-column lock; failed builds leave no partial data.
+		// Build under a per-column lock; failed builds discard incomplete grids.
 		template <typename TBuild>
 		void prepareColumn(const World::ChunkCoordinate &coordinate, TBuild &&build)
 		{
@@ -138,13 +138,32 @@ namespace spk::Voxel
 			const std::scoped_lock lock(column->_mutex);
 			if (!column->_ready)
 			{
-				ColumnData pending;
-				build(pending);
-				column->influences = std::move(pending.influences);
-				column->heights = std::move(pending.heights);
-				column->strata = std::move(pending.strata);
-				column->_ready = true;
+				try
+				{
+					build(*this);
+					column->_ready = true;
+				} catch (...)
+				{
+					column->influences = {};
+					column->heights = {};
+					column->strata = {};
+					throw;
+				}
 			}
+		}
+
+		// Surface passes access the column being built while prepareColumn holds its lock.
+		// These overloads are only for the synchronous construction callback.
+		[[nodiscard]] ColumnData &column(const spk::Vector2Int &coordinate)
+		{
+			const std::scoped_lock lock(_mutex);
+			return _columns.at(coordinate);
+		}
+
+		[[nodiscard]] const ColumnData &column(const spk::Vector2Int &coordinate) const
+		{
+			const std::scoped_lock lock(_mutex);
+			return _columns.at(coordinate);
 		}
 
 		// References remain valid until the caller cleans its active chunk.

@@ -9,7 +9,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 - spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity. Checked at() and operator[] accept Vector2UInt coordinates. Row-major iteration exposes read-only coordinates and mutable or const values through structured bindings (auto&& [coords, value]).
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid owns the Floor/Nearest/Bilinear interpolation enum and a protected weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, floor/nearest/bilinear sampling.
-- World::SurfacePass<TSurfaceData>: abstract construction steps, receiving only X/Z.
+- World::SurfacePass<TGenerationData>: X/Z operations receiving the full generation data; specialized passes access their inputs and destinations via coordinate-aware hooks.
 - Voxel::BiomeGenerationData: owns persistent column entries and request-local voxel builders; the ordinary voxel column pass only orchestrates construction.
 - Voxel::Biome: ordered strata, weighted/Perlin/custom material selection, finite/infinite thickness.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
@@ -30,16 +30,14 @@ influences, heights and strata. There are no shared pointers or separate collect
 types for generation data.
 
 The map mutex protects insertion, lookup, cleanup and flush. A mutex per column
-serializes its first construction without blocking other columns. A temporary
-ColumnData is built and its leases are published only after all surface passes
-succeed. Failed builds are retryable. Only one active generation per chunk coordinate
+serializes its first construction without blocking other columns. The concrete generation data runs surface passes under the column lock and marks the grids available only after all passes succeed; failed attempts clear partial grids. Failed builds are retryable. Only one active generation per chunk coordinate
 is supported; a duplicate preparation throws without modifying the existing entry.
 Distinct coordinates may be generated concurrently.
 
 Active chunks protect their X/Z column from eviction. References to chunk or column
 data are valid only until the calling chunk is cleaned. The generator calls cleanup
 after successful preparation, on success or failure; preparation itself must be
-exception-safe. Column callbacks must not recursively request columns. Queued jobs
+exception-safe. Surface callbacks may access the current X/Z column through the construction-only accessors but must not recursively prepare columns. Queued jobs
 need no reservations. Completed columns remain cached until flush(), which derives
 the active X/Z keys from the chunk map and evicts only unused columns. A duplicate
 streaming request after timeout can fail temporarily; retry policy is unchanged.
@@ -140,7 +138,7 @@ from actual test outputs only, with unchanged comparator tolerances.
 - Optional `_prepareGenerationData(coordinate, data)` returns false for an absent chunk; it must leave no request-local state on rejection or failure.
 - Chunk passes receive only coordinate and mutable data; `_instantiateChunk(coordinate, data)` constructs the final chunk.
 - `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
-- Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass remains a reusable XZ operation without its own cache.
+- Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass receives the complete TGenerationData and remains a reusable XZ operation without its own cache or cleanup policy.
 - Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Generation data is private to the generator and passed to hooks and passes; no public accessor is provided. `Generator::flush()` is available only when the data provides `flush()`, and forwards directly to it; voxel data releases idle cached columns.
 
 ### Validation after persistent-generation refactoring

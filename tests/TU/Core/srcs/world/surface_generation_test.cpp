@@ -46,20 +46,20 @@ namespace
 	using GenerationData = spk::Voxel::BiomeGenerationData<2>;
 	using SurfaceData = GenerationData::ColumnData;
 
-	class Distribution : public spk::World::SurfaceBiomeDistributionPass<SurfaceData, 2>
+	class Distribution : public spk::World::SurfaceBiomeDistributionPass<GenerationData, 2>
 	{
 	private:
 		ConstantBiome _first{20};
 		ConstantBiome _second{100};
 
 	protected:
-		Configuration _gridConfiguration(const spk::Vector2Int &, const SurfaceData &) override
+		Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &) override
 		{
 			return {{16, 16}, 1};
 		}
-		Grid::Lease &_gridDestination(SurfaceData &data) override
+		Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 		{
-			return data.influences;
+			return data.column(coordinate).influences;
 		}
 		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) override
 		{
@@ -75,16 +75,33 @@ namespace
 		using CombinationBase::CombinationBase;
 
 	protected:
-		const InfluenceGrid &_influences(const SurfaceData &data) override
+		const InfluenceGrid &_influences(const spk::Vector2Int &, const SurfaceData &data) override
 		{
 			return *data.influences;
 		}
-		Grid::Lease &_gridDestination(SurfaceData &data) override
+		Grid::Lease &_gridDestination(const spk::Vector2Int &, SurfaceData &data) override
 		{
 			return data.heights;
 		}
 	};
 
+	using ColumnCombinationBase = spk::World::SurfaceHeightCombinationPass<GenerationData, 2>;
+	class ColumnCombination : public ColumnCombinationBase
+	{
+	public:
+		using ColumnCombinationBase::ColumnCombinationBase;
+
+	protected:
+		const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
+		{
+			return *data.column(coordinate).influences;
+		}
+
+		Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+		{
+			return data.column(coordinate).heights;
+		}
+	};
 }
 
 namespace
@@ -224,12 +241,12 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	data.prepare(lower, {16, 16, 16}, registry);
 	data.prepare(upper, {16, 16, 16}, registry);
 	Distribution distribution;
-	Combination combination(CombinationBase::Combination::Weighted);
+	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	std::atomic<int> calls{0};
-	const auto build = [&](SurfaceData &column) {
+	const auto build = [&](GenerationData &generationData) {
 		++calls;
-		distribution.apply({-1, 2}, column);
-		combination.apply({-1, 2}, column);
+		distribution.apply({-1, 2}, generationData);
+		combination.apply({-1, 2}, generationData);
 	};
 	auto first = std::async(std::launch::async, [&] {
 		data.prepareColumn(lower, build);
@@ -267,16 +284,16 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	const Coordinate coordinate{0, 0, 0};
 	data.prepare(coordinate, {16, 16, 16}, registry);
 	Distribution distribution;
-	Combination combination(CombinationBase::Combination::Weighted);
+	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	int calls = 0;
-	const auto build = [&](SurfaceData &column) {
-		EXPECT_FALSE(static_cast<bool>(column.influences));
-		distribution.apply({0, 0}, column);
+	const auto build = [&](GenerationData &generationData) {
+		EXPECT_FALSE(static_cast<bool>(generationData.column(spk::Vector2Int{0, 0}).influences));
+		distribution.apply({0, 0}, generationData);
 		if (++calls == 1)
 		{
 			throw spk::Exception("Injected column failure");
 		}
-		combination.apply({0, 0}, column);
+		combination.apply({0, 0}, generationData);
 	};
 	EXPECT_THROW(data.prepareColumn(coordinate, build), spk::Exception);
 	EXPECT_THROW((void)data.column(coordinate), spk::Exception);
@@ -398,7 +415,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	const Coordinate idle{0, 0, 0};
 	data.prepare(active, {16, 16, 16}, registry);
 	data.prepare(idle, {16, 16, 16}, registry);
-	data.prepareColumn(idle, [](SurfaceData &) {
+	data.prepareColumn(idle, [](GenerationData &) {
 	});
 	data.clean(idle);
 
@@ -407,7 +424,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	auto ready = entered.get_future();
 	auto gate = resume.get_future().share();
 	auto building = std::async(std::launch::async, [&] {
-		data.prepareColumn(active, [&](SurfaceData &) {
+		data.prepareColumn(active, [&](GenerationData &) {
 			entered.set_value();
 			gate.wait();
 		});
