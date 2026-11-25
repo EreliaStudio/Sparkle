@@ -137,7 +137,7 @@ from actual test outputs only, with unchanged comparator tolerances.
 - Chunk passes receive only coordinate and mutable data; `_instantiateChunk(coordinate, data)` constructs the final chunk.
 - `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
 - Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass remains a reusable XZ operation without its own cache.
-- Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Explicit `BiomeGenerator::flush()` releases idle cached columns.
+- Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Generation data is private to the generator and passed to hooks and passes; no public accessor is provided. `Generator::flush()` is available only when the data provides `flush()`, and forwards directly to it; voxel data releases idle cached columns.
 
 ### Validation after persistent-generation refactoring
 

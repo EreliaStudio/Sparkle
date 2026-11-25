@@ -47,13 +47,10 @@ namespace spk::World
 	public:
 		virtual ~Generator() = default;
 
-		[[nodiscard]] TGenerationData &generationData() noexcept
+		void flush()
+			requires requires(TGenerationData &data) { data.flush(); }
 		{
-			return _generationData;
-		}
-		[[nodiscard]] const TGenerationData &generationData() const noexcept
-		{
-			return _generationData;
+			_generationData.flush();
 		}
 
 		// Configure passes before submitting work; the generator must outlive its jobs.

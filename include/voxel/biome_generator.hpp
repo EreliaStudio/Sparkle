@@ -168,11 +168,6 @@ namespace spk::Voxel
 			this->template addPass<Application>();
 		}
 
-		void flush()
-		{
-			this->generationData().flush();
-		}
-
 		template <typename TPass, typename... TArgs>
 		TPass &addSurfacePass(TArgs &&...args)
 		{

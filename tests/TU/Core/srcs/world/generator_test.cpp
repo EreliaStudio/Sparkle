@@ -104,9 +104,13 @@ namespace
 		{
 			++cleanupCalls;
 			data.chunks.erase(coordinate);
+			completed = data.completed;
+			remainingChunks = data.chunks.count();
 		}
 
 	public:
+		int completed = 0;
+		std::size_t remainingChunks = 0;
 		int cleanupCalls = 0;
 		int instantiationCalls = 0;
 		Coordinate lastCoordinate{};
@@ -285,8 +289,8 @@ TEST(GeneratorTest, PersistentGenerationDataHasFreshRequestScratch)
 	EXPECT_EQ(generator.instantiationCalls, 3);
 	EXPECT_EQ(generator.dataCalls, 3);
 	EXPECT_EQ(generator.cleanupCalls, 3);
-	EXPECT_EQ(generator.generationData().completed, 3);
-	EXPECT_EQ(generator.generationData().chunks.count(), 0u);
+	EXPECT_EQ(generator.completed, 3);
+	EXPECT_EQ(generator.remainingChunks, 0u);
 }
 
 TEST(GeneratorTest, AbsentChunkSkipsAllPassesAndInstantiation)
@@ -353,7 +357,7 @@ TEST(GeneratorTest, StandardPassFailureIsWrappedWithCauseAndStopsLaterPasses)
 	EXPECT_EQ(laterCalls, 0);
 	EXPECT_EQ(generator.instantiationCalls, 0);
 	EXPECT_EQ(generator.cleanupCalls, 1);
-	EXPECT_EQ(generator.generationData().chunks.count(), 0u);
+	EXPECT_EQ(generator.remainingChunks, 0u);
 }
 
 TEST(GeneratorTest, SparklePassFailurePreservesOriginalException)
@@ -387,7 +391,7 @@ TEST(GeneratorTest, FinalConstructionFailureIsAnException)
 	EXPECT_EQ(generator.instantiationCalls, 1);
 	EXPECT_EQ(generator.dataCalls, 1);
 	EXPECT_EQ(generator.cleanupCalls, 1);
-	EXPECT_EQ(generator.generationData().chunks.count(), 0u);
+	EXPECT_EQ(generator.remainingChunks, 0u);
 }
 
 TEST(GeneratorTest, ResultsRemainDeterministicRegardlessOfRequestOrder)

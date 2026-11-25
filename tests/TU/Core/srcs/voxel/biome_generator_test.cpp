@@ -59,8 +59,16 @@ namespace
 	{
 	private:
 		Biome _biome;
+		std::atomic<const GenerationData *> _observedData{nullptr};
 
 	protected:
+		bool _prepareGenerationData(const spk::World::ChunkCoordinate &coordinate, GenerationData &data) override
+		{
+			const bool prepared = BiomeGenerator::_prepareGenerationData(coordinate, data);
+			_observedData.store(&data);
+			return prepared;
+		}
+
 		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) const override
 		{
 			++samples;
@@ -69,6 +77,17 @@ namespace
 
 	public:
 		mutable std::atomic<int> samples{0};
+
+		[[nodiscard]] std::size_t activeChunkCount() const
+		{
+			return _observedData.load()->activeChunkCount();
+		}
+
+		[[nodiscard]] std::size_t columnCount() const
+		{
+			return _observedData.load()->columnCount();
+		}
+
 		Biome &biome()
 		{
 			return _biome;
@@ -107,9 +126,9 @@ TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
 	EXPECT_EQ(idAt(*upper, 0, 2, 0), 0u);
 	ASSERT_TRUE(generator.generate({-2, 1, -1}).has_value());
 	EXPECT_EQ(generator.samples.load(), 289);
-	EXPECT_EQ(generator.generationData().activeChunkCount(), 0u);
+	EXPECT_EQ(generator.activeChunkCount(), 0u);
 	generator.flush();
-	EXPECT_EQ(generator.generationData().columnCount(), 0u);
+	EXPECT_EQ(generator.columnCount(), 0u);
 	ASSERT_TRUE(generator.generate({-2, 1, -1}).has_value());
 	EXPECT_EQ(generator.samples.load(), 578);
 }
@@ -409,7 +428,7 @@ TEST(VoxelBiomeGeneratorTest, LocalRequesterReusesCachedColumnWithoutObserver)
 	EXPECT_EQ(generator.samples.load(), 289);
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	EXPECT_EQ(generator.samples.load(), 289);
-	EXPECT_EQ(generator.generationData().activeChunkCount(), 0u);
+	EXPECT_EQ(generator.activeChunkCount(), 0u);
 	generator.flush();
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	EXPECT_EQ(generator.samples.load(), 578);
@@ -434,5 +453,5 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesUseIndependentChun
 	ASSERT_TRUE(a && b);
 	EXPECT_EQ(idAt(*a, 0, 15, 0), idAt(*b, 0, 15, 0));
 	EXPECT_EQ(generator.samples.load(), 289);
-	EXPECT_EQ(generator.generationData().activeChunkCount(), 0u);
+	EXPECT_EQ(generator.activeChunkCount(), 0u);
 }
