@@ -300,6 +300,12 @@ TEST(SurfaceGridTest, BilinearUsesBothAxesAndRejectsInvalidCoordinates)
 	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Bilinear), 6);
 	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Nearest), 0);
 	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}, HeightMap::Grid::Interpolation::Nearest), 12);
+	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}, HeightMap::Grid::Interpolation::Floor), 0);
+	EXPECT_FLOAT_EQ(grid->at({2.9f, 1.9f}, HeightMap::Grid::Interpolation::Floor), 8);
+	EXPECT_FLOAT_EQ(grid->at({2, 2}, HeightMap::Grid::Interpolation::Floor), 12);
+	EXPECT_FLOAT_EQ(grid->at({4, 2}, HeightMap::Grid::Interpolation::Floor), grid->sample({2, 1}));
+	EXPECT_FLOAT_EQ(grid->at({2.9f, 1.9f}, HeightMap::Grid::Interpolation::Floor), grid->at({2.9f, 1.9f}));
+	EXPECT_THROW((void)grid->at({-0.01f, 0}, HeightMap::Grid::Interpolation::Floor), spk::Exception);
 	EXPECT_THROW((void)grid->at({-0.01f, 0}), spk::Exception);
 	EXPECT_THROW((void)grid->at({0, std::numeric_limits<float>::infinity()}), spk::Exception);
 	EXPECT_THROW((void)grid->at({std::numeric_limits<float>::quiet_NaN(), 0}), spk::Exception);

@@ -28,7 +28,8 @@ namespace spk::World
 			enum class Interpolation
 			{
 				Nearest,
-				Bilinear
+				Bilinear,
+				Floor
 			};
 
 		private:
@@ -57,6 +58,8 @@ namespace spk::World
 				const auto z1 = std::min<std::uint32_t>(z0 + 1, dimensions.y - 1);
 				switch (interpolation)
 				{
+				case Interpolation::Floor:
+					return sample({x0, z0});
 				case Interpolation::Nearest:
 					return sample({x - x0 > 0.5 ? x1 : x0, z - z0 > 0.5 ? z1 : z0});
 				case Interpolation::Bilinear:
