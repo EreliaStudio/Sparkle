@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -12,7 +13,6 @@
 
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 
 namespace
@@ -56,7 +56,14 @@ namespace
 			std::vector<int> appliedPasses;
 			std::unique_ptr<int> moveOnly = std::make_unique<int>(0);
 		};
-		spk::World::ChunkGenerationDataCollection<ChunkData> chunks;
+		std::mutex mutex;
+		std::map<Coordinate, ChunkData> chunks;
+
+		ChunkData &chunk(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return chunks.at(coordinate);
+		}
 		int completed = 0;
 
 		GenerationData(const int &seedValue, std::vector<int> *traceValue) :
@@ -84,7 +91,11 @@ namespace
 			{
 				return false;
 			}
-			data.chunks.emplace(coordinate);
+			const std::scoped_lock lock(data.mutex);
+			if (!data.chunks.try_emplace(coordinate).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
 			return true;
 		}
 
@@ -95,7 +106,7 @@ namespace
 			{
 				throw spk::Exception("Chunk construction failed");
 			}
-			auto &chunk = data.chunks.at(coordinate);
+			auto &chunk = data.chunk(coordinate);
 			++data.completed;
 			return ExampleChunk(chunk.value, std::move(chunk.appliedPasses));
 		}
@@ -103,9 +114,10 @@ namespace
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
 			++cleanupCalls;
+			const std::scoped_lock lock(data.mutex);
 			data.chunks.erase(coordinate);
 			completed = data.completed;
-			remainingChunks = data.chunks.count();
+			remainingChunks = data.chunks.size();
 		}
 
 	public:
@@ -142,7 +154,7 @@ namespace
 
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &chunk = data.chunks.at(coordinate);
+			auto &chunk = data.chunk(coordinate);
 			_coordinates.push_back(coordinate);
 			if (_initialScratch != nullptr)
 			{

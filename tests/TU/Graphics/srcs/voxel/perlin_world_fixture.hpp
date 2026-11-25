@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <map>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <string>
@@ -18,7 +20,6 @@
 #include "voxel/definition.hpp"
 #include "voxel/palette.hpp"
 #include "voxel/pass/perlin_terrain_pass.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 
 namespace sparkle_test::perlin_world
@@ -47,10 +48,12 @@ namespace sparkle_test::perlin_world
 	// Perlin is configured by the production pass, not implemented by this fixture.
 	struct GenerationData
 	{
-		spk::World::ChunkGenerationDataCollection<Builder> builders;
+		std::mutex mutex;
+		std::map<Coordinate, Builder> builders;
 
 		Builder &builder(const Coordinate &coordinate)
 		{
+			const std::scoped_lock lock(mutex);
 			return builders.at(coordinate);
 		}
 	};
@@ -165,7 +168,11 @@ namespace sparkle_test::perlin_world
 			}
 			Builder builder({16, 16, 16});
 			builder.bind(_registry);
-			data.builders.emplace(coordinate, std::move(builder));
+			const std::scoped_lock lock(data.mutex);
+			if (!data.builders.try_emplace(coordinate, std::move(builder)).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
 			return true;
 		}
 
@@ -178,6 +185,7 @@ namespace sparkle_test::perlin_world
 
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
+			const std::scoped_lock lock(data.mutex);
 			data.builders.erase(coordinate);
 		}
 

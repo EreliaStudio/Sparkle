@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <type_traits>
@@ -18,7 +19,6 @@
 #include "voxel/chunk.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_filter.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
@@ -51,7 +51,14 @@ namespace
 	{
 		Registry definitions;
 		std::int64_t seed;
-		spk::World::ChunkGenerationDataCollection<Volume::Builder> builders;
+		std::mutex mutex;
+		std::map<Coordinate, Volume::Builder> builders;
+
+		Volume::Builder &builder(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return builders.at(coordinate);
+		}
 
 		GenerationData(const Registry &registry, std::int64_t seedValue) :
 			definitions(registry),
@@ -67,7 +74,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = data.builders.at(coordinate);
+			auto &volume = data.builder(coordinate);
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -93,7 +100,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = data.builders.at(coordinate);
+			auto &volume = data.builder(coordinate);
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
@@ -118,19 +125,24 @@ namespace
 			{
 				return false;
 			}
-			data.builders.emplace(coordinate, spk::Vector3UInt{Chunk::Size});
+			const std::scoped_lock lock(data.mutex);
+			if (!data.builders.try_emplace(coordinate, spk::Vector3UInt{Chunk::Size}).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
 			return true;
 		}
 
 		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			Chunk chunk;
-			chunk.setVolume(data.builders.at(coordinate).build());
+			chunk.setVolume(data.builder(coordinate).build());
 			return chunk;
 		}
 
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
+			const std::scoped_lock lock(data.mutex);
 			data.builders.erase(coordinate);
 		}
 

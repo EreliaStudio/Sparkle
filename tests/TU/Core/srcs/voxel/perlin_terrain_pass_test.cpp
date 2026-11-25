@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <map>
+#include <mutex>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -15,7 +17,6 @@
 #include "voxel/definition.hpp"
 #include "voxel/pass/perlin_terrain_pass.hpp"
 #include "voxel/volume.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 
 namespace
@@ -26,10 +27,12 @@ namespace
 
 	struct GenerationData
 	{
-		spk::World::ChunkGenerationDataCollection<Builder> builders;
+		std::mutex mutex;
+		std::map<Coordinate, Builder> builders;
 
 		Builder &builder(const Coordinate &coordinate)
 		{
+			const std::scoped_lock lock(mutex);
 			return builders.at(coordinate);
 		}
 	};
@@ -60,7 +63,11 @@ namespace
 			(void)coordinate;
 			Builder builder({16, 16, 16});
 			builder.bind(_registry);
-			data.builders.emplace(coordinate, std::move(builder));
+			const std::scoped_lock lock(data.mutex);
+			if (!data.builders.try_emplace(coordinate, std::move(builder)).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
 			return true;
 		}
 
@@ -73,6 +80,7 @@ namespace
 
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
+			const std::scoped_lock lock(data.mutex);
 			data.builders.erase(coordinate);
 		}
 

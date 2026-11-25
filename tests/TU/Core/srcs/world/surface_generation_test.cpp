@@ -11,7 +11,6 @@
 #include <limits>
 
 #include "voxel/biome_surface_data.hpp"
-#include "world/column_generation_data_collection.hpp"
 #include "world/height_map.hpp"
 #include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
@@ -44,8 +43,8 @@ namespace
 		int value;
 	};
 
-	using SurfaceData = spk::Voxel::BiomeSurfaceData<2>;
-	using ColumnCache = spk::World::ColumnGenerationDataCollection<SurfaceData>;
+	using GenerationData = spk::Voxel::BiomeGenerationData<2>;
+	using SurfaceData = GenerationData::ColumnData;
 
 	class Distribution : public spk::World::SurfaceBiomeDistributionPass<SurfaceData, 2>
 	{
@@ -218,7 +217,12 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 
 TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 {
-	ColumnCache cache;
+	GenerationData data;
+	const spk::Voxel::Definition::Registry registry;
+	const Coordinate lower{-1, 0, 2};
+	const Coordinate upper{-1, 1, 2};
+	data.prepare(lower, {16, 16, 16}, registry);
+	data.prepare(upper, {16, 16, 16}, registry);
 	Distribution distribution;
 	Combination combination(CombinationBase::Combination::Weighted);
 	std::atomic<int> calls{0};
@@ -228,35 +232,45 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 		combination.apply({-1, 2}, column);
 	};
 	auto first = std::async(std::launch::async, [&] {
-		return cache.obtain({-1, 2}, build);
+		data.prepareColumn(lower, build);
 	});
 	auto second = std::async(std::launch::async, [&] {
-		return cache.obtain({-1, 2}, build);
+		data.prepareColumn(upper, build);
 	});
-	auto a = first.get();
-	auto b = second.get();
-	EXPECT_EQ(a.get(), b.get());
-	EXPECT_FLOAT_EQ(a->heights->at({0, 0}), 40);
+	first.get();
+	second.get();
+	EXPECT_EQ(&data.column(lower), &data.column(upper));
+	EXPECT_FLOAT_EQ(data.column(lower).heights->at({0, 0}), 40);
 	EXPECT_EQ(calls.load(), 1);
-	cache.flush();
-	EXPECT_EQ(cache.count(), 1u);
-	a.reset();
-	b.reset();
-	EXPECT_FLOAT_EQ(cache.obtain({-1, 2}, build)->heights->at({0, 0}), 40);
+	data.clean(lower);
+	data.flush();
+	EXPECT_EQ(data.columnCount(), 1u);
+	data.clean(upper);
+	data.prepare(lower, {16, 16, 16}, registry);
+	data.prepareColumn(lower, build);
+	EXPECT_FLOAT_EQ(data.column(lower).heights->at({0, 0}), 40);
 	EXPECT_EQ(calls.load(), 1);
-	cache.flush();
-	EXPECT_EQ(cache.count(), 0u);
-	EXPECT_FLOAT_EQ(cache.obtain({-1, 2}, build)->heights->at({0, 0}), 40);
+	data.clean(lower);
+	data.flush();
+	EXPECT_EQ(data.columnCount(), 0u);
+	data.prepare(lower, {16, 16, 16}, registry);
+	data.prepareColumn(lower, build);
+	EXPECT_FLOAT_EQ(data.column(lower).heights->at({0, 0}), 40);
 	EXPECT_EQ(calls.load(), 2);
+	data.clean(lower);
 }
 
 TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 {
-	ColumnCache cache;
+	GenerationData data;
+	const spk::Voxel::Definition::Registry registry;
+	const Coordinate coordinate{0, 0, 0};
+	data.prepare(coordinate, {16, 16, 16}, registry);
 	Distribution distribution;
 	Combination combination(CombinationBase::Combination::Weighted);
 	int calls = 0;
 	const auto build = [&](SurfaceData &column) {
+		EXPECT_FALSE(static_cast<bool>(column.influences));
 		distribution.apply({0, 0}, column);
 		if (++calls == 1)
 		{
@@ -264,11 +278,16 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 		}
 		combination.apply({0, 0}, column);
 	};
-	EXPECT_THROW((void)cache.obtain({0, 0}, build), spk::Exception);
-	EXPECT_FLOAT_EQ(cache.obtain({0, 0}, build)->heights->at({0, 0}), 40);
+	EXPECT_THROW(data.prepareColumn(coordinate, build), spk::Exception);
+	EXPECT_THROW((void)data.column(coordinate), spk::Exception);
+	data.clean(coordinate);
+	data.prepare(coordinate, {16, 16, 16}, registry);
+	data.prepareColumn(coordinate, build);
+	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
 	EXPECT_EQ(calls, 2);
-	EXPECT_FLOAT_EQ(cache.obtain({0, 0}, build)->heights->at({0, 0}), 40);
+	data.prepareColumn(coordinate, build);
 	EXPECT_EQ(calls, 2);
+	data.clean(coordinate);
 }
 
 TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
@@ -373,31 +392,38 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 
 TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 {
-	ColumnCache cache;
+	GenerationData data;
+	const spk::Voxel::Definition::Registry registry;
+	const Coordinate active{-1, 0, 0};
+	const Coordinate idle{0, 0, 0};
+	data.prepare(active, {16, 16, 16}, registry);
+	data.prepare(idle, {16, 16, 16}, registry);
+	data.prepareColumn(idle, [](SurfaceData &) {
+	});
+	data.clean(idle);
+
 	std::promise<void> entered;
 	std::promise<void> resume;
 	auto ready = entered.get_future();
 	auto gate = resume.get_future().share();
 	auto building = std::async(std::launch::async, [&] {
-		return cache.obtain({-1, 0}, [&](SurfaceData &) {
+		data.prepareColumn(active, [&](SurfaceData &) {
 			entered.set_value();
 			gate.wait();
 		});
 	});
 	ready.wait();
-	auto idle = cache.obtain({0, 0}, [](SurfaceData &) {
-	});
-	idle.reset();
-	cache.flush();
-	EXPECT_EQ(cache.count(), 1u);
+	data.flush();
+	EXPECT_EQ(data.columnCount(), 1u);
 	resume.set_value();
-	auto active = building.get();
-	cache.flush();
-	EXPECT_EQ(cache.count(), 1u);
-	active.reset();
-	cache.flush();
-	EXPECT_EQ(cache.count(), 0u);
+	building.get();
+	data.flush();
+	EXPECT_EQ(data.columnCount(), 1u);
+	data.clean(active);
+	data.flush();
+	EXPECT_EQ(data.columnCount(), 0u);
 }
+
 
 namespace
 {

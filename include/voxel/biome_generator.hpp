@@ -108,7 +108,7 @@ namespace spk::Voxel
 			void apply(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 			{
 				const spk::Vector2Int key{coordinate.x, coordinate.z};
-				data.chunk(coordinate).column = data.obtainColumn(key, [&](SurfaceData &column) {
+				data.prepareColumn(coordinate, [&](SurfaceData &column) {
 					for (auto &pass : _passes)
 					{
 						pass->apply(key, column);
@@ -123,11 +123,11 @@ namespace spk::Voxel
 		protected:
 			const World::HeightMap::Grid &_heights(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
-				return *data.chunk(coordinate).column->heights;
+				return *data.column(coordinate).heights;
 			}
 			const StrataGrid::Grid &_strata(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
-				return *data.chunk(coordinate).column->strata;
+				return *data.column(coordinate).strata;
 			}
 		};
 

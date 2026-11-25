@@ -5,6 +5,8 @@
 #include <exception>
 #include <future>
 #include <memory>
+#include <map>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -16,7 +18,6 @@
 #include "threading/worker_pool.hpp"
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/chunk_requester.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
@@ -46,7 +47,14 @@ namespace
 	struct GenerationData
 	{
 		int seed = 0;
-		spk::World::ChunkGenerationDataCollection<int> values;
+		std::mutex mutex;
+		std::map<Coordinate, int> values;
+
+		int &value(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return values.at(coordinate);
+		}
 
 		explicit GenerationData(int seedValue) :
 			seed(seedValue)
@@ -76,17 +84,22 @@ namespace
 			{
 				return false;
 			}
-			data.values.emplace(coordinate, 0);
+			const std::scoped_lock lock(data.mutex);
+			if (!data.values.try_emplace(coordinate, 0).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
 			return true;
 		}
 
 		[[nodiscard]] TestChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			return TestChunk(data.values.at(coordinate));
+			return TestChunk(data.value(coordinate));
 		}
 
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
+			const std::scoped_lock lock(data.mutex);
 			data.values.erase(coordinate);
 		}
 
@@ -115,7 +128,7 @@ namespace
 			{
 				throw std::runtime_error("Expected standard exception");
 			}
-			data.values.at(coordinate) = data.seed + coordinate.x + coordinate.y + coordinate.z;
+			data.value(coordinate) = data.seed + coordinate.x + coordinate.y + coordinate.z;
 		}
 	};
 
@@ -136,7 +149,7 @@ namespace
 		{
 			_entered.set_value();
 			_release.wait();
-			data.values.at(coordinate) = data.seed;
+			data.value(coordinate) = data.seed;
 		}
 	};
 

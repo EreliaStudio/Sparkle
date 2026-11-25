@@ -6,6 +6,7 @@
 #include <exception>
 #include <future>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -23,7 +24,6 @@
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_filter.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/chunk_requester.hpp"
 #include "world/generator.hpp"
@@ -65,7 +65,14 @@ namespace
 
 	struct GenerationData
 	{
-		spk::World::ChunkGenerationDataCollection<int> values;
+		std::mutex mutex;
+		std::map<Coordinate, int> values;
+
+		int &value(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return values.at(coordinate);
+		}
 	};
 
 	using Generator = spk::World::Generator<IntegrationChunk, GenerationData>;
@@ -85,16 +92,21 @@ namespace
 			{
 				return false;
 			}
-			data.values.emplace(coordinate, 0);
+			const std::scoped_lock lock(data.mutex);
+			if (!data.values.try_emplace(coordinate, 0).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
 			return true;
 		}
 
 		[[nodiscard]] IntegrationChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			return IntegrationChunk(data.values.at(coordinate));
+			return IntegrationChunk(data.value(coordinate));
 		}
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
+			const std::scoped_lock lock(data.mutex);
 			data.values.erase(coordinate);
 		}
 	};
@@ -104,7 +116,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			data.values.at(coordinate) = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
+			data.value(coordinate) = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
 		}
 	};
 
@@ -113,7 +125,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			data.values.at(coordinate) = data.values.at(coordinate) * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
+			data.value(coordinate) = data.value(coordinate) * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
 		}
 	};
 
@@ -565,7 +577,7 @@ TEST(HeadlessMultiObserverIntegrationTest, LocalWorkerShutdownDoesNotWaitForBloc
 		{
 			_entered.set_value();
 			_release.wait();
-			data.values.at(coordinate) = 77;
+			data.value(coordinate) = 77;
 		}
 	};
 

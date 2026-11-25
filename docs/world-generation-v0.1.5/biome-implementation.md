@@ -23,31 +23,31 @@ spatial hierarchy or eviction policy. Each derived generator decides how to init
 synchronize and clean its data. Streaming requests no longer retain or release generator
 data. The generator must outlive all submitted jobs.
 
-Voxel::BiomeGenerationData composes two optional generic containers: World::ColumnGenerationDataCollection<ColumnData> for persistent columns and World::ChunkGenerationDataCollection<ChunkData> for request-local scratch.
-ColumnGenerationDataCollection is keyed by X/Z coordinates; obtain(coordinate, build) returns a shared immutable handle, count() reports cached entries and flush() releases unused entries.
-A per-column mutex serializes construction; distinct columns compute independently.
-A column is published only after distribution, height combination, custom surface passes
-and strata have succeeded. Failed builds are retryable. Column data is retained after
-all chunk jobs finish, independently of observers. The optional explicit flush() evicts
-idle column entries; entries currently building or referenced by handles are preserved.
-Queued jobs need no reservations and regenerate an evicted column when they start.
-Flush releases leases back to their pools, not necessarily heap capacity back to the OS.
+Voxel::BiomeGenerationData owns two maps directly: ColumnData keyed by X/Z and
+ChunkData keyed by the full chunk coordinate. Both types are nested in the generation
+data. ChunkData contains the request-local Volume::Builder; ColumnData contains
+influences, heights and strata. There are no shared pointers or separate collection
+types for generation data.
 
-ChunkGenerationDataCollection is optional request-local storage keyed exclusively by
-chunk coordinate. Only one active generation per coordinate is supported: a duplicate
-preparation throws without modifying the existing entry. Distinct coordinates remain
-independent and can be generated concurrently. References are valid only until their
-own job cleans its entry. After cleanup, the same coordinate can be generated again.
-A duplicate streaming request after retirement or timeout may fail temporarily; the
-existing streaming retry policy remains unchanged.
-The generator calls cleanup after successful preparation, on success or failure;
-preparation itself must be exception-safe. Column callbacks must not recursively obtain
-columns from the cache. Cross-column generation dependencies are not implemented.
+The map mutex protects insertion, lookup, cleanup and flush. A mutex per column
+serializes its first construction without blocking other columns. A temporary
+ColumnData is built and its leases are published only after all surface passes
+succeed. Failed builds are retryable. Only one active generation per chunk coordinate
+is supported; a duplicate preparation throws without modifying the existing entry.
+Distinct coordinates may be generated concurrently.
 
-Configure passes before submitting jobs. Biome definitions, callbacks and height sources
-must be immutable and alive throughout their use. Drain workers, release external
-column handles and flush before changing settings or definitions. Cached column data
-is invalidated only by explicit flush; no LRU or automatic eviction.
+Active chunks protect their X/Z column from eviction. References to chunk or column
+data are valid only until the calling chunk is cleaned. The generator calls cleanup
+after successful preparation, on success or failure; preparation itself must be
+exception-safe. Column callbacks must not recursively request columns. Queued jobs
+need no reservations. Completed columns remain cached until flush(), which derives
+the active X/Z keys from the chunk map and evicts only unused columns. A duplicate
+streaming request after timeout can fail temporarily; retry policy is unchanged.
+Flush returns leases to their pools, not necessarily memory to the OS.
+
+Configure passes before submitting jobs. Biome definitions, callbacks and height
+sources must remain immutable and alive throughout use. Drain workers and flush
+before changing settings or definitions. No LRU or automatic eviction is implemented.
 
 ## Selected open-question resolutions
 
@@ -59,7 +59,7 @@ is invalidated only by explicit flush; no LRU or automatic eviction.
   positive influences with double accumulation; Dominant evaluates only the biome with
   the greatest positive weight (first slot wins ties). Both reject missing contributions
   and non-finite results. This choice is independent of spatial influence interpolation. Custom edits run inside the
-  construction pipeline, before the result is published as shared_ptr<const SurfaceData>.
+  construction pipeline, before the column is published for read-only access.
 - Voxel height is floored. Depth zero means the top voxel. Finite strata have positive
   integer thickness; the final stratum may be infinite. Missing finite layers leave the
   builder unchanged; solid strata overwrite the corresponding existing voxels.
