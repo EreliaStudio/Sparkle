@@ -41,6 +41,7 @@
 #include "world/world_streaming_system.hpp"
 
 #include "biome_world_fixture.hpp"
+#include "biome_validation_fixture.hpp"
 #include "perlin_world_fixture.hpp"
 
 namespace
@@ -695,4 +696,204 @@ TEST(BiomeWorldGolden, StrataAndCliffsFromBelow)
 TEST(BiomeWorldGolden, CustomHeightModification)
 {
 	captureBiomeWorld("custom_height_edit", false, {52, 52, 60}, {0, 9, 0}, true);
+}
+
+namespace
+{
+	namespace validation = sparkle_test::biome_validation;
+
+	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {})
+	{
+		Scene scene;
+		validation::Generator generator(scene.definitions, settings);
+		const auto coordinates = view.coordinates();
+		// Deliberately retain every vertical coordinate before running any generation.
+		for (const auto &coordinate : coordinates)
+		{
+			generator.retain(coordinate);
+		}
+		auto generationOrder = coordinates;
+		if (view.reverseOrder)
+		{
+			std::reverse(generationOrder.begin(), generationOrder.end());
+		}
+		std::size_t visibleVoxels = 0;
+		for (const auto &coordinate : generationOrder)
+		{
+			auto chunk = generator.generate(coordinate);
+			ASSERT_TRUE(chunk.has_value());
+			if (view.cut != validation::Cut::None)
+			{
+				terrain::Builder builder({16, 16, 16});
+				builder.load(chunk->volume());
+				const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
+				for (std::uint32_t z = 0; z < 16; ++z)
+				{
+					for (std::uint32_t x = 0; x < 16; ++x)
+					{
+						for (std::uint32_t y = 0; y < 16; ++y)
+						{
+							if (view.removes(origin.x + x, origin.y + y, origin.z + z))
+							{
+								builder.erase({x, y, z});
+							}
+						}
+					}
+				}
+				chunk->setVolume(builder.build());
+			}
+			for (std::uint32_t z = 0; z < 16; ++z)
+			{
+				for (std::uint32_t y = 0; y < 16; ++y)
+				{
+					for (std::uint32_t x = 0; x < 16; ++x)
+					{
+						visibleVoxels += chunk->volume().atRaw({x, y, z}) != 0;
+					}
+				}
+			}
+			scene.chunks.addChunk(coordinate, *chunk);
+		}
+		for (const auto &coordinate : coordinates)
+		{
+			generator.release(coordinate);
+		}
+		ASSERT_GT(visibleVoxels, 0u);
+		ASSERT_EQ(scene.chunks.size(), coordinates.size());
+		scene.refreshCasters();
+		scene.sun.setCastsShadows(view.shadows);
+		scene.setCamera(view.camera, view.target);
+		const auto pixels = scene.capture();
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto actual = sparkle_test::resultImagePath("rendering/biome-world", name);
+		gl.save(actual);
+		const auto expected = sparkle_test::expectedImagePath("rendering/biome-world", name);
+		ASSERT_TRUE(std::filesystem::exists(expected)) << "Review and promote rendered biome baseline: " << actual;
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		tolerance.alphaTolerance = 8;
+		const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
+		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
+		EXPECT_EQ(pixels.size, terrain::ImageSize);
+	}
+}
+
+TEST(BiomeWorldGolden, PerlinMaterialLowFrequency)
+{
+	captureBiomeValidation("strata_perlin_low_frequency", {.layers = validation::Layers::PerlinLow}, {.cut = validation::Cut::Horizontal, .camera = {1, 88, 2}, .target = {0, 20, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, PerlinMaterialHighFrequency)
+{
+	captureBiomeValidation("strata_perlin_high_frequency", {.layers = validation::Layers::PerlinHigh}, {.cut = validation::Cut::Horizontal, .camera = {1, 88, 2}, .target = {0, 20, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, WeightedMaterialSpeckles)
+{
+	captureBiomeValidation("strata_weighted_materials", {.layers = validation::Layers::Weighted}, {.cut = validation::Cut::Horizontal, .camera = {1, 88, 2}, .target = {0, 20, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, CustomMaterialBands)
+{
+	captureBiomeValidation("strata_custom_bands", {.layers = validation::Layers::Custom}, {.cut = validation::Cut::Horizontal, .camera = {1, 88, 2}, .target = {0, 20, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, PerlinThreeMaterialWeights)
+{
+	captureBiomeValidation("strata_three_materials", {.layers = validation::Layers::ThreeMaterials}, {.cut = validation::Cut::Horizontal, .camera = {1, 88, 2}, .target = {0, 20, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, PerlinVariableThicknessCutaway)
+{
+	captureBiomeValidation("strata_variable_thickness", {.layers = validation::Layers::VariableThickness}, {.cut = validation::Cut::Half, .cutHeight = 16, .camera = {50, 43, 43}, .target = {0, 17, 0}});
+}
+
+TEST(BiomeWorldGolden, PerlinVariableThicknessHorizontalSection)
+{
+	captureBiomeValidation("strata_thickness_section", {.layers = validation::Layers::VariableThickness}, {.cut = validation::Cut::Horizontal, .cutHeight = 22, .camera = {1, 88, 2}, .target = {0, 22, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, IndependentMaterialAndThicknessPerlin)
+{
+	captureBiomeValidation("strata_independent_perlin", {.layers = validation::Layers::Independent}, {.cut = validation::Cut::Staircase, .camera = {48, 44, 49}, .target = {0, 19, 0}});
+}
+
+TEST(BiomeWorldGolden, SeparatePerlinSeedsAcrossDepth)
+{
+	captureBiomeValidation("strata_two_perlin_layers", {.layers = validation::Layers::TwoPerlin}, {.cut = validation::Cut::Staircase, .camera = {48, 44, 49}, .target = {0, 19, 0}});
+}
+
+TEST(BiomeWorldGolden, InfiniteDeepMaterialDistribution)
+{
+	captureBiomeValidation("strata_infinite_perlin", {.layers = validation::Layers::DeepPerlin}, {.cut = validation::Cut::Horizontal, .cutHeight = 5, .camera = {1, 76, 2}, .target = {0, 5, 0}, .shadows = false});
+}
+
+TEST(BiomeWorldGolden, FiniteStrataWithoutBedrock)
+{
+	captureBiomeValidation("strata_finite_floating", {.layers = validation::Layers::Finite}, {.camera = {54, 12, 49}, .target = {0, 23, 0}});
+}
+
+TEST(BiomeWorldGolden, SingleInfiniteStratum)
+{
+	captureBiomeValidation("strata_single_infinite", {.layers = validation::Layers::SingleInfinite}, {.camera = {52, 43, 55}, .target = {0, 16, 0}});
+}
+
+TEST(BiomeWorldGolden, MultilayerHeightNoise)
+{
+	captureBiomeValidation("height_multilayer_perlin", {.height = validation::Height::Multilayer}, {.camera = {53, 53, 59}, .target = {0, 17, 0}});
+}
+
+TEST(BiomeWorldGolden, NegativeWorldElevation)
+{
+	captureBiomeValidation("height_negative_elevation", {.height = validation::Height::BelowZero, .layers = validation::Layers::Independent}, {.minimumY = -2, .maximumY = 0, .camera = {52, 22, 55}, .target = {0, -13, 0}});
+}
+
+TEST(BiomeWorldGolden, TallTerrainThreeVerticalChunks)
+{
+	captureBiomeValidation("height_vertical_stack", {.height = validation::Height::Tall, .layers = validation::Layers::VariableThickness}, {.minimumY = -1, .maximumY = 2, .cut = validation::Cut::Half, .cutHeight = 20, .camera = {55, 64, 58}, .target = {0, 19, 0}});
+}
+
+TEST(BiomeWorldGolden, FineHalfVoxelSurfaceGrid)
+{
+	captureBiomeValidation("grid_scale_half", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .scale = 0.5f}, {});
+}
+
+TEST(BiomeWorldGolden, CoarseTwoVoxelSurfaceGrid)
+{
+	captureBiomeValidation("grid_scale_two", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .scale = 2.0f}, {});
+}
+
+TEST(BiomeWorldGolden, CoarseFourVoxelSurfaceGrid)
+{
+	captureBiomeValidation("grid_scale_four", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .scale = 4.0f}, {});
+}
+
+TEST(BiomeWorldGolden, NoisyBiomeIslands)
+{
+	captureBiomeValidation("biome_perlin_islands", {.height = validation::Height::Hills, .placement = validation::Placement::Islands}, {.camera = {2, 97, 3}, .target = {0, 14, 0}});
+}
+
+TEST(BiomeWorldGolden, ThreeWayBiomeBlend)
+{
+	captureBiomeValidation("biome_three_way_blend", {.height = validation::Height::Hills, .placement = validation::Placement::Blend}, {});
+}
+
+TEST(BiomeWorldGolden, EqualInfluenceFirstSlotWins)
+{
+	captureBiomeValidation("biome_equal_weight_tie", {.placement = validation::Placement::Tie}, {});
+}
+
+TEST(BiomeWorldGolden, DominantBiomeCheckerboard)
+{
+	captureBiomeValidation("biome_checkerboard", {.placement = validation::Placement::Checker}, {.camera = {1, 97, 2}, .target = {0, 20, 0}});
+}
+
+TEST(BiomeWorldGolden, NegativeCoordinateChunkSeams)
+{
+	captureBiomeValidation("biome_negative_chunk_seams", {.height = validation::Height::Multilayer, .placement = validation::Placement::Islands, .layers = validation::Layers::Independent}, {.centerX = -3, .centerZ = -2, .camera = {-9, 50, 10}, .target = {-40, 14, -24}, .reverseOrder = true});
+}
+
+TEST(BiomeWorldGolden, CustomTerracedHeightPass)
+{
+	captureBiomeValidation("height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {});
 }
