@@ -25,12 +25,6 @@ namespace spk::World
 		{
 		public:
 			using Lease = spk::Pool<Grid>::Lease;
-			enum class Interpolation
-			{
-				Nearest,
-				Bilinear,
-				Floor
-			};
 
 		private:
 			Grid() = default;
@@ -48,24 +42,18 @@ namespace spk::World
 
 			[[nodiscard]] float at(const spk::Vector2 &position, Interpolation interpolation) const
 			{
-				const auto dimensions = sampleSize();
-				const auto &config = configuration();
-				const double x = _sampleAxis(position.x, config.size.x, dimensions.x);
-				const double z = _sampleAxis(position.y, config.size.y, dimensions.y);
-				const auto x0 = static_cast<std::uint32_t>(x);
-				const auto z0 = static_cast<std::uint32_t>(z);
-				const auto x1 = std::min<std::uint32_t>(x0 + 1, dimensions.x - 1);
-				const auto z1 = std::min<std::uint32_t>(z0 + 1, dimensions.y - 1);
-				switch (interpolation)
-				{
-				case Interpolation::Floor:
-					return sample({x0, z0});
-				case Interpolation::Nearest:
-					return sample({x - x0 > 0.5 ? x1 : x0, z - z0 > 0.5 ? z1 : z0});
-				case Interpolation::Bilinear:
-					return std::lerp(std::lerp(sample({x0, z0}), sample({x1, z0}), static_cast<float>(x - x0)), std::lerp(sample({x0, z1}), sample({x1, z1}), static_cast<float>(x - x0)), static_cast<float>(z - z0));
-				}
-				throw spk::Exception("Unknown height grid interpolation");
+				double result = 0.0;
+				_forEachInterpolationSample(position, interpolation, [&](const float &value, double weight) {
+					if (weight == 1.0)
+					{
+						result = value;
+					}
+					else
+					{
+						result += static_cast<double>(value) * weight;
+					}
+				});
+				return static_cast<float>(result);
 			}
 		};
 

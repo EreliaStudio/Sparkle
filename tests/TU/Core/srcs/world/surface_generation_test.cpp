@@ -2,6 +2,7 @@
 #include "container/grid_2d.hpp"
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 #include <array>
 #include <atomic>
@@ -170,6 +171,81 @@ namespace
 			addPass<Application>();
 		}
 	};
+}
+
+namespace
+{
+	class InterpolationProbe : public spk::World::SurfaceGrid<int>
+	{
+	public:
+		using Lease = spk::Pool<InterpolationProbe>::Lease;
+		using SurfaceGrid::_forEachInterpolationSample;
+
+		static Lease obtain(const Configuration &configuration)
+		{
+			return _obtain<InterpolationProbe>(configuration, {}, []() {
+				return new InterpolationProbe();
+			}, [](InterpolationProbe &) {
+			});
+		}
+	};
+}
+
+TEST(SurfaceGridTest, SharedInterpolationVisitsOnlyContributingSamples)
+{
+	using Mode = InterpolationProbe::Interpolation;
+	auto grid = InterpolationProbe::obtain({{4, 4}, 2});
+	grid->sample({0, 0}) = 1;
+	grid->sample({1, 0}) = 2;
+	grid->sample({0, 1}) = 3;
+	grid->sample({1, 1}) = 4;
+	std::vector<std::pair<int, double>> visits;
+	const auto visit = [&](const int &value, double weight) {
+		visits.emplace_back(value, weight);
+	};
+	using Visits = decltype(visits);
+	grid->_forEachInterpolationSample({0, 0}, Mode::Bilinear, visit);
+	EXPECT_EQ(visits, (Visits{{1, 1.0}}));
+	visits.clear();
+	grid->_forEachInterpolationSample({1, 0}, Mode::Bilinear, visit);
+	EXPECT_EQ(visits, (Visits{{1, 0.5}, {2, 0.5}}));
+	visits.clear();
+	grid->_forEachInterpolationSample({0, 1}, Mode::Bilinear, visit);
+	EXPECT_EQ(visits, (Visits{{1, 0.5}, {3, 0.5}}));
+	visits.clear();
+	grid->_forEachInterpolationSample({1, 1}, Mode::Bilinear, visit);
+	EXPECT_EQ(visits, (Visits{{1, 0.25}, {2, 0.25}, {3, 0.25}, {4, 0.25}}));
+	visits.clear();
+	grid->_forEachInterpolationSample({1.5f, 1.5f}, Mode::Floor, visit);
+	EXPECT_EQ(visits, (Visits{{1, 1.0}}));
+	visits.clear();
+	grid->_forEachInterpolationSample({1.5f, 1.5f}, Mode::Nearest, visit);
+	EXPECT_EQ(visits, (Visits{{4, 1.0}}));
+	visits.clear();
+	grid->_forEachInterpolationSample({1, 1}, Mode::Nearest, visit);
+	EXPECT_EQ(visits, (Visits{{1, 1.0}}));
+	visits.clear();
+	EXPECT_THROW(grid->_forEachInterpolationSample({-1, 0}, Mode::Bilinear, visit), spk::Exception);
+	EXPECT_TRUE(visits.empty());
+	EXPECT_THROW(grid->_forEachInterpolationSample({0, 0}, static_cast<Mode>(99), visit), spk::Exception);
+	EXPECT_TRUE(visits.empty());
+	auto decimal = InterpolationProbe::obtain({{1, 1}, 0.1f});
+	decimal->sample({7, 7}) = 7;
+	decimal->_forEachInterpolationSample(decimal->localPosition({7, 7}), Mode::Bilinear, visit);
+	EXPECT_EQ(visits, (Visits{{7, 1.0}}));
+}
+
+TEST(SurfaceGridTest, HeightGridAlignedInterpolationDoesNotReadUnusedValues)
+{
+	using Grid = HeightMap::Grid;
+	auto grid = Grid::obtain({{2, 2}, 2}, {});
+	grid->sample({0, 0}) = 2;
+	grid->sample({1, 0}) = 6;
+	grid->sample({0, 1}) = std::numeric_limits<float>::quiet_NaN();
+	grid->sample({1, 1}) = std::numeric_limits<float>::quiet_NaN();
+	EXPECT_FLOAT_EQ(grid->at({0, 0}, Grid::Interpolation::Bilinear), 2);
+	EXPECT_FLOAT_EQ(grid->at({1, 0}, Grid::Interpolation::Bilinear), 4);
+	EXPECT_FLOAT_EQ(grid->at({2, 0}, Grid::Interpolation::Bilinear), 6);
 }
 
 TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
@@ -437,6 +513,8 @@ TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
 	EXPECT_FLOAT_EQ(cell[1].weight, 0.75f);
 	EXPECT_EQ(grid->interpolate({3, 1}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
 	EXPECT_EQ(grid->interpolate({3, 1}, Grid::Interpolation::Floor).dominant(), &a);
+	EXPECT_EQ(grid->interpolate({3, 1}, Grid::Interpolation::Nearest).dominant(), &b);
+	EXPECT_EQ(grid->interpolate({2, 2}, Grid::Interpolation::Nearest).dominant(), &a);
 	EXPECT_EQ(grid->interpolate({2, 2}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &a);
 	EXPECT_EQ(grid->interpolate({4, 4}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
 }

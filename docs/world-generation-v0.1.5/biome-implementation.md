@@ -7,7 +7,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 
 - World::Biome / World::SurfaceBiome: identity and continuous absolute height.
 - spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity. Checked at() and operator[] accept Vector2UInt coordinates. Row-major iteration exposes read-only coordinates and mutable or const values through structured bindings (auto&& [coords, value]).
-- World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease.
+- World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid owns the Floor/Nearest/Bilinear interpolation enum and a protected weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, floor/nearest/bilinear sampling.
 - World::SurfacePass<TSurfaceData>: abstract construction steps, receiving only X/Z.
 - World::SurfaceGenerationPass: owns child passes and one entry per active horizontal column.
@@ -104,9 +104,12 @@ three independently configurable Perlin fields and exposes warp1D, warp2D and
 warp3D. Each axis samples the original input position at the requested dimension;
 the 2D result is unchanged by the addition of the third field.
 Influence grids interpolate by biome identity, not slot index, preserving up to
-four cells' distinct biomes. Interpolation is explicit: Floor copies the floor cell,
-Bilinear combines neighboring influences without discarding positive contributions.
-Aligned queries read only one cell at a grid node, or two cells on a grid line.
+four cells' distinct biomes. Floor and Nearest copy the selected cell; Bilinear
+combines neighboring influences without discarding positive contributions.
+Both height and influence grids use SurfaceGrid's weighted traversal. Aligned
+bilinear queries read only one cell at a grid node, or two cells on a grid line.
+Height interpolation accumulates weighted samples in double precision before
+converting to float; a single contributing sample is returned unchanged.
 Empty cells remain empty. The Highest mode belongs to height combination only.
 Stored and interpolated influences use Influence::Cell<N>, which owns a fixed-size
 std::array and exposes dominant() independently of spatial sampling. Grid no longer

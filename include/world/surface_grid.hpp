@@ -18,6 +18,13 @@ namespace spk::World
 	class SurfaceGrid : public spk::LifeCycle
 	{
 	public:
+		enum class Interpolation
+		{
+			Floor,
+			Nearest,
+			Bilinear
+		};
+
 		struct Configuration
 		{
 			spk::Vector2UInt size;
@@ -91,6 +98,60 @@ namespace spk::World
 				return static_cast<double>(count - 1);
 			}
 			return std::min(static_cast<double>(position) / _configuration.scale, static_cast<double>(count - 1));
+		}
+
+		template <typename TVisitor>
+		void _forEachInterpolationSample(const spk::Vector2 &position, Interpolation interpolation, TVisitor &&visitor) const
+		{
+			const auto dimensions = sampleSize();
+			double x = _sampleAxis(position.x, _configuration.size.x, dimensions.x);
+			double z = _sampleAxis(position.y, _configuration.size.y, dimensions.y);
+			if (interpolation == Interpolation::Floor)
+			{
+				visitor(sample({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)}), 1.0);
+				return;
+			}
+			if (interpolation != Interpolation::Nearest && interpolation != Interpolation::Bilinear)
+			{
+				throw spk::Exception("Unknown surface grid interpolation");
+			}
+			const auto align = [this](float coordinate, double index) {
+				const double nearest = std::round(index);
+				// Match localPosition's float representation, without snapping nearby positions.
+				return coordinate == static_cast<float>(nearest * _configuration.scale) ? nearest : index;
+			};
+			x = align(position.x, x);
+			z = align(position.y, z);
+			const auto x0 = static_cast<std::uint32_t>(x);
+			const auto z0 = static_cast<std::uint32_t>(z);
+			const double dx = x - x0;
+			const double dz = z - z0;
+			if (interpolation == Interpolation::Nearest)
+			{
+				visitor(sample({x0 + (dx > 0.5 ? 1u : 0u), z0 + (dz > 0.5 ? 1u : 0u)}), 1.0);
+				return;
+			}
+			if (dx == 0.0 && dz == 0.0)
+			{
+				visitor(sample({x0, z0}), 1.0);
+			}
+			else if (dx == 0.0)
+			{
+				visitor(sample({x0, z0}), 1.0 - dz);
+				visitor(sample({x0, z0 + 1}), dz);
+			}
+			else if (dz == 0.0)
+			{
+				visitor(sample({x0, z0}), 1.0 - dx);
+				visitor(sample({x0 + 1, z0}), dx);
+			}
+			else
+			{
+				visitor(sample({x0, z0}), (1.0 - dx) * (1.0 - dz));
+				visitor(sample({x0 + 1, z0}), dx * (1.0 - dz));
+				visitor(sample({x0, z0 + 1}), (1.0 - dx) * dz);
+				visitor(sample({x0 + 1, z0 + 1}), dx * dz);
+			}
 		}
 
 	public:
