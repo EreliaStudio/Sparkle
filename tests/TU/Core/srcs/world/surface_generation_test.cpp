@@ -46,7 +46,7 @@ namespace
 	using GenerationData = spk::Voxel::BiomeGenerationData<2>;
 	using SurfaceData = GenerationData::ColumnData;
 
-	class Distribution : public spk::World::SurfaceBiomeDistributionPass<GenerationData, 2>
+	class Distribution : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>
 	{
 	private:
 		ConstantBiome _first{20};
@@ -68,7 +68,7 @@ namespace
 		}
 	};
 
-	using CombinationBase = spk::World::SurfaceHeightCombinationPass<SurfaceData, 2>;
+	using CombinationBase = spk::World::SurfaceHeightCombinationPass<Chunk, SurfaceData, 2>;
 	class Combination : public CombinationBase
 	{
 	public:
@@ -85,7 +85,7 @@ namespace
 		}
 	};
 
-	using ColumnCombinationBase = spk::World::SurfaceHeightCombinationPass<GenerationData, 2>;
+	using ColumnCombinationBase = spk::World::SurfaceHeightCombinationPass<Chunk, GenerationData, 2>;
 	class ColumnCombination : public ColumnCombinationBase
 	{
 	public:
@@ -238,43 +238,37 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	const spk::Voxel::Definition::Registry registry;
 	const Coordinate lower{-1, 0, 2};
 	const Coordinate upper{-1, 1, 2};
-	data.prepare(lower, {16, 16, 16}, registry);
-	data.prepare(upper, {16, 16, 16}, registry);
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	std::atomic<int> calls{0};
-	const auto build = [&](GenerationData &generationData) {
-		++calls;
-		distribution.apply({-1, 2}, generationData);
-		combination.apply({-1, 2}, generationData);
+	const auto generate = [&](const Coordinate &coordinate) {
+		data.prepare(coordinate, {16, 16, 16}, registry);
+		if (data.needsSurfaceGeneration(coordinate))
+		{
+			++calls;
+			distribution.apply(coordinate, data);
+			combination.apply(coordinate, data);
+			data.publishColumn(coordinate);
+		}
+		const float height = data.column(coordinate).heights->at({0, 0});
+		data.clean(coordinate);
+		return height;
 	};
 	auto first = std::async(std::launch::async, [&] {
-		data.prepareColumn(lower, build);
+		return generate(lower);
 	});
 	auto second = std::async(std::launch::async, [&] {
-		data.prepareColumn(upper, build);
+		return generate(upper);
 	});
-	first.get();
-	second.get();
-	EXPECT_EQ(&data.column(lower), &data.column(upper));
-	EXPECT_FLOAT_EQ(data.column(lower).heights->at({0, 0}), 40);
+	EXPECT_FLOAT_EQ(first.get(), 40);
+	EXPECT_FLOAT_EQ(second.get(), 40);
 	EXPECT_EQ(calls.load(), 1);
-	data.clean(lower);
-	data.flush();
-	EXPECT_EQ(data.columnCount(), 1u);
-	data.clean(upper);
-	data.prepare(lower, {16, 16, 16}, registry);
-	data.prepareColumn(lower, build);
-	EXPECT_FLOAT_EQ(data.column(lower).heights->at({0, 0}), 40);
+	EXPECT_FLOAT_EQ(generate(lower), 40);
 	EXPECT_EQ(calls.load(), 1);
-	data.clean(lower);
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 0u);
-	data.prepare(lower, {16, 16, 16}, registry);
-	data.prepareColumn(lower, build);
-	EXPECT_FLOAT_EQ(data.column(lower).heights->at({0, 0}), 40);
+	EXPECT_FLOAT_EQ(generate(lower), 40);
 	EXPECT_EQ(calls.load(), 2);
-	data.clean(lower);
 }
 
 TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
@@ -282,28 +276,24 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	GenerationData data;
 	const spk::Voxel::Definition::Registry registry;
 	const Coordinate coordinate{0, 0, 0};
-	data.prepare(coordinate, {16, 16, 16}, registry);
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
-	int calls = 0;
-	const auto build = [&](GenerationData &generationData) {
-		EXPECT_FALSE(static_cast<bool>(generationData.column(spk::Vector2Int{0, 0}).influences));
-		distribution.apply({0, 0}, generationData);
-		if (++calls == 1)
-		{
-			throw spk::Exception("Injected column failure");
-		}
-		combination.apply({0, 0}, generationData);
-	};
-	EXPECT_THROW(data.prepareColumn(coordinate, build), spk::Exception);
-	EXPECT_THROW((void)data.column(coordinate), spk::Exception);
+	data.prepare(coordinate, {16, 16, 16}, registry);
+	ASSERT_TRUE(data.needsSurfaceGeneration(coordinate));
+	distribution.apply(coordinate, data);
+	// A failed job cleans its partially constructed column without publishing it.
 	data.clean(coordinate);
 	data.prepare(coordinate, {16, 16, 16}, registry);
-	data.prepareColumn(coordinate, build);
+	ASSERT_TRUE(data.needsSurfaceGeneration(coordinate));
+	EXPECT_FALSE(static_cast<bool>(data.column(spk::Vector2Int{0, 0}).influences));
+	distribution.apply(coordinate, data);
+	combination.apply(coordinate, data);
+	data.publishColumn(coordinate);
 	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
-	EXPECT_EQ(calls, 2);
-	data.prepareColumn(coordinate, build);
-	EXPECT_EQ(calls, 2);
+	data.clean(coordinate);
+	data.prepare(coordinate, {16, 16, 16}, registry);
+	EXPECT_FALSE(data.needsSurfaceGeneration(coordinate));
+	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
 }
 
@@ -413,10 +403,8 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	const spk::Voxel::Definition::Registry registry;
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
-	data.prepare(active, {16, 16, 16}, registry);
 	data.prepare(idle, {16, 16, 16}, registry);
-	data.prepareColumn(idle, [](GenerationData &) {
-	});
+	data.publishColumn(idle);
 	data.clean(idle);
 
 	std::promise<void> entered;
@@ -424,16 +412,19 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	auto ready = entered.get_future();
 	auto gate = resume.get_future().share();
 	auto building = std::async(std::launch::async, [&] {
-		data.prepareColumn(active, [&](GenerationData &) {
-			entered.set_value();
-			gate.wait();
-		});
+		data.prepare(active, {16, 16, 16}, registry);
+		entered.set_value();
+		gate.wait();
+		data.publishColumn(active);
+		data.clean(active);
 	});
 	ready.wait();
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);
 	resume.set_value();
 	building.get();
+	data.prepare(active, {16, 16, 16}, registry);
+	EXPECT_FALSE(data.needsSurfaceGeneration(active));
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);
 	data.clean(active);

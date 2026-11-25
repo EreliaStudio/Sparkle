@@ -1,10 +1,5 @@
 #pragma once
 
-#include <concepts>
-#include <memory>
-#include <utility>
-#include <vector>
-
 #include "voxel/pass/strata_application_pass.hpp"
 #include "voxel/pass/strata_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
@@ -13,21 +8,22 @@
 namespace spk::Voxel
 {
 	// Ready-to-use voxel terrain pipeline. Derive to supply the placement strategy.
-	// Additional surface passes run after height combination and before publication.
+	// Derived generators register additional passes, then Strata and Application, in their desired order.
 	template <typename TChunk, std::size_t TCapacity>
 	class BiomeGenerator : public World::Generator<TChunk, BiomeGenerationData<TCapacity>>
 	{
 	public:
 		using GenerationData = BiomeGenerationData<TCapacity>;
+		using SurfacePass = World::SurfacePass<TChunk, GenerationData>;
 		using SurfaceData = typename GenerationData::ColumnData;
 		using InfluenceGrid = typename SurfaceData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
-		using HeightCombination = typename World::SurfaceHeightCombinationPass<GenerationData, TCapacity>::Combination;
+		using HeightCombination = typename World::SurfaceHeightCombinationPass<TChunk, GenerationData, TCapacity>::Combination;
 
 	private:
-		using DistributionBase = World::SurfaceBiomeDistributionPass<GenerationData, TCapacity>;
-		using CombinationBase = World::SurfaceHeightCombinationPass<GenerationData, TCapacity>;
-		using StrataBase = StrataGenerationPass<GenerationData, TCapacity>;
+		using DistributionBase = World::SurfaceBiomeDistributionPass<TChunk, GenerationData, TCapacity>;
+		using CombinationBase = World::SurfaceHeightCombinationPass<TChunk, GenerationData, TCapacity>;
+		using StrataBase = StrataGenerationPass<TChunk, GenerationData, TCapacity>;
 		using ApplicationBase = StrataApplicationPass<TChunk, GenerationData>;
 
 		class Distribution : public DistributionBase
@@ -72,6 +68,7 @@ namespace spk::Voxel
 			}
 		};
 
+	protected:
 		class Strata : public StrataBase
 		{
 		protected:
@@ -82,39 +79,6 @@ namespace spk::Voxel
 			StrataGrid::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
 				return data.column(coordinate).strata;
-			}
-		};
-
-		// A regular generator pass. The cache and its synchronization belong to
-		// GenerationData, not to the pass or the streaming system.
-		class ColumnPass : public World::Generator<TChunk, GenerationData>::Pass
-		{
-		private:
-			using Pass = World::SurfacePass<GenerationData>;
-			std::vector<std::unique_ptr<Pass>> _passes;
-			Strata _strata;
-
-		public:
-			template <typename TPass, typename... TArgs>
-				requires std::derived_from<TPass, Pass>
-			TPass &addPass(TArgs &&...args)
-			{
-				auto pass = std::make_unique<TPass>(std::forward<TArgs>(args)...);
-				auto &result = *pass;
-				_passes.push_back(std::move(pass));
-				return result;
-			}
-
-			void apply(const World::ChunkCoordinate &coordinate, GenerationData &data) override
-			{
-				const spk::Vector2Int key{coordinate.x, coordinate.z};
-				data.prepareColumn(coordinate, [&](GenerationData &generationData) {
-					for (auto &pass : _passes)
-					{
-						pass->apply(key, generationData);
-					}
-					_strata.apply(key, generationData);
-				});
 			}
 		};
 
@@ -131,9 +95,9 @@ namespace spk::Voxel
 			}
 		};
 
+	private:
 		Definition::Registry _registry;
 		float _scale;
-		ColumnPass *_surface;
 
 	protected:
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
@@ -144,10 +108,19 @@ namespace spk::Voxel
 			return true;
 		}
 
+		void _applyPass(typename World::Generator<TChunk, GenerationData>::Pass &pass, const World::ChunkCoordinate &coordinate, GenerationData &data) override
+		{
+			if (dynamic_cast<SurfacePass *>(&pass) == nullptr || data.needsSurfaceGeneration(coordinate))
+			{
+				pass.apply(coordinate, data);
+			}
+		}
+
 		TChunk _instantiateChunk(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
 			TChunk chunk;
 			chunk.setVolume(data.builder(coordinate).build());
+			data.publishColumn(coordinate);
 			return chunk;
 		}
 
@@ -159,19 +132,11 @@ namespace spk::Voxel
 	public:
 		explicit BiomeGenerator(const Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
 			_registry(registry),
-			_scale(scale),
-			_surface(&this->template addPass<ColumnPass>())
+			_scale(scale)
 		{
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
-			_surface->template addPass<Distribution>(*this);
-			_surface->template addPass<Combination>(combination);
-			this->template addPass<Application>();
-		}
-
-		template <typename TPass, typename... TArgs>
-		TPass &addSurfacePass(TArgs &&...args)
-		{
-			return _surface->template addPass<TPass>(std::forward<TArgs>(args)...);
+			this->template addPass<Distribution>(*this);
+			this->template addPass<Combination>(combination);
 		}
 	};
 }

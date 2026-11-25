@@ -6,8 +6,8 @@
 
 namespace spk::World
 {
-	template <typename TGenerationData, std::size_t TCapacity>
-	class SurfaceHeightCombinationPass : public SurfacePass<TGenerationData>
+	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
+	class SurfaceHeightCombinationPass : public SurfacePass<TChunk, TGenerationData>
 	{
 	public:
 		using InfluenceGrid = SurfaceBiome::Influence::Grid<TCapacity>;
@@ -35,7 +35,8 @@ namespace spk::World
 			}
 		}
 
-		void apply(const spk::Vector2Int &coordinate, TGenerationData &data) override
+	protected:
+		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
 			const auto &influences = _influences(coordinate, data);
 			const auto &config = influences.configuration();

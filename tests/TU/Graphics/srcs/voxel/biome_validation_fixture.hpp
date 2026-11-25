@@ -235,10 +235,10 @@ namespace sparkle_test::biome_validation
 		Biome _third;
 		spk::Perlin _regions{913};
 
-		class Terrace final : public spk::World::SurfacePass<GenerationData>
+		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, GenerationData>
 		{
 		public:
-			void apply(const spk::Vector2Int &coordinate, GenerationData &data) override
+			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
 				auto &grid = *data.column(coordinate).heights;
 				const auto layout = grid.sampleSize();
@@ -299,8 +299,10 @@ namespace sparkle_test::biome_validation
 			_regions.setFrequency(0.048f);
 			if (settings.terrace)
 			{
-				addSurfacePass<Terrace>();
+				addPass<Terrace>();
 			}
+			addPass<Strata>();
+			addPass<Application>();
 		}
 	};
 }

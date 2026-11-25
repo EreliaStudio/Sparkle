@@ -96,6 +96,8 @@ namespace
 		explicit Generator(float scale = 1.0f) :
 			BiomeGenerator(registry(), HeightCombination::Weighted, scale)
 		{
+			addPass<Strata>();
+			addPass<Application>();
 		}
 	};
 
@@ -131,6 +133,61 @@ TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
 	EXPECT_EQ(generator.columnCount(), 0u);
 	ASSERT_TRUE(generator.generate({-2, 1, -1}).has_value());
 	EXPECT_EQ(generator.samples.load(), 578);
+}
+
+TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrder)
+{
+	using Data = Generator::GenerationData;
+	using Coordinate = spk::World::ChunkCoordinate;
+
+	class SurfaceProbe : public spk::World::SurfacePass<Chunk, Data>
+	{
+	private:
+		std::vector<int> &_trace;
+
+	protected:
+		void _applySurface(const spk::Vector2Int &coordinate, Data &) override
+		{
+			EXPECT_EQ(coordinate, (spk::Vector2Int{3, -2}));
+			_trace.push_back(1);
+		}
+
+	public:
+		explicit SurfaceProbe(std::vector<int> &trace) :
+			_trace(trace)
+		{
+		}
+	};
+
+	class ChunkProbe : public Generator::Pass
+	{
+	private:
+		std::vector<int> &_trace;
+
+	public:
+		explicit ChunkProbe(std::vector<int> &trace) :
+			_trace(trace)
+		{
+		}
+
+		void apply(const Coordinate &coordinate, Data &) override
+		{
+			EXPECT_EQ(coordinate.x, 3);
+			EXPECT_EQ(coordinate.z, -2);
+			_trace.push_back(2);
+		}
+	};
+
+	Generator generator;
+	std::vector<int> trace;
+	generator.addPass<SurfaceProbe>(trace);
+	generator.addPass<ChunkProbe>(trace);
+	ASSERT_TRUE(generator.generate({3, 0, -2}));
+	ASSERT_TRUE(generator.generate({3, 1, -2}));
+	EXPECT_EQ(trace, (std::vector<int>{1, 2, 2}));
+	generator.flush();
+	ASSERT_TRUE(generator.generate({3, 2, -2}));
+	EXPECT_EQ(trace, (std::vector<int>{1, 2, 2, 1, 2}));
 }
 
 TEST(VoxelBiomeGeneratorTest, FiniteStrataAndCustomMaterialSelection)

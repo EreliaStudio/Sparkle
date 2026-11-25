@@ -9,6 +9,7 @@
 
 #include "voxel/biome.hpp"
 #include "voxel/volume.hpp"
+#include "world/chunk_coordinate.hpp"
 #include "world/height_map.hpp"
 
 namespace spk::Voxel
@@ -85,6 +86,19 @@ namespace spk::Voxel
 		struct ChunkData
 		{
 			Volume::Builder builder;
+
+		private:
+			friend class BiomeGenerationData;
+			std::unique_lock<std::mutex> _columnLock;
+
+			explicit ChunkData(Volume::Builder value) :
+				builder(std::move(value))
+			{
+			}
+
+		public:
+			ChunkData(ChunkData &&) = default;
+			ChunkData &operator=(ChunkData &&) = default;
 		};
 
 	private:
@@ -97,10 +111,28 @@ namespace spk::Voxel
 		{
 			Volume::Builder builder(dimensions);
 			builder.bind(registry);
-			const std::scoped_lock lock(_mutex);
-			if (!_chunks.try_emplace(coordinate, ChunkData{std::move(builder)}).second)
+			ColumnData *columnData;
 			{
-				throw spk::Exception("Chunk generation is already active for this coordinate");
+				const std::scoped_lock lock(_mutex);
+				if (_chunks.contains(coordinate))
+				{
+					throw spk::Exception("Chunk generation is already active for this coordinate");
+				}
+				columnData = &_columns.try_emplace(spk::Vector2Int{coordinate.x, coordinate.z}).first->second;
+				_chunks.try_emplace(coordinate, ChunkData(std::move(builder)));
+			}
+			try
+			{
+				// Waiting jobs are registered before waiting, so flush cannot evict this column.
+				std::unique_lock lock(columnData->_mutex);
+				if (!columnData->_ready)
+				{
+					chunk(coordinate)._columnLock = std::move(lock);
+				}
+			} catch (...)
+			{
+				clean(coordinate);
+				throw;
 			}
 		}
 
@@ -121,39 +153,13 @@ namespace spk::Voxel
 			return chunk(coordinate).builder;
 		}
 
-		// The active chunk protects its column from flush until clean().
-		// Build under a per-column lock; failed builds discard incomplete grids.
-		template <typename TBuild>
-		void prepareColumn(const World::ChunkCoordinate &coordinate, TBuild &&build)
+		// Only the first successful chunk generation writes the surface grids.
+		[[nodiscard]] bool needsSurfaceGeneration(const World::ChunkCoordinate &coordinate) const
 		{
-			ColumnData *column;
-			{
-				const std::scoped_lock lock(_mutex);
-				if (!_chunks.contains(coordinate))
-				{
-					throw spk::Exception("Chunk generation is not active");
-				}
-				column = &_columns.try_emplace(spk::Vector2Int{coordinate.x, coordinate.z}).first->second;
-			}
-			const std::scoped_lock lock(column->_mutex);
-			if (!column->_ready)
-			{
-				try
-				{
-					build(*this);
-					column->_ready = true;
-				} catch (...)
-				{
-					column->influences = {};
-					column->heights = {};
-					column->strata = {};
-					throw;
-				}
-			}
+			return chunk(coordinate)._columnLock.owns_lock();
 		}
 
-		// Surface passes access the column being built while prepareColumn holds its lock.
-		// These overloads are only for the synchronous construction callback.
+		// Mutable X/Z access is reserved for the surface passes of that first job.
 		[[nodiscard]] ColumnData &column(const spk::Vector2Int &coordinate)
 		{
 			const std::scoped_lock lock(_mutex);
@@ -169,27 +175,41 @@ namespace spk::Voxel
 		// References remain valid until the caller cleans its active chunk.
 		[[nodiscard]] const ColumnData &column(const World::ChunkCoordinate &coordinate) const
 		{
-			const ColumnData *result;
+			const std::scoped_lock lock(_mutex);
+			if (!_chunks.contains(coordinate))
 			{
-				const std::scoped_lock lock(_mutex);
-				if (!_chunks.contains(coordinate))
-				{
-					throw spk::Exception("Chunk generation is not active");
-				}
-				result = &_columns.at({coordinate.x, coordinate.z});
+				throw spk::Exception("Chunk generation is not active");
 			}
-			const std::scoped_lock lock(result->_mutex);
-			if (!result->_ready)
+			return _columns.at({coordinate.x, coordinate.z});
+		}
+
+		void publishColumn(const World::ChunkCoordinate &coordinate)
+		{
+			if (needsSurfaceGeneration(coordinate))
 			{
-				throw spk::Exception("Column generation is not complete");
+				column(spk::Vector2Int{coordinate.x, coordinate.z})._ready = true;
 			}
-			return *result;
 		}
 
 		void clean(const World::ChunkCoordinate &coordinate) noexcept
 		{
 			const std::scoped_lock lock(_mutex);
-			_chunks.erase(coordinate);
+			auto it = _chunks.find(coordinate);
+			if (it == _chunks.end())
+			{
+				return;
+			}
+			if (it->second._columnLock.owns_lock())
+			{
+				auto &columnData = _columns.at({coordinate.x, coordinate.z});
+				if (!columnData._ready)
+				{
+					columnData.influences = {};
+					columnData.heights = {};
+					columnData.strata = {};
+				}
+			}
+			_chunks.erase(it);
 		}
 
 		[[nodiscard]] std::size_t activeChunkCount() const

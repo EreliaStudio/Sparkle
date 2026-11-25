@@ -9,11 +9,11 @@ The design branch remains unchanged. No merge is authorized by this record.
 - spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity. Checked at() and operator[] accept Vector2UInt coordinates. Row-major iteration exposes read-only coordinates and mutable or const values through structured bindings (auto&& [coords, value]).
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid owns the Floor/Nearest/Bilinear interpolation enum and a protected weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, floor/nearest/bilinear sampling.
-- World::SurfacePass<TGenerationData>: X/Z operations receiving the full generation data; specialized passes access their inputs and destinations via coordinate-aware hooks.
-- Voxel::BiomeGenerationData: owns persistent column entries and request-local voxel builders; the ordinary voxel column pass only orchestrates construction.
+- World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it receives the full generation data and owns no cache.
+- Voxel::BiomeGenerationData: owns persistent column entries and request-local voxel builders; the concrete generator selects when to execute surface passes.
 - Voxel::Biome: ordered strata, weighted/Perlin/custom material selection, finite/infinite thickness.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
-  Additional surface steps run after the selected height combination and before strata publication.
+  Derived generators register custom passes, Strata and Application with addPass in dependency order; the base constructor registers Distribution and Combination.
   Existing PerlinTerrainPass and existing golden tests are not replaced.
 
 ## Lifetime and threading
@@ -29,15 +29,14 @@ data. ChunkData contains the request-local Volume::Builder; ColumnData contains
 influences, heights and strata. There are no shared pointers or separate collection
 types for generation data.
 
-The map mutex protects insertion, lookup, cleanup and flush. A mutex per column
-serializes its first construction without blocking other columns. The concrete generation data runs surface passes under the column lock and marks the grids available only after all passes succeed; failed attempts clear partial grids. Failed builds are retryable. Only one active generation per chunk coordinate
+The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active ChunkData until cleanup. Other columns remain independent. Later jobs on a published column skip surface passes and run chunk passes concurrently. Failed initial jobs clear partial grids and are retryable. Only one active generation per chunk coordinate
 is supported; a duplicate preparation throws without modifying the existing entry.
 Distinct coordinates may be generated concurrently.
 
 Active chunks protect their X/Z column from eviction. References to chunk or column
 data are valid only until the calling chunk is cleaned. The generator calls cleanup
 after successful preparation, on success or failure; preparation itself must be
-exception-safe. Surface callbacks may access the current X/Z column through the construction-only accessors but must not recursively prepare columns. Queued jobs
+exception-safe. Surface callbacks may access the current X/Z column through the construction-only accessors. All voxel surface passes run once per column under the concrete cache policy. Do not read a grid in an earlier chunk pass if a later surface pass modifies it; cached columns contain final results. Queued jobs
 need no reservations. Completed columns remain cached until flush(), which derives
 the active X/Z keys from the chunk map and evicts only unused columns. A duplicate
 streaming request after timeout can fail temporarily; retry policy is unchanged.
@@ -138,7 +137,7 @@ from actual test outputs only, with unchanged comparator tolerances.
 - Optional `_prepareGenerationData(coordinate, data)` returns false for an absent chunk; it must leave no request-local state on rejection or failure.
 - Chunk passes receive only coordinate and mutable data; `_instantiateChunk(coordinate, data)` constructs the final chunk.
 - `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
-- Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass receives the complete TGenerationData and remains a reusable XZ operation without its own cache or cleanup policy.
+- Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass participates in the standard addPass pipeline and receives the complete TGenerationData without its own cache or cleanup policy. Generator::_applyPass defaults to calling the pass; BiomeGenerator overrides it to select surface execution using its data.
 - Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Generation data is private to the generator and passed to hooks and passes; no public accessor is provided. `Generator::flush()` is available only when the data provides `flush()`, and forwards directly to it; voxel data releases idle cached columns.
 
 ### Validation after persistent-generation refactoring

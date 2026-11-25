@@ -5,8 +5,8 @@
 
 namespace spk::Voxel
 {
-	template <typename TGenerationData, std::size_t TCapacity>
-	class StrataGenerationPass : public World::SurfacePass<TGenerationData>
+	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
+	class StrataGenerationPass : public World::SurfacePass<TChunk, TGenerationData>
 	{
 	public:
 		using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
@@ -16,8 +16,7 @@ namespace spk::Voxel
 		virtual const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
 		virtual Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
 
-	public:
-		void apply(const spk::Vector2Int &coordinate, TGenerationData &data) override
+		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
 			const auto &influences = _influences(coordinate, data);
 			auto grid = Grid::obtain({influences.configuration().size, 1.0f}, influences.worldOrigin());

@@ -54,10 +54,10 @@ namespace sparkle_test::biome_world
 		spk::Perlin _boundary{123};
 		bool _hard;
 
-		class FlattenRoad : public spk::World::SurfacePass<GenerationData>
+		class FlattenRoad : public spk::World::SurfacePass<perlin_world::Chunk, GenerationData>
 		{
 		public:
-			void apply(const spk::Vector2Int &coordinate, GenerationData &data) override
+			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
 				auto &grid = *data.column(coordinate).heights;
 				const auto layout = grid.sampleSize();
@@ -100,8 +100,10 @@ namespace sparkle_test::biome_world
 			_boundary.setFrequency(0.055f);
 			if (edit)
 			{
-				addSurfacePass<FlattenRoad>();
+				addPass<FlattenRoad>();
 			}
+			addPass<Strata>();
+			addPass<Application>();
 		}
 	};
 }

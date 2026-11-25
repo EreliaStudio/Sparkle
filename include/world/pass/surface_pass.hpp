@@ -1,15 +1,21 @@
 #pragma once
 
 #include "math/vector2.hpp"
+#include "world/generator.hpp"
 
 namespace spk::World
 {
-	// A reusable X/Z operation on generation data. Storage and lifetime are defined by TGenerationData.
-	template <typename TGenerationData>
-	class SurfacePass
+	// A regular generator pass adapting XYZ coordinates to X/Z.
+	template <typename TChunk, typename TGenerationData>
+	class SurfacePass : public Generator<TChunk, TGenerationData>::Pass
 	{
+	protected:
+		virtual void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
+
 	public:
-		virtual ~SurfacePass() = default;
-		virtual void apply(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
+		void apply(const ChunkCoordinate &coordinate, TGenerationData &data) override
+		{
+			_applySurface({coordinate.x, coordinate.z}, data);
+		}
 	};
 }

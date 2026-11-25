@@ -6,8 +6,8 @@
 
 namespace spk::World
 {
-	template <typename TGenerationData, std::size_t TCapacity>
-	class SurfaceBiomeDistributionPass : public SurfacePass<TGenerationData>, protected BiomeDistribution
+	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
+	class SurfaceBiomeDistributionPass : public SurfacePass<TChunk, TGenerationData>, protected BiomeDistribution
 	{
 	public:
 		using Grid = SurfaceBiome::Influence::Grid<TCapacity>;
@@ -19,8 +19,7 @@ namespace spk::World
 		virtual typename Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) = 0;
 
-	public:
-		void apply(const spk::Vector2Int &coordinate, TGenerationData &data) override
+		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
 			const auto config = _gridConfiguration(coordinate, data);
 			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.y) * config.size.y)};
