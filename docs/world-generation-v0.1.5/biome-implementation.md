@@ -105,8 +105,9 @@ warp3D. Each axis samples the original input position at the requested dimension
 the 2D result is unchanged by the addition of the third field.
 Influence grids interpolate by biome identity, not slot index, preserving up to
 four cells' distinct biomes. Interpolation is explicit: Floor copies the floor cell,
-Bilinear combines neighboring influences, and Highest selects the strongest bilinear
-influence and assigns it weight 1, clearing other entries. Empty cells remain empty.
+Bilinear combines neighboring influences without discarding positive contributions.
+Aligned queries read only one cell at a grid node, or two cells on a grid line.
+Empty cells remain empty. The Highest mode belongs to height combination only.
 Exact ties retain first positive encounter order.
 Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
 interpolation, 3D slices and optional coordinate warping from the voxel renderer.
