@@ -131,11 +131,13 @@ namespace
 			const std::scoped_lock lock(data.mutex);
 			data.chunks.erase(coordinate);
 			completed = data.completed;
+			observedFlushCalls = data.flushCalls;
 			remainingChunks = data.chunks.size();
 		}
 
 	public:
 		int completed = 0;
+		int observedFlushCalls = 0;
 		std::size_t remainingChunks = 0;
 		int cleanupCalls = 0;
 		int instantiationCalls = 0;
@@ -469,4 +471,17 @@ TEST(GeneratorTest, ChunkCollectionSupportsChunkTypesWithoutBuilder)
 	ASSERT_TRUE(collection.tryGet(coordinate, chunk));
 	ASSERT_NE(chunk, nullptr);
 	EXPECT_EQ(chunk->value(), 42);
+}
+
+TEST(GeneratorTest, FlushDelegatesToPersistentGenerationData)
+{
+	const int seed = 42;
+	ExampleGenerator generator(seed);
+	generator.flush();
+	generator.flush();
+	ASSERT_TRUE(generator.generate({0, 0, 0}));
+	EXPECT_EQ(generator.observedFlushCalls, 2);
+	generator.flush();
+	ASSERT_TRUE(generator.generate({1, 0, 0}));
+	EXPECT_EQ(generator.observedFlushCalls, 3);
 }
