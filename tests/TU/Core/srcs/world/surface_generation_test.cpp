@@ -580,29 +580,44 @@ TEST(SurfaceGridTest, LocalPositionUsesSampleCoordinates)
 	EXPECT_THROW((void)grid->localPosition({0, 13}), spk::Exception);
 }
 
-TEST(SurfaceGridTest, HighestInterpolationKeepsOnlyTheStrongestInterpolatedBiome)
+TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 {
 	using Grid = SurfaceData::InfluenceGrid;
-	ConstantBiome a(20), b(100);
-	auto grid = Grid::obtain({{8, 8}, 8}, {});
-	grid->sample({0, 0})[0] = grid->sample({0, 1})[0] = {&a, 1};
-	grid->sample({1, 0})[0] = grid->sample({1, 1})[0] = {&b, 1};
-	const auto floor = grid->interpolate({6, 4}, Grid::Interpolation::Floor);
-	EXPECT_EQ(floor[0].biome, &a);
-	const auto highest = grid->interpolate({6, 4}, Grid::Interpolation::Highest);
-	EXPECT_EQ(highest[0].biome, &b);
-	EXPECT_FLOAT_EQ(highest[0].weight, 1);
-	for (std::size_t i = 1; i < highest.size(); ++i)
+	ConstantBiome a(20), b(100), c(200);
+	auto grid = Grid::obtain({{8, 8}, 4}, {});
+	grid->sample({1, 1}) = {{{&a, 0.25f}, {&b, 0.75f}}};
+	grid->sample({2, 1})[0] = {&c, 1};
+	grid->sample({1, 2})[0] = {&c, 1};
+	grid->sample({2, 2})[0] = {&c, 1};
+	const auto exact = grid->interpolate({4, 4}, Grid::Interpolation::Bilinear);
+	EXPECT_EQ(exact[0].biome, &a);
+	EXPECT_FLOAT_EQ(exact[0].weight, 0.25f);
+	EXPECT_EQ(exact[1].biome, &b);
+	EXPECT_FLOAT_EQ(exact[1].weight, 0.75f);
+	EXPECT_EQ(exact[2].biome, nullptr);
+	for (const auto &position : {spk::Vector2{6, 4}, spk::Vector2{4, 6}})
 	{
-		EXPECT_EQ(highest[i].biome, nullptr);
-		EXPECT_FLOAT_EQ(highest[i].weight, 0);
+		const auto edge = grid->interpolate(position, Grid::Interpolation::Bilinear);
+		EXPECT_EQ(edge[0].biome, &a);
+		EXPECT_FLOAT_EQ(edge[0].weight, 0.125f);
+		EXPECT_EQ(edge[1].biome, &b);
+		EXPECT_FLOAT_EQ(edge[1].weight, 0.375f);
+		EXPECT_EQ(edge[2].biome, &c);
+		EXPECT_FLOAT_EQ(edge[2].weight, 0.5f);
 	}
-	EXPECT_EQ(grid->dominant({6, 4}, Grid::Interpolation::Highest), &b);
-	EXPECT_EQ(grid->interpolate({4, 4}, Grid::Interpolation::Highest)[0].biome, &a);
-	EXPECT_FLOAT_EQ(grid->interpolate({6, 4}, Grid::Interpolation::Bilinear)[0].weight, 0.25f);
-	auto empty = Grid::obtain({{8, 8}, 8}, {});
-	EXPECT_EQ(empty->interpolate({4, 4}, Grid::Interpolation::Highest)[0].biome, nullptr);
-	EXPECT_THROW((void)grid->interpolate({9, 4}, Grid::Interpolation::Highest), spk::Exception);
+	grid->sample({1, 1}) = {{{&a, 0.25f}, {&a, 0.75f}}};
+	const auto merged = grid->interpolate({4, 4}, Grid::Interpolation::Bilinear);
+	EXPECT_EQ(merged[0].biome, &a);
+	EXPECT_FLOAT_EQ(merged[0].weight, 1);
+	EXPECT_EQ(merged[1].biome, nullptr);
+	auto decimal = Grid::obtain({{1, 1}, 0.1f}, {});
+	decimal->sample({3, 3})[0] = {&a, 1};
+	decimal->sample({4, 3})[0] = {&b, 1};
+	const auto decimalExact = decimal->interpolate(decimal->localPosition({3, 3}), Grid::Interpolation::Bilinear);
+	EXPECT_EQ(decimalExact[0].biome, &a);
+	EXPECT_FLOAT_EQ(decimalExact[0].weight, 1);
+	EXPECT_EQ(decimalExact[1].biome, nullptr);
+	EXPECT_THROW((void)grid->interpolate({9, 4}, Grid::Interpolation::Bilinear), spk::Exception);
 }
 
 TEST(SurfaceGenerationTest, HighestHeightCombinationUsesWeightRatherThanHeight)
