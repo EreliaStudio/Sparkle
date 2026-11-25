@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "container/grid_2d.hpp"
 #include <cstdint>
+#include <type_traits>
 
 #include <array>
 #include <atomic>
@@ -496,4 +497,53 @@ TEST(Grid2DTest, ReleasesElementsAndKeepsConcurrentLeasesIndependent)
 	EXPECT_TRUE(observer.expired());
 	const auto &readOnly = second;
 	EXPECT_FALSE(readOnly->at({0, 0}));
+}
+
+TEST(Grid2DTest, BracketAccessAndStructuredBindings)
+{
+	auto grid = spk::Grid2D<int>::obtain({3, 2});
+	(*grid)[{1, 0}] = 42;
+	EXPECT_EQ(grid->at({1, 0}), 42);
+	EXPECT_THROW((void)(*grid)[(spk::Vector2UInt{3, 0})], spk::Exception);
+
+	std::size_t index = 0;
+	for (auto &&[coords, value] : *grid)
+	{
+		static_assert(std::is_const_v<std::remove_reference_t<decltype(coords)>>);
+		static_assert(std::is_same_v<decltype(value), int &>);
+		EXPECT_EQ(coords.x, index % 3);
+		EXPECT_EQ(coords.y, index / 3);
+		value = static_cast<int>(++index);
+	}
+	EXPECT_EQ(index, 6u);
+
+	const auto &readOnly = *grid.get();
+	index = 0;
+	for (auto &&[coords, value] : readOnly)
+	{
+		static_assert(std::is_same_v<decltype(value), const int &>);
+		EXPECT_EQ(value, static_cast<int>(++index));
+		EXPECT_EQ(&value, &readOnly[coords]);
+	}
+	EXPECT_EQ(index, 6u);
+	EXPECT_EQ(readOnly.cbegin(), readOnly.begin());
+	EXPECT_EQ(readOnly.cend(), readOnly.end());
+}
+
+TEST(Grid2DTest, StructuredBindingsSupportBoolAndMoveOnlyElements)
+{
+	auto flags = spk::Grid2D<bool>::obtain({2, 2});
+	for (auto &&[coords, value] : *flags)
+	{
+		value = coords.x == coords.y;
+	}
+	EXPECT_TRUE(flags->at({0, 0}));
+	EXPECT_FALSE(flags->at({0, 1}));
+
+	auto objects = spk::Grid2D<std::unique_ptr<int>>::obtain({2, 1});
+	for (auto &&[coords, value] : *objects)
+	{
+		value = std::make_unique<int>(static_cast<int>(coords.x));
+	}
+	EXPECT_EQ(*objects->at({1, 0}), 1);
 }
