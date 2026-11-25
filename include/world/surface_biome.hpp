@@ -34,8 +34,7 @@ namespace spk::World
 		enum class Interpolation
 		{
 			Floor,
-			Bilinear,
-			Highest
+			Bilinear
 		};
 		// Four neighboring cells may contain completely different biomes.
 		using InterpolatedCell = std::array<Influence, 4 * TCapacity>;
@@ -61,14 +60,24 @@ namespace spk::World
 				std::copy(cell.begin(), cell.end(), result.begin());
 				return result;
 			}
-			if (interpolation != Interpolation::Bilinear && interpolation != Interpolation::Highest)
+			if (interpolation != Interpolation::Bilinear)
 			{
 				throw spk::Exception("Unknown biome influence interpolation");
 			}
 			const auto dimensions = this->sampleSize();
 			const auto &config = this->configuration();
-			const double x = this->_sampleAxis(position.x, config.size.x, dimensions.x);
-			const double z = this->_sampleAxis(position.y, config.size.y, dimensions.y);
+			const auto alignedAxis = [&](float coordinate, unsigned int extent, std::size_t count) {
+				const double index = this->_sampleAxis(coordinate, extent, count);
+				const double nearest = std::round(index);
+				// Match the float representation produced by localPosition, not an arbitrary epsilon.
+				if (coordinate == static_cast<float>(nearest * config.scale))
+				{
+					return nearest;
+				}
+				return index;
+			};
+			const double x = alignedAxis(position.x, config.size.x, dimensions.x);
+			const double z = alignedAxis(position.y, config.size.y, dimensions.y);
 			const auto x0 = static_cast<std::uint32_t>(x);
 			const auto z0 = static_cast<std::uint32_t>(z);
 			const auto x1 = std::min<std::uint32_t>(x0 + 1, dimensions.x - 1);
@@ -101,31 +110,30 @@ namespace spk::World
 					weights[index] += factor * influence.weight;
 				}
 			};
-			accumulate(this->sample({x0, z0}), (1 - dx) * (1 - dz));
-			accumulate(this->sample({x1, z0}), dx * (1 - dz));
-			accumulate(this->sample({x0, z1}), (1 - dx) * dz);
-			accumulate(this->sample({x1, z1}), dx * dz);
+			if (dx == 0.0 && dz == 0.0)
+			{
+				accumulate(this->sample({x0, z0}), 1.0);
+			}
+			else if (dx == 0.0)
+			{
+				accumulate(this->sample({x0, z0}), 1 - dz);
+				accumulate(this->sample({x0, z1}), dz);
+			}
+			else if (dz == 0.0)
+			{
+				accumulate(this->sample({x0, z0}), 1 - dx);
+				accumulate(this->sample({x1, z0}), dx);
+			}
+			else
+			{
+				accumulate(this->sample({x0, z0}), (1 - dx) * (1 - dz));
+				accumulate(this->sample({x1, z0}), dx * (1 - dz));
+				accumulate(this->sample({x0, z1}), (1 - dx) * dz);
+				accumulate(this->sample({x1, z1}), dx * dz);
+			}
 			for (std::size_t i = 0; i < count; ++i)
 			{
 				result[i].weight = static_cast<float>(weights[i]);
-			}
-			if (interpolation == Interpolation::Highest)
-			{
-				const SurfaceBiome *winner = nullptr;
-				float weight = 0.0f;
-				for (const auto &influence : result)
-				{
-					if (influence.biome != nullptr && influence.weight > weight)
-					{
-						winner = influence.biome;
-						weight = influence.weight;
-					}
-				}
-				result = {};
-				if (winner != nullptr)
-				{
-					result[0] = {winner, 1.0f};
-				}
 			}
 			return result;
 		}
@@ -150,7 +158,6 @@ namespace spk::World
 			case Interpolation::Floor:
 				return select(this->at(position));
 			case Interpolation::Bilinear:
-			case Interpolation::Highest:
 				return select(interpolate(position, Interpolation::Bilinear));
 			}
 			throw spk::Exception("Unknown biome influence interpolation");
