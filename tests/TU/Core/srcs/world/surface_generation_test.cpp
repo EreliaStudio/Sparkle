@@ -464,7 +464,7 @@ TEST(Grid2DTest, ReusesCapacityAcrossShapesAndResetsCells)
 	const auto *address = grid.get();
 	EXPECT_GE(grid->capacity(), 16u);
 	EXPECT_EQ(grid->count(), 15u);
-	grid->at(2, 4) = 42;
+	grid->at({2, 4}) = 42;
 	grid = {};
 	auto recycled = Grid::obtain({4, 4});
 	EXPECT_EQ(recycled.get(), address);
@@ -474,11 +474,11 @@ TEST(Grid2DTest, ReusesCapacityAcrossShapesAndResetsCells)
 	{
 		for (std::size_t x = 0; x < 4; ++x)
 		{
-			EXPECT_EQ(recycled->at(x, y), 0);
+			EXPECT_EQ(recycled->at({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(y)}), 0);
 		}
 	}
-	EXPECT_THROW((void)recycled->at(4, 0), spk::Exception);
-	EXPECT_THROW((void)recycled->at(0, 4), spk::Exception);
+	EXPECT_THROW((void)recycled->at({4, 0}), spk::Exception);
+	EXPECT_THROW((void)recycled->at({0, 4}), spk::Exception);
 	EXPECT_THROW((void)Grid::obtain({0, 4}), spk::Exception);
 	EXPECT_THROW((void)Grid::obtain({std::numeric_limits<std::uint32_t>::max(), std::numeric_limits<std::uint32_t>::max()}), spk::Exception);
 }
@@ -489,11 +489,11 @@ TEST(Grid2DTest, ReleasesElementsAndKeepsConcurrentLeasesIndependent)
 	auto first = Grid::obtain({2, 2});
 	auto second = Grid::obtain({2, 2});
 	EXPECT_NE(first.get(), second.get());
-	first->at(0, 0) = std::make_shared<int>(7);
-	std::weak_ptr<int> observer = first->at(0, 0);
-	EXPECT_FALSE(second->at(0, 0));
+	first->at({0, 0}) = std::make_shared<int>(7);
+	std::weak_ptr<int> observer = first->at({0, 0});
+	EXPECT_FALSE(second->at({0, 0}));
 	first = {};
 	EXPECT_TRUE(observer.expired());
 	const auto &readOnly = second;
-	EXPECT_FALSE(readOnly->at(0, 0));
+	EXPECT_FALSE(readOnly->at({0, 0}));
 }

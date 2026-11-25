@@ -31,13 +31,13 @@ namespace spk
 			_elements.reserve(capacity);
 		}
 
-		[[nodiscard]] std::size_t _index(std::size_t x, std::size_t y) const
+		[[nodiscard]] std::size_t _index(const spk::Vector2UInt &position) const
 		{
-			if (x >= _size.x || y >= _size.y)
+			if (position.x >= _size.x || position.y >= _size.y)
 			{
 				throw spk::Exception("Grid2D index is outside its domain");
 			}
-			return y * _size.x + x;
+			return static_cast<std::size_t>(position.y) * _size.x + position.x;
 		}
 
 	public:
@@ -84,14 +84,14 @@ namespace spk
 			return _elements.capacity();
 		}
 
-		[[nodiscard]] Reference at(std::size_t x, std::size_t y)
+		[[nodiscard]] Reference at(const spk::Vector2UInt &position)
 		{
-			return _elements[_index(x, y)];
+			return _elements[_index(position)];
 		}
 
-		[[nodiscard]] ConstReference at(std::size_t x, std::size_t y) const
+		[[nodiscard]] ConstReference at(const spk::Vector2UInt &position) const
 		{
-			return _elements[_index(x, y)];
+			return _elements[_index(position)];
 		}
 	};
 }

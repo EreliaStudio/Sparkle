@@ -134,7 +134,11 @@ namespace spk::World
 
 		[[nodiscard]] typename spk::Grid2D<TElement>::Reference sample(std::size_t x, std::size_t z)
 		{
-			return _elements->at(x, z);
+			if (x >= sampleSize().x || z >= sampleSize().y)
+			{
+				throw spk::Exception("Surface grid sample index is outside its domain");
+			}
+			return _elements->at({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)});
 		}
 		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference sample(std::size_t x, std::size_t z) const
 		{
@@ -142,7 +146,7 @@ namespace spk::World
 			{
 				throw spk::Exception("Surface grid sample index is outside its domain");
 			}
-			return _elements->at(x, z);
+			return _elements->at({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)});
 		}
 		[[nodiscard]] spk::Vector2 localPosition(std::size_t x, std::size_t z) const
 		{
