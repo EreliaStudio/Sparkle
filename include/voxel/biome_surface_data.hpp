@@ -103,14 +103,14 @@ namespace spk::Voxel
 		};
 	};
 
-	template <std::size_t TCapacity>
+	template <std::size_t TCapacity = 4>
 	class BiomeGenerationData
 	{
 	public:
 		struct WorldData
 		{
 			Definition::Registry registry;
-			float scale = 1.0f;
+			float surfaceScale = 1.0f;
 		};
 
 		struct ColumnData
@@ -149,14 +149,17 @@ namespace spk::Voxel
 		};
 
 	private:
+		using ColumnCollection = std::map<spk::Vector2Int, ColumnData>;
+		using ChunkCollection = std::map<World::ChunkCoordinate, ChunkData>;
+
 		mutable std::mutex _mutex;
 		WorldData _world;
-		std::map<spk::Vector2Int, ColumnData> _columns;
-		std::map<World::ChunkCoordinate, ChunkData> _chunks;
+		ColumnCollection _columns;
+		ChunkCollection _chunks;
 
 	public:
-		explicit BiomeGenerationData(const Definition::Registry &registry = {}, float scale = 1.0f) :
-			_world{registry, scale}
+		explicit BiomeGenerationData(const Definition::Registry &registry = {}, float surfaceScale = 1.0f) :
+			_world{registry, surfaceScale}
 		{
 		}
 

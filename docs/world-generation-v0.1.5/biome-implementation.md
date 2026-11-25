@@ -12,7 +12,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 - World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling.
 - World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it receives the full generation data and owns no cache.
 - Voxel::Strata::Grid: contiguous sampled layers with offset/count cells. buildCell accepts a sample coordinate (Vector2UInt); rebuilding replaces old layers and repairs offsets, with rollback on sampling failure. Returned spans are valid only until the next mutation.
-- Voxel::BiomeGenerationData: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
+- Voxel::BiomeGenerationData<TCapacity = 4>: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
 - Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
   Derived generators register custom passes, Strata and Application with addPass in dependency order; the base constructor registers Distribution and Combination.
@@ -25,7 +25,7 @@ spatial hierarchy or eviction policy. Each derived generator decides how to init
 synchronize and clean its data. Streaming requests no longer retain or release generator
 data. The generator must outlive all submitted jobs.
 
-Voxel::BiomeGenerationData owns WorldData (registry and scale), ColumnData keyed by X/Z and ChunkData keyed by the full chunk coordinate. All three types are nested in the concrete generation data. ChunkData contains the request-local Volume::Builder; ColumnData contains
+Voxel::BiomeGenerationData owns WorldData (registry and surfaceScale), ColumnData keyed by X/Z and ChunkData keyed by the full chunk coordinate. All three types are nested in the concrete generation data. ChunkData contains the request-local Volume::Builder; ColumnData contains
 influences, heights and strata. There are no shared pointers or separate collection
 types for generation data.
 

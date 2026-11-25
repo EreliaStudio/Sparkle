@@ -42,7 +42,7 @@ namespace spk::Voxel
 
 			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &data) override
 			{
-				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().scale};
+				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().surfaceScale};
 			}
 			typename InfluenceGrid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
