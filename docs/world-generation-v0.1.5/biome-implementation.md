@@ -59,6 +59,7 @@ Five GPU-rendered cases are registered in BiomeWorldGolden: smooth overview, har
 boundaries, top-down distribution, visible strata/cliffs, and custom height modification.
 They use the existing OpenGL scene and palette, generate two vertical chunks per column,
 and save actual PNGs to the normal Graphics results directory. Missing expected images
-deliberately fail rather than auto-approve a baseline. Review actual captures, then
-promote the five PNGs to tests/TU/Graphics/resources/expectedImages/rendering/biome-world/.
-Do not substitute fabricated images for rendered baselines. Existing CI uploads results.
+deliberately fail rather than auto-approve a baseline. The five reference PNGs are now
+committed under tests/TU/Graphics/resources/expectedImages/rendering/biome-world/.
+They are byte-identical to the actual Graphics Release captures from CI run 45492661433.
+These references remain subject to visual review; existing CI uploads results.
