@@ -65,7 +65,7 @@ namespace sparkle_test::biome_world
 				{
 					for (std::uint32_t x = 0; x < layout.x; ++x)
 					{
-						const auto position = grid.worldOrigin() + grid.localPosition(x, z);
+						const auto position = grid.worldOrigin() + grid.localPosition({x, z});
 						const float weight = std::clamp((7.0f - std::abs(position.y)) / 4.0f, 0.0f, 1.0f);
 						grid.sample({x, z}) = std::lerp(grid.sample({x, z}), 7.0f, weight);
 					}

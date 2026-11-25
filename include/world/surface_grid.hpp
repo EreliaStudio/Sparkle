@@ -140,15 +140,16 @@ namespace spk::World
 		{
 			return _elements->at(position);
 		}
-		[[nodiscard]] spk::Vector2 localPosition(std::size_t x, std::size_t z) const
+		[[nodiscard]] spk::Vector2 localPosition(const spk::Vector2UInt &position) const
 		{
-			if (x >= sampleSize().x || z >= sampleSize().y)
+			const auto dimensions = sampleSize();
+			if (position.x >= dimensions.x || position.y >= dimensions.y)
 			{
 				throw spk::Exception("Surface grid sample index is outside its domain");
 			}
 			return {
-				x == sampleSize().x - 1 ? static_cast<float>(_configuration.size.x) : static_cast<float>(x * static_cast<double>(_configuration.scale)),
-				z == sampleSize().y - 1 ? static_cast<float>(_configuration.size.y) : static_cast<float>(z * static_cast<double>(_configuration.scale))};
+				position.x == dimensions.x - 1 ? static_cast<float>(_configuration.size.x) : static_cast<float>(position.x * static_cast<double>(_configuration.scale)),
+				position.y == dimensions.y - 1 ? static_cast<float>(_configuration.size.y) : static_cast<float>(position.y * static_cast<double>(_configuration.scale))};
 		}
 		[[nodiscard]] TElement &at(const spk::Vector2 &position)
 		{

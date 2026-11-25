@@ -116,7 +116,7 @@ namespace spk::World
 			{
 				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
-					grid->sample({x, z}) = sample(origin + grid->localPosition(x, z));
+					grid->sample({x, z}) = sample(origin + grid->localPosition({x, z}));
 				}
 			}
 			return grid;

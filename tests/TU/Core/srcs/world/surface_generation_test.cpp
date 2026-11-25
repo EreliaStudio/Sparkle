@@ -562,3 +562,16 @@ TEST(SurfaceGridTest, SampleReturnsReferencesAndChecksCoordinates)
 	EXPECT_FLOAT_EQ(readOnly.sample({1, 1}), 42.0f);
 	EXPECT_THROW((void)grid->sample({3, 0}), spk::Exception);
 }
+
+TEST(SurfaceGridTest, LocalPositionUsesSampleCoordinates)
+{
+	auto grid = spk::World::HeightMap::Grid::obtain({{4, 6}, 0.5f}, {10, 20});
+	const auto position = grid->localPosition({4, 6});
+	EXPECT_FLOAT_EQ(position.x, 2.0f);
+	EXPECT_FLOAT_EQ(position.y, 3.0f);
+	const auto endpoint = grid->localPosition({8, 12});
+	EXPECT_FLOAT_EQ(endpoint.x, 4.0f);
+	EXPECT_FLOAT_EQ(endpoint.y, 6.0f);
+	EXPECT_THROW((void)grid->localPosition({9, 0}), spk::Exception);
+	EXPECT_THROW((void)grid->localPosition({0, 13}), spk::Exception);
+}

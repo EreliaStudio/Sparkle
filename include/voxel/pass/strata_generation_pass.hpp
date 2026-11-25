@@ -22,11 +22,11 @@ namespace spk::Voxel
 			const auto &influences = _influences(data);
 			auto grid = Grid::obtain({influences.configuration().size, 1.0f}, influences.worldOrigin());
 			const auto layout = grid->sampleSize();
-			for (std::size_t z = 0; z < layout.y; ++z)
+			for (std::uint32_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.x; ++x)
+				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
-					const auto *biome = dynamic_cast<const Biome *>(influences.dominant(grid->localPosition(x, z), InfluenceGrid::Interpolation::Bilinear));
+					const auto *biome = dynamic_cast<const Biome *>(influences.dominant(grid->localPosition({x, z}), InfluenceGrid::Interpolation::Bilinear));
 					if (biome == nullptr)
 					{
 						throw spk::Exception("Voxel strata require a dominant voxel biome");

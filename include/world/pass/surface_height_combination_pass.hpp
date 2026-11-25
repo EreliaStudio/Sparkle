@@ -30,7 +30,7 @@ namespace spk::World
 				{
 					double height = 0.0;
 					bool found = false;
-					const auto position = grid->worldOrigin() + grid->localPosition(x, z);
+					const auto position = grid->worldOrigin() + grid->localPosition({x, z});
 					for (const auto &influence : influences.sample({x, z}))
 					{
 						if (influence.biome != nullptr && influence.weight > 0.0f)

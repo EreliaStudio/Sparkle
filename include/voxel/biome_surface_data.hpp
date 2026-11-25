@@ -38,11 +38,17 @@ namespace spk::Voxel
 
 			void buildCell(std::size_t x, std::size_t z, const Biome &biome)
 			{
+				const auto dimensions = sampleSize();
+				if (x >= dimensions.x || z >= dimensions.y)
+				{
+					throw spk::Exception("Surface grid sample index is outside its domain");
+				}
+				const spk::Vector2UInt position{static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)};
 				const auto offset = _layers.size();
-				biome.sampleStrata(worldOrigin() + localPosition(x, z), [&](Biome::Layer layer) {
+				biome.sampleStrata(worldOrigin() + localPosition(position), [&](Biome::Layer layer) {
 					_layers.push_back(layer);
 				});
-				sample({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)}) = {offset, _layers.size() - offset};
+				sample(position) = {offset, _layers.size() - offset};
 			}
 
 			[[nodiscard]] std::span<const Biome::Layer> layers(const spk::Vector2 &position) const

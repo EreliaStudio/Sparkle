@@ -31,7 +31,7 @@ namespace spk::World
 				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
 					auto &cell = grid->sample({x, z});
-					_computeBiomePlacement(origin + grid->localPosition(x, z), cell);
+					_computeBiomePlacement(origin + grid->localPosition({x, z}), cell);
 					_normalize(cell);
 				}
 			}
