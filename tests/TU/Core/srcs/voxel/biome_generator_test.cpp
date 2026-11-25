@@ -328,7 +328,7 @@ TEST(VoxelBiomeGeneratorTest, WeightedDistributionIsDeterministicAndHonorsZeroWe
 	{
 		EXPECT_EQ(sampled(biome, {static_cast<float>(i), -17}).front().voxelID, expected[static_cast<std::size_t>(i + 2048)]);
 	}
-	stratum.seed++;
+	std::get<Stratum::Distribution::Weighted>(stratum.distribution).seed++;
 	bool changed = false;
 	for (int i = -128; i < 128; ++i)
 	{
