@@ -153,3 +153,14 @@ graphics test target only. Commit 456b3612ce9275d3b7f53256b79282ef332c8406
 applies clang-format 21.1.0. Commit 7a85d98a249ea0f0b867c26a5ddfb544227554ba
 refreshes the 43 affected references from CI 2417. No comparator changes were made.
 The refreshed references still require a successful independent Graphics run.
+
+### Visual review follow-up
+
+The hard-boundary overview hid the transition behind the elevated mountain biome.
+The hard, smooth and custom-height overview cameras now share a more distant
+view from the negative X/Z lowland side, so the transitions can be inspected
+without changing terrain generation or the lighting setup. Their three expected
+PNGs must be refreshed from actual CI captures after visual review, with the
+existing comparison tolerances. The reported incomplete-looking shadows are
+explicitly deferred to PR #102; no shadow implementation or lighting settings
+are changed in this PR for that issue.
