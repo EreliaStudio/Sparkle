@@ -23,10 +23,10 @@ En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson,
 - Tout ajout/édition/suppression de collection attachée se fait sur le thread Engine ; aucune modification directe depuis un worker.
 
 ## Génération sans propriétaire caché
-- Le Generator<TChunk,TGenerationData> est synchrone, configurable par addPass<TPass>(...) ; ses deux hooks de création sont virtuels protégés ; aucun Builder n'est imposé.
-- `_createGenerationData(coord)` retourne `std::optional<TGenerationData>` ; `nullopt` signifie absence valide et arrêt avant toute passe.
-- Les données temporaires appartiennent à une demande, peuvent référencer des données persistantes et contenir les éventuels builders spécifiques. Aucun cycle de vie ou verrou global imposé par Sparkle.
-- `Pass::apply(coord,data)` est appelé dans l'ordre ; `_instantiateChunk(data)` construit et retourne le `TChunk` final. `Generator::generate(coord)` renvoie `std::optional<TChunk>` sans imposer de constructeur au chunk.
+- Le Generator<TChunk,TGenerationData> possède une instance persistante de TGenerationData, construite avec les arguments fournis à son constructeur ; il ne connaît ni colonnes, ni régions, ni builders.
+- `_prepareGenerationData(coord,data)` initialise éventuellement les données propres à la demande ; false signale une absence valide. En cas de rejet ou d'exception, ce hook ne doit laisser aucun état temporaire.
+- L'état de génération choisit ses propres structures, caches, synchronisation et durées de vie ; aucun verrou ni compteur d'intérêt n'est imposé par le générateur.
+- `Pass::apply(coord,data)` est appelé dans l'ordre ; `_instantiateChunk(coord,data)` retourne le chunk final. `_cleanGenerationData(coord,data) noexcept` est appelé après une préparation réussie, même si une passe ou l'instanciation échoue. `generate(coord)` renvoie `std::optional<TChunk>`.
 - Une exception spk::Exception fait échouer la génération, sans résultat partiel. La reproductibilité provient des règles utilisateur : mêmes données/coordonnées pertinentes => même chunk, pas de seed universelle imposée.
 
 ## Requester, Task et WorkerPool

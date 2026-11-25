@@ -10,7 +10,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid owns the Floor/Nearest/Bilinear interpolation enum and a protected weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, floor/nearest/bilinear sampling.
 - World::SurfacePass<TSurfaceData>: abstract construction steps, receiving only X/Z.
-- World::SurfaceGenerationPass: owns child passes and one entry per active horizontal column.
+- Voxel::BiomeGenerationData: owns persistent column entries and request-local voxel builders; the ordinary voxel column pass only orchestrates construction.
 - Voxel::Biome: ordered strata, weighted/Perlin/custom material selection, finite/infinite thickness.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
   Additional surface steps run after the selected height combination and before strata publication.
@@ -18,29 +18,39 @@ The design branch remains unchanged. No merge is authorized by this record.
 
 ## Lifetime and threading
 
-InterestPlan compares sorted coordinate keys; retains precede releases. Requester hooks
-are optional. A failing retain must leave its own state unchanged; prior retains are
-rolled back. Release and endJob are noexcept. Generator and requester must outlive the
-streamer and all submitted jobs. Configure the pipeline before observing or submitting
-jobs. Biome definitions, callbacks and height sources must remain immutable and alive
-for the duration of use; hooks running across different columns must be thread-safe.
+Generator owns a single persistent GenerationData instance, without imposing a lock,
+spatial hierarchy or eviction policy. Each derived generator decides how to initialize,
+synchronize and clean its data. Streaming requests no longer retain or release generator
+data. The generator must outlive all submitted jobs.
 
-Interest and job reservations are independent counts. LocalChunkRequester reserves before
-submitting to WorkerPool; direct generate also reserves. A per-column mutex serializes
-construction; unrelated columns compute independently. An exception publishes nothing,
-and the next attempt retries. A timeout does not cancel a worker or release its reservation.
-After all interest and job reservations end, the map entry is erased. A result handle
-may retain the data independently until its last consumer releases it. Grids are
-non-copyable, so Pool::Lease cannot deep-copy them. Idle grid allocations are pooled by element type; wrapper objects are pooled independently. The dominant biome interpolation mode must be specified explicitly.
-No LRU or trimming is introduced.
+Voxel::BiomeGenerationData owns a synchronized column map and per-request chunk scratch.
+A per-column mutex serializes construction; distinct columns compute independently.
+A column is published only after distribution, height combination, custom surface passes
+and strata have succeeded. Failed builds are retryable. Column data is retained after
+all chunk jobs finish, independently of observers. The optional explicit flush() evicts
+idle column entries; entries currently building or referenced by handles are preserved.
+Queued jobs need no reservations and regenerate an evicted column when they start.
+Flush releases leases back to their pools, not necessarily heap capacity back to the OS.
+
+ChunkGenerationDataCollection is optional request-local storage keyed by coordinate and
+calling thread; concurrent requests of the same coordinate have independent scratch.
+The same coordinate cannot be recursively prepared on the same thread.
+References are valid only until their own job cleans its entry.
+The generator calls cleanup after successful preparation, on success or failure;
+preparation itself must be exception-safe. Column callbacks must not recursively obtain
+columns from the cache. Cross-column generation dependencies are not implemented.
+
+Configure passes before submitting jobs. Biome definitions, callbacks and height sources
+must be immutable and alive throughout their use. Drain workers, release external
+column handles and flush before changing settings or definitions. Cached column data
+is invalidated only by explicit flush; no LRU or automatic eviction.
 
 ## Selected open-question resolutions
 
 - Both grid kinds use inclusive endpoints, floor direct access, identical world origins.
   Influence and blended-height sample spacing are the same; voxel strata are sampled at
   unit spacing and use explicit bilinear dominance. Configuration is fixed
-  during all active interests/jobs. No runtime invalidation API yet; detach and drain
-  before changing definitions. Float world positions retain the existing Perlin precision limit.
+  during all active jobs. Drain workers and flush before changing definitions. Float world positions retain the existing Perlin precision limit.
 - Height combination is explicitly selected at construction: Weighted sums normalized
   positive influences with double accumulation; Highest evaluates only the biome with
   the greatest positive weight (first slot wins ties). Both reject missing contributions
@@ -122,8 +132,9 @@ from actual test outputs only, with unchanged comparator tolerances.
 
 ### Generator contract (current PR)
 
-- `Generator<TChunk, TGenerationData>` has no Builder template parameter or chunk construction policy.
-- `_createGenerationData(coordinate)` returns optional generation data; an empty result skips all passes and final construction.
-- Chunk passes receive only the coordinate and mutable generation data. `_instantiateChunk(data)` returns the final chunk after all passes succeed.
-- `SurfaceGenerationPass<TChunk, TGenerationData>` derives its surface type from `TGenerationData::Surface`. Existing column/job reservations are unchanged.
-- Voxel generation data owns its Volume::Builder; terrain passes access it through `data.builder`. Voxel instantiation builds and assigns the final volume.
+- `Generator<TChunk, TGenerationData>` owns persistent generation data and has no Builder template parameter or spatial hierarchy.
+- Optional `_prepareGenerationData(coordinate, data)` returns false for an absent chunk; it must leave no request-local state on rejection or failure.
+- Chunk passes receive only coordinate and mutable data; `_instantiateChunk(coordinate, data)` constructs the final chunk.
+- `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
+- Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass remains a reusable XZ operation without its own cache.
+- Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Explicit `BiomeGenerator::flush()` releases idle cached columns.

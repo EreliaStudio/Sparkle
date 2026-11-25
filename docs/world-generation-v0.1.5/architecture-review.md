@@ -4,7 +4,7 @@
 ## Décisions consolidées
 - Chunk<T dimensions> héritable, données libres et mutables, coordonnée stockée uniquement comme clé de map. Copie/move sans transfert d'abonnements ; chaque setter appelle notifyChunkEdition().
 - ChunkCollection possède TChunk par valeur et Entity3D headless, plus ChunkFilter non propriétaire ; édition relayée par la collection, remplacement conserve entité, suppression détruit entité/composants.
-- Generator avec addPass et apply(coord,data), données optionnelles créées à chaque demande et instanciation finale via _instantiateChunk(data), sans builder imposé.
+- Generator avec addPass et apply(coord,data), données persistantes synchronisées par leur propriétaire, instanciation et nettoyage par coordonnée ; aucun builder, colonne ou compteur d'intérêt imposé.
 - Task renvoie std::optional<TChunk>, nullopt succès et absence au seul sein de l'intérêt ; échec/timeout permettent retry contrôlé. Pas d'annulation, résultat ancien toujours rejeté.
 - WorldObserver et multi-observateur ; recalcul de l'union et file seulement au franchissement de coordonnée de chunk, rayon/observateurs modifiés. Manhattan à dimensions pondérées.
 - Volume voxel exactement SX×SY×SZ, setter sur chunk mutable, Voxel::ChunkMesher par héritage de Mesher avec outsideCell() et consultation des six voisins à chaque bake. À chaque changement, rebake le chunk et six voisins.

@@ -14,10 +14,10 @@ Les décisions ci-dessous reprennent la discussion de conception et les ajusteme
 | Collection events | S'abonne à chaque chunk, relaie immédiatement édition + signal insertion/remplacement, avec coord ; pas de notification de suppression générique séparée |
 | Remove | Entity3D/composants détruits avant chunk ; notification LifeCycle::Destruction disponible |
 | Engine | Attach/detach/rebind explicite, une collection/monde par Engine, pas de mutation collection depuis worker |
-| Generator | `spk::World::Generator<TChunk,TGenerationData>` synchrone ; `Pass::apply(coordinate,data)` virtuel ; `_instantiateChunk(data)` retourne TChunk |
+| Generator | `Generator<TChunk,TGenerationData>` possède les données persistantes ; `apply(coord,data)`, `_instantiateChunk(coord,data)` et `_cleanGenerationData(coord,data) noexcept` |
 | Builder | Aucun builder imposé par Generator ou Chunk ; facultatif dans les données de génération spécifiques |
-| Optional | `_createGenerationData(coord)` -> `optional<TGenerationData>`, generate -> `optional<TChunk>` ; nullopt succès sans chunk et sans passes |
-| Generation Data | Nouvel objet par demande, initialisé avec les coordonnées ; peut référencer des données persistantes ou contenir des ressources move-only |
+| Optional | `_prepareGenerationData(coord,data)` -> bool ; false signifie absence valide et aucune passe ; generate -> optional<TChunk> |
+| Generation Data | Instance persistante ; organise librement l'état mondial, les colonnes et le scratch par demande ; synchronisation et éviction à sa charge |
 | Erreur | spk::Exception lors de génération ; Task Failed distincte de réussite nullopt ; timeout supervisé par streaming |
 | Requester | Task<std::optional<TChunk>>::Answer par chunk, sources locales/fichier/réseau possibles sans implémentation d'un protocole |
 | Transfert Task | Task::Answer::result renvoie const& ; TChunk doit être copiable à la frontière réponse→collection en l'état |
@@ -57,8 +57,9 @@ GameChunk& chunk = chunks.at({1, 0, -2});
 
 class GameGenerator : public spk::World::Generator<GameChunk, MyGenerationData> {
 private:
-    std::optional<MyGenerationData> _createGenerationData(const spk::World::ChunkCoordinate&) override;
-    GameChunk _instantiateChunk(MyGenerationData&) override;
+    bool _prepareGenerationData(const spk::World::ChunkCoordinate&, MyGenerationData&) override;
+    GameChunk _instantiateChunk(const spk::World::ChunkCoordinate&, MyGenerationData&) override;
+    void _cleanGenerationData(const spk::World::ChunkCoordinate&, MyGenerationData&) noexcept override;
 };
 // Pass::apply(const spk::World::ChunkCoordinate&, MyGenerationData&);
 // generate(coordinate) -> std::optional<GameChunk>
