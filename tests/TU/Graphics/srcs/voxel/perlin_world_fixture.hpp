@@ -46,6 +46,7 @@ namespace sparkle_test::perlin_world
 	// Perlin is configured by the production pass, not implemented by this fixture.
 	struct GenerationData
 	{
+		Builder builder;
 	};
 
 	[[nodiscard]] inline spk::Voxel::Shape shape(const char *name)
@@ -128,7 +129,7 @@ namespace sparkle_test::perlin_world
 	}
 
 	// Keep the test-owned palette/shapes separate from Sparkle's reusable pass.
-	using GeneratorBase = spk::World::Generator<Chunk, GenerationData, Builder>;
+	using GeneratorBase = spk::World::Generator<Chunk, GenerationData>;
 	using TerrainPass = spk::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
 
 	class Generator final : public GeneratorBase
@@ -150,7 +151,7 @@ namespace sparkle_test::perlin_world
 		const Registry &_registry;
 		TerrainPass *_terrain = nullptr;
 
-		[[nodiscard]] std::optional<Builder> _createChunkBuilder(const Coordinate &coordinate) override
+		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
 		{
 			if (coordinate.y != 0 || coordinate.x < -4 || coordinate.x > 4 || coordinate.z < -4 || coordinate.z > 4)
 			{
@@ -158,12 +159,14 @@ namespace sparkle_test::perlin_world
 			}
 			Builder builder({16, 16, 16});
 			builder.bind(_registry);
-			return builder;
+			return GenerationData{std::move(builder)};
 		}
 
-		[[nodiscard]] GenerationData _createGenerationData() override
+		[[nodiscard]] Chunk _instantiateChunk(GenerationData &data) override
 		{
-			return {};
+			Chunk chunk;
+			chunk.setVolume(data.builder.build());
+			return chunk;
 		}
 
 	public:

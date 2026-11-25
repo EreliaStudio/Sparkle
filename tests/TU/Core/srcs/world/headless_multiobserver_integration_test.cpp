@@ -38,7 +38,6 @@ namespace
 	class IntegrationChunk : public spk::World::Chunk<16, 8, 32>
 	{
 	public:
-		class Builder;
 
 	private:
 		int _value = 0;
@@ -64,22 +63,6 @@ namespace
 		}
 	};
 
-	class IntegrationChunk::Builder
-	{
-	private:
-		int _value = 0;
-
-	public:
-		void setValue(int value) noexcept
-		{
-			_value = value;
-		}
-
-		[[nodiscard]] IntegrationChunk build() &&
-		{
-			return IntegrationChunk(_value);
-		}
-	};
 
 	struct GenerationData
 	{
@@ -97,38 +80,36 @@ namespace
 	class IntegrationGenerator : public Generator
 	{
 	private:
-		[[nodiscard]] std::optional<IntegrationChunk::Builder> _createChunkBuilder(const Coordinate &coordinate) override
+		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
 		{
 			if (coordinate == Coordinate{9, 0, 0})
 			{
 				return std::nullopt;
 			}
-			return IntegrationChunk::Builder{};
+			return GenerationData{};
 		}
 
-		[[nodiscard]] GenerationData _createGenerationData() override
+		[[nodiscard]] IntegrationChunk _instantiateChunk(GenerationData &data) override
 		{
-			return {};
+			return IntegrationChunk(data.value);
 		}
 	};
 
 	class FirstPass : public Generator::Pass
 	{
 	public:
-		void apply(IntegrationChunk::Builder &builder, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			data.value = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
-			builder.setValue(data.value);
 		}
 	};
 
 	class SecondPass : public Generator::Pass
 	{
 	public:
-		void apply(IntegrationChunk::Builder &builder, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			data.value = data.value * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
-			builder.setValue(data.value);
 		}
 	};
 
@@ -576,11 +557,11 @@ TEST(HeadlessMultiObserverIntegrationTest, LocalWorkerShutdownDoesNotWaitForBloc
 		{
 		}
 
-		void apply(IntegrationChunk::Builder &builder, const Coordinate &, GenerationData &) override
+		void apply(const Coordinate &, GenerationData &data) override
 		{
 			_entered.set_value();
 			_release.wait();
-			builder.setValue(77);
+			data.value = 77;
 		}
 	};
 

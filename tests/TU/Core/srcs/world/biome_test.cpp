@@ -46,7 +46,7 @@ namespace
 	public:
 		using DistributionPass::_normalize;
 
-		void apply(Chunk::Builder &, const spk::World::ChunkCoordinate &, GenerationData &) override
+		void apply(const spk::World::ChunkCoordinate &, GenerationData &) override
 		{
 		}
 	};

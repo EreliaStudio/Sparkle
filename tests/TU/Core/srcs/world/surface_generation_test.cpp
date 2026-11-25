@@ -40,14 +40,6 @@ namespace
 
 	struct Chunk
 	{
-		struct Builder
-		{
-			int value = 0;
-			Chunk build() &&
-			{
-				return {value};
-			}
-		};
 		int value;
 	};
 
@@ -60,11 +52,13 @@ namespace
 	};
 	struct Data
 	{
-		std::shared_ptr<const SurfaceData> surface;
+		using Surface = SurfaceData;
+		std::shared_ptr<const Surface> surface;
+		int value = 0;
 	};
 
 	using GeneratorBase = spk::World::Generator<Chunk, Data>;
-	using SurfaceBase = spk::World::SurfaceGenerationPass<Chunk, Data, SurfaceData>;
+	using SurfaceBase = spk::World::SurfaceGenerationPass<Chunk, Data>;
 
 	class Surface : public SurfaceBase
 	{
@@ -140,22 +134,23 @@ namespace
 	class Application : public GeneratorBase::Pass
 	{
 	public:
-		void apply(Chunk::Builder &builder, const Coordinate &, Data &data) override
+		void apply(const Coordinate &, Data &data) override
 		{
-			builder.value = data.surface->value;
+			data.value = data.surface->value;
 		}
 	};
 
 	class Generator : public GeneratorBase
 	{
 	protected:
-		std::optional<Chunk::Builder> _createChunkBuilder(const Coordinate &) override
+		std::optional<Data> _createGenerationData(const Coordinate &) override
 		{
-			return Chunk::Builder{};
+			return Data{};
 		}
-		Data _createGenerationData() override
+
+		Chunk _instantiateChunk(Data &data) override
 		{
-			return {};
+			return {data.value};
 		}
 
 	public:
@@ -483,15 +478,14 @@ TEST(SurfaceGenerationTest, StandaloneHeightMapPassUsesWorldOriginAndRequiresBin
 {
 	StandaloneHeightPass pass;
 	SurfaceData data;
-	Chunk::Builder builder;
-	EXPECT_THROW(pass.apply(builder, {-2, 7, 3}, data), spk::Exception);
+	EXPECT_THROW(pass.apply({-2, 7, 3}, data), spk::Exception);
 	HeightMap map;
 	map.setBaseHeight(12);
 	spk::Perlin noise(72);
 	noise.setFrequency(0.07f);
 	map.noiseLayers().emplace("relief", HeightMap::NoiseLayer{noise, -3, 3});
 	pass.bind(map);
-	pass.apply(builder, {-2, 7, 3}, data);
+	pass.apply({-2, 7, 3}, data);
 	ASSERT_TRUE(data.heights);
 	EXPECT_EQ(data.heights->worldOrigin(), (spk::Vector2{-32, 24}));
 	EXPECT_FLOAT_EQ(data.heights->at({16, 8}), map.sample({-16, 32}));

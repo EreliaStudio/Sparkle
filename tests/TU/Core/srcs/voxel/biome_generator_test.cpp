@@ -396,7 +396,7 @@ TEST(VoxelBiomeGeneratorTest, LocalRequesterRetainsQueuedColumnAfterObserverRele
 {
 	Generator generator;
 	spk::WorkerPool workers(1);
-	spk::World::LocalChunkRequester<Chunk, Generator::GenerationData, Generator::Builder> requester(workers, generator);
+	spk::World::LocalChunkRequester<Chunk, Generator::GenerationData> requester(workers, generator);
 	requester.retain({0, 0, 0});
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	std::promise<void> unblock;

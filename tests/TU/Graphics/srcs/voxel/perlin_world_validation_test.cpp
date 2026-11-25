@@ -103,7 +103,7 @@ namespace
 		terrain::OutlinedAtlas atlas;
 		terrain::Generator generator{definitions};
 		spk::WorkerPool workers{4};
-		spk::World::LocalChunkRequester<Chunk, terrain::GenerationData, terrain::Builder> requester{workers, generator};
+		spk::World::LocalChunkRequester<Chunk, terrain::GenerationData> requester{workers, generator};
 		Collection chunks;
 		spk::Entity3D cameraEntity{"Perlin camera"};
 		spk::Entity3D sunEntity{"Perlin sun"};

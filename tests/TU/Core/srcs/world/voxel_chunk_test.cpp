@@ -50,15 +50,17 @@ namespace
 	{
 		const Registry &definitions;
 		std::int64_t seed;
+		Volume::Builder builder;
 	};
 
-	using Generator = spk::World::Generator<Chunk, GenerationData, Volume::Builder>;
+	using Generator = spk::World::Generator<Chunk, GenerationData>;
 
 	class TerrainPass final : public Generator::Pass
 	{
 	public:
-		void apply(Generator::Builder &volume, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
+			auto &volume = data.builder;
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -82,8 +84,9 @@ namespace
 	class WallPass final : public Generator::Pass
 	{
 	public:
-		void apply(Generator::Builder &volume, const Coordinate &coordinate, GenerationData &) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
+			auto &volume = data.builder;
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
@@ -105,18 +108,20 @@ namespace
 		Registry _definitions;
 		std::int64_t _seed;
 
-		[[nodiscard]] std::optional<Generator::Builder> _createChunkBuilder(const Coordinate &coordinate) override
+		[[nodiscard]] std::optional<GenerationData> _createGenerationData(const Coordinate &coordinate) override
 		{
 			if (coordinate.x < -1 || coordinate.x > 1 || coordinate.y != 0 || coordinate.z != 0)
 			{
 				return std::nullopt;
 			}
-			return Generator::Builder(spk::Vector3UInt{Chunk::Size});
+			return GenerationData{_definitions, _seed, Volume::Builder(spk::Vector3UInt{Chunk::Size})};
 		}
 
-		[[nodiscard]] GenerationData _createGenerationData() override
+		[[nodiscard]] Chunk _instantiateChunk(GenerationData &data) override
 		{
-			return {_definitions, _seed};
+			Chunk chunk;
+			chunk.setVolume(data.builder.build());
+			return chunk;
 		}
 
 	public:
@@ -190,7 +195,7 @@ namespace
 		spk::EngineHeadless engine;
 		WorldGenerator generator{17};
 		spk::WorkerPool workers{2};
-		spk::World::LocalChunkRequester<Chunk, GenerationData, Volume::Builder> requester{workers, generator};
+		spk::World::LocalChunkRequester<Chunk, GenerationData> requester{workers, generator};
 		spk::World::ChunkCollection<Chunk> collection;
 		spk::Entity3D player{"Voxel observer"};
 
