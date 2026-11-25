@@ -655,7 +655,7 @@ TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 	EXPECT_THROW((void)grid->interpolate({9, 4}, Grid::Interpolation::Bilinear), spk::Exception);
 }
 
-TEST(SurfaceGenerationTest, HighestHeightCombinationUsesWeightRatherThanHeight)
+TEST(SurfaceGenerationTest, DominantHeightCombinationUsesWeightRatherThanHeight)
 {
 	using Mode = CombinationBase::Combination;
 	ConstantBiome low(20), high(100), invalid(std::numeric_limits<float>::quiet_NaN());
@@ -669,19 +669,19 @@ TEST(SurfaceGenerationTest, HighestHeightCombinationUsesWeightRatherThanHeight)
 		}
 	}
 	Combination weighted(Mode::Weighted);
-	Combination highest(Mode::Highest);
+	Combination dominant(Mode::Dominant);
 	weighted.apply({}, data);
 	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 40);
-	highest.apply({}, data);
+	dominant.apply({}, data);
 	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 20);
 	data.influences->sample({0, 0}) = {{{{&low, 0.5f}, {&invalid, 0.5f}}}};
-	EXPECT_NO_THROW(highest.apply({}, data));
+	EXPECT_NO_THROW(dominant.apply({}, data));
 	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 20);
 	const auto *previous = data.heights.get();
 	data.influences->sample({0, 0})[1].weight = 0.75f;
-	EXPECT_THROW(highest.apply({}, data), spk::Exception);
+	EXPECT_THROW(dominant.apply({}, data), spk::Exception);
 	EXPECT_EQ(data.heights.get(), previous);
 	data.influences->sample({0, 0}) = {};
-	EXPECT_THROW(highest.apply({}, data), spk::Exception);
+	EXPECT_THROW(dominant.apply({}, data), spk::Exception);
 	EXPECT_EQ(data.heights.get(), previous);
 }

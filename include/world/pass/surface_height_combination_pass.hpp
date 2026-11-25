@@ -15,7 +15,7 @@ namespace spk::World
 		enum class Combination
 		{
 			Weighted,
-			Highest
+			Dominant
 		};
 
 	private:
@@ -29,7 +29,7 @@ namespace spk::World
 		explicit SurfaceHeightCombinationPass(Combination combination) :
 			_combination(combination)
 		{
-			if (combination != Combination::Weighted && combination != Combination::Highest)
+			if (combination != Combination::Weighted && combination != Combination::Dominant)
 			{
 				throw spk::Exception("Unknown biome height combination");
 			}
@@ -49,7 +49,7 @@ namespace spk::World
 					bool found = false;
 					const auto position = grid->worldOrigin() + grid->localPosition({x, z});
 					const auto &cell = influences.sample({x, z});
-					if (_combination == Combination::Highest)
+					if (_combination == Combination::Dominant)
 					{
 						const auto *winner = cell.dominant();
 						if (winner != nullptr)

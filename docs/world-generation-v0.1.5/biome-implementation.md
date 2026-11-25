@@ -52,7 +52,7 @@ is invalidated only by explicit flush; no LRU or automatic eviction.
   unit spacing and use explicit bilinear dominance. Configuration is fixed
   during all active jobs. Drain workers and flush before changing definitions. Float world positions retain the existing Perlin precision limit.
 - Height combination is explicitly selected at construction: Weighted sums normalized
-  positive influences with double accumulation; Highest evaluates only the biome with
+  positive influences with double accumulation; Dominant evaluates only the biome with
   the greatest positive weight (first slot wins ties). Both reject missing contributions
   and non-finite results. This choice is independent of spatial influence interpolation. Custom edits run inside the
   construction pipeline, before the result is published as shared_ptr<const SurfaceData>.
@@ -120,7 +120,7 @@ Both height and influence grids use SurfaceGrid's weighted traversal. Aligned
 bilinear queries read only one cell at a grid node, or two cells on a grid line.
 Height interpolation accumulates weighted samples in double precision before
 converting to float; a single contributing sample is returned unchanged.
-Empty cells remain empty. The Highest mode belongs to height combination only.
+Empty cells remain empty. The Dominant mode belongs to height combination only.
 Stored and interpolated influences use Influence::Cell<N>, which owns a fixed-size
 std::array and exposes dominant() independently of spatial sampling. Grid no longer
 provides dominant(); both the height and strata passes use the cell method.
