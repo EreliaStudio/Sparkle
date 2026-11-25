@@ -6,7 +6,8 @@ The design branch remains unchanged. No merge is authorized by this record.
 ## Layers
 
 - World::Biome / World::SurfaceBiome: identity and continuous absolute height.
-- World::SurfaceGrid<T>: pooled contiguous 2D samples, inclusive bounds, floor access.
+- spk::Grid2D<T>: generic contiguous 2D storage, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity.
+- World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease.
 - World::HeightMap: named Perlin layers, mutable construction grids, nearest/bilinear sampling.
 - World::SurfacePass<TSurfaceData>: abstract construction steps, receiving only X/Z.
 - World::SurfaceGenerationPass: owns child passes and one entry per active horizontal column.
@@ -30,7 +31,7 @@ construction; unrelated columns compute independently. An exception publishes no
 and the next attempt retries. A timeout does not cancel a worker or release its reservation.
 After all interest and job reservations end, the map entry is erased. A result handle
 may retain the data independently until its last consumer releases it. Grids are
-non-copyable, so Pool::Lease cannot deep-copy them. Idle grid allocations are pooled.
+non-copyable, so Pool::Lease cannot deep-copy them. Idle grid allocations are pooled by element type; wrapper objects are pooled independently. The dominant biome interpolation mode must be specified explicitly.
 No LRU or trimming is introduced.
 
 ## Selected open-question resolutions

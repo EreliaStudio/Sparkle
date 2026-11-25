@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "container/grid_2d.hpp"
 
 #include <array>
 #include <atomic>
@@ -192,11 +193,11 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 {
 	ConstantBiome a(0), b(1);
 	auto grid = SurfaceData::InfluenceGrid::obtain({{16, 16}, 1}, {});
-	EXPECT_EQ(grid->dominant({0, 0}), nullptr);
+	EXPECT_EQ(grid->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), nullptr);
 	grid->at({0, 0}) = {{{&a, 0.5f}, {&b, 0.5f}}};
-	EXPECT_EQ(grid->dominant({0, 0}), &a);
+	EXPECT_EQ(grid->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &a);
 	grid->at({0, 0})[0].weight = 0;
-	EXPECT_EQ(grid->dominant({0, 0}), &b);
+	EXPECT_EQ(grid->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 }
 
 TEST(SurfaceGenerationTest, ConcurrentVerticalJobsShareOneWeightedHeight)
@@ -404,10 +405,10 @@ TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
 	EXPECT_FLOAT_EQ(cell[0].weight, 0.25f);
 	EXPECT_EQ(cell[1].biome, &b);
 	EXPECT_FLOAT_EQ(cell[1].weight, 0.75f);
-	EXPECT_EQ(grid->dominant({3, 1}), &b);
+	EXPECT_EQ(grid->dominant({3, 1}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 	EXPECT_EQ(grid->dominant({3, 1}, Grid::Interpolation::Floor), &a);
-	EXPECT_EQ(grid->dominant({2, 2}), &a);
-	EXPECT_EQ(grid->dominant({4, 4}), &b);
+	EXPECT_EQ(grid->dominant({2, 2}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &a);
+	EXPECT_EQ(grid->dominant({4, 4}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 }
 
 TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
@@ -428,7 +429,7 @@ TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
 	{
 		EXPECT_FLOAT_EQ(influence.weight, 0.25f);
 	}
-	EXPECT_EQ(grid->dominant({3, 3}), &d);
+	EXPECT_EQ(grid->dominant({3, 3}, Grid::Interpolation::Bilinear), &d);
 }
 
 TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
@@ -439,8 +440,8 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 	auto right = Grid::obtain({{4, 4}, 4}, {0, 0});
 	left->sample(1, 0) = right->sample(0, 0) = {{{&b, 0.5f}, {&a, 0.5f}}};
 	left->sample(1, 1) = right->sample(0, 1) = {{{&a, 1}, {&b, 0}}};
-	EXPECT_EQ(left->dominant({4, 0}), &b);
-	EXPECT_EQ(right->dominant({0, 0}), &b);
+	EXPECT_EQ(left->dominant({4, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
+	EXPECT_EQ(right->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
 	{
 		const auto l = left->interpolate({4, z});
@@ -450,6 +451,47 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 			EXPECT_EQ(l[i].biome, r[i].biome);
 			EXPECT_FLOAT_EQ(l[i].weight, r[i].weight);
 		}
-		EXPECT_EQ(left->dominant({4, z}), right->dominant({0, z}));
+		EXPECT_EQ(left->dominant({4, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), right->dominant({0, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear));
 	}
+}
+
+TEST(Grid2DTest, ReusesCapacityAcrossShapesAndResetsCells)
+{
+	using Grid = spk::Grid2D<int>;
+	auto grid = Grid::obtain(3, 5);
+	const auto *address = grid.get();
+	EXPECT_GE(grid->capacity(), 16u);
+	EXPECT_EQ(grid->layout().count(), 15u);
+	grid->at(2, 4) = 42;
+	grid = {};
+	auto recycled = Grid::obtain(4, 4);
+	EXPECT_EQ(recycled.get(), address);
+	EXPECT_EQ(recycled->layout().width, 4u);
+	EXPECT_EQ(recycled->layout().height, 4u);
+	for (std::size_t y = 0; y < 4; ++y)
+	{
+		for (std::size_t x = 0; x < 4; ++x)
+		{
+			EXPECT_EQ(recycled->at(x, y), 0);
+		}
+	}
+	EXPECT_THROW((void)recycled->at(4, 0), spk::Exception);
+	EXPECT_THROW((void)recycled->at(0, 4), spk::Exception);
+	EXPECT_THROW((void)Grid::obtain(0, 4), spk::Exception);
+	EXPECT_THROW((void)Grid::obtain(std::numeric_limits<std::size_t>::max(), 2), spk::Exception);
+}
+
+TEST(Grid2DTest, ReleasesElementsAndKeepsConcurrentLeasesIndependent)
+{
+	using Grid = spk::Grid2D<std::shared_ptr<int>>;
+	auto first = Grid::obtain(2, 2);
+	auto second = Grid::obtain(2, 2);
+	EXPECT_NE(first.get(), second.get());
+	first->at(0, 0) = std::make_shared<int>(7);
+	std::weak_ptr<int> observer = first->at(0, 0);
+	EXPECT_FALSE(second->at(0, 0));
+	first = {};
+	EXPECT_TRUE(observer.expired());
+	const auto &readOnly = second;
+	EXPECT_FALSE(readOnly->at(0, 0));
 }

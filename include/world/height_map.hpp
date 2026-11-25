@@ -4,7 +4,6 @@
 #include <map>
 #include <string>
 
-#include "container/capacity_pool.hpp"
 #include "math/perlin.hpp"
 #include "world/surface_grid.hpp"
 
@@ -33,22 +32,16 @@ namespace spk::World
 			};
 
 		private:
-			explicit Grid(std::size_t capacity) :
-				SurfaceGrid(capacity)
-			{
-			}
+			Grid() = default;
 
 		public:
 			using SurfaceGrid::at;
 
 			[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 			{
-				const auto layout = layoutFor(configuration);
-				static spk::CapacityPool<Grid> pool([](std::size_t capacity) {
-					return new Grid(capacity);
-				});
-				return pool.obtain(layout.count(), [&](Grid &grid) {
-					grid._configure(configuration, origin, layout);
+				return _obtain<Grid>(configuration, origin, []() {
+					return new Grid();
+				}, [](Grid &) {
 				});
 			}
 

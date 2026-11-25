@@ -1,6 +1,5 @@
 #pragma once
 
-#include "container/capacity_pool.hpp"
 #include "world/biome.hpp"
 #include "world/surface_grid.hpp"
 #include <array>
@@ -41,20 +40,14 @@ namespace spk::World
 		using InterpolatedCell = std::array<Influence, 4 * TCapacity>;
 
 	private:
-		explicit Grid(std::size_t capacity) :
-			Base(capacity)
-		{
-		}
+		Grid() = default;
 
 	public:
 		[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 		{
-			const auto layout = Base::layoutFor(configuration);
-			static spk::CapacityPool<Grid> pool([](std::size_t capacity) {
-				return new Grid(capacity);
-			});
-			return pool.obtain(layout.count(), [&](Grid &grid) {
-				grid._configure(configuration, origin, layout);
+			return Base::template _obtain<Grid>(configuration, origin, []() {
+				return new Grid();
+			}, [](Grid &) {
 			});
 		}
 
@@ -107,7 +100,7 @@ namespace spk::World
 			return result;
 		}
 
-		[[nodiscard]] const SurfaceBiome *dominant(const spk::Vector2 &position, Interpolation interpolation = Interpolation::Bilinear) const
+		[[nodiscard]] const SurfaceBiome *dominant(const spk::Vector2 &position, Interpolation interpolation) const
 		{
 			const auto select = [](const auto &cell) {
 				const SurfaceBiome *result = nullptr;

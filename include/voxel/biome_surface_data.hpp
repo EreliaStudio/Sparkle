@@ -1,6 +1,7 @@
 #pragma once
 
 #include <span>
+#include <vector>
 
 #include "voxel/biome.hpp"
 #include "world/height_map.hpp"
@@ -21,22 +22,16 @@ namespace spk::Voxel
 		private:
 			std::vector<Biome::Layer> _layers;
 
-			explicit Grid(std::size_t capacity) :
-				SurfaceGrid(capacity)
-			{
-			}
+			Grid() = default;
 
 		public:
 			using Lease = spk::Pool<Grid>::Lease;
 
 			[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 			{
-				const auto layout = layoutFor(configuration);
-				static spk::CapacityPool<Grid> pool([](std::size_t capacity) {
-					return new Grid(capacity);
-				});
-				return pool.obtain(layout.count(), [&](Grid &grid) {
-					grid._configure(configuration, origin, layout);
+				return _obtain<Grid>(configuration, origin, []() {
+					return new Grid();
+				}, [](Grid &grid) {
 					grid._layers.clear();
 				});
 			}

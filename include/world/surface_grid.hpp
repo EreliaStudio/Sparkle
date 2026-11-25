@@ -7,13 +7,14 @@
 #include <utility>
 #include <vector>
 
+#include "container/grid_2d.hpp"
 #include "exception.hpp"
 #include "math/vector2.hpp"
 
 namespace spk::World
 {
 	template <typename TElement>
-	class SurfaceGrid
+	class SurfaceGrid : public spk::LifeCycle
 	{
 	public:
 		struct Configuration
@@ -23,25 +24,14 @@ namespace spk::World
 			[[nodiscard]] bool operator==(const Configuration &) const = default;
 		};
 
-		struct Layout
-		{
-			std::size_t width;
-			std::size_t height;
-			[[nodiscard]] std::size_t count() const
-			{
-				if (height == 0 || width > std::numeric_limits<std::size_t>::max() / height)
-				{
-					throw spk::Exception("Surface grid sample count overflow");
-				}
-				return width * height;
-			}
-		};
+		using Layout = typename spk::Grid2D<TElement>::Layout;
 
 	private:
 		Configuration _configuration{};
 		spk::Vector2 _origin{};
 		Layout _layout{0, 0};
-		std::vector<TElement> _elements;
+		typename spk::Grid2D<TElement>::Lease _elements;
+		ReleaseContract _releaseContract;
 
 		static std::size_t _axisCount(unsigned int size, float scale)
 		{
@@ -57,9 +47,27 @@ namespace spk::World
 		}
 
 	protected:
-		explicit SurfaceGrid(std::size_t capacity)
+		SurfaceGrid() :
+			_releaseContract(subscribeToRelease([this]() {
+				_elements = {};
+			}))
 		{
-			_elements.reserve(capacity);
+		}
+
+		~SurfaceGrid() override
+		{
+			terminateLifeCycle();
+		}
+
+		template <typename TGrid, typename TFactory, typename TConfigure>
+		[[nodiscard]] static typename spk::Pool<TGrid>::Lease _obtain(const Configuration &configuration, const spk::Vector2 &origin, TFactory factory, TConfigure configure)
+		{
+			const auto layout = layoutFor(configuration);
+			static spk::Pool<TGrid> pool(factory);
+			return pool.obtain([&](TGrid &grid) {
+				grid._configure(configuration, origin, layout);
+				configure(grid);
+			});
 		}
 
 		void _configure(const Configuration &configuration, const spk::Vector2 &origin, Layout layout)
@@ -68,8 +76,7 @@ namespace spk::World
 			{
 				throw spk::Exception("Surface grid origin must be finite");
 			}
-			_elements.resize(layout.count());
-			std::fill(_elements.begin(), _elements.end(), TElement{});
+			_elements = spk::Grid2D<TElement>::obtain(layout.width, layout.height);
 			_configuration = configuration;
 			_origin = origin;
 			_layout = layout;
@@ -121,20 +128,20 @@ namespace spk::World
 		}
 		[[nodiscard]] std::size_t capacity() const noexcept
 		{
-			return _elements.capacity();
+			return _elements ? _elements->capacity() : 0;
 		}
 
-		[[nodiscard]] TElement &sample(std::size_t x, std::size_t z)
+		[[nodiscard]] typename spk::Grid2D<TElement>::Reference sample(std::size_t x, std::size_t z)
 		{
-			return const_cast<TElement &>(std::as_const(*this).sample(x, z));
+			return _elements->at(x, z);
 		}
-		[[nodiscard]] const TElement &sample(std::size_t x, std::size_t z) const
+		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference sample(std::size_t x, std::size_t z) const
 		{
 			if (x >= _layout.width || z >= _layout.height)
 			{
 				throw spk::Exception("Surface grid sample index is outside its domain");
 			}
-			return _elements[z * _layout.width + x];
+			return _elements->at(x, z);
 		}
 		[[nodiscard]] spk::Vector2 localPosition(std::size_t x, std::size_t z) const
 		{
@@ -146,11 +153,11 @@ namespace spk::World
 				x == _layout.width - 1 ? static_cast<float>(_configuration.size.x) : static_cast<float>(x * static_cast<double>(_configuration.scale)),
 				z == _layout.height - 1 ? static_cast<float>(_configuration.size.y) : static_cast<float>(z * static_cast<double>(_configuration.scale))};
 		}
-		[[nodiscard]] TElement &at(const spk::Vector2 &position)
+		[[nodiscard]] typename spk::Grid2D<TElement>::Reference at(const spk::Vector2 &position)
 		{
-			return const_cast<TElement &>(std::as_const(*this).at(position));
+			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, _layout.width)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, _layout.height)));
 		}
-		[[nodiscard]] const TElement &at(const spk::Vector2 &position) const
+		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference at(const spk::Vector2 &position) const
 		{
 			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, _layout.width)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, _layout.height)));
 		}
