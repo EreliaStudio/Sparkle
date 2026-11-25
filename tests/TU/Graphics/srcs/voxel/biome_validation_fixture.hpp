@@ -264,7 +264,7 @@ namespace sparkle_test::biome_validation
 			{
 				const float a = std::clamp((p.x + 20.0f) / 40.0f, 0.0f, 1.0f);
 				const float b = std::clamp((p.y + 20.0f) / 40.0f, 0.0f, 1.0f);
-				cell = {{{&_first, (1 - a) * (1 - b)}, {&_second, a * (1 - b)}, {&_third, b}}};
+				cell = {{{{&_first, (1 - a) * (1 - b)}, {&_second, a * (1 - b)}, {&_third, b}}}};
 				break;
 			}
 			case Placement::Islands:
