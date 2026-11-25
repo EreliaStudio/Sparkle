@@ -20,7 +20,6 @@ namespace spk::World
 		{
 		}
 
-
 		[[nodiscard]] typename ChunkRequester<TChunk>::Answer request(const ChunkCoordinate &coordinate) override
 		{
 			return _workerPool.submit([generator = &_generator, coordinate]() {

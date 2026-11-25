@@ -32,7 +32,6 @@ namespace
 		{
 		}
 
-
 		[[nodiscard]] int value() const noexcept
 		{
 			return _value;
@@ -317,7 +316,6 @@ TEST(GeneratorTest, CanGenerateWithoutPasses)
 	EXPECT_TRUE(result->appliedPasses().empty());
 	EXPECT_EQ(generator.dataCalls, 1);
 }
-
 
 TEST(GeneratorTest, DataPreparationFailureIsAnExceptionAndSkipsPasses)
 {

@@ -16,8 +16,8 @@
 #include "threading/worker_pool.hpp"
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
-#include "world/chunk_requester.hpp"
 #include "world/chunk_generation_data_collection.hpp"
+#include "world/chunk_requester.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
 
@@ -28,7 +28,6 @@ namespace
 	class TestChunk : public spk::World::Chunk<8, 4, 6>
 	{
 	public:
-
 	private:
 		int _value;
 
@@ -44,13 +43,15 @@ namespace
 		}
 	};
 
-
 	struct GenerationData
 	{
 		int seed = 0;
 		spk::World::ChunkGenerationDataCollection<int> values;
 
-		explicit GenerationData(int seedValue) : seed(seedValue) {}
+		explicit GenerationData(int seedValue) :
+			seed(seedValue)
+		{
+		}
 	};
 
 	using Generator = spk::World::Generator<TestChunk, GenerationData>;

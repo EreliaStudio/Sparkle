@@ -107,8 +107,9 @@ namespace spk::World
 		{
 			return Base::template _obtain<Grid>(configuration, origin, []() {
 				return new Grid();
-			}, [](Grid &) {
-			});
+			},
+												[](Grid &) {
+												});
 		}
 
 		[[nodiscard]] InterpolatedCell interpolate(const spk::Vector2 &position, Interpolation interpolation) const

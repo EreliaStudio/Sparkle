@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
 #include "container/grid_2d.hpp"
 #include <cstdint>
+#include <gtest/gtest.h>
 #include <type_traits>
 #include <vector>
 
@@ -10,10 +10,10 @@
 #include <future>
 #include <limits>
 
+#include "voxel/biome_surface_data.hpp"
 #include "world/height_map.hpp"
 #include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
-#include "voxel/biome_surface_data.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
 #include "world/surface_biome.hpp"
 
@@ -99,8 +99,9 @@ namespace
 		{
 			return _obtain<InterpolationProbe>(configuration, {}, []() {
 				return new InterpolationProbe();
-			}, [](InterpolationProbe &) {
-			});
+			},
+											   [](InterpolationProbe &) {
+											   });
 		}
 	};
 }
@@ -383,7 +384,8 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 		});
 	});
 	ready.wait();
-	auto idle = cache.obtainColumn({0, 0}, [](SurfaceData &) {});
+	auto idle = cache.obtainColumn({0, 0}, [](SurfaceData &) {
+	});
 	idle.reset();
 	cache.flush();
 	EXPECT_EQ(cache.columnCount(), 1u);

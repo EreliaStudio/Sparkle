@@ -23,9 +23,9 @@
 #include "world/chunk.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_filter.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/chunk_requester.hpp"
-#include "world/chunk_generation_data_collection.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
 #include "world/world_observer.hpp"
@@ -39,7 +39,6 @@ namespace
 	class IntegrationChunk : public spk::World::Chunk<16, 8, 32>
 	{
 	public:
-
 	private:
 		int _value = 0;
 
@@ -63,7 +62,6 @@ namespace
 			}
 		}
 	};
-
 
 	struct GenerationData
 	{

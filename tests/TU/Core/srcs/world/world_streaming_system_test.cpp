@@ -664,4 +664,3 @@ TEST(WorldStreamingSystemTest, DetachingDuringSubmissionRetiresWorkerAndRetainsP
 	fixture.tick(3ms);
 	EXPECT_EQ(fixture.collection.at({0, 0, 0}).value(), 200);
 }
-

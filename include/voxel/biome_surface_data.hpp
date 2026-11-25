@@ -37,9 +37,10 @@ namespace spk::Voxel
 			{
 				return _obtain<Grid>(configuration, origin, []() {
 					return new Grid();
-				}, [](Grid &grid) {
-					grid._layers.clear();
-				});
+				},
+									 [](Grid &grid) {
+										 grid._layers.clear();
+									 });
 			}
 
 			void buildCell(std::size_t x, std::size_t z, const Biome &biome)

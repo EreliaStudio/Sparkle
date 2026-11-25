@@ -36,8 +36,9 @@ namespace spk::World
 			{
 				return _obtain<Grid>(configuration, origin, []() {
 					return new Grid();
-				}, [](Grid &) {
-				});
+				},
+									 [](Grid &) {
+									 });
 			}
 
 			[[nodiscard]] float at(const spk::Vector2 &position, Interpolation interpolation) const
