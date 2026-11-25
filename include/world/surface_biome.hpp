@@ -32,6 +32,13 @@ namespace spk::World
 		using Base = SurfaceGrid<Cell>;
 		using Configuration = typename Base::Configuration;
 		using Lease = typename spk::Pool<Grid>::Lease;
+		enum class Interpolation
+		{
+			Floor,
+			Bilinear
+		};
+		// Four neighboring cells may contain completely different biomes.
+		using InterpolatedCell = std::array<Influence, 4 * TCapacity>;
 
 	private:
 		explicit Grid(std::size_t capacity) :
@@ -51,19 +58,78 @@ namespace spk::World
 			});
 		}
 
-		[[nodiscard]] const SurfaceBiome *dominant(const spk::Vector2 &position) const
+		[[nodiscard]] InterpolatedCell interpolate(const spk::Vector2 &position) const
 		{
-			const SurfaceBiome *result = nullptr;
-			float weight = 0.0f;
-			for (const auto &influence : this->at(position))
-			{
-				if (influence.biome != nullptr && influence.weight > weight)
+			const auto dimensions = this->layout();
+			const auto &config = this->configuration();
+			const double x = this->_sampleAxis(position.x, config.size.x, dimensions.width);
+			const double z = this->_sampleAxis(position.y, config.size.y, dimensions.height);
+			const auto x0 = static_cast<std::size_t>(x);
+			const auto z0 = static_cast<std::size_t>(z);
+			const auto x1 = std::min(x0 + 1, dimensions.width - 1);
+			const auto z1 = std::min(z0 + 1, dimensions.height - 1);
+			const double dx = x - x0;
+			const double dz = z - z0;
+			InterpolatedCell result{};
+			std::array<double, 4 * TCapacity> weights{};
+			std::size_t count = 0;
+			const auto accumulate = [&](const Cell &cell, double factor) {
+				if (factor == 0.0)
 				{
-					result = influence.biome;
-					weight = influence.weight;
+					return;
 				}
+				for (const auto &influence : cell)
+				{
+					if (influence.biome == nullptr || influence.weight <= 0.0f)
+					{
+						continue;
+					}
+					std::size_t index = 0;
+					while (index < count && result[index].biome != influence.biome)
+					{
+						++index;
+					}
+					if (index == count)
+					{
+						result[count++].biome = influence.biome;
+					}
+					weights[index] += factor * influence.weight;
+				}
+			};
+			accumulate(this->sample(x0,z0), (1-dx)*(1-dz));
+			accumulate(this->sample(x1,z0), dx*(1-dz));
+			accumulate(this->sample(x0,z1), (1-dx)*dz);
+			accumulate(this->sample(x1,z1), dx*dz);
+			for (std::size_t i = 0; i < count; ++i)
+			{
+				result[i].weight = static_cast<float>(weights[i]);
 			}
 			return result;
+		}
+
+		[[nodiscard]] const SurfaceBiome *dominant(const spk::Vector2 &position, Interpolation interpolation = Interpolation::Bilinear) const
+		{
+			const auto select = [](const auto &cell) {
+				const SurfaceBiome *result = nullptr;
+				float weight = 0.0f;
+				for (const auto &influence : cell)
+				{
+					if (influence.biome != nullptr && influence.weight > weight)
+					{
+						result = influence.biome;
+						weight = influence.weight;
+					}
+				}
+				return result;
+			};
+			switch (interpolation)
+			{
+			case Interpolation::Floor:
+				return select(this->at(position));
+			case Interpolation::Bilinear:
+				return select(interpolate(position));
+			}
+			throw spk::Exception("Unknown biome influence interpolation");
 		}
 	};
 }

@@ -389,3 +389,67 @@ TEST(SurfaceGenerationTest, StandaloneHeightMapPassUsesWorldOriginAndRequiresBin
 	EXPECT_EQ(data.heights->worldOrigin(), (spk::Vector2{-32, 24}));
 	EXPECT_FLOAT_EQ(data.heights->at({16, 8}), map.sample({-16, 32}));
 }
+
+TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
+{
+	ConstantBiome a(0), b(1);
+	using Grid = SurfaceData::InfluenceGrid;
+	auto grid = Grid::obtain({{4, 4}, 4}, {});
+	grid->sample(0, 0) = {{{&a, 1}, {&b, 0}}};
+	grid->sample(1, 0) = {{{&b, 1}, {&a, 0}}};
+	grid->sample(0, 1) = {{{&b, 0}, {&a, 1}}};
+	grid->sample(1, 1) = {{{&a, 0}, {&b, 1}}};
+	const auto cell = grid->interpolate({3, 1});
+	EXPECT_EQ(cell[0].biome, &a);
+	EXPECT_FLOAT_EQ(cell[0].weight, 0.25f);
+	EXPECT_EQ(cell[1].biome, &b);
+	EXPECT_FLOAT_EQ(cell[1].weight, 0.75f);
+	EXPECT_EQ(grid->dominant({3, 1}), &b);
+	EXPECT_EQ(grid->dominant({3, 1}, Grid::Interpolation::Floor), &a);
+	EXPECT_EQ(grid->dominant({2, 2}), &a);
+	EXPECT_EQ(grid->dominant({4, 4}), &b);
+}
+
+TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
+{
+	using Grid = spk::World::SurfaceBiome::Influence::Grid<1>;
+	ConstantBiome a(1), b(2), c(3), d(4);
+	auto grid = Grid::obtain({{4, 4}, 4}, {});
+	grid->sample(0, 0)[0] = {&a, 1};
+	grid->sample(1, 0)[0] = {&b, 1};
+	grid->sample(0, 1)[0] = {&c, 1};
+	grid->sample(1, 1)[0] = {&d, 1};
+	const auto center = grid->interpolate({2, 2});
+	EXPECT_EQ(center[0].biome, &a);
+	EXPECT_EQ(center[1].biome, &b);
+	EXPECT_EQ(center[2].biome, &c);
+	EXPECT_EQ(center[3].biome, &d);
+	for (const auto &influence : center)
+	{
+		EXPECT_FLOAT_EQ(influence.weight, 0.25f);
+	}
+	EXPECT_EQ(grid->dominant({3, 3}), &d);
+}
+
+TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
+{
+	using Grid = SurfaceData::InfluenceGrid;
+	ConstantBiome a(1), b(2);
+	auto left = Grid::obtain({{4, 4}, 4}, {-4, 0});
+	auto right = Grid::obtain({{4, 4}, 4}, {0, 0});
+	left->sample(1, 0) = right->sample(0, 0) = {{{&b, 0.5f}, {&a, 0.5f}}};
+	left->sample(1, 1) = right->sample(0, 1) = {{{&a, 1}, {&b, 0}}};
+	EXPECT_EQ(left->dominant({4, 0}), &b);
+	EXPECT_EQ(right->dominant({0, 0}), &b);
+	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
+	{
+		const auto l = left->interpolate({4,z});
+		const auto r = right->interpolate({0,z});
+		for (std::size_t i = 0; i < l.size(); ++i)
+		{
+			EXPECT_EQ(l[i].biome, r[i].biome);
+			EXPECT_FLOAT_EQ(l[i].weight, r[i].weight);
+		}
+		EXPECT_EQ(left->dominant({4,z}), right->dominant({0,z}));
+	}
+}

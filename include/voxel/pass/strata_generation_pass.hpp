@@ -26,7 +26,7 @@ namespace spk::Voxel
 			{
 				for (std::size_t x = 0; x < layout.width; ++x)
 				{
-					const auto *biome = dynamic_cast<const Biome *>(influences.dominant(grid->localPosition(x, z)));
+					const auto *biome = dynamic_cast<const Biome *>(influences.dominant(grid->localPosition(x, z), InfluenceGrid::Interpolation::Bilinear));
 					if (biome == nullptr)
 					{
 						throw spk::Exception("Voxel strata require a dominant voxel biome");
