@@ -108,6 +108,9 @@ four cells' distinct biomes. Interpolation is explicit: Floor copies the floor c
 Bilinear combines neighboring influences without discarding positive contributions.
 Aligned queries read only one cell at a grid node, or two cells on a grid line.
 Empty cells remain empty. The Highest mode belongs to height combination only.
+Stored and interpolated influences use Influence::Cell<N>, which owns a fixed-size
+std::array and exposes dominant() independently of spatial sampling. Grid no longer
+provides dominant(); both the height and strata passes use the cell method.
 Exact ties retain first positive encounter order.
 Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
 interpolation, 3D slices and optional coordinate warping from the voxel renderer.
