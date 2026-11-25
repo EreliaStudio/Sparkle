@@ -211,9 +211,9 @@ TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
 			}
 			auto &height = data.column(coordinate).heights->sample({0, 0});
 			EXPECT_FLOAT_EQ(height, 17.75f);
-			height += 1.0f;
 			if (std::exchange(_first, false))
 			{
+				height += 1.0f;
 				throw spk::Exception("Injected surface failure");
 			}
 		}
