@@ -13,7 +13,7 @@ namespace spk::World
 
 	protected:
 		virtual HeightMap::Grid::Configuration _gridConfiguration(const ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
-		virtual HeightMap::Grid::Lease &_gridDestination(TGenerationData &data) = 0;
+		virtual HeightMap::Grid::Lease &_gridDestination(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
 
 	public:
 		void bind(const HeightMap &heightMap) noexcept
@@ -29,7 +29,7 @@ namespace spk::World
 			}
 			const auto config = _gridConfiguration(coordinate, data);
 			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.z) * config.size.y)};
-			_gridDestination(data) = _heightMap->generate(config, origin);
+			_gridDestination(coordinate, data) = _heightMap->generate(config, origin);
 		}
 	};
 }

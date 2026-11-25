@@ -405,7 +405,7 @@ namespace
 		{
 			return {{16, 8}, 2};
 		}
-		HeightMap::Grid::Lease &_gridDestination(SurfaceData &data) override
+		HeightMap::Grid::Lease &_gridDestination(const Coordinate &, SurfaceData &data) override
 		{
 			return data.heights;
 		}

@@ -642,7 +642,6 @@ namespace
 				// Retain the full column before generating the vertical stack.
 				for (int y = 0; y <= 1; ++y)
 				{
-					generator.retain({x, y, z});
 				}
 				for (int y = 0; y <= 1; ++y)
 				{
@@ -652,7 +651,6 @@ namespace
 				}
 				for (int y = 0; y <= 1; ++y)
 				{
-					generator.release({x, y, z});
 				}
 			}
 		}
@@ -710,7 +708,6 @@ namespace
 		// Deliberately retain every vertical coordinate before running any generation.
 		for (const auto &coordinate : coordinates)
 		{
-			generator.retain(coordinate);
 		}
 		auto generationOrder = coordinates;
 		if (view.reverseOrder)
@@ -756,7 +753,6 @@ namespace
 		}
 		for (const auto &coordinate : coordinates)
 		{
-			generator.release(coordinate);
 		}
 		ASSERT_GT(visibleVoxels, 0u);
 		ASSERT_EQ(scene.chunks.size(), coordinates.size());
