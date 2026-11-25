@@ -196,15 +196,32 @@ TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
 	EXPECT_FLOAT_EQ(recycled->at({0, 0}), 7.5f);
 }
 
+TEST(SurfaceGridTest, InfluenceCellDominantWorksWithoutGrid)
+{
+	using Cell = spk::World::SurfaceBiome::Influence::Cell<4>;
+	ConstantBiome a(1), b(2);
+	Cell cell{};
+	EXPECT_EQ(cell.dominant(), nullptr);
+	cell[0] = {&a, 0};
+	cell[1] = {nullptr, 1};
+	EXPECT_EQ(cell.dominant(), nullptr);
+	cell[0].weight = 0.5f;
+	cell[2] = {&b, 0.5f};
+	EXPECT_EQ(std::as_const(cell).dominant(), &a);
+	cell[2].weight = 0.75f;
+	EXPECT_EQ(cell.dominant(), &b);
+	EXPECT_EQ(cell.size(), 4u);
+}
+
 TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 {
 	ConstantBiome a(0), b(1);
 	auto grid = SurfaceData::InfluenceGrid::obtain({{16, 16}, 1}, {});
-	EXPECT_EQ(grid->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), nullptr);
-	grid->at({0, 0}) = {{{&a, 0.5f}, {&b, 0.5f}}};
-	EXPECT_EQ(grid->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &a);
+	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), nullptr);
+	grid->at({0, 0}) = {{{{&a, 0.5f}, {&b, 0.5f}}}};
+	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &a);
 	grid->at({0, 0})[0].weight = 0;
-	EXPECT_EQ(grid->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
+	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
 }
 
 TEST(SurfaceGenerationTest, ConcurrentVerticalJobsShareOneWeightedHeight)
@@ -331,7 +348,7 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 	{
 		for (std::uint32_t x = 0; x < layout.x; ++x)
 		{
-			data.influences->sample({x, z}) = {{{&valid, 1}, {&invalid, 0}}};
+			data.influences->sample({x, z}) = {{{{&valid, 1}, {&invalid, 0}}}};
 		}
 	}
 	EXPECT_NO_THROW(pass.apply({}, data));
@@ -403,19 +420,19 @@ TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
 	ConstantBiome a(0), b(1);
 	using Grid = SurfaceData::InfluenceGrid;
 	auto grid = Grid::obtain({{4, 4}, 4}, {});
-	grid->sample({0, 0}) = {{{&a, 1}, {&b, 0}}};
-	grid->sample({1, 0}) = {{{&b, 1}, {&a, 0}}};
-	grid->sample({0, 1}) = {{{&b, 0}, {&a, 1}}};
-	grid->sample({1, 1}) = {{{&a, 0}, {&b, 1}}};
+	grid->sample({0, 0}) = {{{{&a, 1}, {&b, 0}}}};
+	grid->sample({1, 0}) = {{{{&b, 1}, {&a, 0}}}};
+	grid->sample({0, 1}) = {{{{&b, 0}, {&a, 1}}}};
+	grid->sample({1, 1}) = {{{{&a, 0}, {&b, 1}}}};
 	const auto cell = grid->interpolate({3, 1}, Grid::Interpolation::Bilinear);
 	EXPECT_EQ(cell[0].biome, &a);
 	EXPECT_FLOAT_EQ(cell[0].weight, 0.25f);
 	EXPECT_EQ(cell[1].biome, &b);
 	EXPECT_FLOAT_EQ(cell[1].weight, 0.75f);
-	EXPECT_EQ(grid->dominant({3, 1}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
-	EXPECT_EQ(grid->dominant({3, 1}, Grid::Interpolation::Floor), &a);
-	EXPECT_EQ(grid->dominant({2, 2}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &a);
-	EXPECT_EQ(grid->dominant({4, 4}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
+	EXPECT_EQ(grid->interpolate({3, 1}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
+	EXPECT_EQ(grid->interpolate({3, 1}, Grid::Interpolation::Floor).dominant(), &a);
+	EXPECT_EQ(grid->interpolate({2, 2}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &a);
+	EXPECT_EQ(grid->interpolate({4, 4}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
 }
 
 TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
@@ -436,7 +453,7 @@ TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
 	{
 		EXPECT_FLOAT_EQ(influence.weight, 0.25f);
 	}
-	EXPECT_EQ(grid->dominant({3, 3}, Grid::Interpolation::Bilinear), &d);
+	EXPECT_EQ(grid->interpolate({3, 3}, Grid::Interpolation::Bilinear).dominant(), &d);
 }
 
 TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
@@ -445,10 +462,10 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 	ConstantBiome a(1), b(2);
 	auto left = Grid::obtain({{4, 4}, 4}, {-4, 0});
 	auto right = Grid::obtain({{4, 4}, 4}, {0, 0});
-	left->sample({1, 0}) = right->sample({0, 0}) = {{{&b, 0.5f}, {&a, 0.5f}}};
-	left->sample({1, 1}) = right->sample({0, 1}) = {{{&a, 1}, {&b, 0}}};
-	EXPECT_EQ(left->dominant({4, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
-	EXPECT_EQ(right->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
+	left->sample({1, 0}) = right->sample({0, 0}) = {{{{&b, 0.5f}, {&a, 0.5f}}}};
+	left->sample({1, 1}) = right->sample({0, 1}) = {{{{&a, 1}, {&b, 0}}}};
+	EXPECT_EQ(left->interpolate({4, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
+	EXPECT_EQ(right->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
 	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
 	{
 		const auto l = left->interpolate({4, z}, Grid::Interpolation::Bilinear);
@@ -458,7 +475,7 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 			EXPECT_EQ(l[i].biome, r[i].biome);
 			EXPECT_FLOAT_EQ(l[i].weight, r[i].weight);
 		}
-		EXPECT_EQ(left->dominant({4, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), right->dominant({0, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear));
+		EXPECT_EQ(left->interpolate({4, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), right->interpolate({0, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant());
 	}
 }
 
@@ -585,7 +602,7 @@ TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 	using Grid = SurfaceData::InfluenceGrid;
 	ConstantBiome a(20), b(100), c(200);
 	auto grid = Grid::obtain({{8, 8}, 4}, {});
-	grid->sample({1, 1}) = {{{&a, 0.25f}, {&b, 0.75f}}};
+	grid->sample({1, 1}) = {{{{&a, 0.25f}, {&b, 0.75f}}}};
 	grid->sample({2, 1})[0] = {&c, 1};
 	grid->sample({1, 2})[0] = {&c, 1};
 	grid->sample({2, 2})[0] = {&c, 1};
@@ -605,7 +622,7 @@ TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 		EXPECT_EQ(edge[2].biome, &c);
 		EXPECT_FLOAT_EQ(edge[2].weight, 0.5f);
 	}
-	grid->sample({1, 1}) = {{{&a, 0.25f}, {&a, 0.75f}}};
+	grid->sample({1, 1}) = {{{{&a, 0.25f}, {&a, 0.75f}}}};
 	const auto merged = grid->interpolate({4, 4}, Grid::Interpolation::Bilinear);
 	EXPECT_EQ(merged[0].biome, &a);
 	EXPECT_FLOAT_EQ(merged[0].weight, 1);
@@ -630,7 +647,7 @@ TEST(SurfaceGenerationTest, HighestHeightCombinationUsesWeightRatherThanHeight)
 	{
 		for (std::uint32_t x = 0; x < 2; ++x)
 		{
-			data.influences->sample({x, z}) = {{{&low, 0.75f}, {&high, 0.25f}}};
+			data.influences->sample({x, z}) = {{{{&low, 0.75f}, {&high, 0.25f}}}};
 		}
 	}
 	Combination weighted(Mode::Weighted);
@@ -639,7 +656,7 @@ TEST(SurfaceGenerationTest, HighestHeightCombinationUsesWeightRatherThanHeight)
 	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 40);
 	highest.apply({}, data);
 	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 20);
-	data.influences->sample({0, 0}) = {{{&low, 0.5f}, {&invalid, 0.5f}}};
+	data.influences->sample({0, 0}) = {{{{&low, 0.5f}, {&invalid, 0.5f}}}};
 	EXPECT_NO_THROW(highest.apply({}, data));
 	EXPECT_FLOAT_EQ(data.heights->sample({0, 0}), 20);
 	const auto *previous = data.heights.get();
