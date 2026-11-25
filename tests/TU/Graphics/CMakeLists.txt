@@ -25,6 +25,10 @@ add_executable(SparkleGraphicsTestSuite
 )
 
 target_compile_features(SparkleGraphicsTestSuite PRIVATE cxx_std_23)
+# Template-heavy graphics fixtures can exceed the COFF section limit in MSVC Debug.
+if(MSVC)
+    target_compile_options(SparkleGraphicsTestSuite PRIVATE /bigobj)
+endif()
 target_compile_definitions(SparkleGraphicsTestSuite PRIVATE
     SPARKLE_VOXEL_SHAPES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../Core/resources/voxel/shapes"
     SPARKLE_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
