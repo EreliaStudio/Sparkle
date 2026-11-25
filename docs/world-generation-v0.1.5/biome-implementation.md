@@ -23,13 +23,11 @@ spatial hierarchy or eviction policy. Each derived generator decides how to init
 synchronize and clean its data. Streaming requests no longer retain or release generator
 data. The generator must outlive all submitted jobs.
 
-Voxel::BiomeGenerationData owns two maps directly: ColumnData keyed by X/Z and
-ChunkData keyed by the full chunk coordinate. Both types are nested in the generation
-data. ChunkData contains the request-local Volume::Builder; ColumnData contains
+Voxel::BiomeGenerationData owns WorldData (registry and scale), ColumnData keyed by X/Z and ChunkData keyed by the full chunk coordinate. All three types are nested in the concrete generation data. ChunkData contains the request-local Volume::Builder; ColumnData contains
 influences, heights and strata. There are no shared pointers or separate collection
 types for generation data.
 
-The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active ChunkData until cleanup. Other columns remain independent. Every job invokes every pass. Concrete distribution, height combination and strata passes return immediately when their respective grid already exists. In-place editing passes must explicitly avoid reapplying modifications to published columns (for example with columnReady()). Later jobs on a published column can read concurrently. Failed initial jobs clear partial grids and are retryable. Only one active generation per chunk coordinate
+The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active ChunkData until cleanup. Other columns remain independent. Every job invokes every pass. Concrete distribution, height combination and strata passes return immediately when their respective grid already exists. In-place editing passes explicitly check and record their stable identity in ColumnData::appliedPasses, only marking after success. The first job owns the column mutex through cleanup; subsequent jobs only read cached results and markers. Failed initial jobs clear both grids and markers. Later jobs on a published column can read concurrently. Failed initial jobs clear partial grids and are retryable. Only one active generation per chunk coordinate
 is supported; a duplicate preparation throws without modifying the existing entry.
 Distinct coordinates may be generated concurrently.
 
@@ -138,7 +136,7 @@ from actual test outputs only, with unchanged comparator tolerances.
 - Chunk passes receive only coordinate and mutable data; `_instantiateChunk(coordinate, data)` constructs the final chunk.
 - `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
 - Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass participates in the standard addPass pipeline and receives the complete TGenerationData without its own cache or cleanup policy. Generator calls every pass directly in registration order. Cache decisions belong to concrete passes; there is no dispatch hook or type-based filtering.
-- Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Generation data is private to the generator and passed to hooks and passes; no public accessor is provided. `Generator::flush()` is available only when the data provides `flush()`, and forwards directly to it; voxel data releases idle cached columns.
+- Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.chunk(coordinate).builder`. Generation data is private to the generator and passed to hooks and passes; no public accessor is provided. The C++20 World::GenerationData concept requires `void flush()`; `Generator::flush()` always forwards directly to it. Voxel data currently releases idle cached columns, while other implementations can retain any data or provide a no-op.
 
 ### Validation after persistent-generation refactoring
 

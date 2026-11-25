@@ -27,13 +27,22 @@ namespace
 
 	struct GenerationData
 	{
-		std::mutex mutex;
-		std::map<Coordinate, Builder> builders;
+		void flush()
+		{
+		}
 
-		Builder &builder(const Coordinate &coordinate)
+		std::mutex mutex;
+		struct ChunkData
+		{
+			Builder builder;
+		};
+
+		std::map<Coordinate, ChunkData> chunks;
+
+		ChunkData &chunk(const Coordinate &coordinate)
 		{
 			const std::scoped_lock lock(mutex);
-			return builders.at(coordinate);
+			return chunks.at(coordinate);
 		}
 	};
 
@@ -64,7 +73,7 @@ namespace
 			Builder builder({16, 16, 16});
 			builder.bind(_registry);
 			const std::scoped_lock lock(data.mutex);
-			if (!data.builders.try_emplace(coordinate, std::move(builder)).second)
+			if (!data.chunks.try_emplace(coordinate, GenerationData::ChunkData{std::move(builder)}).second)
 			{
 				throw spk::Exception("Chunk generation is already active");
 			}
@@ -74,14 +83,14 @@ namespace
 		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			Chunk chunk;
-			chunk.setVolume(data.builder(coordinate).build());
+			chunk.setVolume(data.chunk(coordinate).builder.build());
 			return chunk;
 		}
 
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
 			const std::scoped_lock lock(data.mutex);
-			data.builders.erase(coordinate);
+			data.chunks.erase(coordinate);
 		}
 
 	public:

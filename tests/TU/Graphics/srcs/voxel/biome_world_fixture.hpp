@@ -59,11 +59,12 @@ namespace sparkle_test::biome_world
 		public:
 			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				if (data.columnReady(coordinate))
+				auto &column = data.column(coordinate);
+				if (column.appliedPasses.contains(this))
 				{
 					return;
 				}
-				auto &grid = *data.column(coordinate).heights;
+				auto &grid = *column.heights;
 				const auto layout = grid.sampleSize();
 				for (std::uint32_t z = 0; z < layout.y; ++z)
 				{
@@ -74,6 +75,7 @@ namespace sparkle_test::biome_world
 						grid.sample({x, z}) = std::lerp(grid.sample({x, z}), 7.0f, weight);
 					}
 				}
+				column.appliedPasses.insert(this);
 			}
 		};
 

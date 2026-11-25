@@ -70,12 +70,22 @@ namespace spk::Voxel
 	class BiomeGenerationData
 	{
 	public:
+		struct WorldData
+		{
+			Definition::Registry registry;
+			float scale = 1.0f;
+		};
+
 		struct ColumnData
 		{
 			using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
 			typename InfluenceGrid::Lease influences;
 			World::HeightMap::Grid::Lease heights;
 			StrataGrid::Grid::Lease strata;
+
+			// Stable pass addresses are valid while the generator configuration is unchanged.
+			// Only the first active job writes these markers; published columns are read-only.
+			std::set<const void *> appliedPasses;
 
 		private:
 			friend class BiomeGenerationData;
@@ -103,14 +113,25 @@ namespace spk::Voxel
 
 	private:
 		mutable std::mutex _mutex;
+		WorldData _world;
 		std::map<spk::Vector2Int, ColumnData> _columns;
 		std::map<World::ChunkCoordinate, ChunkData> _chunks;
 
 	public:
-		void prepare(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions, const Definition::Registry &registry)
+		explicit BiomeGenerationData(const Definition::Registry &registry = {}, float scale = 1.0f) :
+			_world{registry, scale}
+		{
+		}
+
+		[[nodiscard]] const WorldData &world() const noexcept
+		{
+			return _world;
+		}
+
+		void prepare(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
 		{
 			Volume::Builder builder(dimensions);
-			builder.bind(registry);
+			builder.bind(_world.registry);
 			ColumnData *columnData;
 			{
 				const std::scoped_lock lock(_mutex);
@@ -148,25 +169,6 @@ namespace spk::Voxel
 			return _chunks.at(coordinate);
 		}
 
-		[[nodiscard]] Volume::Builder &builder(const World::ChunkCoordinate &coordinate)
-		{
-			return chunk(coordinate).builder;
-		}
-
-		// Only the first successful chunk generation writes the surface grids.
-		[[nodiscard]] bool needsSurfaceGeneration(const World::ChunkCoordinate &coordinate) const
-		{
-			return chunk(coordinate)._columnLock.owns_lock();
-		}
-
-		// Ready columns are read-only to generation jobs; in-place editing passes
-		// consult this state before changing their cached result.
-		[[nodiscard]] bool columnReady(const spk::Vector2Int &coordinate) const
-		{
-			const std::scoped_lock lock(_mutex);
-			return _columns.at(coordinate)._ready;
-		}
-
 		// Surface passes may write only while their active job owns the column lock.
 		[[nodiscard]] ColumnData &column(const spk::Vector2Int &coordinate)
 		{
@@ -191,9 +193,9 @@ namespace spk::Voxel
 			return _columns.at({coordinate.x, coordinate.z});
 		}
 
-		void publishColumn(const World::ChunkCoordinate &coordinate)
+		void completeChunk(const World::ChunkCoordinate &coordinate)
 		{
-			if (needsSurfaceGeneration(coordinate))
+			if (chunk(coordinate)._columnLock.owns_lock())
 			{
 				const std::scoped_lock lock(_mutex);
 				_columns.at({coordinate.x, coordinate.z})._ready = true;
@@ -216,6 +218,7 @@ namespace spk::Voxel
 					columnData.influences = {};
 					columnData.heights = {};
 					columnData.strata = {};
+					columnData.appliedPasses.clear();
 				}
 			}
 			_chunks.erase(it);

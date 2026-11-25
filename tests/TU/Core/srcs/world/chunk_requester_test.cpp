@@ -46,6 +46,10 @@ namespace
 
 	struct GenerationData
 	{
+		void flush()
+		{
+		}
+
 		int seed = 0;
 		std::mutex mutex;
 		std::map<Coordinate, int> values;

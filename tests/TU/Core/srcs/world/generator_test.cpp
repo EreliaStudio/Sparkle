@@ -47,6 +47,13 @@ namespace
 
 	struct GenerationData
 	{
+		void flush()
+		{
+			++flushCalls;
+		}
+
+		int flushCalls = 0;
+
 		const int &seed;
 		std::vector<int> *trace;
 		struct ChunkData
@@ -74,6 +81,13 @@ namespace
 	};
 
 	static_assert(!std::is_copy_constructible_v<GenerationData>);
+	static_assert(spk::World::GenerationData<GenerationData>);
+	static_assert(!spk::World::GenerationData<int>);
+	struct WrongFlush
+	{
+		int flush();
+	};
+	static_assert(!spk::World::GenerationData<WrongFlush>);
 	using BaseGenerator = spk::World::Generator<ExampleChunk, GenerationData>;
 
 	class ExampleGenerator : public BaseGenerator

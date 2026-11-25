@@ -240,11 +240,12 @@ namespace sparkle_test::biome_validation
 		public:
 			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
-				if (data.columnReady(coordinate))
+				auto &column = data.column(coordinate);
+				if (column.appliedPasses.contains(this))
 				{
 					return;
 				}
-				auto &grid = *data.column(coordinate).heights;
+				auto &grid = *column.heights;
 				const auto layout = grid.sampleSize();
 				for (std::uint32_t z = 0; z < layout.y; ++z)
 				{
@@ -253,6 +254,7 @@ namespace sparkle_test::biome_validation
 						grid.sample({x, z}) = 4.0f * std::floor(grid.sample({x, z}) / 4.0f);
 					}
 				}
+				column.appliedPasses.insert(this);
 			}
 		};
 

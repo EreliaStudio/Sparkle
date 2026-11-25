@@ -151,9 +151,11 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 		{
 			EXPECT_EQ(coordinate, (spk::Vector2Int{3, -2}));
 			_trace.push_back(1);
-			if (!data.columnReady(coordinate))
+			auto &column = data.column(coordinate);
+			if (!column.appliedPasses.contains(this))
 			{
 				_trace.push_back(3);
+				column.appliedPasses.insert(this);
 			}
 		}
 
@@ -205,17 +207,19 @@ TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
 	protected:
 		void _applySurface(const spk::Vector2Int &coordinate, Generator::GenerationData &data) override
 		{
-			if (data.columnReady(coordinate))
+			auto &column = data.column(coordinate);
+			if (column.appliedPasses.contains(this))
 			{
 				return;
 			}
-			auto &height = data.column(coordinate).heights->sample({0, 0});
+			auto &height = column.heights->sample({0, 0});
 			EXPECT_FLOAT_EQ(height, 17.75f);
 			if (std::exchange(_first, false))
 			{
 				height += 1.0f;
 				throw spk::Exception("Injected surface failure");
 			}
+			column.appliedPasses.insert(this);
 		}
 	};
 

@@ -36,6 +36,10 @@ namespace
 
 	struct GenerationData
 	{
+		void flush()
+		{
+		}
+
 	};
 
 	using DistributionPass = spk::World::BiomeDistributionPass<Chunk, GenerationData>;

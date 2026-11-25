@@ -49,15 +49,24 @@ namespace
 
 	struct GenerationData
 	{
+		void flush()
+		{
+		}
+
 		Registry definitions;
 		std::int64_t seed;
 		std::mutex mutex;
-		std::map<Coordinate, Volume::Builder> builders;
+		struct ChunkData
+		{
+			Volume::Builder builder;
+		};
 
-		Volume::Builder &builder(const Coordinate &coordinate)
+		std::map<Coordinate, ChunkData> chunks;
+
+		ChunkData &chunk(const Coordinate &coordinate)
 		{
 			const std::scoped_lock lock(mutex);
-			return builders.at(coordinate);
+			return chunks.at(coordinate);
 		}
 
 		GenerationData(const Registry &registry, std::int64_t seedValue) :
@@ -74,7 +83,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = data.builder(coordinate);
+			auto &volume = data.chunk(coordinate).builder;
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -100,7 +109,7 @@ namespace
 	public:
 		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			auto &volume = data.builder(coordinate);
+			auto &volume = data.chunk(coordinate).builder;
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
@@ -126,7 +135,7 @@ namespace
 				return false;
 			}
 			const std::scoped_lock lock(data.mutex);
-			if (!data.builders.try_emplace(coordinate, spk::Vector3UInt{Chunk::Size}).second)
+			if (!data.chunks.try_emplace(coordinate, GenerationData::ChunkData{Volume::Builder(spk::Vector3UInt{Chunk::Size})}).second)
 			{
 				throw spk::Exception("Chunk generation is already active");
 			}
@@ -136,14 +145,14 @@ namespace
 		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
 			Chunk chunk;
-			chunk.setVolume(data.builder(coordinate).build());
+			chunk.setVolume(data.chunk(coordinate).builder.build());
 			return chunk;
 		}
 
 		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
 		{
 			const std::scoped_lock lock(data.mutex);
-			data.builders.erase(coordinate);
+			data.chunks.erase(coordinate);
 		}
 
 	public:

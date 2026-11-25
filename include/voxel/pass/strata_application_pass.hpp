@@ -15,7 +15,7 @@ namespace spk::Voxel
 	public:
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
-			auto &builder = data.builder(coordinate);
+			auto &builder = data.chunk(coordinate).builder;
 			const auto &heights = _heights(coordinate, data);
 			const auto &strata = _strata(coordinate, data);
 			const auto origin = TChunk::chunkCoordinateToWorld(coordinate);

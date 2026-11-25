@@ -12,7 +12,12 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData>
+	template <typename T>
+	concept GenerationData = requires(T &data) {
+		{ data.flush() } -> std::same_as<void>;
+	};
+
+	template <typename TChunk, GenerationData TGenerationData>
 	class Generator
 	{
 	public:
@@ -48,7 +53,6 @@ namespace spk::World
 		virtual ~Generator() = default;
 
 		void flush()
-			requires requires(TGenerationData &data) { data.flush(); }
 		{
 			_generationData.flush();
 		}

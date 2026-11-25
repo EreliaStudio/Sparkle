@@ -40,9 +40,9 @@ namespace spk::Voxel
 				}
 			}
 
-			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &) override
+			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &data) override
 			{
-				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, _generator._scale};
+				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().scale};
 			}
 			typename InfluenceGrid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
 			{
@@ -119,24 +119,20 @@ namespace spk::Voxel
 			}
 		};
 
-	private:
-		Definition::Registry _registry;
-		float _scale;
-
 	protected:
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
 
 		bool _prepareGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
-			data.prepare(coordinate, spk::Vector3UInt{TChunk::Size}, _registry);
+			data.prepare(coordinate, spk::Vector3UInt{TChunk::Size});
 			return true;
 		}
 
 		TChunk _instantiateChunk(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
 			TChunk chunk;
-			chunk.setVolume(data.builder(coordinate).build());
-			data.publishColumn(coordinate);
+			chunk.setVolume(data.chunk(coordinate).builder.build());
+			data.completeChunk(coordinate);
 			return chunk;
 		}
 
@@ -147,8 +143,7 @@ namespace spk::Voxel
 
 	public:
 		explicit BiomeGenerator(const Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
-			_registry(registry),
-			_scale(scale)
+			World::Generator<TChunk, GenerationData>(registry, scale)
 		{
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			this->template addPass<Distribution>(*this);

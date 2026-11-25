@@ -46,6 +46,13 @@ namespace
 	using GenerationData = spk::Voxel::BiomeGenerationData<2>;
 	using SurfaceData = GenerationData::ColumnData;
 
+	struct StandaloneData : SurfaceData
+	{
+		void flush()
+		{
+		}
+	};
+
 	class Distribution : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>
 	{
 	private:
@@ -68,18 +75,18 @@ namespace
 		}
 	};
 
-	using CombinationBase = spk::World::SurfaceHeightCombinationPass<Chunk, SurfaceData, 2>;
+	using CombinationBase = spk::World::SurfaceHeightCombinationPass<Chunk, StandaloneData, 2>;
 	class Combination : public CombinationBase
 	{
 	public:
 		using CombinationBase::CombinationBase;
 
 	protected:
-		const InfluenceGrid &_influences(const spk::Vector2Int &, const SurfaceData &data) override
+		const InfluenceGrid &_influences(const spk::Vector2Int &, const StandaloneData &data) override
 		{
 			return *data.influences;
 		}
-		Grid::Lease &_gridDestination(const spk::Vector2Int &, SurfaceData &data) override
+		Grid::Lease &_gridDestination(const spk::Vector2Int &, StandaloneData &data) override
 		{
 			return data.heights;
 		}
@@ -234,21 +241,21 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 
 TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 {
-	GenerationData data;
 	const spk::Voxel::Definition::Registry registry;
+	GenerationData data(registry);
 	const Coordinate lower{-1, 0, 2};
 	const Coordinate upper{-1, 1, 2};
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	std::atomic<int> calls{0};
 	const auto generate = [&](const Coordinate &coordinate) {
-		data.prepare(coordinate, {16, 16, 16}, registry);
-		if (data.needsSurfaceGeneration(coordinate))
+		data.prepare(coordinate, {16, 16, 16});
+		if (!data.column(spk::Vector2Int{coordinate.x, coordinate.z}).heights)
 		{
 			++calls;
 			distribution.apply(coordinate, data);
 			combination.apply(coordinate, data);
-			data.publishColumn(coordinate);
+			data.completeChunk(coordinate);
 		}
 		const float height = data.column(coordinate).heights->at({0, 0});
 		data.clean(coordinate);
@@ -273,26 +280,28 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 
 TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 {
-	GenerationData data;
 	const spk::Voxel::Definition::Registry registry;
+	GenerationData data(registry);
 	const Coordinate coordinate{0, 0, 0};
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
-	data.prepare(coordinate, {16, 16, 16}, registry);
-	ASSERT_TRUE(data.needsSurfaceGeneration(coordinate));
+	data.prepare(coordinate, {16, 16, 16});
+	EXPECT_FALSE(data.column(coordinate).heights);
 	distribution.apply(coordinate, data);
+	data.column(spk::Vector2Int{0, 0}).appliedPasses.insert(&distribution);
 	// A failed job cleans its partially constructed column without publishing it.
 	data.clean(coordinate);
-	data.prepare(coordinate, {16, 16, 16}, registry);
-	ASSERT_TRUE(data.needsSurfaceGeneration(coordinate));
+	data.prepare(coordinate, {16, 16, 16});
+	EXPECT_FALSE(data.column(coordinate).heights);
 	EXPECT_FALSE(static_cast<bool>(data.column(spk::Vector2Int{0, 0}).influences));
+	EXPECT_FALSE(data.column(coordinate).appliedPasses.contains(&distribution));
 	distribution.apply(coordinate, data);
 	combination.apply(coordinate, data);
-	data.publishColumn(coordinate);
+	data.completeChunk(coordinate);
 	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
-	data.prepare(coordinate, {16, 16, 16}, registry);
-	EXPECT_FALSE(data.needsSurfaceGeneration(coordinate));
+	data.prepare(coordinate, {16, 16, 16});
+	EXPECT_TRUE(data.column(coordinate).heights);
 	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
 }
@@ -371,7 +380,7 @@ TEST(SurfaceGridTest, RecycledInfluenceGridResetsEverySlot)
 
 TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributionsWithoutReplacingResult)
 {
-	SurfaceData data;
+	StandaloneData data;
 	data.influences = SurfaceData::InfluenceGrid::obtain({{2, 2}, 1}, {});
 	data.heights = HeightMap::Grid::obtain({{2, 2}, 1}, {});
 	data.heights->at({0, 0}) = 99;
@@ -399,12 +408,13 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 
 TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 {
-	GenerationData data;
 	const spk::Voxel::Definition::Registry registry;
+	GenerationData data(registry);
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
-	data.prepare(idle, {16, 16, 16}, registry);
-	data.publishColumn(idle);
+	data.prepare(idle, {16, 16, 16});
+	data.column(spk::Vector2Int{0, 0}).appliedPasses.insert(&data);
+	data.completeChunk(idle);
 	data.clean(idle);
 
 	std::promise<void> entered;
@@ -412,10 +422,11 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	auto ready = entered.get_future();
 	auto gate = resume.get_future().share();
 	auto building = std::async(std::launch::async, [&] {
-		data.prepare(active, {16, 16, 16}, registry);
+		data.prepare(active, {16, 16, 16});
 		entered.set_value();
 		gate.wait();
-		data.publishColumn(active);
+		data.column(spk::Vector2Int{-1, 0}).appliedPasses.insert(&data);
+		data.completeChunk(active);
 		data.clean(active);
 	});
 	ready.wait();
@@ -423,8 +434,8 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	EXPECT_EQ(data.columnCount(), 1u);
 	resume.set_value();
 	building.get();
-	data.prepare(active, {16, 16, 16}, registry);
-	EXPECT_FALSE(data.needsSurfaceGeneration(active));
+	data.prepare(active, {16, 16, 16});
+	EXPECT_TRUE(data.column(active).appliedPasses.contains(&data));
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);
 	data.clean(active);
@@ -435,14 +446,14 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 
 namespace
 {
-	class StandaloneHeightPass : public spk::World::HeightMapGenerationPass<Chunk, SurfaceData>
+	class StandaloneHeightPass : public spk::World::HeightMapGenerationPass<Chunk, StandaloneData>
 	{
 	protected:
-		HeightMap::Grid::Configuration _gridConfiguration(const Coordinate &, const SurfaceData &) override
+		HeightMap::Grid::Configuration _gridConfiguration(const Coordinate &, const StandaloneData &) override
 		{
 			return {{16, 8}, 2};
 		}
-		HeightMap::Grid::Lease &_gridDestination(const Coordinate &, SurfaceData &data) override
+		HeightMap::Grid::Lease &_gridDestination(const Coordinate &, StandaloneData &data) override
 		{
 			return data.heights;
 		}
@@ -452,7 +463,7 @@ namespace
 TEST(SurfaceGenerationTest, StandaloneHeightMapPassUsesWorldOriginAndRequiresBinding)
 {
 	StandaloneHeightPass pass;
-	SurfaceData data;
+	StandaloneData data;
 	EXPECT_THROW(pass.apply({-2, 7, 3}, data), spk::Exception);
 	HeightMap map;
 	map.setBaseHeight(12);
@@ -694,7 +705,7 @@ TEST(SurfaceGenerationTest, DominantHeightCombinationUsesWeightRatherThanHeight)
 {
 	using Mode = CombinationBase::Combination;
 	ConstantBiome low(20), high(100), invalid(std::numeric_limits<float>::quiet_NaN());
-	SurfaceData data;
+	StandaloneData data;
 	data.influences = SurfaceData::InfluenceGrid::obtain({{1, 1}, 1}, {});
 	for (std::uint32_t z = 0; z < 2; ++z)
 	{
