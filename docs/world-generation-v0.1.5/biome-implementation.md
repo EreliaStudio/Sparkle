@@ -85,3 +85,7 @@ These references remain subject to visual review; existing CI uploads results.
 
 All additional references must originate from the actual Sparkle Graphics test
 outputs. Existing reference PNGs are not replaced by this extension.
+
+The 24 additional reference PNGs were imported from the Graphics Release captures in
+CI run 45524081345. All 29 BiomeWorldGolden cases passed against the resulting
+references before the import commit 705bd538ed6717d7f79a1e996bb38cd5f6a2e694.

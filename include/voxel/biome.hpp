@@ -41,11 +41,11 @@ namespace spk::Voxel
 			ThicknessMode thicknessMode = ThicknessMode::Finite;
 			std::uint32_t minimumThickness = 1;
 			std::uint32_t maximumThickness = 1;
-			spk::Perlin thicknessNoise;
+			spk::Perlin thicknessNoise{};
 			std::vector<Material> materials;
 			Distribution distribution = Distribution::Weighted;
 			std::uint32_t seed = 0;
-			spk::Perlin materialNoise;
+			spk::Perlin materialNoise{};
 			std::function<float(const spk::Vector2 &)> customDistribution;
 		};
 
