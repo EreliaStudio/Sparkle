@@ -138,3 +138,18 @@ from actual test outputs only, with unchanged comparator tolerances.
 - `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
 - Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass remains a reusable XZ operation without its own cache.
 - Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.builder(coordinate)`. Explicit `BiomeGenerator::flush()` releases idle cached columns.
+
+### Validation after persistent-generation refactoring
+
+CI run 45636410109 compiled both Graphics configurations and executed 1,369 tests
+per configuration. Debug and Release each reported the same 43 golden failures:
+7 PerlinNoiseGolden, 13 PerlinWorldGolden and 23 BiomeWorldGolden. All remaining
+Graphics tests passed. Core unit and stress tests and AddressSanitizer checks
+passed on both platforms. LLVM coverage failed on the same golden comparisons;
+the separate MSVC Debug compatibility build exceeded the COFF section limit.
+
+Commit f6e54b170406acd147cdb9232aa09dcb85075c69 adds /bigobj to the MSVC
+graphics test target only. Commit 456b3612ce9275d3b7f53256b79282ef332c8406
+applies clang-format 21.1.0. Commit 7a85d98a249ea0f0b867c26a5ddfb544227554ba
+refreshes the 43 affected references from CI 2417. No comparator changes were made.
+The refreshed references still require a successful independent Graphics run.
