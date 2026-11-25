@@ -96,7 +96,10 @@ Perlin now uses 16 uniformly spaced unit gradients in 2D and 32 symmetric unit
 gradients in 3D. Quintic interpolation is the default; Linear and SmoothStep
 remain selectable. The seed and permutation remain deterministic, but existing
 procedural worlds will change with the revised gradients and default fade.
-DomainWarp2D is optional and does not silently alter any existing pipeline.
+DomainWarp is optional and does not silently alter any existing pipeline. It owns
+three independently configurable Perlin fields and exposes warp1D, warp2D and
+warp3D. Each axis samples the original input position at the requested dimension;
+the 2D result is unchanged by the addition of the third field.
 Influence grids interpolate by biome identity, not slot index, preserving up to
 four cells' distinct biomes. Bilinear dominance is the default; Floor remains
 explicitly selectable. Exact grid-node ties retain first positive slot order.

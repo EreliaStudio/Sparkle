@@ -13,7 +13,7 @@
 #include <thread>
 #include <vector>
 
-#include "math/domain_warp_2d.hpp"
+#include "math/domain_warp.hpp"
 #include "math/perlin.hpp"
 
 namespace
@@ -382,20 +382,59 @@ TEST(PerlinTest, ThresholdedLowFrequencyFieldAvoidsLongAxisAlignedArtifacts)
 
 TEST(PerlinTest, DomainWarpIsOptionalBoundedAndDeterministic)
 {
-	spk::DomainWarp2D warp(718);
+	spk::DomainWarp warp(718);
 	const spk::Vector2 p{-12.3f, 5.7f};
-	EXPECT_EQ(warp.warp(p), p);
+	EXPECT_EQ(warp.warp2D(p), p);
 	warp.setAmplitude(8);
 	warp.xNoise().setFrequency(0.071f);
 	warp.yNoise().setFrequency(0.083f);
-	const auto first = warp.warp(p);
+	const auto first = warp.warp2D(p);
 	EXPECT_NE(first, p);
 	EXPECT_LE(std::abs(first.x - p.x), 8.001f);
 	EXPECT_LE(std::abs(first.y - p.y), 8.001f);
-	EXPECT_EQ(warp.warp(p), first);
+	EXPECT_EQ(warp.warp2D(p), first);
 	EXPECT_NE(warp.xNoise().seed(), warp.yNoise().seed());
 	EXPECT_THROW(warp.setAmplitude(-1), std::invalid_argument);
-	EXPECT_THROW((void)warp.warp({std::numeric_limits<float>::infinity(), 0}), std::invalid_argument);
+	EXPECT_THROW((void)warp.warp2D({std::numeric_limits<float>::infinity(), 0}), std::invalid_argument);
 	warp.setAmplitude(0);
-	EXPECT_EQ(warp.warp(p), p);
+	EXPECT_EQ(warp.warp2D(p), p);
+}
+
+TEST(PerlinTest, DomainWarpSupportsOneAndThreeDimensions)
+{
+	spk::DomainWarp warp(718);
+	const float x = -12.3f;
+	const spk::Vector3 p{x, 5.7f, -3.4f};
+	EXPECT_FLOAT_EQ(warp.warp1D(x), x);
+	EXPECT_EQ(warp.warp3D(p), p);
+	warp.setAmplitude(8);
+	warp.xNoise().setFrequency(0.071f);
+	warp.yNoise().setFrequency(0.083f);
+	warp.zNoise().setFrequency(0.097f);
+	const auto one = warp.warp1D(x);
+	const auto three = warp.warp3D(p);
+	EXPECT_FLOAT_EQ(one, x + warp.xNoise().sample1D(x, -8, 8));
+	EXPECT_FLOAT_EQ(three.x, p.x + warp.xNoise().sample3D(p.x, p.y, p.z, -8, 8));
+	EXPECT_FLOAT_EQ(three.y, p.y + warp.yNoise().sample3D(p.x, p.y, p.z, -8, 8));
+	EXPECT_FLOAT_EQ(three.z, p.z + warp.zNoise().sample3D(p.x, p.y, p.z, -8, 8));
+	EXPECT_NE(three, p);
+	EXPECT_LE(std::abs(one - x), 8.001f);
+	EXPECT_LE(std::abs(three.x - p.x), 8.001f);
+	EXPECT_LE(std::abs(three.y - p.y), 8.001f);
+	EXPECT_LE(std::abs(three.z - p.z), 8.001f);
+	EXPECT_EQ(warp.warp3D(p), three);
+	EXPECT_NE(warp.xNoise().seed(), warp.zNoise().seed());
+	EXPECT_NE(warp.yNoise().seed(), warp.zNoise().seed());
+	const spk::Vector2 planar{x, p.y};
+	const auto planarBefore = warp.warp2D(planar);
+	warp.zNoise().setSeed(123);
+	EXPECT_EQ(warp.warp2D(planar), planarBefore);
+	EXPECT_FLOAT_EQ(warp.warp1D(x), one);
+	EXPECT_FLOAT_EQ(warp.warp3D(p).x, three.x);
+	EXPECT_FLOAT_EQ(warp.warp3D(p).y, three.y);
+	EXPECT_THROW((void)warp.warp1D(std::numeric_limits<float>::quiet_NaN()), std::invalid_argument);
+	EXPECT_THROW((void)warp.warp3D({0, 0, std::numeric_limits<float>::infinity()}), std::invalid_argument);
+	warp.setAmplitude(0);
+	EXPECT_FLOAT_EQ(warp.warp1D(x), x);
+	EXPECT_EQ(warp.warp3D(p), p);
 }

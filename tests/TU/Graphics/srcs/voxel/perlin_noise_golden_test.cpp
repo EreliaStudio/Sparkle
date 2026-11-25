@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <vector>
 
-#include "math/domain_warp_2d.hpp"
+#include "math/domain_warp.hpp"
 #include "math/perlin.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/paths.hpp"
@@ -29,7 +29,7 @@ namespace
 		spk::Perlin noise(118, interpolation);
 		noise.setFrequency(0.055f);
 		noise.setOctaves(octaves);
-		spk::DomainWarp2D warp(931);
+		spk::DomainWarp warp(931);
 		warp.setAmplitude(12);
 		warp.xNoise().setFrequency(0.039f);
 		warp.yNoise().setFrequency(0.047f);
@@ -41,7 +41,7 @@ namespace
 				spk::Vector2 position{static_cast<float>(x) / 8.0f - 32.0f, static_cast<float>(z) / 6.0f - 32.0f};
 				if (field == Field::Warped)
 				{
-					position = warp.warp(position);
+					position = warp.warp2D(position);
 				}
 				const float value = field == Field::ThreeDimensional ? noise.sample3D(position.x, 13.375f, position.y) : noise.sample2D(position.x, position.y);
 				const bool threshold = field == Field::Threshold || field == Field::Warped;
