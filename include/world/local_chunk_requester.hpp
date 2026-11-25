@@ -20,8 +20,14 @@ namespace spk::World
 		{
 		}
 
-		void retain(const ChunkCoordinate &coordinate) override { _generator.retain(coordinate); }
-		void release(const ChunkCoordinate &coordinate) noexcept override { _generator.release(coordinate); }
+		void retain(const ChunkCoordinate &coordinate) override
+		{
+			_generator.retain(coordinate);
+		}
+		void release(const ChunkCoordinate &coordinate) noexcept override
+		{
+			_generator.release(coordinate);
+		}
 
 		[[nodiscard]] typename ChunkRequester<TChunk>::Answer request(const ChunkCoordinate &coordinate) override
 		{

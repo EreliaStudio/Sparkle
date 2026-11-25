@@ -32,14 +32,16 @@ namespace spk
 			if (it == _pools.end())
 			{
 				it = _pools.emplace(capacity, std::make_unique<Pool<TElement>>([factory = _factory, capacity]() {
-					return factory(capacity);
-				})).first;
+										return factory(capacity);
+									}))
+						 .first;
 			}
 			return *it->second;
 		}
 
 	public:
-		explicit CapacityPool(Factory factory) : _factory(std::move(factory))
+		explicit CapacityPool(Factory factory) :
+			_factory(std::move(factory))
 		{
 			if (!_factory)
 			{

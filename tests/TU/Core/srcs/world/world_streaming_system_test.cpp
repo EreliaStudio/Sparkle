@@ -62,8 +62,14 @@ namespace
 		std::vector<Request> requests;
 		std::vector<std::pair<bool, Coordinate>> interests;
 
-		void retain(const Coordinate &coordinate) override { interests.emplace_back(true, coordinate); }
-		void release(const Coordinate &coordinate) noexcept override { interests.emplace_back(false, coordinate); }
+		void retain(const Coordinate &coordinate) override
+		{
+			interests.emplace_back(true, coordinate);
+		}
+		void release(const Coordinate &coordinate) noexcept override
+		{
+			interests.emplace_back(false, coordinate);
+		}
 		bool failSynchronously = false;
 		std::function<void()> onSubmit;
 

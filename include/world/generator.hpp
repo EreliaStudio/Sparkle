@@ -24,10 +24,18 @@ namespace spk::World
 		public:
 			virtual ~Pass() = default;
 
-			virtual void retain(const ChunkCoordinate &) {}
-			virtual void release(const ChunkCoordinate &) noexcept {}
-			virtual void beginJob(const ChunkCoordinate &) {}
-			virtual void endJob(const ChunkCoordinate &) noexcept {}
+			virtual void retain(const ChunkCoordinate &)
+			{
+			}
+			virtual void release(const ChunkCoordinate &) noexcept
+			{
+			}
+			virtual void beginJob(const ChunkCoordinate &)
+			{
+			}
+			virtual void endJob(const ChunkCoordinate &) noexcept
+			{
+			}
 
 			virtual void apply(
 				Builder &builder,
@@ -54,8 +62,7 @@ namespace spk::World
 				{
 					_passes[count]->retain(coordinate);
 				}
-			}
-			catch (...)
+			} catch (...)
 			{
 				while (count != 0)
 				{
@@ -82,7 +89,8 @@ namespace spk::World
 			friend class Generator;
 
 			JobLease(Generator &generator, const ChunkCoordinate &coordinate) :
-				_generator(&generator), _coordinate(coordinate)
+				_generator(&generator),
+				_coordinate(coordinate)
 			{
 				try
 				{
@@ -90,8 +98,7 @@ namespace spk::World
 					{
 						generator._passes[_count]->beginJob(coordinate);
 					}
-				}
-				catch (...)
+				} catch (...)
 				{
 					_release();
 					throw;
@@ -110,10 +117,15 @@ namespace spk::World
 			JobLease(const JobLease &) = delete;
 			JobLease &operator=(const JobLease &) = delete;
 			JobLease(JobLease &&other) noexcept :
-				_generator(other._generator), _coordinate(other._coordinate), _count(std::exchange(other._count, 0))
+				_generator(other._generator),
+				_coordinate(other._coordinate),
+				_count(std::exchange(other._count, 0))
 			{
 			}
-			~JobLease() { _release(); }
+			~JobLease()
+			{
+				_release();
+			}
 		};
 
 		[[nodiscard]] JobLease reserve(const ChunkCoordinate &coordinate)

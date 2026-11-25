@@ -16,7 +16,10 @@ namespace spk::World
 		virtual HeightMap::Grid::Lease &_gridDestination(TGenerationData &data) = 0;
 
 	public:
-		void bind(const HeightMap &heightMap) noexcept { _heightMap = &heightMap; }
+		void bind(const HeightMap &heightMap) noexcept
+		{
+			_heightMap = &heightMap;
+		}
 
 		void apply(TBuilder &, const ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
@@ -25,8 +28,7 @@ namespace spk::World
 				throw spk::Exception("HeightMapGenerationPass has no bound height map");
 			}
 			const auto config = _gridConfiguration(coordinate, data);
-			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x),
-				static_cast<float>(static_cast<double>(coordinate.z) * config.size.y)};
+			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.z) * config.size.y)};
 			_gridDestination(data) = _heightMap->generate(config, origin);
 		}
 	};

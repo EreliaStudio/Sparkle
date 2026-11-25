@@ -5,10 +5,10 @@
 #include <limits>
 
 #include "world/height_map.hpp"
-#include "world/surface_biome.hpp"
-#include "world/pass/surface_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
+#include "world/pass/surface_generation_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
+#include "world/surface_biome.hpp"
 
 namespace
 {
@@ -19,9 +19,16 @@ namespace
 	{
 	private:
 		float _height;
+
 	public:
-		explicit ConstantBiome(float height) : _height(height) {}
-		float groundHeight(const spk::Vector2 &) const override { return _height; }
+		explicit ConstantBiome(float height) :
+			_height(height)
+		{
+		}
+		float groundHeight(const spk::Vector2 &) const override
+		{
+			return _height;
+		}
 	};
 
 	struct Chunk
@@ -29,7 +36,10 @@ namespace
 		struct Builder
 		{
 			int value = 0;
-			Chunk build() && { return {value}; }
+			Chunk build() &&
+			{
+				return {value};
+			}
 		};
 		int value;
 	};
@@ -52,7 +62,10 @@ namespace
 	class Surface : public SurfaceBase
 	{
 	protected:
-		Handle &_surfaceDestination(Data &data) override { return data.surface; }
+		Handle &_surfaceDestination(Data &data) override
+		{
+			return data.surface;
+		}
 	};
 
 	class Distribution : public spk::World::SurfaceBiomeDistributionPass<SurfaceData, 2>
@@ -60,9 +73,16 @@ namespace
 	private:
 		ConstantBiome _first{20};
 		ConstantBiome _second{100};
+
 	protected:
-		Configuration _gridConfiguration(const spk::Vector2Int &, const SurfaceData &) override { return {{16, 16}, 1}; }
-		Grid::Lease &_gridDestination(SurfaceData &data) override { return data.influences; }
+		Configuration _gridConfiguration(const spk::Vector2Int &, const SurfaceData &) override
+		{
+			return {{16, 16}, 1};
+		}
+		Grid::Lease &_gridDestination(SurfaceData &data) override
+		{
+			return data.influences;
+		}
 		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) override
 		{
 			cell[0] = {&_first, 3.0f};
@@ -73,8 +93,14 @@ namespace
 	class Combination : public spk::World::SurfaceHeightCombinationPass<SurfaceData, 2>
 	{
 	protected:
-		const InfluenceGrid &_influences(const SurfaceData &data) override { return *data.influences; }
-		Grid::Lease &_gridDestination(SurfaceData &data) override { return data.heights; }
+		const InfluenceGrid &_influences(const SurfaceData &data) override
+		{
+			return *data.influences;
+		}
+		Grid::Lease &_gridDestination(SurfaceData &data) override
+		{
+			return data.heights;
+		}
 	};
 
 	class CountPass : public spk::World::SurfacePass<SurfaceData>
@@ -82,8 +108,13 @@ namespace
 	private:
 		std::atomic<int> &_calls;
 		std::atomic<bool> &_fail;
+
 	public:
-		CountPass(std::atomic<int> &calls, std::atomic<bool> &fail) : _calls(calls), _fail(fail) {}
+		CountPass(std::atomic<int> &calls, std::atomic<bool> &fail) :
+			_calls(calls),
+			_fail(fail)
+		{
+		}
 		void apply(const spk::Vector2Int &, SurfaceData &data) override
 		{
 			++_calls;
@@ -107,8 +138,15 @@ namespace
 	class Generator : public GeneratorBase
 	{
 	protected:
-		std::optional<Chunk::Builder> _createChunkBuilder(const Coordinate &) override { return Chunk::Builder{}; }
-		Data _createGenerationData() override { return {}; }
+		std::optional<Chunk::Builder> _createChunkBuilder(const Coordinate &) override
+		{
+			return Chunk::Builder{};
+		}
+		Data _createGenerationData() override
+		{
+			return {};
+		}
+
 	public:
 		std::atomic<int> calls{0};
 		std::atomic<bool> fail{false};
@@ -163,8 +201,12 @@ TEST(SurfaceGenerationTest, ConcurrentVerticalJobsShareOneWeightedHeight)
 	Generator generator;
 	generator.retain({-1, 0, 2});
 	generator.retain({-1, 1, 2});
-	auto first = std::async(std::launch::async, [&] { return generator.generate({-1, 0, 2}); });
-	auto second = std::async(std::launch::async, [&] { return generator.generate({-1, 1, 2}); });
+	auto first = std::async(std::launch::async, [&] {
+		return generator.generate({-1, 0, 2});
+	});
+	auto second = std::async(std::launch::async, [&] {
+		return generator.generate({-1, 1, 2});
+	});
 	EXPECT_EQ(first.get()->value, 40);
 	EXPECT_EQ(second.get()->value, 40);
 	EXPECT_EQ(generator.calls.load(), 1);

@@ -167,8 +167,7 @@ namespace spk::World
 					{
 						requester.retain(retained[count]);
 					}
-				}
-				catch (...)
+				} catch (...)
 				{
 					while (count != 0)
 					{

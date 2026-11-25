@@ -26,8 +26,17 @@ namespace spk::Voxel
 				float weight;
 			};
 
-			enum class ThicknessMode { Finite, Infinite };
-			enum class Distribution { Weighted, Perlin, Custom };
+			enum class ThicknessMode
+			{
+				Finite,
+				Infinite
+			};
+			enum class Distribution
+			{
+				Weighted,
+				Perlin,
+				Custom
+			};
 
 			ThicknessMode thicknessMode = ThicknessMode::Finite;
 			std::uint32_t minimumThickness = 1;
@@ -133,15 +142,20 @@ namespace spk::Voxel
 				throw spk::Exception("Invalid voxel biome stratum thickness");
 			}
 			const double range = static_cast<double>(stratum.maximumThickness) - stratum.minimumThickness + 1.0;
-			const double noise = stratum.minimumThickness == stratum.maximumThickness ? 0.0 :
-				stratum.thicknessNoise.sample2D(position.x, position.y);
+			const double noise = stratum.minimumThickness == stratum.maximumThickness ? 0.0 : stratum.thicknessNoise.sample2D(position.x, position.y);
 			const auto offset = std::min(range - 1.0, std::floor(noise * range));
 			return {stratum.minimumThickness + static_cast<std::uint32_t>(offset), id};
 		}
 
 	public:
-		[[nodiscard]] StratumContainer &strata() noexcept { return _strata; }
-		[[nodiscard]] const StratumContainer &strata() const noexcept { return _strata; }
+		[[nodiscard]] StratumContainer &strata() noexcept
+		{
+			return _strata;
+		}
+		[[nodiscard]] const StratumContainer &strata() const noexcept
+		{
+			return _strata;
+		}
 
 		template <typename TCallback>
 		void sampleStrata(const spk::Vector2 &position, TCallback &&callback) const

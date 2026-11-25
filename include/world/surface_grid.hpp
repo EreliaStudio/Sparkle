@@ -99,8 +99,7 @@ namespace spk::World
 			{
 				throw spk::Exception("Surface grid scale must be finite and positive");
 			}
-			const Layout layout{_axisCount(configuration.size.x, configuration.scale),
-				_axisCount(configuration.size.y, configuration.scale)};
+			const Layout layout{_axisCount(configuration.size.x, configuration.scale), _axisCount(configuration.size.y, configuration.scale)};
 			if (layout.count() > std::vector<TElement>().max_size())
 			{
 				throw spk::Exception("Surface grid exceeds storage limits");
@@ -108,10 +107,22 @@ namespace spk::World
 			return layout;
 		}
 
-		[[nodiscard]] const Configuration &configuration() const noexcept { return _configuration; }
-		[[nodiscard]] const spk::Vector2 &worldOrigin() const noexcept { return _origin; }
-		[[nodiscard]] Layout layout() const noexcept { return _layout; }
-		[[nodiscard]] std::size_t capacity() const noexcept { return _elements.capacity(); }
+		[[nodiscard]] const Configuration &configuration() const noexcept
+		{
+			return _configuration;
+		}
+		[[nodiscard]] const spk::Vector2 &worldOrigin() const noexcept
+		{
+			return _origin;
+		}
+		[[nodiscard]] Layout layout() const noexcept
+		{
+			return _layout;
+		}
+		[[nodiscard]] std::size_t capacity() const noexcept
+		{
+			return _elements.capacity();
+		}
 
 		[[nodiscard]] TElement &sample(std::size_t x, std::size_t z)
 		{
@@ -141,8 +152,7 @@ namespace spk::World
 		}
 		[[nodiscard]] const TElement &at(const spk::Vector2 &position) const
 		{
-			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, _layout.width)),
-				static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, _layout.height)));
+			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, _layout.width)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, _layout.height)));
 		}
 	};
 }

@@ -124,5 +124,7 @@ TEST(VoxelBiomeGeneratorTest, FiniteStrataAndCustomMaterialSelection)
 		EXPECT_EQ(layer.thickness, 2u);
 	});
 	stratum.materials[0].voxelID = 0;
-	EXPECT_THROW(biome.sampleStrata({0, 0}, [](const auto &) {}), spk::Exception);
+	EXPECT_THROW(biome.sampleStrata({0, 0}, [](const auto &) {
+	}),
+				 spk::Exception);
 }

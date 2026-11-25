@@ -21,7 +21,10 @@ namespace spk::Voxel
 		private:
 			std::vector<Biome::Layer> _layers;
 
-			explicit Grid(std::size_t capacity) : SurfaceGrid(capacity) {}
+			explicit Grid(std::size_t capacity) :
+				SurfaceGrid(capacity)
+			{
+			}
 
 		public:
 			using Lease = spk::Pool<Grid>::Lease;
@@ -29,7 +32,9 @@ namespace spk::Voxel
 			[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 			{
 				const auto layout = layoutFor(configuration);
-				static spk::CapacityPool<Grid> pool([](std::size_t capacity) { return new Grid(capacity); });
+				static spk::CapacityPool<Grid> pool([](std::size_t capacity) {
+					return new Grid(capacity);
+				});
 				return pool.obtain(layout.count(), [&](Grid &grid) {
 					grid._configure(configuration, origin, layout);
 					grid._layers.clear();

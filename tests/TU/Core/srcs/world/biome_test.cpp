@@ -139,9 +139,7 @@ TEST(BiomeTest, RejectsInvalidWeightsBeforeModifyingTheCell)
 	const float infinity = std::numeric_limits<float>::infinity();
 	const float nan = std::numeric_limits<float>::quiet_NaN();
 	for (const Influence invalid : std::array<Influence, 7>{
-			 Influence{nullptr, 1.0f}, Influence{nullptr, -1.0f}, Influence{nullptr, infinity},
-			 Influence{nullptr, nan}, Influence{&second, -1.0f}, Influence{&second, infinity},
-			 Influence{&second, nan}})
+			 Influence{nullptr, 1.0f}, Influence{nullptr, -1.0f}, Influence{nullptr, infinity}, Influence{nullptr, nan}, Influence{&second, -1.0f}, Influence{&second, infinity}, Influence{&second, nan}})
 	{
 		std::array<Influence, 2> cell{{{&first, 3.0f}, invalid}};
 		EXPECT_THROW(TestPass::_normalize(cell), spk::Exception);

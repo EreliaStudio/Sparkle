@@ -81,8 +81,7 @@ namespace sparkle_test::biome_world
 			const float z = position.y + shift * 0.5f;
 			if (_hard)
 			{
-				const spk::World::SurfaceBiome *biome = x < -8.0f ? &_desert :
-					(z > 3.0f ? &_mountain : &_plains);
+				const spk::World::SurfaceBiome *biome = x < -8.0f ? &_desert : (z > 3.0f ? &_mountain : &_plains);
 				cell[0] = {biome, 1.0f};
 				return;
 			}
@@ -95,7 +94,8 @@ namespace sparkle_test::biome_world
 
 	public:
 		Generator(const perlin_world::Registry &registry, bool hard, bool edit) :
-			BiomeGenerator(registry), _hard(hard)
+			BiomeGenerator(registry),
+			_hard(hard)
 		{
 			_boundary.setFrequency(0.055f);
 			if (edit)

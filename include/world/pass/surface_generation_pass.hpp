@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include "world/generator.hpp"
 #include "math/vector2.hpp"
+#include "world/generator.hpp"
 
 namespace spk::World
 {
@@ -87,8 +87,13 @@ namespace spk::World
 		}
 
 	protected:
-		virtual SurfaceDataType _createSurfaceData() { return {}; }
-		virtual void _finalizeSurfaceData(const spk::Vector2Int &, SurfaceDataType &) {}
+		virtual SurfaceDataType _createSurfaceData()
+		{
+			return {};
+		}
+		virtual void _finalizeSurfaceData(const spk::Vector2Int &, SurfaceDataType &)
+		{
+		}
 		virtual Handle &_surfaceDestination(TGenerationData &data) = 0;
 
 	public:
@@ -102,10 +107,22 @@ namespace spk::World
 			return result;
 		}
 
-		void retain(const ChunkCoordinate &coordinate) override { _retain(coordinate, &Entry::interests); }
-		void release(const ChunkCoordinate &coordinate) noexcept override { _release(coordinate, &Entry::interests); }
-		void beginJob(const ChunkCoordinate &coordinate) override { _retain(coordinate, &Entry::jobs); }
-		void endJob(const ChunkCoordinate &coordinate) noexcept override { _release(coordinate, &Entry::jobs); }
+		void retain(const ChunkCoordinate &coordinate) override
+		{
+			_retain(coordinate, &Entry::interests);
+		}
+		void release(const ChunkCoordinate &coordinate) noexcept override
+		{
+			_release(coordinate, &Entry::interests);
+		}
+		void beginJob(const ChunkCoordinate &coordinate) override
+		{
+			_retain(coordinate, &Entry::jobs);
+		}
+		void endJob(const ChunkCoordinate &coordinate) noexcept override
+		{
+			_release(coordinate, &Entry::jobs);
+		}
 
 		void apply(TBuilder &, const ChunkCoordinate &coordinate, TGenerationData &data) override
 		{

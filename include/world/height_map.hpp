@@ -26,10 +26,17 @@ namespace spk::World
 		{
 		public:
 			using Lease = spk::Pool<Grid>::Lease;
-			enum class Interpolation { Nearest, Bilinear };
+			enum class Interpolation
+			{
+				Nearest,
+				Bilinear
+			};
 
 		private:
-			explicit Grid(std::size_t capacity) : SurfaceGrid(capacity) {}
+			explicit Grid(std::size_t capacity) :
+				SurfaceGrid(capacity)
+			{
+			}
 
 		public:
 			using SurfaceGrid::at;
@@ -37,8 +44,12 @@ namespace spk::World
 			[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 			{
 				const auto layout = layoutFor(configuration);
-				static spk::CapacityPool<Grid> pool([](std::size_t capacity) { return new Grid(capacity); });
-				return pool.obtain(layout.count(), [&](Grid &grid) { grid._configure(configuration, origin, layout); });
+				static spk::CapacityPool<Grid> pool([](std::size_t capacity) {
+					return new Grid(capacity);
+				});
+				return pool.obtain(layout.count(), [&](Grid &grid) {
+					grid._configure(configuration, origin, layout);
+				});
 			}
 
 			[[nodiscard]] float at(const spk::Vector2 &position, Interpolation interpolation) const
@@ -56,8 +67,7 @@ namespace spk::World
 				case Interpolation::Nearest:
 					return sample(x - x0 > 0.5 ? x1 : x0, z - z0 > 0.5 ? z1 : z0);
 				case Interpolation::Bilinear:
-					return std::lerp(std::lerp(sample(x0, z0), sample(x1, z0), static_cast<float>(x - x0)),
-						std::lerp(sample(x0, z1), sample(x1, z1), static_cast<float>(x - x0)), static_cast<float>(z - z0));
+					return std::lerp(std::lerp(sample(x0, z0), sample(x1, z0), static_cast<float>(x - x0)), std::lerp(sample(x0, z1), sample(x1, z1), static_cast<float>(x - x0)), static_cast<float>(z - z0));
 				}
 				throw spk::Exception("Unknown height grid interpolation");
 			}
@@ -76,9 +86,18 @@ namespace spk::World
 			}
 			_baseHeight = value;
 		}
-		[[nodiscard]] float baseHeight() const noexcept { return _baseHeight; }
-		[[nodiscard]] NoiseLayerCollection &noiseLayers() noexcept { return _noiseLayers; }
-		[[nodiscard]] const NoiseLayerCollection &noiseLayers() const noexcept { return _noiseLayers; }
+		[[nodiscard]] float baseHeight() const noexcept
+		{
+			return _baseHeight;
+		}
+		[[nodiscard]] NoiseLayerCollection &noiseLayers() noexcept
+		{
+			return _noiseLayers;
+		}
+		[[nodiscard]] const NoiseLayerCollection &noiseLayers() const noexcept
+		{
+			return _noiseLayers;
+		}
 
 		[[nodiscard]] float sample(const spk::Vector2 &worldPosition) const
 		{

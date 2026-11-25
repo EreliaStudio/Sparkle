@@ -40,8 +40,8 @@
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
-#include "perlin_world_fixture.hpp"
 #include "biome_world_fixture.hpp"
+#include "perlin_world_fixture.hpp"
 
 namespace
 {
@@ -666,8 +666,7 @@ namespace
 		sparkle_test::ImageComparisonOptions tolerance;
 		tolerance.rgbTolerance = 8;
 		tolerance.alphaTolerance = 8;
-		const auto result = sparkle_test::compareImages(actual, expected,
-			sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
+		const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
 		EXPECT_EQ(pixels.size, terrain::ImageSize);
 	}

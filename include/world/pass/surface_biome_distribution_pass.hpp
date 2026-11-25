@@ -23,8 +23,7 @@ namespace spk::World
 		void apply(const spk::Vector2Int &coordinate, TSurfaceData &data) override
 		{
 			const auto config = _gridConfiguration(coordinate, data);
-			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x),
-				static_cast<float>(static_cast<double>(coordinate.y) * config.size.y)};
+			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.y) * config.size.y)};
 			auto grid = Grid::obtain(config, origin);
 			const auto layout = grid->layout();
 			for (std::size_t z = 0; z < layout.height; ++z)

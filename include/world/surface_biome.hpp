@@ -1,9 +1,9 @@
 #pragma once
 
-#include <array>
 #include "container/capacity_pool.hpp"
 #include "world/biome.hpp"
 #include "world/surface_grid.hpp"
+#include <array>
 
 namespace spk::World
 {
@@ -26,6 +26,7 @@ namespace spk::World
 	class SurfaceBiome::Influence::Grid : public SurfaceGrid<std::array<Influence, TCapacity>>
 	{
 		static_assert(TCapacity > 0);
+
 	public:
 		using Cell = std::array<Influence, TCapacity>;
 		using Base = SurfaceGrid<Cell>;
@@ -33,14 +34,21 @@ namespace spk::World
 		using Lease = typename spk::Pool<Grid>::Lease;
 
 	private:
-		explicit Grid(std::size_t capacity) : Base(capacity) {}
+		explicit Grid(std::size_t capacity) :
+			Base(capacity)
+		{
+		}
 
 	public:
 		[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 		{
 			const auto layout = Base::layoutFor(configuration);
-			static spk::CapacityPool<Grid> pool([](std::size_t capacity) { return new Grid(capacity); });
-			return pool.obtain(layout.count(), [&](Grid &grid) { grid._configure(configuration, origin, layout); });
+			static spk::CapacityPool<Grid> pool([](std::size_t capacity) {
+				return new Grid(capacity);
+			});
+			return pool.obtain(layout.count(), [&](Grid &grid) {
+				grid._configure(configuration, origin, layout);
+			});
 		}
 
 		[[nodiscard]] const SurfaceBiome *dominant(const spk::Vector2 &position) const

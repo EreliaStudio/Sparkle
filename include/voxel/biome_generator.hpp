@@ -36,28 +36,46 @@ namespace spk::Voxel
 			{
 				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, _generator._scale};
 			}
-			typename InfluenceGrid::Lease &_gridDestination(SurfaceData &data) override { return data.influences; }
+			typename InfluenceGrid::Lease &_gridDestination(SurfaceData &data) override
+			{
+				return data.influences;
+			}
 			void _computeBiomePlacement(const spk::Vector2 &position, Cell &destination) override
 			{
 				_generator._computeBiomePlacement(position, destination);
 			}
 
 		public:
-			explicit Distribution(BiomeGenerator &generator) : _generator(generator) {}
+			explicit Distribution(BiomeGenerator &generator) :
+				_generator(generator)
+			{
+			}
 		};
 
 		class Combination : public CombinationBase
 		{
 		protected:
-			const InfluenceGrid &_influences(const SurfaceData &data) override { return *data.influences; }
-			World::HeightMap::Grid::Lease &_gridDestination(SurfaceData &data) override { return data.heights; }
+			const InfluenceGrid &_influences(const SurfaceData &data) override
+			{
+				return *data.influences;
+			}
+			World::HeightMap::Grid::Lease &_gridDestination(SurfaceData &data) override
+			{
+				return data.heights;
+			}
 		};
 
 		class Strata : public StrataBase
 		{
 		protected:
-			const InfluenceGrid &_influences(const SurfaceData &data) override { return *data.influences; }
-			StrataGrid::Grid::Lease &_gridDestination(SurfaceData &data) override { return data.strata; }
+			const InfluenceGrid &_influences(const SurfaceData &data) override
+			{
+				return *data.influences;
+			}
+			StrataGrid::Grid::Lease &_gridDestination(SurfaceData &data) override
+			{
+				return data.strata;
+			}
 		};
 
 		class Surface : public SurfaceBase
@@ -66,7 +84,10 @@ namespace spk::Voxel
 			Strata _strata;
 
 		protected:
-			typename SurfaceBase::Handle &_surfaceDestination(GenerationData &data) override { return data.surface; }
+			typename SurfaceBase::Handle &_surfaceDestination(GenerationData &data) override
+			{
+				return data.surface;
+			}
 			void _finalizeSurfaceData(const spk::Vector2Int &coordinate, SurfaceData &data) override
 			{
 				_strata.apply(coordinate, data);
@@ -76,8 +97,14 @@ namespace spk::Voxel
 		class Application : public ApplicationBase
 		{
 		protected:
-			const World::HeightMap::Grid &_heights(const GenerationData &data) override { return *data.surface->heights; }
-			const StrataGrid::Grid &_strata(const GenerationData &data) override { return *data.surface->strata; }
+			const World::HeightMap::Grid &_heights(const GenerationData &data) override
+			{
+				return *data.surface->heights;
+			}
+			const StrataGrid::Grid &_strata(const GenerationData &data) override
+			{
+				return *data.surface->strata;
+			}
 		};
 
 		Definition::Registry _registry;
@@ -89,17 +116,21 @@ namespace spk::Voxel
 
 		std::optional<Builder> _createChunkBuilder(const World::ChunkCoordinate &) override
 		{
-			Builder builder({static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.y),
-				static_cast<std::uint32_t>(TChunk::Size.z)});
+			Builder builder({static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.y), static_cast<std::uint32_t>(TChunk::Size.z)});
 			builder.bind(_registry);
 			return builder;
 		}
 
-		GenerationData _createGenerationData() override { return {}; }
+		GenerationData _createGenerationData() override
+		{
+			return {};
+		}
 
 	public:
 		explicit BiomeGenerator(const Definition::Registry &registry, float scale = 1.0f) :
-			_registry(registry), _scale(scale), _surface(&this->template addPass<Surface>())
+			_registry(registry),
+			_scale(scale),
+			_surface(&this->template addPass<Surface>())
 		{
 			(void)InfluenceGrid::layoutFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			_surface->template addPass<Distribution>(*this);
