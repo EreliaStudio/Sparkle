@@ -29,8 +29,8 @@ namespace spk::World
 	{
 	public:
 		using Pass = SurfacePass<TSurfaceData>;
-		using Data = TSurfaceData;
-		using Handle = std::shared_ptr<const Data>;
+		using SurfaceDataType = TSurfaceData;
+		using Handle = std::shared_ptr<const SurfaceDataType>;
 
 	private:
 		struct Entry
@@ -87,8 +87,8 @@ namespace spk::World
 		}
 
 	protected:
-		virtual Data _createSurfaceData() { return {}; }
-		virtual void _finalizeSurfaceData(const spk::Vector2Int &, Data &) {}
+		virtual SurfaceDataType _createSurfaceData() { return {}; }
+		virtual void _finalizeSurfaceData(const spk::Vector2Int &, SurfaceDataType &) {}
 		virtual Handle &_surfaceDestination(TGenerationData &data) = 0;
 
 	public:
@@ -122,7 +122,7 @@ namespace spk::World
 				const std::scoped_lock lock(entry->mutex);
 				if (!entry->result)
 				{
-					auto building = std::make_shared<Data>(_createSurfaceData());
+					auto building = std::make_shared<SurfaceDataType>(_createSurfaceData());
 					for (auto &pass : _passes)
 					{
 						pass->apply(key, *building);
