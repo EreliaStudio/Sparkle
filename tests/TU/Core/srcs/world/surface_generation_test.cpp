@@ -443,13 +443,13 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 	EXPECT_EQ(right->dominant({0, 0}), &b);
 	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
 	{
-		const auto l = left->interpolate({4,z});
-		const auto r = right->interpolate({0,z});
+		const auto l = left->interpolate({4, z});
+		const auto r = right->interpolate({0, z});
 		for (std::size_t i = 0; i < l.size(); ++i)
 		{
 			EXPECT_EQ(l[i].biome, r[i].biome);
 			EXPECT_FLOAT_EQ(l[i].weight, r[i].weight);
 		}
-		EXPECT_EQ(left->dominant({4,z}), right->dominant({0,z}));
+		EXPECT_EQ(left->dominant({4, z}), right->dominant({0, z}));
 	}
 }

@@ -14,7 +14,13 @@
 
 namespace
 {
-	enum class Field { Raw, Threshold, ThreeDimensional, Warped };
+	enum class Field
+	{
+		Raw,
+		Threshold,
+		ThreeDimensional,
+		Warped
+	};
 
 	void captureNoise(const std::string &name, Field field, int octaves, spk::Perlin::Interpolation interpolation = spk::Perlin::Interpolation::Quintic)
 	{
@@ -42,9 +48,9 @@ namespace
 				const auto shade = static_cast<std::uint8_t>(std::round(std::clamp(value, 0.0f, 1.0f) * 255));
 				const auto index = static_cast<std::size_t>((z * Width + x) * 4);
 				pixels[index] = threshold ? (value < 0.5f ? 142 : 151) : shade;
-				pixels[index+1] = threshold ? (value < 0.5f ? 103 : 162) : shade;
-				pixels[index+2] = threshold ? (value < 0.5f ? 70 : 175) : shade;
-				pixels[index+3] = 255;
+				pixels[index + 1] = threshold ? (value < 0.5f ? 103 : 162) : shade;
+				pixels[index + 2] = threshold ? (value < 0.5f ? 70 : 175) : shade;
+				pixels[index + 3] = 255;
 			}
 		}
 		const auto actual = sparkle_test::resultImagePath("rendering/perlin-noise", name);

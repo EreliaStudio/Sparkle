@@ -8,8 +8,8 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <stdexcept>
 #include <set>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -318,9 +318,9 @@ TEST(PerlinTest, QuinticInterpolationIsDistinctAndContinuous)
 		const float x = static_cast<float>(i);
 		constexpr float step = 0.002f;
 		const float center = noise.sample2D(x, 0.371f);
-		const float left = noise.sample2D(x-step, 0.371f);
-		const float right = noise.sample2D(x+step, 0.371f);
-		EXPECT_NEAR((center-left)/step, (right-center)/step, 0.01f);
+		const float left = noise.sample2D(x - step, 0.371f);
+		const float right = noise.sample2D(x + step, 0.371f);
+		EXPECT_NEAR((center - left) / step, (right - center) / step, 0.01f);
 	}
 }
 
@@ -331,15 +331,17 @@ TEST(PerlinTest, LatticeGradientsUseDiverseDirectionsInTwoAndThreeDimensions)
 	std::set<std::array<int, 2>> directions2;
 	std::set<std::array<int, 3>> directions3;
 	constexpr float e = 0.002f;
-	const auto quantize = [](float derivative) { return static_cast<int>(std::round(derivative * 20.0f)); };
+	const auto quantize = [](float derivative) {
+		return static_cast<int>(std::round(derivative * 20.0f));
+	};
 	for (int y = -8; y < 8; ++y)
 	{
 		for (int x = -8; x < 8; ++x)
 		{
 			const float a = static_cast<float>(x), b = static_cast<float>(y);
-			const float z = static_cast<float>(x-y);
-			directions2.insert({quantize((noise.sample2D(a+e,b)-noise.sample2D(a-e,b))/(2*e)), quantize((noise.sample2D(a,b+e)-noise.sample2D(a,b-e))/(2*e))});
-			directions3.insert({quantize((noise.sample3D(a+e,b,z)-noise.sample3D(a-e,b,z))/(2*e)), quantize((noise.sample3D(a,b+e,z)-noise.sample3D(a,b-e,z))/(2*e)), quantize((noise.sample3D(a,b,z+e)-noise.sample3D(a,b,z-e))/(2*e))});
+			const float z = static_cast<float>(x - y);
+			directions2.insert({quantize((noise.sample2D(a + e, b) - noise.sample2D(a - e, b)) / (2 * e)), quantize((noise.sample2D(a, b + e) - noise.sample2D(a, b - e)) / (2 * e))});
+			directions3.insert({quantize((noise.sample3D(a + e, b, z) - noise.sample3D(a - e, b, z)) / (2 * e)), quantize((noise.sample3D(a, b + e, z) - noise.sample3D(a, b - e, z)) / (2 * e)), quantize((noise.sample3D(a, b, z + e) - noise.sample3D(a, b, z - e)) / (2 * e))});
 		}
 	}
 	EXPECT_GE(directions2.size(), 16u);
@@ -358,23 +360,23 @@ TEST(PerlinTest, ThresholdedLowFrequencyFieldAvoidsLongAxisAlignedArtifacts)
 	{
 		for (int x = 0; x < Size; ++x)
 		{
-			field[z][x] = noise.sample2D(static_cast<float>(x-32), static_cast<float>(z-32)) >= 0.5f;
+			field[z][x] = noise.sample2D(static_cast<float>(x - 32), static_cast<float>(z - 32)) >= 0.5f;
 			filled += field[z][x];
 		}
 	}
 	int longest = 0;
-	for (int axis = 0; axis < Size-1; ++axis)
+	for (int axis = 0; axis < Size - 1; ++axis)
 	{
 		int horizontal = 0, vertical = 0;
 		for (int i = 0; i < Size; ++i)
 		{
-			horizontal = field[axis][i] != field[axis+1][i] ? horizontal+1 : 0;
-			vertical = field[i][axis] != field[i][axis+1] ? vertical+1 : 0;
+			horizontal = field[axis][i] != field[axis + 1][i] ? horizontal + 1 : 0;
+			vertical = field[i][axis] != field[i][axis + 1] ? vertical + 1 : 0;
 			longest = std::max({longest, horizontal, vertical});
 		}
 	}
-	EXPECT_GT(filled, Size*Size/4);
-	EXPECT_LT(filled, Size*Size*3/4);
+	EXPECT_GT(filled, Size * Size / 4);
+	EXPECT_LT(filled, Size * Size * 3 / 4);
 	EXPECT_LT(longest, 33) << "Longest straight material boundary";
 }
 
@@ -388,8 +390,8 @@ TEST(PerlinTest, DomainWarpIsOptionalBoundedAndDeterministic)
 	warp.yNoise().setFrequency(0.083f);
 	const auto first = warp.warp(p);
 	EXPECT_NE(first, p);
-	EXPECT_LE(std::abs(first.x-p.x), 8.001f);
-	EXPECT_LE(std::abs(first.y-p.y), 8.001f);
+	EXPECT_LE(std::abs(first.x - p.x), 8.001f);
+	EXPECT_LE(std::abs(first.y - p.y), 8.001f);
 	EXPECT_EQ(warp.warp(p), first);
 	EXPECT_NE(warp.xNoise().seed(), warp.yNoise().seed());
 	EXPECT_THROW(warp.setAmplitude(-1), std::invalid_argument);

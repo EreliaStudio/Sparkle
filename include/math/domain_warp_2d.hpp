@@ -24,10 +24,22 @@ namespace spk
 		{
 		}
 
-		[[nodiscard]] Perlin &xNoise() noexcept { return _xNoise; }
-		[[nodiscard]] const Perlin &xNoise() const noexcept { return _xNoise; }
-		[[nodiscard]] Perlin &yNoise() noexcept { return _yNoise; }
-		[[nodiscard]] const Perlin &yNoise() const noexcept { return _yNoise; }
+		[[nodiscard]] Perlin &xNoise() noexcept
+		{
+			return _xNoise;
+		}
+		[[nodiscard]] const Perlin &xNoise() const noexcept
+		{
+			return _xNoise;
+		}
+		[[nodiscard]] Perlin &yNoise() noexcept
+		{
+			return _yNoise;
+		}
+		[[nodiscard]] const Perlin &yNoise() const noexcept
+		{
+			return _yNoise;
+		}
 
 		void setAmplitude(float amplitude)
 		{
@@ -38,7 +50,10 @@ namespace spk
 			_amplitude = amplitude;
 		}
 
-		[[nodiscard]] float amplitude() const noexcept { return _amplitude; }
+		[[nodiscard]] float amplitude() const noexcept
+		{
+			return _amplitude;
+		}
 
 		[[nodiscard]] Vector2 warp(const Vector2 &position) const
 		{

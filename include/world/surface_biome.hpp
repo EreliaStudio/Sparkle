@@ -96,10 +96,10 @@ namespace spk::World
 					weights[index] += factor * influence.weight;
 				}
 			};
-			accumulate(this->sample(x0,z0), (1-dx)*(1-dz));
-			accumulate(this->sample(x1,z0), dx*(1-dz));
-			accumulate(this->sample(x0,z1), (1-dx)*dz);
-			accumulate(this->sample(x1,z1), dx*dz);
+			accumulate(this->sample(x0, z0), (1 - dx) * (1 - dz));
+			accumulate(this->sample(x1, z0), dx * (1 - dz));
+			accumulate(this->sample(x0, z1), (1 - dx) * dz);
+			accumulate(this->sample(x1, z1), dx * dz);
 			for (std::size_t i = 0; i < count; ++i)
 			{
 				result[i].weight = static_cast<float>(weights[i]);
