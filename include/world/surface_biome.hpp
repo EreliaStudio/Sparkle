@@ -15,6 +15,9 @@ namespace spk::World
 			float weight = 0.0f;
 
 			template <std::size_t TCapacity>
+			struct Cell;
+
+			template <std::size_t TCapacity>
 			class Grid;
 		};
 
@@ -22,12 +25,73 @@ namespace spk::World
 	};
 
 	template <std::size_t TCapacity>
-	class SurfaceBiome::Influence::Grid : public SurfaceGrid<std::array<Influence, TCapacity>>
+	struct SurfaceBiome::Influence::Cell
+	{
+		static_assert(TCapacity > 0);
+
+		std::array<Influence, TCapacity> elements{};
+
+		[[nodiscard]] auto begin() noexcept
+		{
+			return elements.begin();
+		}
+		[[nodiscard]] auto begin() const noexcept
+		{
+			return elements.begin();
+		}
+		[[nodiscard]] auto end() noexcept
+		{
+			return elements.end();
+		}
+		[[nodiscard]] auto end() const noexcept
+		{
+			return elements.end();
+		}
+		[[nodiscard]] auto cbegin() const noexcept
+		{
+			return elements.cbegin();
+		}
+		[[nodiscard]] auto cend() const noexcept
+		{
+			return elements.cend();
+		}
+		[[nodiscard]] constexpr std::size_t size() const noexcept
+		{
+			return TCapacity;
+		}
+
+		[[nodiscard]] Influence &operator[](std::size_t index) noexcept
+		{
+			return elements[index];
+		}
+		[[nodiscard]] const Influence &operator[](std::size_t index) const noexcept
+		{
+			return elements[index];
+		}
+
+		[[nodiscard]] const SurfaceBiome *dominant() const noexcept
+		{
+			const SurfaceBiome *result = nullptr;
+			float weight = 0.0f;
+			for (const auto &influence : elements)
+			{
+				if (influence.biome != nullptr && influence.weight > weight)
+				{
+					result = influence.biome;
+					weight = influence.weight;
+				}
+			}
+			return result;
+		}
+	};
+
+	template <std::size_t TCapacity>
+	class SurfaceBiome::Influence::Grid : public SurfaceGrid<SurfaceBiome::Influence::Cell<TCapacity>>
 	{
 		static_assert(TCapacity > 0);
 
 	public:
-		using Cell = std::array<Influence, TCapacity>;
+		using Cell = Influence::Cell<TCapacity>;
 		using Base = SurfaceGrid<Cell>;
 		using Configuration = typename Base::Configuration;
 		using Lease = typename spk::Pool<Grid>::Lease;
@@ -37,7 +101,7 @@ namespace spk::World
 			Bilinear
 		};
 		// Four neighboring cells may contain completely different biomes.
-		using InterpolatedCell = std::array<Influence, 4 * TCapacity>;
+		using InterpolatedCell = Influence::Cell<4 * TCapacity>;
 
 	private:
 		Grid() = default;
@@ -136,31 +200,6 @@ namespace spk::World
 				result[i].weight = static_cast<float>(weights[i]);
 			}
 			return result;
-		}
-
-		[[nodiscard]] const SurfaceBiome *dominant(const spk::Vector2 &position, Interpolation interpolation) const
-		{
-			const auto select = [](const auto &cell) {
-				const SurfaceBiome *result = nullptr;
-				float weight = 0.0f;
-				for (const auto &influence : cell)
-				{
-					if (influence.biome != nullptr && influence.weight > weight)
-					{
-						result = influence.biome;
-						weight = influence.weight;
-					}
-				}
-				return result;
-			};
-			switch (interpolation)
-			{
-			case Interpolation::Floor:
-				return select(this->at(position));
-			case Interpolation::Bilinear:
-				return select(interpolate(position, Interpolation::Bilinear));
-			}
-			throw spk::Exception("Unknown biome influence interpolation");
 		}
 	};
 }
