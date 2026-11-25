@@ -89,3 +89,18 @@ outputs. Existing reference PNGs are not replaced by this extension.
 The 24 additional reference PNGs were imported from the Graphics Release captures in
 CI run 45524081345. All 29 BiomeWorldGolden cases passed against the resulting
 references before the import commit 705bd538ed6717d7f79a1e996bb38cd5f6a2e694.
+
+## Noise and influence continuity
+
+Perlin now uses 16 uniformly spaced unit gradients in 2D and 32 symmetric unit
+gradients in 3D. Quintic interpolation is the default; Linear and SmoothStep
+remain selectable. The seed and permutation remain deterministic, but existing
+procedural worlds will change with the revised gradients and default fade.
+DomainWarp2D is optional and does not silently alter any existing pipeline.
+Influence grids interpolate by biome identity, not slot index, preserving up to
+four cells' distinct biomes. Bilinear dominance is the default; Floor remains
+explicitly selectable. Exact grid-node ties retain first positive slot order.
+Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
+interpolation, 3D slices and optional coordinate warping from the voxel renderer.
+Existing terrain goldens affected by this algorithm change must be refreshed
+from actual test outputs only, with unchanged comparator tolerances.

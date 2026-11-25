@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "math/domain_warp_2d.hpp"
 #include "math/perlin.hpp"
 
 namespace
@@ -375,4 +376,24 @@ TEST(PerlinTest, ThresholdedLowFrequencyFieldAvoidsLongAxisAlignedArtifacts)
 	EXPECT_GT(filled, Size*Size/4);
 	EXPECT_LT(filled, Size*Size*3/4);
 	EXPECT_LT(longest, 33) << "Longest straight material boundary";
+}
+
+TEST(PerlinTest, DomainWarpIsOptionalBoundedAndDeterministic)
+{
+	spk::DomainWarp2D warp(718);
+	const spk::Vector2 p{-12.3f, 5.7f};
+	EXPECT_EQ(warp.warp(p), p);
+	warp.setAmplitude(8);
+	warp.xNoise().setFrequency(0.071f);
+	warp.yNoise().setFrequency(0.083f);
+	const auto first = warp.warp(p);
+	EXPECT_NE(first, p);
+	EXPECT_LE(std::abs(first.x-p.x), 8.001f);
+	EXPECT_LE(std::abs(first.y-p.y), 8.001f);
+	EXPECT_EQ(warp.warp(p), first);
+	EXPECT_NE(warp.xNoise().seed(), warp.yNoise().seed());
+	EXPECT_THROW(warp.setAmplitude(-1), std::invalid_argument);
+	EXPECT_THROW((void)warp.warp({std::numeric_limits<float>::infinity(), 0}), std::invalid_argument);
+	warp.setAmplitude(0);
+	EXPECT_EQ(warp.warp(p), p);
 }
