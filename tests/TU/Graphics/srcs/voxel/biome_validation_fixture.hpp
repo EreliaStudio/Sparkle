@@ -29,7 +29,7 @@ namespace sparkle_test::biome_validation
 		int centerX = 0;
 		int centerZ = 0;
 		int minimumY = 0;
-		int maximumY = 1;
+		int maximumY = 2;
 		Cut cut = Cut::None;
 		int cutHeight = 20;
 		spk::Vector3 camera{52, 52, 59};

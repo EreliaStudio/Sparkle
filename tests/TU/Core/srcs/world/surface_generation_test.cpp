@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <atomic>
+#include <cmath>
 #include <future>
 #include <limits>
 
 #include "world/height_map.hpp"
+#include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
 #include "world/pass/surface_generation_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
@@ -235,4 +238,150 @@ TEST(SurfaceGenerationTest, QueuedReservationSurvivesLastInterestAndFailedBuildR
 	EXPECT_EQ(generator.generate({0, 0, 0})->value, 40);
 	EXPECT_EQ(generator.calls.load(), 3);
 	generator.release({0, 0, 0});
+}
+
+TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
+{
+	HeightMap map;
+	map.setBaseHeight(10);
+	spk::Perlin a(81);
+	a.setFrequency(0.073f);
+	spk::Perlin b(913);
+	b.setFrequency(0.21f);
+	map.noiseLayers().emplace("a", HeightMap::NoiseLayer{a, -4, 8});
+	map.noiseLayers().emplace("b", HeightMap::NoiseLayer{b, -2, 2});
+	for (float scale : {0.5f, 1.0f, 2.0f, 4.0f})
+	{
+		auto left = map.generate({{16, 16}, scale}, {-16, -16});
+		auto right = map.generate({{16, 16}, scale}, {0, -16});
+		auto back = map.generate({{16, 16}, scale}, {-16, 0});
+		const auto layout = left->layout();
+		for (std::size_t i = 0; i < layout.width; ++i)
+		{
+			EXPECT_FLOAT_EQ(left->sample(layout.width - 1, i), right->sample(0, i));
+			EXPECT_FLOAT_EQ(left->sample(i, layout.height - 1), back->sample(i, 0));
+		}
+		EXPECT_FLOAT_EQ(left->at({16, 16}), map.sample({0, 0}));
+	}
+}
+
+TEST(SurfaceGridTest, BilinearUsesBothAxesAndRejectsInvalidCoordinates)
+{
+	auto grid = HeightMap::Grid::obtain({{4, 2}, 2}, {});
+	grid->sample(0, 0) = 0;
+	grid->sample(1, 0) = 8;
+	grid->sample(0, 1) = 4;
+	grid->sample(1, 1) = 12;
+	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Bilinear), 6);
+	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Nearest), 0);
+	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}, HeightMap::Grid::Interpolation::Nearest), 12);
+	EXPECT_THROW((void)grid->at({-0.01f, 0}), spk::Exception);
+	EXPECT_THROW((void)grid->at({0, std::numeric_limits<float>::infinity()}), spk::Exception);
+	EXPECT_THROW((void)grid->at({std::numeric_limits<float>::quiet_NaN(), 0}), spk::Exception);
+	EXPECT_THROW((void)HeightMap::Grid::obtain({{16, 16}, std::numeric_limits<float>::infinity()}, {}), spk::Exception);
+}
+
+TEST(SurfaceGridTest, RecycledInfluenceGridResetsEverySlot)
+{
+	ConstantBiome biome(1);
+	using Grid = SurfaceData::InfluenceGrid;
+	auto grid = Grid::obtain({{8, 8}, 1}, {-8, 0});
+	grid->at({0, 0})[0] = {&biome, 1};
+	grid->at({8, 8})[1] = {&biome, 1};
+	const auto *address = grid.get();
+	grid = {};
+	auto recycled = Grid::obtain({{8, 8}, 1}, {16, -16});
+	EXPECT_EQ(recycled.get(), address);
+	EXPECT_EQ(recycled->worldOrigin(), (spk::Vector2{16, -16}));
+	for (std::size_t z = 0; z < recycled->layout().height; ++z)
+	{
+		for (std::size_t x = 0; x < recycled->layout().width; ++x)
+		{
+			for (const auto &influence : recycled->sample(x, z))
+			{
+				EXPECT_EQ(influence.biome, nullptr);
+				EXPECT_FLOAT_EQ(influence.weight, 0);
+			}
+		}
+	}
+}
+
+TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributionsWithoutReplacingResult)
+{
+	SurfaceData data;
+	data.influences = SurfaceData::InfluenceGrid::obtain({{2, 2}, 1}, {});
+	data.heights = HeightMap::Grid::obtain({{2, 2}, 1}, {});
+	data.heights->at({0, 0}) = 99;
+	const auto *old = data.heights.get();
+	Combination pass;
+	EXPECT_THROW(pass.apply({}, data), spk::Exception);
+	EXPECT_EQ(data.heights.get(), old);
+	ConstantBiome valid(20);
+	ConstantBiome invalid(std::numeric_limits<float>::quiet_NaN());
+	const auto layout = data.influences->layout();
+	for (std::size_t z = 0; z < layout.height; ++z)
+	{
+		for (std::size_t x = 0; x < layout.width; ++x)
+		{
+			data.influences->sample(x, z) = {{{&valid, 1}, {&invalid, 0}}};
+		}
+	}
+	EXPECT_NO_THROW(pass.apply({}, data));
+	EXPECT_FLOAT_EQ(data.heights->at({0, 0}), 20);
+	data.influences->sample(2, 2)[1].weight = 1;
+	const auto *previous = data.heights.get();
+	EXPECT_THROW(pass.apply({}, data), spk::Exception);
+	EXPECT_EQ(data.heights.get(), previous);
+}
+
+TEST(SurfaceGenerationTest, DifferentColumnsHaveIndependentCacheLifetimes)
+{
+	Generator generator;
+	generator.retain({-1, 0, 0});
+	generator.retain({0, 0, 0});
+	auto a = std::async(std::launch::async, [&] { return generator.generate({-1, 0, 0}); });
+	auto b = std::async(std::launch::async, [&] { return generator.generate({0, 0, 0}); });
+	ASSERT_TRUE(a.get());
+	ASSERT_TRUE(b.get());
+	EXPECT_EQ(generator.calls.load(), 2);
+	generator.release({-1, 0, 0});
+	EXPECT_TRUE(generator.generate({0, 2, 0}));
+	EXPECT_EQ(generator.calls.load(), 2);
+	EXPECT_TRUE(generator.generate({-1, 0, 0}));
+	EXPECT_EQ(generator.calls.load(), 3);
+	generator.release({0, 0, 0});
+}
+
+namespace
+{
+	class StandaloneHeightPass : public spk::World::HeightMapGenerationPass<Chunk, SurfaceData>
+	{
+	protected:
+		HeightMap::Grid::Configuration _gridConfiguration(const Coordinate &, const SurfaceData &) override
+		{
+			return {{16, 8}, 2};
+		}
+		HeightMap::Grid::Lease &_gridDestination(SurfaceData &data) override
+		{
+			return data.heights;
+		}
+	};
+}
+
+TEST(SurfaceGenerationTest, StandaloneHeightMapPassUsesWorldOriginAndRequiresBinding)
+{
+	StandaloneHeightPass pass;
+	SurfaceData data;
+	Chunk::Builder builder;
+	EXPECT_THROW(pass.apply(builder, {-2, 7, 3}, data), spk::Exception);
+	HeightMap map;
+	map.setBaseHeight(12);
+	spk::Perlin noise(72);
+	noise.setFrequency(0.07f);
+	map.noiseLayers().emplace("relief", HeightMap::NoiseLayer{noise, -3, 3});
+	pass.bind(map);
+	pass.apply(builder, {-2, 7, 3}, data);
+	ASSERT_TRUE(data.heights);
+	EXPECT_EQ(data.heights->worldOrigin(), (spk::Vector2{-32, 24}));
+	EXPECT_FLOAT_EQ(data.heights->at({16, 8}), map.sample({-16, 32}));
 }
