@@ -1,8 +1,12 @@
 #pragma once
 
+#include <array>
+#include <cmath>
+#include <cstddef>
+
+#include "exception.hpp"
 #include "world/biome.hpp"
 #include "world/surface_grid.hpp"
-#include <array>
 
 namespace spk::World
 {
@@ -67,6 +71,49 @@ namespace spk::World
 		[[nodiscard]] const Influence &operator[](std::size_t index) const noexcept
 		{
 			return elements[index];
+		}
+
+		// Validate the entire cell before changing any weight. The order and
+		// identity of all slots, including zero-weight slots, are preserved.
+		void normalize()
+		{
+			double sum = 0.0;
+			for (std::size_t index = 0; index < TCapacity; ++index)
+			{
+				const auto &influence = elements[index];
+				if (influence.biome == nullptr)
+				{
+					if (influence.weight != 0.0f)
+					{
+						throw spk::Exception("An empty biome influence must have zero weight");
+					}
+					continue;
+				}
+				if (!std::isfinite(influence.weight) || influence.weight < 0.0f)
+				{
+					throw spk::Exception("Biome influence weight must be finite and nonnegative");
+				}
+				for (std::size_t previous = 0; previous < index; ++previous)
+				{
+					if (elements[previous].biome == influence.biome)
+					{
+						throw spk::Exception("Duplicate biome in influence cell");
+					}
+				}
+				sum += static_cast<double>(influence.weight);
+			}
+
+			if (sum == 0.0)
+			{
+				return;
+			}
+			for (auto &influence : elements)
+			{
+				if (influence.biome != nullptr)
+				{
+					influence.weight = static_cast<float>(static_cast<double>(influence.weight) / sum);
+				}
+			}
 		}
 
 		[[nodiscard]] const SurfaceBiome *dominant() const noexcept

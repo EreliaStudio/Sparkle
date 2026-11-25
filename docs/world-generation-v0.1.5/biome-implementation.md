@@ -6,6 +6,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 ## Layers
 
 - World::Biome / World::SurfaceBiome: identity and continuous absolute height.
+- World::SurfaceBiome::Influence::Cell<N>: owns validation and normalization through normalize(), and dominant selection through dominant(). SurfaceBiomeDistributionPass inherits only SurfacePass and calls cell.normalize() after placement; the redundant BiomeDistribution and BiomeDistributionPass classes are removed.
 - spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity. Checked at() and operator[] accept Vector2UInt coordinates. Row-major iteration exposes read-only coordinates and mutable or const values through structured bindings (auto&& [coords, value]).
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid exposes direct floor access through at(position) and a protected bilinear-only weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling.

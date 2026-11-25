@@ -1,13 +1,12 @@
 #pragma once
 
-#include "world/pass/biome_distribution_pass.hpp"
 #include "world/pass/surface_pass.hpp"
 #include "world/surface_biome.hpp"
 
 namespace spk::World
 {
 	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
-	class SurfaceBiomeDistributionPass : public SurfacePass<TChunk, TGenerationData>, protected BiomeDistribution
+	class SurfaceBiomeDistributionPass : public SurfacePass<TChunk, TGenerationData>
 	{
 	public:
 		using Grid = SurfaceBiome::Influence::Grid<TCapacity>;
@@ -31,7 +30,7 @@ namespace spk::World
 				{
 					auto &cell = grid->sample({x, z});
 					_computeBiomePlacement(origin + grid->localPosition({x, z}), cell);
-					_normalize(cell.elements);
+					cell.normalize();
 				}
 			}
 			_gridDestination(coordinate, data) = std::move(grid);
