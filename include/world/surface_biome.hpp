@@ -57,10 +57,10 @@ namespace spk::World
 			const auto &config = this->configuration();
 			const double x = this->_sampleAxis(position.x, config.size.x, dimensions.x);
 			const double z = this->_sampleAxis(position.y, config.size.y, dimensions.y);
-			const auto x0 = static_cast<std::size_t>(x);
-			const auto z0 = static_cast<std::size_t>(z);
-			const auto x1 = std::min<std::size_t>(x0 + 1, dimensions.x - 1);
-			const auto z1 = std::min<std::size_t>(z0 + 1, dimensions.y - 1);
+			const auto x0 = static_cast<std::uint32_t>(x);
+			const auto z0 = static_cast<std::uint32_t>(z);
+			const auto x1 = std::min<std::uint32_t>(x0 + 1, dimensions.x - 1);
+			const auto z1 = std::min<std::uint32_t>(z0 + 1, dimensions.y - 1);
 			const double dx = x - x0;
 			const double dz = z - z0;
 			InterpolatedCell result{};
@@ -89,10 +89,10 @@ namespace spk::World
 					weights[index] += factor * influence.weight;
 				}
 			};
-			accumulate(this->sample(x0, z0), (1 - dx) * (1 - dz));
-			accumulate(this->sample(x1, z0), dx * (1 - dz));
-			accumulate(this->sample(x0, z1), (1 - dx) * dz);
-			accumulate(this->sample(x1, z1), dx * dz);
+			accumulate(this->sample({x0, z0}), (1 - dx) * (1 - dz));
+			accumulate(this->sample({x1, z0}), dx * (1 - dz));
+			accumulate(this->sample({x0, z1}), (1 - dx) * dz);
+			accumulate(this->sample({x1, z1}), dx * dz);
 			for (std::size_t i = 0; i < count; ++i)
 			{
 				result[i].weight = static_cast<float>(weights[i]);

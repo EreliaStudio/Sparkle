@@ -42,7 +42,7 @@ namespace spk::Voxel
 				biome.sampleStrata(worldOrigin() + localPosition(x, z), [&](Biome::Layer layer) {
 					_layers.push_back(layer);
 				});
-				sample(x, z) = {offset, _layers.size() - offset};
+				sample({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)}) = {offset, _layers.size() - offset};
 			}
 
 			[[nodiscard]] std::span<const Biome::Layer> layers(const spk::Vector2 &position) const

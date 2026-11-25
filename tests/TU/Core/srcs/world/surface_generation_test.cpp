@@ -260,10 +260,10 @@ TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
 		auto right = map.generate({{16, 16}, scale}, {0, -16});
 		auto back = map.generate({{16, 16}, scale}, {-16, 0});
 		const auto layout = left->sampleSize();
-		for (std::size_t i = 0; i < layout.x; ++i)
+		for (std::uint32_t i = 0; i < layout.x; ++i)
 		{
-			EXPECT_FLOAT_EQ(left->sample(layout.x - 1, i), right->sample(0, i));
-			EXPECT_FLOAT_EQ(left->sample(i, layout.y - 1), back->sample(i, 0));
+			EXPECT_FLOAT_EQ(left->sample({layout.x - 1, i}), right->sample({0, i}));
+			EXPECT_FLOAT_EQ(left->sample({i, layout.y - 1}), back->sample({i, 0}));
 		}
 		EXPECT_FLOAT_EQ(left->at({16, 16}), map.sample({0, 0}));
 	}
@@ -272,10 +272,10 @@ TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
 TEST(SurfaceGridTest, BilinearUsesBothAxesAndRejectsInvalidCoordinates)
 {
 	auto grid = HeightMap::Grid::obtain({{4, 2}, 2}, {});
-	grid->sample(0, 0) = 0;
-	grid->sample(1, 0) = 8;
-	grid->sample(0, 1) = 4;
-	grid->sample(1, 1) = 12;
+	grid->sample({0, 0}) = 0;
+	grid->sample({1, 0}) = 8;
+	grid->sample({0, 1}) = 4;
+	grid->sample({1, 1}) = 12;
 	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Bilinear), 6);
 	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Nearest), 0);
 	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}, HeightMap::Grid::Interpolation::Nearest), 12);
@@ -297,11 +297,11 @@ TEST(SurfaceGridTest, RecycledInfluenceGridResetsEverySlot)
 	auto recycled = Grid::obtain({{8, 8}, 1}, {16, -16});
 	EXPECT_EQ(recycled.get(), address);
 	EXPECT_EQ(recycled->worldOrigin(), (spk::Vector2{16, -16}));
-	for (std::size_t z = 0; z < recycled->sampleSize().y; ++z)
+	for (std::uint32_t z = 0; z < recycled->sampleSize().y; ++z)
 	{
-		for (std::size_t x = 0; x < recycled->sampleSize().x; ++x)
+		for (std::uint32_t x = 0; x < recycled->sampleSize().x; ++x)
 		{
-			for (const auto &influence : recycled->sample(x, z))
+			for (const auto &influence : recycled->sample({x, z}))
 			{
 				EXPECT_EQ(influence.biome, nullptr);
 				EXPECT_FLOAT_EQ(influence.weight, 0);
@@ -323,16 +323,16 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 	ConstantBiome valid(20);
 	ConstantBiome invalid(std::numeric_limits<float>::quiet_NaN());
 	const auto layout = data.influences->sampleSize();
-	for (std::size_t z = 0; z < layout.y; ++z)
+	for (std::uint32_t z = 0; z < layout.y; ++z)
 	{
-		for (std::size_t x = 0; x < layout.x; ++x)
+		for (std::uint32_t x = 0; x < layout.x; ++x)
 		{
-			data.influences->sample(x, z) = {{{&valid, 1}, {&invalid, 0}}};
+			data.influences->sample({x, z}) = {{{&valid, 1}, {&invalid, 0}}};
 		}
 	}
 	EXPECT_NO_THROW(pass.apply({}, data));
 	EXPECT_FLOAT_EQ(data.heights->at({0, 0}), 20);
-	data.influences->sample(2, 2)[1].weight = 1;
+	data.influences->sample({2, 2})[1].weight = 1;
 	const auto *previous = data.heights.get();
 	EXPECT_THROW(pass.apply({}, data), spk::Exception);
 	EXPECT_EQ(data.heights.get(), previous);
@@ -399,10 +399,10 @@ TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
 	ConstantBiome a(0), b(1);
 	using Grid = SurfaceData::InfluenceGrid;
 	auto grid = Grid::obtain({{4, 4}, 4}, {});
-	grid->sample(0, 0) = {{{&a, 1}, {&b, 0}}};
-	grid->sample(1, 0) = {{{&b, 1}, {&a, 0}}};
-	grid->sample(0, 1) = {{{&b, 0}, {&a, 1}}};
-	grid->sample(1, 1) = {{{&a, 0}, {&b, 1}}};
+	grid->sample({0, 0}) = {{{&a, 1}, {&b, 0}}};
+	grid->sample({1, 0}) = {{{&b, 1}, {&a, 0}}};
+	grid->sample({0, 1}) = {{{&b, 0}, {&a, 1}}};
+	grid->sample({1, 1}) = {{{&a, 0}, {&b, 1}}};
 	const auto cell = grid->interpolate({3, 1});
 	EXPECT_EQ(cell[0].biome, &a);
 	EXPECT_FLOAT_EQ(cell[0].weight, 0.25f);
@@ -419,10 +419,10 @@ TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
 	using Grid = spk::World::SurfaceBiome::Influence::Grid<1>;
 	ConstantBiome a(1), b(2), c(3), d(4);
 	auto grid = Grid::obtain({{4, 4}, 4}, {});
-	grid->sample(0, 0)[0] = {&a, 1};
-	grid->sample(1, 0)[0] = {&b, 1};
-	grid->sample(0, 1)[0] = {&c, 1};
-	grid->sample(1, 1)[0] = {&d, 1};
+	grid->sample({0, 0})[0] = {&a, 1};
+	grid->sample({1, 0})[0] = {&b, 1};
+	grid->sample({0, 1})[0] = {&c, 1};
+	grid->sample({1, 1})[0] = {&d, 1};
 	const auto center = grid->interpolate({2, 2});
 	EXPECT_EQ(center[0].biome, &a);
 	EXPECT_EQ(center[1].biome, &b);
@@ -441,8 +441,8 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 	ConstantBiome a(1), b(2);
 	auto left = Grid::obtain({{4, 4}, 4}, {-4, 0});
 	auto right = Grid::obtain({{4, 4}, 4}, {0, 0});
-	left->sample(1, 0) = right->sample(0, 0) = {{{&b, 0.5f}, {&a, 0.5f}}};
-	left->sample(1, 1) = right->sample(0, 1) = {{{&a, 1}, {&b, 0}}};
+	left->sample({1, 0}) = right->sample({0, 0}) = {{{&b, 0.5f}, {&a, 0.5f}}};
+	left->sample({1, 1}) = right->sample({0, 1}) = {{{&a, 1}, {&b, 0}}};
 	EXPECT_EQ(left->dominant({4, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 	EXPECT_EQ(right->dominant({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear), &b);
 	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
@@ -533,8 +533,11 @@ TEST(Grid2DTest, BracketAccessAndStructuredBindings)
 TEST(Grid2DTest, StructuredBindingsSupportBoolAndMoveOnlyElements)
 {
 	auto flags = spk::Grid2D<bool>::obtain({2, 2});
+	static_assert(std::is_same_v<decltype(flags->at({0, 0})), bool &>);
+	static_assert(std::is_same_v<decltype(std::as_const(*flags).at({0, 0})), const bool &>);
 	for (auto &&[coords, value] : *flags)
 	{
+		static_assert(std::is_same_v<decltype(value), bool &>);
 		value = coords.x == coords.y;
 	}
 	EXPECT_TRUE(flags->at({0, 0}));
@@ -546,4 +549,16 @@ TEST(Grid2DTest, StructuredBindingsSupportBoolAndMoveOnlyElements)
 		value = std::make_unique<int>(static_cast<int>(coords.x));
 	}
 	EXPECT_EQ(*objects->at({1, 0}), 1);
+}
+
+TEST(SurfaceGridTest, SampleReturnsReferencesAndChecksCoordinates)
+{
+	auto grid = spk::World::HeightMap::Grid::obtain({{2, 2}, 1.0f}, {0, 0});
+	static_assert(std::is_same_v<decltype(grid->sample({0, 0})), float &>);
+	const auto &readOnly = *grid.get();
+	static_assert(std::is_same_v<decltype(readOnly.sample({0, 0})), const float &>);
+	grid->sample({1, 1}) = 42.0f;
+	EXPECT_EQ(&grid->sample({1, 1}), &grid->at({1, 1}));
+	EXPECT_FLOAT_EQ(readOnly.sample({1, 1}), 42.0f);
+	EXPECT_THROW((void)grid->sample({3, 0}), spk::Exception);
 }

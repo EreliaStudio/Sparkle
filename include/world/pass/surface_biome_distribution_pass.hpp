@@ -26,11 +26,11 @@ namespace spk::World
 			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.y) * config.size.y)};
 			auto grid = Grid::obtain(config, origin);
 			const auto layout = grid->sampleSize();
-			for (std::size_t z = 0; z < layout.y; ++z)
+			for (std::uint32_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.x; ++x)
+				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
-					auto &cell = grid->sample(x, z);
+					auto &cell = grid->sample({x, z});
 					_computeBiomePlacement(origin + grid->localPosition(x, z), cell);
 					_normalize(cell);
 				}

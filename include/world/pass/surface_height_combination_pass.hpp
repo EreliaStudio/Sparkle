@@ -24,14 +24,14 @@ namespace spk::World
 			const auto &config = influences.configuration();
 			auto grid = Grid::obtain({config.size, config.scale}, influences.worldOrigin());
 			const auto layout = grid->sampleSize();
-			for (std::size_t z = 0; z < layout.y; ++z)
+			for (std::uint32_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.x; ++x)
+				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
 					double height = 0.0;
 					bool found = false;
 					const auto position = grid->worldOrigin() + grid->localPosition(x, z);
-					for (const auto &influence : influences.sample(x, z))
+					for (const auto &influence : influences.sample({x, z}))
 					{
 						if (influence.biome != nullptr && influence.weight > 0.0f)
 						{
@@ -48,7 +48,7 @@ namespace spk::World
 					{
 						throw spk::Exception("Biome height combination has no usable result");
 					}
-					grid->sample(x, z) = static_cast<float>(height);
+					grid->sample({x, z}) = static_cast<float>(height);
 				}
 			}
 			_gridDestination(data) = std::move(grid);

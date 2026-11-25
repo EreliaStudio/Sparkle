@@ -132,21 +132,13 @@ namespace spk::World
 			return _elements ? _elements->capacity() : 0;
 		}
 
-		[[nodiscard]] typename spk::Grid2D<TElement>::Reference sample(std::size_t x, std::size_t z)
+		[[nodiscard]] TElement &sample(const spk::Vector2UInt &position)
 		{
-			if (x >= sampleSize().x || z >= sampleSize().y)
-			{
-				throw spk::Exception("Surface grid sample index is outside its domain");
-			}
-			return _elements->at({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)});
+			return _elements->at(position);
 		}
-		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference sample(std::size_t x, std::size_t z) const
+		[[nodiscard]] const TElement &sample(const spk::Vector2UInt &position) const
 		{
-			if (x >= sampleSize().x || z >= sampleSize().y)
-			{
-				throw spk::Exception("Surface grid sample index is outside its domain");
-			}
-			return _elements->at({static_cast<std::uint32_t>(x), static_cast<std::uint32_t>(z)});
+			return _elements->at(position);
 		}
 		[[nodiscard]] spk::Vector2 localPosition(std::size_t x, std::size_t z) const
 		{
@@ -158,13 +150,13 @@ namespace spk::World
 				x == sampleSize().x - 1 ? static_cast<float>(_configuration.size.x) : static_cast<float>(x * static_cast<double>(_configuration.scale)),
 				z == sampleSize().y - 1 ? static_cast<float>(_configuration.size.y) : static_cast<float>(z * static_cast<double>(_configuration.scale))};
 		}
-		[[nodiscard]] typename spk::Grid2D<TElement>::Reference at(const spk::Vector2 &position)
+		[[nodiscard]] TElement &at(const spk::Vector2 &position)
 		{
-			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, sampleSize().x)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, sampleSize().y)));
+			return sample({static_cast<std::uint32_t>(_sampleAxis(position.x, _configuration.size.x, sampleSize().x)), static_cast<std::uint32_t>(_sampleAxis(position.y, _configuration.size.y, sampleSize().y))});
 		}
-		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference at(const spk::Vector2 &position) const
+		[[nodiscard]] const TElement &at(const spk::Vector2 &position) const
 		{
-			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, sampleSize().x)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, sampleSize().y)));
+			return sample({static_cast<std::uint32_t>(_sampleAxis(position.x, _configuration.size.x, sampleSize().x)), static_cast<std::uint32_t>(_sampleAxis(position.y, _configuration.size.y, sampleSize().y))});
 		}
 	};
 }

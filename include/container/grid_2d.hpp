@@ -18,8 +18,6 @@ namespace spk
 	{
 	public:
 		using Lease = typename CapacityPool<Grid2D>::Lease;
-		using Reference = typename std::vector<TElement>::reference;
-		using ConstReference = typename std::vector<TElement>::const_reference;
 
 	private:
 		template <bool TConst>
@@ -42,7 +40,7 @@ namespace spk
 			using iterator_category = std::input_iterator_tag;
 			using difference_type = std::ptrdiff_t;
 			using value_type = std::pair<const spk::Vector2UInt, TElement>;
-			using reference = std::pair<const spk::Vector2UInt, std::conditional_t<TConst, ConstReference, Reference>>;
+			using reference = std::pair<const spk::Vector2UInt, std::conditional_t<TConst, const TElement &, TElement &>>;
 			using pointer = void;
 
 			BasicIterator() = default;
@@ -50,7 +48,7 @@ namespace spk
 			[[nodiscard]] reference operator*() const
 			{
 				const auto width = _grid->_size.x;
-				return {{static_cast<std::uint32_t>(_index % width), static_cast<std::uint32_t>(_index / width)}, _grid->_elements[_index]};
+				return {{static_cast<std::uint32_t>(_index % width), static_cast<std::uint32_t>(_index / width)}, _grid->_element(_index)};
 			}
 
 			BasicIterator &operator++() noexcept
@@ -75,7 +73,12 @@ namespace spk
 
 	private:
 		spk::Vector2UInt _size{};
-		std::vector<TElement> _elements;
+		struct BoolElement
+		{
+			bool value = false;
+		};
+		using StorageElement = std::conditional_t<std::is_same_v<TElement, bool>, BoolElement, TElement>;
+		std::vector<StorageElement> _elements;
 		ReleaseContract _releaseContract;
 
 		explicit Grid2D(std::size_t capacity) :
@@ -96,6 +99,30 @@ namespace spk
 			return static_cast<std::size_t>(position.y) * _size.x + position.x;
 		}
 
+		[[nodiscard]] TElement &_element(std::size_t index) noexcept
+		{
+			if constexpr (std::is_same_v<TElement, bool>)
+			{
+				return _elements[index].value;
+			}
+			else
+			{
+				return _elements[index];
+			}
+		}
+
+		[[nodiscard]] const TElement &_element(std::size_t index) const noexcept
+		{
+			if constexpr (std::is_same_v<TElement, bool>)
+			{
+				return _elements[index].value;
+			}
+			else
+			{
+				return _elements[index];
+			}
+		}
+
 	public:
 		Grid2D(const Grid2D &) = delete;
 		Grid2D &operator=(const Grid2D &) = delete;
@@ -112,7 +139,7 @@ namespace spk
 				throw spk::Exception("Invalid Grid2D dimensions");
 			}
 			const auto count = static_cast<std::size_t>(size.x) * size.y;
-			if (CapacityPool<Grid2D>::capacityFor(count) > std::vector<TElement>().max_size())
+			if (CapacityPool<Grid2D>::capacityFor(count) > std::vector<StorageElement>().max_size())
 			{
 				throw spk::Exception("Grid2D exceeds storage limits");
 			}
@@ -140,24 +167,24 @@ namespace spk
 			return _elements.capacity();
 		}
 
-		[[nodiscard]] Reference operator[](const spk::Vector2UInt &position)
+		[[nodiscard]] TElement &operator[](const spk::Vector2UInt &position)
 		{
 			return at(position);
 		}
 
-		[[nodiscard]] ConstReference operator[](const spk::Vector2UInt &position) const
+		[[nodiscard]] const TElement &operator[](const spk::Vector2UInt &position) const
 		{
 			return at(position);
 		}
 
-		[[nodiscard]] Reference at(const spk::Vector2UInt &position)
+		[[nodiscard]] TElement &at(const spk::Vector2UInt &position)
 		{
-			return _elements[_index(position)];
+			return _element(_index(position));
 		}
 
-		[[nodiscard]] ConstReference at(const spk::Vector2UInt &position) const
+		[[nodiscard]] const TElement &at(const spk::Vector2UInt &position) const
 		{
-			return _elements[_index(position)];
+			return _element(_index(position));
 		}
 
 		[[nodiscard]] iterator begin() noexcept

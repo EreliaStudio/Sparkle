@@ -51,16 +51,16 @@ namespace spk::World
 				const auto &config = configuration();
 				const double x = _sampleAxis(position.x, config.size.x, dimensions.x);
 				const double z = _sampleAxis(position.y, config.size.y, dimensions.y);
-				const auto x0 = static_cast<std::size_t>(x);
-				const auto z0 = static_cast<std::size_t>(z);
-				const auto x1 = std::min<std::size_t>(x0 + 1, dimensions.x - 1);
-				const auto z1 = std::min<std::size_t>(z0 + 1, dimensions.y - 1);
+				const auto x0 = static_cast<std::uint32_t>(x);
+				const auto z0 = static_cast<std::uint32_t>(z);
+				const auto x1 = std::min<std::uint32_t>(x0 + 1, dimensions.x - 1);
+				const auto z1 = std::min<std::uint32_t>(z0 + 1, dimensions.y - 1);
 				switch (interpolation)
 				{
 				case Interpolation::Nearest:
-					return sample(x - x0 > 0.5 ? x1 : x0, z - z0 > 0.5 ? z1 : z0);
+					return sample({x - x0 > 0.5 ? x1 : x0, z - z0 > 0.5 ? z1 : z0});
 				case Interpolation::Bilinear:
-					return std::lerp(std::lerp(sample(x0, z0), sample(x1, z0), static_cast<float>(x - x0)), std::lerp(sample(x0, z1), sample(x1, z1), static_cast<float>(x - x0)), static_cast<float>(z - z0));
+					return std::lerp(std::lerp(sample({x0, z0}), sample({x1, z0}), static_cast<float>(x - x0)), std::lerp(sample({x0, z1}), sample({x1, z1}), static_cast<float>(x - x0)), static_cast<float>(z - z0));
 				}
 				throw spk::Exception("Unknown height grid interpolation");
 			}
@@ -112,11 +112,11 @@ namespace spk::World
 		{
 			auto grid = Grid::obtain(configuration, origin);
 			const auto layout = grid->sampleSize();
-			for (std::size_t z = 0; z < layout.y; ++z)
+			for (std::uint32_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.x; ++x)
+				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
-					grid->sample(x, z) = sample(origin + grid->localPosition(x, z));
+					grid->sample({x, z}) = sample(origin + grid->localPosition(x, z));
 				}
 			}
 			return grid;
