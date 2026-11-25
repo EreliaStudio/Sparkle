@@ -23,7 +23,8 @@ spatial hierarchy or eviction policy. Each derived generator decides how to init
 synchronize and clean its data. Streaming requests no longer retain or release generator
 data. The generator must outlive all submitted jobs.
 
-Voxel::BiomeGenerationData owns a synchronized column map and per-request chunk scratch.
+Voxel::BiomeGenerationData composes two optional generic containers: World::ColumnGenerationDataCollection<ColumnData> for persistent columns and World::ChunkGenerationDataCollection<ChunkData> for request-local scratch.
+ColumnGenerationDataCollection is keyed by X/Z coordinates; obtain(coordinate, build) returns a shared immutable handle, count() reports cached entries and flush() releases unused entries.
 A per-column mutex serializes construction; distinct columns compute independently.
 A column is published only after distribution, height combination, custom surface passes
 and strata have succeeded. Failed builds are retryable. Column data is retained after

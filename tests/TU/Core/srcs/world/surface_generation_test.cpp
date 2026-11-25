@@ -11,6 +11,7 @@
 #include <limits>
 
 #include "voxel/biome_surface_data.hpp"
+#include "world/column_generation_data_collection.hpp"
 #include "world/height_map.hpp"
 #include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
@@ -44,7 +45,7 @@ namespace
 	};
 
 	using SurfaceData = spk::Voxel::BiomeSurfaceData<2>;
-	using ColumnCache = spk::Voxel::BiomeGenerationData<2>;
+	using ColumnCache = spk::World::ColumnGenerationDataCollection<SurfaceData>;
 
 	class Distribution : public spk::World::SurfaceBiomeDistributionPass<SurfaceData, 2>
 	{
@@ -227,10 +228,10 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 		combination.apply({-1, 2}, column);
 	};
 	auto first = std::async(std::launch::async, [&] {
-		return cache.obtainColumn({-1, 2}, build);
+		return cache.obtain({-1, 2}, build);
 	});
 	auto second = std::async(std::launch::async, [&] {
-		return cache.obtainColumn({-1, 2}, build);
+		return cache.obtain({-1, 2}, build);
 	});
 	auto a = first.get();
 	auto b = second.get();
@@ -238,14 +239,14 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	EXPECT_FLOAT_EQ(a->heights->at({0, 0}), 40);
 	EXPECT_EQ(calls.load(), 1);
 	cache.flush();
-	EXPECT_EQ(cache.columnCount(), 1u);
+	EXPECT_EQ(cache.count(), 1u);
 	a.reset();
 	b.reset();
-	EXPECT_FLOAT_EQ(cache.obtainColumn({-1, 2}, build)->heights->at({0, 0}), 40);
+	EXPECT_FLOAT_EQ(cache.obtain({-1, 2}, build)->heights->at({0, 0}), 40);
 	EXPECT_EQ(calls.load(), 1);
 	cache.flush();
-	EXPECT_EQ(cache.columnCount(), 0u);
-	EXPECT_FLOAT_EQ(cache.obtainColumn({-1, 2}, build)->heights->at({0, 0}), 40);
+	EXPECT_EQ(cache.count(), 0u);
+	EXPECT_FLOAT_EQ(cache.obtain({-1, 2}, build)->heights->at({0, 0}), 40);
 	EXPECT_EQ(calls.load(), 2);
 }
 
@@ -263,10 +264,10 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 		}
 		combination.apply({0, 0}, column);
 	};
-	EXPECT_THROW((void)cache.obtainColumn({0, 0}, build), spk::Exception);
-	EXPECT_FLOAT_EQ(cache.obtainColumn({0, 0}, build)->heights->at({0, 0}), 40);
+	EXPECT_THROW((void)cache.obtain({0, 0}, build), spk::Exception);
+	EXPECT_FLOAT_EQ(cache.obtain({0, 0}, build)->heights->at({0, 0}), 40);
 	EXPECT_EQ(calls, 2);
-	EXPECT_FLOAT_EQ(cache.obtainColumn({0, 0}, build)->heights->at({0, 0}), 40);
+	EXPECT_FLOAT_EQ(cache.obtain({0, 0}, build)->heights->at({0, 0}), 40);
 	EXPECT_EQ(calls, 2);
 }
 
@@ -378,24 +379,24 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	auto ready = entered.get_future();
 	auto gate = resume.get_future().share();
 	auto building = std::async(std::launch::async, [&] {
-		return cache.obtainColumn({-1, 0}, [&](SurfaceData &) {
+		return cache.obtain({-1, 0}, [&](SurfaceData &) {
 			entered.set_value();
 			gate.wait();
 		});
 	});
 	ready.wait();
-	auto idle = cache.obtainColumn({0, 0}, [](SurfaceData &) {
+	auto idle = cache.obtain({0, 0}, [](SurfaceData &) {
 	});
 	idle.reset();
 	cache.flush();
-	EXPECT_EQ(cache.columnCount(), 1u);
+	EXPECT_EQ(cache.count(), 1u);
 	resume.set_value();
 	auto active = building.get();
 	cache.flush();
-	EXPECT_EQ(cache.columnCount(), 1u);
+	EXPECT_EQ(cache.count(), 1u);
 	active.reset();
 	cache.flush();
-	EXPECT_EQ(cache.columnCount(), 0u);
+	EXPECT_EQ(cache.count(), 0u);
 }
 
 namespace
