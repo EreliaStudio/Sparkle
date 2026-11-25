@@ -59,8 +59,8 @@ namespace spk::World
 			const double z = this->_sampleAxis(position.y, config.size.y, dimensions.y);
 			const auto x0 = static_cast<std::size_t>(x);
 			const auto z0 = static_cast<std::size_t>(z);
-			const auto x1 = std::min(x0 + 1, dimensions.x - 1);
-			const auto z1 = std::min(z0 + 1, dimensions.y - 1);
+			const auto x1 = std::min<std::size_t>(x0 + 1, dimensions.x - 1);
+			const auto z1 = std::min<std::size_t>(z0 + 1, dimensions.y - 1);
 			const double dx = x - x0;
 			const double dz = z - z0;
 			InterpolatedCell result{};
