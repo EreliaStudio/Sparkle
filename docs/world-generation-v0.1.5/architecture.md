@@ -23,10 +23,10 @@ En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson,
 - Tout ajout/édition/suppression de collection attachée se fait sur le thread Engine ; aucune modification directe depuis un worker.
 
 ## Génération sans propriétaire caché
-- Le Generator<TChunk,TGenerationData> est synchrone, configurable par addPass<TPass>(...) uniquement ; ses deux hooks de création sont virtuels privés ; pas de Generator::Builder.
-- Le type du builder peut être fourni indépendamment par `Generator<TChunk,TGenerationData,TBuilder>` ; par défaut `TBuilder` vaut `TChunk::Builder` pour les usages existants. `_createChunkBuilder(coord)` retourne `std::optional<TBuilder>` ; `nullopt` signifie absence valide et arrêt immédiat.
-- _createGenerationData() fournit les données temporaires d'une demande existante ; elles peuvent référencer des données persistantes de l'utilisateur. Les coordonnées sont accessibles à chaque passe, pas à cette fabrique. Aucun cycle de vie ou verrou global imposé par Sparkle.
-- `Pass::apply(builder,coord,data)` est appelé dans l'ordre ; si `builder.build()` produit un `TChunk`, il est retourné directement. S'il produit un `Volume`, le générateur construit un `TChunk` vide puis appelle `setVolume()`. `Generator::generate(coord)` renvoie `std::optional<TChunk>`.
+- Le Generator<TChunk,TGenerationData> est synchrone, configurable par addPass<TPass>(...) ; ses deux hooks de création sont virtuels protégés ; aucun Builder n'est imposé.
+- `_createGenerationData(coord)` retourne `std::optional<TGenerationData>` ; `nullopt` signifie absence valide et arrêt avant toute passe.
+- Les données temporaires appartiennent à une demande, peuvent référencer des données persistantes et contenir les éventuels builders spécifiques. Aucun cycle de vie ou verrou global imposé par Sparkle.
+- `Pass::apply(coord,data)` est appelé dans l'ordre ; `_instantiateChunk(data)` construit et retourne le `TChunk` final. `Generator::generate(coord)` renvoie `std::optional<TChunk>` sans imposer de constructeur au chunk.
 - Une exception spk::Exception fait échouer la génération, sans résultat partiel. La reproductibilité provient des règles utilisateur : mêmes données/coordonnées pertinentes => même chunk, pas de seed universelle imposée.
 
 ## Requester, Task et WorkerPool

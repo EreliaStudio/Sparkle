@@ -119,3 +119,11 @@ Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
 interpolation, 3D slices and optional coordinate warping from the voxel renderer.
 Existing terrain goldens affected by this algorithm change must be refreshed
 from actual test outputs only, with unchanged comparator tolerances.
+
+### Generator contract (current PR)
+
+- `Generator<TChunk, TGenerationData>` has no Builder template parameter or chunk construction policy.
+- `_createGenerationData(coordinate)` returns optional generation data; an empty result skips all passes and final construction.
+- Chunk passes receive only the coordinate and mutable generation data. `_instantiateChunk(data)` returns the final chunk after all passes succeed.
+- `SurfaceGenerationPass<TChunk, TGenerationData>` derives its surface type from `TGenerationData::Surface`. Existing column/job reservations are unchanged.
+- Voxel generation data owns its Volume::Builder; terrain passes access it through `data.builder`. Voxel instantiation builds and assigns the final volume.

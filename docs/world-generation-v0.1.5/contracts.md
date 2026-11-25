@@ -14,10 +14,10 @@ Les décisions ci-dessous reprennent la discussion de conception et les ajusteme
 | Collection events | S'abonne à chaque chunk, relaie immédiatement édition + signal insertion/remplacement, avec coord ; pas de notification de suppression générique séparée |
 | Remove | Entity3D/composants détruits avant chunk ; notification LifeCycle::Destruction disponible |
 | Engine | Attach/detach/rebind explicite, une collection/monde par Engine, pas de mutation collection depuis worker |
-| Generator | `spk::World::Generator<TChunk,TGenerationData,TBuilder>` synchrone, addPass successifs ; Pass::apply(builder, coordinate, data) virtuel |
-| Builder | Pas imposé par Chunk ; par défaut `TBuilder = TChunk::Builder` mais un builder distinct peut produire un Volume, ensuite affecté avec `setVolume()` |
-| Optional | _createChunkBuilder -> optional<Builder>, generate -> optional<TChunk> ; nullopt succès sans chunk |
-| Generation Data | Nouvel objet par demande via _createGenerationData() sans coordonnée, peut référencer données persistantes de l'utilisateur ; seed et verrouillage non imposés |
+| Generator | `spk::World::Generator<TChunk,TGenerationData>` synchrone ; `Pass::apply(coordinate,data)` virtuel ; `_instantiateChunk(data)` retourne TChunk |
+| Builder | Aucun builder imposé par Generator ou Chunk ; facultatif dans les données de génération spécifiques |
+| Optional | `_createGenerationData(coord)` -> `optional<TGenerationData>`, generate -> `optional<TChunk>` ; nullopt succès sans chunk et sans passes |
+| Generation Data | Nouvel objet par demande, initialisé avec les coordonnées ; peut référencer des données persistantes ou contenir des ressources move-only |
 | Erreur | spk::Exception lors de génération ; Task Failed distincte de réussite nullopt ; timeout supervisé par streaming |
 | Requester | Task<std::optional<TChunk>>::Answer par chunk, sources locales/fichier/réseau possibles sans implémentation d'un protocole |
 | Transfert Task | Task::Answer::result renvoie const& ; TChunk doit être copiable à la frontière réponse→collection en l'état |
@@ -40,7 +40,7 @@ Les décisions ci-dessous reprennent la discussion de conception et les ajusteme
 ~~~cpp
 class GameChunk : public spk::World::Chunk<32, 16, 32> {
 public:
-    class Builder;
+
     void setSomething(Value value) {
         _value = std::move(value);
         notifyChunkEdition();
@@ -57,10 +57,10 @@ GameChunk& chunk = chunks.at({1, 0, -2});
 
 class GameGenerator : public spk::World::Generator<GameChunk, MyGenerationData> {
 private:
-    std::optional<GameChunk::Builder> _createChunkBuilder(const spk::World::ChunkCoordinate&) override;
-    MyGenerationData _createGenerationData() override;
+    std::optional<MyGenerationData> _createGenerationData(const spk::World::ChunkCoordinate&) override;
+    GameChunk _instantiateChunk(MyGenerationData&) override;
 };
-// Pass::apply(GameChunk::Builder&, const spk::World::ChunkCoordinate&, MyGenerationData&);
+// Pass::apply(const spk::World::ChunkCoordinate&, MyGenerationData&);
 // generate(coordinate) -> std::optional<GameChunk>
 // request(coordinate) -> spk::Task<std::optional<GameChunk>>::Answer
 ~~~

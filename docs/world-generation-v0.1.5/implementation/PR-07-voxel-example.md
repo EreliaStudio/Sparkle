@@ -39,7 +39,7 @@ Le TU définit localement :
 - `WorldGenerator` : deux passes et zone finie de trois chunks ; hors zone, `generate()` renvoie `std::nullopt`.
 - Un montage `EngineHeadless` + `WorldObserver` + `WorkerPool` + `LocalChunkRequester` + `WorldStreamingSystem` + `ChunkCollection` + `ChunkFilter`.
 
-`spk::World::Generator<TChunk, TGenerationData, TBuilder>` accepte un builder distinct du chunk : par défaut `TChunk::Builder` pour les usages existants, et ici `Volume::Builder`. Après les passes, le générateur construit un `TChunk` par défaut et affecte le volume obtenu avec `setVolume()`. Les générateurs dont le builder retourne directement un `TChunk` conservent leur chemin précédent.
+`spk::World::Generator<TChunk, TGenerationData>` n'impose plus de builder. Les données de génération voxel contiennent un `Volume::Builder` préparé par `_createGenerationData(coord)` ; les passes le modifient via les données. `_instantiateChunk(data)` construit le volume et l'affecte au chunk avec `setVolume()`.
 
 ## Vérifications des TU
 
