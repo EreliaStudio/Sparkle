@@ -1,10 +1,15 @@
 #pragma once
 
+#include <map>
+#include <memory>
+#include <mutex>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "voxel/biome.hpp"
 #include "voxel/volume.hpp"
+#include "world/chunk_generation_data_collection.hpp"
 #include "world/height_map.hpp"
 
 namespace spk::Voxel
@@ -70,10 +75,112 @@ namespace spk::Voxel
 	};
 
 	template <std::size_t TCapacity>
-	struct BiomeGenerationData
+	class BiomeGenerationData
 	{
-		using Surface = BiomeSurfaceData<TCapacity>;
-		Volume::Builder builder;
-		std::shared_ptr<const Surface> surface;
+	public:
+		using ColumnData = BiomeSurfaceData<TCapacity>;
+		using ColumnHandle = std::shared_ptr<const ColumnData>;
+
+		struct ChunkData
+		{
+			Volume::Builder builder;
+			ColumnHandle column;
+		};
+
+	private:
+		struct ColumnEntry
+		{
+			std::mutex mutex;
+			ColumnHandle result;
+		};
+
+		mutable std::mutex _columnsMutex;
+		std::map<spk::Vector2Int, std::shared_ptr<ColumnEntry>> _columns;
+		World::ChunkGenerationDataCollection<ChunkData> _chunks;
+
+	public:
+		void prepare(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions, const Definition::Registry &registry)
+		{
+			Volume::Builder builder(dimensions);
+			builder.bind(registry);
+			_chunks.emplace(coordinate, ChunkData{std::move(builder), {}});
+		}
+
+		[[nodiscard]] ChunkData &chunk(const World::ChunkCoordinate &coordinate)
+		{
+			return _chunks.at(coordinate);
+		}
+		[[nodiscard]] const ChunkData &chunk(const World::ChunkCoordinate &coordinate) const
+		{
+			return _chunks.at(coordinate);
+		}
+		[[nodiscard]] Volume::Builder &builder(const World::ChunkCoordinate &coordinate)
+		{
+			return chunk(coordinate).builder;
+		}
+
+		void clean(const World::ChunkCoordinate &coordinate) noexcept
+		{
+			_chunks.erase(coordinate);
+		}
+
+		[[nodiscard]] std::size_t activeChunkCount() const
+		{
+			return _chunks.count();
+		}
+
+		// Build and publish a complete immutable column, or leave it retryable.
+		// The callback must not recursively request columns from this cache.
+		template <typename TBuild>
+		[[nodiscard]] ColumnHandle obtainColumn(const spk::Vector2Int &coordinate, TBuild &&build)
+		{
+			std::shared_ptr<ColumnEntry> entry;
+			{
+				const std::scoped_lock lock(_columnsMutex);
+				auto it = _columns.find(coordinate);
+				if (it == _columns.end())
+				{
+					it = _columns.emplace(coordinate, std::make_shared<ColumnEntry>()).first;
+				}
+				entry = it->second;
+			}
+			const std::scoped_lock lock(entry->mutex);
+			if (!entry->result)
+			{
+				auto column = std::make_shared<ColumnData>();
+				build(*column);
+				entry->result = std::move(column);
+			}
+			return entry->result;
+		}
+
+		[[nodiscard]] std::size_t columnCount() const
+		{
+			const std::scoped_lock lock(_columnsMutex);
+			return _columns.size();
+		}
+
+		// Reclaim idle columns only; active builds and externally held handles
+		// keep their entries alive. Queued jobs do not need reservations.
+		void flush()
+		{
+			std::vector<std::shared_ptr<ColumnEntry>> retired;
+			{
+				const std::scoped_lock lock(_columnsMutex);
+				for (auto it = _columns.begin(); it != _columns.end();)
+				{
+					const auto &entry = it->second;
+					if (entry.use_count() == 1 && (!entry->result || entry->result.use_count() == 1))
+					{
+						retired.push_back(std::move(it->second));
+						it = _columns.erase(it);
+					}
+					else
+					{
+						++it;
+					}
+				}
+			}
+		}
 	};
 }

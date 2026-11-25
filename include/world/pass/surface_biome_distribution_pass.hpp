@@ -1,7 +1,7 @@
 #pragma once
 
 #include "world/pass/biome_distribution_pass.hpp"
-#include "world/pass/surface_generation_pass.hpp"
+#include "world/pass/surface_pass.hpp"
 #include "world/surface_biome.hpp"
 
 namespace spk::World

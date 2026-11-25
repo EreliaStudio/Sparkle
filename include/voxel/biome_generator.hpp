@@ -1,5 +1,10 @@
 #pragma once
 
+#include <concepts>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "voxel/pass/strata_application_pass.hpp"
 #include "voxel/pass/strata_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
@@ -14,13 +19,12 @@ namespace spk::Voxel
 	{
 	public:
 		using GenerationData = BiomeGenerationData<TCapacity>;
-		using SurfaceData = typename GenerationData::Surface;
+		using SurfaceData = typename GenerationData::ColumnData;
 		using InfluenceGrid = typename SurfaceData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
 		using HeightCombination = typename World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>::Combination;
 
 	private:
-		using SurfaceBase = World::SurfaceGenerationPass<TChunk, GenerationData>;
 		using DistributionBase = World::SurfaceBiomeDistributionPass<SurfaceData, TCapacity>;
 		using CombinationBase = World::SurfaceHeightCombinationPass<SurfaceData, TCapacity>;
 		using StrataBase = StrataGenerationPass<SurfaceData, TCapacity>;
@@ -81,66 +85,92 @@ namespace spk::Voxel
 			}
 		};
 
-		class Surface : public SurfaceBase
+		// A regular generator pass. The cache and its synchronization belong to
+		// GenerationData, not to the pass or the streaming system.
+		class ColumnPass : public World::Generator<TChunk, GenerationData>::Pass
 		{
 		private:
+			using Pass = World::SurfacePass<SurfaceData>;
+			std::vector<std::unique_ptr<Pass>> _passes;
 			Strata _strata;
 
-		protected:
-			typename SurfaceBase::Handle &_surfaceDestination(GenerationData &data) override
+		public:
+			template <typename TPass, typename... TArgs>
+				requires std::derived_from<TPass, Pass>
+			TPass &addPass(TArgs &&...args)
 			{
-				return data.surface;
+				auto pass = std::make_unique<TPass>(std::forward<TArgs>(args)...);
+				auto &result = *pass;
+				_passes.push_back(std::move(pass));
+				return result;
 			}
-			void _finalizeSurfaceData(const spk::Vector2Int &coordinate, SurfaceData &data) override
+
+			void apply(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 			{
-				_strata.apply(coordinate, data);
+				const spk::Vector2Int key{coordinate.x, coordinate.z};
+				data.chunk(coordinate).column = data.obtainColumn(key, [&](SurfaceData &column) {
+					for (auto &pass : _passes)
+					{
+						pass->apply(key, column);
+					}
+					_strata.apply(key, column);
+				});
 			}
 		};
 
 		class Application : public ApplicationBase
 		{
 		protected:
-			const World::HeightMap::Grid &_heights(const GenerationData &data) override
+			const World::HeightMap::Grid &_heights(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
-				return *data.surface->heights;
+				return *data.chunk(coordinate).column->heights;
 			}
-			const StrataGrid::Grid &_strata(const GenerationData &data) override
+			const StrataGrid::Grid &_strata(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
-				return *data.surface->strata;
+				return *data.chunk(coordinate).column->strata;
 			}
 		};
 
 		Definition::Registry _registry;
 		float _scale;
-		Surface *_surface;
+		ColumnPass *_surface;
 
 	protected:
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
 
-		std::optional<GenerationData> _createGenerationData(const World::ChunkCoordinate &) override
+		bool _prepareGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
-			GenerationData data{Volume::Builder({static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.y), static_cast<std::uint32_t>(TChunk::Size.z)}), {}};
-			data.builder.bind(_registry);
-			return data;
+			data.prepare(coordinate, spk::Vector3UInt{TChunk::Size}, _registry);
+			return true;
 		}
 
-		TChunk _instantiateChunk(GenerationData &data) override
+		TChunk _instantiateChunk(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
 			TChunk chunk;
-			chunk.setVolume(data.builder.build());
+			chunk.setVolume(data.builder(coordinate).build());
 			return chunk;
+		}
+
+		void _cleanGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) noexcept override
+		{
+			data.clean(coordinate);
 		}
 
 	public:
 		explicit BiomeGenerator(const Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
 			_registry(registry),
 			_scale(scale),
-			_surface(&this->template addPass<Surface>())
+			_surface(&this->template addPass<ColumnPass>())
 		{
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			_surface->template addPass<Distribution>(*this);
 			_surface->template addPass<Combination>(combination);
 			this->template addPass<Application>();
+		}
+
+		void flush()
+		{
+			this->generationData().flush();
 		}
 
 		template <typename TPass, typename... TArgs>

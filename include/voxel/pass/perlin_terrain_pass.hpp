@@ -143,7 +143,7 @@ namespace spk::Voxel
 
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
-			auto &builder = data.builder;
+			auto &builder = data.builder(coordinate);
 			const World::ChunkWorldCoordinate origin = TChunk::chunkCoordinateToWorld(coordinate);
 			for (std::int32_t z = 0; z < TChunk::Size.z; ++z)
 			{

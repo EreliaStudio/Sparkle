@@ -9,15 +9,15 @@ namespace spk::Voxel
 	class StrataApplicationPass : public World::Generator<TChunk, TGenerationData>::Pass
 	{
 	protected:
-		virtual const World::HeightMap::Grid &_heights(const TGenerationData &data) = 0;
-		virtual const StrataGrid::Grid &_strata(const TGenerationData &data) = 0;
+		virtual const World::HeightMap::Grid &_heights(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
+		virtual const StrataGrid::Grid &_strata(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
 
 	public:
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
-			auto &builder = data.builder;
-			const auto &heights = _heights(data);
-			const auto &strata = _strata(data);
+			auto &builder = data.builder(coordinate);
+			const auto &heights = _heights(coordinate, data);
+			const auto &strata = _strata(coordinate, data);
 			const auto origin = TChunk::chunkCoordinateToWorld(coordinate);
 			const spk::Vector2UInt size{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)};
 			const spk::Vector2 expectedOrigin{static_cast<float>(origin.x), static_cast<float>(origin.z)};

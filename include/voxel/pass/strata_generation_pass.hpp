@@ -1,7 +1,7 @@
 #pragma once
 
 #include "voxel/biome_surface_data.hpp"
-#include "world/pass/surface_generation_pass.hpp"
+#include "world/pass/surface_pass.hpp"
 
 namespace spk::Voxel
 {
