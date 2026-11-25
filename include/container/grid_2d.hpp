@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "container/capacity_pool.hpp"
+#include "math/vector2.hpp"
 
 namespace spk
 {
@@ -16,30 +17,15 @@ namespace spk
 		using Reference = typename std::vector<TElement>::reference;
 		using ConstReference = typename std::vector<TElement>::const_reference;
 
-		struct Layout
-		{
-			std::size_t width;
-			std::size_t height;
-
-			[[nodiscard]] std::size_t count() const
-			{
-				if (width == 0 || height == 0 || width > std::numeric_limits<std::size_t>::max() / height)
-				{
-					throw spk::Exception("Invalid Grid2D dimensions");
-				}
-				return width * height;
-			}
-		};
-
 	private:
-		Layout _layout{0, 0};
+		spk::Vector2UInt _size{};
 		std::vector<TElement> _elements;
 		ReleaseContract _releaseContract;
 
 		explicit Grid2D(std::size_t capacity) :
 			_releaseContract(subscribeToRelease([this]() {
 				_elements.clear();
-				_layout = {0, 0};
+				_size = {};
 			}))
 		{
 			_elements.reserve(capacity);
@@ -47,11 +33,11 @@ namespace spk
 
 		[[nodiscard]] std::size_t _index(std::size_t x, std::size_t y) const
 		{
-			if (x >= _layout.width || y >= _layout.height)
+			if (x >= _size.x || y >= _size.y)
 			{
 				throw spk::Exception("Grid2D index is outside its domain");
 			}
-			return y * _layout.width + x;
+			return y * _size.x + x;
 		}
 
 	public:
@@ -63,10 +49,13 @@ namespace spk
 			terminateLifeCycle();
 		}
 
-		[[nodiscard]] static Lease obtain(std::size_t width, std::size_t height)
+		[[nodiscard]] static Lease obtain(const spk::Vector2UInt &size)
 		{
-			const Layout layout{width, height};
-			const auto count = layout.count();
+			if (size.x == 0 || size.y == 0 || static_cast<std::size_t>(size.x) > std::numeric_limits<std::size_t>::max() / size.y)
+			{
+				throw spk::Exception("Invalid Grid2D dimensions");
+			}
+			const auto count = static_cast<std::size_t>(size.x) * size.y;
 			if (CapacityPool<Grid2D>::capacityFor(count) > std::vector<TElement>().max_size())
 			{
 				throw spk::Exception("Grid2D exceeds storage limits");
@@ -76,13 +65,18 @@ namespace spk
 			});
 			return pool.obtain(count, [&](Grid2D &grid) {
 				grid._elements.resize(count);
-				grid._layout = layout;
+				grid._size = size;
 			});
 		}
 
-		[[nodiscard]] Layout layout() const noexcept
+		[[nodiscard]] const spk::Vector2UInt &size() const noexcept
 		{
-			return _layout;
+			return _size;
+		}
+
+		[[nodiscard]] std::size_t count() const noexcept
+		{
+			return _elements.size();
 		}
 
 		[[nodiscard]] std::size_t capacity() const noexcept

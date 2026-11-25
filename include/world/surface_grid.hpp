@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -24,26 +25,23 @@ namespace spk::World
 			[[nodiscard]] bool operator==(const Configuration &) const = default;
 		};
 
-		using Layout = typename spk::Grid2D<TElement>::Layout;
-
 	private:
 		Configuration _configuration{};
 		spk::Vector2 _origin{};
-		Layout _layout{0, 0};
 		typename spk::Grid2D<TElement>::Lease _elements;
 		ReleaseContract _releaseContract;
 
-		static std::size_t _axisCount(unsigned int size, float scale)
+		static std::uint32_t _axisCount(std::uint32_t size, float scale)
 		{
 			const double quotient = static_cast<double>(size) / scale;
 			const double rounded = std::round(quotient);
 			const double tolerance = std::min(1.0e-5, 4.0 * std::numeric_limits<float>::epsilon() * std::abs(quotient));
 			if (!std::isfinite(quotient) || std::abs(quotient - rounded) > tolerance ||
-				rounded >= static_cast<double>(std::numeric_limits<std::size_t>::max()))
+				rounded >= static_cast<double>(std::numeric_limits<std::uint32_t>::max()))
 			{
 				throw spk::Exception("Surface grid extent must be divisible by its scale");
 			}
-			return static_cast<std::size_t>(rounded) + 1;
+			return static_cast<std::uint32_t>(rounded) + 1;
 		}
 
 	protected:
@@ -62,24 +60,23 @@ namespace spk::World
 		template <typename TGrid, typename TFactory, typename TConfigure>
 		[[nodiscard]] static typename spk::Pool<TGrid>::Lease _obtain(const Configuration &configuration, const spk::Vector2 &origin, TFactory factory, TConfigure configure)
 		{
-			const auto layout = layoutFor(configuration);
+			const auto dimensions = sampleSizeFor(configuration);
 			static spk::Pool<TGrid> pool(factory);
 			return pool.obtain([&](TGrid &grid) {
-				grid._configure(configuration, origin, layout);
+				grid._configure(configuration, origin, dimensions);
 				configure(grid);
 			});
 		}
 
-		void _configure(const Configuration &configuration, const spk::Vector2 &origin, Layout layout)
+		void _configure(const Configuration &configuration, const spk::Vector2 &origin, const spk::Vector2UInt &dimensions)
 		{
 			if (!std::isfinite(origin.x) || !std::isfinite(origin.y))
 			{
 				throw spk::Exception("Surface grid origin must be finite");
 			}
-			_elements = spk::Grid2D<TElement>::obtain(layout.width, layout.height);
+			_elements = spk::Grid2D<TElement>::obtain(dimensions);
 			_configuration = configuration;
 			_origin = origin;
-			_layout = layout;
 		}
 
 		[[nodiscard]] double _sampleAxis(float position, unsigned int extent, std::size_t count) const
@@ -100,18 +97,18 @@ namespace spk::World
 		SurfaceGrid(const SurfaceGrid &) = delete;
 		SurfaceGrid &operator=(const SurfaceGrid &) = delete;
 
-		[[nodiscard]] static Layout layoutFor(const Configuration &configuration)
+		[[nodiscard]] static spk::Vector2UInt sampleSizeFor(const Configuration &configuration)
 		{
 			if (!std::isfinite(configuration.scale) || configuration.scale <= 0.0f)
 			{
 				throw spk::Exception("Surface grid scale must be finite and positive");
 			}
-			const Layout layout{_axisCount(configuration.size.x, configuration.scale), _axisCount(configuration.size.y, configuration.scale)};
-			if (layout.count() > std::vector<TElement>().max_size())
+			const spk::Vector2UInt dimensions{_axisCount(configuration.size.x, configuration.scale), _axisCount(configuration.size.y, configuration.scale)};
+			if (static_cast<std::size_t>(dimensions.x) > std::vector<TElement>().max_size() / dimensions.y)
 			{
 				throw spk::Exception("Surface grid exceeds storage limits");
 			}
-			return layout;
+			return dimensions;
 		}
 
 		[[nodiscard]] const Configuration &configuration() const noexcept
@@ -122,9 +119,13 @@ namespace spk::World
 		{
 			return _origin;
 		}
-		[[nodiscard]] Layout layout() const noexcept
+		[[nodiscard]] spk::Vector2UInt sampleSize() const noexcept
 		{
-			return _layout;
+			return _elements ? _elements->size() : spk::Vector2UInt{};
+		}
+		[[nodiscard]] std::size_t count() const noexcept
+		{
+			return _elements ? _elements->count() : 0;
 		}
 		[[nodiscard]] std::size_t capacity() const noexcept
 		{
@@ -137,7 +138,7 @@ namespace spk::World
 		}
 		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference sample(std::size_t x, std::size_t z) const
 		{
-			if (x >= _layout.width || z >= _layout.height)
+			if (x >= sampleSize().x || z >= sampleSize().y)
 			{
 				throw spk::Exception("Surface grid sample index is outside its domain");
 			}
@@ -145,21 +146,21 @@ namespace spk::World
 		}
 		[[nodiscard]] spk::Vector2 localPosition(std::size_t x, std::size_t z) const
 		{
-			if (x >= _layout.width || z >= _layout.height)
+			if (x >= sampleSize().x || z >= sampleSize().y)
 			{
 				throw spk::Exception("Surface grid sample index is outside its domain");
 			}
 			return {
-				x == _layout.width - 1 ? static_cast<float>(_configuration.size.x) : static_cast<float>(x * static_cast<double>(_configuration.scale)),
-				z == _layout.height - 1 ? static_cast<float>(_configuration.size.y) : static_cast<float>(z * static_cast<double>(_configuration.scale))};
+				x == sampleSize().x - 1 ? static_cast<float>(_configuration.size.x) : static_cast<float>(x * static_cast<double>(_configuration.scale)),
+				z == sampleSize().y - 1 ? static_cast<float>(_configuration.size.y) : static_cast<float>(z * static_cast<double>(_configuration.scale))};
 		}
 		[[nodiscard]] typename spk::Grid2D<TElement>::Reference at(const spk::Vector2 &position)
 		{
-			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, _layout.width)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, _layout.height)));
+			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, sampleSize().x)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, sampleSize().y)));
 		}
 		[[nodiscard]] typename spk::Grid2D<TElement>::ConstReference at(const spk::Vector2 &position) const
 		{
-			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, _layout.width)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, _layout.height)));
+			return sample(static_cast<std::size_t>(_sampleAxis(position.x, _configuration.size.x, sampleSize().x)), static_cast<std::size_t>(_sampleAxis(position.y, _configuration.size.y, sampleSize().y)));
 		}
 	};
 }

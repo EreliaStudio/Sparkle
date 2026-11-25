@@ -23,10 +23,10 @@ namespace spk::World
 			const auto &influences = _influences(data);
 			const auto &config = influences.configuration();
 			auto grid = Grid::obtain({config.size, config.scale}, influences.worldOrigin());
-			const auto layout = grid->layout();
-			for (std::size_t z = 0; z < layout.height; ++z)
+			const auto layout = grid->sampleSize();
+			for (std::size_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.width; ++x)
+				for (std::size_t x = 0; x < layout.x; ++x)
 				{
 					double height = 0.0;
 					bool found = false;

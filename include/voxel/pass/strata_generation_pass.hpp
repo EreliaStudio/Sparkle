@@ -21,10 +21,10 @@ namespace spk::Voxel
 		{
 			const auto &influences = _influences(data);
 			auto grid = Grid::obtain({influences.configuration().size, 1.0f}, influences.worldOrigin());
-			const auto layout = grid->layout();
-			for (std::size_t z = 0; z < layout.height; ++z)
+			const auto layout = grid->sampleSize();
+			for (std::size_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.width; ++x)
+				for (std::size_t x = 0; x < layout.x; ++x)
 				{
 					const auto *biome = dynamic_cast<const Biome *>(influences.dominant(grid->localPosition(x, z), InfluenceGrid::Interpolation::Bilinear));
 					if (biome == nullptr)

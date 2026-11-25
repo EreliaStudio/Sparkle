@@ -241,10 +241,10 @@ namespace sparkle_test::biome_validation
 			void apply(const spk::Vector2Int &, SurfaceData &data) override
 			{
 				auto &grid = *data.heights;
-				const auto layout = grid.layout();
-				for (std::size_t z = 0; z < layout.height; ++z)
+				const auto layout = grid.sampleSize();
+				for (std::size_t z = 0; z < layout.y; ++z)
 				{
-					for (std::size_t x = 0; x < layout.width; ++x)
+					for (std::size_t x = 0; x < layout.x; ++x)
 					{
 						grid.sample(x, z) = 4.0f * std::floor(grid.sample(x, z) / 4.0f);
 					}

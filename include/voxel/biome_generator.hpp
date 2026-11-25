@@ -132,7 +132,7 @@ namespace spk::Voxel
 			_scale(scale),
 			_surface(&this->template addPass<Surface>())
 		{
-			(void)InfluenceGrid::layoutFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
+			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			_surface->template addPass<Distribution>(*this);
 			_surface->template addPass<Combination>();
 			this->template addPass<Application>();

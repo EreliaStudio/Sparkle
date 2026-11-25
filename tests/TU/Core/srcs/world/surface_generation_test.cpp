@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "container/grid_2d.hpp"
+#include <cstdint>
 
 #include <array>
 #include <atomic>
@@ -171,7 +172,8 @@ TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
 	HeightMap map;
 	map.setBaseHeight(7.5f);
 	auto grid = map.generate({{16, 16}, 2}, {-16, 0});
-	EXPECT_EQ(grid->layout().count(), 81u);
+	EXPECT_EQ(grid->count(), 81u);
+	EXPECT_EQ(grid->sampleSize(), (spk::Vector2UInt{9, 9}));
 	EXPECT_GE(grid->capacity(), 128u);
 	EXPECT_FLOAT_EQ(grid->at({16, 16}), 7.5f);
 	grid->at({0, 0}) = 0;
@@ -256,11 +258,11 @@ TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
 		auto left = map.generate({{16, 16}, scale}, {-16, -16});
 		auto right = map.generate({{16, 16}, scale}, {0, -16});
 		auto back = map.generate({{16, 16}, scale}, {-16, 0});
-		const auto layout = left->layout();
-		for (std::size_t i = 0; i < layout.width; ++i)
+		const auto layout = left->sampleSize();
+		for (std::size_t i = 0; i < layout.x; ++i)
 		{
-			EXPECT_FLOAT_EQ(left->sample(layout.width - 1, i), right->sample(0, i));
-			EXPECT_FLOAT_EQ(left->sample(i, layout.height - 1), back->sample(i, 0));
+			EXPECT_FLOAT_EQ(left->sample(layout.x - 1, i), right->sample(0, i));
+			EXPECT_FLOAT_EQ(left->sample(i, layout.y - 1), back->sample(i, 0));
 		}
 		EXPECT_FLOAT_EQ(left->at({16, 16}), map.sample({0, 0}));
 	}
@@ -294,9 +296,9 @@ TEST(SurfaceGridTest, RecycledInfluenceGridResetsEverySlot)
 	auto recycled = Grid::obtain({{8, 8}, 1}, {16, -16});
 	EXPECT_EQ(recycled.get(), address);
 	EXPECT_EQ(recycled->worldOrigin(), (spk::Vector2{16, -16}));
-	for (std::size_t z = 0; z < recycled->layout().height; ++z)
+	for (std::size_t z = 0; z < recycled->sampleSize().y; ++z)
 	{
-		for (std::size_t x = 0; x < recycled->layout().width; ++x)
+		for (std::size_t x = 0; x < recycled->sampleSize().x; ++x)
 		{
 			for (const auto &influence : recycled->sample(x, z))
 			{
@@ -319,10 +321,10 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 	EXPECT_EQ(data.heights.get(), old);
 	ConstantBiome valid(20);
 	ConstantBiome invalid(std::numeric_limits<float>::quiet_NaN());
-	const auto layout = data.influences->layout();
-	for (std::size_t z = 0; z < layout.height; ++z)
+	const auto layout = data.influences->sampleSize();
+	for (std::size_t z = 0; z < layout.y; ++z)
 	{
-		for (std::size_t x = 0; x < layout.width; ++x)
+		for (std::size_t x = 0; x < layout.x; ++x)
 		{
 			data.influences->sample(x, z) = {{{&valid, 1}, {&invalid, 0}}};
 		}
@@ -458,16 +460,16 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 TEST(Grid2DTest, ReusesCapacityAcrossShapesAndResetsCells)
 {
 	using Grid = spk::Grid2D<int>;
-	auto grid = Grid::obtain(3, 5);
+	auto grid = Grid::obtain({3, 5});
 	const auto *address = grid.get();
 	EXPECT_GE(grid->capacity(), 16u);
-	EXPECT_EQ(grid->layout().count(), 15u);
+	EXPECT_EQ(grid->count(), 15u);
 	grid->at(2, 4) = 42;
 	grid = {};
-	auto recycled = Grid::obtain(4, 4);
+	auto recycled = Grid::obtain({4, 4});
 	EXPECT_EQ(recycled.get(), address);
-	EXPECT_EQ(recycled->layout().width, 4u);
-	EXPECT_EQ(recycled->layout().height, 4u);
+	EXPECT_EQ(recycled->size(), (spk::Vector2UInt{4, 4}));
+	EXPECT_EQ(recycled->count(), 16u);
 	for (std::size_t y = 0; y < 4; ++y)
 	{
 		for (std::size_t x = 0; x < 4; ++x)
@@ -477,15 +479,15 @@ TEST(Grid2DTest, ReusesCapacityAcrossShapesAndResetsCells)
 	}
 	EXPECT_THROW((void)recycled->at(4, 0), spk::Exception);
 	EXPECT_THROW((void)recycled->at(0, 4), spk::Exception);
-	EXPECT_THROW((void)Grid::obtain(0, 4), spk::Exception);
-	EXPECT_THROW((void)Grid::obtain(std::numeric_limits<std::size_t>::max(), 2), spk::Exception);
+	EXPECT_THROW((void)Grid::obtain({0, 4}), spk::Exception);
+	EXPECT_THROW((void)Grid::obtain({std::numeric_limits<std::uint32_t>::max(), std::numeric_limits<std::uint32_t>::max()}), spk::Exception);
 }
 
 TEST(Grid2DTest, ReleasesElementsAndKeepsConcurrentLeasesIndependent)
 {
 	using Grid = spk::Grid2D<std::shared_ptr<int>>;
-	auto first = Grid::obtain(2, 2);
-	auto second = Grid::obtain(2, 2);
+	auto first = Grid::obtain({2, 2});
+	auto second = Grid::obtain({2, 2});
 	EXPECT_NE(first.get(), second.get());
 	first->at(0, 0) = std::make_shared<int>(7);
 	std::weak_ptr<int> observer = first->at(0, 0);

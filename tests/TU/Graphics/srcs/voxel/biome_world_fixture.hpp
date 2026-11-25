@@ -60,10 +60,10 @@ namespace sparkle_test::biome_world
 			void apply(const spk::Vector2Int &, SurfaceData &data) override
 			{
 				auto &grid = *data.heights;
-				const auto layout = grid.layout();
-				for (std::size_t z = 0; z < layout.height; ++z)
+				const auto layout = grid.sampleSize();
+				for (std::size_t z = 0; z < layout.y; ++z)
 				{
-					for (std::size_t x = 0; x < layout.width; ++x)
+					for (std::size_t x = 0; x < layout.x; ++x)
 					{
 						const auto position = grid.worldOrigin() + grid.localPosition(x, z);
 						const float weight = std::clamp((7.0f - std::abs(position.y)) / 4.0f, 0.0f, 1.0f);

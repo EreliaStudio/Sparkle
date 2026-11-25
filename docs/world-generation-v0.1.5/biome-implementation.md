@@ -6,8 +6,8 @@ The design branch remains unchanged. No merge is authorized by this record.
 ## Layers
 
 - World::Biome / World::SurfaceBiome: identity and continuous absolute height.
-- spk::Grid2D<T>: generic contiguous 2D storage, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity.
-- World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease.
+- spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity.
+- World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease.
 - World::HeightMap: named Perlin layers, mutable construction grids, nearest/bilinear sampling.
 - World::SurfacePass<TSurfaceData>: abstract construction steps, receiving only X/Z.
 - World::SurfaceGenerationPass: owns child passes and one entry per active horizontal column.

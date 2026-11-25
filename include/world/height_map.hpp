@@ -47,14 +47,14 @@ namespace spk::World
 
 			[[nodiscard]] float at(const spk::Vector2 &position, Interpolation interpolation) const
 			{
-				const auto dimensions = layout();
+				const auto dimensions = sampleSize();
 				const auto &config = configuration();
-				const double x = _sampleAxis(position.x, config.size.x, dimensions.width);
-				const double z = _sampleAxis(position.y, config.size.y, dimensions.height);
+				const double x = _sampleAxis(position.x, config.size.x, dimensions.x);
+				const double z = _sampleAxis(position.y, config.size.y, dimensions.y);
 				const auto x0 = static_cast<std::size_t>(x);
 				const auto z0 = static_cast<std::size_t>(z);
-				const auto x1 = std::min(x0 + 1, dimensions.width - 1);
-				const auto z1 = std::min(z0 + 1, dimensions.height - 1);
+				const auto x1 = std::min(x0 + 1, dimensions.x - 1);
+				const auto z1 = std::min(z0 + 1, dimensions.y - 1);
 				switch (interpolation)
 				{
 				case Interpolation::Nearest:
@@ -111,10 +111,10 @@ namespace spk::World
 		[[nodiscard]] Grid::Lease generate(const Grid::Configuration &configuration, const spk::Vector2 &origin) const
 		{
 			auto grid = Grid::obtain(configuration, origin);
-			const auto layout = grid->layout();
-			for (std::size_t z = 0; z < layout.height; ++z)
+			const auto layout = grid->sampleSize();
+			for (std::size_t z = 0; z < layout.y; ++z)
 			{
-				for (std::size_t x = 0; x < layout.width; ++x)
+				for (std::size_t x = 0; x < layout.x; ++x)
 				{
 					grid->sample(x, z) = sample(origin + grid->localPosition(x, z));
 				}
