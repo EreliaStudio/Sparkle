@@ -666,12 +666,12 @@ namespace
 
 TEST(BiomeWorldGolden, SmoothThreeBiomeOverview)
 {
-	captureBiomeWorld("smooth_overview", false, {52, 52, 60}, {0, 9, 0});
+	captureBiomeWorld("smooth_overview", false, {-78, 75, -82}, {0, 9, 0});
 }
 
 TEST(BiomeWorldGolden, HardBiomeBoundaries)
 {
-	captureBiomeWorld("hard_boundaries", true, {52, 52, 60}, {0, 9, 0});
+	captureBiomeWorld("hard_boundaries", true, {-78, 75, -82}, {0, 9, 0});
 }
 
 TEST(BiomeWorldGolden, TopDownBiomeDistribution)
@@ -686,7 +686,7 @@ TEST(BiomeWorldGolden, StrataAndCliffsFromBelow)
 
 TEST(BiomeWorldGolden, CustomHeightModification)
 {
-	captureBiomeWorld("custom_height_edit", false, {52, 52, 60}, {0, 9, 0}, true);
+	captureBiomeWorld("custom_height_edit", false, {-78, 75, -82}, {0, 9, 0}, true);
 }
 
 namespace
