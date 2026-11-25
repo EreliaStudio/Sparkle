@@ -4,10 +4,10 @@
 #include <array>
 #include <atomic>
 #include <cmath>
-#include <set>
-#include <vector>
 #include <future>
 #include <limits>
+#include <set>
+#include <vector>
 
 #include "voxel/biome_generator.hpp"
 #include "voxel/chunk.hpp"
@@ -69,7 +69,10 @@ namespace
 
 	public:
 		mutable std::atomic<int> samples{0};
-		Biome &biome() { return _biome; }
+		Biome &biome()
+		{
+			return _biome;
+		}
 
 		explicit Generator(float scale = 1.0f) :
 			BiomeGenerator(registry(), scale)
@@ -144,7 +147,9 @@ namespace
 	std::vector<Layer> sampled(const Biome &biome, const spk::Vector2 &position)
 	{
 		std::vector<Layer> layers;
-		biome.sampleStrata(position, [&](Layer layer) { layers.push_back(layer); });
+		biome.sampleStrata(position, [&](Layer layer) {
+			layers.push_back(layer);
+		});
 		return layers;
 	}
 
@@ -171,7 +176,8 @@ TEST(VoxelBiomeGeneratorTest, PerlinMaterialSelectionMatchesWeightedThresholds)
 		{
 			const spk::Vector2 p{static_cast<float>(x), static_cast<float>(z)};
 			const double value = stratum.materialNoise.sample2D(p.x, p.y);
-			const auto expected = value * 5 < 2 ? 1u : value * 5 < 3 ? 2u : 3u;
+			const auto expected = value * 5 < 2 ? 1u : value * 5 < 3 ? 2u
+																	 : 3u;
 			const auto result = sampled(biome, p);
 			ASSERT_EQ(result.size(), 1u);
 			EXPECT_EQ(result.front().voxelID, expected);
@@ -332,7 +338,9 @@ TEST(VoxelBiomeGeneratorTest, RejectsInvalidThicknessAndMaterialConfigurations)
 	Biome biome;
 	biome.strata().resize(1);
 	auto &s = biome.strata().front();
-	const auto sample = [&] { return sampled(biome, {0, 0}); };
+	const auto sample = [&] {
+		return sampled(biome, {0, 0});
+	};
 	s.materials.clear();
 	EXPECT_THROW((void)sample(), spk::Exception);
 	s.materials = {{1, 0}};
@@ -354,7 +362,9 @@ TEST(VoxelBiomeGeneratorTest, RejectsInvalidThicknessAndMaterialConfigurations)
 	EXPECT_THROW((void)sample(), spk::Exception);
 	for (float value : {-0.01f, 1.01f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
 	{
-		s.customDistribution = [value](const spk::Vector2 &) { return value; };
+		s.customDistribution = [value](const spk::Vector2 &) {
+			return value;
+		};
 		EXPECT_THROW((void)sample(), spk::Exception);
 	}
 	s.distribution = Stratum::Distribution::Weighted;
@@ -391,7 +401,10 @@ TEST(VoxelBiomeGeneratorTest, LocalRequesterRetainsQueuedColumnAfterObserverRele
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	std::promise<void> unblock;
 	auto gate = unblock.get_future().share();
-	auto blocker = workers.submit([gate] { gate.wait(); return 0; });
+	auto blocker = workers.submit([gate] {
+		gate.wait();
+		return 0;
+	});
 	auto upper = requester.request({0, 1, 0});
 	requester.release({0, 0, 0});
 	unblock.set_value();

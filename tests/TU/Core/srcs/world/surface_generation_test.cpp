@@ -339,8 +339,12 @@ TEST(SurfaceGenerationTest, DifferentColumnsHaveIndependentCacheLifetimes)
 	Generator generator;
 	generator.retain({-1, 0, 0});
 	generator.retain({0, 0, 0});
-	auto a = std::async(std::launch::async, [&] { return generator.generate({-1, 0, 0}); });
-	auto b = std::async(std::launch::async, [&] { return generator.generate({0, 0, 0}); });
+	auto a = std::async(std::launch::async, [&] {
+		return generator.generate({-1, 0, 0});
+	});
+	auto b = std::async(std::launch::async, [&] {
+		return generator.generate({0, 0, 0});
+	});
 	ASSERT_TRUE(a.get());
 	ASSERT_TRUE(b.get());
 	EXPECT_EQ(generator.calls.load(), 2);

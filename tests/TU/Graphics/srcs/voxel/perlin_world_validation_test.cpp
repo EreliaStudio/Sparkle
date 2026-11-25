@@ -40,8 +40,8 @@
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
-#include "biome_world_fixture.hpp"
 #include "biome_validation_fixture.hpp"
+#include "biome_world_fixture.hpp"
 #include "perlin_world_fixture.hpp"
 
 namespace

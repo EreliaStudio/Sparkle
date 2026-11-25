@@ -10,10 +10,44 @@
 
 namespace sparkle_test::biome_validation
 {
-	enum class Height { Flat, Hills, Multilayer, BelowZero, Tall };
-	enum class Placement { Single, Blend, Islands, Tie, Checker };
-	enum class Layers { Fixed, PerlinLow, PerlinHigh, Weighted, Custom, ThreeMaterials, VariableThickness, Independent, TwoPerlin, DeepPerlin, Finite, SingleInfinite };
-	enum class Cut { None, Horizontal, Half, Staircase };
+	enum class Height
+	{
+		Flat,
+		Hills,
+		Multilayer,
+		BelowZero,
+		Tall
+	};
+	enum class Placement
+	{
+		Single,
+		Blend,
+		Islands,
+		Tie,
+		Checker
+	};
+	enum class Layers
+	{
+		Fixed,
+		PerlinLow,
+		PerlinHigh,
+		Weighted,
+		Custom,
+		ThreeMaterials,
+		VariableThickness,
+		Independent,
+		TwoPerlin,
+		DeepPerlin,
+		Finite,
+		SingleInfinite
+	};
+	enum class Cut
+	{
+		None,
+		Horizontal,
+		Half,
+		Staircase
+	};
 
 	struct Settings
 	{
@@ -59,10 +93,16 @@ namespace sparkle_test::biome_validation
 		{
 			switch (cut)
 			{
-			case Cut::Horizontal: return y > cutHeight;
-			case Cut::Half: return x >= 0 && y > cutHeight;
-			case Cut::Staircase: return y > (x < -12 ? 27 : x < 12 ? 21 : 11) && z >= -24;
-			default: return false;
+			case Cut::Horizontal:
+				return y > cutHeight;
+			case Cut::Half:
+				return x >= 0 && y > cutHeight;
+			case Cut::Staircase:
+				return y > (x < -12 ? 27 : x < 12 ? 21
+												  : 11) &&
+					   z >= -24;
+			default:
+				return false;
 			}
 		}
 	};
@@ -90,8 +130,14 @@ namespace sparkle_test::biome_validation
 		Biome(Settings settings, std::uint32_t surfaceID, float altitudeOffset, std::uint32_t seed)
 		{
 			float altitude = 28.0f + altitudeOffset;
-			if (settings.height == Height::BelowZero) altitude = -9.0f + altitudeOffset;
-			if (settings.height == Height::Tall) altitude = 37.0f + altitudeOffset;
+			if (settings.height == Height::BelowZero)
+			{
+				altitude = -9.0f + altitudeOffset;
+			}
+			if (settings.height == Height::Tall)
+			{
+				altitude = 37.0f + altitudeOffset;
+			}
 			_map.setBaseHeight(altitude);
 			if (settings.height != Height::Flat)
 			{
@@ -142,7 +188,8 @@ namespace sparkle_test::biome_validation
 				deep.materials = {{3, 1}, {4, 1}};
 				_materialPerlin(deep, seed + 43, 0.07f);
 				break;
-			default: break;
+			default:
+				break;
 			}
 			if (settings.layers == Layers::VariableThickness || settings.layers == Layers::Independent)
 			{
@@ -217,14 +264,14 @@ namespace sparkle_test::biome_validation
 			{
 				const float a = std::clamp((p.x + 20.0f) / 40.0f, 0.0f, 1.0f);
 				const float b = std::clamp((p.y + 20.0f) / 40.0f, 0.0f, 1.0f);
-				cell = {{{&_first, (1-a)*(1-b)}, {&_second, a*(1-b)}, {&_third, b}}};
+				cell = {{{&_first, (1 - a) * (1 - b)}, {&_second, a * (1 - b)}, {&_third, b}}};
 				break;
 			}
 			case Placement::Islands:
 			{
 				const float noise = _regions.sample2D(p.x, p.y);
 				const float a = std::clamp((noise - 0.40f) / 0.20f, 0.0f, 1.0f);
-				cell[0] = {&_first, 1-a};
+				cell[0] = {&_first, 1 - a};
 				cell[1] = {&_third, a};
 				break;
 			}
