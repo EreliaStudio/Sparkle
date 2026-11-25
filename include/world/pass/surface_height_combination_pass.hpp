@@ -6,7 +6,7 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
+	template <typename TChunk, typename TGenerationData, std::size_t TCapacity = 4>
 	class SurfaceHeightCombinationPass : public SurfacePass<TChunk, TGenerationData>
 	{
 	public:
