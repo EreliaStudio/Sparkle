@@ -120,10 +120,10 @@ namespace sparkle_test::biome_validation
 		}
 		static void _materialPerlin(Stratum &stratum, std::uint32_t seed, float frequency)
 		{
-			stratum.distribution = Stratum::Distribution::Perlin;
-			stratum.materialNoise.setSeed(seed);
-			stratum.materialNoise.setFrequency(frequency);
-			stratum.materialNoise.setOctaves(1);
+			stratum.distribution = Stratum::Distribution::Perlin{};
+			std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setSeed(seed);
+			std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setFrequency(frequency);
+			std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setOctaves(1);
 		}
 
 	public:
@@ -151,13 +151,13 @@ namespace sparkle_test::biome_validation
 			Stratum top;
 			top.materials = {{surfaceID, 1}};
 			Stratum middle;
-			middle.minimumThickness = middle.maximumThickness = 10;
+			middle.thickness = Stratum::Thickness::Fixed{10};
 			middle.materials = {{2, 1}};
 			Stratum lower;
-			lower.minimumThickness = lower.maximumThickness = 7;
+			lower.thickness = Stratum::Thickness::Fixed{7};
 			lower.materials = {{4, 1}};
 			Stratum deep;
-			deep.thicknessMode = Stratum::ThicknessMode::Infinite;
+			deep.thickness = Stratum::Thickness::Infinite{};
 			deep.materials = {{3, 1}};
 
 			switch (settings.layers)
@@ -171,14 +171,13 @@ namespace sparkle_test::biome_validation
 				break;
 			case Layers::Weighted:
 				middle.materials = {{2, 3}, {3, 1}};
-				middle.seed = seed + 31;
+				middle.distribution = Stratum::Distribution::Weighted{seed + 31};
 				break;
 			case Layers::Custom:
 				middle.materials = {{2, 1}, {4, 1}};
-				middle.distribution = Stratum::Distribution::Custom;
-				middle.customDistribution = [](const spk::Vector2 &p) {
+				middle.distribution = Stratum::Distribution::Custom{[](const spk::Vector2 &p) {
 					return std::sin(p.x * 0.33f + std::sin(p.y * 0.17f) * 2.5f) > 0 ? 0.75f : 0.25f;
-				};
+				}};
 				break;
 			case Layers::ThreeMaterials:
 				middle.materials = {{2, 2}, {4, 1}, {3, 2}};
@@ -193,10 +192,9 @@ namespace sparkle_test::biome_validation
 			}
 			if (settings.layers == Layers::VariableThickness || settings.layers == Layers::Independent)
 			{
-				middle.minimumThickness = 1;
-				middle.maximumThickness = 14;
-				middle.thicknessNoise.setSeed(seed + 71);
-				middle.thicknessNoise.setFrequency(0.065f);
+				middle.thickness = Stratum::Thickness::Variable{1, 14, spk::Perlin{}};
+				std::get<Stratum::Thickness::Variable>(middle.thickness).noise.setSeed(seed + 71);
+				std::get<Stratum::Thickness::Variable>(middle.thickness).noise.setFrequency(0.065f);
 			}
 			if (settings.layers == Layers::TwoPerlin)
 			{

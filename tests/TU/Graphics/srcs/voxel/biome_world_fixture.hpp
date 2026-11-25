@@ -24,17 +24,16 @@ namespace sparkle_test::biome_world
 			top.materials = {{surface, 1.0f}};
 			strata().push_back(top);
 			Stratum middle;
-			middle.minimumThickness = 2;
-			middle.maximumThickness = 5;
-			middle.thicknessNoise.setSeed(seed + 1);
-			middle.thicknessNoise.setFrequency(0.09f);
+			middle.thickness = Stratum::Thickness::Variable{2, 5, spk::Perlin{}};
+			std::get<Stratum::Thickness::Variable>(middle.thickness).noise.setSeed(seed + 1);
+			std::get<Stratum::Thickness::Variable>(middle.thickness).noise.setFrequency(0.09f);
 			middle.materials = {{surface == 4 ? 4u : 2u, 3.0f}, {3u, 1.0f}};
-			middle.distribution = Stratum::Distribution::Perlin;
-			middle.materialNoise.setSeed(seed + 2);
-			middle.materialNoise.setFrequency(0.12f);
+			middle.distribution = Stratum::Distribution::Perlin{};
+			std::get<Stratum::Distribution::Perlin>(middle.distribution).noise.setSeed(seed + 2);
+			std::get<Stratum::Distribution::Perlin>(middle.distribution).noise.setFrequency(0.12f);
 			strata().push_back(middle);
 			Stratum deep;
-			deep.thicknessMode = Stratum::ThicknessMode::Infinite;
+			deep.thickness = Stratum::Thickness::Infinite{};
 			deep.materials = {{3, 1.0f}};
 			strata().push_back(deep);
 		}

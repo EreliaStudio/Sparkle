@@ -12,7 +12,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 - World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling.
 - World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it receives the full generation data and owns no cache.
 - Voxel::BiomeGenerationData: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
-- Voxel::Biome: ordered strata, weighted/Perlin/custom material selection, finite/infinite thickness.
+- Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
   Derived generators register custom passes, Strata and Application with addPass in dependency order; the base constructor registers Distribution and Combination.
   Existing PerlinTerrainPass and existing golden tests are not replaced.

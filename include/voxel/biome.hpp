@@ -7,6 +7,8 @@
 #include <functional>
 #include <limits>
 #include <optional>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 #include "math/perlin.hpp"
@@ -26,27 +28,50 @@ namespace spk::Voxel
 				float weight;
 			};
 
-			enum class ThicknessMode
+			struct Thickness
 			{
-				Finite,
-				Infinite
-			};
-			enum class Distribution
-			{
-				Weighted,
-				Perlin,
-				Custom
+				struct Fixed
+				{
+					std::uint32_t value = 1;
+				};
+
+				struct Variable
+				{
+					std::uint32_t minimum = 1;
+					std::uint32_t maximum = 1;
+					spk::Perlin noise{};
+				};
+
+				struct Infinite
+				{
+				};
+
+				using Configuration = std::variant<Fixed, Variable, Infinite>;
 			};
 
-			ThicknessMode thicknessMode = ThicknessMode::Finite;
-			std::uint32_t minimumThickness = 1;
-			std::uint32_t maximumThickness = 1;
-			spk::Perlin thicknessNoise{};
+			struct Distribution
+			{
+				struct Weighted
+				{
+					std::uint32_t seed = 0;
+				};
+
+				struct Perlin
+				{
+					spk::Perlin noise{};
+				};
+
+				struct Custom
+				{
+					std::function<float(const spk::Vector2 &)> function;
+				};
+
+				using Configuration = std::variant<Weighted, Perlin, Custom>;
+			};
+
+			Thickness::Configuration thickness = Thickness::Fixed{1};
+			Distribution::Configuration distribution = Distribution::Weighted{0};
 			std::vector<Material> materials;
-			Distribution distribution = Distribution::Weighted;
-			std::uint32_t seed = 0;
-			spk::Perlin materialNoise{};
-			std::function<float(const spk::Vector2 &)> customDistribution;
 		};
 
 		using StratumContainer = std::vector<Stratum>;
@@ -93,25 +118,27 @@ namespace spk::Voxel
 			{
 				throw spk::Exception("Voxel biome stratum has no positive material weight");
 			}
-			double sample;
-			switch (stratum.distribution)
-			{
-			case Stratum::Distribution::Weighted:
-				sample = _weightedSample(position, stratum.seed);
-				break;
-			case Stratum::Distribution::Perlin:
-				sample = stratum.materialNoise.sample2D(position.x, position.y);
-				break;
-			case Stratum::Distribution::Custom:
-				if (!stratum.customDistribution)
-				{
-					throw spk::Exception("Voxel biome stratum has no custom distribution");
-				}
-				sample = stratum.customDistribution(position);
-				break;
-			default:
-				throw spk::Exception("Unknown voxel biome material distribution");
-			}
+			const double sample = std::visit(
+				[&](const auto &configuration) -> double {
+					using Configuration = std::decay_t<decltype(configuration)>;
+					if constexpr (std::is_same_v<Configuration, Stratum::Distribution::Weighted>)
+					{
+						return _weightedSample(position, configuration.seed);
+					}
+					else if constexpr (std::is_same_v<Configuration, Stratum::Distribution::Perlin>)
+					{
+						return configuration.noise.sample2D(position.x, position.y);
+					}
+					else
+					{
+						if (!configuration.function)
+						{
+							throw spk::Exception("Voxel biome stratum has no custom distribution");
+						}
+						return configuration.function(position);
+					}
+				},
+				stratum.distribution);
 			if (!std::isfinite(sample) || sample < 0.0 || sample > 1.0)
 			{
 				throw spk::Exception("Voxel biome material sample must be in [0, 1]");
@@ -132,19 +159,35 @@ namespace spk::Voxel
 					break;
 				}
 			}
-			if (stratum.thicknessMode == Stratum::ThicknessMode::Infinite)
-			{
-				return {std::nullopt, id};
-			}
-			if (stratum.thicknessMode != Stratum::ThicknessMode::Finite ||
-				stratum.minimumThickness == 0 || stratum.minimumThickness > stratum.maximumThickness)
-			{
-				throw spk::Exception("Invalid voxel biome stratum thickness");
-			}
-			const double range = static_cast<double>(stratum.maximumThickness) - stratum.minimumThickness + 1.0;
-			const double noise = stratum.minimumThickness == stratum.maximumThickness ? 0.0 : stratum.thicknessNoise.sample2D(position.x, position.y);
-			const auto offset = std::min(range - 1.0, std::floor(noise * range));
-			return {stratum.minimumThickness + static_cast<std::uint32_t>(offset), id};
+			const auto thickness = std::visit(
+				[&](const auto &configuration) -> std::optional<std::uint32_t> {
+					using Configuration = std::decay_t<decltype(configuration)>;
+					if constexpr (std::is_same_v<Configuration, Stratum::Thickness::Infinite>)
+					{
+						return std::nullopt;
+					}
+					else if constexpr (std::is_same_v<Configuration, Stratum::Thickness::Fixed>)
+					{
+						if (configuration.value == 0)
+						{
+							throw spk::Exception("Invalid voxel biome stratum thickness");
+						}
+						return configuration.value;
+					}
+					else
+					{
+						if (configuration.minimum == 0 || configuration.minimum > configuration.maximum)
+						{
+							throw spk::Exception("Invalid voxel biome stratum thickness");
+						}
+						const double range = static_cast<double>(configuration.maximum) - configuration.minimum + 1.0;
+						const double noise = configuration.minimum == configuration.maximum ? 0.0 : configuration.noise.sample2D(position.x, position.y);
+						const auto offset = std::min(range - 1.0, std::floor(noise * range));
+						return configuration.minimum + static_cast<std::uint32_t>(offset);
+					}
+				},
+				stratum.thickness);
+			return {thickness, id};
 		}
 
 	public:
@@ -167,7 +210,7 @@ namespace spk::Voxel
 			for (std::size_t index = 0; index < _strata.size(); ++index)
 			{
 				const auto &stratum = _strata[index];
-				if (stratum.thicknessMode == Stratum::ThicknessMode::Infinite && index + 1 != _strata.size())
+				if (std::holds_alternative<Stratum::Thickness::Infinite>(stratum.thickness) && index + 1 != _strata.size())
 				{
 					throw spk::Exception("Only the final voxel biome stratum may be infinite");
 				}

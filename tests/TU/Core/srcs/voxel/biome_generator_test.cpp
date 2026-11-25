@@ -40,12 +40,11 @@ namespace
 			surface.materials = {{1, 1}};
 			strata().push_back(surface);
 			Stratum soil;
-			soil.minimumThickness = 2;
-			soil.maximumThickness = 2;
+			soil.thickness = Stratum::Thickness::Fixed{2};
 			soil.materials = {{2, 1}};
 			strata().push_back(soil);
 			Stratum deep;
-			deep.thicknessMode = Stratum::ThicknessMode::Infinite;
+			deep.thickness = Stratum::Thickness::Infinite{};
 			deep.materials = {{3, 1}};
 			strata().push_back(deep);
 		}
@@ -239,13 +238,11 @@ TEST(VoxelBiomeGeneratorTest, FiniteStrataAndCustomMaterialSelection)
 	Biome biome;
 	biome.strata().resize(1);
 	auto &stratum = biome.strata().front();
-	stratum.minimumThickness = 2;
-	stratum.maximumThickness = 2;
+	stratum.thickness = Biome::Stratum::Thickness::Fixed{2};
 	stratum.materials = {{1, 1}, {4, 3}};
-	stratum.distribution = Biome::Stratum::Distribution::Custom;
-	stratum.customDistribution = [](const spk::Vector2 &position) {
+	stratum.distribution = Biome::Stratum::Distribution::Custom{[](const spk::Vector2 &position) {
 		return position.x < 0 ? 0.0f : 1.0f;
-	};
+	}};
 	biome.sampleStrata({-1, 0}, [](const auto &layer) {
 		EXPECT_EQ(layer.voxelID, 1u);
 		EXPECT_EQ(layer.thickness, 2u);
@@ -276,10 +273,10 @@ namespace
 
 	void configurePerlin(Stratum &stratum, std::uint32_t seed, float frequency)
 	{
-		stratum.distribution = Stratum::Distribution::Perlin;
-		stratum.materialNoise.setSeed(seed);
-		stratum.materialNoise.setFrequency(frequency);
-		stratum.materialNoise.setOctaves(1);
+		stratum.distribution = Stratum::Distribution::Perlin{};
+		std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setSeed(seed);
+		std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setFrequency(frequency);
+		std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setOctaves(1);
 	}
 }
 
@@ -296,7 +293,7 @@ TEST(VoxelBiomeGeneratorTest, PerlinMaterialSelectionMatchesWeightedThresholds)
 		for (int x = -32; x < 32; ++x)
 		{
 			const spk::Vector2 p{static_cast<float>(x), static_cast<float>(z)};
-			const double value = stratum.materialNoise.sample2D(p.x, p.y);
+			const double value = std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.sample2D(p.x, p.y);
 			const auto expected = value * 5 < 2 ? 1u : value * 5 < 3 ? 2u
 																	 : 3u;
 			const auto result = sampled(biome, p);
@@ -314,7 +311,7 @@ TEST(VoxelBiomeGeneratorTest, WeightedDistributionIsDeterministicAndHonorsZeroWe
 	biome.strata().resize(1);
 	auto &stratum = biome.strata().front();
 	stratum.materials = {{1, 3}, {2, 1}, {4, 0}};
-	stratum.seed = 928;
+	stratum.distribution = Stratum::Distribution::Weighted{928};
 	std::vector<std::uint32_t> expected;
 	int count = 0;
 	for (int i = -2048; i < 2048; ++i)
@@ -346,10 +343,9 @@ TEST(VoxelBiomeGeneratorTest, ThicknessNoiseIsIndependentOfMaterialNoise)
 	biome.strata().resize(1);
 	auto &stratum = biome.strata().front();
 	stratum.materials = {{1, 1}, {2, 1}};
-	stratum.minimumThickness = 2;
-	stratum.maximumThickness = 13;
-	stratum.thicknessNoise.setSeed(31);
-	stratum.thicknessNoise.setFrequency(0.069f);
+	stratum.thickness = Stratum::Thickness::Variable{2, 13, spk::Perlin{}};
+	std::get<Stratum::Thickness::Variable>(stratum.thickness).noise.setSeed(31);
+	std::get<Stratum::Thickness::Variable>(stratum.thickness).noise.setFrequency(0.069f);
 	configurePerlin(stratum, 721, 0.19f);
 	std::set<std::uint32_t> thicknesses;
 	for (int z = -15; z <= 15; ++z)
@@ -358,12 +354,12 @@ TEST(VoxelBiomeGeneratorTest, ThicknessNoiseIsIndependentOfMaterialNoise)
 		{
 			const spk::Vector2 p{static_cast<float>(x), static_cast<float>(z)};
 			const auto result = sampled(biome, p).front();
-			const double noise = stratum.thicknessNoise.sample2D(p.x, p.y);
+			const double noise = std::get<Stratum::Thickness::Variable>(stratum.thickness).noise.sample2D(p.x, p.y);
 			const auto expected = 2u + static_cast<std::uint32_t>(std::min(11.0, std::floor(noise * 12)));
 			ASSERT_TRUE(result.thickness.has_value());
 			EXPECT_EQ(*result.thickness, expected);
 			thicknesses.insert(*result.thickness);
-			const auto id = stratum.materialNoise.sample2D(p.x, p.y) < 0.5f ? 1u : 2u;
+			const auto id = std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.sample2D(p.x, p.y) < 0.5f ? 1u : 2u;
 			EXPECT_EQ(result.voxelID, id);
 		}
 	}
@@ -375,10 +371,9 @@ TEST(VoxelBiomeGeneratorTest, PerlinStrataAreAppliedToEveryVoxelAcrossVerticalAn
 	Generator generator;
 	auto &biome = generator.biome();
 	auto &strata = biome.strata();
-	strata[1].minimumThickness = 1;
-	strata[1].maximumThickness = 9;
-	strata[1].thicknessNoise.setSeed(65);
-	strata[1].thicknessNoise.setFrequency(0.077f);
+	strata[1].thickness = Stratum::Thickness::Variable{1, 9, spk::Perlin{}};
+	std::get<Stratum::Thickness::Variable>(strata[1].thickness).noise.setSeed(65);
+	std::get<Stratum::Thickness::Variable>(strata[1].thickness).noise.setFrequency(0.077f);
 	strata[1].materials = {{2, 1}, {4, 1}};
 	configurePerlin(strata[1], 33, 0.12f);
 	strata[2].materials = {{3, 1}, {4, 1}};
@@ -474,23 +469,22 @@ TEST(VoxelBiomeGeneratorTest, RejectsInvalidThicknessAndMaterialConfigurations)
 	s.materials = {{spk::Voxel::Volume::PackedCell::MaxDefinitionId + 1u, 1}};
 	EXPECT_THROW((void)sample(), spk::Exception);
 	s.materials = {{1, 1}};
-	s.minimumThickness = 0;
+	s.thickness = Stratum::Thickness::Fixed{0};
 	EXPECT_THROW((void)sample(), spk::Exception);
-	s.minimumThickness = 4;
-	s.maximumThickness = 3;
+	s.thickness = Stratum::Thickness::Variable{4, 3, spk::Perlin{}};
 	EXPECT_THROW((void)sample(), spk::Exception);
-	s.minimumThickness = s.maximumThickness = 1;
-	s.distribution = Stratum::Distribution::Custom;
+	s.thickness = Stratum::Thickness::Fixed{1};
+	s.distribution = Stratum::Distribution::Custom{};
 	EXPECT_THROW((void)sample(), spk::Exception);
 	for (float value : {-0.01f, 1.01f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
 	{
-		s.customDistribution = [value](const spk::Vector2 &) {
+		s.distribution = Stratum::Distribution::Custom{[value](const spk::Vector2 &) {
 			return value;
-		};
+		}};
 		EXPECT_THROW((void)sample(), spk::Exception);
 	}
-	s.distribution = Stratum::Distribution::Weighted;
-	s.thicknessMode = Stratum::ThicknessMode::Infinite;
+	s.distribution = Stratum::Distribution::Weighted{};
+	s.thickness = Stratum::Thickness::Infinite{};
 	biome.strata().push_back(Stratum{});
 	EXPECT_THROW((void)sample(), spk::Exception);
 }
