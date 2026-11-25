@@ -1,7 +1,6 @@
 #pragma once
 
 #include <concepts>
-#include <cstddef>
 #include <exception>
 #include <memory>
 #include <optional>
@@ -21,116 +20,44 @@ namespace spk::World
 		{
 		public:
 			virtual ~Pass() = default;
-
-			virtual void retain(const ChunkCoordinate &)
-			{
-			}
-			virtual void release(const ChunkCoordinate &) noexcept
-			{
-			}
-			virtual void beginJob(const ChunkCoordinate &)
-			{
-			}
-			virtual void endJob(const ChunkCoordinate &) noexcept
-			{
-			}
-
-			virtual void apply(
-				const ChunkCoordinate &coordinate,
-				TGenerationData &data) = 0;
+			virtual void apply(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
 		};
 
 	private:
+		TGenerationData _generationData;
 		std::vector<std::unique_ptr<Pass>> _passes;
 
 	protected:
-		virtual std::optional<TGenerationData> _createGenerationData(const ChunkCoordinate &coordinate) = 0;
-		virtual TChunk _instantiateChunk(TGenerationData &data) = 0;
+		template <typename... TArgs>
+		explicit Generator(TArgs &&...args) :
+			_generationData(std::forward<TArgs>(args)...)
+		{
+		}
+
+		// A rejected or throwing preparation must leave no request-local state.
+		virtual bool _prepareGenerationData(const ChunkCoordinate &, TGenerationData &)
+		{
+			return true;
+		}
+		virtual TChunk _instantiateChunk(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
+		virtual void _cleanGenerationData(const ChunkCoordinate &, TGenerationData &) noexcept
+		{
+		}
 
 	public:
 		virtual ~Generator() = default;
 
+		[[nodiscard]] TGenerationData &generationData() noexcept
+		{
+			return _generationData;
+		}
+		[[nodiscard]] const TGenerationData &generationData() const noexcept
+		{
+			return _generationData;
+		}
+
 		// Configure passes before submitting work; the generator must outlive its jobs.
-		void retain(const ChunkCoordinate &coordinate)
-		{
-			std::size_t count = 0;
-			try
-			{
-				for (; count < _passes.size(); ++count)
-				{
-					_passes[count]->retain(coordinate);
-				}
-			} catch (...)
-			{
-				while (count != 0)
-				{
-					_passes[--count]->release(coordinate);
-				}
-				throw;
-			}
-		}
-
-		void release(const ChunkCoordinate &coordinate) noexcept
-		{
-			for (auto &pass : _passes)
-			{
-				pass->release(coordinate);
-			}
-		}
-
-		class JobLease
-		{
-		private:
-			Generator *_generator;
-			ChunkCoordinate _coordinate;
-			std::size_t _count = 0;
-			friend class Generator;
-
-			JobLease(Generator &generator, const ChunkCoordinate &coordinate) :
-				_generator(&generator),
-				_coordinate(coordinate)
-			{
-				try
-				{
-					for (; _count < generator._passes.size(); ++_count)
-					{
-						generator._passes[_count]->beginJob(coordinate);
-					}
-				} catch (...)
-				{
-					_release();
-					throw;
-				}
-			}
-
-			void _release() noexcept
-			{
-				while (_count != 0)
-				{
-					_generator->_passes[--_count]->endJob(_coordinate);
-				}
-			}
-
-		public:
-			JobLease(const JobLease &) = delete;
-			JobLease &operator=(const JobLease &) = delete;
-			JobLease(JobLease &&other) noexcept :
-				_generator(other._generator),
-				_coordinate(other._coordinate),
-				_count(std::exchange(other._count, 0))
-			{
-			}
-			~JobLease()
-			{
-				_release();
-			}
-		};
-
-		[[nodiscard]] JobLease reserve(const ChunkCoordinate &coordinate)
-		{
-			return JobLease(*this, coordinate);
-		}
-
+		// The data and passes are responsible for synchronization.
 		template <typename TPass, typename... TArgs>
 			requires std::derived_from<TPass, Pass>
 		TPass &addPass(TArgs &&...args)
@@ -145,17 +72,25 @@ namespace spk::World
 		{
 			try
 			{
-				auto job = reserve(coordinate);
-				auto data = _createGenerationData(coordinate);
-				if (!data.has_value())
+				if (!_prepareGenerationData(coordinate, _generationData))
 				{
 					return std::nullopt;
 				}
-				for (const std::unique_ptr<Pass> &pass : _passes)
+				std::optional<TChunk> result;
+				try
 				{
-					pass->apply(coordinate, *data);
+					for (const auto &pass : _passes)
+					{
+						pass->apply(coordinate, _generationData);
+					}
+					result.emplace(_instantiateChunk(coordinate, _generationData));
+				} catch (...)
+				{
+					_cleanGenerationData(coordinate, _generationData);
+					throw;
 				}
-				return _instantiateChunk(*data);
+				_cleanGenerationData(coordinate, _generationData);
+				return result;
 			} catch (const spk::Exception &)
 			{
 				throw;
