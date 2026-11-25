@@ -30,8 +30,6 @@ namespace spk::World
 			Grid() = default;
 
 		public:
-			using SurfaceGrid::at;
-
 			[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
 			{
 				return _obtain<Grid>(configuration, origin, []() {
@@ -41,10 +39,10 @@ namespace spk::World
 									 });
 			}
 
-			[[nodiscard]] float at(const spk::Vector2 &position, Interpolation interpolation) const
+			[[nodiscard]] float interpolate(const spk::Vector2 &position) const
 			{
 				double result = 0.0;
-				_forEachInterpolationSample(position, interpolation, [&](const float &value, double weight) {
+				_forEachInterpolationSample(position, [&](const float &value, double weight) {
 					if (weight == 1.0)
 					{
 						result = value;

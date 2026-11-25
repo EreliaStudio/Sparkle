@@ -31,7 +31,7 @@ namespace spk::Voxel
 				for (std::uint32_t x = 0; x < size.x; ++x)
 				{
 					const spk::Vector2 position{static_cast<float>(x), static_cast<float>(z)};
-					const double top = std::floor(heights.at(position, World::HeightMap::Grid::Interpolation::Bilinear));
+					const double top = std::floor(heights.interpolate(position));
 					if (!std::isfinite(top))
 					{
 						throw spk::Exception("Voxel terrain height must be finite");

@@ -132,7 +132,6 @@ namespace
 
 TEST(SurfaceGridTest, SharedInterpolationVisitsOnlyContributingSamples)
 {
-	using Mode = InterpolationProbe::Interpolation;
 	auto grid = InterpolationProbe::obtain({{4, 4}, 2});
 	grid->sample({0, 0}) = 1;
 	grid->sample({1, 0}) = 2;
@@ -143,34 +142,25 @@ TEST(SurfaceGridTest, SharedInterpolationVisitsOnlyContributingSamples)
 		visits.emplace_back(value, weight);
 	};
 	using Visits = decltype(visits);
-	grid->_forEachInterpolationSample({0, 0}, Mode::Bilinear, visit);
+	grid->_forEachInterpolationSample({0, 0}, visit);
 	EXPECT_EQ(visits, (Visits{{1, 1.0}}));
 	visits.clear();
-	grid->_forEachInterpolationSample({1, 0}, Mode::Bilinear, visit);
+	grid->_forEachInterpolationSample({1, 0}, visit);
 	EXPECT_EQ(visits, (Visits{{1, 0.5}, {2, 0.5}}));
 	visits.clear();
-	grid->_forEachInterpolationSample({0, 1}, Mode::Bilinear, visit);
+	grid->_forEachInterpolationSample({0, 1}, visit);
 	EXPECT_EQ(visits, (Visits{{1, 0.5}, {3, 0.5}}));
 	visits.clear();
-	grid->_forEachInterpolationSample({1, 1}, Mode::Bilinear, visit);
+	grid->_forEachInterpolationSample({1, 1}, visit);
 	EXPECT_EQ(visits, (Visits{{1, 0.25}, {2, 0.25}, {3, 0.25}, {4, 0.25}}));
 	visits.clear();
-	grid->_forEachInterpolationSample({1.5f, 1.5f}, Mode::Floor, visit);
-	EXPECT_EQ(visits, (Visits{{1, 1.0}}));
-	visits.clear();
-	grid->_forEachInterpolationSample({1.5f, 1.5f}, Mode::Nearest, visit);
-	EXPECT_EQ(visits, (Visits{{4, 1.0}}));
-	visits.clear();
-	grid->_forEachInterpolationSample({1, 1}, Mode::Nearest, visit);
-	EXPECT_EQ(visits, (Visits{{1, 1.0}}));
-	visits.clear();
-	EXPECT_THROW(grid->_forEachInterpolationSample({-1, 0}, Mode::Bilinear, visit), spk::Exception);
+	EXPECT_EQ(grid->at({1.5f, 1.5f}), 1);
 	EXPECT_TRUE(visits.empty());
-	EXPECT_THROW(grid->_forEachInterpolationSample({0, 0}, static_cast<Mode>(99), visit), spk::Exception);
+	EXPECT_THROW(grid->_forEachInterpolationSample({-1, 0}, visit), spk::Exception);
 	EXPECT_TRUE(visits.empty());
 	auto decimal = InterpolationProbe::obtain({{1, 1}, 0.1f});
 	decimal->sample({7, 7}) = 7;
-	decimal->_forEachInterpolationSample(decimal->localPosition({7, 7}), Mode::Bilinear, visit);
+	decimal->_forEachInterpolationSample(decimal->localPosition({7, 7}), visit);
 	EXPECT_EQ(visits, (Visits{{7, 1.0}}));
 }
 
@@ -182,9 +172,9 @@ TEST(SurfaceGridTest, HeightGridAlignedInterpolationDoesNotReadUnusedValues)
 	grid->sample({1, 0}) = 6;
 	grid->sample({0, 1}) = std::numeric_limits<float>::quiet_NaN();
 	grid->sample({1, 1}) = std::numeric_limits<float>::quiet_NaN();
-	EXPECT_FLOAT_EQ(grid->at({0, 0}, Grid::Interpolation::Bilinear), 2);
-	EXPECT_FLOAT_EQ(grid->at({1, 0}, Grid::Interpolation::Bilinear), 4);
-	EXPECT_FLOAT_EQ(grid->at({2, 0}, Grid::Interpolation::Bilinear), 6);
+	EXPECT_FLOAT_EQ(grid->interpolate({0, 0}), 2);
+	EXPECT_FLOAT_EQ(grid->interpolate({1, 0}), 4);
+	EXPECT_FLOAT_EQ(grid->interpolate({2, 0}), 6);
 }
 
 TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
@@ -198,9 +188,9 @@ TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
 	EXPECT_FLOAT_EQ(grid->at({16, 16}), 7.5f);
 	grid->at({0, 0}) = 0;
 	grid->at({2, 0}) = 10;
-	EXPECT_FLOAT_EQ(grid->at({1, 0}, HeightMap::Grid::Interpolation::Nearest), 0);
-	EXPECT_FLOAT_EQ(grid->at({1, 0}, HeightMap::Grid::Interpolation::Bilinear), 5);
-	EXPECT_FLOAT_EQ(grid->at({16, 16}, HeightMap::Grid::Interpolation::Bilinear), 7.5f);
+	EXPECT_FLOAT_EQ(grid->at({1, 0}), 0);
+	EXPECT_FLOAT_EQ(grid->interpolate({1, 0}), 5);
+	EXPECT_FLOAT_EQ(grid->interpolate({16, 16}), 7.5f);
 	EXPECT_THROW((void)grid->at({16.1f, 0}), spk::Exception);
 	EXPECT_THROW((void)map.generate({{16, 16}, 3}, {}), spk::Exception);
 	EXPECT_THROW((void)map.generate({{16, 16}, 0}, {}), spk::Exception);
@@ -232,11 +222,11 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 {
 	ConstantBiome a(0), b(1);
 	auto grid = SurfaceData::InfluenceGrid::obtain({{16, 16}, 1}, {});
-	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), nullptr);
+	EXPECT_EQ(grid->interpolate({0, 0}).dominant(), nullptr);
 	grid->at({0, 0}) = {{{{&a, 0.5f}, {&b, 0.5f}}}};
-	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &a);
+	EXPECT_EQ(grid->interpolate({0, 0}).dominant(), &a);
 	grid->at({0, 0})[0].weight = 0;
-	EXPECT_EQ(grid->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
+	EXPECT_EQ(grid->interpolate({0, 0}).dominant(), &b);
 }
 
 TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
@@ -338,15 +328,12 @@ TEST(SurfaceGridTest, BilinearUsesBothAxesAndRejectsInvalidCoordinates)
 	grid->sample({1, 0}) = 8;
 	grid->sample({0, 1}) = 4;
 	grid->sample({1, 1}) = 12;
-	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Bilinear), 6);
-	EXPECT_FLOAT_EQ(grid->at({1, 1}, HeightMap::Grid::Interpolation::Nearest), 0);
-	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}, HeightMap::Grid::Interpolation::Nearest), 12);
-	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}, HeightMap::Grid::Interpolation::Floor), 0);
-	EXPECT_FLOAT_EQ(grid->at({2.9f, 1.9f}, HeightMap::Grid::Interpolation::Floor), 8);
-	EXPECT_FLOAT_EQ(grid->at({2, 2}, HeightMap::Grid::Interpolation::Floor), 12);
-	EXPECT_FLOAT_EQ(grid->at({4, 2}, HeightMap::Grid::Interpolation::Floor), grid->sample({2, 1}));
-	EXPECT_FLOAT_EQ(grid->at({2.9f, 1.9f}, HeightMap::Grid::Interpolation::Floor), grid->at({2.9f, 1.9f}));
-	EXPECT_THROW((void)grid->at({-0.01f, 0}, HeightMap::Grid::Interpolation::Floor), spk::Exception);
+	EXPECT_FLOAT_EQ(grid->interpolate({1, 1}), 6);
+	EXPECT_FLOAT_EQ(grid->at({1.1f, 1.1f}), 0);
+	EXPECT_FLOAT_EQ(grid->at({2.9f, 1.9f}), 8);
+	EXPECT_FLOAT_EQ(grid->at({2, 2}), 12);
+	EXPECT_FLOAT_EQ(grid->at({4, 2}), grid->sample({2, 1}));
+	EXPECT_THROW((void)grid->interpolate({-0.01f, 0}), spk::Exception);
 	EXPECT_THROW((void)grid->at({-0.01f, 0}), spk::Exception);
 	EXPECT_THROW((void)grid->at({0, std::numeric_limits<float>::infinity()}), spk::Exception);
 	EXPECT_THROW((void)grid->at({std::numeric_limits<float>::quiet_NaN(), 0}), spk::Exception);
@@ -486,17 +473,15 @@ TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
 	grid->sample({1, 0}) = {{{{&b, 1}, {&a, 0}}}};
 	grid->sample({0, 1}) = {{{{&b, 0}, {&a, 1}}}};
 	grid->sample({1, 1}) = {{{{&a, 0}, {&b, 1}}}};
-	const auto cell = grid->interpolate({3, 1}, Grid::Interpolation::Bilinear);
+	const auto cell = grid->interpolate({3, 1});
 	EXPECT_EQ(cell[0].biome, &a);
 	EXPECT_FLOAT_EQ(cell[0].weight, 0.25f);
 	EXPECT_EQ(cell[1].biome, &b);
 	EXPECT_FLOAT_EQ(cell[1].weight, 0.75f);
-	EXPECT_EQ(grid->interpolate({3, 1}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
-	EXPECT_EQ(grid->interpolate({3, 1}, Grid::Interpolation::Floor).dominant(), &a);
-	EXPECT_EQ(grid->interpolate({3, 1}, Grid::Interpolation::Nearest).dominant(), &b);
-	EXPECT_EQ(grid->interpolate({2, 2}, Grid::Interpolation::Nearest).dominant(), &a);
-	EXPECT_EQ(grid->interpolate({2, 2}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &a);
-	EXPECT_EQ(grid->interpolate({4, 4}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
+	EXPECT_EQ(grid->interpolate({3, 1}).dominant(), &b);
+	EXPECT_EQ(grid->at({3, 1}).dominant(), &a);
+	EXPECT_EQ(grid->interpolate({2, 2}).dominant(), &a);
+	EXPECT_EQ(grid->interpolate({4, 4}).dominant(), &b);
 }
 
 TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
@@ -508,7 +493,7 @@ TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
 	grid->sample({1, 0})[0] = {&b, 1};
 	grid->sample({0, 1})[0] = {&c, 1};
 	grid->sample({1, 1})[0] = {&d, 1};
-	const auto center = grid->interpolate({2, 2}, Grid::Interpolation::Bilinear);
+	const auto center = grid->interpolate({2, 2});
 	EXPECT_EQ(center[0].biome, &a);
 	EXPECT_EQ(center[1].biome, &b);
 	EXPECT_EQ(center[2].biome, &c);
@@ -517,7 +502,7 @@ TEST(SurfaceGridTest, InterpolatedInfluencesPreserveAllFourCornerBiomes)
 	{
 		EXPECT_FLOAT_EQ(influence.weight, 0.25f);
 	}
-	EXPECT_EQ(grid->interpolate({3, 3}, Grid::Interpolation::Bilinear).dominant(), &d);
+	EXPECT_EQ(grid->interpolate({3, 3}).dominant(), &d);
 }
 
 TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
@@ -528,18 +513,18 @@ TEST(SurfaceGridTest, InterpolationSharesChunkEdgesAndKeepsExactNodeTieOrder)
 	auto right = Grid::obtain({{4, 4}, 4}, {0, 0});
 	left->sample({1, 0}) = right->sample({0, 0}) = {{{{&b, 0.5f}, {&a, 0.5f}}}};
 	left->sample({1, 1}) = right->sample({0, 1}) = {{{{&a, 1}, {&b, 0}}}};
-	EXPECT_EQ(left->interpolate({4, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
-	EXPECT_EQ(right->interpolate({0, 0}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), &b);
+	EXPECT_EQ(left->interpolate({4, 0}).dominant(), &b);
+	EXPECT_EQ(right->interpolate({0, 0}).dominant(), &b);
 	for (float z : {0.0f, 1.0f, 2.0f, 3.0f, 4.0f})
 	{
-		const auto l = left->interpolate({4, z}, Grid::Interpolation::Bilinear);
-		const auto r = right->interpolate({0, z}, Grid::Interpolation::Bilinear);
+		const auto l = left->interpolate({4, z});
+		const auto r = right->interpolate({0, z});
 		for (std::size_t i = 0; i < l.size(); ++i)
 		{
 			EXPECT_EQ(l[i].biome, r[i].biome);
 			EXPECT_FLOAT_EQ(l[i].weight, r[i].weight);
 		}
-		EXPECT_EQ(left->interpolate({4, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant(), right->interpolate({0, z}, SurfaceData::InfluenceGrid::Interpolation::Bilinear).dominant());
+		EXPECT_EQ(left->interpolate({4, z}).dominant(), right->interpolate({0, z}).dominant());
 	}
 }
 
@@ -670,7 +655,7 @@ TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 	grid->sample({2, 1})[0] = {&c, 1};
 	grid->sample({1, 2})[0] = {&c, 1};
 	grid->sample({2, 2})[0] = {&c, 1};
-	const auto exact = grid->interpolate({4, 4}, Grid::Interpolation::Bilinear);
+	const auto exact = grid->interpolate({4, 4});
 	EXPECT_EQ(exact[0].biome, &a);
 	EXPECT_FLOAT_EQ(exact[0].weight, 0.25f);
 	EXPECT_EQ(exact[1].biome, &b);
@@ -678,7 +663,7 @@ TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 	EXPECT_EQ(exact[2].biome, nullptr);
 	for (const auto &position : {spk::Vector2{6, 4}, spk::Vector2{4, 6}})
 	{
-		const auto edge = grid->interpolate(position, Grid::Interpolation::Bilinear);
+		const auto edge = grid->interpolate(position);
 		EXPECT_EQ(edge[0].biome, &a);
 		EXPECT_FLOAT_EQ(edge[0].weight, 0.125f);
 		EXPECT_EQ(edge[1].biome, &b);
@@ -687,18 +672,18 @@ TEST(SurfaceGridTest, BilinearAlignedPositionsPreserveInfluences)
 		EXPECT_FLOAT_EQ(edge[2].weight, 0.5f);
 	}
 	grid->sample({1, 1}) = {{{{&a, 0.25f}, {&a, 0.75f}}}};
-	const auto merged = grid->interpolate({4, 4}, Grid::Interpolation::Bilinear);
+	const auto merged = grid->interpolate({4, 4});
 	EXPECT_EQ(merged[0].biome, &a);
 	EXPECT_FLOAT_EQ(merged[0].weight, 1);
 	EXPECT_EQ(merged[1].biome, nullptr);
 	auto decimal = Grid::obtain({{1, 1}, 0.1f}, {});
 	decimal->sample({3, 3})[0] = {&a, 1};
 	decimal->sample({4, 3})[0] = {&b, 1};
-	const auto decimalExact = decimal->interpolate(decimal->localPosition({3, 3}), Grid::Interpolation::Bilinear);
+	const auto decimalExact = decimal->interpolate(decimal->localPosition({3, 3}));
 	EXPECT_EQ(decimalExact[0].biome, &a);
 	EXPECT_FLOAT_EQ(decimalExact[0].weight, 1);
 	EXPECT_EQ(decimalExact[1].biome, nullptr);
-	EXPECT_THROW((void)grid->interpolate({9, 4}, Grid::Interpolation::Bilinear), spk::Exception);
+	EXPECT_THROW((void)grid->interpolate({9, 4}), spk::Exception);
 }
 
 TEST(SurfaceGenerationTest, DominantHeightCombinationUsesWeightRatherThanHeight)

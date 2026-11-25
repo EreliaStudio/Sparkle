@@ -95,7 +95,6 @@ namespace spk::World
 		using Base = SurfaceGrid<Cell>;
 		using Configuration = typename Base::Configuration;
 		using Lease = typename spk::Pool<Grid>::Lease;
-		using Interpolation = typename Base::Interpolation;
 		// Four neighboring cells may contain completely different biomes.
 		using InterpolatedCell = Influence::Cell<4 * TCapacity>;
 
@@ -112,16 +111,8 @@ namespace spk::World
 												});
 		}
 
-		[[nodiscard]] InterpolatedCell interpolate(const spk::Vector2 &position, Interpolation interpolation) const
+		[[nodiscard]] InterpolatedCell interpolate(const spk::Vector2 &position) const
 		{
-			if (interpolation == Interpolation::Floor || interpolation == Interpolation::Nearest)
-			{
-				InterpolatedCell result{};
-				this->_forEachInterpolationSample(position, interpolation, [&](const Cell &cell, double) {
-					std::copy(cell.begin(), cell.end(), result.begin());
-				});
-				return result;
-			}
 			InterpolatedCell result{};
 			std::array<double, 4 * TCapacity> weights{};
 			std::size_t count = 0;
@@ -144,7 +135,7 @@ namespace spk::World
 					weights[index] += factor * influence.weight;
 				}
 			};
-			this->_forEachInterpolationSample(position, interpolation, accumulate);
+			this->_forEachInterpolationSample(position, accumulate);
 			for (std::size_t i = 0; i < count; ++i)
 			{
 				result[i].weight = static_cast<float>(weights[i]);
