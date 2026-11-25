@@ -14,13 +14,14 @@ namespace spk
 		enum class Interpolation
 		{
 			Linear,
-			SmoothStep
+			SmoothStep,
+			Quintic
 		};
 
 	private:
 		std::array<int, 512> _permutation{};
 		std::uint32_t _seed = 0;
-		Interpolation _interpolation = Interpolation::SmoothStep;
+		Interpolation _interpolation = Interpolation::Quintic;
 		int _octaves = 3;
 		float _persistence = 0.5f;
 		float _lacunarity = 2.0f;
@@ -43,7 +44,7 @@ namespace spk
 
 	public:
 		// Unlike SparkleV1, seed 0 is deterministic (no random_device fallback).
-		explicit Perlin(std::uint32_t seed = 0, Interpolation interpolation = Interpolation::SmoothStep);
+		explicit Perlin(std::uint32_t seed = 0, Interpolation interpolation = Interpolation::Quintic);
 
 		void setSeed(std::uint32_t seed) noexcept;
 		void setInterpolation(Interpolation interpolation);

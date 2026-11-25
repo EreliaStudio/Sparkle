@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -25,12 +26,12 @@ namespace
 	}
 }
 
-TEST(PerlinTest, DefaultsMatchSparkleV1AndSeedZeroIsReproducible)
+TEST(PerlinTest, QuinticDefaultsAndSeedZeroIsReproducible)
 {
 	const spk::Perlin original;
 	const spk::Perlin again(0u);
 	EXPECT_EQ(original.seed(), 0u);
-	EXPECT_EQ(original.interpolation(), spk::Perlin::Interpolation::SmoothStep);
+	EXPECT_EQ(original.interpolation(), spk::Perlin::Interpolation::Quintic);
 	EXPECT_EQ(original.octaves(), 3);
 	EXPECT_FLOAT_EQ(original.persistence(), 0.5f);
 	EXPECT_FLOAT_EQ(original.lacunarity(), 2.0f);
@@ -146,6 +147,7 @@ TEST(PerlinTest, InterpolationAndOctaveParametersActuallyChangeSamples)
 {
 	spk::Perlin noise(123u);
 	noise.setOctaves(1);
+	noise.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
 	const float smooth = noise.sample1D(0.213f);
 	noise.setInterpolation(spk::Perlin::Interpolation::Linear);
 	EXPECT_EQ(noise.interpolation(), spk::Perlin::Interpolation::Linear);
@@ -299,4 +301,78 @@ TEST(PerlinPerformanceTest, ReportOneTwoAndThreeDimensionalSampleCosts)
 	benchmark("3D", [&](float x) {
 		return noise.sample3D(x, x * 0.61f, x * 0.13f);
 	});
+}
+
+TEST(PerlinTest, QuinticInterpolationIsDistinctAndContinuous)
+{
+	spk::Perlin noise(118);
+	noise.setOctaves(1);
+	const float quintic = noise.sample2D(0.217f, -0.731f);
+	noise.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
+	EXPECT_NE(noise.sample2D(0.217f, -0.731f), quintic);
+	noise.setInterpolation(spk::Perlin::Interpolation::Quintic);
+	EXPECT_FLOAT_EQ(noise.sample2D(0.217f, -0.731f), quintic);
+	for (int i = -8; i <= 8; ++i)
+	{
+		const float x = static_cast<float>(i);
+		constexpr float step = 0.002f;
+		const float center = noise.sample2D(x, 0.371f);
+		const float left = noise.sample2D(x-step, 0.371f);
+		const float right = noise.sample2D(x+step, 0.371f);
+		EXPECT_NEAR((center-left)/step, (right-center)/step, 0.01f);
+	}
+}
+
+TEST(PerlinTest, LatticeGradientsUseDiverseDirectionsInTwoAndThreeDimensions)
+{
+	spk::Perlin noise(118);
+	noise.setOctaves(1);
+	std::set<std::array<int, 2>> directions2;
+	std::set<std::array<int, 3>> directions3;
+	constexpr float e = 0.002f;
+	const auto quantize = [](float derivative) { return static_cast<int>(std::round(derivative * 20.0f)); };
+	for (int y = -8; y < 8; ++y)
+	{
+		for (int x = -8; x < 8; ++x)
+		{
+			const float a = static_cast<float>(x), b = static_cast<float>(y);
+			const float z = static_cast<float>(x-y);
+			directions2.insert({quantize((noise.sample2D(a+e,b)-noise.sample2D(a-e,b))/(2*e)), quantize((noise.sample2D(a,b+e)-noise.sample2D(a,b-e))/(2*e))});
+			directions3.insert({quantize((noise.sample3D(a+e,b,z)-noise.sample3D(a-e,b,z))/(2*e)), quantize((noise.sample3D(a,b+e,z)-noise.sample3D(a,b-e,z))/(2*e)), quantize((noise.sample3D(a,b,z+e)-noise.sample3D(a,b,z-e))/(2*e))});
+		}
+	}
+	EXPECT_GE(directions2.size(), 16u);
+	EXPECT_GE(directions3.size(), 24u);
+}
+
+TEST(PerlinTest, ThresholdedLowFrequencyFieldAvoidsLongAxisAlignedArtifacts)
+{
+	spk::Perlin noise(118);
+	noise.setFrequency(0.055f);
+	noise.setOctaves(1);
+	constexpr int Size = 80;
+	std::array<std::array<bool, Size>, Size> field{};
+	int filled = 0;
+	for (int z = 0; z < Size; ++z)
+	{
+		for (int x = 0; x < Size; ++x)
+		{
+			field[z][x] = noise.sample2D(static_cast<float>(x-32), static_cast<float>(z-32)) >= 0.5f;
+			filled += field[z][x];
+		}
+	}
+	int longest = 0;
+	for (int axis = 0; axis < Size-1; ++axis)
+	{
+		int horizontal = 0, vertical = 0;
+		for (int i = 0; i < Size; ++i)
+		{
+			horizontal = field[axis][i] != field[axis+1][i] ? horizontal+1 : 0;
+			vertical = field[i][axis] != field[i][axis+1] ? vertical+1 : 0;
+			longest = std::max({longest, horizontal, vertical});
+		}
+	}
+	EXPECT_GT(filled, Size*Size/4);
+	EXPECT_LT(filled, Size*Size*3/4);
+	EXPECT_LT(longest, 33) << "Longest straight material boundary";
 }
