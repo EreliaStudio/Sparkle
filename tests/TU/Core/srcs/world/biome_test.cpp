@@ -39,7 +39,6 @@ namespace
 		void flush()
 		{
 		}
-
 	};
 
 	using DistributionPass = spk::World::BiomeDistributionPass<Chunk, GenerationData>;

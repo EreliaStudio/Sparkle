@@ -430,7 +430,6 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	EXPECT_EQ(data.columnCount(), 0u);
 }
 
-
 namespace
 {
 	class StandaloneHeightPass : public spk::World::HeightMapGenerationPass<Chunk, StandaloneData>
