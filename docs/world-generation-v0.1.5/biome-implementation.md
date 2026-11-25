@@ -32,10 +32,13 @@ idle column entries; entries currently building or referenced by handles are pre
 Queued jobs need no reservations and regenerate an evicted column when they start.
 Flush releases leases back to their pools, not necessarily heap capacity back to the OS.
 
-ChunkGenerationDataCollection is optional request-local storage keyed by coordinate and
-calling thread; concurrent requests of the same coordinate have independent scratch.
-The same coordinate cannot be recursively prepared on the same thread.
-References are valid only until their own job cleans its entry.
+ChunkGenerationDataCollection is optional request-local storage keyed exclusively by
+chunk coordinate. Only one active generation per coordinate is supported: a duplicate
+preparation throws without modifying the existing entry. Distinct coordinates remain
+independent and can be generated concurrently. References are valid only until their
+own job cleans its entry. After cleanup, the same coordinate can be generated again.
+A duplicate streaming request after retirement or timeout may fail temporarily; the
+existing streaming retry policy remains unchanged.
 The generator calls cleanup after successful preparation, on success or failure;
 preparation itself must be exception-safe. Column callbacks must not recursively obtain
 columns from the cache. Cross-column generation dependencies are not implemented.

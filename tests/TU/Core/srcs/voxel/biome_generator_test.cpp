@@ -434,23 +434,49 @@ TEST(VoxelBiomeGeneratorTest, LocalRequesterReusesCachedColumnWithoutObserver)
 	EXPECT_EQ(generator.samples.load(), 578);
 }
 
-TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesUseIndependentChunkScratch)
+TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithoutErasingActiveScratch)
 {
+	class BlockingPass : public Generator::Pass
+	{
+	private:
+		std::promise<void> &_entered;
+		std::shared_future<void> _release;
+		std::atomic<bool> _blocked{false};
+
+	public:
+		BlockingPass(std::promise<void> &entered, std::shared_future<void> release) :
+			_entered(entered),
+			_release(std::move(release))
+		{
+		}
+
+		void apply(const spk::World::ChunkCoordinate &, Generator::GenerationData &) override
+		{
+			if (!_blocked.exchange(true))
+			{
+				_entered.set_value();
+				_release.wait();
+			}
+		}
+	};
+
+	std::promise<void> entered;
+	std::promise<void> release;
 	Generator generator;
-	std::promise<void> start;
-	auto gate = start.get_future().share();
+	generator.addPass<BlockingPass>(entered, release.get_future().share());
 	auto first = std::async(std::launch::async, [&] {
-		gate.wait();
 		return generator.generate({0, 0, 0});
 	});
-	auto second = std::async(std::launch::async, [&] {
-		gate.wait();
-		return generator.generate({0, 0, 0});
-	});
-	start.set_value();
+	entered.get_future().wait();
+	EXPECT_EQ(generator.activeChunkCount(), 1u);
+	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
+	EXPECT_EQ(generator.activeChunkCount(), 1u);
+	release.set_value();
 	const auto a = first.get();
-	const auto b = second.get();
-	ASSERT_TRUE(a && b);
+	ASSERT_TRUE(a);
+	EXPECT_EQ(generator.activeChunkCount(), 0u);
+	const auto b = generator.generate({0, 0, 0});
+	ASSERT_TRUE(b);
 	EXPECT_EQ(idAt(*a, 0, 15, 0), idAt(*b, 0, 15, 0));
 	EXPECT_EQ(generator.samples.load(), 289);
 	EXPECT_EQ(generator.activeChunkCount(), 0u);
