@@ -265,7 +265,7 @@ float shadowVisibility(uint i, vec3 position, vec3 normal)
 		shadow.cascadeDepthBias[cascade], shadow.cascadeNormalBias[cascade]);
 	if (cascade < 3)
 	{
-		float previous = cascade == 0 ? 0.0 : shadow.cascadeSplits[cascade - 1];
+		float previous = cascade == 0 ? shadow.parameters.x : shadow.cascadeSplits[cascade - 1];
 		float edge = shadow.cascadeSplits[cascade];
 		float weight = smoothstep(edge - (edge - previous) * 0.08, edge, depth);
 		if (weight > 0.0)

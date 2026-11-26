@@ -22,13 +22,15 @@ namespace spk::ShadowMap
 		float farPlane = 0.0f;
 		float splitFar = 0.0f;
 		float worldPerTexel = 0.0f;
+		float splitNear = 0.0f;
 		static constexpr std::size_t CascadeCount = 4;
 
 		[[nodiscard]] static std::array<Projection, 6> point(const Light::Selection::Entry &light);
 		[[nodiscard]] static Projection spot(const Light::Selection::Entry &light);
 		[[nodiscard]] static Projection directional(const Light::Selection::Entry &light, const Camera3D &camera);
 		[[nodiscard]] static std::array<Projection, CascadeCount> directionalCascades(
-			const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters);
+			const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters,
+			std::size_t count = CascadeCount);
 		[[nodiscard]] bool intersects(const CasterBounds &bounds) const;
 	};
 }

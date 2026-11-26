@@ -28,7 +28,7 @@ namespace spk::ShadowMap
 			return std::abs(direction.y) < 0.95f ? Vector3{0, 1, 0} : Vector3{1, 0, 0};
 		}
 
-		[[nodiscard]] std::array<Vector3, 8> truncatedFrustum(const Camera3D &camera, float distance, float minimumDepth = 0.0f)
+		[[nodiscard]] std::array<Vector3, 8> truncatedFrustum(const Camera3D &camera, float distance, float minimumDepth = -std::numeric_limits<float>::infinity())
 		{
 			if (!std::isfinite(distance) || distance <= 0.0f)
 			{
@@ -159,17 +159,25 @@ namespace spk::ShadowMap
 	}
 
 	std::array<Projection, Projection::CascadeCount> Projection::directionalCascades(
-		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters)
+		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters, std::size_t count)
 	{
-		if (light.type != Light::Selection::Type::Directional || light.shadowResolution < 8)
+		if (light.type != Light::Selection::Type::Directional || light.shadowResolution == 0 || (count != 1 && count != CascadeCount))
 		{
 			throw spk::Exception("Invalid directional cascade parameters");
 		}
 		const auto direction = normalizedDirection(light.direction);
-		const auto fullFrustum = truncatedFrustum(camera, light.shadowDistance);
-		const auto cameraView = camera.viewMatrix();
-		const float nearDepth = -(cameraView * Vector4(fullFrustum.front(), 1.0f)).z;
-		const float farDepth = -(cameraView * Vector4(fullFrustum.back(), 1.0f)).z;
+		if (!std::isfinite(light.shadowDistance) || light.shadowDistance <= 0.0f)
+		{
+			throw spk::Exception("Directional shadow distance must be finite and positive");
+		}
+		const auto &projection = camera.projectionMatrix();
+		const bool perspective = camera.projectionMode() == Camera3D::ProjectionMode::Perspective;
+		const float nearDepth = perspective ? projection[3][2] / (projection[2][2] - 1.0f) :
+											  (projection[3][2] + 1.0f) / projection[2][2];
+		const float cameraFar = perspective ? projection[3][2] / (projection[2][2] + 1.0f) :
+											  (projection[3][2] - 1.0f) / projection[2][2];
+		const float distance = std::isfinite(cameraFar) ? std::min(cameraFar, light.shadowDistance) : light.shadowDistance;
+		const float farDepth = std::max(nearDepth + 0.004f, distance);
 		Camera3D lightCamera;
 		lightCamera.lookAt(direction, upFor(direction));
 		const auto view = lightCamera.viewMatrix();
@@ -199,9 +207,9 @@ namespace spk::ShadowMap
 		std::array<Projection, CascadeCount> result{};
 		float previous = nearDepth;
 		float previousWidth = 0.0f;
-		for (std::size_t i = 0; i < result.size(); ++i)
+		for (std::size_t i = 0; i < count; ++i)
 		{
-			const float split = nearDepth + (farDepth - nearDepth) * fractions[i];
+			const float split = nearDepth + (farDepth - nearDepth) * (count == 1 ? 1.0f : fractions[i]);
 			const auto corners = truncatedFrustum(camera, split, previous - previousWidth * 0.1f);
 			Vector3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
 			Vector3 maximum{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()};
@@ -214,10 +222,11 @@ namespace spk::ShadowMap
 			const float extent = std::max(maximum.x - minimum.x, maximum.y - minimum.y);
 			const float half = std::ceil(std::max(0.01f, extent * 0.51f) * 64.0f) / 64.0f;
 			const float resolution = static_cast<float>(light.shadowResolution);
-			const float paddedHalf = half / (1.0f - 4.0f / resolution);
+			const float paddedHalf = resolution >= 8.0f ? half / (1.0f - 4.0f / resolution) : half;
 			const float texel = 2.0f * paddedHalf / resolution;
-			const float x = std::round((minimum.x + maximum.x) * 0.5f / texel) * texel;
-			const float y = std::round((minimum.y + maximum.y) * 0.5f / texel) * texel;
+			const auto snap = [&](float coordinate) { return resolution >= 8.0f ? std::round(coordinate / texel) * texel : coordinate; };
+			const float x = snap((minimum.x + maximum.x) * 0.5f);
+			const float y = snap((minimum.y + maximum.y) * 0.5f);
 			const float left = x - paddedHalf, right = x + paddedHalf;
 			const float bottom = y - paddedHalf, top = y + paddedHalf;
 			// Only extend towards the light for casters overlapping the receiver
@@ -233,7 +242,7 @@ namespace spk::ShadowMap
 			const float nearPlane = std::floor((-maximum.z - texel) / texel) * texel;
 			const float farPlane = std::ceil((-minimum.z + texel) / texel) * texel;
 			result[i] = {Matrix4x4::ortho(left, right, bottom, top, nearPlane, farPlane) * view,
-						 nearPlane, farPlane, split, texel};
+						 nearPlane, farPlane, split, texel, previous};
 			previousWidth = split - previous;
 			previous = split;
 		}

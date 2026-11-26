@@ -28,6 +28,7 @@
 #include "graphics/opengl/state.hpp"
 #include "graphics/opengl/uniform_buffer.hpp"
 #include "light/channel.hpp"
+#include "lighting/system.hpp"
 #include "math/vector4.hpp"
 #include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
@@ -323,6 +324,7 @@ namespace spk::ShadowMap
 			std::uint64_t dynamicSignature = 0;
 			Framebuffer::Handle staticTarget;
 			Texture::Handle staticTexture;
+			Result::Entry::CascadeStatistics statistics;
 			Framebuffer::Handle finalTarget;
 			Texture::Handle texture;
 		};
@@ -331,6 +333,7 @@ namespace spk::ShadowMap
 		{
 			std::array<CascadeCache, Projection::CascadeCount> cascades{};
 			bool cascaded = false;
+			std::size_t cascadeCount = 0;
 			Matrix4x4 cascadeCameraView{};
 			Matrix4x4 cascadeCameraProjection{};
 			Vector3 cascadeDirection{};
@@ -482,7 +485,7 @@ namespace spk::ShadowMap
 
 		void _renderDirectional(
 			RenderContext &context, RenderingSystem::State::LightCache &cache,
-			const Light::Selection::Entry &light) const
+			const Light::Selection::Entry &light, std::size_t count) const
 		{
 			if (cache.sourceCaptureOrdinal > _captureOrdinal)
 			{
@@ -490,7 +493,7 @@ namespace spk::ShadowMap
 			}
 			const auto cameraView = _camera.viewMatrix();
 			const auto cameraProjection = _camera.projectionMatrix();
-			if (cache.cascaded && cache.resolution == light.shadowResolution &&
+			if (cache.cascaded && cache.cascadeCount == count && cache.resolution == light.shadowResolution &&
 				cache.publishedAdmission == light.admission && cache.cascadeCameraView == cameraView &&
 				cache.cascadeCameraProjection == cameraProjection && cache.cascadeDirection == light.direction &&
 				cache.cascadeDistance == light.shadowDistance && cache.staticSignature == _staticSignature &&
@@ -498,10 +501,13 @@ namespace spk::ShadowMap
 			{
 				return;
 			}
-			const auto projections = Projection::directionalCascades(light, _camera, _bounds);
+			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count);
 			auto cascades = cache.cascades;
-			bool changed = !cache.cascaded || cache.resolution != light.shadowResolution;
-			for (std::size_t i = 0; i < projections.size(); ++i)
+			for (std::size_t i = count; i < cascades.size(); ++i)
+			{
+				cascades[i] = {};
+			}
+			for (std::size_t i = 0; i < count; ++i)
 			{
 				const auto &projection = projections[i];
 				auto &cascade = cascades[i];
@@ -522,7 +528,7 @@ namespace spk::ShadowMap
 				}
 				const auto staticSignature = signature(staticCasters);
 				const auto dynamicSignature = signature(dynamicCasters);
-				const bool staticDirty = !cache.cascaded || !cascade.staticTarget ||
+				const bool staticDirty = !cache.cascaded || cache.cascadeCount != count || !cascade.staticTarget ||
 					cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection ||
 					cascade.staticSignature != staticSignature;
 				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cascade.dynamicSignature != dynamicSignature;
@@ -532,6 +538,7 @@ namespace spk::ShadowMap
 					cascade.staticTarget = frame.handle();
 					cascade.staticTexture = *frame.depthStencilAttachmentHandle();
 					renderDepth(context, cascade.staticTarget, projection.viewProjection, staticCasters, true);
+					++cascade.statistics.staticBuilds;
 				}
 				if (dynamicDirty)
 				{
@@ -548,24 +555,29 @@ namespace spk::ShadowMap
 						cascade.texture = *frame.depthStencilAttachmentHandle();
 						copyDepth(context, cascade.staticTarget, cascade.finalTarget);
 						renderDepth(context, cascade.finalTarget, projection.viewProjection, dynamicCasters, false);
+						++cascade.statistics.dynamicBuilds;
 					}
 				}
 				cascade.projection = projection.viewProjection;
 				cascade.staticSignature = staticSignature;
 				cascade.dynamicSignature = dynamicSignature;
-				changed |= dynamicDirty;
+				cascade.statistics.staticCasters = staticCasters.size();
+				cascade.statistics.dynamicCasters = dynamicCasters.size();
 			}
 			std::array<float, Projection::CascadeCount> splits{};
-			for (std::size_t i = 0; i < splits.size(); ++i)
+			for (std::size_t i = 0; i < count; ++i)
 			{
 				splits[i] = projections[i].splitFar;
 			}
 			// Publish only if the maps or their selection metadata changed.
 			// Camera-space split selection still follows camera movement when
 			// stabilized maps are reusable.
-			(void)changed;
+			cache.staticTarget = {};
+			cache.finalTarget = {};
+			cache.finalTexture = {};
 			cache.cascades = std::move(cascades);
 			cache.cascaded = true;
+			cache.cascadeCount = count;
 			cache.point = false;
 			cache.resolution = light.shadowResolution;
 			cache.sourceCaptureOrdinal = _captureOrdinal;
@@ -588,10 +600,13 @@ namespace spk::ShadowMap
 			entry.farPlane = projections.front().farPlane;
 			entry.cascadeCameraView = cameraView;
 			entry.cascadeSplits = splits;
-			for (std::size_t i = 0; i < projections.size(); ++i)
+			entry.cascadeCount = static_cast<std::uint8_t>(count);
+			entry.cascadeNear = projections.front().splitNear;
+			for (std::size_t i = 0; i < count; ++i)
 			{
 				const auto &projection = projections[i];
 				entry.cascadeTextures[i] = cache.cascades[i].texture;
+				entry.cascadeStatistics[i] = cache.cascades[i].statistics;
 				entry.viewProjection[i] = projection.viewProjection;
 				entry.cascadeDepthBias[i] = std::max(0.000001f, 0.35f * projection.worldPerTexel / (projection.farPlane - projection.nearPlane));
 				entry.cascadeNormalBias[i] = 0.3f * projection.worldPerTexel;
@@ -607,7 +622,7 @@ namespace spk::ShadowMap
 		void _renderLight(
 			RenderContext &context,
 			RenderingSystem::State::LightCache &cache,
-			const Light::Selection::Entry &light) const
+			const Light::Selection::Entry &light, std::size_t cascadeCount) const
 		{
 			if (light.type == Light::Selection::Type::Point)
 			{
@@ -620,7 +635,7 @@ namespace spk::ShadowMap
 			}
 			if (light.type == Light::Selection::Type::Directional && _directionalCascades)
 			{
-				_renderDirectional(context, cache, light);
+				_renderDirectional(context, cache, light, cascadeCount);
 				return;
 			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
@@ -767,8 +782,22 @@ namespace spk::ShadowMap
 			}
 			auto surface = _surface(*context.targetSurface);
 			std::lock_guard lock(surface->mutex);
+			std::size_t slots = Lighting::System::MaxShadowSamplers;
+			std::size_t remaining = static_cast<std::size_t>(std::count_if(_lights.begin(), _lights.end(), [](const auto &light) {
+				return light.type != Light::Selection::Type::Point;
+			}));
 			for (const auto &light : _lights)
 			{
+				std::size_t cascadeCount = 1;
+				if (light.type != Light::Selection::Type::Point)
+				{
+					if (_directionalCascades && light.type == Light::Selection::Type::Directional && slots >= remaining + 3)
+					{
+						cascadeCount = Projection::CascadeCount;
+					}
+					slots = slots >= cascadeCount ? slots - cascadeCount : 0;
+					--remaining;
+				}
 				if (!_channel->isAdmissionCurrent(light.registrationOrder, light.admission))
 				{
 					continue;
@@ -783,7 +812,7 @@ namespace spk::ShadowMap
 					}
 				}
 				auto &cache = surface->lights[{_viewIdentity, light.registrationOrder}];
-				_renderLight(context, cache, light);
+				_renderLight(context, cache, light, cascadeCount);
 			}
 		}
 	};

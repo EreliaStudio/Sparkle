@@ -137,6 +137,7 @@ namespace spk::Lighting
 						shadow.viewProjection = resolved->viewProjection;
 						shadow.viewProjection[4] = resolved->cascadeCameraView;
 						shadow.cascadeSplits = resolved->cascadeSplits;
+						shadow.parameters[0] = resolved->cascadeNear;
 						shadow.cascadeDepthBias = resolved->cascadeDepthBias;
 						shadow.cascadeNormalBias = resolved->cascadeNormalBias;
 						const bool soft = light.shadowFilter == Light::ShadowFilter::PCF3x3;
