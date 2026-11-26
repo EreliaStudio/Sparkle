@@ -131,7 +131,29 @@ namespace spk::Lighting
 						bindings->samplers.back().setTexture(resolved->depthTexture);
 						bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 					}
-					else if (compatible && !point && map2DCount < MaxShadowSamplers)
+					else if (compatible && !point && resolved->cascadeSplits.back() > 0.0f &&
+							 map2DCount + resolved->cascadeTextures.size() <= MaxShadowSamplers)
+					{
+						shadow.viewProjection = resolved->viewProjection;
+						shadow.viewProjection[4] = resolved->cascadeCameraView;
+						shadow.cascadeSplits = resolved->cascadeSplits;
+						shadow.cascadeDepthBias = resolved->cascadeDepthBias;
+						shadow.cascadeNormalBias = resolved->cascadeNormalBias;
+						const bool soft = light.shadowFilter == Light::ShadowFilter::PCF3x3;
+						shadow.parameters[2] = soft ? 1.0f / static_cast<float>(resolved->resolution) : 0.0f;
+						shadow.parameters[3] = static_cast<float>(map2DCount + 1);
+						for (const auto &texture : resolved->cascadeTextures)
+						{
+							bindings->samplers.emplace_back(
+								1 + map2DCount++,
+								soft ? Sampler::Filtering::Linear : Sampler::Filtering::Nearest,
+								Sampler::Wrap::ClampToBorder,
+								Sampler::MipmapFiltering::Disabled);
+							bindings->samplers.back().setTexture(texture);
+							bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
+						}
+					}
+					else if (compatible && !point && resolved->cascadeSplits.back() == 0.0f && map2DCount < MaxShadowSamplers)
 					{
 						const std::size_t index = map2DCount++;
 						shadow.viewProjection[0] = resolved->viewProjection[0];

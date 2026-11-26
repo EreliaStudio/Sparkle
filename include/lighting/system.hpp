@@ -75,9 +75,12 @@ namespace spk::Lighting
 			std::array<float, 4> parameters{};
 			std::array<float, 4> pointPositionNear{};
 			std::array<float, 4> pointFarResolution{};
+			std::array<float, 4> cascadeSplits{};
+			std::array<float, 4> cascadeDepthBias{};
+			std::array<float, 4> cascadeNormalBias{};
 		};
 
-		static_assert(sizeof(ShadowData) == 432 && alignof(ShadowData) == 16);
+		static_assert(sizeof(ShadowData) == 480 && alignof(ShadowData) == 16);
 
 		struct ShadowBindings
 		{
