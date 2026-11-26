@@ -16,12 +16,12 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "threading/worker_pool.hpp"
-#include "voxel/chunk.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_filter.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
+#include "world/voxel/chunk.hpp"
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
@@ -29,7 +29,7 @@ namespace
 {
 	using namespace std::chrono_literals;
 
-	using Chunk = spk::Voxel::Chunk<8, 16, 32>;
+	using Chunk = spk::World::Voxel::Chunk<8, 16, 32>;
 	using Coordinate = spk::World::ChunkCoordinate;
 	using Volume = spk::Voxel::Volume;
 	using Streaming = spk::World::WorldStreamingSystem<Chunk>;
@@ -268,7 +268,7 @@ namespace
 
 TEST(VoxelChunkTest, NonCubicDimensionsAreExactlyThoseOfTheVolume)
 {
-	using NonCubic = spk::Voxel::Chunk<8, 16, 32>;
+	using NonCubic = spk::World::Voxel::Chunk<8, 16, 32>;
 	Volume::Builder builder({8, 16, 32});
 	NonCubic chunk;
 	EXPECT_EQ(chunk.volume().atRaw({0, 0, 0}), Volume::PackedCell::Air);

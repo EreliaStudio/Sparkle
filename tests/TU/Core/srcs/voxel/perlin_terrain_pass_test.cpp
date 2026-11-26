@@ -13,15 +13,15 @@
 
 #include "exception.hpp"
 #include "math/perlin.hpp"
-#include "voxel/chunk.hpp"
 #include "voxel/definition.hpp"
-#include "voxel/pass/perlin_terrain_pass.hpp"
 #include "voxel/volume.hpp"
 #include "world/generator.hpp"
+#include "world/voxel/chunk.hpp"
+#include "world/voxel/pass/perlin_terrain_pass.hpp"
 
 namespace
 {
-	using Chunk = spk::Voxel::Chunk<16, 16, 16>;
+	using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 	using Builder = spk::Voxel::Volume::Builder;
 	using Coordinate = spk::World::ChunkCoordinate;
 
@@ -47,7 +47,7 @@ namespace
 	};
 
 	using GeneratorBase = spk::World::Generator<Chunk, GenerationData>;
-	using TerrainPass = spk::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
+	using TerrainPass = spk::World::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
 
 	[[nodiscard]] spk::Voxel::Definition::Registry registry()
 	{

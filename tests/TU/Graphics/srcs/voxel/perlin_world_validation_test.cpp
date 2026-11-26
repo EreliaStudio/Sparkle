@@ -32,8 +32,8 @@
 #include "sparkle_test/open_gl_test_context.hpp"
 #include "sparkle_test/paths.hpp"
 #include "threading/worker_pool.hpp"
-#include "voxel/chunk_mesher.hpp"
-#include "voxel/chunk_rendering_system.hpp"
+#include "world/voxel/chunk_mesher.hpp"
+#include "world/voxel/chunk_rendering_system.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/local_chunk_requester.hpp"
@@ -51,7 +51,7 @@ namespace
 	using Chunk = terrain::Chunk;
 	using Coordinate = terrain::Coordinate;
 	using Collection = spk::World::ChunkCollection<Chunk>;
-	using ChunkGraphics = spk::Voxel::ChunkRenderingSystem<16, 16, 16>;
+	using ChunkGraphics = spk::World::Voxel::ChunkRenderingSystem<16, 16, 16>;
 	using Streamer = spk::World::WorldStreamingSystem<Chunk>;
 	using Clock = std::chrono::steady_clock;
 	constexpr const char *GoldenCategory = "rendering/perlin-world";
@@ -574,7 +574,7 @@ TEST(PerlinWorldPerformance, NeighborAwareMeshing25Chunks)
 	measure("neighbor_aware_meshing", 25, [&]() {
 		for (const auto &[coordinate, entry] : collection)
 		{
-			spk::Voxel::ChunkMesher<16, 16, 16> mesher(collection, coordinate);
+			spk::World::Voxel::ChunkMesher<16, 16, 16> mesher(collection, coordinate);
 			mesher.attachCache(cache);
 			const auto geometry = mesher.bake(entry.chunk().volume());
 			vertices += geometry.opaqueMesh().vertexCount();

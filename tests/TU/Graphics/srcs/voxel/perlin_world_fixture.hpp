@@ -16,15 +16,15 @@
 #include "container/json/object.hpp"
 #include "graphics/opengl/texture.hpp"
 #include "math/perlin.hpp"
-#include "voxel/chunk.hpp"
 #include "voxel/definition.hpp"
 #include "voxel/palette.hpp"
-#include "voxel/pass/perlin_terrain_pass.hpp"
 #include "world/generator.hpp"
+#include "world/voxel/chunk.hpp"
+#include "world/voxel/pass/perlin_terrain_pass.hpp"
 
 namespace sparkle_test::perlin_world
 {
-	using Chunk = spk::Voxel::Chunk<16, 16, 16>;
+	using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 	using Coordinate = spk::World::ChunkCoordinate;
 	using Builder = spk::Voxel::Volume::Builder;
 	using Registry = spk::Voxel::Definition::Registry;
@@ -148,7 +148,7 @@ namespace sparkle_test::perlin_world
 
 	// Keep the test-owned palette/shapes separate from Sparkle's reusable pass.
 	using GeneratorBase = spk::World::Generator<Chunk, GenerationData>;
-	using TerrainPass = spk::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
+	using TerrainPass = spk::World::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
 
 	class Generator final : public GeneratorBase
 	{

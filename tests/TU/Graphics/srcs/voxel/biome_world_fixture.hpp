@@ -4,11 +4,11 @@
 #include <cmath>
 
 #include "perlin_world_fixture.hpp"
-#include "voxel/biome_generator.hpp"
+#include "world/voxel/biome_generator.hpp"
 
 namespace sparkle_test::biome_world
 {
-	class Biome final : public spk::Voxel::Biome
+	class Biome final : public spk::World::Voxel::Biome
 	{
 	private:
 		spk::World::HeightMap _heightMap;
@@ -44,7 +44,7 @@ namespace sparkle_test::biome_world
 		}
 	};
 
-	class Generator final : public spk::Voxel::BiomeGenerator<perlin_world::Chunk, 3>
+	class Generator final : public spk::World::Voxel::BiomeGenerator<perlin_world::Chunk, 3>
 	{
 	private:
 		Biome _plains{7.0f, 2.0f, 1, 11};

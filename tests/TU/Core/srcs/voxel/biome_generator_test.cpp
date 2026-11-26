@@ -11,23 +11,23 @@
 #include <utility>
 #include <vector>
 
-#include "voxel/biome_generator.hpp"
-#include "voxel/chunk.hpp"
 #include "world/local_chunk_requester.hpp"
+#include "world/voxel/biome_generator.hpp"
+#include "world/voxel/chunk.hpp"
 
 namespace
 {
-	using Chunk = spk::Voxel::Chunk<16, 16, 16>;
+	using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 
 	using Influence = spk::World::SurfaceBiome::Influence;
-	using DefaultGenerationData = spk::Voxel::BiomeGenerationData<>;
+	using DefaultGenerationData = spk::World::Voxel::BiomeGenerationData<>;
 	static_assert(std::is_same_v<Influence::Cell<>, Influence::Cell<4>>);
 	static_assert(std::is_same_v<Influence::Grid<>, Influence::Grid<4>>);
-	static_assert(std::is_same_v<DefaultGenerationData, spk::Voxel::BiomeGenerationData<4>>);
-	static_assert(std::is_same_v<spk::Voxel::BiomeGenerator<Chunk>, spk::Voxel::BiomeGenerator<Chunk, 4>>);
+	static_assert(std::is_same_v<DefaultGenerationData, spk::World::Voxel::BiomeGenerationData<4>>);
+	static_assert(std::is_same_v<spk::World::Voxel::BiomeGenerator<Chunk>, spk::World::Voxel::BiomeGenerator<Chunk, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData>, spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData>, spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData, 4>>);
-	static_assert(std::is_same_v<spk::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData>, spk::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData, 4>>);
+	static_assert(std::is_same_v<spk::World::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData>, spk::World::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData, 4>>);
 
 	spk::Voxel::Definition::Registry registry()
 	{
@@ -42,7 +42,7 @@ namespace
 		return builder.build();
 	}
 
-	class Biome : public spk::Voxel::Biome
+	class Biome : public spk::World::Voxel::Biome
 	{
 	public:
 		Biome()
@@ -66,7 +66,7 @@ namespace
 		}
 	};
 
-	class Generator : public spk::Voxel::BiomeGenerator<Chunk, 1>
+	class Generator : public spk::World::Voxel::BiomeGenerator<Chunk, 1>
 	{
 	private:
 		Biome _biome;
@@ -620,7 +620,7 @@ TEST(VoxelStratumInstanceTest, ResolvesAbsoluteHeightsAndVoxelIDs)
 TEST(VoxelStratumInstanceTest, ReusesGridAndInstancesWithoutKeepingOldLayers)
 {
 	using Instance = Biome::Stratum::Instance;
-	using Grid = spk::Voxel::StrataGrid;
+	using Grid = spk::World::Voxel::StrataGrid;
 	Biome biome;
 	auto grid = Grid::obtain({2, 1});
 	(*grid)[{0, 0}] = Instance::obtain(biome, {0, 0}, 17);
@@ -684,7 +684,7 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 		}
 	};
 
-	class EditedGenerator : public spk::Voxel::BiomeGenerator<Chunk, 1>
+	class EditedGenerator : public spk::World::Voxel::BiomeGenerator<Chunk, 1>
 	{
 	private:
 		Biome _biome;

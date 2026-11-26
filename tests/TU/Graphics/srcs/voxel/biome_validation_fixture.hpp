@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "perlin_world_fixture.hpp"
-#include "voxel/biome_generator.hpp"
+#include "world/voxel/biome_generator.hpp"
 
 namespace sparkle_test::biome_validation
 {
@@ -107,7 +107,7 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
-	class Biome final : public spk::Voxel::Biome
+	class Biome final : public spk::World::Voxel::Biome
 	{
 	private:
 		spk::World::HeightMap _map;
@@ -224,7 +224,7 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
-	class Generator final : public spk::Voxel::BiomeGenerator<perlin_world::Chunk, 3>
+	class Generator final : public spk::World::Voxel::BiomeGenerator<perlin_world::Chunk, 3>
 	{
 	private:
 		Settings _settings;
