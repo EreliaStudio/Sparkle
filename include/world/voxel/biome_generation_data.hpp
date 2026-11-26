@@ -18,12 +18,9 @@ namespace spk::World::Voxel
 	class Biome::GenerationData
 	{
 	public:
-		using Distribution = spk::World::SurfaceBiome::Influence::Distribution<TCapacity>;
-
 		struct World
 		{
 			const spk::Voxel::Definition::Registry *registry = nullptr;
-			const Distribution *distribution = nullptr;
 			float surfaceScale = 1.0f;
 		};
 
@@ -87,18 +84,6 @@ namespace spk::World::Voxel
 			}
 			_columns.clear();
 			_world.registry = registry;
-		}
-
-		// The strategy and referenced biomes must outlive the binding.
-		void bindDistribution(const Distribution *distribution)
-		{
-			const std::scoped_lock lock(_mutex);
-			if (!_chunks.empty())
-			{
-				throw spk::Exception("Cannot bind a biome distribution during generation");
-			}
-			_columns.clear();
-			_world.distribution = distribution;
 		}
 
 		void setSurfaceScale(float scale)

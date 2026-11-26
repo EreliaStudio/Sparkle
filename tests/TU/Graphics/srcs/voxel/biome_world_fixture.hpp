@@ -44,7 +44,7 @@ namespace sparkle_test::biome_world
 		}
 	};
 
-	class PlacementDistribution final : public spk::World::SurfaceBiome::Influence::Distribution<3>
+	class Placement
 	{
 	private:
 		Biome _plains{7.0f, 2.0f, 1, 11};
@@ -54,7 +54,7 @@ namespace sparkle_test::biome_world
 		bool _hard;
 
 	public:
-		void compute(const spk::Vector2 &position, Cell &cell) const override
+		void compute(const spk::Vector2 &position, spk::World::SurfaceBiome::Influence::Cell<3> &cell) const
 		{
 			const float shift = _boundary.sample2D(position.x, position.y, -8.0f, 8.0f);
 			const float x = position.x + shift;
@@ -72,7 +72,7 @@ namespace sparkle_test::biome_world
 			cell[2] = {&_plains, (1.0f - desert) * (1.0f - mountain)};
 		}
 
-		explicit PlacementDistribution(bool hard) :
+		explicit Placement(bool hard) :
 			_hard(hard)
 		{
 			_boundary.setFrequency(0.055f);
@@ -82,7 +82,7 @@ namespace sparkle_test::biome_world
 	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
 	{
 	private:
-		PlacementDistribution _distribution;
+		Placement _placement;
 
 		class FlattenRoad : public spk::World::SurfacePass<perlin_world::Chunk, Data>
 		{
@@ -106,10 +106,12 @@ namespace sparkle_test::biome_world
 
 	public:
 		Generator(const perlin_world::Registry &registry, bool hard, bool edit) :
-			_distribution(hard)
+			_placement(hard)
 		{
 			bind(&registry);
-			bindDistribution(&_distribution);
+			distribution().setInfluenceFunction([this](const spk::Vector2 &position, Cell &cell) {
+				_placement.compute(position, cell);
+			});
 			if (edit)
 			{
 				insertPass<FlattenRoad>(2);

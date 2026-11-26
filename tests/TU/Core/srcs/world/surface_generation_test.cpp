@@ -59,6 +59,16 @@ namespace
 	private:
 		ConstantBiome _first{20};
 		ConstantBiome _second{100};
+		spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>::Distribution _influenceFunction = [this](const spk::Vector2 &, Cell &cell) {
+			cell[0] = {&_first, 3.0f};
+			cell[1] = {&_second, 1.0f};
+		};
+
+	public:
+		Distribution()
+		{
+			bind(&_influenceFunction);
+		}
 
 	protected:
 		Configuration _computeGridConfiguration(const spk::Vector2Int &, const GenerationData &) override
@@ -68,11 +78,6 @@ namespace
 		void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, Grid::Lease grid) override
 		{
 			data.column(coordinate).influences = std::move(grid);
-		}
-		void _computeBiomeInfluences(const spk::Vector2 &, Cell &cell, const GenerationData &) override
-		{
-			cell[0] = {&_first, 3.0f};
-			cell[1] = {&_second, 1.0f};
 		}
 	};
 

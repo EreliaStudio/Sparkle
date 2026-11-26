@@ -224,7 +224,7 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
-	class PlacementDistribution final : public spk::World::SurfaceBiome::Influence::Distribution<3>
+	class Placement
 	{
 	private:
 		Settings _settings;
@@ -234,7 +234,7 @@ namespace sparkle_test::biome_validation
 		spk::Perlin _regions{913};
 
 	public:
-		void compute(const spk::Vector2 &p, Cell &cell) const override
+		void compute(const spk::Vector2 &p, spk::World::SurfaceBiome::Influence::Cell<3> &cell) const
 		{
 			switch (_settings.placement)
 			{
@@ -269,7 +269,7 @@ namespace sparkle_test::biome_validation
 			}
 		}
 
-		explicit PlacementDistribution(Settings settings) :
+		explicit Placement(Settings settings) :
 			_settings(settings),
 			_first(settings, 1, 0, 107),
 			_second(settings, 4, -12, 211),
@@ -282,7 +282,7 @@ namespace sparkle_test::biome_validation
 	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
 	{
 	private:
-		PlacementDistribution _distribution;
+		Placement _placement;
 
 		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, Data>
 		{
@@ -304,11 +304,13 @@ namespace sparkle_test::biome_validation
 
 	public:
 		Generator(const perlin_world::Registry &registry, Settings settings) :
-			_distribution(settings)
+			_placement(settings)
 		{
 			bind(&registry);
 			_setSurfaceScale(settings.scale);
-			bindDistribution(&_distribution);
+			distribution().setInfluenceFunction([this](const spk::Vector2 &position, Cell &cell) {
+				_placement.compute(position, cell);
+			});
 			if (settings.terrace)
 			{
 				insertPass<Terrace>(2);

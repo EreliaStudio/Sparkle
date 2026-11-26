@@ -23,9 +23,6 @@ namespace spk::World
 
 			template <std::size_t TCapacity = 4>
 			class Grid;
-
-			template <std::size_t TCapacity = 4>
-			class Distribution;
 		};
 
 		[[nodiscard]] virtual float groundHeight(const spk::Vector2 &worldPosition) const = 0;
@@ -133,18 +130,6 @@ namespace spk::World
 			}
 			return result;
 		}
-	};
-
-	// A world-specific placement strategy, independent of chunks and voxel data.
-	// Implementations must support concurrent read-only sampling.
-	template <std::size_t TCapacity>
-	class SurfaceBiome::Influence::Distribution
-	{
-	public:
-		using Cell = Influence::Cell<TCapacity>;
-
-		virtual ~Distribution() = default;
-		virtual void compute(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
 	};
 
 	template <std::size_t TCapacity>

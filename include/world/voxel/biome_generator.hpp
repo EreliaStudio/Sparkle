@@ -8,7 +8,7 @@
 
 namespace spk::World::Voxel
 {
-	// Ready-to-use voxel terrain pipeline. Bind a placement strategy before generation.
+	// Ready-to-use voxel terrain pipeline. Configure the influence function in a derived recipe.
 	// All four standard passes are registered by the constructor. Extend with addPass or insertPass before generating.
 	template <typename TChunk, std::size_t TCapacity>
 	class Biome::Generator : public spk::World::Generator<TChunk, Biome::GenerationData<TCapacity>>
@@ -19,7 +19,6 @@ namespace spk::World::Voxel
 		using ColumnData = typename Data::Column;
 		using InfluenceGrid = typename ColumnData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
-		using DistributionStrategy = typename Data::Distribution;
 		using HeightCombination = typename spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>::Combination;
 
 	private:
@@ -28,26 +27,39 @@ namespace spk::World::Voxel
 		using StrataBase = Strata::GenerationPass<TChunk, Data, TCapacity>;
 		using ApplicationBase = Strata::ApplicationPass<TChunk, Data>;
 
-		class Distribution : public DistributionBase
+		class DistributionPass : public DistributionBase
 		{
+		private:
+			typename DistributionBase::Distribution _influenceFunction;
+
+		public:
+			DistributionPass()
+			{
+				this->bind(&_influenceFunction);
+			}
+
+			// Configure once, before submitting any generation work.
+			void setInfluenceFunction(typename DistributionBase::Distribution function)
+			{
+				if (_influenceFunction || !function)
+				{
+					throw spk::Exception("Biome influence function must be configured exactly once");
+				}
+				_influenceFunction = std::move(function);
+			}
+
 		protected:
 			typename InfluenceGrid::Configuration _computeGridConfiguration(const spk::Vector2Int &, const Data &data) override
 			{
-				if (data.world().distribution == nullptr)
-				{
-					throw spk::Exception("Voxel biome generator has no bound distribution");
-				}
 				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().surfaceScale};
 			}
 			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, Data &data, typename InfluenceGrid::Lease grid) override
 			{
 				data.column(coordinate).influences = std::move(grid);
 			}
-			void _computeBiomeInfluences(const spk::Vector2 &position, Cell &destination, const Data &data) override
-			{
-				data.world().distribution->compute(position, destination);
-			}
 		};
+
+		DistributionPass *_distributionPass = nullptr;
 
 		class Combination : public CombinationBase
 		{
@@ -94,6 +106,11 @@ namespace spk::World::Voxel
 		};
 
 	protected:
+		[[nodiscard]] DistributionPass &distribution() noexcept
+		{
+			return *_distributionPass;
+		}
+
 		// Derived recipes can specialize the sampling scale before submitting work.
 		void _setSurfaceScale(float scale)
 		{
@@ -132,7 +149,7 @@ namespace spk::World::Voxel
 	public:
 		Generator()
 		{
-			this->template addPass<Distribution>();
+			_distributionPass = &this->template addPass<DistributionPass>();
 			this->template addPass<Combination>(HeightCombination::Weighted);
 			this->template addPass<StrataGeneration>();
 			this->template addPass<Application>();
@@ -141,11 +158,6 @@ namespace spk::World::Voxel
 		void bind(const spk::Voxel::Definition::Registry *registry)
 		{
 			this->_data().bind(registry);
-		}
-
-		void bindDistribution(const DistributionStrategy *distribution)
-		{
-			this->_data().bindDistribution(distribution);
 		}
 	};
 }
