@@ -192,6 +192,45 @@ namespace
 		}
 	};
 
+	class MixedGenerator final : public spk::World::Voxel::Biome::Generator<Chunk, 2>
+	{
+	private:
+		class MixedDistributionPass final : public DistributionPass
+		{
+		private:
+			Biome _first;
+			Biome _second;
+			Distribution _function = [this](const spk::Vector2 &, Cell &cell) {
+				cell[0] = {&_first, 0.8f};
+				cell[1] = {&_second, 0.2f};
+			};
+
+		public:
+			MixedDistributionPass()
+			{
+				for (auto &stratum : _first.strata())
+				{
+					stratum.materials = {{1, 1}};
+				}
+				for (auto &stratum : _second.strata())
+				{
+					stratum.materials = {{4, 1}};
+				}
+				bind(&_function);
+			}
+		};
+
+	public:
+		explicit MixedGenerator(BiomeSelection selection, std::uint32_t seed)
+		{
+			bind(&registry());
+			addPass<MixedDistributionPass>();
+			addPass<CombinationPass>(HeightCombination::Weighted);
+			addPass<StrataGeneration>(selection, seed);
+			addPass<Application>();
+		}
+	};
+
 	std::uint32_t idAt(const Chunk &chunk, std::uint32_t x, std::uint32_t y, std::uint32_t z)
 	{
 		return spk::Voxel::Volume::PackedCell::definitionId(chunk.volume().atRaw({x, y, z}));
@@ -230,6 +269,62 @@ TEST(VoxelBiomeGeneratorTest, SeparateRecipesOwnTheirDistributionAndHeightMode)
 	EXPECT_EQ(idAt(*firstUpper, 0, 1, 0), 1u);
 	EXPECT_EQ(idAt(*secondUpper, 0, 1, 0), 0u);
 	EXPECT_EQ(first.samples.load(), 289);
+}
+
+TEST(VoxelBiomeGeneratorTest, WeightedBiomeSelectionIsSeededAndSharedByVerticalStrata)
+{
+	using Selection = MixedGenerator::BiomeSelection;
+	MixedGenerator dominant(Selection::Dominant, 42);
+	MixedGenerator weighted(Selection::Weighted, 42);
+	MixedGenerator sameSeed(Selection::Weighted, 42);
+	MixedGenerator otherSeed(Selection::Weighted, 43);
+	std::size_t firstCount = 0;
+	std::size_t changedCount = 0;
+	for (const int cx : {-2, -1, 0, 1})
+	{
+		const auto d = dominant.generate({cx, 1, -1});
+		const auto upper = weighted.generate({cx, 1, -1});
+		const auto lower = weighted.generate({cx, 0, -1});
+		const auto other = otherSeed.generate({cx, 1, -1});
+		ASSERT_TRUE(d && upper && lower && other);
+		for (std::uint32_t z = 0; z < 16; ++z)
+		{
+			for (std::uint32_t x = 0; x < 16; ++x)
+			{
+				const auto id = idAt(*upper, x, 1, z);
+				EXPECT_EQ(idAt(*d, x, 1, z), 1u);
+				EXPECT_TRUE(id == 1u || id == 4u);
+				EXPECT_EQ(idAt(*lower, x, 0, z), id);
+				EXPECT_EQ(idAt(*upper, x, 2, z), 0u);
+				firstCount += id == 1u;
+				changedCount += id != idAt(*other, x, 1, z);
+			}
+		}
+	}
+	EXPECT_GT(firstCount, 740u);
+	EXPECT_LT(firstCount, 890u);
+	EXPECT_GT(changedCount, 100u);
+
+	weighted.flush();
+	for (const int cx : {1, 0, -1, -2})
+	{
+		auto concurrentLower = std::async(std::launch::async, [&] {
+			return sameSeed.generate({cx, 0, -1});
+		});
+		const auto upper = sameSeed.generate({cx, 1, -1});
+		const auto lower = concurrentLower.get();
+		const auto regenerated = weighted.generate({cx, 1, -1});
+		ASSERT_TRUE(upper && lower && regenerated);
+		for (std::uint32_t z = 0; z < 16; ++z)
+		{
+			for (std::uint32_t x = 0; x < 16; ++x)
+			{
+				const auto id = idAt(*regenerated, x, 1, z);
+				EXPECT_EQ(idAt(*upper, x, 1, z), id);
+				EXPECT_EQ(idAt(*lower, x, 0, z), id);
+			}
+		}
+	}
 }
 
 TEST(VoxelBiomeGeneratorTest, RegistryBindingIsRequiredAndCanBeDetached)

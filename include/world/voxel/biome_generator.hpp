@@ -20,6 +20,7 @@ namespace spk::World::Voxel
 		using InfluenceGrid = typename ColumnData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
 		using HeightCombination = typename spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>::Combination;
+		using BiomeSelection = typename Strata::GenerationPass<TChunk, Data, TCapacity>::Selection;
 
 	protected:
 		using DistributionBase = spk::World::SurfaceBiomeDistributionPass<TChunk, Data, TCapacity>;
@@ -55,6 +56,9 @@ namespace spk::World::Voxel
 
 		class StrataGeneration : public StrataBase
 		{
+		public:
+			using StrataBase::StrataBase;
+
 		protected:
 			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const Data &data) override
 			{

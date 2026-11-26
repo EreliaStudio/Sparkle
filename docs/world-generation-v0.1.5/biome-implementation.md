@@ -51,7 +51,7 @@ before changing settings or definitions. No LRU or automatic eviction is impleme
 
 - Both grid kinds use inclusive endpoints, floor direct access, identical world origins.
   Influence and blended-height sample spacing are the same; voxel strata are sampled at
-  unit spacing and use explicit bilinear dominance. Configuration is fixed
+  unit spacing and select a biome from the interpolated influences. Configuration is fixed
   during all active jobs. Drain workers and flush before changing definitions. Float world positions retain the existing Perlin precision limit.
 - The generic height combination pass accepts its mode at construction (default Weighted); concrete generators can register a pass with Weighted or Dominant explicitly. Weighted sums normalized
   positive influences with double accumulation; Dominant evaluates only the biome with
@@ -61,7 +61,7 @@ before changing settings or definitions. No LRU or automatic eviction is impleme
 - Voxel height is floored. Depth zero means the top voxel. Finite strata have positive
   integer thickness; the final stratum may be infinite. Missing finite layers leave the
   builder unchanged; solid strata overwrite the corresponding existing voxels.
-- Incompatible dominant biome throws using a dynamic cast once per column sample, not per voxel.
+- Strata::GenerationPass accepts Selection::Dominant (default) or Selection::Weighted and a uint32 seed (default 0). Weighted draws one biome for each absolute integer X/Z using its positive interpolated weights and a stateless hash; the same biome supplies the entire vertical profile, independently of the height combination mode, chunk order, threads and flush. Incompatible selected biome throws using a dynamic cast once per column sample, not per voxel.
   Material weights are finite/nonnegative, air and out-of-range packed IDs rejected.
   Independent hash-based weighted selection, Perlin selection and custom [0,1] selectors
   are supported; thickness noise is independent. Registry compatibility is checked by
@@ -122,10 +122,10 @@ Both height and influence grids use SurfaceGrid's weighted traversal. Aligned
 bilinear queries read only one cell at a grid node, or two cells on a grid line.
 Height interpolation accumulates weighted samples in double precision before
 converting to float; a single contributing sample is returned unchanged.
-Empty cells remain empty. The Dominant mode belongs to height combination only.
+Empty cells remain empty. Height combination and strata biome selection have independent modes.
 Stored and interpolated influences use Influence::Cell<N>, which owns a fixed-size
 std::array and exposes dominant() independently of spatial sampling. Grid no longer
-provides dominant(); both the height and strata passes use the cell method.
+provides dominant(); both the height and strata passes use the cell method in dominant mode.
 Exact ties retain first positive encounter order.
 Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
 interpolation, 3D slices and optional coordinate warping from the voxel renderer.
