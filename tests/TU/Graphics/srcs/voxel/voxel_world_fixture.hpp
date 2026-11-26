@@ -18,7 +18,7 @@
 #include "world/voxel/biome_generator.hpp"
 #include "world/voxel/chunk.hpp"
 
-namespace sparkle_test::perlin_world
+namespace sparkle_test::voxel_world
 {
 	using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 	using Coordinate = spk::World::ChunkCoordinate;

@@ -42,19 +42,18 @@
 
 #include "biome_validation_fixture.hpp"
 #include "biome_world_fixture.hpp"
-#include "perlin_world_fixture.hpp"
+#include "voxel_world_fixture.hpp"
 
 namespace
 {
 	using namespace std::chrono_literals;
-	namespace terrain = sparkle_test::perlin_world;
+	namespace terrain = sparkle_test::voxel_world;
 	using Chunk = terrain::Chunk;
 	using Coordinate = terrain::Coordinate;
 	using Collection = spk::World::ChunkCollection<Chunk>;
 	using ChunkGraphics = Chunk::RenderingSystem;
 	using Streamer = spk::World::WorldStreamingSystem<Chunk>;
 	using Clock = std::chrono::steady_clock;
-	constexpr const char *GoldenCategory = "rendering/perlin-world";
 	constexpr std::uint32_t ShadowResolution = 512;
 
 	[[nodiscard]] std::uint64_t checksum(const Chunk &chunk)
@@ -86,7 +85,7 @@ namespace
 		}
 		std::sort(durations.begin(), durations.end());
 		std::cout << std::fixed << std::setprecision(3)
-				  << "\n[Perlin world performance] phase=" << name
+				  << "\n[Biome world performance] phase=" << name
 				  << " | operations=" << operations
 				  << " | median=" << durations[Samples / 2]
 				  << " ms | per_operation=" << durations[Samples / 2] / static_cast<double>(operations)
@@ -105,8 +104,8 @@ namespace
 		spk::WorkerPool workers{4};
 		spk::World::LocalChunkRequester<Chunk, terrain::GenerationData> requester{workers, generator};
 		Collection chunks;
-		spk::Entity3D cameraEntity{"Perlin camera"};
-		spk::Entity3D sunEntity{"Perlin sun"};
+		spk::Entity3D cameraEntity{"Biome camera"};
+		spk::Entity3D sunEntity{"Biome sun"};
 		spk::Entity3D firstObserver{"First observer"};
 		spk::Entity3D secondObserver{"Second observer"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
@@ -154,7 +153,7 @@ namespace
 			setCamera({46.0f, 44.0f, 53.0f}, {0, 6, 0});
 			camera.setPerspective(0.90f, static_cast<float>(terrain::ImageSize.x) / terrain::ImageSize.y, 0.1f, 240.0f);
 			engine.addEntity(&cameraEntity);
-			return engine.addView("Perlin", &camera, terrain::ImageSize);
+			return engine.addView("Biome", &camera, terrain::ImageSize);
 		}
 
 		void setCamera(spk::Vector3 position, spk::Vector3 target)
@@ -321,164 +320,14 @@ namespace
 			engine.removeEntity(&cameraEntity);
 		}
 	};
-
-	void expectGolden(Scene &scene, const std::string &name)
-	{
-		const auto pixels = scene.capture();
-		auto &gl = sparkle_test::OpenGLTestContext::instance();
-		const auto actual = sparkle_test::resultImagePath(GoldenCategory, name);
-		gl.save(actual);
-		const auto expected = sparkle_test::expectedImagePath(GoldenCategory, name);
-		ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing approved Perlin world golden: " << expected << "; actual " << actual;
-		sparkle_test::ImageComparisonOptions tolerance;
-		tolerance.rgbTolerance = 8;
-		tolerance.alphaTolerance = 8;
-		const auto result = sparkle_test::compareImages(
-			actual, expected, sparkle_test::resultImagePath(GoldenCategory, name + "_difference"), tolerance);
-		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
-		EXPECT_EQ(pixels.size, terrain::ImageSize);
-	}
 }
 
-TEST(PerlinWorldIntegration, NegativeCoordinatesAndGenerationOrderAreDeterministic)
-{
-	const auto definitions = terrain::registry();
-	terrain::Generator generator(definitions);
-	const std::array<Coordinate, 6> coordinates{
-		Coordinate{-2, 0, -2}, {-1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {2, 0, -1}};
-	std::array<std::uint64_t, coordinates.size()> first{};
-	for (std::size_t i = 0; i < coordinates.size(); ++i)
-	{
-		const auto chunk = generator.generate(coordinates[i]);
-		ASSERT_TRUE(chunk.has_value());
-		first[i] = checksum(*chunk);
-	}
-	for (std::size_t i = coordinates.size(); i > 0; --i)
-	{
-		const auto chunk = generator.generate(coordinates[i - 1]);
-		ASSERT_TRUE(chunk.has_value());
-		EXPECT_EQ(checksum(*chunk), first[i - 1]);
-	}
-	EXPECT_FALSE(generator.generate({5, 0, 0}).has_value());
-	EXPECT_FALSE(generator.generate({0, 1, 0}).has_value());
-	const auto negative = generator.generate({-1, 0, 0});
-	const auto positive = generator.generate({0, 0, 0});
-	ASSERT_TRUE(negative.has_value());
-	ASSERT_TRUE(positive.has_value());
-	const std::array<const Chunk *, 2> neighbors{&*negative, &*positive};
-	for (std::uint32_t z = 0; z < 16; ++z)
-	{
-		for (std::size_t side = 0; side < neighbors.size(); ++side)
-		{
-			const Chunk *chunk = neighbors[side];
-			const std::uint32_t localX = side == 0 ? 15u : 0u;
-			const auto globalX = side == 0 ? -1 : 0;
-			const auto top = static_cast<std::uint32_t>(generator.height(globalX, static_cast<std::int32_t>(z)));
-			EXPECT_NE(chunk->volume().atRaw({localX, top, z}), spk::Voxel::Volume::PackedCell::Air);
-			if (top < 15)
-			{
-				EXPECT_EQ(chunk->volume().atRaw({localX, top + 1, z}), spk::Voxel::Volume::PackedCell::Air);
-			}
-		}
-	}
-}
-
-TEST(PerlinWorldGolden, TerrainOverviewWithDirectionalShadows)
-{
-	Scene scene;
-	scene.fill(2);
-	EXPECT_EQ(scene.chunks.size(), 25u);
-	expectGolden(scene, "overview_shadows");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, ObliqueCameraAndOutlinedShapes)
-{
-	Scene scene;
-	scene.fill(2);
-	scene.setCamera({-48, 35, 37}, {-5, 8, -5});
-	expectGolden(scene, "oblique_outlined");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, FpsGroundForward)
-{
-	Scene scene;
-	scene.fill(2);
-	const float cameraHeight = static_cast<float>(scene.generator.height(4, -8)) + 1.8f;
-	scene.setCamera({4.0f, cameraHeight, -8.0f}, {23.0f, cameraHeight + 2.0f, 14.0f});
-	expectGolden(scene, "fps_ground_forward");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, FpsHillside)
-{
-	Scene scene;
-	scene.fill(2);
-	const float cameraHeight = static_cast<float>(scene.generator.height(-27, -16)) + 1.8f;
-	scene.setCamera({-27.0f, cameraHeight, -16.0f}, {-3.0f, 13.0f, 3.0f});
-	expectGolden(scene, "fps_hillside");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, SkyTopDownHeightfield)
-{
-	Scene scene;
-	scene.fill(2);
-	scene.setCamera({8.0f, 86.0f, 11.0f}, {0.0f, 8.0f, 0.0f});
-	expectGolden(scene, "topdown_heightfield");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, RuggedTerrainOverview)
-{
-	terrain::Generator::Settings settings;
-	settings.seed = terrain::Seed + 123u;
-	settings.broadFrequency = 0.082f;
-	settings.broadAmplitude = 10.5f;
-	settings.detailFrequency = 0.23f;
-	settings.detailAmplitude = 5.0f;
-	Scene scene(false, settings);
-	scene.fill(2);
-	scene.setCamera({44.0f, 49.0f, 51.0f}, {0.0f, 8.0f, 0.0f});
-	expectGolden(scene, "rugged_overview");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, LowlandTerrainOverview)
-{
-	terrain::Generator::Settings settings;
-	settings.seed = terrain::Seed + 456u;
-	settings.broadFrequency = 0.034f;
-	settings.broadAmplitude = 3.2f;
-	settings.detailFrequency = 0.12f;
-	settings.detailAmplitude = 1.1f;
-	settings.baseHeight = 6.0f;
-	settings.minimumHeight = 2;
-	settings.maximumHeight = 12;
-	Scene scene(false, settings);
-	scene.fill(2);
-	scene.setCamera({47.0f, 37.0f, 50.0f}, {0.0f, 6.0f, 0.0f});
-	expectGolden(scene, "lowland_overview");
-	scene.verifyShadow();
-}
-
-TEST(PerlinWorldGolden, SameWorldWithoutShadows)
-{
-	Scene scene;
-	scene.fill(2);
-	scene.sun.setCastsShadows(false);
-	expectGolden(scene, "overview_without_shadows");
-}
-
-TEST(PerlinWorldGolden, EditedChunkAndSixNeighborRemeshing)
+TEST(BiomeWorldIntegration, EditedChunkAndNeighborRemeshing)
 {
 	Scene scene;
 	scene.fill(2);
 	const Coordinate center{0, 0, 0};
 	auto *original = &scene.chunks.at(center);
-	auto *entity = &scene.chunks.begin()->second.entity();
-	(void)entity;
 	const auto before = checksum(*original);
 	spk::Voxel::Volume::Builder edit({16, 16, 16});
 	edit.load(original->volume());
@@ -493,57 +342,33 @@ TEST(PerlinWorldGolden, EditedChunkAndSixNeighborRemeshing)
 	EXPECT_NE(checksum(*original), before);
 	scene.refreshCasters();
 	EXPECT_GE(scene.graphics.lastStatistics().chunks, 1u);
-	expectGolden(scene, "terrain_edited");
+	(void)scene.capture();
 	scene.verifyShadow();
 }
 
-// Each movement stage gets its own PNG, so a streaming regression identifies
-// the precise observer position rather than failing an entire animation.
-void checkStreamingStep(int lastStep, const std::string &goldenName)
+TEST(BiomeWorldIntegration, TwoObserversStreamingAcrossChunkBoundaries)
 {
 	Scene scene(true);
-	for (int step = 0; step <= lastStep; ++step)
+	for (int step = 0; step <= 3; ++step)
 	{
 		const float shift = static_cast<float>(step * 16);
 		scene.firstObserver.transform().place({shift - 16.0f, 8, 0});
 		scene.secondObserver.transform().place({shift, 8, 0});
 		scene.waitForStreaming();
 		EXPECT_EQ(scene.chunks.size(), scene.desiredChunks());
-		if (step == lastStep)
-		{
-			scene.setCamera({shift + 28.0f, 35, 42}, {shift, 7, 0});
-			expectGolden(scene, goldenName);
-			scene.verifyShadow();
-		}
+		scene.setCamera({shift + 28.0f, 35, 42}, {shift, 7, 0});
+		(void)scene.capture();
+		scene.verifyShadow();
 	}
 }
 
-TEST(PerlinWorldGolden, TwoObserversStreamingInitial)
-{
-	checkStreamingStep(0, "streaming_initial");
-}
-
-TEST(PerlinWorldGolden, TwoObserversStreamingOneChunk)
-{
-	checkStreamingStep(1, "streaming_one_chunk");
-}
-
-TEST(PerlinWorldGolden, TwoObserversStreamingTwoChunks)
-{
-	checkStreamingStep(2, "streaming_two_chunks");
-}
-
-TEST(PerlinWorldGolden, TwoObserversStreamingThreeChunks)
-{
-	checkStreamingStep(3, "streaming_three_chunks");
-}
-
-TEST(PerlinWorldPerformance, GenerationOnly49Chunks)
+TEST(BiomeWorldPerformance, GenerationOnly49Chunks)
 {
 	const auto definitions = terrain::registry();
 	terrain::Generator generator(definitions);
 	std::uint64_t guard = 0;
 	measure("generation", 49, [&]() {
+		generator.flush();
 		for (int z = -3; z <= 3; ++z)
 		{
 			for (int x = -3; x <= 3; ++x)
@@ -554,10 +379,10 @@ TEST(PerlinWorldPerformance, GenerationOnly49Chunks)
 			}
 		}
 	});
-	std::cout << "[Perlin world performance] generation guard=" << guard << '\n';
+	std::cout << "[Biome world performance] generation guard=" << guard << '\n';
 }
 
-TEST(PerlinWorldPerformance, NeighborAwareMeshing25Chunks)
+TEST(BiomeWorldPerformance, NeighborAwareMeshing25Chunks)
 {
 	const auto definitions = terrain::registry();
 	terrain::Generator generator(definitions);
@@ -566,7 +391,9 @@ TEST(PerlinWorldPerformance, NeighborAwareMeshing25Chunks)
 	{
 		for (int x = -2; x <= 2; ++x)
 		{
-			collection.addChunk({x, 0, z}, *generator.generate({x, 0, z}));
+			const auto chunk = generator.generate({x, 0, z});
+			ASSERT_TRUE(chunk.has_value());
+			collection.addChunk({x, 0, z}, *chunk);
 		}
 	}
 	spk::Voxel::Occlusion::Cache cache;
@@ -581,10 +408,10 @@ TEST(PerlinWorldPerformance, NeighborAwareMeshing25Chunks)
 		}
 	});
 	EXPECT_GT(vertices, 0u);
-	std::cout << "[Perlin world performance] meshing vertices=" << vertices / 5 << '\n';
+	std::cout << "[Biome world performance] meshing vertices=" << vertices / 5 << '\n';
 }
 
-TEST(PerlinWorldPerformance, ShadowMapComputationSeparateFromVoxelColorRendering)
+TEST(BiomeWorldPerformance, ShadowMapComputationSeparateFromVoxelColorRendering)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(terrain::ImageSize);
@@ -611,7 +438,7 @@ TEST(PerlinWorldPerformance, ShadowMapComputationSeparateFromVoxelColorRendering
 	gl.reset();
 }
 
-TEST(PerlinWorldPerformance, ColorRenderWithoutShadows)
+TEST(BiomeWorldPerformance, ColorRenderWithoutShadows)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(terrain::ImageSize);

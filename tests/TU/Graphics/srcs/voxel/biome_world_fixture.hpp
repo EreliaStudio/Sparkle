@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "perlin_world_fixture.hpp"
+#include "voxel_world_fixture.hpp"
 #include "world/voxel/biome_generator.hpp"
 
 namespace sparkle_test::biome_world
@@ -79,10 +79,10 @@ namespace sparkle_test::biome_world
 	};
 
 	template <bool THard>
-	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
+	class Generator final : public spk::World::Voxel::Biome::Generator<voxel_world::Chunk, 3>
 	{
 	private:
-		using Base = spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>;
+		using Base = spk::World::Voxel::Biome::Generator<voxel_world::Chunk, 3>;
 		using Data = typename Base::Data;
 		using Cell = typename Base::Cell;
 
@@ -101,7 +101,7 @@ namespace sparkle_test::biome_world
 			}
 		};
 
-		class FlattenRoad : public spk::World::SurfacePass<perlin_world::Chunk, Data>
+		class FlattenRoad : public spk::World::SurfacePass<voxel_world::Chunk, Data>
 		{
 		public:
 			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
@@ -122,7 +122,7 @@ namespace sparkle_test::biome_world
 		};
 
 	public:
-		Generator(const perlin_world::Registry &registry, bool edit)
+		Generator(const voxel_world::Registry &registry, bool edit)
 		{
 			this->bind(&registry);
 			this->template addPass<PlacementPass>();

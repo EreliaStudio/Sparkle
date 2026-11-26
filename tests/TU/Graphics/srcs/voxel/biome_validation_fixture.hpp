@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "perlin_world_fixture.hpp"
+#include "voxel_world_fixture.hpp"
 #include "world/voxel/biome_generator.hpp"
 
 namespace sparkle_test::biome_validation
@@ -71,9 +71,9 @@ namespace sparkle_test::biome_validation
 		bool shadows = true;
 		bool reverseOrder = false;
 
-		[[nodiscard]] std::vector<perlin_world::Coordinate> coordinates() const
+		[[nodiscard]] std::vector<voxel_world::Coordinate> coordinates() const
 		{
-			std::vector<perlin_world::Coordinate> result;
+			std::vector<voxel_world::Coordinate> result;
 			for (int z = centerZ - 2; z <= centerZ + 2; ++z)
 			{
 				for (int x = centerX - 2; x <= centerX + 2; ++x)
@@ -279,10 +279,10 @@ namespace sparkle_test::biome_validation
 	};
 
 	template <Placement TPlacement>
-	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
+	class Generator final : public spk::World::Voxel::Biome::Generator<voxel_world::Chunk, 3>
 	{
 	private:
-		using Base = spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>;
+		using Base = spk::World::Voxel::Biome::Generator<voxel_world::Chunk, 3>;
 		using Data = typename Base::Data;
 		using Cell = typename Base::Cell;
 
@@ -303,7 +303,7 @@ namespace sparkle_test::biome_validation
 			}
 		};
 
-		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, Data>
+		class Terrace final : public spk::World::SurfacePass<voxel_world::Chunk, Data>
 		{
 		public:
 			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
@@ -322,7 +322,7 @@ namespace sparkle_test::biome_validation
 		};
 
 	public:
-		Generator(const perlin_world::Registry &registry, Settings settings)
+		Generator(const voxel_world::Registry &registry, Settings settings)
 		{
 			this->bind(&registry);
 			this->template addPass<PlacementPass>(settings);
