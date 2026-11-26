@@ -120,7 +120,7 @@ namespace
 
 		explicit Generator(float scale = 1.0f)
 		{
-			_setSurfaceScale(scale);
+			distribution().setScale(scale);
 			bind(&registry());
 			distribution().setInfluenceFunction([this](const spk::Vector2 &position, Cell &cell) {
 				_placement.compute(position, cell);

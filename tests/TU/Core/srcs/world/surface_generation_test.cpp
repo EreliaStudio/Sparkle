@@ -41,6 +41,7 @@ namespace
 
 	struct Chunk
 	{
+		static constexpr spk::Vector3Int Size{16, 16, 16};
 		int value;
 	};
 
@@ -71,10 +72,6 @@ namespace
 		}
 
 	protected:
-		Configuration _computeGridConfiguration(const spk::Vector2Int &, const GenerationData &) override
-		{
-			return {{16, 16}, 1};
-		}
 		void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, Grid::Lease grid) override
 		{
 			data.column(coordinate).influences = std::move(grid);

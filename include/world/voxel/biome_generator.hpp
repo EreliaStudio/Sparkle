@@ -33,6 +33,8 @@ namespace spk::World::Voxel
 			typename DistributionBase::Distribution _influenceFunction;
 
 		public:
+			using DistributionBase::setScale;
+
 			DistributionPass()
 			{
 				this->bind(&_influenceFunction);
@@ -49,10 +51,6 @@ namespace spk::World::Voxel
 			}
 
 		protected:
-			typename InfluenceGrid::Configuration _computeGridConfiguration(const spk::Vector2Int &, const Data &data) override
-			{
-				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().surfaceScale};
-			}
 			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, Data &data, typename InfluenceGrid::Lease grid) override
 			{
 				data.column(coordinate).influences = std::move(grid);
@@ -109,13 +107,6 @@ namespace spk::World::Voxel
 		[[nodiscard]] DistributionPass &distribution() noexcept
 		{
 			return *_distributionPass;
-		}
-
-		// Derived recipes can specialize the sampling scale before submitting work.
-		void _setSurfaceScale(float scale)
-		{
-			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
-			this->_data().setSurfaceScale(scale);
 		}
 
 		void _applyPass(typename spk::World::Generator<TChunk, Data>::Pass &pass, const spk::World::ChunkCoordinate &coordinate, Data &data) override

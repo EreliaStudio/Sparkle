@@ -307,7 +307,7 @@ namespace sparkle_test::biome_validation
 			_placement(settings)
 		{
 			bind(&registry);
-			_setSurfaceScale(settings.scale);
+			distribution().setScale(settings.scale);
 			distribution().setInfluenceFunction([this](const spk::Vector2 &position, Cell &cell) {
 				_placement.compute(position, cell);
 			});

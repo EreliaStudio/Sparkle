@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cmath>
 #include <map>
 #include <mutex>
 #include <set>
@@ -21,7 +20,6 @@ namespace spk::World::Voxel
 		struct World
 		{
 			const spk::Voxel::Definition::Registry *registry = nullptr;
-			float surfaceScale = 1.0f;
 		};
 
 		struct Column
@@ -84,21 +82,6 @@ namespace spk::World::Voxel
 			}
 			_columns.clear();
 			_world.registry = registry;
-		}
-
-		void setSurfaceScale(float scale)
-		{
-			if (!std::isfinite(scale) || scale <= 0.0f)
-			{
-				throw spk::Exception("Invalid biome surface scale");
-			}
-			const std::scoped_lock lock(_mutex);
-			if (!_chunks.empty())
-			{
-				throw spk::Exception("Cannot change biome surface scale during generation");
-			}
-			_columns.clear();
-			_world.surfaceScale = scale;
 		}
 
 		[[nodiscard]] const World &world() const noexcept
