@@ -1,5 +1,6 @@
 #pragma once
 
+#include "voxel/volume.hpp"
 #include "world/generator.hpp"
 #include "world/voxel/strata.hpp"
 
@@ -9,12 +10,13 @@ namespace spk::World::Voxel
 	class Strata::ApplicationPass : public World::Generator<TChunk, TGenerationData>::Pass
 	{
 	protected:
+		virtual spk::Voxel::Volume::Builder &_builder(const World::ChunkCoordinate &coordinate, TGenerationData &data) = 0;
 		virtual const Strata::Grid &_strataGrid(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
 
 	public:
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
-			auto &builder = data.chunk(coordinate).builder;
+			auto &builder = _builder(coordinate, data);
 			const auto &strata = _strataGrid(coordinate, data);
 			const auto origin = TChunk::chunkCoordinateToWorld(coordinate);
 			const spk::Vector2UInt size{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)};

@@ -79,6 +79,11 @@ namespace spk::World::Voxel
 		class Application : public ApplicationBase
 		{
 		protected:
+			spk::Voxel::Volume::Builder &_builder(const spk::World::ChunkCoordinate &coordinate, Data &data) override
+			{
+				return data.chunk(coordinate).builder;
+			}
+
 			const Strata::Grid &_strataGrid(const spk::World::ChunkCoordinate &coordinate, const Data &data) override
 			{
 				return *data.column(coordinate).strata;

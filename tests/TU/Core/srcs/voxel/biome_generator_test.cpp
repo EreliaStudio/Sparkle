@@ -237,6 +237,56 @@ namespace
 	}
 }
 
+TEST(VoxelBiomeGeneratorTest, StrataApplicationSupportsIndependentGenerationData)
+{
+	using Strata = spk::World::Voxel::Strata;
+	using Coordinate = spk::World::ChunkCoordinate;
+
+	struct Data
+	{
+		spk::Voxel::Volume::Builder volume{spk::Vector3UInt{Chunk::Size}};
+		Strata::Grid::Lease profiles = Strata::Grid::obtain({16, 16});
+
+		void flush()
+		{
+		}
+	};
+
+	class Pass : public Strata::ApplicationPass<Chunk, Data>
+	{
+	protected:
+		spk::Voxel::Volume::Builder &_builder(const Coordinate &coordinate, Data &data) override
+		{
+			EXPECT_EQ(coordinate, (Coordinate{0, 1, 0}));
+			return data.volume;
+		}
+
+		const Strata::Grid &_strataGrid(const Coordinate &coordinate, const Data &data) override
+		{
+			EXPECT_EQ(coordinate, (Coordinate{0, 1, 0}));
+			return *data.profiles;
+		}
+	};
+
+	Data data;
+	data.volume.bind(registry());
+	data.volume.set({0, 2, 0}, 4);
+	Biome biome;
+	for (auto &&[position, instance] : *data.profiles)
+	{
+		instance = Strata::Instance::obtain(biome, {static_cast<float>(position.x), static_cast<float>(position.y)}, 17.75);
+	}
+
+	Pass pass;
+	pass.apply({0, 1, 0}, data);
+	Chunk chunk;
+	chunk.setVolume(data.volume.build());
+	EXPECT_EQ(idAt(chunk, 0, 0, 0), 2u);
+	EXPECT_EQ(idAt(chunk, 0, 1, 0), 1u);
+	EXPECT_EQ(idAt(chunk, 0, 2, 0), 4u);
+	EXPECT_EQ(idAt(chunk, 0, 3, 0), 0u);
+}
+
 TEST(VoxelBiomeGeneratorTest, PlacementIsConfiguredByConcreteRecipe)
 {
 	static_assert(!std::is_default_constructible_v<spk::World::Voxel::Biome::Generator<Chunk, 1>>);
