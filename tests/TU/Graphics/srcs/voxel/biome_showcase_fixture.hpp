@@ -7,6 +7,9 @@
 #include <span>
 #include <string>
 #include <utility>
+#include <vector>
+
+#include "rendering/engine/skybox.hpp"
 
 #include "voxel_world_fixture.hpp"
 
@@ -51,21 +54,7 @@ namespace sparkle_test::biome_showcase
 		float opacity = 1.0f;
 	};
 
-	inline constexpr std::array<Tile, 13> Tiles{{
-		{"grass", {104, 165, 71}},
-		{"soil", {126, 90, 61}},
-		{"rock", {132, 139, 143}},
-		{"sand", {222, 190, 130}},
-		{"terracotta", {191, 106, 66}},
-		{"red_rock", {145, 65, 49}},
-		{"ochre", {226, 158, 84}},
-		{"chalk", {231, 226, 206}},
-		{"water", {42, 137, 195}, 0.48f},
-		{"concrete", {147, 153, 164}},
-		{"glass", {83, 132, 160}},
-		{"basalt", {67, 64, 67}},
-		{"snow", {240, 244, 248}}
-	}};
+	inline constexpr std::array<Tile, 13> Tiles{{{"grass", {104, 165, 71}}, {"soil", {126, 90, 61}}, {"rock", {132, 139, 143}}, {"sand", {222, 190, 130}}, {"terracotta", {191, 106, 66}}, {"red_rock", {145, 65, 49}}, {"ochre", {226, 158, 84}}, {"chalk", {231, 226, 206}}, {"water", {42, 137, 195}, 0.48f}, {"concrete", {147, 153, 164}}, {"glass", {83, 132, 160}}, {"basalt", {67, 64, 67}}, {"snow", {240, 244, 248}}}};
 
 	inline terrain::Registry registry()
 	{
@@ -130,6 +119,61 @@ namespace sparkle_test::biome_showcase
 		x = std::clamp(x, 0.0f, 1.0f);
 		return x * x * (3.0f - 2.0f * x);
 	}
+
+	// One shared atlas for the six standard Skybox materials. Sampling the
+	// normalized direction keeps the horizon and cloud pattern coherent at seams.
+	class DaylightSky final : public spk::Texture
+	{
+	public:
+		static constexpr std::uint32_t FaceSize = 256;
+
+		DaylightSky()
+		{
+			constexpr std::uint32_t Width = FaceSize * spk::Skybox::FaceCount;
+			std::vector<std::uint8_t> pixels(Width * FaceSize * 4);
+			for (std::uint32_t face = 0; face < spk::Skybox::FaceCount; ++face)
+			{
+				for (std::uint32_t y = 0; y < FaceSize; ++y)
+				{
+					for (std::uint32_t x = 0; x < FaceSize; ++x)
+					{
+						const float u = 2.0f * (static_cast<float>(x) + 0.5f) / FaceSize - 1.0f;
+						const float v = 1.0f - 2.0f * (static_cast<float>(y) + 0.5f) / FaceSize;
+						const std::array<spk::Vector3, 6> directions{{{1, v, -u}, {-1, v, u}, {u, 1, v}, {u, -1, -v}, {-u, v, 1}, {u, v, -1}}};
+						const auto &direction = directions[face];
+						const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
+						const float altitude = direction.y / length;
+						const float elevation = smooth(std::max(0.0f, altitude));
+						const float below = smooth(std::max(0.0f, -altitude));
+						const float cloudField = std::sin(13.0f * direction.x / length + 3.0f * std::sin(11.0f * direction.z / length)) + 0.55f * std::sin(21.0f * direction.z / length - 6.0f * altitude);
+						const float cloud = 0.55f * smooth((cloudField - 0.7f) / 0.65f) * smooth(altitude * 5.0f) * (1.0f - smooth((altitude - 0.65f) / 0.35f));
+						const std::array<float, 3> horizon{201.0f, 225.0f, 242.0f};
+						const std::array<float, 3> zenith{65.0f, 137.0f, 217.0f};
+						const std::array<float, 3> nadir{150.0f, 174.0f, 191.0f};
+						const auto index = (y * Width + face * FaceSize + x) * 4;
+						for (std::size_t channel = 0; channel < horizon.size(); ++channel)
+						{
+							const float sky = horizon[channel] + (zenith[channel] - horizon[channel]) * elevation + (nadir[channel] - horizon[channel]) * below;
+							pixels[index + channel] = static_cast<std::uint8_t>(sky + (250.0f - sky) * cloud);
+						}
+						pixels[index + 3] = 255;
+					}
+				}
+			}
+			setPixels(std::span<const std::uint8_t>(pixels), {Width, FaceSize}, Format::RGBA);
+			validate();
+		}
+
+		void bind(spk::Skybox &skybox) const
+		{
+			for (std::uint32_t face = 0; face < spk::Skybox::FaceCount; ++face)
+			{
+				spk::Material::Builder material;
+				material.add("albedo", *this, spk::Texture::Section::fromPixels(size(), {face * FaceSize, 0}, {FaceSize, FaceSize}));
+				skybox.setMaterial(static_cast<spk::Skybox::Face>(face), material.build());
+			}
+		}
+	};
 
 	inline float shore(const spk::Vector2 &p)
 	{
@@ -220,16 +264,35 @@ namespace sparkle_test::biome_showcase
 				return 4.0f + 37.0f * smooth((std::abs(p.x - canyonCenter(p.y)) - 5.0f) / 13.0f) + 2.0f * broad;
 			case Landscape::Peaks:
 			{
-				const float u = p.x + 3.0f * broad;
-				const float v = p.y + 3.0f * detail;
-				const float cx = std::floor((u + 13.0f) / 26.0f);
-				const float cz = std::floor((v + 13.0f) / 26.0f);
-				const float dx = u - cx * 26.0f;
-				const float dz = v - cz * 26.0f;
-				const auto hash = terrain::hash(static_cast<std::int32_t>(cx), static_cast<std::int32_t>(cz), 3109);
-				const float radius = 6.0f + static_cast<float>(hash % 4);
-				const float peak = 33.0f + static_cast<float>((hash >> 8) % 22);
-				return 3.0f + 2.0f * broad + peak * (1.0f - smooth((std::sqrt(dx * dx + dz * dz) - 2.0f) / radius));
+				// Overlapping, jittered mountain masses with broad foothills and irregular ridges.
+				const float u = p.x + 7.0f * broad;
+				const float v = p.y + 7.0f * detail;
+				constexpr float spacing = 40.0f;
+				const auto cx = static_cast<std::int32_t>(std::floor(u / spacing));
+				const auto cz = static_cast<std::int32_t>(std::floor(v / spacing));
+				float massif = 0.0f;
+				for (int z = -1; z <= 1; ++z)
+				{
+					for (int x = -1; x <= 1; ++x)
+					{
+						const auto hash = terrain::hash(cx + x, cz + z, 3109);
+						const float centerX = (cx + x + 0.5f) * spacing + static_cast<float>(hash % 17) - 8.0f;
+						const float centerZ = (cz + z + 0.5f) * spacing + static_cast<float>((hash >> 5) % 17) - 8.0f;
+						const float dx = u - centerX;
+						const float dz = v - centerZ;
+						const float angle = static_cast<float>((hash >> 10) % 16) * 0.19634954f;
+						const float along = dx * std::cos(angle) + dz * std::sin(angle);
+						const float across = -dx * std::sin(angle) + dz * std::cos(angle);
+						const float radiusX = 29.0f + static_cast<float>((hash >> 14) % 9);
+						const float radiusZ = 23.0f + static_cast<float>((hash >> 18) % 10);
+						const float distance = std::sqrt((along / radiusX) * (along / radiusX) + (across / radiusZ) * (across / radiusZ));
+						const float height = 31.0f + static_cast<float>((hash >> 23) % 15);
+						const float slope = 1.0f - smooth(distance);
+						massif = std::max(massif, height * slope);
+					}
+				}
+				const float ridge = 1.0f - std::abs(detail);
+				return std::clamp(7.0f + 4.0f * broad + massif * (0.85f + 0.15f * ridge) + 2.5f * detail, 2.0f, 59.0f);
 			}
 			case Landscape::Plains:
 				return 8.0f + 5.0f * broad + 0.8f * detail;
@@ -325,7 +388,7 @@ namespace sparkle_test::biome_showcase
 						else if (_type == Landscape::Canyon && id == Rock)
 						{
 							const int band = static_cast<int>((altitude % 12 + 12) % 12);
-							builder.set({position.x, y, position.y}, band < 4 ? RedRock : band < 8 ? Terracotta : Ochre);
+							builder.set({position.x, y, position.y}, band < 4 ? RedRock : (band < 8 ? Terracotta : Ochre));
 						}
 					}
 				}
