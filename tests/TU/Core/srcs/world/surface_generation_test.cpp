@@ -51,6 +51,11 @@ namespace
 
 	struct StandaloneData : SurfaceData
 	{
+		[[nodiscard]] bool surfaceReady(const Coordinate &) const noexcept
+		{
+			return false;
+		}
+
 		void flush()
 		{
 		}
@@ -61,6 +66,7 @@ namespace
 	private:
 		ConstantBiome _first{20};
 		ConstantBiome _second{100};
+		std::atomic<int> _calls{0};
 		spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>::Distribution _influenceFunction = [this](const spk::Vector2 &, Cell &cell) {
 			cell[0] = {&_first, 3.0f};
 			cell[1] = {&_second, 1.0f};
@@ -72,10 +78,16 @@ namespace
 			bind(&_influenceFunction);
 		}
 
+		[[nodiscard]] int calls() const
+		{
+			return _calls.load();
+		}
+
 	protected:
 		void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, Grid::Lease grid) override
 		{
 			data.column(coordinate).influences = std::move(grid);
+			++_calls;
 		}
 	};
 
@@ -242,16 +254,11 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	const Coordinate upper{-1, 1, 2};
 	DistributionPass distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
-	std::atomic<int> calls{0};
 	const auto generate = [&](const Coordinate &coordinate) {
 		data.prepareChunk(coordinate, {16, 16, 16});
-		if (!std::as_const(data).column(coordinate).ready())
-		{
-			++calls;
-			distribution.apply(coordinate, data);
-			combination.apply(coordinate, data);
-			data.completeChunk(coordinate);
-		}
+		distribution.apply(coordinate, data);
+		combination.apply(coordinate, data);
+		data.completeChunk(coordinate);
 		const float height = std::as_const(data).column(coordinate).heights->at({0, 0});
 		data.cleanChunk(coordinate);
 		return height;
@@ -264,13 +271,13 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	});
 	EXPECT_FLOAT_EQ(first.get(), 40);
 	EXPECT_FLOAT_EQ(second.get(), 40);
-	EXPECT_EQ(calls.load(), 1);
+	EXPECT_EQ(distribution.calls(), 1);
 	EXPECT_FLOAT_EQ(generate(lower), 40);
-	EXPECT_EQ(calls.load(), 1);
+	EXPECT_EQ(distribution.calls(), 1);
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 0u);
 	EXPECT_FLOAT_EQ(generate(lower), 40);
-	EXPECT_EQ(calls.load(), 2);
+	EXPECT_EQ(distribution.calls(), 2);
 }
 
 TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)

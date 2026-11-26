@@ -179,6 +179,12 @@ namespace spk::World::Voxel
 			return _columns.at({coordinate.x, coordinate.z});
 		}
 
+		// Query only for an active chunk, after prepareChunk() has synchronized the column.
+		[[nodiscard]] bool surfaceReady(const spk::World::ChunkCoordinate &coordinate) const
+		{
+			return column(coordinate).ready();
+		}
+
 		void completeChunk(const spk::World::ChunkCoordinate &coordinate)
 		{
 			if (chunk(coordinate)._columnLock.owns_lock())

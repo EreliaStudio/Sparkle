@@ -1,11 +1,13 @@
 #pragma once
 
+#include <utility>
+
 #include "math/vector2.hpp"
 #include "world/generator.hpp"
 
 namespace spk::World
 {
-	// A regular generator pass adapting XYZ coordinates to X/Z.
+	// Adapts XYZ coordinates to X/Z; generation data owns the column cache.
 	template <typename TChunk, typename TGenerationData>
 	class SurfacePass : public Generator<TChunk, TGenerationData>::Pass
 	{
@@ -15,6 +17,10 @@ namespace spk::World
 	public:
 		void apply(const ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
+			if (std::as_const(data).surfaceReady(coordinate))
+			{
+				return;
+			}
 			_applySurface({coordinate.x, coordinate.z}, data);
 		}
 	};

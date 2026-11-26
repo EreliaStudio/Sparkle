@@ -83,15 +83,6 @@ namespace spk::World::Voxel
 
 		Generator() = default;
 
-		void _applyPass(typename spk::World::Generator<TChunk, Data>::Pass &pass, const spk::World::ChunkCoordinate &coordinate, Data &data) override
-		{
-			if (dynamic_cast<SurfacePass *>(&pass) != nullptr && std::as_const(data).column(coordinate).ready())
-			{
-				return;
-			}
-			pass.apply(coordinate, data);
-		}
-
 		bool _prepareGenerationData(const spk::World::ChunkCoordinate &coordinate, Data &data) override
 		{
 			data.prepareChunk(coordinate, spk::Vector3UInt{TChunk::Size});
