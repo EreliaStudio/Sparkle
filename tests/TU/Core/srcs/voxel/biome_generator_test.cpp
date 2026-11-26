@@ -7,6 +7,7 @@
 #include <future>
 #include <limits>
 #include <set>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -67,22 +68,14 @@ namespace
 			strata().push_back(deep);
 		}
 
+		explicit Biome(StratumContainer layers)
+		{
+			strata() = std::move(layers);
+		}
+
 		float groundHeight(const spk::Vector2 &) const override
 		{
 			return 17.75f;
-		}
-	};
-
-	class SingleBiomePlacement
-	{
-	public:
-		Biome biome;
-		mutable std::atomic<int> samples{0};
-
-		void compute(const spk::Vector2 &, spk::World::SurfaceBiome::Influence::Cell<1> &cell) const
-		{
-			++samples;
-			cell[0] = {&biome, 1};
 		}
 	};
 
@@ -92,24 +85,29 @@ namespace
 		class SingleBiomeDistributionPass final : public DistributionPass
 		{
 		private:
-			SingleBiomePlacement _placement;
-			Distribution _function = [this](const spk::Vector2 &position, Cell &cell) {
-				_placement.compute(position, cell);
+			DistributionFactory _factory = [this](const spk::World::Biome::Registry &registry) -> Distribution {
+				const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("terrain"));
+				if (biome == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return [this, biome](const spk::Vector2 &, Cell &cell) {
+					++samples;
+					cell[0] = {biome, 1};
+				};
 			};
 
 		public:
+			std::atomic<int> samples{0};
+
 			explicit SingleBiomeDistributionPass(float scale)
 			{
 				setScale(scale);
-				bind(&_function);
-			}
-
-			SingleBiomePlacement &placement() noexcept
-			{
-				return _placement;
+				bind(&_factory);
 			}
 		};
 
+		spk::World::Biome::Registry _biomes;
 		SingleBiomeDistributionPass &_distributionPass;
 		std::atomic<const Data *> _observedData{nullptr};
 
@@ -134,15 +132,12 @@ namespace
 			return _observedData.load()->columnCount();
 		}
 
-		Biome &biome()
-		{
-			return _distributionPass.placement().biome;
-		}
-
-		explicit Generator(float scale = 1.0f) :
+		explicit Generator(float scale = 1.0f, Biome::StratumContainer layers = Biome().strata()) :
 			_distributionPass(addPass<SingleBiomeDistributionPass>(scale)),
-			samples(_distributionPass.placement().samples)
+			samples(_distributionPass.samples)
 		{
+			_biomes.add<Biome>("terrain", std::move(layers));
+			bind(&_biomes);
 			bind(&registry());
 			addPass<CombinationPass>(HeightCombination::Weighted);
 			addPass<StrataGeneration>();
@@ -170,21 +165,31 @@ namespace
 		class AlternateDistributionPass final : public DistributionPass
 		{
 		private:
-			AlternateBiome _biome;
-			Distribution _function = [this](const spk::Vector2 &, Cell &cell) {
-				cell[0] = {&_biome, 1.0f};
+			DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+				const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("terrain"));
+				if (biome == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return [biome](const spk::Vector2 &, Cell &cell) {
+					cell[0] = {biome, 1.0f};
+				};
 			};
 
 		public:
 			AlternateDistributionPass()
 			{
-				bind(&_function);
+				bind(&_factory);
 			}
 		};
+
+		spk::World::Biome::Registry _biomes;
 
 	public:
 		AlternateGenerator()
 		{
+			_biomes.add<AlternateBiome>("terrain");
+			bind(&_biomes);
 			addPass<AlternateDistributionPass>();
 			addPass<CombinationPass>(HeightCombination::Dominant);
 			addPass<StrataGeneration>();
@@ -198,31 +203,44 @@ namespace
 		class MixedDistributionPass final : public DistributionPass
 		{
 		private:
-			Biome _first;
-			Biome _second;
-			Distribution _function = [this](const spk::Vector2 &, Cell &cell) {
-				cell[0] = {&_first, 0.8f};
-				cell[1] = {&_second, 0.2f};
+			DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+				const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
+				const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
+				if (first == nullptr || second == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return [first, second](const spk::Vector2 &, Cell &cell) {
+					cell[0] = {first, 0.8f};
+					cell[1] = {second, 0.2f};
+				};
 			};
 
 		public:
 			MixedDistributionPass()
 			{
-				for (auto &stratum : _first.strata())
-				{
-					stratum.materials = {{1, 1}};
-				}
-				for (auto &stratum : _second.strata())
-				{
-					stratum.materials = {{4, 1}};
-				}
-				bind(&_function);
+				bind(&_factory);
 			}
 		};
+
+		spk::World::Biome::Registry _biomes;
 
 	public:
 		explicit MixedGenerator(BiomeSelection selection, std::uint32_t seed)
 		{
+			Biome first;
+			Biome second;
+			for (auto &stratum : first.strata())
+			{
+				stratum.materials = {{1, 1}};
+			}
+			for (auto &stratum : second.strata())
+			{
+				stratum.materials = {{4, 1}};
+			}
+			_biomes.add<Biome>("first", std::move(first.strata()));
+			_biomes.add<Biome>("second", std::move(second.strata()));
+			bind(&_biomes);
 			bind(&registry());
 			addPass<MixedDistributionPass>();
 			addPass<CombinationPass>(HeightCombination::Weighted);
@@ -380,19 +398,62 @@ TEST(VoxelBiomeGeneratorTest, WeightedBiomeSelectionIsSeededAndSharedByVerticalS
 TEST(VoxelBiomeGeneratorTest, RegistryBindingIsRequiredAndCanBeDetached)
 {
 	Generator generator;
-	generator.bind(nullptr);
+	generator.bind(static_cast<const spk::Voxel::Definition::Registry *>(nullptr));
 	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
 	EXPECT_EQ(generator.samples.load(), 0);
 	generator.bind(&registry());
 	const auto first = generator.generate({0, 0, 0});
 	ASSERT_TRUE(first);
 	EXPECT_EQ(generator.samples.load(), 289);
-	generator.bind(nullptr);
+	generator.bind(static_cast<const spk::Voxel::Definition::Registry *>(nullptr));
 	EXPECT_THROW((void)generator.generate({0, 1, 0}), spk::Exception);
 	generator.bind(&registry());
 	const auto second = generator.generate({0, 1, 0});
 	ASSERT_TRUE(second);
 	EXPECT_EQ(generator.samples.load(), 578);
+}
+
+TEST(BiomeRegistryTest, OwnsPolymorphicBiomesAndKeepsAddressesStable)
+{
+	using Registry = spk::World::Biome::Registry;
+	static_assert(std::is_same_v<decltype(std::declval<Registry &>().add<Biome>("terrain")), const spk::World::Biome *>);
+	Registry biomes;
+	EXPECT_EQ(biomes.get("missing"), nullptr);
+	const auto *first = biomes.add<Biome>("terrain");
+	ASSERT_NE(dynamic_cast<const spk::World::SurfaceBiome *>(first), nullptr);
+	EXPECT_EQ(biomes.get("terrain"), first);
+	EXPECT_TRUE(biomes.contains("terrain"));
+	EXPECT_THROW(biomes.add<AlternateBiome>("terrain"), spk::Exception);
+	for (int i = 0; i < 128; ++i)
+	{
+		biomes.add<spk::World::Biome>(std::to_string(i));
+	}
+	EXPECT_EQ(biomes.size(), 129u);
+	EXPECT_EQ(biomes.get("terrain"), first);
+	EXPECT_EQ(dynamic_cast<const spk::World::SurfaceBiome *>(biomes.get("0")), nullptr);
+}
+
+TEST(VoxelBiomeGeneratorTest, BiomeRegistryRebindingInvalidatesCachedColumns)
+{
+	spk::World::Biome::Registry alternate;
+	alternate.add<AlternateBiome>("terrain");
+	spk::World::Biome::Registry invalid;
+	invalid.add<spk::World::Biome>("terrain");
+	Generator generator;
+	const auto first = generator.generate({0, 0, 0});
+	ASSERT_TRUE(first);
+	EXPECT_EQ(idAt(*first, 0, 15, 0), 2u);
+	generator.bind(&alternate);
+	EXPECT_EQ(generator.columnCount(), 0u);
+	const auto second = generator.generate({0, 0, 0});
+	ASSERT_TRUE(second);
+	EXPECT_EQ(idAt(*second, 0, 5, 0), 4u);
+	EXPECT_EQ(idAt(*second, 0, 6, 0), 0u);
+	generator.bind(static_cast<const spk::World::Biome::Registry *>(nullptr));
+	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
+	generator.bind(&invalid);
+	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
+	EXPECT_EQ(generator.activeChunkCount(), 0u);
 }
 
 TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
@@ -655,8 +716,7 @@ TEST(VoxelBiomeGeneratorTest, ThicknessNoiseIsIndependentOfMaterialNoise)
 
 TEST(VoxelBiomeGeneratorTest, PerlinStrataAreAppliedToEveryVoxelAcrossVerticalAndHorizontalChunks)
 {
-	Generator generator;
-	auto &biome = generator.biome();
+	Biome biome;
 	auto &strata = biome.strata();
 	strata[1].thickness = Stratum::Thickness::Variable{1, 9, spk::Perlin{}};
 	std::get<Stratum::Thickness::Variable>(strata[1].thickness).noise.setSeed(65);
@@ -665,6 +725,7 @@ TEST(VoxelBiomeGeneratorTest, PerlinStrataAreAppliedToEveryVoxelAcrossVerticalAn
 	configurePerlin(strata[1], 33, 0.12f);
 	strata[2].materials = {{3, 1}, {4, 1}};
 	configurePerlin(strata[2], 123, 0.09f);
+	Generator generator(1.0f, strata);
 	for (int cz : {-1, 0})
 	{
 		for (int cx : {-1, 0})
@@ -706,8 +767,11 @@ TEST(VoxelBiomeGeneratorTest, PerlinStrataAreAppliedToEveryVoxelAcrossVerticalAn
 
 TEST(VoxelBiomeGeneratorTest, FiniteAndEmptyStrataLeaveUnfilledVoxels)
 {
-	Generator generator;
-	generator.biome().strata().resize(2);
+	Biome biome;
+	biome.strata().resize(2);
+	spk::World::Biome::Registry emptyBiomes;
+	emptyBiomes.add<Biome>("terrain", Biome::StratumContainer{});
+	Generator generator(1.0f, biome.strata());
 	const auto lower = generator.generate({0, 0, 0});
 	const auto upper = generator.generate({0, 1, 0});
 	ASSERT_TRUE(lower && upper);
@@ -716,8 +780,7 @@ TEST(VoxelBiomeGeneratorTest, FiniteAndEmptyStrataLeaveUnfilledVoxels)
 	EXPECT_EQ(idAt(*upper, 0, 0, 0), 2u);
 	EXPECT_EQ(idAt(*upper, 0, 1, 0), 1u);
 	EXPECT_EQ(idAt(*upper, 0, 2, 0), 0u);
-	generator.biome().strata().clear();
-	generator.flush();
+	generator.bind(&emptyBiomes);
 	const auto empty = generator.generate({0, 1, 0});
 	ASSERT_TRUE(empty);
 	for (std::uint32_t y = 0; y < 16; ++y)
@@ -728,9 +791,10 @@ TEST(VoxelBiomeGeneratorTest, FiniteAndEmptyStrataLeaveUnfilledVoxels)
 
 TEST(VoxelBiomeGeneratorTest, InfiniteStratumCoversArbitrarilyDeepChunks)
 {
-	Generator generator;
-	auto &strata = generator.biome().strata();
+	Biome biome;
+	auto &strata = biome.strata();
 	strata.erase(strata.begin(), strata.end() - 1);
+	Generator generator(1.0f, strata);
 	const auto deep = generator.generate({-8, -300, 7});
 	ASSERT_TRUE(deep);
 	EXPECT_EQ(idAt(*deep, 0, 0, 0), 3u);
@@ -844,6 +908,8 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 
 	std::promise<void> entered;
 	std::promise<void> release;
+	spk::World::Biome::Registry otherBiomes;
+	otherBiomes.add<AlternateBiome>("terrain");
 	Generator generator;
 	generator.addPass<BlockingPass>(entered, release.get_future().share());
 	auto first = std::async(std::launch::async, [&] {
@@ -851,6 +917,7 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 	});
 	entered.get_future().wait();
 	EXPECT_EQ(generator.activeChunkCount(), 1u);
+	EXPECT_THROW(generator.bind(&otherBiomes), spk::Exception);
 	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
 	EXPECT_EQ(generator.activeChunkCount(), 1u);
 	release.set_value();

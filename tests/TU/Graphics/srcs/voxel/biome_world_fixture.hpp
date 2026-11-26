@@ -48,28 +48,25 @@ namespace sparkle_test::biome_world
 	class Placement
 	{
 	private:
-		Biome _plains{7.0f, 2.0f, 1, 11};
-		Biome _desert{4.0f, 2.5f, 4, 29};
-		Biome _mountain{24.0f, 6.0f, 3, 47};
 		spk::Perlin _boundary{123};
 
 	public:
-		void compute(const spk::Vector2 &position, spk::World::SurfaceBiome::Influence::Cell<3> &cell) const
+		void compute(const spk::Vector2 &position, spk::World::SurfaceBiome::Influence::Cell<3> &cell, const spk::World::SurfaceBiome *plains, const spk::World::SurfaceBiome *desertBiome, const spk::World::SurfaceBiome *mountainBiome) const
 		{
 			const float shift = _boundary.sample2D(position.x, position.y, -8.0f, 8.0f);
 			const float x = position.x + shift;
 			const float z = position.y + shift * 0.5f;
 			if constexpr (THard)
 			{
-				const spk::World::SurfaceBiome *biome = x < -8.0f ? &_desert : (z > 3.0f ? &_mountain : &_plains);
+				const spk::World::SurfaceBiome *biome = x < -8.0f ? desertBiome : (z > 3.0f ? mountainBiome : plains);
 				cell[0] = {biome, 1.0f};
 				return;
 			}
 			const float desert = std::clamp((-x + 1.0f) / 18.0f, 0.0f, 1.0f);
 			const float mountain = std::clamp((z + 5.0f) / 20.0f, 0.0f, 1.0f);
-			cell[0] = {&_desert, desert};
-			cell[1] = {&_mountain, (1.0f - desert) * mountain};
-			cell[2] = {&_plains, (1.0f - desert) * (1.0f - mountain)};
+			cell[0] = {desertBiome, desert};
+			cell[1] = {mountainBiome, (1.0f - desert) * mountain};
+			cell[2] = {plains, (1.0f - desert) * (1.0f - mountain)};
 		}
 
 		Placement()
@@ -90,14 +87,23 @@ namespace sparkle_test::biome_world
 		{
 		private:
 			Placement<THard> _placement;
-			typename Base::DistributionPass::Distribution _function = [this](const spk::Vector2 &position, Cell &cell) {
-				_placement.compute(position, cell);
+			typename Base::DistributionPass::DistributionFactory _factory = [this](const spk::World::Biome::Registry &registry) -> typename Base::DistributionPass::Distribution {
+				const auto *plains = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("plains"));
+				const auto *desert = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("desert"));
+				const auto *mountain = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("mountain"));
+				if (plains == nullptr || desert == nullptr || mountain == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return [this, plains, desert, mountain](const spk::Vector2 &position, Cell &cell) {
+					_placement.compute(position, cell, plains, desert, mountain);
+				};
 			};
 
 		public:
 			PlacementPass()
 			{
-				this->bind(&_function);
+				this->bind(&_factory);
 			}
 		};
 
@@ -121,9 +127,15 @@ namespace sparkle_test::biome_world
 			}
 		};
 
+		spk::World::Biome::Registry _biomes;
+
 	public:
 		Generator(const voxel_world::Registry &registry, bool edit)
 		{
+			_biomes.add<Biome>("plains", 7.0f, 2.0f, 1, 11);
+			_biomes.add<Biome>("desert", 4.0f, 2.5f, 4, 29);
+			_biomes.add<Biome>("mountain", 24.0f, 6.0f, 3, 47);
+			this->bind(&_biomes);
 			this->bind(&registry);
 			this->template addPass<PlacementPass>();
 			this->template addPass<typename Base::CombinationPass>(Base::HeightCombination::Weighted);

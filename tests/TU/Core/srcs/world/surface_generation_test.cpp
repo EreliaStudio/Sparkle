@@ -63,18 +63,24 @@ namespace
 	class DistributionPass : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>
 	{
 	private:
-		ConstantBiome _first{20};
-		ConstantBiome _second{100};
 		std::atomic<int> _calls{0};
-		spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>::Distribution _influenceFunction = [this](const spk::Vector2 &, Cell &cell) {
-			cell[0] = {&_first, 3.0f};
-			cell[1] = {&_second, 1.0f};
+		DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+			const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
+			const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
+			if (first == nullptr || second == nullptr)
+			{
+				throw spk::Exception("Missing surface biome");
+			}
+			return [first, second](const spk::Vector2 &, Cell &cell) {
+				cell[0] = {first, 3.0f};
+				cell[1] = {second, 1.0f};
+			};
 		};
 
 	public:
 		DistributionPass()
 		{
-			bind(&_influenceFunction);
+			bind(&_factory);
 		}
 
 		[[nodiscard]] int calls() const
@@ -83,6 +89,11 @@ namespace
 		}
 
 	protected:
+		const spk::World::Biome::Registry *_biomeRegistry(const GenerationData &data) const override
+		{
+			return data.world().biomeRegistry;
+		}
+
 		void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, Grid::Lease grid) override
 		{
 			data.column(coordinate).influences = std::move(grid);
@@ -247,8 +258,12 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 {
 	const spk::Voxel::Definition::Registry registry;
+	spk::World::Biome::Registry biomes;
+	biomes.add<ConstantBiome>("first", 20);
+	biomes.add<ConstantBiome>("second", 100);
 	GenerationData data;
 	data.bind(&registry);
+	data.bind(&biomes);
 	const Coordinate lower{-1, 0, 2};
 	const Coordinate upper{-1, 1, 2};
 	DistributionPass distribution;
@@ -282,8 +297,12 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 {
 	const spk::Voxel::Definition::Registry registry;
+	spk::World::Biome::Registry biomes;
+	biomes.add<ConstantBiome>("first", 20);
+	biomes.add<ConstantBiome>("second", 100);
 	GenerationData data;
 	data.bind(&registry);
+	data.bind(&biomes);
 	const Coordinate coordinate{0, 0, 0};
 	DistributionPass distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
@@ -441,8 +460,12 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 {
 	const spk::Voxel::Definition::Registry registry;
+	spk::World::Biome::Registry biomes;
+	biomes.add<ConstantBiome>("first", 20);
+	biomes.add<ConstantBiome>("second", 100);
 	GenerationData data;
 	data.bind(&registry);
+	data.bind(&biomes);
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
 	data.prepareChunk(idle, {16, 16, 16});
@@ -732,8 +755,12 @@ TEST(SurfaceGenerationTest, DominantHeightCombinationUsesWeightRatherThanHeight)
 TEST(SurfaceGenerationTest, MutableColumnAccessRequiresUnpublishedActiveGeneration)
 {
 	const spk::Voxel::Definition::Registry registry;
+	spk::World::Biome::Registry biomes;
+	biomes.add<ConstantBiome>("first", 20);
+	biomes.add<ConstantBiome>("second", 100);
 	GenerationData data;
 	data.bind(&registry);
+	data.bind(&biomes);
 	const Coordinate first{0, 0, 0};
 	const Coordinate second{0, 1, 0};
 	const spk::Vector2Int surface{0, 0};

@@ -32,6 +32,11 @@ namespace spk::World::Voxel
 		class DistributionPass : public DistributionBase
 		{
 		protected:
+			const spk::World::Biome::Registry *_biomeRegistry(const Data &data) const override
+			{
+				return data.world().biomeRegistry;
+			}
+
 			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, Data &data, typename InfluenceGrid::Lease grid) override
 			{
 				data.column(coordinate).influences = std::move(grid);
@@ -113,6 +118,11 @@ namespace spk::World::Voxel
 
 	public:
 		void bind(const spk::Voxel::Definition::Registry *registry)
+		{
+			this->_data().bind(registry);
+		}
+
+		void bind(const spk::World::Biome::Registry *registry)
 		{
 			this->_data().bind(registry);
 		}

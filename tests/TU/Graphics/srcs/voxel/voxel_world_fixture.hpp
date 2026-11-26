@@ -207,25 +207,25 @@ namespace sparkle_test::voxel_world
 		class TerrainDistribution final : public DistributionPass
 		{
 		private:
-			TerrainBiome _biome;
-			Distribution _function = [this](const spk::Vector2 &, Cell &cell) {
-				cell[0] = {&_biome, 1.0f};
+			DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+				const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("terrain"));
+				if (biome == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return [biome](const spk::Vector2 &, Cell &cell) {
+					cell[0] = {biome, 1.0f};
+				};
 			};
 
 		public:
-			explicit TerrainDistribution(Settings settings) :
-				_biome(settings)
+			TerrainDistribution()
 			{
-				bind(&_function);
-			}
-
-			[[nodiscard]] const TerrainBiome &biome() const noexcept
-			{
-				return _biome;
+				bind(&_factory);
 			}
 		};
 
-		TerrainDistribution &_distribution;
+		spk::World::Biome::Registry _biomes;
 
 	protected:
 		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
@@ -238,10 +238,12 @@ namespace sparkle_test::voxel_world
 		}
 
 	public:
-		explicit Generator(const Registry &definitions, Settings settings) :
-			_distribution(addPass<TerrainDistribution>(settings))
+		explicit Generator(const Registry &definitions, Settings settings)
 		{
+			_biomes.add<TerrainBiome>("terrain", settings);
+			bind(&_biomes);
 			bind(&definitions);
+			addPass<TerrainDistribution>();
 			addPass<CombinationPass>(HeightCombination::Dominant);
 			addPass<StrataGeneration>();
 			addPass<Application>();
@@ -254,7 +256,8 @@ namespace sparkle_test::voxel_world
 
 		[[nodiscard]] std::int32_t height(std::int64_t worldX, std::int64_t worldZ) const
 		{
-			return static_cast<std::int32_t>(_distribution.biome().groundHeight({static_cast<float>(worldX), static_cast<float>(worldZ)}));
+			const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(_biomes.get("terrain"));
+			return static_cast<std::int32_t>(biome->groundHeight({static_cast<float>(worldX), static_cast<float>(worldZ)}));
 		}
 	};
 }

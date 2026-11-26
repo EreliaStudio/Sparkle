@@ -228,51 +228,45 @@ namespace sparkle_test::biome_validation
 	class PlacementModel
 	{
 	private:
-		Biome _first;
-		Biome _second;
-		Biome _third;
 		spk::Perlin _regions{913};
 
 	public:
-		void compute(const spk::Vector2 &p, spk::World::SurfaceBiome::Influence::Cell<3> &cell) const
+		void compute(const spk::Vector2 &p, spk::World::SurfaceBiome::Influence::Cell<3> &cell, const spk::World::SurfaceBiome *first, const spk::World::SurfaceBiome *second, const spk::World::SurfaceBiome *third) const
 		{
 			switch (TPlacement)
 			{
 			case Placement::Single:
-				cell[0] = {&_first, 1};
+				cell[0] = {first, 1};
 				break;
 			case Placement::Blend:
 			{
 				const float a = std::clamp((p.x + 20.0f) / 40.0f, 0.0f, 1.0f);
 				const float b = std::clamp((p.y + 20.0f) / 40.0f, 0.0f, 1.0f);
-				cell = {{{{&_first, (1 - a) * (1 - b)}, {&_second, a * (1 - b)}, {&_third, b}}}};
+				cell = {{{{first, (1 - a) * (1 - b)}, {second, a * (1 - b)}, {third, b}}}};
 				break;
 			}
 			case Placement::Islands:
 			{
 				const float noise = _regions.sample2D(p.x, p.y);
 				const float a = std::clamp((noise - 0.40f) / 0.20f, 0.0f, 1.0f);
-				cell[0] = {&_first, 1 - a};
-				cell[1] = {&_third, a};
+				cell[0] = {first, 1 - a};
+				cell[1] = {third, a};
 				break;
 			}
 			case Placement::Tie:
-				cell[0] = {&_second, 7};
-				cell[1] = {&_first, 7};
+				cell[0] = {second, 7};
+				cell[1] = {first, 7};
 				break;
 			case Placement::Checker:
 			{
 				const int index = static_cast<int>(std::floor(p.x / 8.0f)) + static_cast<int>(std::floor(p.y / 8.0f));
-				cell[0] = {index % 2 == 0 ? &_first : &_second, 1};
+				cell[0] = {index % 2 == 0 ? first : second, 1};
 				break;
 			}
 			}
 		}
 
-		explicit PlacementModel(Settings settings) :
-			_first(settings, 1, 0, 107),
-			_second(settings, 4, -12, 211),
-			_third(settings, 3, -5, 317)
+		PlacementModel()
 		{
 			_regions.setFrequency(0.048f);
 		}
@@ -290,16 +284,24 @@ namespace sparkle_test::biome_validation
 		{
 		private:
 			PlacementModel<TPlacement> _placement;
-			typename Base::DistributionPass::Distribution _function = [this](const spk::Vector2 &position, Cell &cell) {
-				_placement.compute(position, cell);
+			typename Base::DistributionPass::DistributionFactory _factory = [this](const spk::World::Biome::Registry &registry) -> typename Base::DistributionPass::Distribution {
+				const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
+				const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
+				const auto *third = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("third"));
+				if (first == nullptr || second == nullptr || third == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return [this, first, second, third](const spk::Vector2 &position, Cell &cell) {
+					_placement.compute(position, cell, first, second, third);
+				};
 			};
 
 		public:
-			explicit PlacementPass(Settings settings) :
-				_placement(settings)
+			explicit PlacementPass(Settings settings)
 			{
 				this->setScale(settings.scale);
-				this->bind(&_function);
+				this->bind(&_factory);
 			}
 		};
 
@@ -321,9 +323,15 @@ namespace sparkle_test::biome_validation
 			}
 		};
 
+		spk::World::Biome::Registry _biomes;
+
 	public:
 		Generator(const voxel_world::Registry &registry, Settings settings)
 		{
+			_biomes.add<Biome>("first", settings, 1, 0, 107);
+			_biomes.add<Biome>("second", settings, 4, -12, 211);
+			_biomes.add<Biome>("third", settings, 3, -5, 317);
+			this->bind(&_biomes);
 			this->bind(&registry);
 			this->template addPass<PlacementPass>(settings);
 			this->template addPass<typename Base::CombinationPass>(Base::HeightCombination::Weighted);

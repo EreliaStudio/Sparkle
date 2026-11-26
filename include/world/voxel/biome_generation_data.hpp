@@ -19,7 +19,8 @@ namespace spk::World::Voxel
 	public:
 		struct World
 		{
-			const spk::Voxel::Definition::Registry *registry = nullptr;
+			const spk::Voxel::Definition::Registry *voxelRegistry = nullptr;
+			const spk::World::Biome::Registry *biomeRegistry = nullptr;
 		};
 
 		struct Column
@@ -81,7 +82,18 @@ namespace spk::World::Voxel
 				throw spk::Exception("Cannot bind a voxel registry during generation");
 			}
 			_columns.clear();
-			_world.registry = registry;
+			_world.voxelRegistry = registry;
+		}
+
+		void bind(const spk::World::Biome::Registry *registry)
+		{
+			const std::scoped_lock lock(_mutex);
+			if (!_chunks.empty())
+			{
+				throw spk::Exception("Cannot bind a biome registry during generation");
+			}
+			_columns.clear();
+			_world.biomeRegistry = registry;
 		}
 
 		[[nodiscard]] const World &world() const noexcept
@@ -99,11 +111,15 @@ namespace spk::World::Voxel
 				{
 					throw spk::Exception("Chunk generation is already active for this coordinate");
 				}
-				if (_world.registry == nullptr)
+				if (_world.voxelRegistry == nullptr)
 				{
-					throw spk::Exception("Voxel biome generator has no bound registry");
+					throw spk::Exception("Voxel biome generator has no bound voxel registry");
 				}
-				builder.bind(*_world.registry);
+				if (_world.biomeRegistry == nullptr)
+				{
+					throw spk::Exception("Voxel biome generator has no bound biome registry");
+				}
+				builder.bind(*_world.voxelRegistry);
 				columnData = &_columns.try_emplace(spk::Vector2Int{coordinate.x, coordinate.z}).first->second;
 				_chunks.try_emplace(coordinate, Chunk(std::move(builder)));
 			}
