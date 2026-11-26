@@ -570,6 +570,45 @@ namespace
 		EXPECT_GT(difference.differentPixelCount, 0u);
 	}
 
+	[[nodiscard]] float surfaceHeight(const Scene &scene, std::int64_t x, std::int64_t z)
+	{
+		float height = 0.0f;
+		for (const auto &[coordinate, entry] : scene.chunks)
+		{
+			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
+			const auto localX = x - origin.x;
+			const auto localZ = z - origin.z;
+			if (localX < 0 || localX >= 16 || localZ < 0 || localZ >= 16)
+			{
+				continue;
+			}
+			for (std::uint32_t y = 0; y < 16; ++y)
+			{
+				if (entry.chunk().volume().atRaw({static_cast<std::uint32_t>(localX), y, static_cast<std::uint32_t>(localZ)}) != 0)
+				{
+					height = std::max(height, static_cast<float>(origin.y + y + 1));
+				}
+			}
+		}
+		return height;
+	}
+
+	void captureCloseShadowDiagnostics(Scene &scene, const std::string &name)
+	{
+		// Position the camera above the actual generated surface rather than
+		// changing terrain or guessing a height that may be inside a voxel.
+		const float centerHeight = surfaceHeight(scene, 2, 2);
+		const float cameraHeight = std::max(centerHeight, surfaceHeight(scene, 12, 10)) + 5.0f;
+		scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
+		captureShadowDiagnostics(scene, name + "_close");
+
+		// Look across the x=16 chunk seam from the opposite side.
+		const float seamHeight = surfaceHeight(scene, 16, 0);
+		const float seamCameraHeight = std::max(seamHeight, surfaceHeight(scene, 9, -9)) + 5.0f;
+		scene.setCamera({9.5f, seamCameraHeight, -8.5f}, {16.5f, seamHeight, 0.5f});
+		captureShadowDiagnostics(scene, name + "_close_seam");
+	}
+
 	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {}, bool shadowDiagnostics = false)
 	{
 		Scene scene;
@@ -645,6 +684,7 @@ namespace
 		if (shadowDiagnostics)
 		{
 			captureShadowDiagnostics(scene, name);
+			captureCloseShadowDiagnostics(scene, name);
 			return;
 		}
 		const auto pixels = scene.capture();
