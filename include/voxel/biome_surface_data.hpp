@@ -120,7 +120,6 @@ namespace spk::Voxel
 			World::HeightMap::Grid::Lease heights;
 			Strata::Grid::Lease strata;
 
-
 		private:
 			friend class BiomeGenerationData;
 			mutable std::mutex _mutex;
