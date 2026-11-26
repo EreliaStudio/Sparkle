@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <GL/glew.h>
-
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -797,7 +796,7 @@ namespace
 		for (const auto &view : views)
 		{
 			auto camera = view.camera;
-			if (landscape == showcase::Landscape::Peaks)
+			if (landscape == showcase::Landscape::Peaks || landscape == showcase::Landscape::Volcano)
 			{
 				const showcase::LandscapeBiome biome(landscape);
 				camera.y = std::max(camera.y, std::ceil(biome.groundHeight({camera.x, camera.z})) + 3.0f);
@@ -830,7 +829,7 @@ TEST(BiomeShowcaseGolden, MesaCanyon)
 
 TEST(BiomeShowcaseGolden, HighPeaks)
 {
-	captureLandscape(showcase::Landscape::Peaks, "high_peaks", {{"overview", {72, 65, 74}, {0, 25, 0}}, {"valley", {13, 8, -38}, {0, 42, 0}}, {"aerial", {-25, 82, 45}, {4, 23, -10}}}, 3);
+	captureLandscape(showcase::Landscape::Peaks, "high_peaks", {{"overview", {72, 65, 74}, {0, 25, 0}}, {"valley", {2, 14, -57}, {0, 24, 7}}, {"aerial", {-25, 82, 45}, {4, 23, -10}}}, 3);
 }
 
 TEST(BiomeShowcaseGolden, RollingPlains)
@@ -840,12 +839,12 @@ TEST(BiomeShowcaseGolden, RollingPlains)
 
 TEST(BiomeShowcaseGolden, Sea)
 {
-	captureLandscape(showcase::Landscape::Sea, "sea", {{"overview", {-68, 44, 70}, {0, -1, 0}}, {"surface", {-34, 8, -28}, {5, -2, 12}}}, 0);
+	captureLandscape(showcase::Landscape::Sea, "sea", {{"overview", {-68, 44, 70}, {0, -1, 0}}, {"surface", {-39, 6, -38}, {12, 0, 14}}}, 0);
 }
 
 TEST(BiomeShowcaseGolden, ChalkCliffs)
 {
-	captureLandscape(showcase::Landscape::Cliffs, "chalk_cliffs", {{"overview", {-85, 65, 80}, {0, 16, 0}}, {"foot", {-26, 8, -22}, {8, 22, 4}}}, 2);
+	captureLandscape(showcase::Landscape::Cliffs, "chalk_cliffs", {{"overview", {-85, 65, 80}, {0, 16, 0}}, {"foot", {-30, 11, -32}, {10, 17, 12}}}, 2);
 }
 
 TEST(BiomeShowcaseGolden, CoastalTransition)
@@ -865,5 +864,24 @@ TEST(BiomeShowcaseGolden, DesertDunes)
 
 TEST(BiomeShowcaseGolden, VolcanicCrater)
 {
-	captureLandscape(showcase::Landscape::Volcano, "volcanic_crater", {{"overview", {80, 83, 85}, {0, 22, 0}}, {"crater", {3, 85, -15}, {0, 25, 0}}}, 3);
+	captureLandscape(showcase::Landscape::Volcano, "volcanic_crater", {{"overview", {80, 83, 85}, {0, 22, 0}}, {"crater", {-5, 86, -12}, {-7, 27, 7}}, {"foothills", {35, 25, -42}, {-10, 25, 8}}}, 3);
+}
+
+TEST(BiomeShowcaseTerrain, VolcanicBasinsHaveRaisedRims)
+{
+	const showcase::LandscapeBiome biome(showcase::Landscape::Volcano);
+	const std::array<spk::Vector2, 3> centers{{{-14, -8}, {21, 14}, {-26, 24}}};
+	const std::array<spk::Vector2, 3> radii{{{9, 7}, {7, 5}, {6, 5}}};
+	for (std::size_t i = 0; i < centers.size(); ++i)
+	{
+		SCOPED_TRACE(i);
+		const auto &center = centers[i];
+		const auto &radius = radii[i];
+		const float bottom = biome.groundHeight(center);
+		EXPECT_GT(biome.groundHeight({center.x + radius.x * 0.85f, center.y}), bottom + 1.5f);
+		EXPECT_GT(biome.groundHeight({center.x - radius.x * 0.85f, center.y}), bottom + 1.5f);
+		EXPECT_GT(biome.groundHeight({center.x, center.y + radius.y * 0.85f}), bottom + 1.5f);
+		EXPECT_GT(biome.groundHeight({center.x, center.y - radius.y * 0.85f}), bottom + 1.5f);
+	}
+	EXPECT_GT(biome.groundHeight(centers[0]), biome.groundHeight(centers[2]) + 4.0f);
 }
