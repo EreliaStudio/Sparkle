@@ -1,9 +1,11 @@
-#include <GL/glew.h>
 #include <gtest/gtest.h>
+
+#include <GL/glew.h>
 
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -26,6 +28,7 @@
 #include "rendering/command/viewport_uniform_render_command.hpp"
 #include "rendering/engine/camera_component3d.hpp"
 #include "rendering/engine/engine.hpp"
+#include "rendering/engine/skybox.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/rendering_system.hpp"
@@ -108,6 +111,7 @@ namespace
 		Collection chunks;
 		spk::Entity3D cameraEntity{"Biome camera"};
 		spk::Entity3D sunEntity{"Biome sun"};
+		spk::Entity3D skyEntity{"Biome sky"};
 		spk::Entity3D firstObserver{"First observer"};
 		spk::Entity3D secondObserver{"Second observer"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
@@ -118,6 +122,7 @@ namespace
 		spk::Light::Directional &sun = sunEntity.addComponent<spk::Light::Directional>();
 		Streamer *streamer = nullptr;
 		bool graphicsActive = true;
+		bool skyActive = false;
 		std::int64_t tickTime = 0;
 
 		explicit Scene(bool stream = false, terrain::Generator::Settings settings = {}, spk::Vector2UInt resolution = terrain::ImageSize) :
@@ -164,6 +169,13 @@ namespace
 		{
 			cameraEntity.transform().place(position);
 			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(position, target));
+		}
+
+		void setSkybox(const sparkle_test::biome_showcase::DaylightSky &atlas)
+		{
+			atlas.bind(skyEntity.addComponent<spk::Skybox>());
+			engine.addEntity(&skyEntity);
+			skyActive = true;
 		}
 
 		void fill(std::int32_t radius)
@@ -320,6 +332,10 @@ namespace
 				graphics.unbind();
 			}
 			chunks.detach();
+			if (skyActive)
+			{
+				engine.removeEntity(&skyEntity);
+			}
 			engine.removeEntity(&sunEntity);
 			engine.removeEntity(&cameraEntity);
 		}
@@ -754,16 +770,18 @@ namespace
 	{
 		const auto definitions = showcase::registry();
 		showcase::Atlas atlas;
+		showcase::DaylightSky sky;
 		showcase::Generator generator(definitions, landscape);
 		Scene scene(false, {}, showcase::ImageSize);
+		scene.setSkybox(sky);
 		scene.graphics.unbind();
 		scene.graphics.bind(scene.chunks, showcase::palette(atlas));
 		scene.camera.setPerspective(0.95f, static_cast<float>(showcase::ImageSize.x) / showcase::ImageSize.y, 0.1f, 300.0f);
 		scene.view.ambientLight().setIntensity(0.32f);
 		scene.sun.setCastsShadows(false);
-		for (int z = -3; z <= 2; ++z)
+		for (int z = -4; z <= 3; ++z)
 		{
-			for (int x = -3; x <= 2; ++x)
+			for (int x = -4; x <= 3; ++x)
 			{
 				for (int y = -1; y <= maximumY; ++y)
 				{
@@ -778,7 +796,13 @@ namespace
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		for (const auto &view : views)
 		{
-			scene.setCamera(view.camera, view.target);
+			auto camera = view.camera;
+			if (landscape == showcase::Landscape::Peaks)
+			{
+				const showcase::LandscapeBiome biome(landscape);
+				camera.y = std::max(camera.y, std::ceil(biome.groundHeight({camera.x, camera.z})) + 3.0f);
+			}
+			scene.setCamera(camera, view.target);
 			const auto pixels = scene.capture();
 			const std::string imageName = std::string(name) + "_" + view.name;
 			const auto actual = sparkle_test::resultImagePath("rendering/biome-showcase", imageName);
@@ -806,7 +830,7 @@ TEST(BiomeShowcaseGolden, MesaCanyon)
 
 TEST(BiomeShowcaseGolden, HighPeaks)
 {
-	captureLandscape(showcase::Landscape::Peaks, "high_peaks", {{"overview", {93, 96, 92}, {0, 25, 0}}, {"valley", {13, 8, -38}, {0, 36, 0}}, {"aerial", {-25, 90, 45}, {4, 20, -10}}}, 3);
+	captureLandscape(showcase::Landscape::Peaks, "high_peaks", {{"overview", {72, 65, 74}, {0, 25, 0}}, {"valley", {13, 8, -38}, {0, 42, 0}}, {"aerial", {-25, 82, 45}, {4, 23, -10}}}, 3);
 }
 
 TEST(BiomeShowcaseGolden, RollingPlains)
