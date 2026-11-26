@@ -4,10 +4,12 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <limits>
+#include <iostream>
 #include <memory>
 #include <span>
 #include <string>
@@ -979,4 +981,79 @@ TEST(ShadowRenderingGolden, DirectionalOffscreenCasterStillShadowsVisibleFloor)
 		actual, sparkle_test::resultImagePath(Category, name + "_no_shadows"), sparkle_test::resultImagePath(Category, name + "_shadow_difference"), tolerance);
 	EXPECT_GT(difference.differentPixelCount, 0u);
 	compareGolden(Category, name, actual);
+}
+
+TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
+{
+	using Clock = std::chrono::steady_clock;
+	Scene scene(true);
+	const spk::Vector3 eye{0, 12, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-12, 12, -9, 9, 0.1f, 30);
+	const auto pillar = geometry({2, 3, 2});
+	for (int x = -8; x <= 8; x += 2)
+	{
+		scene.add(scene.cube, 0, {static_cast<float>(x), -0.2f, -4}, spk::ShadowMap::Mode::Static);
+	}
+	auto &moving = scene.add(pillar, 1, {0, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	auto &sun = scene.addLight<spk::Light::Directional>({0, 10, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(24);
+	sun.setShadowResolution(1024);
+	scene.voxels.deactivate();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	const auto execute = [&]() {
+		const auto snapshot = scene.capture();
+		const auto begin = Clock::now();
+		snapshot->execute(gl.renderContext());
+		glFinish();
+		return std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+	};
+	(void)execute();
+	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(first, nullptr);
+	const auto original = first->entries.at(sun.registrationOrder());
+	ASSERT_EQ(original.cascadeCount, 4u);
+	constexpr std::size_t Cases = 32;
+	constexpr double BudgetMs = 16.7;
+	std::array<double, Cases> times{};
+	std::size_t overBudget = 0;
+	std::uint32_t seed = 0xA11CEu;
+	for (std::size_t index = 0; index < Cases; ++index)
+	{
+		seed = seed * 1664525u + 1013904223u;
+		const float x = 1.0f + static_cast<float>((seed >> 8) % 500) / 100.0f;
+		std::array<double, 3> samples{};
+		for (auto &sample : samples)
+		{
+			moving.transform().place({-x, -0.2f, 0});
+			(void)execute();
+			moving.transform().place({x, -0.2f, 0});
+			sample = execute();
+			const auto published = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+			ASSERT_NE(published, nullptr);
+			const auto &entry = published->entries.at(sun.registrationOrder());
+			std::size_t dynamicRebuilds = 0;
+			for (std::size_t i = 0; i < entry.cascadeCount; ++i)
+			{
+				EXPECT_EQ(entry.cascadeStatistics[i].staticBuilds, original.cascadeStatistics[i].staticBuilds)
+					<< "Moving a caster must not rebuild unchanged static depth";
+				dynamicRebuilds += entry.cascadeStatistics[i].dynamicBuilds;
+			}
+			EXPECT_GT(dynamicRebuilds, 0u);
+		}
+		std::sort(samples.begin(), samples.end());
+		times[index] = samples[1];
+		overBudget += times[index] > BudgetMs ? 1u : 0u;
+	}
+	std::sort(times.begin(), times.end());
+	std::cout << "[Directional dynamic stress] cases=" << Cases << " median=" << times[Cases / 2]
+			  << "ms p95=" << times[Cases * 95 / 100] << "ms p99=" << times[Cases * 99 / 100]
+			  << "ms worst=" << times.back() << "ms budget=" << BudgetMs << " over_budget=" << overBudget << '\n';
+#if defined(NDEBUG)
+	EXPECT_EQ(overBudget, 0u);
+#endif
+	gl.requireNoErrors();
+	gl.reset();
 }

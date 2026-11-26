@@ -228,3 +228,39 @@ TEST(ShadowProjectionPerformance, Randomized128CastersHardBudget)
 	EXPECT_EQ(overBudget, 0u) << "Optimize projection and caster selection before raising the budget";
 #endif
 }
+
+TEST(ShadowProjectionTest, CascadesRemainStableUnderSubTexelCameraTranslation)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 100.0f);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {0, 0, -1};
+	light.shadowDistance = 80;
+	light.shadowResolution = 2048;
+	const auto first = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	camera.setPosition({first.front().worldPerTexel * 0.1f, 0, 0});
+	const auto second = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	for (std::size_t i = 0; i < first.size(); ++i)
+	{
+		EXPECT_EQ(first[i].viewProjection, second[i].viewProjection);
+	}
+}
+
+TEST(ShadowProjectionTest, SingleCascadeFallbackKeepsOffscreenCasterCoverage)
+{
+	spk::Camera3D camera;
+	camera.setPosition({0, 10, 8});
+	camera.lookAt({0, -0.2f, 0});
+	camera.setOrthographic(-4, 4, -3, 3, 0.1f, 18);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {3, -1, 0};
+	light.shadowDistance = 80;
+	light.shadowResolution = 2048;
+	const std::array<spk::ShadowMap::CasterBounds, 1> bounds{{{{-19, -0.2f, -1}, {-17, 7.8f, 1}}}};
+	const auto cascades = spk::ShadowMap::Projection::directionalCascades(light, camera, bounds, 1);
+	EXPECT_TRUE(cascades.front().intersects(bounds.front()));
+	EXPECT_NEAR(cascades.front().splitFar, 18.0f, 0.001f);
+	EXPECT_FLOAT_EQ(cascades.back().splitFar, 0.0f);
+}

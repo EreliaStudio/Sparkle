@@ -527,6 +527,7 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 	{
 		scene.sun.setShadowResolution(Resolutions[level]);
 		scene.sun.setShadowDistance(80.0f);
+		seed = 0xC45CADEu;
 		std::vector<double> cold, warm, capture;
 		std::size_t coldOver = 0, warmOver = 0;
 		// Warm shaders and resources before the measured corpus.
@@ -535,11 +536,19 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 		for (std::size_t index = 0; index < Cases; ++index)
 		{
 			std::array<double, Samples> coldTimes{}, warmTimes{}, captureTimes{};
+			const spk::Vector3 eye{35 + 8 * sample(), 30 + 6 * sample(), 35 + 8 * sample()};
+			const spk::Vector3 source{-36 + 10 * sample(), 50 + 10 * sample(), 20 + 10 * sample()};
 			for (std::size_t trial = 0; trial < Samples; ++trial)
 			{
-				const spk::Vector3 eye{35 + 8 * sample(), 30 + 6 * sample(), 35 + 8 * sample()};
+				// Invalidate outside the timed interval, then rebuild the
+				// identical case instead of averaging unrelated scenes.
+				if (trial != 0)
+				{
+					scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source + spk::Vector3{15, 0, 0}, {0, 0, 0}));
+					scene.engine.refreshRenderSnapshot();
+					(void)run(scene.engine.latestRenderSnapshot());
+				}
 				scene.setCamera(eye, {0, 8, 0});
-				const spk::Vector3 source{-36 + 10 * sample(), 50 + 10 * sample(), 20 + 10 * sample()};
 				scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source, {0, 0, 0}));
 				const auto begin = Clock::now();
 				scene.engine.refreshRenderSnapshot();
@@ -550,6 +559,7 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 				const auto first = published();
 				ASSERT_NE(first, nullptr);
 				const auto &entry = first->entries.at(scene.sun.registrationOrder());
+				ASSERT_EQ(entry.cascadeCount, 4u);
 				ASSERT_GT(entry.cascadeSplits.back(), 0.0f);
 				for (const auto &texture : entry.cascadeTextures)
 				{
@@ -563,6 +573,8 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 				for (std::size_t i = 0; i < entry.cascadeTextures.size(); ++i)
 				{
 					EXPECT_EQ(cached.cascadeTextures[i].identifier(), entry.cascadeTextures[i].identifier());
+					EXPECT_EQ(cached.cascadeStatistics[i].staticBuilds, entry.cascadeStatistics[i].staticBuilds);
+					EXPECT_EQ(cached.cascadeStatistics[i].dynamicBuilds, 0u);
 				}
 			}
 			std::sort(coldTimes.begin(), coldTimes.end());
@@ -751,7 +763,7 @@ namespace
 	// Independent ray traversal through the occupied unit cubes in the exact
 	// validation scene. No mesher, shadow projection, bias or GPU sampling.
 	// White: directly lit; black: occluded; gray: back-facing or background.
-	void captureCpuShadowReference(Scene &scene, const std::string &name)
+	void captureCpuShadowReference(Scene &scene, const std::string &name, std::vector<std::uint8_t> &reference)
 	{
 		using Point = std::array<double, 3>;
 		using Cell = std::array<int, 3>;
@@ -900,6 +912,7 @@ namespace
 			}
 		};
 		ReferenceTexture{}.save(rgba, sparkle_test::resultImagePath("rendering/biome-world", name + "_cpu_reference"));
+		reference = std::move(rgba);
 	}
 
 	// Use the original close-up camera and a single sun. Vary only the
@@ -1147,17 +1160,60 @@ namespace
 		if (name == "shadow_diagnostic_grid_scale_four")
 		{
 			scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
-			captureCpuShadowReference(scene, name + "_close_sweep");
+			std::vector<std::uint8_t> reference;
+			captureCpuShadowReference(scene, name + "_close_sweep", reference);
+			scene.sun.setCastsShadows(false);
+			const auto unshadowed = scene.capture();
+			ASSERT_EQ(reference.size(), unshadowed.pixels.size());
+			scene.sun.setCastsShadows(true);
+			const auto countErrors = [&](const sparkle_test::FramebufferImage &image, const std::string &label) {
+				std::size_t errors = 0, compared = 0, falseLit = 0, falseShadow = 0;
+				for (std::size_t i = 0; i < reference.size(); i += 4)
+				{
+					if (reference[i] == 127)
+					{
+						continue;
+					}
+					const int baseline = unshadowed.pixels[i] + unshadowed.pixels[i + 1] + unshadowed.pixels[i + 2];
+					const int actual = image.pixels[i] + image.pixels[i + 1] + image.pixels[i + 2];
+					// Exclude very dark texture outlines: they provide too
+					// little direct-light contrast for a robust classification.
+					if (baseline < 60)
+					{
+						continue;
+					}
+					const bool expectedShadow = reference[i] == 0;
+					const bool actualShadow = actual < baseline * 0.85f;
+					++compared;
+					errors += expectedShadow != actualShadow ? 1u : 0u;
+					falseLit += expectedShadow && !actualShadow ? 1u : 0u;
+					falseShadow += !expectedShadow && actualShadow ? 1u : 0u;
+				}
+				std::cout << "[Directional CPU comparison] mode=" << label << " pixels=" << compared
+						  << " errors=" << errors << " false_lit=" << falseLit << " false_shadow=" << falseShadow << '\n';
+				EXPECT_GT(compared, 0u);
+				return errors;
+			};
+			scene.sun.setShadowResolution(2048);
+			scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+			const auto single = scene.capture();
+			const auto singleErrors = countErrors(single, "single_2048");
 			scene.shadowSystem.setDirectionalCascadesEnabled(true);
 			for (const std::uint32_t resolution : {512u, 1024u, 2048u})
 			{
 				scene.sun.setShadowResolution(resolution);
 				scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
-				(void)scene.capture();
+				const auto hard = scene.capture();
 				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_hard_" + std::to_string(resolution)));
+				const auto errors = countErrors(hard, "csm_hard_" + std::to_string(resolution));
+				if (resolution == 2048)
+				{
+					EXPECT_LT(errors, singleErrors) << "Cascades must improve the original terrain against the independent CPU reference";
+				}
 				scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
-				(void)scene.capture();
+				const auto soft = scene.capture();
 				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_pcf_" + std::to_string(resolution)));
+				(void)countErrors(soft, "csm_pcf_" + std::to_string(resolution));
 			}
 			scene.shadowSystem.setDirectionalCascadesEnabled(false);
 			captureShadowParameterSweep(scene, name + "_close_sweep");
