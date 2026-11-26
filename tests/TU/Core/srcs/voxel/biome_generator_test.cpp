@@ -146,16 +146,11 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 		std::vector<int> &_trace;
 
 	protected:
-		void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
+		void _applySurface(const spk::Vector2Int &coordinate, Data &) override
 		{
 			EXPECT_EQ(coordinate, (spk::Vector2Int{3, -2}));
 			_trace.push_back(1);
-			auto &column = data.column(coordinate);
-			if (!column.appliedPasses.contains(this))
-			{
-				_trace.push_back(3);
-				column.appliedPasses.insert(this);
-			}
+			_trace.push_back(3);
 		}
 
 	public:
@@ -190,10 +185,10 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 	generator.addPass<ChunkProbe>(trace);
 	ASSERT_TRUE(generator.generate({3, 0, -2}));
 	ASSERT_TRUE(generator.generate({3, 1, -2}));
-	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 1, 2}));
+	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 2}));
 	generator.flush();
 	ASSERT_TRUE(generator.generate({3, 2, -2}));
-	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 1, 2, 1, 3, 2}));
+	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 2, 1, 3, 2}));
 }
 
 TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
@@ -207,10 +202,6 @@ TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
 		void _applySurface(const spk::Vector2Int &coordinate, Generator::GenerationData &data) override
 		{
 			auto &column = data.column(coordinate);
-			if (column.appliedPasses.contains(this))
-			{
-				return;
-			}
 			auto &height = column.heights->sample({0, 0});
 			EXPECT_FLOAT_EQ(height, 17.75f);
 			if (std::exchange(_first, false))
@@ -218,7 +209,6 @@ TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
 				height += 1.0f;
 				throw spk::Exception("Injected surface failure");
 			}
-			column.appliedPasses.insert(this);
 		}
 	};
 

@@ -278,13 +278,13 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	data.prepare(coordinate, {16, 16, 16});
 	EXPECT_FALSE(data.column(coordinate).heights);
 	distribution.apply(coordinate, data);
-	data.column(spk::Vector2Int{0, 0}).appliedPasses.insert(&distribution);
+	EXPECT_FALSE(data.column(coordinate).ready());
 	// A failed job cleans its partially constructed column without publishing it.
 	data.clean(coordinate);
 	data.prepare(coordinate, {16, 16, 16});
 	EXPECT_FALSE(data.column(coordinate).heights);
 	EXPECT_FALSE(static_cast<bool>(data.column(spk::Vector2Int{0, 0}).influences));
-	EXPECT_FALSE(data.column(coordinate).appliedPasses.contains(&distribution));
+	EXPECT_FALSE(data.column(coordinate).ready());
 	distribution.apply(coordinate, data);
 	combination.apply(coordinate, data);
 	data.completeChunk(coordinate);
@@ -400,7 +400,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
 	data.prepare(idle, {16, 16, 16});
-	data.column(spk::Vector2Int{0, 0}).appliedPasses.insert(&data);
+	EXPECT_FALSE(data.column(idle).ready());
 	data.completeChunk(idle);
 	data.clean(idle);
 
@@ -412,7 +412,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 		data.prepare(active, {16, 16, 16});
 		entered.set_value();
 		gate.wait();
-		data.column(spk::Vector2Int{-1, 0}).appliedPasses.insert(&data);
+		EXPECT_FALSE(data.column(active).ready());
 		data.completeChunk(active);
 		data.clean(active);
 	});
@@ -422,7 +422,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	resume.set_value();
 	building.get();
 	data.prepare(active, {16, 16, 16});
-	EXPECT_TRUE(data.column(active).appliedPasses.contains(&data));
+	EXPECT_TRUE(data.column(active).ready());
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);
 	data.clean(active);

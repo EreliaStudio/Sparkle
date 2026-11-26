@@ -120,14 +120,18 @@ namespace spk::Voxel
 			World::HeightMap::Grid::Lease heights;
 			Strata::Grid::Lease strata;
 
-			// Stable pass addresses are valid while the generator configuration is unchanged.
-			// Only the first active job writes these markers; published columns are read-only.
-			std::set<const void *> appliedPasses;
 
 		private:
 			friend class BiomeGenerationData;
 			mutable std::mutex _mutex;
 			bool _ready = false;
+
+		public:
+			// Read while the calling chunk is active, after prepare().
+			[[nodiscard]] bool ready() const noexcept
+			{
+				return _ready;
+			}
 		};
 
 		struct ChunkData
@@ -258,7 +262,6 @@ namespace spk::Voxel
 					columnData.influences = {};
 					columnData.heights = {};
 					columnData.strata = {};
-					columnData.appliedPasses.clear();
 				}
 			}
 			_chunks.erase(it);

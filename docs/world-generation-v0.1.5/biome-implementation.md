@@ -26,17 +26,16 @@ synchronize and clean its data. Streaming requests no longer retain or release g
 data. The generator must outlive all submitted jobs.
 
 Voxel::BiomeGenerationData owns WorldData (registry and surfaceScale), ColumnData keyed by X/Z and ChunkData keyed by the full chunk coordinate. All three types are nested in the concrete generation data. ChunkData contains the request-local Volume::Builder; ColumnData contains
-influences, heights and strata. There are no shared pointers or separate collection
-types for generation data.
+influences, heights and strata. There are no shared pointers for generation data; private collection aliases name the column and chunk maps.
 
-The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active ChunkData until cleanup. Other columns remain independent. Every job invokes every pass. Concrete distribution, height combination and strata passes return immediately when their respective grid already exists. In-place editing passes explicitly check and record their stable identity in ColumnData::appliedPasses, only marking after success. The first job owns the column mutex through cleanup; subsequent jobs only read cached results and markers. Failed initial jobs clear both grids and markers. Later jobs on a published column can read concurrently. Failed initial jobs clear partial grids and are retryable. Only one active generation per chunk coordinate
+The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active ChunkData until cleanup. Other columns remain independent. BiomeGenerator overrides the generic pass invocation hook to skip all SurfacePass instances when the column is ready, including custom surface edits; chunk passes still run in their registered order for every chunk. The first job owns the column mutex through cleanup and marks the column ready only after successful chunk instantiation. Failed initial jobs clear partial grids and are retryable. Later jobs on a published column can read concurrently. Only one active generation per chunk coordinate
 is supported; a duplicate preparation throws without modifying the existing entry.
 Distinct coordinates may be generated concurrently.
 
 Active chunks protect their X/Z column from eviction. References to chunk or column
 data are valid only until the calling chunk is cleaned. The generator calls cleanup
 after successful preparation, on success or failure; preparation itself must be
-exception-safe. Surface callbacks may access the current X/Z column through the construction-only accessors. The built-in voxel surface calculations run once per column under the concrete cache policy; the generic SurfacePass itself is invoked for every chunk. Do not read a grid in an earlier chunk pass if a later surface pass modifies it; cached columns contain final results. Queued jobs
+exception-safe. Surface callbacks may access the current X/Z column through the construction-only accessors. All voxel surface passes run once per column under the concrete cache policy; generic Generator and SurfacePass do not impose caching. Do not read a grid in an earlier chunk pass if a later surface pass modifies it; cached columns contain final results. Queued jobs
 need no reservations. Completed columns remain cached until flush(), which derives
 the active X/Z keys from the chunk map and evicts only unused columns. A duplicate
 streaming request after timeout can fail temporarily; retry policy is unchanged.
