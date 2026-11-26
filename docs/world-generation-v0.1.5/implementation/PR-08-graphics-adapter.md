@@ -4,15 +4,15 @@
 
 ## Public API
 
-`spk::Voxel::ChunkMesher<SX, SY, SZ>` in `include/voxel/chunk_mesher.hpp` derives from the existing `Voxel::Mesher`. Construct it with a const reference to `World::ChunkCollection<Voxel::Chunk<SX,SY,SZ>>` and a chunk coordinate. It uses `outsideCell()` to look up boundary cells in the six adjacent chunks during each `bake()`; missing neighbors are treated as empty. The existing occlusion algorithm remains unchanged and handles opaque, translucent, and partially occluding shapes. No neighbor pointer is retained.
+`spk::World::Voxel::Chunk<SX, SY, SZ>::Mesher` in `include/world/voxel/chunk_mesher.hpp` derives from the existing `Voxel::Mesher`. Construct it with a const reference to `World::ChunkCollection<World::Voxel::Chunk<SX,SY,SZ>>` and a chunk coordinate. It uses `outsideCell()` to look up boundary cells in the six adjacent chunks during each `bake()`; missing neighbors are treated as empty. The existing occlusion algorithm remains unchanged and handles opaque, translucent, and partially occluding shapes. No neighbor pointer is retained.
 
-`spk::Voxel::ChunkRenderingSystem<SX, SY, SZ>` in `include/voxel/chunk_rendering_system.hpp` specializes the existing `Voxel::RenderingSystem`. Create it on a Graphics `spk::Engine`, attach a Core `World::ChunkCollection` to that same engine, then bind a palette explicitly:
+`spk::World::Voxel::Chunk<SX, SY, SZ>::RenderingSystem` in `include/world/voxel/chunk_rendering_system.hpp` specializes the existing `Voxel::RenderingSystem`. Create it on a Graphics `spk::Engine`, attach a Core `World::ChunkCollection` to that same engine, then bind a palette explicitly:
 
 ```cpp
-using Chunk = spk::Voxel::Chunk<16, 16, 16>;
+using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 spk::World::ChunkCollection<Chunk> chunks;
 chunks.attach(engine);
-auto &renderer = engine.addSystem<spk::Voxel::ChunkRenderingSystem<16, 16, 16>>();
+auto &renderer = engine.addSystem<spk::World::Voxel::Chunk<16, 16, 16>::RenderingSystem>();
 renderer.bind(chunks, materials);
 ```
 
@@ -24,7 +24,7 @@ Rendering requires a Graphics Engine. A Core-only headless world creates no rend
 
 ## Measurements
 
-`ChunkRenderingSystem::lastStatistics()` reports the last nonempty synchronization:
+`Chunk::RenderingSystem::lastStatistics()` reports the last nonempty synchronization:
 
 - Rebuilt chunks and processed voxels.
 - Opaque and translucent vertex counts.
@@ -43,7 +43,7 @@ Timing covers CPU `Mesher::bake()` (including geometry construction), not GPU re
 
 The performance TU adds **two seeded stress tests with 256 distinct chunks each**: (1) randomized opaque cubes with two materials and high face exposure, and (2) randomized cubes/slabs/slopes/stairs with independent random horizontal/vertical orientations. All 4,096 cells in each chunk are randomized; occupancy varies from 35% to 80%, with additional near-checkerboard randomized cases (94% occupied on one parity, 3% on the other) that force more than 60,000 generated vertices. The generator uses a fixed 64-bit seed, so every run replays the identical 512 chunks. Each test independently validates mesh counts (including exact visible-face counts for cube-only chunks), and reports median, P95, P99, maximum per-case median, and maximum observed single bake.
 
-**Hard CI contract:** each chunk's median across three consecutive bakes must be **no more than 5 ms** under the Release Windows CI configuration; one case above this limit fails its whole test. No results are hidden behind the overall median. The `ChunkMesher` reuses the shared occlusion cache, as the runtime adapter does; volume creation, random generation, and geometric assertions are not timed.
+**Hard CI contract:** each chunk's median across three consecutive bakes must be **no more than 5 ms** under the Release Windows CI configuration; one case above this limit fails its whole test. No results are hidden behind the overall median. The `Chunk::Mesher` reuses the shared occlusion cache, as the runtime adapter does; volume creation, random generation, and geometric assertions are not timed.
 
 The **5 ms target is a design requirement**, not an existing demonstrated capability. A failing test is actionable evidence of a performance bottleneck; do not silently increase the threshold to get green CI. The maximum single elapsed bake is reported separately, since OS scheduling interruptions mean a wall-clock upper bound on arbitrary machines cannot be guaranteed by unit tests. The release build's fixed hardware/runners and per-case median provide a repeatable regression check.
 

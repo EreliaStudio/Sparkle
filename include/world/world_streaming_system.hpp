@@ -135,9 +135,18 @@ namespace spk::World
 					coordinates.push_back(coordinate);
 				}
 
-				_priorities = std::move(priorities);
-				_coordinates.clear();
-				_coordinates.pushBack(std::move(coordinates));
+				auto previousQueue = std::move(_coordinates);
+				_priorities.swap(priorities);
+				try
+				{
+					_coordinates = PriorityQueue<ChunkCoordinate, Comparator>(Comparator{&_priorities});
+					_coordinates.pushBack(std::move(coordinates));
+				} catch (...)
+				{
+					_priorities.swap(priorities);
+					_coordinates = std::move(previousQueue);
+					throw;
+				}
 			}
 
 		public:
@@ -160,7 +169,7 @@ namespace spk::World
 				return true;
 			}
 
-			void reset()
+			void reset() noexcept
 			{
 				_observers.clear();
 				_priorities.clear();
@@ -502,6 +511,11 @@ namespace spk::World
 						attach(nullptr);
 					}
 				});
+		}
+
+		~WorldStreamingSystem() override
+		{
+			_interest.reset();
 		}
 
 		WorldStreamingSystem(const WorldStreamingSystem &) = delete;

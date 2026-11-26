@@ -1,0 +1,358 @@
+#pragma once
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+#include "voxel_world_fixture.hpp"
+#include "world/voxel/biome_generator.hpp"
+
+namespace sparkle_test::biome_validation
+{
+	enum class Height
+	{
+		Flat,
+		Hills,
+		Multilayer,
+		BelowZero,
+		Tall
+	};
+	enum class Placement
+	{
+		Single,
+		Blend,
+		Islands,
+		Tie,
+		Checker
+	};
+	enum class Layers
+	{
+		Fixed,
+		PerlinLow,
+		PerlinHigh,
+		Weighted,
+		Custom,
+		ThreeMaterials,
+		VariableThickness,
+		Independent,
+		TwoPerlin,
+		DeepPerlin,
+		Finite,
+		SingleInfinite
+	};
+	enum class Cut
+	{
+		None,
+		Horizontal,
+		Half,
+		Staircase
+	};
+
+	struct Settings
+	{
+		Height height = Height::Flat;
+		Placement placement = Placement::Single;
+		Layers layers = Layers::Fixed;
+		float scale = 1.0f;
+		bool terrace = false;
+	};
+
+	struct View
+	{
+		int centerX = 0;
+		int centerZ = 0;
+		int minimumY = 0;
+		int maximumY = 2;
+		Cut cut = Cut::None;
+		int cutHeight = 20;
+		spk::Vector3 camera{52, 52, 59};
+		spk::Vector3 target{0, 17, 0};
+		bool shadows = true;
+		bool reverseOrder = false;
+
+		[[nodiscard]] std::vector<voxel_world::Coordinate> coordinates() const
+		{
+			std::vector<voxel_world::Coordinate> result;
+			for (int z = centerZ - 2; z <= centerZ + 2; ++z)
+			{
+				for (int x = centerX - 2; x <= centerX + 2; ++x)
+				{
+					for (int y = minimumY; y <= maximumY; ++y)
+					{
+						result.push_back({x, y, z});
+					}
+				}
+			}
+			return result;
+		}
+
+		// Only remove upper voxels from the already generated terrain, exposing its
+		// real interior. No material or thickness is synthesized by the test.
+		[[nodiscard]] bool removes(std::int64_t x, std::int64_t y, std::int64_t z) const
+		{
+			switch (cut)
+			{
+			case Cut::Horizontal:
+				return y > cutHeight;
+			case Cut::Half:
+				return x >= 0 && y > cutHeight;
+			case Cut::Staircase:
+				return y > (x < -12 ? 27 : x < 12 ? 21
+												  : 11) &&
+					   z >= -24;
+			default:
+				return false;
+			}
+		}
+	};
+
+	class Biome final : public spk::World::Voxel::Biome
+	{
+	private:
+		spk::World::HeightMap _map;
+		static void _noise(spk::World::HeightMap &map, const char *name, std::uint32_t seed, float frequency, float amplitude)
+		{
+			spk::Perlin perlin(seed);
+			perlin.setFrequency(frequency);
+			perlin.setOctaves(1);
+			map.noiseLayers().emplace(name, spk::World::HeightMap::NoiseLayer{perlin, -amplitude, amplitude});
+		}
+		static void _materialPerlin(Stratum &stratum, std::uint32_t seed, float frequency)
+		{
+			stratum.distribution = Stratum::Distribution::Perlin{};
+			std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setSeed(seed);
+			std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setFrequency(frequency);
+			std::get<Stratum::Distribution::Perlin>(stratum.distribution).noise.setOctaves(1);
+		}
+
+	public:
+		Biome(Settings settings, std::uint32_t surfaceID, float altitudeOffset, std::uint32_t seed)
+		{
+			float altitude = 28.0f + altitudeOffset;
+			if (settings.height == Height::BelowZero)
+			{
+				altitude = -9.0f + altitudeOffset;
+			}
+			if (settings.height == Height::Tall)
+			{
+				altitude = 37.0f + altitudeOffset;
+			}
+			_map.setBaseHeight(altitude);
+			if (settings.height != Height::Flat)
+			{
+				_noise(_map, "broad", seed, 0.055f, settings.height == Height::Tall ? 7.0f : 6.0f);
+			}
+			if (settings.height == Height::Multilayer)
+			{
+				_noise(_map, "detail", seed + 1, 0.21f, 3.5f);
+				_noise(_map, "fine", seed + 2, 0.46f, 1.5f);
+			}
+			Stratum top;
+			top.materials = {{surfaceID, 1}};
+			Stratum middle;
+			middle.thickness = Stratum::Thickness::Fixed{10};
+			middle.materials = {{2, 1}};
+			Stratum lower;
+			lower.thickness = Stratum::Thickness::Fixed{7};
+			lower.materials = {{4, 1}};
+			Stratum deep;
+			deep.thickness = Stratum::Thickness::Infinite{};
+			deep.materials = {{3, 1}};
+
+			switch (settings.layers)
+			{
+			case Layers::PerlinLow:
+			case Layers::PerlinHigh:
+			case Layers::Independent:
+			case Layers::TwoPerlin:
+				middle.materials = {{2, 1}, {3, 1}};
+				_materialPerlin(middle, seed + 11, settings.layers == Layers::PerlinHigh ? 0.31f : 0.055f);
+				break;
+			case Layers::Weighted:
+				middle.materials = {{2, 3}, {3, 1}};
+				middle.distribution = Stratum::Distribution::Weighted{seed + 31};
+				break;
+			case Layers::Custom:
+				middle.materials = {{2, 1}, {4, 1}};
+				middle.distribution = Stratum::Distribution::Custom{[](const spk::Vector2 &p) {
+					return std::sin(p.x * 0.33f + std::sin(p.y * 0.17f) * 2.5f) > 0 ? 0.75f : 0.25f;
+				}};
+				break;
+			case Layers::ThreeMaterials:
+				middle.materials = {{2, 2}, {4, 1}, {3, 2}};
+				_materialPerlin(middle, seed + 11, 0.09f);
+				break;
+			case Layers::DeepPerlin:
+				deep.materials = {{3, 1}, {4, 1}};
+				_materialPerlin(deep, seed + 43, 0.07f);
+				break;
+			default:
+				break;
+			}
+			if (settings.layers == Layers::VariableThickness || settings.layers == Layers::Independent)
+			{
+				middle.thickness = Stratum::Thickness::Variable{1, 14, spk::Perlin{}};
+				std::get<Stratum::Thickness::Variable>(middle.thickness).noise.setSeed(seed + 71);
+				std::get<Stratum::Thickness::Variable>(middle.thickness).noise.setFrequency(0.065f);
+			}
+			if (settings.layers == Layers::TwoPerlin)
+			{
+				lower.materials = {{4, 1}, {3, 1}};
+				_materialPerlin(lower, seed + 91, 0.13f);
+			}
+			if (settings.layers == Layers::SingleInfinite)
+			{
+				deep.materials = {{surfaceID, 1}};
+				strata().push_back(deep);
+			}
+			else
+			{
+				strata().push_back(top);
+				strata().push_back(middle);
+				if (settings.layers != Layers::Finite)
+				{
+					strata().push_back(lower);
+					strata().push_back(deep);
+				}
+			}
+		}
+
+		float groundHeight(const spk::Vector2 &position) const override
+		{
+			return _map.sample(position);
+		}
+	};
+
+	template <Placement TPlacement>
+	class PlacementModel
+	{
+	private:
+		spk::Perlin _regions{913};
+
+	public:
+		void compute(const spk::Vector2 &p, spk::World::SurfaceBiome::Influence::Cell<3> &cell, const spk::World::SurfaceBiome *first, const spk::World::SurfaceBiome *second, const spk::World::SurfaceBiome *third) const
+		{
+			switch (TPlacement)
+			{
+			case Placement::Single:
+				cell[0] = {first, 1};
+				break;
+			case Placement::Blend:
+			{
+				const float a = std::clamp((p.x + 20.0f) / 40.0f, 0.0f, 1.0f);
+				const float b = std::clamp((p.y + 20.0f) / 40.0f, 0.0f, 1.0f);
+				cell = {{{{first, (1 - a) * (1 - b)}, {second, a * (1 - b)}, {third, b}}}};
+				break;
+			}
+			case Placement::Islands:
+			{
+				const float noise = _regions.sample2D(p.x, p.y);
+				const float a = std::clamp((noise - 0.40f) / 0.20f, 0.0f, 1.0f);
+				cell[0] = {first, 1 - a};
+				cell[1] = {third, a};
+				break;
+			}
+			case Placement::Tie:
+				cell[0] = {second, 7};
+				cell[1] = {first, 7};
+				break;
+			case Placement::Checker:
+			{
+				const int index = static_cast<int>(std::floor(p.x / 8.0f)) + static_cast<int>(std::floor(p.y / 8.0f));
+				cell[0] = {index % 2 == 0 ? first : second, 1};
+				break;
+			}
+			}
+		}
+
+		PlacementModel()
+		{
+			_regions.setFrequency(0.048f);
+		}
+	};
+
+	template <Placement TPlacement>
+	class Generator final : public spk::World::Voxel::Biome::Generator<voxel_world::Chunk, 3>
+	{
+	private:
+		using Base = spk::World::Voxel::Biome::Generator<voxel_world::Chunk, 3>;
+		using Data = typename Base::Data;
+		using Cell = typename Base::Cell;
+
+		struct DistributionData
+		{
+			const spk::World::SurfaceBiome *first;
+			const spk::World::SurfaceBiome *second;
+			const spk::World::SurfaceBiome *third;
+		};
+
+		class PlacementPass final : public Base::template DistributionPass<DistributionData>
+		{
+		private:
+			PlacementModel<TPlacement> _placement;
+
+		protected:
+			DistributionData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+			{
+				const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
+				const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
+				const auto *third = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("third"));
+				if (first == nullptr || second == nullptr || third == nullptr)
+				{
+					throw spk::Exception("Missing surface biome");
+				}
+				return {first, second, third};
+			}
+
+			void _distribute(const spk::Vector2 &position, const DistributionData &data, Cell &cell) const override
+			{
+				_placement.compute(position, cell, data.first, data.second, data.third);
+			}
+
+		public:
+			explicit PlacementPass(Settings settings)
+			{
+				this->setScale(settings.scale);
+			}
+		};
+
+		class Terrace final : public spk::World::SurfacePass<voxel_world::Chunk, Data>
+		{
+		public:
+			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
+			{
+				auto &column = data.column(coordinate);
+				auto &grid = *column.heights;
+				const auto layout = grid.sampleSize();
+				for (std::uint32_t z = 0; z < layout.y; ++z)
+				{
+					for (std::uint32_t x = 0; x < layout.x; ++x)
+					{
+						grid.sample({x, z}) = 4.0f * std::floor(grid.sample({x, z}) / 4.0f);
+					}
+				}
+			}
+		};
+
+		spk::World::Biome::Registry _biomes;
+
+	public:
+		Generator(const voxel_world::Registry &registry, Settings settings)
+		{
+			_biomes.add<Biome>("first", settings, 1, 0, 107);
+			_biomes.add<Biome>("second", settings, 4, -12, 211);
+			_biomes.add<Biome>("third", settings, 3, -5, 317);
+			this->bind(&_biomes);
+			this->bind(&registry);
+			this->template addPass<PlacementPass>(settings);
+			this->template addPass<typename Base::CombinationPass>(Base::HeightCombination::Weighted);
+			if (settings.terrace)
+			{
+				this->template addPass<Terrace>();
+			}
+			this->template addPass<typename Base::StrataGeneration>();
+			this->template addPass<typename Base::Application>();
+		}
+	};
+}

@@ -1,0 +1,168 @@
+# Biome implementation — review branch
+
+This branch is an implementation proposal, including decisions that were previously open.
+The design branch remains unchanged. No merge is authorized by this record.
+
+
+World-specific voxel types live in `spk::World::Voxel` (`include/world/voxel/`). The reusable voxel primitives (`Definition`, `Shape`, `Cell`, `Volume`, `Geometry`, `Mesher`, `Renderer` and `Occlusion`) remain in `spk::Voxel`. Dependencies run from world adapters to voxel primitives, not the reverse.
+
+## Layers
+
+- World::Biome / World::SurfaceBiome: identity and continuous absolute height.
+- World::Biome::Registry: owns polymorphic World::Biome instances in an unordered_map keyed by name. add<TBiome>(name, args...) constructs in place and returns const Biome*; get returns const Biome* or nullptr. Duplicate names throw. No erase, replacement, mutable access or move is exposed. Configure registries before binding; registered biomes must support concurrent const sampling. The registry must outlive its binding and cached references.
+- World::SurfaceBiome::Influence::Cell<N>: owns validation and normalization through normalize(), and dominant selection through dominant(). SurfaceBiomeDistributionPass<TChunk, TGenerationData, TDistributionData, TCapacity = 4> inherits only SurfacePass and calls cell.normalize() after placement. Concrete passes implement _prepareDistribution(const Biome::Registry&) const to return local per-column data, and _distribute(position, const TDistributionData&, cell) const to sample each grid position. No callable or factory binding is required.
+- spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity. Checked at() and operator[] accept Vector2UInt coordinates. Row-major iteration exposes read-only coordinates and mutable or const values through structured bindings (auto&& [coords, value]).
+- World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid exposes direct floor access through at(position) and a protected bilinear-only weighted sample traversal shared by specialized grids.
+- World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling. Biomes can use HeightMap::sample to compute their relief; SurfaceHeightCombinationPass builds the final height grid from biome influences. The redundant HeightMapGenerationPass and HeightMap::generate are removed; HeightMap retains its point-sampling API.
+- World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it consults `data.surfaceReady(coordinate)` before executing and owns no cache. Surface generation data must provide this const query; uncached data returns false.
+- World::Voxel::Strata::Instance: one pooled resolved vertical profile per voxel X/Z, containing absolute layer boundaries and selected voxel IDs. `voxelIDAt(height)` queries the profile without noise sampling, allocations or registry access. ID zero denotes air. Application passes nonzero IDs to the registry-bound Volume::Builder, which validates them. `World::Voxel::Strata::Grid` is a `Grid2D<Instance::Lease>` with exactly the chunk footprint; releasing the grid returns every instance to its own capacity pool. Each instance retains its reserved layer storage for reuse.
+- World::Voxel::Biome::GenerationData<TCapacity = 4> (exposed as Biome::Generator<TChunk, TCapacity>::Data): owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
+- World::Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
+- World::Voxel::Biome::Generator: reusable voxel generator foundation with a protected parameterless constructor and protected pass adapters. Each concrete generator registers its dedicated distribution pass, the height combination pass, optional surface edits, strata generation and application, in that order. The concrete distribution pass derives from DistributionPass<TDistributionData> and implements two virtual hooks. _prepareDistribution receives the bound biome registry once per uncached column and returns local data by value, resolving required biome names and types. _distribute receives the local data by const reference for every sample. Both hooks must support concurrent calls; registry-dependent pointers are not retained across columns or bindings. Different placement algorithms use separate concrete generator and pass types. The generic pass derives horizontal extent from TChunk::Size and validates its scale (default 1) via protected setScale. The generic height combination pass accepts its mode as a declarative constructor argument (default Weighted). addPass forwards declarative configuration such as enums, values and settings; dependencies such as registry pointers or other pass instances are not supplied as constructor arguments to built-in biome passes. Two non-owning overloads, `bind(const spk::Voxel::Definition::Registry*)` and `bind(const spk::World::Biome::Registry*)`, associate the voxel and biome registries. A typed null pointer detaches the corresponding registry. Binding is permitted only while idle, invalidates cached columns, and both registries must remain alive while bound. Generation without either registry throws. Concrete generators may register additional passes with addPass or insertPass before generation. Strata consumes the final height map and influence grid; Application consumes the resolved strata grid and obtains its mutable Volume::Builder through the protected pure virtual _builder(coordinate, data) hook. Only the concrete storage adapter knows the layout of generation data.
+  The redundant PerlinTerrainPass and its legacy terrain unit tests and 13 Perlin world golden scenarios are removed. The 29 biome golden scenarios and mathematical/raw-noise Perlin tests remain. Shared voxel scene resources and a single-biome test recipe live in voxel_world_fixture.hpp; the non-golden chunk-editing and multi-observer streaming checks and four performance measurements use the biome pipeline. The generation benchmark flushes its cache before each sample to measure full generation rather than cached column reuse. Historical CI counts below describe earlier commits, not the current test inventory.
+
+## Lifetime and threading
+
+Generator owns a single persistent GenerationData instance, without imposing a lock,
+spatial hierarchy or eviction policy. Each derived generator decides how to initialize,
+synchronize and clean its data. Streaming requests no longer retain or release generator
+data. The generator must outlive all submitted jobs.
+
+World::Voxel::Biome::GenerationData owns World (non-owning voxelRegistry and biomeRegistry), Column keyed by X/Z and Chunk keyed by the full chunk coordinate. All three types are nested in the concrete generation data. Chunk contains the request-local Volume::Builder; Column contains
+influences, heights and strata. There are no shared pointers for generation data; private collection aliases name the column and chunk maps.
+
+The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active Chunk until cleanup. Other columns remain independent. SurfacePass::apply consults the generation data and skips its surface operation when the column is ready, including custom surface edits; chunk passes still run in their registered order for every chunk. The first job owns the column mutex through cleanup and marks the column ready only after successful chunk instantiation. Failed initial jobs clear partial grids and are retryable. Later jobs on a published column can read concurrently. Only one active generation per chunk coordinate
+is supported; a duplicate preparation throws without modifying the existing entry.
+Distinct coordinates may be generated concurrently.
+
+Active chunks protect their X/Z column from eviction. References to chunk or column
+data are valid only until the calling chunk is cleaned. The generator calls cleanup
+after successful preparation, on success or failure; preparation itself must be
+exception-safe. Mutable column access is restricted to unpublished columns. The chunk-coordinate overload also verifies that the active chunk owns the column lock; surface callbacks using X/Z must already own that lock. Read access uses the const overloads. All voxel surface passes run once per column under the generation data cache policy; the generic Generator does not distinguish pass types. Do not read a grid in an earlier chunk pass if a later surface pass modifies it; cached columns contain final results. Queued jobs
+need no reservations. Completed columns remain cached until flush(), which derives
+the active X/Z keys from the chunk map and evicts only unused columns. A duplicate
+streaming request after timeout can fail temporarily; retry policy is unchanged.
+Flush returns leases to their pools, not necessarily memory to the OS.
+
+Configure passes before submitting jobs. Biome definitions, callbacks and height
+sources must remain immutable and alive throughout use. Drain workers and flush
+before changing settings or definitions. No LRU or automatic eviction is implemented.
+
+## Selected open-question resolutions
+
+- Both grid kinds use inclusive endpoints, floor direct access, identical world origins.
+  Influence and blended-height sample spacing are the same; voxel strata are sampled at
+  unit spacing and select a biome from the interpolated influences. Configuration is fixed
+  during all active jobs. Drain workers and flush before changing definitions. Float world positions retain the existing Perlin precision limit.
+- The generic height combination pass accepts its mode at construction (default Weighted); concrete generators can register a pass with Weighted or Dominant explicitly. Weighted sums normalized
+  positive influences with double accumulation; Dominant evaluates only the biome with
+  the greatest positive weight (first slot wins ties). Both reject missing contributions
+  and non-finite results. This choice is independent of spatial influence interpolation. Custom edits run inside the
+  construction pipeline, before the column is published for read-only access.
+- Voxel height is floored. Depth zero means the top voxel. Finite strata have positive
+  integer thickness; the final stratum may be infinite. Missing finite layers leave the
+  builder unchanged; solid strata overwrite the corresponding existing voxels.
+- Strata::GenerationPass accepts Selection::Dominant (default) or Selection::Weighted and a uint32 seed (default 0). Weighted draws one biome for each absolute integer X/Z using its positive interpolated weights and a stateless hash; the same biome supplies the entire vertical profile, independently of the height combination mode, chunk order, threads and flush. Incompatible selected biome throws using a dynamic cast once per column sample, not per voxel.
+  Material weights are finite/nonnegative, air and out-of-range packed IDs rejected.
+  Independent hash-based weighted selection, Perlin selection and custom [0,1] selectors
+  are supported; thickness noise is independent. Registry compatibility is checked by
+  the existing volume builder.
+- Pool tiers are next powers of two; zero and overflow are rejected; no trimming.
+
+## Visual review
+
+Five GPU-rendered cases are registered in BiomeWorldGolden: smooth overview, hard
+boundaries, top-down distribution, visible strata/cliffs, and custom height modification.
+They use the existing OpenGL scene and palette, generate two vertical chunks per column,
+and save actual PNGs to the normal Graphics results directory. Missing expected images
+deliberately fail rather than auto-approve a baseline. The five reference PNGs are now
+committed under tests/TU/Graphics/resources/expectedImages/rendering/biome-world/.
+They are byte-identical to the actual Graphics Release captures from CI run 45492661433.
+These references remain subject to visual review; existing CI uploads results.
+
+## Expanded validation
+
+29 BiomeWorldGolden scenarios (5 initial + 24 additional):
+- Exposed horizontal strata: low/high frequency Perlin, weighted speckles, custom
+  bands, three weighted materials, variable thickness and infinite deep Perlin.
+- Cutaways: variable thickness, independently seeded material and thickness Perlin,
+  two independently distributed layers, finite strata and a single infinite stratum.
+- Terrain: layered height noise, negative elevation, tall terrain, surface scales
+  0.5/2/4, noisy biome islands, three-way blend, equal-weight tie, checkerboard,
+  negative coordinates with reversed generation order, custom terraces.
+- The cutaway fixtures only erase generated voxels to expose the real interior.
+  No material or layer is generated by the visualization itself.
+- Core tests compare exact material thresholds, thickness values, deterministic
+  weighted output, entire vertical stacks across negative coordinates, finite and
+  infinite layers, invalid settings, scale-dependent sampling counts, queued local
+  requester lifetime, neighboring height grid endpoints, bilinear interpolation,
+  recycled influences and height-combination failure atomicity.
+
+All additional references must originate from the actual Sparkle Graphics test
+outputs. Existing reference PNGs are not replaced by this extension.
+
+The 24 additional reference PNGs were imported from the Graphics Release captures in
+CI run 45524081345. All 29 BiomeWorldGolden cases passed against the resulting
+references before the import commit 705bd538ed6717d7f79a1e996bb38cd5f6a2e694.
+
+## Noise and influence continuity
+
+Perlin now uses 16 uniformly spaced unit gradients in 2D and 32 symmetric unit
+gradients in 3D. Quintic interpolation is the default; Linear and SmoothStep
+remain selectable. The seed and permutation remain deterministic, but existing
+procedural worlds will change with the revised gradients and default fade.
+DomainWarp is optional and does not silently alter any existing pipeline. It owns
+three independently configurable Perlin fields and exposes sample1D, sample2D and
+sample3D. Each axis samples the original input position at the requested dimension;
+the 2D result is unchanged by the addition of the third field.
+Influence grids interpolate by biome identity, not slot index, preserving up to
+four cells' distinct biomes. Direct at(position) returns the selected cell by reference; interpolate(position)
+combines neighboring influences without discarding positive contributions.
+Both height and influence grids use SurfaceGrid's weighted traversal. Aligned
+bilinear queries read only one cell at a grid node, or two cells on a grid line.
+Height interpolation accumulates weighted samples in double precision before
+converting to float; a single contributing sample is returned unchanged.
+Empty cells remain empty. Height combination and strata biome selection have independent modes.
+Stored and interpolated influences use Influence::Cell<N>, which owns a fixed-size
+std::array and exposes dominant() independently of spatial sampling. Grid no longer
+provides dominant(); both the height and strata passes use the cell method in dominant mode.
+Exact ties retain first positive encounter order.
+Seven raw-noise PNG cases isolate the scalar field, threshold, octaves, cubic
+interpolation, 3D slices and optional coordinate warping from the voxel renderer.
+Existing terrain goldens affected by this algorithm change must be refreshed
+from actual test outputs only, with unchanged comparator tolerances.
+
+### Generator contract (current PR)
+
+- `Generator<TChunk, TGenerationData>` owns persistent generation data and has no Builder template parameter or spatial hierarchy.
+- Optional `_prepareGenerationData(coordinate, data)` returns false for an absent chunk; it must leave no request-local state on rejection or failure.
+- Chunk passes receive only coordinate and mutable data; `_instantiateChunk(coordinate, data)` constructs the final chunk.
+- `_cleanGenerationData(coordinate, data) noexcept` runs exactly once after successful preparation, including pass and instantiation failures.
+- Generic SurfaceGenerationPass and streaming retention hooks are removed. SurfacePass participates in the standard addPass pipeline and receives the complete TGenerationData without its own cache or cleanup policy. Generator invokes apply directly in registration order. SurfacePass itself queries generation data to skip already-published columns.
+- Voxel data owns its column cache and request-local Volume::Builder, accessed with `data.chunk(coordinate).builder`. Generation data is private to the generator and passed to hooks and passes; the protected _data() accessor supports setup, including registry binding. No public accessor is provided. The C++20 World::GenerationData concept requires `void flush()`; `Generator::flush()` always forwards directly to it. Voxel data currently releases idle cached columns, while other implementations can retain any data or provide a no-op.
+
+### Validation after persistent-generation refactoring
+
+CI run 45636410109 compiled both Graphics configurations and executed 1,369 tests
+per configuration. Debug and Release each reported the same 43 golden failures:
+7 PerlinNoiseGolden, 13 PerlinWorldGolden and 23 BiomeWorldGolden. All remaining
+Graphics tests passed. Core unit and stress tests and AddressSanitizer checks
+passed on both platforms. LLVM coverage failed on the same golden comparisons;
+the separate MSVC Debug compatibility build exceeded the COFF section limit.
+
+Commit f6e54b170406acd147cdb9232aa09dcb85075c69 adds /bigobj to the MSVC
+graphics test target only. Commit 456b3612ce9275d3b7f53256b79282ef332c8406
+applies clang-format 21.1.0. Commit 7a85d98a249ea0f0b867c26a5ddfb544227554ba
+refreshes the 43 affected references from CI 2417. No comparator changes were made.
+The refreshed references still require a successful independent Graphics run.
+
+### Visual review follow-up
+
+The hard-boundary overview hid the transition behind the elevated mountain biome.
+The hard, smooth and custom-height overview cameras now share a more distant
+view from the negative X/Z lowland side, so the transitions can be inspected
+without changing terrain generation or the lighting setup. Their three expected
+PNGs must be refreshed from actual CI captures after visual review, with the
+existing comparison tolerances. The reported incomplete-looking shadows are
+explicitly deferred to PR #102; no shadow implementation or lighting settings
+are changed in this PR for that issue.

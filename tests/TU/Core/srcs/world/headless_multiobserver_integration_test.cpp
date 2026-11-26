@@ -7,6 +7,7 @@
 #include <future>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -38,8 +39,6 @@ namespace
 	class IntegrationChunk : public spk::World::Chunk<16, 8, 32>
 	{
 	public:
-		class Builder;
-
 	private:
 		int _value = 0;
 
@@ -64,26 +63,20 @@ namespace
 		}
 	};
 
-	class IntegrationChunk::Builder
-	{
-	private:
-		int _value = 0;
-
-	public:
-		void setValue(int value) noexcept
-		{
-			_value = value;
-		}
-
-		[[nodiscard]] IntegrationChunk build() &&
-		{
-			return IntegrationChunk(_value);
-		}
-	};
-
 	struct GenerationData
 	{
-		int value = 0;
+		void flush()
+		{
+		}
+
+		std::mutex mutex;
+		std::map<Coordinate, int> values;
+
+		int &value(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return values.at(coordinate);
+		}
 	};
 
 	using Generator = spk::World::Generator<IntegrationChunk, GenerationData>;
@@ -97,38 +90,46 @@ namespace
 	class IntegrationGenerator : public Generator
 	{
 	private:
-		[[nodiscard]] std::optional<IntegrationChunk::Builder> _createChunkBuilder(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate == Coordinate{9, 0, 0})
 			{
-				return std::nullopt;
+				return false;
 			}
-			return IntegrationChunk::Builder{};
+			const std::scoped_lock lock(data.mutex);
+			if (!data.values.try_emplace(coordinate, 0).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
+			return true;
 		}
 
-		[[nodiscard]] GenerationData _createGenerationData() override
+		[[nodiscard]] IntegrationChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			return {};
+			return IntegrationChunk(data.value(coordinate));
+		}
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			const std::scoped_lock lock(data.mutex);
+			data.values.erase(coordinate);
 		}
 	};
 
 	class FirstPass : public Generator::Pass
 	{
 	public:
-		void apply(IntegrationChunk::Builder &builder, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			data.value = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
-			builder.setValue(data.value);
+			data.value(coordinate) = 200 + coordinate.x * 11 + coordinate.y * 13 + coordinate.z * 17;
 		}
 	};
 
 	class SecondPass : public Generator::Pass
 	{
 	public:
-		void apply(IntegrationChunk::Builder &builder, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
-			data.value = data.value * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
-			builder.setValue(data.value);
+			data.value(coordinate) = data.value(coordinate) * 3 + coordinate.x - coordinate.y * 2 + coordinate.z;
 		}
 	};
 
@@ -576,11 +577,11 @@ TEST(HeadlessMultiObserverIntegrationTest, LocalWorkerShutdownDoesNotWaitForBloc
 		{
 		}
 
-		void apply(IntegrationChunk::Builder &builder, const Coordinate &, GenerationData &) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			_entered.set_value();
 			_release.wait();
-			builder.setValue(77);
+			data.value(coordinate) = 77;
 		}
 	};
 

@@ -4,7 +4,9 @@
 #include <chrono>
 #include <exception>
 #include <future>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -27,8 +29,6 @@ namespace
 	class TestChunk : public spk::World::Chunk<8, 4, 6>
 	{
 	public:
-		class Builder;
-
 	private:
 		int _value;
 
@@ -44,26 +44,26 @@ namespace
 		}
 	};
 
-	class TestChunk::Builder
-	{
-	private:
-		int _value = 0;
-
-	public:
-		void setValue(int value) noexcept
-		{
-			_value = value;
-		}
-
-		[[nodiscard]] TestChunk build() &&
-		{
-			return TestChunk(_value);
-		}
-	};
-
 	struct GenerationData
 	{
+		void flush()
+		{
+		}
+
 		int seed = 0;
+		std::mutex mutex;
+		std::map<Coordinate, int> values;
+
+		int &value(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return values.at(coordinate);
+		}
+
+		explicit GenerationData(int seedValue) :
+			seed(seedValue)
+		{
+		}
 	};
 
 	using Generator = spk::World::Generator<TestChunk, GenerationData>;
@@ -75,31 +75,41 @@ namespace
 	class TestGenerator : public Generator
 	{
 	private:
-		int _seed;
 		std::atomic<int> _dataCalls = 0;
 
-		[[nodiscard]] std::optional<TestChunk::Builder> _createChunkBuilder(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
+			_dataCalls.fetch_add(1, std::memory_order_relaxed);
 			if (coordinate.x == -2)
 			{
-				throw spk::Exception("Builder could not be prepared");
+				throw spk::Exception("Generation data could not be prepared");
 			}
 			if (coordinate.x == -1)
 			{
-				return std::nullopt;
+				return false;
 			}
-			return TestChunk::Builder{};
+			const std::scoped_lock lock(data.mutex);
+			if (!data.values.try_emplace(coordinate, 0).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
+			return true;
 		}
 
-		[[nodiscard]] GenerationData _createGenerationData() override
+		[[nodiscard]] TestChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			_dataCalls.fetch_add(1, std::memory_order_relaxed);
-			return {_seed};
+			return TestChunk(data.value(coordinate));
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			const std::scoped_lock lock(data.mutex);
+			data.values.erase(coordinate);
 		}
 
 	public:
 		explicit TestGenerator(int seed) :
-			_seed(seed)
+			Generator(seed)
 		{
 		}
 
@@ -112,7 +122,7 @@ namespace
 	class FillPass : public Generator::Pass
 	{
 	public:
-		void apply(TestChunk::Builder &builder, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate.x == 98)
 			{
@@ -122,7 +132,7 @@ namespace
 			{
 				throw std::runtime_error("Expected standard exception");
 			}
-			builder.setValue(data.seed + coordinate.x + coordinate.y + coordinate.z);
+			data.value(coordinate) = data.seed + coordinate.x + coordinate.y + coordinate.z;
 		}
 	};
 
@@ -139,11 +149,11 @@ namespace
 		{
 		}
 
-		void apply(TestChunk::Builder &builder, const Coordinate &, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
 			_entered.set_value();
 			_release.wait();
-			builder.setValue(data.seed);
+			data.value(coordinate) = data.seed;
 		}
 	};
 
@@ -197,7 +207,7 @@ TEST(ChunkRequesterTest, LocalSourceGeneratesAChunkOnAWorker)
 	EXPECT_EQ(generator.dataCalls(), 1);
 }
 
-TEST(ChunkRequesterTest, AbsentChunkIsSuccessfulAndDoesNotBuildGenerationData)
+TEST(ChunkRequesterTest, AbsentChunkIsSuccessful)
 {
 	TestGenerator generator(40);
 	generator.addPass<FillPass>();
@@ -209,7 +219,7 @@ TEST(ChunkRequesterTest, AbsentChunkIsSuccessfulAndDoesNotBuildGenerationData)
 	ASSERT_TRUE(waitUntilSettled(answer));
 	EXPECT_EQ(answer.status(), Status::Completed);
 	EXPECT_FALSE(answer.result().has_value());
-	EXPECT_EQ(generator.dataCalls(), 0);
+	EXPECT_EQ(generator.dataCalls(), 1);
 }
 
 TEST(ChunkRequesterTest, SparkleGenerationExceptionBecomesFailedTask)
@@ -230,9 +240,9 @@ TEST(ChunkRequesterTest, SparkleGenerationExceptionBecomesFailedTask)
 		FAIL() << "Expected generation exception";
 	} catch (const spk::Exception &exception)
 	{
-		EXPECT_EQ(exception.message(), "Builder could not be prepared");
+		EXPECT_EQ(exception.message(), "Generation data could not be prepared");
 	}
-	EXPECT_EQ(generator.dataCalls(), 0);
+	EXPECT_EQ(generator.dataCalls(), 1);
 }
 
 TEST(ChunkRequesterTest, StandardPassExceptionIsStoredAsFailureWithOriginalCause)

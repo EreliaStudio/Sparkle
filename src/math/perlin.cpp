@@ -11,7 +11,16 @@ namespace spk
 {
 	float Perlin::_fade(float value, Interpolation interpolation) noexcept
 	{
-		return interpolation == Interpolation::SmoothStep ? value * value * (3.0f - 2.0f * value) : value;
+		switch (interpolation)
+		{
+		case Interpolation::Linear:
+			return value;
+		case Interpolation::SmoothStep:
+			return value * value * (3.0f - 2.0f * value);
+		case Interpolation::Quintic:
+			return value * value * value * (value * (value * 6.0f - 15.0f) + 10.0f);
+		}
+		return value;
 	}
 
 	float Perlin::_lerp(float from, float to, float alpha) noexcept
@@ -26,17 +35,18 @@ namespace spk
 
 	float Perlin::_gradient2D(int hash, float x, float y) noexcept
 	{
-		const float gx = (hash & 1) != 0 ? x : -x;
-		const float gy = (hash & 2) != 0 ? y : -y;
-		return (gx + gy) * 0.7071067811865475f;
+		// Unit gradients uniformly spaced around the circle. No trigonometry at sampling time.
+		static constexpr std::array<std::array<float, 2>, 16> Gradients{{{1.000000000f, 0.0f}, {0.923879533f, 0.382683432f}, {0.707106781f, 0.707106781f}, {0.382683432f, 0.923879533f}, {0.0f, 1.000000000f}, {-0.382683432f, 0.923879533f}, {-0.707106781f, 0.707106781f}, {-0.923879533f, 0.382683432f}, {-1.000000000f, 0.0f}, {-0.923879533f, -0.382683432f}, {-0.707106781f, -0.707106781f}, {-0.382683432f, -0.923879533f}, {0.0f, -1.000000000f}, {0.382683432f, -0.923879533f}, {0.707106781f, -0.707106781f}, {0.923879533f, -0.382683432f}}};
+		const auto &gradient = Gradients[hash & 15];
+		return gradient[0] * x + gradient[1] * y;
 	}
 
 	float Perlin::_gradient3D(int hash, float x, float y, float z) noexcept
 	{
-		const float gx = (hash & 1) != 0 ? x : -x;
-		const float gy = (hash & 2) != 0 ? y : -y;
-		const float gz = (hash & 4) != 0 ? z : -z;
-		return (gx + gy + gz) * 0.5773502691896258f;
+		// Symmetric unit gradients: signed permutations of (2,1,0) and cube diagonals.
+		static constexpr std::array<std::array<float, 3>, 32> Gradients{{{0.0f, -0.894427191f, -0.447213595f}, {0.0f, -0.894427191f, 0.447213595f}, {0.0f, 0.894427191f, -0.447213595f}, {0.0f, 0.894427191f, 0.447213595f}, {0.0f, -0.447213595f, -0.894427191f}, {0.0f, -0.447213595f, 0.894427191f}, {0.0f, 0.447213595f, -0.894427191f}, {0.0f, 0.447213595f, 0.894427191f}, {-0.447213595f, 0.0f, -0.894427191f}, {0.447213595f, 0.0f, -0.894427191f}, {-0.447213595f, 0.0f, 0.894427191f}, {0.447213595f, 0.0f, 0.894427191f}, {-0.894427191f, 0.0f, -0.447213595f}, {0.894427191f, 0.0f, -0.447213595f}, {-0.894427191f, 0.0f, 0.447213595f}, {0.894427191f, 0.0f, 0.447213595f}, {-0.894427191f, -0.447213595f, 0.0f}, {-0.894427191f, 0.447213595f, 0.0f}, {0.894427191f, -0.447213595f, 0.0f}, {0.894427191f, 0.447213595f, 0.0f}, {-0.447213595f, -0.894427191f, 0.0f}, {-0.447213595f, 0.894427191f, 0.0f}, {0.447213595f, -0.894427191f, 0.0f}, {0.447213595f, 0.894427191f, 0.0f}, {-0.577350269f, -0.577350269f, -0.577350269f}, {-0.577350269f, -0.577350269f, 0.577350269f}, {-0.577350269f, 0.577350269f, -0.577350269f}, {-0.577350269f, 0.577350269f, 0.577350269f}, {0.577350269f, -0.577350269f, -0.577350269f}, {0.577350269f, -0.577350269f, 0.577350269f}, {0.577350269f, 0.577350269f, -0.577350269f}, {0.577350269f, 0.577350269f, 0.577350269f}}};
+		const auto &gradient = Gradients[hash & 31];
+		return gradient[0] * x + gradient[1] * y + gradient[2] * z;
 	}
 
 	int Perlin::_lattice(float coordinate) noexcept
@@ -223,7 +233,7 @@ namespace spk
 
 	void Perlin::setInterpolation(Interpolation interpolation)
 	{
-		if (interpolation != Interpolation::Linear && interpolation != Interpolation::SmoothStep)
+		if (interpolation != Interpolation::Linear && interpolation != Interpolation::SmoothStep && interpolation != Interpolation::Quintic)
 		{
 			throw std::invalid_argument("Unknown Perlin interpolation mode");
 		}

@@ -1,10 +1,10 @@
-# PR07 — `spk::Voxel::Chunk` et génération headless testée
+# PR07 — `spk::World::Voxel::Chunk` et génération headless testée
 
 **Couche :** Voxel Core. **Dépendances :** PR01, PR02, PR03, PR06. **État :** implémenté sur la branche PR07.
 
 ## API du chunk
 
-`include/voxel/chunk.hpp` fournit `spk::Voxel::Chunk<SX, SY, SZ>`, dérivé de `spk::World::Chunk<SX, SY, SZ>`.
+`include/world/voxel/chunk.hpp` fournit `spk::World::Voxel::Chunk<SX, SY, SZ>`, dérivé de `spk::World::Chunk<SX, SY, SZ>`.
 
 - Le constructeur par défaut crée un `Volume` vide (air) aux dimensions fixes du chunk.
 - `volume() const` donne accès au snapshot immuable du volume.
@@ -13,7 +13,7 @@
 - Il n'existe pas de `Chunk::Builder`. Les voxels sont préparés par `Volume::Builder`, puis affectés au chunk.
 
 ```cpp
-using Chunk = spk::Voxel::Chunk<8, 16, 32>;
+using Chunk = spk::World::Voxel::Chunk<8, 16, 32>;
 Chunk chunk;
 
 spk::Voxel::Volume::Builder builder({8, 16, 32});
@@ -39,7 +39,7 @@ Le TU définit localement :
 - `WorldGenerator` : deux passes et zone finie de trois chunks ; hors zone, `generate()` renvoie `std::nullopt`.
 - Un montage `EngineHeadless` + `WorldObserver` + `WorkerPool` + `LocalChunkRequester` + `WorldStreamingSystem` + `ChunkCollection` + `ChunkFilter`.
 
-`spk::World::Generator<TChunk, TGenerationData, TBuilder>` accepte un builder distinct du chunk : par défaut `TChunk::Builder` pour les usages existants, et ici `Volume::Builder`. Après les passes, le générateur construit un `TChunk` par défaut et affecte le volume obtenu avec `setVolume()`. Les générateurs dont le builder retourne directement un `TChunk` conservent leur chemin précédent.
+`spk::World::Generator<TChunk, TGenerationData>` n'impose aucun builder. L'état persistant contient un `Volume::Builder` par demande active, préparé par `_prepareGenerationData(coord,data)` ; les passes le modifient via les données. `_instantiateChunk(coord,data)` construit le volume et l'affecte au chunk ; `_cleanGenerationData(coord,data)` efface le scratch.
 
 ## Vérifications des TU
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstddef>
 #include <exception>
 #include <memory>
 #include <optional>
@@ -12,32 +13,60 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
+	template <typename T>
+	concept GenerationData = requires(T &data) {
+		{ data.flush() } -> std::same_as<void>;
+	};
+
+	template <typename TChunk, GenerationData TGenerationData>
 	class Generator
 	{
 	public:
-		using Builder = TBuilder;
-
 		class Pass
 		{
 		public:
 			virtual ~Pass() = default;
-
-			virtual void apply(
-				Builder &builder,
-				const ChunkCoordinate &coordinate,
-				TGenerationData &data) = 0;
+			virtual void apply(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
 		};
 
 	private:
+		TGenerationData _generationData;
 		std::vector<std::unique_ptr<Pass>> _passes;
 
-		virtual std::optional<Builder> _createChunkBuilder(const ChunkCoordinate &coordinate) = 0;
-		virtual TGenerationData _createGenerationData() = 0;
+	protected:
+		template <typename... TArgs>
+		explicit Generator(TArgs &&...args) :
+			_generationData(std::forward<TArgs>(args)...)
+		{
+		}
+
+		[[nodiscard]] TGenerationData &_data() noexcept
+		{
+			return _generationData;
+		}
+
+		// A rejected or throwing preparation must leave no request-local state.
+		virtual bool _prepareGenerationData(const ChunkCoordinate &, TGenerationData &)
+		{
+			return true;
+		}
+		virtual TChunk _instantiateChunk(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
+		virtual void _cleanGenerationData(const ChunkCoordinate &, TGenerationData &) noexcept
+		{
+		}
 
 	public:
 		virtual ~Generator() = default;
 
+		void flush()
+		{
+			_generationData.flush();
+		}
+
+		// Configure passes before submitting work; the generator must outlive its jobs.
+		// Constructor arguments describe the pass configuration (values, enums, settings).
+		// Passes own their implementation objects and exchange results through generation data.
+		// The data and passes are responsible for synchronization.
 		template <typename TPass, typename... TArgs>
 			requires std::derived_from<TPass, Pass>
 		TPass &addPass(TArgs &&...args)
@@ -48,31 +77,45 @@ namespace spk::World
 			return result;
 		}
 
+		// Insert before the current pass at index; index == size appends.
+		// Constructor arguments follow the same convention as addPass.
+		template <typename TPass, typename... TArgs>
+			requires std::derived_from<TPass, Pass>
+		TPass &insertPass(std::size_t index, TArgs &&...args)
+		{
+			if (index > _passes.size())
+			{
+				throw spk::Exception("Generator pass insertion index is out of range");
+			}
+			auto pass = std::make_unique<TPass>(std::forward<TArgs>(args)...);
+			TPass &result = *pass;
+			_passes.insert(_passes.begin() + static_cast<std::ptrdiff_t>(index), std::move(pass));
+			return result;
+		}
+
 		[[nodiscard]] std::optional<TChunk> generate(const ChunkCoordinate &coordinate)
 		{
 			try
 			{
-				std::optional<Builder> builder = _createChunkBuilder(coordinate);
-				if (!builder.has_value())
+				if (!_prepareGenerationData(coordinate, _generationData))
 				{
 					return std::nullopt;
 				}
-
-				TGenerationData data = _createGenerationData();
-				for (const std::unique_ptr<Pass> &pass : _passes)
+				std::optional<TChunk> result;
+				try
 				{
-					pass->apply(*builder, coordinate, data);
-				}
-				if constexpr (std::same_as<decltype(std::declval<Builder &&>().build()), TChunk>)
+					for (const auto &pass : _passes)
+					{
+						pass->apply(coordinate, _generationData);
+					}
+					result.emplace(_instantiateChunk(coordinate, _generationData));
+				} catch (...)
 				{
-					return std::move(*builder).build();
+					_cleanGenerationData(coordinate, _generationData);
+					throw;
 				}
-				else
-				{
-					TChunk chunk;
-					chunk.setVolume(std::move(*builder).build());
-					return chunk;
-				}
+				_cleanGenerationData(coordinate, _generationData);
+				return result;
 			} catch (const spk::Exception &)
 			{
 				throw;

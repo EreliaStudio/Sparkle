@@ -4,10 +4,10 @@
 ## Décisions consolidées
 - Chunk<T dimensions> héritable, données libres et mutables, coordonnée stockée uniquement comme clé de map. Copie/move sans transfert d'abonnements ; chaque setter appelle notifyChunkEdition().
 - ChunkCollection possède TChunk par valeur et Entity3D headless, plus ChunkFilter non propriétaire ; édition relayée par la collection, remplacement conserve entité, suppression détruit entité/composants.
-- Generator avec addPass et apply(builder,coord,data), TGenerationData créée à chaque demande, std::optional<Builder> puis std::optional<TChunk>, pas de Builder obligatoire dans le Chunk de base.
+- Generator avec addPass, insertPass et apply(coord,data), données persistantes synchronisées par leur propriétaire, instanciation et nettoyage par coordonnée ; aucun builder, colonne ou compteur d'intérêt imposé.
 - Task renvoie std::optional<TChunk>, nullopt succès et absence au seul sein de l'intérêt ; échec/timeout permettent retry contrôlé. Pas d'annulation, résultat ancien toujours rejeté.
 - WorldObserver et multi-observateur ; recalcul de l'union et file seulement au franchissement de coordonnée de chunk, rayon/observateurs modifiés. Manhattan à dimensions pondérées.
-- Volume voxel exactement SX×SY×SZ, setter sur chunk mutable, Voxel::ChunkMesher par héritage de Mesher avec outsideCell() et consultation des six voisins à chaque bake. À chaque changement, rebake le chunk et six voisins.
+- Volume voxel exactement SX×SY×SZ, setter sur chunk mutable, World::Voxel::Chunk::Mesher par héritage de Mesher avec outsideCell() et consultation des six voisins à chaque bake. À chaque changement, rebake le chunk et six voisins.
 
 ## Risques d'implémentation identifiés et affectation explicite
 | Risque / vérification | PR chargée |
@@ -15,7 +15,7 @@
 | ContractProvider non copiable : fournir sémantique de copie/move sur Chunk sans répliquer les abonnés | 01 |
 | Conservation d'adresse lors du remplacement map et durée de vie du ChunkFilter ; reentrance des événements | 02 |
 | Destruction Entity et ordre des callbacks LifeCycle, composants attachés, Engine attach/detach | 00, 02 |
-| Builder optionnel d'un type concrete et signature virtuelle exacte apply(builder,coordinate,data) | 03 |
+| Données optionnelles, signature virtuelle apply(coordinate,data), instanciation finale du chunk | 03 |
 | Task::Answer::result() renvoie const TResult& : copie nécessaire depuis optional<TChunk> ; vérifier les contraintes C++ | 04 |
 | WorkerPool::~WorkerPool utilise jthread, peut attendre un job bloqué ; garder ses dépendances en vie sans bloquer ~WorldStreamingSystem | 04, 06 |
 | Timeout n'interrompt pas le job réel ; compter toutes les demandes soumises non terminées dans le cap | 06 |

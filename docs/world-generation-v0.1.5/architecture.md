@@ -3,7 +3,7 @@ Statut : conception, PR draft #85. Le C++ n'est pas encore implémenté ; les no
 
 ## Chaîne fonctionnelle
 WorldObserver (Component3D + EngineHeadless Registry) → WorldStreamingSystem<TChunk> (union, file Manhattan, gestion des requêtes) → ChunkRequester<TChunk> (Task<std::optional<TChunk>>) → Generator<TChunk,TGenerationData> ou source externe → ChunkCollection<TChunk> (TChunk + Entity3D/ChunkFilter) → consommateurs headless / adaptateur Graphics.
-En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson, puis les composants de rendu sont actualisés.
+En Graphics, World::Voxel::Chunk::Mesher consulte les six voisins lors de chaque cuisson, puis les composants de rendu sont actualisés.
 
 ## Types et coordonnées
 - `spk::World` est un namespace regroupant les types du monde (`Chunk`, `ChunkCollection`, `ChunkCoordinate`, `ChunkFilter`, `ChunkInterest`, `ChunkRequester`, `Generator`, `LocalChunkRequester`, `WorldObserver`, `WorldStreamingSystem`). Ce n'est pas une classe ni une instance de monde.
@@ -23,10 +23,10 @@ En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson,
 - Tout ajout/édition/suppression de collection attachée se fait sur le thread Engine ; aucune modification directe depuis un worker.
 
 ## Génération sans propriétaire caché
-- Le Generator<TChunk,TGenerationData> est synchrone, configurable par addPass<TPass>(...) uniquement ; ses deux hooks de création sont virtuels privés ; pas de Generator::Builder.
-- Le type du builder peut être fourni indépendamment par `Generator<TChunk,TGenerationData,TBuilder>` ; par défaut `TBuilder` vaut `TChunk::Builder` pour les usages existants. `_createChunkBuilder(coord)` retourne `std::optional<TBuilder>` ; `nullopt` signifie absence valide et arrêt immédiat.
-- _createGenerationData() fournit les données temporaires d'une demande existante ; elles peuvent référencer des données persistantes de l'utilisateur. Les coordonnées sont accessibles à chaque passe, pas à cette fabrique. Aucun cycle de vie ou verrou global imposé par Sparkle.
-- `Pass::apply(builder,coord,data)` est appelé dans l'ordre ; si `builder.build()` produit un `TChunk`, il est retourné directement. S'il produit un `Volume`, le générateur construit un `TChunk` vide puis appelle `setVolume()`. `Generator::generate(coord)` renvoie `std::optional<TChunk>`.
+- Le Generator<TChunk,TGenerationData> possède une instance persistante de TGenerationData, construite avec les arguments fournis à son constructeur ; il ne connaît ni colonnes, ni régions, ni builders.
+- `_prepareGenerationData(coord,data)` initialise éventuellement les données propres à la demande ; false signale une absence valide. En cas de rejet ou d'exception, ce hook ne doit laisser aucun état temporaire.
+- L'état de génération choisit ses propres structures, caches, synchronisation et durées de vie ; aucun verrou ni compteur d'intérêt n'est imposé par le générateur.
+- `Pass::apply(coord,data)` est appelé dans l'ordre ; `_instantiateChunk(coord,data)` retourne le chunk final. `_cleanGenerationData(coord,data) noexcept` est appelé après une préparation réussie, même si une passe ou l'instanciation échoue. `generate(coord)` renvoie `std::optional<TChunk>`.
 - Une exception spk::Exception fait échouer la génération, sans résultat partiel. La reproductibilité provient des règles utilisateur : mêmes données/coordonnées pertinentes => même chunk, pas de seed universelle imposée.
 
 ## Requester, Task et WorkerPool
@@ -45,9 +45,9 @@ En Graphics, Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson,
 - Décharger immédiatement les chunks hors de l'union. Aucun cache LRU, persistance automatique ou protocole réseau.
 
 ## Voxel et Graphics
-- spk::Voxel::Chunk<SX,SY,SZ> hérite de spk::World::Chunk<SX,SY,SZ> et contient un Voxel::Volume de dimensions exactes SX×SY×SZ. Le chunk est modifiable, mais le Volume lui-même est une valeur immuable, dont les Data sont déjà partagées de manière const ; setVolume remplace la valeur puis notifie.
-- Il n'existe pas de `Voxel::Chunk::Builder` ni de constructeur prenant un `Volume`. Le chunk possède un volume vide par défaut et reçoit ses données avec `setVolume(Volume)`. Les modifications de cellules sont préparées dans `Voxel::Volume::Builder`.
-- spk::Voxel::ChunkMesher hérite de Voxel::Mesher ; outsideCell() consulte les six voisins de la collection lors de chaque bake. Pas de stockage durable des voisins, pas de MesherContext requis, pas de changement d'algorithme d'occlusion.
+- spk::World::Voxel::Chunk<SX,SY,SZ> hérite de spk::World::Chunk<SX,SY,SZ> et contient un Voxel::Volume de dimensions exactes SX×SY×SZ. Le chunk est modifiable, mais le Volume lui-même est une valeur immuable, dont les Data sont déjà partagées de manière const ; setVolume remplace la valeur puis notifie.
+- Il n'existe pas de `World::Voxel::Chunk::Builder` ni de constructeur prenant un `Volume`. Le chunk possède un volume vide par défaut et reçoit ses données avec `setVolume(Volume)`. Les modifications de cellules sont préparées dans `Voxel::Volume::Builder`.
+- spk::World::Voxel::Chunk::Mesher hérite de Voxel::Mesher ; outsideCell() consulte les six voisins de la collection lors de chaque bake. Pas de stockage durable des voisins, pas de MesherContext requis, pas de changement d'algorithme d'occlusion.
 - L'adaptateur graphique est optionnel et se lie explicitement à ChunkCollection. Il scanne les chunks chargés au bind, puis place les coordonnées notifiées dans un set de dirty, traité une fois par rendu.
 - À chaque ajout/édition/remplacement : invalider systématiquement le chunk et **ses six voisins** ; à une suppression : destruction LifeCycle de l'entité puis invalidation des six voisins. Pas de détection coûteuse des frontières éditées.
 - L'entité et ses composants gameplay/headless persistent lors d'une édition, le rendu ajoute/réutilise ses propres composants. Unbind révoque ses souscriptions.

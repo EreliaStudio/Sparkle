@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <type_traits>
@@ -15,12 +16,12 @@
 #include "engine/transform3d.hpp"
 #include "exception.hpp"
 #include "threading/worker_pool.hpp"
-#include "voxel/chunk.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_filter.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/generator.hpp"
 #include "world/local_chunk_requester.hpp"
+#include "world/voxel/chunk.hpp"
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
@@ -28,7 +29,7 @@ namespace
 {
 	using namespace std::chrono_literals;
 
-	using Chunk = spk::Voxel::Chunk<8, 16, 32>;
+	using Chunk = spk::World::Voxel::Chunk<8, 16, 32>;
 	using Coordinate = spk::World::ChunkCoordinate;
 	using Volume = spk::Voxel::Volume;
 	using Streaming = spk::World::WorldStreamingSystem<Chunk>;
@@ -48,17 +49,41 @@ namespace
 
 	struct GenerationData
 	{
-		const Registry &definitions;
+		void flush()
+		{
+		}
+
+		Registry definitions;
 		std::int64_t seed;
+		std::mutex mutex;
+		struct ChunkData
+		{
+			Volume::Builder builder;
+		};
+
+		std::map<Coordinate, ChunkData> chunks;
+
+		ChunkData &chunk(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return chunks.at(coordinate);
+		}
+
+		GenerationData(const Registry &registry, std::int64_t seedValue) :
+			definitions(registry),
+			seed(seedValue)
+		{
+		}
 	};
 
-	using Generator = spk::World::Generator<Chunk, GenerationData, Volume::Builder>;
+	using Generator = spk::World::Generator<Chunk, GenerationData>;
 
 	class TerrainPass final : public Generator::Pass
 	{
 	public:
-		void apply(Generator::Builder &volume, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
+			auto &volume = data.chunk(coordinate).builder;
 			volume.bind(data.definitions);
 			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
 			for (std::uint32_t z = 0; z < static_cast<std::uint32_t>(Chunk::Size.z); ++z)
@@ -82,8 +107,9 @@ namespace
 	class WallPass final : public Generator::Pass
 	{
 	public:
-		void apply(Generator::Builder &volume, const Coordinate &coordinate, GenerationData &) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
+			auto &volume = data.chunk(coordinate).builder;
 			for (std::int64_t x = -2; x <= 10; ++x)
 			{
 				for (std::int64_t y = 3; y <= 5; ++y)
@@ -102,27 +128,36 @@ namespace
 	class WorldGenerator final : public Generator
 	{
 	private:
-		Registry _definitions;
-		std::int64_t _seed;
-
-		[[nodiscard]] std::optional<Generator::Builder> _createChunkBuilder(const Coordinate &coordinate) override
+		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate.x < -1 || coordinate.x > 1 || coordinate.y != 0 || coordinate.z != 0)
 			{
-				return std::nullopt;
+				return false;
 			}
-			return Generator::Builder(spk::Vector3UInt{Chunk::Size});
+			const std::scoped_lock lock(data.mutex);
+			if (!data.chunks.try_emplace(coordinate, GenerationData::ChunkData{Volume::Builder(spk::Vector3UInt{Chunk::Size})}).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
+			return true;
 		}
 
-		[[nodiscard]] GenerationData _createGenerationData() override
+		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
 		{
-			return {_definitions, _seed};
+			Chunk chunk;
+			chunk.setVolume(data.chunk(coordinate).builder.build());
+			return chunk;
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			const std::scoped_lock lock(data.mutex);
+			data.chunks.erase(coordinate);
 		}
 
 	public:
 		explicit WorldGenerator(std::int64_t seed) :
-			_definitions(makeDefinitions()),
-			_seed(seed)
+			Generator(makeDefinitions(), seed)
 		{
 			addPass<TerrainPass>();
 			addPass<WallPass>();
@@ -190,7 +225,7 @@ namespace
 		spk::EngineHeadless engine;
 		WorldGenerator generator{17};
 		spk::WorkerPool workers{2};
-		spk::World::LocalChunkRequester<Chunk, GenerationData, Volume::Builder> requester{workers, generator};
+		spk::World::LocalChunkRequester<Chunk, GenerationData> requester{workers, generator};
 		spk::World::ChunkCollection<Chunk> collection;
 		spk::Entity3D player{"Voxel observer"};
 
@@ -233,7 +268,7 @@ namespace
 
 TEST(VoxelChunkTest, NonCubicDimensionsAreExactlyThoseOfTheVolume)
 {
-	using NonCubic = spk::Voxel::Chunk<8, 16, 32>;
+	using NonCubic = spk::World::Voxel::Chunk<8, 16, 32>;
 	Volume::Builder builder({8, 16, 32});
 	NonCubic chunk;
 	EXPECT_EQ(chunk.volume().atRaw({0, 0, 0}), Volume::PackedCell::Air);

@@ -9,7 +9,7 @@
 | Conteneur headless | [02](implementation/PR-02-chunk-collection.md) | ChunkCollection possédant TChunk, Entity3D et ChunkFilter non propriétaire, événements |
 | Génération | [03](implementation/PR-03-generator-passes.md), [04](implementation/PR-04-chunk-requester.md) | Passes ordonnées, Builder optionnel, Task<std::optional<TChunk>> |
 | Intérêt et streaming | [05](implementation/PR-05-interest-observer.md), [06](implementation/PR-06-streaming-system.md) | Plusieurs joueurs, priorité Manhattan, timeout non annulant, éviction |
-| Surcouche voxel/Graphics | [07](implementation/PR-07-voxel-example.md), [08](implementation/PR-08-graphics-adapter.md) | Voxel::Chunk de dimensions exactes, ChunkMesher et six voisins, synchronisation |
+| Surcouche voxel/Graphics | [07](implementation/PR-07-voxel-example.md), [08](implementation/PR-08-graphics-adapter.md) | World::Voxel::Chunk de dimensions exactes, Chunk::Mesher et six voisins, synchronisation |
 | Preuves d'intégration | [09](implementation/PR-09-headless-multiobserver.md), [10](implementation/PR-10-integration-validation.md) | Headless, rendering, goldens, release gate |
 
 ## Vérifications de fin de phase

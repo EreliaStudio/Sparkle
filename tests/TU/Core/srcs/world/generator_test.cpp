@@ -2,6 +2,8 @@
 
 #include <exception>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -19,22 +21,17 @@ namespace
 
 	class ExampleChunk : public spk::World::Chunk<32, 16, 32>
 	{
-	public:
-		class Builder;
-
 	private:
 		int _value;
 		std::vector<int> _appliedPasses;
 
+	public:
 		explicit ExampleChunk(int value, std::vector<int> appliedPasses) :
 			_value(value),
 			_appliedPasses(std::move(appliedPasses))
 		{
 		}
 
-		friend class Builder;
-
-	public:
 		[[nodiscard]] int value() const noexcept
 		{
 			return _value;
@@ -46,113 +43,112 @@ namespace
 		}
 	};
 
-	class ExampleChunk::Builder
-	{
-	private:
-		int _value = 0;
-		std::vector<int> _appliedPasses;
-		bool _consumed = false;
-		bool _throwOnBuild = false;
-
-	public:
-		explicit Builder(bool throwOnBuild = false) :
-			_throwOnBuild(throwOnBuild)
-		{
-		}
-
-		Builder(const Builder &) = delete;
-		Builder &operator=(const Builder &) = delete;
-		Builder(Builder &&) = default;
-		Builder &operator=(Builder &&) = default;
-
-		void add(int value)
-		{
-			_value += value;
-		}
-
-		void record(int pass)
-		{
-			_appliedPasses.push_back(pass);
-		}
-
-		void load(const ExampleChunk &chunk)
-		{
-			_value = chunk.value();
-			_appliedPasses = chunk.appliedPasses();
-		}
-
-		[[nodiscard]] bool consumed() const noexcept
-		{
-			return _consumed;
-		}
-
-		[[nodiscard]] ExampleChunk build() &&
-		{
-			if (std::exchange(_consumed, true))
-			{
-				throw spk::Exception("Builder has already been consumed");
-			}
-			if (_throwOnBuild)
-			{
-				throw spk::Exception("Chunk construction failed");
-			}
-			return ExampleChunk(_value, std::move(_appliedPasses));
-		}
-	};
-
-	static_assert(std::is_same_v<decltype(std::declval<ExampleChunk::Builder &&>().build()), ExampleChunk>);
-	static_assert(!std::is_copy_constructible_v<ExampleChunk::Builder>);
+	static_assert(!std::is_default_constructible_v<ExampleChunk>);
 
 	struct GenerationData
 	{
+		void flush()
+		{
+			++flushCalls;
+		}
+
+		int flushCalls = 0;
+
 		const int &seed;
-		int scratch = 0;
-		std::vector<int> *trace = nullptr;
+		std::vector<int> *trace;
+		struct ChunkData
+		{
+			int scratch = 0;
+			int value = 0;
+			std::vector<int> appliedPasses;
+			std::unique_ptr<int> moveOnly = std::make_unique<int>(0);
+		};
+		std::mutex mutex;
+		std::map<Coordinate, ChunkData> chunks;
+
+		ChunkData &chunk(const Coordinate &coordinate)
+		{
+			const std::scoped_lock lock(mutex);
+			return chunks.at(coordinate);
+		}
+		int completed = 0;
+
+		GenerationData(const int &seedValue, std::vector<int> *traceValue) :
+			seed(seedValue),
+			trace(traceValue)
+		{
+		}
 	};
 
+	static_assert(!std::is_copy_constructible_v<GenerationData>);
+	static_assert(spk::World::GenerationData<GenerationData>);
+	static_assert(!spk::World::GenerationData<int>);
+	struct WrongFlush
+	{
+		int flush();
+	};
+	static_assert(!spk::World::GenerationData<WrongFlush>);
 	using BaseGenerator = spk::World::Generator<ExampleChunk, GenerationData>;
 
 	class ExampleGenerator : public BaseGenerator
 	{
 	private:
-		const int &_seed;
-		std::vector<int> *_trace;
-
-		std::optional<ExampleChunk::Builder> _createChunkBuilder(const Coordinate &) override
-		{
-			++builderCalls;
-			if (throwOnBuilder)
-			{
-				throw std::runtime_error("builder preparation failed");
-			}
-			if (absent)
-			{
-				return std::nullopt;
-			}
-			return std::optional<ExampleChunk::Builder>(std::in_place, throwOnBuild);
-		}
-
-		GenerationData _createGenerationData() override
+		bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			++dataCalls;
+			lastCoordinate = coordinate;
 			if (throwOnData)
 			{
 				throw std::runtime_error("generation data failed");
 			}
-			return {_seed, 0, _trace};
+			if (absent)
+			{
+				return false;
+			}
+			const std::scoped_lock lock(data.mutex);
+			if (!data.chunks.try_emplace(coordinate).second)
+			{
+				throw spk::Exception("Chunk generation is already active");
+			}
+			return true;
+		}
+
+		ExampleChunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
+		{
+			++instantiationCalls;
+			if (throwOnBuild)
+			{
+				throw spk::Exception("Chunk construction failed");
+			}
+			auto &chunk = data.chunk(coordinate);
+			++data.completed;
+			return ExampleChunk(chunk.value, std::move(chunk.appliedPasses));
+		}
+
+		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
+		{
+			++cleanupCalls;
+			const std::scoped_lock lock(data.mutex);
+			data.chunks.erase(coordinate);
+			completed = data.completed;
+			observedFlushCalls = data.flushCalls;
+			remainingChunks = data.chunks.size();
 		}
 
 	public:
-		int builderCalls = 0;
+		int completed = 0;
+		int observedFlushCalls = 0;
+		std::size_t remainingChunks = 0;
+		int cleanupCalls = 0;
+		int instantiationCalls = 0;
+		Coordinate lastCoordinate{};
 		int dataCalls = 0;
 		bool absent = false;
-		bool throwOnBuilder = false;
 		bool throwOnData = false;
 		bool throwOnBuild = false;
 
 		explicit ExampleGenerator(const int &seed, std::vector<int> *trace = nullptr) :
-			_seed(seed),
-			_trace(trace)
+			BaseGenerator(seed, trace)
 		{
 		}
 	};
@@ -172,16 +168,17 @@ namespace
 		{
 		}
 
-		void apply(ExampleChunk::Builder &builder, const Coordinate &coordinate, GenerationData &data) override
+		void apply(const Coordinate &coordinate, GenerationData &data) override
 		{
+			auto &chunk = data.chunk(coordinate);
 			_coordinates.push_back(coordinate);
 			if (_initialScratch != nullptr)
 			{
-				_initialScratch->push_back(data.scratch);
+				_initialScratch->push_back(chunk.scratch);
 			}
-			data.scratch = data.scratch * 10 + _number;
-			builder.add(data.scratch + data.seed + coordinate.x - coordinate.y + coordinate.z);
-			builder.record(_number);
+			chunk.scratch = chunk.scratch * 10 + _number;
+			chunk.value += chunk.scratch + data.seed + coordinate.x - coordinate.y + coordinate.z;
+			chunk.appliedPasses.push_back(_number);
 			if (data.trace != nullptr)
 			{
 				data.trace->push_back(_number);
@@ -207,7 +204,7 @@ namespace
 		{
 		}
 
-		void apply(ExampleChunk::Builder &, const Coordinate &, GenerationData &) override
+		void apply(const Coordinate &, GenerationData &) override
 		{
 			++calls;
 			if (failure == Failure::Sparkle)
@@ -228,7 +225,7 @@ namespace
 		{
 		}
 
-		void apply(ExampleChunk::Builder &, const Coordinate &, GenerationData &) override
+		void apply(const Coordinate &, GenerationData &) override
 		{
 			++calls;
 		}
@@ -250,7 +247,7 @@ namespace
 			++_destructions;
 		}
 
-		void apply(ExampleChunk::Builder &, const Coordinate &, GenerationData &) override
+		void apply(const Coordinate &, GenerationData &) override
 		{
 		}
 	};
@@ -291,11 +288,43 @@ TEST(GeneratorTest, GeneratesChunkByValueAndSharesScratchDataBetweenPasses)
 	EXPECT_EQ(result->appliedPasses(), (std::vector<int>{1, 2, 3}));
 	EXPECT_EQ(order, (std::vector<int>{1, 2, 3}));
 	EXPECT_EQ(coordinates, (std::vector<Coordinate>{requested, requested, requested}));
-	EXPECT_EQ(generator.builderCalls, 1);
+	EXPECT_EQ(generator.lastCoordinate, requested);
+	EXPECT_EQ(generator.instantiationCalls, 1);
 	EXPECT_EQ(generator.dataCalls, 1);
 }
 
-TEST(GeneratorTest, EachRequestHasFreshGenerationDataAndBuilder)
+TEST(GeneratorTest, InsertsPassesAtBeginningMiddleAndEnd)
+{
+	const int seed = 0;
+	std::vector<Coordinate> coordinates;
+	ExampleGenerator generator(seed);
+	generator.addPass<RecordingPass>(2, coordinates);
+	generator.addPass<RecordingPass>(4, coordinates);
+	generator.insertPass<RecordingPass>(0, 1, coordinates);
+	generator.insertPass<RecordingPass>(2, 3, coordinates);
+	generator.insertPass<RecordingPass>(4, 5, coordinates);
+	generator.addPass<RecordingPass>(6, coordinates);
+
+	const auto result = generator.generate({0, 0, 0});
+	ASSERT_TRUE(result.has_value());
+	EXPECT_EQ(result->appliedPasses(), (std::vector<int>{1, 2, 3, 4, 5, 6}));
+}
+
+TEST(GeneratorTest, RejectsInvalidInsertionIndexWithoutConstructingPass)
+{
+	const int seed = 0;
+	std::vector<Coordinate> coordinates;
+	int destructions = 0;
+	ExampleGenerator generator(seed);
+	generator.addPass<RecordingPass>(1, coordinates);
+	EXPECT_THROW(generator.insertPass<LifetimePass>(2, destructions), spk::Exception);
+	EXPECT_EQ(destructions, 0);
+	const auto result = generator.generate({0, 0, 0});
+	ASSERT_TRUE(result.has_value());
+	EXPECT_EQ(result->appliedPasses(), (std::vector<int>{1}));
+}
+
+TEST(GeneratorTest, PersistentGenerationDataHasFreshRequestScratch)
 {
 	const int seed = 7;
 	std::vector<Coordinate> coordinates;
@@ -316,11 +345,14 @@ TEST(GeneratorTest, EachRequestHasFreshGenerationDataAndBuilder)
 	EXPECT_EQ(coordinates, (std::vector<Coordinate>{first, second, first}));
 	EXPECT_EQ(firstResult->value(), repeatedFirst->value());
 	EXPECT_NE(firstResult->value(), secondResult->value());
-	EXPECT_EQ(generator.builderCalls, 3);
+	EXPECT_EQ(generator.instantiationCalls, 3);
 	EXPECT_EQ(generator.dataCalls, 3);
+	EXPECT_EQ(generator.cleanupCalls, 3);
+	EXPECT_EQ(generator.completed, 3);
+	EXPECT_EQ(generator.remainingChunks, 0u);
 }
 
-TEST(GeneratorTest, AbsentChunkSkipsGenerationDataAndAllPasses)
+TEST(GeneratorTest, AbsentChunkSkipsAllPassesAndInstantiation)
 {
 	const int seed = 1;
 	ExampleGenerator generator(seed);
@@ -329,8 +361,9 @@ TEST(GeneratorTest, AbsentChunkSkipsGenerationDataAndAllPasses)
 	generator.addPass<CountingPass>(calls);
 
 	EXPECT_FALSE(generator.generate({9, 8, 7}).has_value());
-	EXPECT_EQ(generator.builderCalls, 1);
-	EXPECT_EQ(generator.dataCalls, 0);
+	EXPECT_EQ(generator.instantiationCalls, 0);
+	EXPECT_EQ(generator.dataCalls, 1);
+	EXPECT_EQ(generator.cleanupCalls, 0);
 	EXPECT_EQ(calls, 0);
 }
 
@@ -347,27 +380,6 @@ TEST(GeneratorTest, CanGenerateWithoutPasses)
 	EXPECT_EQ(generator.dataCalls, 1);
 }
 
-TEST(GeneratorTest, BuilderPreparationFailureIsAnExceptionNotAnAbsentChunk)
-{
-	const int seed = 1;
-	ExampleGenerator generator(seed);
-	generator.throwOnBuilder = true;
-	int calls = 0;
-	generator.addPass<CountingPass>(calls);
-
-	try
-	{
-		(void)generator.generate({0, 0, 0});
-		FAIL() << "Expected an exception";
-	} catch (const spk::Exception &error)
-	{
-		EXPECT_NE(error.cause(), nullptr);
-	}
-	EXPECT_EQ(generator.builderCalls, 1);
-	EXPECT_EQ(generator.dataCalls, 0);
-	EXPECT_EQ(calls, 0);
-}
-
 TEST(GeneratorTest, DataPreparationFailureIsAnExceptionAndSkipsPasses)
 {
 	const int seed = 1;
@@ -377,7 +389,7 @@ TEST(GeneratorTest, DataPreparationFailureIsAnExceptionAndSkipsPasses)
 	generator.addPass<CountingPass>(calls);
 
 	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
-	EXPECT_EQ(generator.builderCalls, 1);
+	EXPECT_EQ(generator.instantiationCalls, 0);
 	EXPECT_EQ(generator.dataCalls, 1);
 	EXPECT_EQ(calls, 0);
 }
@@ -402,6 +414,9 @@ TEST(GeneratorTest, StandardPassFailureIsWrappedWithCauseAndStopsLaterPasses)
 	}
 	EXPECT_EQ(calls, 1);
 	EXPECT_EQ(laterCalls, 0);
+	EXPECT_EQ(generator.instantiationCalls, 0);
+	EXPECT_EQ(generator.cleanupCalls, 1);
+	EXPECT_EQ(generator.remainingChunks, 0u);
 }
 
 TEST(GeneratorTest, SparklePassFailurePreservesOriginalException)
@@ -432,39 +447,10 @@ TEST(GeneratorTest, FinalConstructionFailureIsAnException)
 
 	EXPECT_THROW((void)generator.generate({1, 2, 3}), spk::Exception);
 	EXPECT_EQ(coordinates, (std::vector<Coordinate>{{1, 2, 3}}));
+	EXPECT_EQ(generator.instantiationCalls, 1);
 	EXPECT_EQ(generator.dataCalls, 1);
-}
-
-TEST(GeneratorTest, BuilderBuildConsumesItsInstanceAndProducesChunkByValue)
-{
-	ExampleChunk::Builder builder;
-	builder.add(8);
-	builder.record(7);
-	ExampleChunk chunk = std::move(builder).build();
-
-	EXPECT_EQ(chunk.value(), 8);
-	EXPECT_EQ(chunk.appliedPasses(), (std::vector<int>{7}));
-	EXPECT_TRUE(builder.consumed());
-	EXPECT_THROW((void)std::move(builder).build(), spk::Exception);
-}
-
-TEST(GeneratorTest, ConcreteBuilderCanLoadExistingChunkAndRebuildIt)
-{
-	ExampleChunk::Builder initial;
-	initial.add(30);
-	initial.record(1);
-	const ExampleChunk existing = std::move(initial).build();
-
-	ExampleChunk::Builder replacement;
-	replacement.load(existing);
-	replacement.add(12);
-	replacement.record(2);
-	ExampleChunk edited = std::move(replacement).build();
-
-	EXPECT_EQ(existing.value(), 30);
-	EXPECT_EQ(existing.appliedPasses(), (std::vector<int>{1}));
-	EXPECT_EQ(edited.value(), 42);
-	EXPECT_EQ(edited.appliedPasses(), (std::vector<int>{1, 2}));
+	EXPECT_EQ(generator.cleanupCalls, 1);
+	EXPECT_EQ(generator.remainingChunks, 0u);
 }
 
 TEST(GeneratorTest, ResultsRemainDeterministicRegardlessOfRequestOrder)
@@ -516,4 +502,17 @@ TEST(GeneratorTest, ChunkCollectionSupportsChunkTypesWithoutBuilder)
 	ASSERT_TRUE(collection.tryGet(coordinate, chunk));
 	ASSERT_NE(chunk, nullptr);
 	EXPECT_EQ(chunk->value(), 42);
+}
+
+TEST(GeneratorTest, FlushDelegatesToPersistentGenerationData)
+{
+	const int seed = 42;
+	ExampleGenerator generator(seed);
+	generator.flush();
+	generator.flush();
+	ASSERT_TRUE(generator.generate({0, 0, 0}));
+	EXPECT_EQ(generator.observedFlushCalls, 2);
+	generator.flush();
+	ASSERT_TRUE(generator.generate({1, 0, 0}));
+	EXPECT_EQ(generator.observedFlushCalls, 3);
 }

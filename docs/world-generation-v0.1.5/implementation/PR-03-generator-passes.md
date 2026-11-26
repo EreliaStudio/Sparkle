@@ -2,17 +2,17 @@
 **Couche :** Core. **Dépendances :** PR01. **État :** cahier des charges.
 
 ## Contrat public
-- Generator<TChunk,TGenerationData> est une recette synchrone. Pour les types de chunk utilisés avec Generator seulement, TChunk::Builder existe ; la base spk::World::Chunk n'impose aucun Builder.
-- Pas de Generator::Builder de configuration : le générateur expose uniquement addPass<TPass>(...) pour créer et posséder les passes (pas de surcharge prenant std::unique_ptr) pour enregistrer définitivement et dans l'ordre des passes polymorphes. Elles sont configurées avant les générations concurrentes.
-- Pass::apply(TChunk::Builder&, const ChunkCoordinate&, TGenerationData&) est virtuelle. Les coordonnées sont disponibles dans chaque passe sans imposition de membre coordinate dans TGenerationData.
-- Le hook virtuel privé _createChunkBuilder(const ChunkCoordinate&) retourne std::optional<typename TChunk::Builder>. Un nullopt indique un chunk définitivement absent **pour cette demande**, et évite _createGenerationData ainsi que toutes les passes.
-- Le hook virtuel privé _createGenerationData() (sans coordonnées) fournit une nouvelle TGenerationData pour chaque demande valide. Elle peut contenir des références aux structures persistantes de l'application, des résultats intermédiaires, des caches, des seeds optionnelles ; Sparkle n'en impose ni l'origine ni la durée de vie, ni le verrouillage. Les coordonnées sont transmises directement aux passes.
-- Exécuter toutes les passes dans l'ordre ; puis builder.build() consomme le Builder et retourne TChunk par valeur ; generate(coord) retourne std::optional<TChunk>. Les échecs sont des spk::Exception, jamais assimilés à nullopt ; ne pas publier de résultat incomplet.
-- TChunk::Builder::load(const TChunk&) est recommandé pour les chunks construits avec Builder et requis par l'exemple voxel : nouvelle édition par reconstruction ; ce n'est pas un remplacement de l'édition directe des chunks publiés.
+- Generator<TChunk,TGenerationData> est une recette synchrone. Aucun Builder ni constructeur particulier n'est imposé au chunk.
+- Pas de Generator::Builder de configuration : le générateur expose addPass<TPass>(...) pour ajouter en fin et insertPass<TPass>(index, ...) pour insérer avant la passe à l'index donné. Les index commencent à zéro ; un index égal au nombre de passes ajoute en fin, un index supérieur déclenche une exception. Le générateur crée et possède les passes (pas de surcharge prenant std::unique_ptr). Elles sont configurées avant les générations concurrentes.
+- Pass::apply(const ChunkCoordinate&, TGenerationData&) est virtuelle. Les coordonnées sont transmises à chaque passe.
+- Le hook virtuel protégé _prepareGenerationData(coord,data) retourne bool (true par défaut). false signifie absence valide ; en cas de refus ou d'exception il ne laisse aucun état temporaire.
+- TGenerationData est une instance persistante détenue par le Generator. Elle peut contenir caches globaux, données de régions, colonnes, builders et scratch par coordonnée. Elle peut être non copiable et non déplaçable ; la synchronisation est à sa charge.
+- Exécuter toutes les passes dans l'ordre ; `_instantiateChunk(coord,data)` construit TChunk par valeur. `_cleanGenerationData(coord,data) noexcept` nettoie les données temporaires après succès ou échec, si la préparation a réussi. generate(coord) retourne optional<TChunk> ; les erreurs ne sont pas des absences.
+- Les éventuels builders sont propres aux données de génération et ne font pas partie du contrat du Generator.
 - Déterminisme attendu de l'exemple : mêmes réglages pertinents + mêmes coordonnées => mêmes données, quel que soit l'ordre des requêtes. Sparkle impose l'ordre des passes mais **pas** une seed unique ni la sécurité des données partagées gérées par l'utilisateur.
 
 ## Tests
-Aucun Builder sur une classe utilisée seulement dans ChunkCollection ; passes appliquées dans l'ordre avec coord, data scratch fraîche, nullopt sans passes, exception en n'importe quelle étape, builder consommé, load et construction by-value, déterminisme sur demande en ordre inverse.
+Aucun Builder requis ; chunk non default-constructible, données move-only, passes ordonnées, état persistant, scratch indépendant et nettoyage après succès ou échec, nullopt sans passes, exception en n'importe quelle étape, instanciation finale par valeur et déterminisme.
 
 ## Exclusions
 Ni Task, ni WorkerPool, ni génération automatique de villes/biomes/routes/cavernes, ni contrôle centralisé des structures utilisateur.

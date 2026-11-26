@@ -60,6 +60,7 @@ namespace
 		};
 
 		std::vector<Request> requests;
+
 		bool failSynchronously = false;
 		std::function<void()> onSubmit;
 

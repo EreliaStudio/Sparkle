@@ -18,9 +18,9 @@
 #include <vector>
 
 #include "container/json/object.hpp"
-#include "voxel/chunk_mesher.hpp"
 #include "voxel/occlusion/cache.hpp"
 #include "world/chunk_collection.hpp"
+#include "world/voxel/chunk_mesher.hpp"
 
 namespace
 {
@@ -312,7 +312,7 @@ namespace
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
 	void measureSingle(std::string_view name, Pattern pattern)
 	{
-		using Chunk = spk::Voxel::Chunk<SX, SY, SZ>;
+		using Chunk = spk::World::Voxel::Chunk<SX, SY, SZ>;
 		const auto model = makeModel({SX, SY, SZ}, pattern);
 		const auto expected = countExposedFaces(model);
 		const auto registry = makeRegistry();
@@ -320,7 +320,7 @@ namespace
 		chunk.setVolume(makeVolume(model, registry));
 		spk::World::ChunkCollection<Chunk> collection;
 		collection.addChunk({-1, 0, 1}, std::move(chunk));
-		spk::Voxel::ChunkMesher<SX, SY, SZ> mesher(collection, {-1, 0, 1});
+		typename Chunk::Mesher mesher(collection, {-1, 0, 1});
 		spk::Voxel::Occlusion::Cache cache;
 		mesher.attachCache(cache);
 		const auto &volume = collection.at({-1, 0, 1}).volume();
@@ -333,7 +333,7 @@ namespace
 	void measureFourJoinedChunks()
 	{
 		constexpr std::int32_t Side = 16;
-		using Chunk = spk::Voxel::Chunk<Side, Side, Side>;
+		using Chunk = spk::World::Voxel::Chunk<Side, Side, Side>;
 		const auto model = makeModel({Side * 2, Side, Side * 2}, Pattern::TerracedCaves);
 		const auto expected = countExposedFaces(model);
 		const auto registry = makeRegistry();
@@ -370,7 +370,7 @@ namespace
 			MeshCounts result;
 			for (const auto &[coordinate, entry] : collection)
 			{
-				spk::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, coordinate);
+				typename Chunk::Mesher mesher(collection, coordinate);
 				mesher.attachCache(cache);
 				const auto current = countMesh(mesher.bake(entry.chunk().volume()));
 				result.vertices += current.vertices;
@@ -400,7 +400,7 @@ namespace
 	void measureMixedShapes()
 	{
 		constexpr std::int32_t Side = 16;
-		using Chunk = spk::Voxel::Chunk<Side, Side, Side>;
+		using Chunk = spk::World::Voxel::Chunk<Side, Side, Side>;
 		const auto registry = makeRegistry();
 		constexpr std::array<std::uint32_t, 4> DefinitionIds{1, 3, 4, 5};
 		const std::array<std::size_t, 4> perShapeVertices{
@@ -429,7 +429,7 @@ namespace
 		chunk.setVolume(builder.build());
 		spk::World::ChunkCollection<Chunk> collection;
 		collection.addChunk({0, 0, 0}, std::move(chunk));
-		spk::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, {0, 0, 0});
+		typename Chunk::Mesher mesher(collection, {0, 0, 0});
 		spk::Voxel::Occlusion::Cache cache;
 		mesher.attachCache(cache);
 		measure("Isolated cube/slab/slope/stair mix", 1, Side * Side * Side, occupied, expectedVertices, expectedVertices / 3, [&]() {
@@ -477,11 +477,11 @@ namespace
 	void measureRandomizedChunks(RandomContent content, std::optional<std::size_t> replayIndex = std::nullopt)
 	{
 		constexpr std::int32_t Side = 16;
-		using Chunk = spk::Voxel::Chunk<Side, Side, Side>;
+		using Chunk = spk::World::Voxel::Chunk<Side, Side, Side>;
 		const auto registry = makeRegistry();
 		spk::World::ChunkCollection<Chunk> collection;
 		const Coordinate coordinate{-1, 2, -3};
-		spk::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, coordinate);
+		typename Chunk::Mesher mesher(collection, coordinate);
 		spk::Voxel::Occlusion::Cache cache;
 		mesher.attachCache(cache);
 

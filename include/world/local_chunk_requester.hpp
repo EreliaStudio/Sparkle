@@ -6,15 +6,15 @@
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, typename TBuilder = typename TChunk::Builder>
+	template <typename TChunk, typename TGenerationData>
 	class LocalChunkRequester : public ChunkRequester<TChunk>
 	{
 	private:
 		WorkerPool &_workerPool;
-		Generator<TChunk, TGenerationData, TBuilder> &_generator;
+		Generator<TChunk, TGenerationData> &_generator;
 
 	public:
-		LocalChunkRequester(WorkerPool &workerPool, Generator<TChunk, TGenerationData, TBuilder> &generator) :
+		LocalChunkRequester(WorkerPool &workerPool, Generator<TChunk, TGenerationData> &generator) :
 			_workerPool(workerPool),
 			_generator(generator)
 		{
