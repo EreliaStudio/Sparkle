@@ -15,8 +15,8 @@ namespace spk::Voxel
 	public:
 		using GenerationData = BiomeGenerationData<TCapacity>;
 		using SurfacePass = World::SurfacePass<TChunk, GenerationData>;
-		using SurfaceData = typename GenerationData::ColumnData;
-		using InfluenceGrid = typename SurfaceData::InfluenceGrid;
+		using ColumnData = typename GenerationData::ColumnData;
+		using InfluenceGrid = typename ColumnData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
 		using HeightCombination = typename World::SurfaceHeightCombinationPass<TChunk, GenerationData, TCapacity>::Combination;
 
