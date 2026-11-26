@@ -61,15 +61,15 @@ namespace
 		ConstantBiome _second{100};
 
 	protected:
-		Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &) override
+		Configuration _computeGridConfiguration(const spk::Vector2Int &, const GenerationData &) override
 		{
 			return {{16, 16}, 1};
 		}
-		Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+		void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, Grid::Lease grid) override
 		{
-			return data.column(coordinate).influences;
+			data.column(coordinate).influences = std::move(grid);
 		}
-		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) override
+		void _computeBiomeInfluences(const spk::Vector2 &, Cell &cell) override
 		{
 			cell[0] = {&_first, 3.0f};
 			cell[1] = {&_second, 1.0f};
@@ -83,13 +83,13 @@ namespace
 		using CombinationBase::CombinationBase;
 
 	protected:
-		const InfluenceGrid &_influences(const spk::Vector2Int &, const StandaloneData &data) override
+		const InfluenceGrid &_influenceGrid(const spk::Vector2Int &, const StandaloneData &data) override
 		{
 			return *data.influences;
 		}
-		Grid::Lease &_gridDestination(const spk::Vector2Int &, StandaloneData &data) override
+		void _storeHeightMap(const spk::Vector2Int &, StandaloneData &data, Grid::Lease grid) override
 		{
-			return data.heights;
+			data.heights = std::move(grid);
 		}
 	};
 
@@ -100,14 +100,14 @@ namespace
 		using ColumnCombinationBase::ColumnCombinationBase;
 
 	protected:
-		const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
+		const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
 		{
 			return *data.column(coordinate).influences;
 		}
 
-		Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+		void _storeHeightMap(const spk::Vector2Int &coordinate, GenerationData &data, Grid::Lease grid) override
 		{
-			return data.column(coordinate).heights;
+			data.column(coordinate).heights = std::move(grid);
 		}
 	};
 }

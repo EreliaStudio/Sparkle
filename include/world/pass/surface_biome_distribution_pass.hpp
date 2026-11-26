@@ -14,13 +14,13 @@ namespace spk::World
 		using Configuration = typename Grid::Configuration;
 
 	protected:
-		virtual Configuration _gridConfiguration(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
-		virtual typename Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
-		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) = 0;
+		virtual Configuration _computeGridConfiguration(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
+		virtual void _storeInfluenceGrid(const spk::Vector2Int &coordinate, TGenerationData &data, typename Grid::Lease grid) = 0;
+		virtual void _computeBiomeInfluences(const spk::Vector2 &worldPosition, Cell &destination) = 0;
 
 		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
-			const auto config = _gridConfiguration(coordinate, data);
+			const auto config = _computeGridConfiguration(coordinate, data);
 			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.y) * config.size.y)};
 			auto grid = Grid::obtain(config, origin);
 			const auto layout = grid->sampleSize();
@@ -29,11 +29,11 @@ namespace spk::World
 				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
 					auto &cell = grid->sample({x, z});
-					_computeBiomePlacement(origin + grid->localPosition({x, z}), cell);
+					_computeBiomeInfluences(origin + grid->localPosition({x, z}), cell);
 					cell.normalize();
 				}
 			}
-			_gridDestination(coordinate, data) = std::move(grid);
+			_storeInfluenceGrid(coordinate, data, std::move(grid));
 		}
 	};
 }

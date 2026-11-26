@@ -22,8 +22,8 @@ namespace spk::World
 		Combination _combination;
 
 	protected:
-		virtual const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
-		virtual Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
+		virtual const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
+		virtual void _storeHeightMap(const spk::Vector2Int &coordinate, TGenerationData &data, Grid::Lease grid) = 0;
 
 	public:
 		explicit SurfaceHeightCombinationPass(Combination combination) :
@@ -38,7 +38,7 @@ namespace spk::World
 	protected:
 		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
-			const auto &influences = _influences(coordinate, data);
+			const auto &influences = _influenceGrid(coordinate, data);
 			const auto &config = influences.configuration();
 			auto grid = Grid::obtain({config.size, config.scale}, influences.worldOrigin());
 			const auto layout = grid->sampleSize();
@@ -82,7 +82,7 @@ namespace spk::World
 					grid->sample({x, z}) = static_cast<float>(height);
 				}
 			}
-			_gridDestination(coordinate, data) = std::move(grid);
+			_storeHeightMap(coordinate, data, std::move(grid));
 		}
 	};
 }

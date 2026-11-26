@@ -32,15 +32,15 @@ namespace spk::Voxel
 			BiomeGenerator &_generator;
 
 		protected:
-			typename InfluenceGrid::Configuration _gridConfiguration(const spk::Vector2Int &, const GenerationData &data) override
+			typename InfluenceGrid::Configuration _computeGridConfiguration(const spk::Vector2Int &, const GenerationData &data) override
 			{
 				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().surfaceScale};
 			}
-			typename InfluenceGrid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, typename InfluenceGrid::Lease grid) override
 			{
-				return data.column(coordinate).influences;
+				data.column(coordinate).influences = std::move(grid);
 			}
-			void _computeBiomePlacement(const spk::Vector2 &position, Cell &destination) override
+			void _computeBiomeInfluences(const spk::Vector2 &position, Cell &destination) override
 			{
 				_generator._computeBiomePlacement(position, destination);
 			}
@@ -58,13 +58,13 @@ namespace spk::Voxel
 			using CombinationBase::CombinationBase;
 
 		protected:
-			const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
+			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).influences;
 			}
-			World::HeightMap::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+			void _storeHeightMap(const spk::Vector2Int &coordinate, GenerationData &data, World::HeightMap::Grid::Lease grid) override
 			{
-				return data.column(coordinate).heights;
+				data.column(coordinate).heights = std::move(grid);
 			}
 		};
 
