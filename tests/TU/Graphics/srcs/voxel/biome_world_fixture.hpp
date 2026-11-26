@@ -100,10 +100,8 @@ namespace sparkle_test::biome_world
 			_boundary.setFrequency(0.055f);
 			if (edit)
 			{
-				addPass<FlattenRoad>();
+				insertPass<FlattenRoad>(2);
 			}
-			addPass<Strata>();
-			addPass<Application>();
 		}
 	};
 }

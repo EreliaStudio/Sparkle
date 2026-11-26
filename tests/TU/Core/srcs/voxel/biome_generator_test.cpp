@@ -107,8 +107,6 @@ namespace
 		explicit Generator(float scale = 1.0f) :
 			BiomeGenerator(registry(), HeightCombination::Weighted, scale)
 		{
-			addPass<Strata>();
-			addPass<Application>();
 		}
 	};
 
@@ -157,9 +155,13 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 		std::vector<int> &_trace;
 
 	protected:
-		void _applySurface(const spk::Vector2Int &coordinate, Data &) override
+		void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
 		{
 			EXPECT_EQ(coordinate, (spk::Vector2Int{3, -2}));
+			const auto &column = std::as_const(data).column(coordinate);
+			EXPECT_TRUE(static_cast<bool>(column.influences));
+			EXPECT_TRUE(static_cast<bool>(column.heights));
+			EXPECT_TRUE(static_cast<bool>(column.strata));
 			_trace.push_back(1);
 			_trace.push_back(3);
 		}
@@ -182,8 +184,10 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 		{
 		}
 
-		void apply(const Coordinate &coordinate, Data &) override
+		void apply(const Coordinate &coordinate, Data &data) override
 		{
+			// Appended passes execute after the built-in voxel application pass.
+			data.chunk(coordinate).builder.set({0, 0, 0}, 4);
 			EXPECT_EQ(coordinate.x, 3);
 			EXPECT_EQ(coordinate.z, -2);
 			_trace.push_back(2);
@@ -194,8 +198,11 @@ TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrde
 	std::vector<int> trace;
 	generator.addPass<SurfaceProbe>(trace);
 	generator.addPass<ChunkProbe>(trace);
-	ASSERT_TRUE(generator.generate({3, 0, -2}));
-	ASSERT_TRUE(generator.generate({3, 1, -2}));
+	const auto first = generator.generate({3, 0, -2});
+	const auto second = generator.generate({3, 1, -2});
+	ASSERT_TRUE(first && second);
+	EXPECT_EQ(idAt(*first, 0, 0, 0), 4u);
+	EXPECT_EQ(idAt(*second, 0, 0, 0), 4u);
 	EXPECT_EQ(trace, (std::vector<int>{1, 3, 2, 2}));
 	generator.flush();
 	ASSERT_TRUE(generator.generate({3, 2, -2}));
@@ -224,7 +231,7 @@ TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
 	};
 
 	Generator generator;
-	generator.addPass<FailingPass>();
+	generator.insertPass<FailingPass>(2);
 	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
 	EXPECT_EQ(generator.activeChunkCount(), 0u);
 	EXPECT_EQ(generator.samples.load(), 289);
@@ -692,9 +699,7 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 		EditedGenerator() :
 			BiomeGenerator(registry(), HeightCombination::Weighted)
 		{
-			addPass<RaiseSurface>();
-			addPass<Strata>();
-			addPass<Application>();
+			insertPass<RaiseSurface>(2);
 		}
 	};
 

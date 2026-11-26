@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstddef>
 #include <exception>
 #include <memory>
 #include <optional>
@@ -70,6 +71,21 @@ namespace spk::World
 			auto pass = std::make_unique<TPass>(std::forward<TArgs>(args)...);
 			TPass &result = *pass;
 			_passes.push_back(std::move(pass));
+			return result;
+		}
+
+		// Insert before the current pass at index; index == size appends.
+		template <typename TPass, typename... TArgs>
+			requires std::derived_from<TPass, Pass>
+		TPass &insertPass(std::size_t index, TArgs &&...args)
+		{
+			if (index > _passes.size())
+			{
+				throw spk::Exception("Generator pass insertion index is out of range");
+			}
+			auto pass = std::make_unique<TPass>(std::forward<TArgs>(args)...);
+			TPass &result = *pass;
+			_passes.insert(_passes.begin() + static_cast<std::ptrdiff_t>(index), std::move(pass));
 			return result;
 		}
 

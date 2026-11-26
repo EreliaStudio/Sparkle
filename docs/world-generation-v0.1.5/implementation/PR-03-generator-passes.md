@@ -3,7 +3,7 @@
 
 ## Contrat public
 - Generator<TChunk,TGenerationData> est une recette synchrone. Aucun Builder ni constructeur particulier n'est imposé au chunk.
-- Pas de Generator::Builder de configuration : le générateur expose uniquement addPass<TPass>(...) pour créer et posséder les passes (pas de surcharge prenant std::unique_ptr) pour enregistrer définitivement et dans l'ordre des passes polymorphes. Elles sont configurées avant les générations concurrentes.
+- Pas de Generator::Builder de configuration : le générateur expose addPass<TPass>(...) pour ajouter en fin et insertPass<TPass>(index, ...) pour insérer avant la passe à l'index donné. Les index commencent à zéro ; un index égal au nombre de passes ajoute en fin, un index supérieur déclenche une exception. Le générateur crée et possède les passes (pas de surcharge prenant std::unique_ptr). Elles sont configurées avant les générations concurrentes.
 - Pass::apply(const ChunkCoordinate&, TGenerationData&) est virtuelle. Les coordonnées sont transmises à chaque passe.
 - Le hook virtuel protégé _prepareGenerationData(coord,data) retourne bool (true par défaut). false signifie absence valide ; en cas de refus ou d'exception il ne laisse aucun état temporaire.
 - TGenerationData est une instance persistante détenue par le Generator. Elle peut contenir caches globaux, données de régions, colonnes, builders et scratch par coordonnée. Elle peut être non copiable et non déplaçable ; la synchronisation est à sa charge.

@@ -298,10 +298,8 @@ namespace sparkle_test::biome_validation
 			_regions.setFrequency(0.048f);
 			if (settings.terrace)
 			{
-				addPass<Terrace>();
+				insertPass<Terrace>(2);
 			}
-			addPass<Strata>();
-			addPass<Application>();
 		}
 	};
 }

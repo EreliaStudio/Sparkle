@@ -293,6 +293,37 @@ TEST(GeneratorTest, GeneratesChunkByValueAndSharesScratchDataBetweenPasses)
 	EXPECT_EQ(generator.dataCalls, 1);
 }
 
+TEST(GeneratorTest, InsertsPassesAtBeginningMiddleAndEnd)
+{
+	const int seed = 0;
+	std::vector<Coordinate> coordinates;
+	ExampleGenerator generator(seed);
+	generator.addPass<RecordingPass>(2, coordinates);
+	generator.addPass<RecordingPass>(4, coordinates);
+	generator.insertPass<RecordingPass>(0, 1, coordinates);
+	generator.insertPass<RecordingPass>(2, 3, coordinates);
+	generator.insertPass<RecordingPass>(4, 5, coordinates);
+	generator.addPass<RecordingPass>(6, coordinates);
+
+	const auto result = generator.generate({0, 0, 0});
+	ASSERT_TRUE(result.has_value());
+	EXPECT_EQ(result->appliedPasses(), (std::vector<int>{1, 2, 3, 4, 5, 6}));
+}
+
+TEST(GeneratorTest, RejectsInvalidInsertionIndexWithoutConstructingPass)
+{
+	const int seed = 0;
+	std::vector<Coordinate> coordinates;
+	int destructions = 0;
+	ExampleGenerator generator(seed);
+	generator.addPass<RecordingPass>(1, coordinates);
+	EXPECT_THROW(generator.insertPass<LifetimePass>(2, destructions), spk::Exception);
+	EXPECT_EQ(destructions, 0);
+	const auto result = generator.generate({0, 0, 0});
+	ASSERT_TRUE(result.has_value());
+	EXPECT_EQ(result->appliedPasses(), (std::vector<int>{1}));
+}
+
 TEST(GeneratorTest, PersistentGenerationDataHasFreshRequestScratch)
 {
 	const int seed = 7;

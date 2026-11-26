@@ -4,7 +4,7 @@
 Sparkle fournit l'infrastructure de chunks, mais pas le contenu d'un monde : relief, bruit, routes, villes, bâtiments, végétation, cavernes et mécanismes de gameplay sont écrits par l'application. Ni WorldPlan ni RegionPlan ni index global de métastructures obligatoires dans la version.
 
 ## Generator / données de génération
-Generator<TChunk,TGenerationData> possède une instance persistante des données et exécute les passes dans l'ordre via addPass. Chaque passe reçoit les coordonnées et TGenerationData&. `_instantiateChunk(coord,data)` construit le chunk final et `_cleanGenerationData(coord,data)` nettoie les données temporaires après une préparation réussie, même en cas d'échec des passes.
+Generator<TChunk,TGenerationData> possède une instance persistante des données et exécute les passes dans l'ordre du pipeline, configuré avec addPass (ajout en fin) et insertPass (insertion à un index). Chaque passe reçoit les coordonnées et TGenerationData&. `_instantiateChunk(coord,data)` construit le chunk final et `_cleanGenerationData(coord,data)` nettoie les données temporaires après une préparation réussie, même en cas d'échec des passes.
 
 L'utilisateur choisit sa seed, ses caches, sa logique de région, ses règles de synchronisation et sa politique de nettoyage. Sparkle ne verrouille pas les données et ne lie pas leur durée de vie aux observateurs.
 

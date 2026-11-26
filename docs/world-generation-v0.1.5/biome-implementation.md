@@ -15,7 +15,7 @@ The design branch remains unchanged. No merge is authorized by this record.
 - Voxel::BiomeGenerationData<TCapacity = 4>: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
 - Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
-  Derived generators register custom surface-height edits before Strata, then Application, with addPass in dependency order; the base constructor registers Distribution and Combination. Strata consumes the final height map and influence grid; Application only consumes the resolved strata grid.
+  The constructor registers all four private built-in passes in order: Distribution, Combination, Strata and Application. Derived generators append custom passes with `addPass<TPass>(...)` or insert them before an existing pass with `insertPass<TPass>(index, ...)`. For example, `insertPass<Erosion>(2)` edits the height map before Strata. Indices are zero-based, and the current pass count is a valid append index. Strata consumes the final height map and influence grid; Application only consumes the resolved strata grid.
   Existing PerlinTerrainPass and existing golden tests are not replaced.
 
 ## Lifetime and threading

@@ -8,7 +8,7 @@
 namespace spk::Voxel
 {
 	// Ready-to-use voxel terrain pipeline. Derive to supply the placement strategy.
-	// Derived generators register additional passes, then Strata and Application, in their desired order.
+	// All four standard passes are registered by the constructor. Extend with addPass or insertPass before generating.
 	template <typename TChunk, std::size_t TCapacity = 4>
 	class BiomeGenerator : public World::Generator<TChunk, BiomeGenerationData<TCapacity>>
 	{
@@ -68,7 +68,6 @@ namespace spk::Voxel
 			}
 		};
 
-	protected:
 		class Strata : public StrataBase
 		{
 		protected:
@@ -135,6 +134,8 @@ namespace spk::Voxel
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			this->template addPass<Distribution>(*this);
 			this->template addPass<Combination>(combination);
+			this->template addPass<Strata>();
+			this->template addPass<Application>();
 		}
 	};
 }
