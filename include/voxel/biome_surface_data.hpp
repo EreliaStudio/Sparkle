@@ -195,7 +195,7 @@ namespace spk::Voxel
 				}
 			} catch (...)
 			{
-				clean(coordinate);
+				cleanChunk(coordinate);
 				throw;
 			}
 		}
@@ -266,7 +266,7 @@ namespace spk::Voxel
 			}
 		}
 
-		void clean(const World::ChunkCoordinate &coordinate) noexcept
+		void cleanChunk(const World::ChunkCoordinate &coordinate) noexcept
 		{
 			const std::scoped_lock lock(_mutex);
 			auto it = _chunks.find(coordinate);

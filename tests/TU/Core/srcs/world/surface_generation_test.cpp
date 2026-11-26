@@ -249,7 +249,7 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 			data.completeChunk(coordinate);
 		}
 		const float height = std::as_const(data).column(coordinate).heights->at({0, 0});
-		data.clean(coordinate);
+		data.cleanChunk(coordinate);
 		return height;
 	};
 	auto first = std::async(std::launch::async, [&] {
@@ -281,7 +281,7 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	distribution.apply(coordinate, data);
 	EXPECT_FALSE(std::as_const(data).column(coordinate).ready());
 	// A failed job cleans its partially constructed column without publishing it.
-	data.clean(coordinate);
+	data.cleanChunk(coordinate);
 	data.prepareChunk(coordinate, {16, 16, 16});
 	EXPECT_FALSE(std::as_const(data).column(coordinate).heights);
 	EXPECT_FALSE(static_cast<bool>(std::as_const(data).column(spk::Vector2Int{0, 0}).influences));
@@ -290,11 +290,11 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	combination.apply(coordinate, data);
 	data.completeChunk(coordinate);
 	EXPECT_FLOAT_EQ(std::as_const(data).column(coordinate).heights->at({0, 0}), 40);
-	data.clean(coordinate);
+	data.cleanChunk(coordinate);
 	data.prepareChunk(coordinate, {16, 16, 16});
 	EXPECT_TRUE(std::as_const(data).column(coordinate).heights);
 	EXPECT_FLOAT_EQ(std::as_const(data).column(coordinate).heights->at({0, 0}), 40);
-	data.clean(coordinate);
+	data.cleanChunk(coordinate);
 }
 
 TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
@@ -403,7 +403,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	data.prepareChunk(idle, {16, 16, 16});
 	EXPECT_FALSE(std::as_const(data).column(idle).ready());
 	data.completeChunk(idle);
-	data.clean(idle);
+	data.cleanChunk(idle);
 
 	std::promise<void> entered;
 	std::promise<void> resume;
@@ -415,7 +415,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 		gate.wait();
 		EXPECT_FALSE(std::as_const(data).column(active).ready());
 		data.completeChunk(active);
-		data.clean(active);
+		data.cleanChunk(active);
 	});
 	ready.wait();
 	data.flush();
@@ -426,7 +426,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	EXPECT_TRUE(std::as_const(data).column(active).ready());
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);
-	data.clean(active);
+	data.cleanChunk(active);
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 0u);
 }
@@ -732,13 +732,13 @@ TEST(SurfaceGenerationTest, MutableColumnAccessRequiresUnpublishedActiveGenerati
 	EXPECT_THROW((void)data.column(first), spk::Exception);
 	EXPECT_THROW((void)data.column(surface), spk::Exception);
 	EXPECT_TRUE(std::as_const(data).column(first).ready());
-	data.clean(first);
+	data.cleanChunk(first);
 
 	data.prepareChunk(second, {16, 16, 16});
 	EXPECT_THROW((void)data.column(second), spk::Exception);
 	EXPECT_TRUE(std::as_const(data).column(second).ready());
 	EXPECT_EQ(&std::as_const(data).column(second), &std::as_const(data).column(surface));
-	data.clean(second);
+	data.cleanChunk(second);
 	EXPECT_THROW((void)data.column(second), spk::Exception);
 	EXPECT_THROW((void)std::as_const(data).column(second), spk::Exception);
 }

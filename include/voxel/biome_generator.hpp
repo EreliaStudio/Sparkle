@@ -123,7 +123,7 @@ namespace spk::Voxel
 
 		void _cleanGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) noexcept override
 		{
-			data.clean(coordinate);
+			data.cleanChunk(coordinate);
 		}
 
 	public:
