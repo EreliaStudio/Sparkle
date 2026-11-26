@@ -529,7 +529,48 @@ namespace
 {
 	namespace validation = sparkle_test::biome_validation;
 
-	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {})
+	void captureShadowDiagnostics(Scene &scene, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto capture = [&](const std::string &suffix) {
+			const auto pixels = scene.capture();
+			EXPECT_EQ(pixels.size, terrain::ImageSize);
+			const auto path = sparkle_test::resultImagePath("rendering/biome-world", name + suffix);
+			gl.save(path);
+			return path;
+		};
+
+		scene.sun.setCastsShadows(true);
+		scene.sun.setShadowResolution(ShadowResolution);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		const auto hard = capture("_hard_512");
+		scene.verifyShadow();
+
+		scene.sun.setCastsShadows(false);
+		const auto unshadowed = capture("_no_shadows");
+
+		scene.sun.setCastsShadows(true);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		capture("_pcf_512");
+
+		scene.sun.setShadowResolution(2048);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		capture("_hard_2048");
+
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		capture("_pcf_2048");
+
+		// Use the unshadowed render as the reference to isolate the contribution
+		// of the shadow map without changing terrain geometry or lighting.
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		tolerance.alphaTolerance = 8;
+		const auto difference = sparkle_test::compareImages(
+			hard, unshadowed, sparkle_test::resultImagePath("rendering/biome-world", name + "_shadow_difference"), tolerance);
+		EXPECT_GT(difference.differentPixelCount, 0u);
+	}
+
+	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {}, bool shadowDiagnostics = false)
 	{
 		Scene scene;
 		using Base = spk::World::Voxel::Biome::Generator<Chunk, 3>;
@@ -601,6 +642,11 @@ namespace
 		scene.refreshCasters();
 		scene.sun.setCastsShadows(view.shadows);
 		scene.setCamera(view.camera, view.target);
+		if (shadowDiagnostics)
+		{
+			captureShadowDiagnostics(scene, name);
+			return;
+		}
 		const auto pixels = scene.capture();
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		const auto actual = sparkle_test::resultImagePath("rendering/biome-world", name);
@@ -734,4 +780,14 @@ TEST(BiomeWorldGolden, NegativeCoordinateChunkSeams)
 TEST(BiomeWorldGolden, CustomTerracedHeightPass)
 {
 	captureBiomeValidation("height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {});
+}
+
+TEST(BiomeWorldShadowDiagnostics, CoarseFourVoxelSurfaceGrid)
+{
+	captureBiomeValidation("shadow_diagnostic_grid_scale_four", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .scale = 4.0f}, {}, true);
+}
+
+TEST(BiomeWorldShadowDiagnostics, CustomTerracedHeightPass)
+{
+	captureBiomeValidation("shadow_diagnostic_height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {}, true);
 }
