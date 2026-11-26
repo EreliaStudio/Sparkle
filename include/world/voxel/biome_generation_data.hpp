@@ -6,16 +6,13 @@
 #include <set>
 #include <utility>
 
-#include "container/grid_2d.hpp"
 #include "voxel/volume.hpp"
 #include "world/chunk_coordinate.hpp"
 #include "world/height_map.hpp"
-#include "world/voxel/biome.hpp"
+#include "world/voxel/strata.hpp"
 
 namespace spk::World::Voxel
 {
-	using StrataGrid = spk::Grid2D<Biome::Stratum::Instance::Lease>;
-
 	template <std::size_t TCapacity = 4>
 	class BiomeGenerationData
 	{
@@ -31,7 +28,7 @@ namespace spk::World::Voxel
 			using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
 			typename InfluenceGrid::Lease influences;
 			World::HeightMap::Grid::Lease heights;
-			StrataGrid::Lease strata;
+			Strata::Grid::Lease strata;
 
 		private:
 			friend class BiomeGenerationData;

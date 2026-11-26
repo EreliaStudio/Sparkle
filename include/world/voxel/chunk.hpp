@@ -16,6 +16,9 @@ namespace spk::World::Voxel
 		spk::Voxel::Volume _volume;
 
 	public:
+		class Mesher;
+		class RenderingSystem;
+
 		Chunk() :
 			_volume(spk::Voxel::Volume::Builder({SX, SY, SZ}).build())
 		{

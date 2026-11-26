@@ -10,7 +10,7 @@
 namespace spk::World::Voxel
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
-	class ChunkMesher : public spk::Voxel::Mesher
+	class Chunk<SX, SY, SZ>::Mesher : public spk::Voxel::Mesher
 	{
 	private:
 		using ChunkType = Chunk<SX, SY, SZ>;
@@ -82,7 +82,7 @@ namespace spk::World::Voxel
 		}
 
 	public:
-		ChunkMesher(const World::ChunkCollection<ChunkType> &collection, World::ChunkCoordinate coordinate) :
+		Mesher(const World::ChunkCollection<ChunkType> &collection, World::ChunkCoordinate coordinate) :
 			_collection(collection),
 			_coordinate(coordinate)
 		{

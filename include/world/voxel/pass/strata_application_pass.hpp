@@ -1,15 +1,15 @@
 #pragma once
 
 #include "world/generator.hpp"
-#include "world/voxel/biome_generation_data.hpp"
+#include "world/voxel/strata.hpp"
 
 namespace spk::World::Voxel
 {
 	template <typename TChunk, typename TGenerationData>
-	class StrataApplicationPass : public World::Generator<TChunk, TGenerationData>::Pass
+	class Strata::ApplicationPass : public World::Generator<TChunk, TGenerationData>::Pass
 	{
 	protected:
-		virtual const StrataGrid &_strataGrid(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
+		virtual const Strata::Grid &_strataGrid(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
 
 	public:
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override

@@ -1,16 +1,17 @@
 #pragma once
 
+#include "world/height_map.hpp"
 #include "world/pass/surface_pass.hpp"
-#include "world/voxel/biome_generation_data.hpp"
+#include "world/voxel/strata.hpp"
 
 namespace spk::World::Voxel
 {
-	template <typename TChunk, typename TGenerationData, std::size_t TCapacity = 4>
-	class StrataGenerationPass : public World::SurfacePass<TChunk, TGenerationData>
+	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
+	class Strata::GenerationPass : public World::SurfacePass<TChunk, TGenerationData>
 	{
 	public:
 		using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
-		using Grid = StrataGrid;
+		using Grid = Strata::Grid;
 
 	protected:
 		virtual const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
@@ -39,7 +40,7 @@ namespace spk::World::Voxel
 				{
 					throw spk::Exception("Voxel strata require a dominant voxel biome");
 				}
-				instance = Biome::Stratum::Instance::obtain(*biome, worldOrigin + localPosition, heights.interpolate(localPosition));
+				instance = Strata::Instance::obtain(*biome, worldOrigin + localPosition, heights.interpolate(localPosition));
 			}
 			_storeStrataGrid(coordinate, data, std::move(grid));
 		}

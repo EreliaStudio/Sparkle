@@ -2,6 +2,7 @@
 
 #include "world/pass/surface_biome_distribution_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
+#include "world/voxel/biome_generation_data.hpp"
 #include "world/voxel/pass/strata_application_pass.hpp"
 #include "world/voxel/pass/strata_generation_pass.hpp"
 
@@ -23,8 +24,8 @@ namespace spk::World::Voxel
 	private:
 		using DistributionBase = World::SurfaceBiomeDistributionPass<TChunk, GenerationData, TCapacity>;
 		using CombinationBase = World::SurfaceHeightCombinationPass<TChunk, GenerationData, TCapacity>;
-		using StrataBase = StrataGenerationPass<TChunk, GenerationData, TCapacity>;
-		using ApplicationBase = StrataApplicationPass<TChunk, GenerationData>;
+		using StrataBase = Strata::GenerationPass<TChunk, GenerationData, TCapacity>;
+		using ApplicationBase = Strata::ApplicationPass<TChunk, GenerationData>;
 
 		class Distribution : public DistributionBase
 		{
@@ -68,7 +69,7 @@ namespace spk::World::Voxel
 			}
 		};
 
-		class Strata : public StrataBase
+		class StrataGeneration : public StrataBase
 		{
 		protected:
 			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
@@ -81,7 +82,7 @@ namespace spk::World::Voxel
 				return *data.column(coordinate).heights;
 			}
 
-			void _storeStrataGrid(const spk::Vector2Int &coordinate, GenerationData &data, StrataGrid::Lease grid) override
+			void _storeStrataGrid(const spk::Vector2Int &coordinate, GenerationData &data, Strata::Grid::Lease grid) override
 			{
 				data.column(coordinate).strata = std::move(grid);
 			}
@@ -90,7 +91,7 @@ namespace spk::World::Voxel
 		class Application : public ApplicationBase
 		{
 		protected:
-			const StrataGrid &_strataGrid(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
+			const Strata::Grid &_strataGrid(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).strata;
 			}
@@ -134,7 +135,7 @@ namespace spk::World::Voxel
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			this->template addPass<Distribution>(*this);
 			this->template addPass<Combination>(combination);
-			this->template addPass<Strata>();
+			this->template addPass<StrataGeneration>();
 			this->template addPass<Application>();
 		}
 	};

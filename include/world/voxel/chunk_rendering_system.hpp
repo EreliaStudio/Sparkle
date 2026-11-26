@@ -22,7 +22,7 @@
 namespace spk::World::Voxel
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
-	class ChunkRenderingSystem : public spk::Voxel::RenderingSystem
+	class Chunk<SX, SY, SZ>::RenderingSystem : public spk::Voxel::RenderingSystem
 	{
 	public:
 		using ChunkType = Chunk<SX, SY, SZ>;
@@ -130,15 +130,15 @@ namespace spk::World::Voxel
 		}
 
 	public:
-		ChunkRenderingSystem() = default;
+		RenderingSystem() = default;
 
-		~ChunkRenderingSystem() override
+		~RenderingSystem() override
 		{
 			unbind();
 		}
 
-		ChunkRenderingSystem(const ChunkRenderingSystem &) = delete;
-		ChunkRenderingSystem &operator=(const ChunkRenderingSystem &) = delete;
+		RenderingSystem(const RenderingSystem &) = delete;
+		RenderingSystem &operator=(const RenderingSystem &) = delete;
 
 		void bind(Collection &collection, spk::Palette palette)
 		{
@@ -218,7 +218,7 @@ namespace spk::World::Voxel
 				}
 
 				ChunkType &chunk = _collection->at(coordinate);
-				ChunkMesher<SX, SY, SZ> mesher(*_collection, coordinate);
+				Mesher mesher(*_collection, coordinate);
 				mesher.attachCache(_occlusionCache);
 				const auto start = std::chrono::steady_clock::now();
 				spk::Voxel::Geometry geometry = mesher.bake(chunk.volume());
