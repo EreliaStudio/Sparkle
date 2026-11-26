@@ -194,9 +194,8 @@ TEST(SurfaceGridTest, HeightGridAlignedInterpolationDoesNotReadUnusedValues)
 
 TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
 {
-	HeightMap map;
-	map.setBaseHeight(7.5f);
-	auto grid = map.generate({{16, 16}, 2}, {-16, 0});
+	auto grid = HeightMap::Grid::obtain({{16, 16}, 2}, {-16, 0});
+	grid->sample({8, 8}) = 7.5f;
 	EXPECT_EQ(grid->count(), 81u);
 	EXPECT_EQ(grid->sampleSize(), (spk::Vector2UInt{9, 9}));
 	EXPECT_GE(grid->capacity(), 128u);
@@ -207,13 +206,14 @@ TEST(SurfaceGridTest, HeightGridEndpointsInterpolationAndPooling)
 	EXPECT_FLOAT_EQ(grid->interpolate({1, 0}), 5);
 	EXPECT_FLOAT_EQ(grid->interpolate({16, 16}), 7.5f);
 	EXPECT_THROW((void)grid->at({16.1f, 0}), spk::Exception);
-	EXPECT_THROW((void)map.generate({{16, 16}, 3}, {}), spk::Exception);
-	EXPECT_THROW((void)map.generate({{16, 16}, 0}, {}), spk::Exception);
+	EXPECT_THROW((void)HeightMap::Grid::obtain({{16, 16}, 3}, {}), spk::Exception);
+	EXPECT_THROW((void)HeightMap::Grid::obtain({{16, 16}, 0}, {}), spk::Exception);
 	const auto *previous = grid.get();
 	grid = {};
-	auto recycled = map.generate({{16, 16}, 2}, {});
+	auto recycled = HeightMap::Grid::obtain({{16, 16}, 2}, {});
 	EXPECT_EQ(recycled.get(), previous);
-	EXPECT_FLOAT_EQ(recycled->at({0, 0}), 7.5f);
+	EXPECT_FLOAT_EQ(recycled->at({2, 0}), 0);
+	EXPECT_FLOAT_EQ(recycled->at({16, 16}), 0);
 }
 
 TEST(SurfaceGridTest, InfluenceCellDominantWorksWithoutGrid)
@@ -318,11 +318,44 @@ TEST(SurfaceGridTest, AdjacentGridsShareExactAbsoluteBoundarySamples)
 	b.setFrequency(0.21f);
 	map.noiseLayers().emplace("a", HeightMap::NoiseLayer{a, -4, 8});
 	map.noiseLayers().emplace("b", HeightMap::NoiseLayer{b, -2, 2});
+	class HeightBiome final : public spk::World::SurfaceBiome
+	{
+	private:
+		const HeightMap &_map;
+
+	public:
+		explicit HeightBiome(const HeightMap &map) :
+			_map(map)
+		{
+		}
+
+		float groundHeight(const spk::Vector2 &position) const override
+		{
+			return _map.sample(position);
+		}
+	};
+
+	HeightBiome biome(map);
+	Combination combination(CombinationBase::Combination::Weighted);
+	const auto buildGrid = [&](float scale, const spk::Vector2 &origin) {
+		StandaloneData data;
+		data.influences = SurfaceData::InfluenceGrid::obtain({{16, 16}, scale}, origin);
+		const auto layout = data.influences->sampleSize();
+		for (std::uint32_t z = 0; z < layout.y; ++z)
+		{
+			for (std::uint32_t x = 0; x < layout.x; ++x)
+			{
+				data.influences->sample({x, z})[0] = {&biome, 1};
+			}
+		}
+		combination.apply({}, data);
+		return std::move(data.heights);
+	};
 	for (float scale : {0.5f, 1.0f, 2.0f, 4.0f})
 	{
-		auto left = map.generate({{16, 16}, scale}, {-16, -16});
-		auto right = map.generate({{16, 16}, scale}, {0, -16});
-		auto back = map.generate({{16, 16}, scale}, {-16, 0});
+		auto left = buildGrid(scale, {-16, -16});
+		auto right = buildGrid(scale, {0, -16});
+		auto back = buildGrid(scale, {-16, 0});
 		const auto layout = left->sampleSize();
 		for (std::uint32_t i = 0; i < layout.x; ++i)
 		{

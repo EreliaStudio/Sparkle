@@ -97,19 +97,5 @@ namespace spk::World
 			}
 			return height;
 		}
-
-		[[nodiscard]] Grid::Lease generate(const Grid::Configuration &configuration, const spk::Vector2 &origin) const
-		{
-			auto grid = Grid::obtain(configuration, origin);
-			const auto layout = grid->sampleSize();
-			for (std::uint32_t z = 0; z < layout.y; ++z)
-			{
-				for (std::uint32_t x = 0; x < layout.x; ++x)
-				{
-					grid->sample({x, z}) = sample(origin + grid->localPosition({x, z}));
-				}
-			}
-			return grid;
-		}
 	};
 }
