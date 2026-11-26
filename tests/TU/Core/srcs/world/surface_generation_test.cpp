@@ -13,7 +13,6 @@
 #include "container/grid_2d.hpp"
 
 #include "world/height_map.hpp"
-#include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
 #include "world/surface_biome.hpp"
@@ -442,41 +441,6 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	data.cleanChunk(active);
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 0u);
-}
-
-namespace
-{
-	class StandaloneHeightPass : public spk::World::HeightMapGenerationPass<Chunk, StandaloneData>
-	{
-	protected:
-		HeightMap::Grid::Configuration _gridConfiguration(const Coordinate &, const StandaloneData &) override
-		{
-			return {{16, 8}, 2};
-		}
-		HeightMap::Grid::Lease &_gridDestination(const Coordinate &, StandaloneData &data) override
-		{
-			return data.heights;
-		}
-	};
-}
-
-TEST(SurfaceGenerationTest, StandaloneHeightMapPassUsesWorldOriginAndRequiresBinding)
-{
-	StandaloneHeightPass pass;
-	StandaloneData data;
-	EXPECT_THROW(pass.apply({-2, 7, 3}, data), spk::Exception);
-	HeightMap map;
-	map.setBaseHeight(12);
-	spk::Perlin noise(72);
-	noise.setFrequency(0.07f);
-	map.noiseLayers().emplace("relief", HeightMap::NoiseLayer{noise, -3, 3});
-	pass.bind(&map);
-	pass.apply({-2, 7, 3}, data);
-	ASSERT_TRUE(data.heights);
-	EXPECT_EQ(data.heights->worldOrigin(), (spk::Vector2{-32, 24}));
-	EXPECT_FLOAT_EQ(data.heights->at({16, 8}), map.sample({-16, 32}));
-	pass.bind(nullptr);
-	EXPECT_THROW(pass.apply({-2, 7, 3}, data), spk::Exception);
 }
 
 TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)

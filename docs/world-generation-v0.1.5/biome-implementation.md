@@ -12,7 +12,7 @@ World-specific voxel types live in `spk::World::Voxel` (`include/world/voxel/`).
 - World::SurfaceBiome::Influence::Cell<N>: owns validation and normalization through normalize(), and dominant selection through dominant(). SurfaceBiomeDistributionPass inherits only SurfacePass and calls cell.normalize() after placement; the distribution callable is bound internally by the concrete pass.
 - spk::Grid2D<T>: generic contiguous 2D storage with Vector2UInt dimensions, a static CapacityPool per element type, and RAII leases. Releasing a lease clears live elements while retaining capacity. Checked at() and operator[] accept Vector2UInt coordinates. Row-major iteration exposes read-only coordinates and mutable or const values through structured bindings (auto&& [coords, value]).
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid exposes direct floor access through at(position) and a protected bilinear-only weighted sample traversal shared by specialized grids.
-- World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling.
+- World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling. Biomes can use HeightMap::sample to compute their relief; SurfaceHeightCombinationPass builds the final height grid from biome influences. The redundant HeightMapGenerationPass is removed.
 - World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it consults `data.surfaceReady(coordinate)` before executing and owns no cache. Surface generation data must provide this const query; uncached data returns false.
 - World::Voxel::Strata::Instance: one pooled resolved vertical profile per voxel X/Z, containing absolute layer boundaries and selected voxel IDs. `voxelIDAt(height)` queries the profile without noise sampling, allocations or registry access. ID zero denotes air. Application passes nonzero IDs to the registry-bound Volume::Builder, which validates them. `World::Voxel::Strata::Grid` is a `Grid2D<Instance::Lease>` with exactly the chunk footprint; releasing the grid returns every instance to its own capacity pool. Each instance retains its reserved layer storage for reuse.
 - World::Voxel::Biome::GenerationData<TCapacity = 4> (exposed as Biome::Generator<TChunk, TCapacity>::Data): owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
@@ -95,8 +95,7 @@ These references remain subject to visual review; existing CI uploads results.
   weighted output, entire vertical stacks across negative coordinates, finite and
   infinite layers, invalid settings, scale-dependent sampling counts, queued local
   requester lifetime, neighboring height grid endpoints, bilinear interpolation,
-  recycled influences, height-combination failure atomicity and standalone height
-  pass binding.
+  recycled influences and height-combination failure atomicity.
 
 All additional references must originate from the actual Sparkle Graphics test
 outputs. Existing reference PNGs are not replaced by this extension.
