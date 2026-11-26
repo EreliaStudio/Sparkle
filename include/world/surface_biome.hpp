@@ -18,10 +18,10 @@ namespace spk::World
 			const SurfaceBiome *biome = nullptr;
 			float weight = 0.0f;
 
-			template <std::size_t TCapacity>
+			template <std::size_t TCapacity = 4>
 			struct Cell;
 
-			template <std::size_t TCapacity>
+			template <std::size_t TCapacity = 4>
 			class Grid;
 		};
 

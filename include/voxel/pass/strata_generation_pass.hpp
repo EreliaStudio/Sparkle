@@ -5,7 +5,7 @@
 
 namespace spk::Voxel
 {
-	template <typename TChunk, typename TGenerationData, std::size_t TCapacity>
+	template <typename TChunk, typename TGenerationData, std::size_t TCapacity = 4>
 	class StrataGenerationPass : public World::SurfacePass<TChunk, TGenerationData>
 	{
 	public:

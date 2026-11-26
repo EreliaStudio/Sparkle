@@ -7,6 +7,7 @@
 #include <future>
 #include <limits>
 #include <set>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -17,6 +18,16 @@
 namespace
 {
 	using Chunk = spk::Voxel::Chunk<16, 16, 16>;
+
+	using Influence = spk::World::SurfaceBiome::Influence;
+	using DefaultGenerationData = spk::Voxel::BiomeGenerationData<>;
+	static_assert(std::is_same_v<Influence::Cell<>, Influence::Cell<4>>);
+	static_assert(std::is_same_v<Influence::Grid<>, Influence::Grid<4>>);
+	static_assert(std::is_same_v<DefaultGenerationData, spk::Voxel::BiomeGenerationData<4>>);
+	static_assert(std::is_same_v<spk::Voxel::BiomeGenerator<Chunk>, spk::Voxel::BiomeGenerator<Chunk, 4>>);
+	static_assert(std::is_same_v<spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData>, spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, 4>>);
+	static_assert(std::is_same_v<spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData>, spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData, 4>>);
+	static_assert(std::is_same_v<spk::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData>, spk::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData, 4>>);
 
 	spk::Voxel::Definition::Registry registry()
 	{

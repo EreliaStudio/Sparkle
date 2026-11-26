@@ -9,7 +9,7 @@ namespace spk::Voxel
 {
 	// Ready-to-use voxel terrain pipeline. Derive to supply the placement strategy.
 	// Derived generators register additional passes, then Strata and Application, in their desired order.
-	template <typename TChunk, std::size_t TCapacity>
+	template <typename TChunk, std::size_t TCapacity = 4>
 	class BiomeGenerator : public World::Generator<TChunk, BiomeGenerationData<TCapacity>>
 	{
 	public:
