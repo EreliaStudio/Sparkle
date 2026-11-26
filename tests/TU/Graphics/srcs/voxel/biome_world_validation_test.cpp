@@ -4,14 +4,18 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <optional>
 #include <memory>
 #include <numeric>
 #include <set>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
@@ -633,6 +637,160 @@ namespace
 		return height;
 	}
 
+	// Independent ray traversal through the occupied unit cubes in the exact
+	// validation scene. No mesher, shadow projection, bias or GPU sampling.
+	// White: directly lit; black: occluded; gray: back-facing or background.
+	void captureCpuShadowReference(Scene &scene, const std::string &name)
+	{
+		using Point = std::array<double, 3>;
+		using Cell = std::array<int, 3>;
+		constexpr Cell minimum{-32, 0, -32};
+		constexpr Cell maximum{48, 48, 48};
+		constexpr int width = maximum[0] - minimum[0];
+		constexpr int height = maximum[1] - minimum[1];
+		constexpr int depth = maximum[2] - minimum[2];
+		std::vector<std::uint8_t> occupied(width * height * depth, 0);
+		const auto inside = [&](const Cell &p) {
+			return p[0] >= minimum[0] && p[0] < maximum[0] &&
+				   p[1] >= minimum[1] && p[1] < maximum[1] &&
+				   p[2] >= minimum[2] && p[2] < maximum[2];
+		};
+		const auto indexOf = [&](const Cell &p) {
+			return static_cast<std::size_t>((p[2] - minimum[2]) * width * height +
+											(p[1] - minimum[1]) * width + p[0] - minimum[0]);
+		};
+		for (const auto &[coordinate, entry] : scene.chunks)
+		{
+			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
+			for (std::uint32_t z = 0; z < 16; ++z)
+			{
+				for (std::uint32_t y = 0; y < 16; ++y)
+				{
+					for (std::uint32_t x = 0; x < 16; ++x)
+					{
+						const Cell p{static_cast<int>(origin.x) + static_cast<int>(x),
+									 static_cast<int>(origin.y) + static_cast<int>(y),
+									 static_cast<int>(origin.z) + static_cast<int>(z)};
+						ASSERT_TRUE(inside(p));
+						occupied[indexOf(p)] = entry.chunk().volume().atRaw({x, y, z}) != 0;
+					}
+				}
+			}
+		}
+
+		struct Hit
+		{
+			Point position;
+			Point normal;
+		};
+		const auto trace = [&](const Point &origin, const Point &direction) -> std::optional<Hit> {
+			Cell cell{};
+			Cell step{};
+			Point next{};
+			Point delta{};
+			Point normal{};
+			for (std::size_t axis = 0; axis < 3; ++axis)
+			{
+				cell[axis] = static_cast<int>(std::floor(origin[axis]));
+				step[axis] = direction[axis] >= 0.0 ? 1 : -1;
+				if (std::abs(direction[axis]) < 1.0e-12)
+				{
+					next[axis] = delta[axis] = std::numeric_limits<double>::infinity();
+				}
+				else
+				{
+					const double boundary = cell[axis] + (step[axis] > 0 ? 1.0 : 0.0);
+					next[axis] = (boundary - origin[axis]) / direction[axis];
+					delta[axis] = std::abs(1.0 / direction[axis]);
+				}
+			}
+			double distance = 0.0;
+			while (distance < 240.0)
+			{
+				if (inside(cell) && occupied[indexOf(cell)] != 0)
+				{
+					return Hit{{origin[0] + distance * direction[0],
+								origin[1] + distance * direction[1],
+								origin[2] + distance * direction[2]},
+							   normal};
+				}
+				bool cannotEnter = false;
+				for (std::size_t axis = 0; axis < 3; ++axis)
+				{
+					cannotEnter |= (cell[axis] < minimum[axis] && direction[axis] <= 0.0) ||
+								   (cell[axis] >= maximum[axis] && direction[axis] >= 0.0);
+				}
+				if (cannotEnter)
+				{
+					break;
+				}
+				const auto axis = static_cast<std::size_t>(std::min_element(next.begin(), next.end()) - next.begin());
+				distance = next[axis];
+				cell[axis] += step[axis];
+				next[axis] += delta[axis];
+				normal = {};
+				normal[axis] = -step[axis];
+			}
+			return std::nullopt;
+		};
+
+		const auto camera = scene.camera.captureCamera();
+		const auto inverseView = scene.camera.inverseViewMatrix();
+		const auto projection = camera.projectionMatrix();
+		const auto eye = camera.position();
+		const Point origin{eye.x, eye.y, eye.z};
+		const auto light = -scene.sun.worldDirection();
+		const Point lightDirection{light.x, light.y, light.z};
+		std::vector<std::uint8_t> rgba(terrain::ImageSize.x * terrain::ImageSize.y * 4, 255);
+		std::size_t litCount = 0;
+		std::size_t shadowCount = 0;
+		for (std::uint32_t y = 0; y < terrain::ImageSize.y; ++y)
+		{
+			for (std::uint32_t x = 0; x < terrain::ImageSize.x; ++x)
+			{
+				const float u = (2.0f * (x + 0.5f) / terrain::ImageSize.x - 1.0f) / projection[0][0];
+				const float v = (1.0f - 2.0f * (y + 0.5f) / terrain::ImageSize.y) / projection[1][1];
+				const auto world = inverseView * spk::Vector4{u, v, -1.0f, 0.0f};
+				const auto ray = spk::Vector3{world.x, world.y, world.z}.normalized();
+				const auto hit = trace(origin, {ray.x, ray.y, ray.z});
+				std::uint8_t shade = 127;
+				if (hit)
+				{
+					double cosine = 0.0;
+					Point start = hit->position;
+					for (std::size_t axis = 0; axis < 3; ++axis)
+					{
+						cosine += hit->normal[axis] * lightDirection[axis];
+						start[axis] += hit->normal[axis] * 0.0001;
+					}
+					if (cosine > 0.0)
+					{
+						const bool blocked = trace(start, lightDirection).has_value();
+						shade = blocked ? 0 : 255;
+						shadowCount += blocked ? 1u : 0u;
+						litCount += blocked ? 0u : 1u;
+					}
+				}
+				const std::size_t pixel = (static_cast<std::size_t>(y) * terrain::ImageSize.x + x) * 4;
+				rgba[pixel] = rgba[pixel + 1] = rgba[pixel + 2] = shade;
+			}
+		}
+		EXPECT_GT(litCount, 0u);
+		EXPECT_GT(shadowCount, 0u);
+		std::cout << "[CPU shadow reference] lit=" << litCount << " shadowed=" << shadowCount << '\n';
+		class ReferenceTexture final : public spk::Texture
+		{
+		public:
+			void save(const std::vector<std::uint8_t> &pixels, const std::filesystem::path &path)
+			{
+				setPixels(std::span<const std::uint8_t>(pixels), terrain::ImageSize, Format::RGBA);
+				validate();
+				saveAsPng(path);
+			}
+		};
+		ReferenceTexture{}.save(rgba, sparkle_test::resultImagePath("rendering/biome-world", name + "_cpu_reference"));
+	}
+
 	// Use the original close-up camera and a single sun. Vary only the
 	// projection extent and resolution first, then replay the same snapshot
 	// with different receiver biases using its immutable published depth map.
@@ -683,6 +841,22 @@ namespace
 				const auto pixels = scene.capture();
 				EXPECT_EQ(pixels.size, terrain::ImageSize);
 				save("_distance_" + std::to_string(static_cast<int>(distance)) + "_resolution_" + std::to_string(resolution));
+				const auto selected = scene.view.lightChannel().current();
+				ASSERT_NE(selected, nullptr);
+				ASSERT_EQ(selected->directional.size(), 1u);
+				const auto publishedMap = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+				ASSERT_NE(publishedMap, nullptr);
+				const auto &map = publishedMap->entries.at(selected->directional.front().registrationOrder);
+				const auto &matrix = map.viewProjection[0];
+				const auto rowLength = [&](std::size_t row) {
+					return std::sqrt(matrix[0][row] * matrix[0][row] +
+									 matrix[1][row] * matrix[1][row] +
+									 matrix[2][row] * matrix[2][row]);
+				};
+				std::cout << "[Shadow density] distance=" << distance << " resolution=" << resolution
+						  << " world_per_texel_x=" << 2.0f / (resolution * rowLength(0))
+						  << " world_per_texel_y=" << 2.0f / (resolution * rowLength(1))
+						  << " depth_range=" << map.farPlane - map.nearPlane << '\n';
 			}
 		}
 
@@ -862,6 +1036,7 @@ namespace
 		if (name == "shadow_diagnostic_grid_scale_four")
 		{
 			scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
+			captureCpuShadowReference(scene, name + "_close_sweep");
 			captureShadowParameterSweep(scene, name + "_close_sweep");
 		}
 	}
