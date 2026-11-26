@@ -39,6 +39,9 @@ namespace spk::World::Voxel
 
 		class CombinationPass : public CombinationBase
 		{
+		public:
+			using CombinationBase::CombinationBase;
+
 		protected:
 			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const Data &data) override
 			{

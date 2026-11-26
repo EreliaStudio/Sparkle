@@ -32,11 +32,11 @@
 #include "sparkle_test/open_gl_test_context.hpp"
 #include "sparkle_test/paths.hpp"
 #include "threading/worker_pool.hpp"
-#include "world/voxel/chunk_mesher.hpp"
-#include "world/voxel/chunk_rendering_system.hpp"
 #include "world/chunk_collection.hpp"
 #include "world/chunk_interest.hpp"
 #include "world/local_chunk_requester.hpp"
+#include "world/voxel/chunk_mesher.hpp"
+#include "world/voxel/chunk_rendering_system.hpp"
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 

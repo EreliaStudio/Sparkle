@@ -144,7 +144,7 @@ namespace
 			samples(_distributionPass.placement().samples)
 		{
 			bind(&registry());
-			addPass<CombinationPass>();
+			addPass<CombinationPass>(HeightCombination::Weighted);
 			addPass<StrataGeneration>();
 			addPass<Application>();
 		}

@@ -1,15 +1,16 @@
-#include "container/grid_2d.hpp"
-#include <utility>
-#include <cstdint>
 #include <gtest/gtest.h>
-#include <type_traits>
-#include <vector>
 
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <future>
 #include <limits>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include "container/grid_2d.hpp"
 
 #include "world/height_map.hpp"
 #include "world/pass/height_map_generation_pass.hpp"
@@ -55,7 +56,7 @@ namespace
 		}
 	};
 
-	class Distribution : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>
+	class DistributionPass : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>
 	{
 	private:
 		ConstantBiome _first{20};
@@ -66,7 +67,7 @@ namespace
 		};
 
 	public:
-		Distribution()
+		DistributionPass()
 		{
 			bind(&_influenceFunction);
 		}
@@ -82,10 +83,7 @@ namespace
 	class Combination : public CombinationBase
 	{
 	public:
-		explicit Combination(CombinationBase::Combination combination = CombinationBase::Combination::Weighted)
-		{
-			setCombination(combination);
-		}
+		using CombinationBase::CombinationBase;
 
 	protected:
 		const InfluenceGrid &_influenceGrid(const spk::Vector2Int &, const StandaloneData &data) override
@@ -102,10 +100,7 @@ namespace
 	class ColumnCombination : public ColumnCombinationBase
 	{
 	public:
-		explicit ColumnCombination(ColumnCombinationBase::Combination combination = ColumnCombinationBase::Combination::Weighted)
-		{
-			setCombination(combination);
-		}
+		using ColumnCombinationBase::ColumnCombinationBase;
 
 	protected:
 		const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
@@ -245,7 +240,7 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	data.bind(&registry);
 	const Coordinate lower{-1, 0, 2};
 	const Coordinate upper{-1, 1, 2};
-	Distribution distribution;
+	DistributionPass distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	std::atomic<int> calls{0};
 	const auto generate = [&](const Coordinate &coordinate) {
@@ -284,7 +279,7 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	GenerationData data;
 	data.bind(&registry);
 	const Coordinate coordinate{0, 0, 0};
-	Distribution distribution;
+	DistributionPass distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	data.prepareChunk(coordinate, {16, 16, 16});
 	EXPECT_FALSE(std::as_const(data).column(coordinate).heights);

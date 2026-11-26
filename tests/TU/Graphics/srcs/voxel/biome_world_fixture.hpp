@@ -126,7 +126,7 @@ namespace sparkle_test::biome_world
 		{
 			this->bind(&registry);
 			this->template addPass<PlacementPass>();
-			this->template addPass<typename Base::CombinationPass>();
+			this->template addPass<typename Base::CombinationPass>(Base::HeightCombination::Weighted);
 			if (edit)
 			{
 				this->template addPass<FlattenRoad>();

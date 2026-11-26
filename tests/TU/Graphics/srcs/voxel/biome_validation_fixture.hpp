@@ -326,7 +326,7 @@ namespace sparkle_test::biome_validation
 		{
 			this->bind(&registry);
 			this->template addPass<PlacementPass>(settings);
-			this->template addPass<typename Base::CombinationPass>();
+			this->template addPass<typename Base::CombinationPass>(Base::HeightCombination::Weighted);
 			if (settings.terrace)
 			{
 				this->template addPass<Terrace>();
