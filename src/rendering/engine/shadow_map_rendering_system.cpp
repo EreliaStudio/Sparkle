@@ -332,6 +332,9 @@ namespace spk::ShadowMap
 			std::array<CascadeCache, Projection::CascadeCount> cascades{};
 			bool cascaded = false;
 			Matrix4x4 cascadeCameraView{};
+			Matrix4x4 cascadeCameraProjection{};
+			Vector3 cascadeDirection{};
+			float cascadeDistance = 0.0f;
 			std::array<float, Projection::CascadeCount> cascadeSplits{};
 			std::uint32_t resolution = 0;
 			Matrix4x4 projection{};
@@ -485,6 +488,16 @@ namespace spk::ShadowMap
 			{
 				return;
 			}
+			const auto cameraView = _camera.viewMatrix();
+			const auto cameraProjection = _camera.projectionMatrix();
+			if (cache.cascaded && cache.resolution == light.shadowResolution &&
+				cache.publishedAdmission == light.admission && cache.cascadeCameraView == cameraView &&
+				cache.cascadeCameraProjection == cameraProjection && cache.cascadeDirection == light.direction &&
+				cache.cascadeDistance == light.shadowDistance && cache.staticSignature == _staticSignature &&
+				cache.dynamicSignature == _dynamicSignature)
+			{
+				return;
+			}
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds);
 			auto cascades = cache.cascades;
 			bool changed = !cache.cascaded || cache.resolution != light.shadowResolution;
@@ -550,18 +563,18 @@ namespace spk::ShadowMap
 			// Publish only if the maps or their selection metadata changed.
 			// Camera-space split selection still follows camera movement when
 			// stabilized maps are reusable.
-			const auto cameraView = _camera.viewMatrix();
-			if (!changed && cache.publishedAdmission == light.admission &&
-				cache.cascadeCameraView == cameraView && cache.cascadeSplits == splits)
-			{
-				return;
-			}
+			(void)changed;
 			cache.cascades = std::move(cascades);
 			cache.cascaded = true;
 			cache.point = false;
 			cache.resolution = light.shadowResolution;
 			cache.sourceCaptureOrdinal = _captureOrdinal;
 			cache.cascadeCameraView = cameraView;
+			cache.cascadeCameraProjection = cameraProjection;
+			cache.cascadeDirection = light.direction;
+			cache.cascadeDistance = light.shadowDistance;
+			cache.staticSignature = _staticSignature;
+			cache.dynamicSignature = _dynamicSignature;
 			cache.cascadeSplits = splits;
 			ShadowMap::Result::Entry entry;
 			entry.registrationOrder = light.registrationOrder;
@@ -869,6 +882,9 @@ namespace spk::ShadowMap
 		{
 			return;
 		}
+		const bool needsBounds = directionalCascadesEnabled() && std::any_of(lights.begin(), lights.end(), [](const auto &light) {
+			return light.type == Light::Selection::Type::Directional;
+		});
 		std::vector<Caster> staticCasters;
 		std::vector<Caster> dynamicCasters;
 		for (const ShadowMap::Contributor *contributor : Registry<ShadowMap::Contributor, EngineHeadless *>::instance().elements(engine()))
@@ -886,7 +902,7 @@ namespace spk::ShadowMap
 				if (!instance.mesh.empty())
 				{
 					const auto transform = base * instance.localTransform;
-					destination.push_back({instance.mesh, transform, worldBounds(instance.mesh, transform)});
+					destination.push_back({instance.mesh, transform, needsBounds ? worldBounds(instance.mesh, transform) : CasterBounds{}});
 				}
 			}
 		}

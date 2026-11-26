@@ -175,17 +175,16 @@ namespace spk::ShadowMap
 		const auto view = lightCamera.viewMatrix();
 
 		const auto projectBounds = [](const CasterBounds &box, const Matrix4x4 &matrix) {
-			CasterBounds result{{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()},
-								{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()}};
-			for (std::size_t i = 0; i < 8; ++i)
-			{
-				const auto p = matrix * Vector4{(i & 1) ? box.maximum.x : box.minimum.x,
-												(i & 2) ? box.maximum.y : box.minimum.y,
-												(i & 4) ? box.maximum.z : box.minimum.z, 1};
-				result.minimum = {std::min(result.minimum.x, p.x), std::min(result.minimum.y, p.y), std::min(result.minimum.z, p.z)};
-				result.maximum = {std::max(result.maximum.x, p.x), std::max(result.maximum.y, p.y), std::max(result.maximum.z, p.z)};
-			}
-			return result;
+			const auto center = (box.minimum + box.maximum) * Vector3{0.5f, 0.5f, 0.5f};
+			const auto extent = (box.maximum - box.minimum) * Vector3{0.5f, 0.5f, 0.5f};
+			const auto p = matrix * Vector4(center, 1.0f);
+			const auto radius = [&](std::size_t row) {
+				return std::abs(matrix[0][row]) * extent.x + std::abs(matrix[1][row]) * extent.y +
+					   std::abs(matrix[2][row]) * extent.z;
+			};
+			const Vector3 r{radius(0), radius(1), radius(2)};
+			const Vector3 c{p.x, p.y, p.z};
+			return CasterBounds{c - r, c + r};
 		};
 		std::vector<CasterBounds> lightBounds;
 		lightBounds.reserve(casters.size());
@@ -243,19 +242,21 @@ namespace spk::ShadowMap
 
 	bool Projection::intersects(const CasterBounds &bounds) const
 	{
-		std::array<bool, 6> outside{true, true, true, true, true, true};
-		for (std::size_t i = 0; i < 8; ++i)
+		// Conservative AABB vs. the orthographic directional clip volume.
+		const auto center = (bounds.minimum + bounds.maximum) * Vector3{0.5f, 0.5f, 0.5f};
+		const auto extent = (bounds.maximum - bounds.minimum) * Vector3{0.5f, 0.5f, 0.5f};
+		const auto p = viewProjection * Vector4(center, 1.0f);
+		const std::array<float, 3> coordinates{p.x, p.y, p.z};
+		for (std::size_t axis = 0; axis < coordinates.size(); ++axis)
 		{
-			const auto p = viewProjection * Vector4{(i & 1) ? bounds.maximum.x : bounds.minimum.x,
-													(i & 2) ? bounds.maximum.y : bounds.minimum.y,
-													(i & 4) ? bounds.maximum.z : bounds.minimum.z, 1};
-			outside[0] &= p.x < -p.w;
-			outside[1] &= p.x > p.w;
-			outside[2] &= p.y < -p.w;
-			outside[3] &= p.y > p.w;
-			outside[4] &= p.z < -p.w;
-			outside[5] &= p.z > p.w;
+			const float radius = std::abs(viewProjection[0][axis]) * extent.x +
+								 std::abs(viewProjection[1][axis]) * extent.y +
+								 std::abs(viewProjection[2][axis]) * extent.z;
+			if (coordinates[axis] - radius > p.w || coordinates[axis] + radius < -p.w)
+			{
+				return false;
+			}
 		}
-		return std::none_of(outside.begin(), outside.end(), [](bool value) { return value; });
+		return true;
 	}
 }
