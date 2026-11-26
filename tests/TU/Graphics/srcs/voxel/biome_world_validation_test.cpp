@@ -20,6 +20,9 @@
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/program.hpp"
+#include "graphics/opengl/state.hpp"
+#include "graphics/opengl/uniform_buffer.hpp"
 #include "light/directional.hpp"
 #include "rendering/command/draw_engine_view_command.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
@@ -739,6 +742,104 @@ namespace
 			EXPECT_EQ(applied.viewProjection, result.viewProjection);
 			save(variant.suffix);
 		}
+
+		// Independently rebuild the same depth map using the same shader,
+		// geometry, matrix, and raster state. Only the polygon offset or
+		// culling changes. Keep this experimentation entirely in the test.
+		spk::Program program(
+			"#version 460 core\n"
+			"layout(location = 0) in vec3 inPosition;\n"
+			"layout(std140, binding = 4) uniform ShadowCamera { mat4 uShadowViewProjection; };\n"
+			"layout(std140, binding = 5) uniform ShadowModel { mat4 uShadowModel; };\n"
+			"void main() { gl_Position = uShadowViewProjection * uShadowModel * vec4(inPosition, 1.0); }\n",
+			"#version 460 core\nvoid main() {}\n");
+		program.bindUniformBlock("ShadowCamera", 4);
+		program.bindUniformBlock("ShadowModel", 5);
+
+		struct RasterVariant
+		{
+			const char *suffix;
+			float factor;
+			float units;
+			bool cull;
+		};
+		const std::array<RasterVariant, 6> rasterVariants{{
+			{"_raster_original", 1.5f, 2.0f, true},
+			{"_raster_offset_zero", 0.0f, 0.0f, true},
+			{"_raster_offset_quarter", 0.375f, 0.5f, true},
+			{"_raster_offset_double", 3.0f, 4.0f, true},
+			{"_raster_no_culling", 1.5f, 2.0f, false},
+			{"_raster_no_culling_no_offset", 0.0f, 0.0f, false}}};
+
+		for (const auto &variant : rasterVariants)
+		{
+			spk::Framebuffer depthTarget(
+				{result.resolution, result.resolution}, {}, spk::Texture::Format::Depth32F);
+			auto &context = gl.renderContext();
+			{
+				spk::OpenGL::State::Scope scope(context);
+				depthTarget.activate(context);
+				const auto size = depthTarget.size();
+				spk::OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply(context);
+				spk::OpenGL::State::Scissor{.enabled = false}.apply(context);
+				spk::OpenGL::State::ColorOutput::writable(context, false).apply(context);
+				spk::OpenGL::State::DepthTest{}.apply(context);
+				spk::OpenGL::State::Blend::disabled(context).apply(context);
+				auto raster = spk::OpenGL::State::Rasterization{};
+				raster.cullEnabled = variant.cull;
+				raster.polygonOffsetEnabled = variant.factor != 0.0f || variant.units != 0.0f;
+				raster.polygonOffsetFactor = variant.factor;
+				raster.polygonOffsetUnits = variant.units;
+				raster.apply(context);
+				spk::OpenGL::State::Clear::depth(context);
+				spk::UniformBuffer cameraBuffer(4, sizeof(spk::Matrix4x4));
+				cameraBuffer.setData(result.viewProjection[0]);
+				cameraBuffer.validate();
+				cameraBuffer.activate(context);
+				program.activate(context);
+				for (auto &[coordinate, entry] : scene.chunks)
+				{
+					(void)coordinate;
+					const auto *caster = entry.entity().getComponent<spk::ShadowMap::Contributor>();
+					const auto base = entry.entity().transform().modelMatrix() * caster->meshFilter().baseTransform();
+					for (const auto &instance : caster->meshFilter().instances())
+					{
+						if (instance.mesh.empty())
+						{
+							continue;
+						}
+						spk::UniformBuffer modelBuffer(5, sizeof(spk::Matrix4x4));
+						modelBuffer.setData(base * instance.localTransform);
+						modelBuffer.validate();
+						modelBuffer.activate(context);
+						instance.mesh.layout().activate(context);
+						program.render(spk::Program::Primitive::Triangles, instance.mesh.indexType(), 0, instance.mesh.indexCount());
+					}
+				}
+			}
+			gl.requireNoErrors();
+			result.depthTexture = *depthTarget.depthStencilAttachmentHandle();
+			result.depthBias = originalDepthBias;
+			result.normalBias = originalNormalBias;
+			++result.generation;
+			ASSERT_TRUE(channel.publishShadowResult(gl.surface(), result));
+			snapshot->execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(context);
+			spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(context);
+			gl.requireNoErrors();
+			save(variant.suffix);
+		}
+
+		// Validate the diagnostic renderer itself against production.
+		const auto category = "rendering/biome-world";
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		const auto difference = sparkle_test::compareImages(
+			sparkle_test::resultImagePath(category, name + "_raster_original"),
+			sparkle_test::resultImagePath(category, name + "_bias_original"),
+			sparkle_test::resultImagePath(category, name + "_raster_control_difference"),
+			tolerance);
+		EXPECT_TRUE(difference.matches) << "Diagnostic rasterization must reproduce the production depth map";
 	}
 
 	void captureCloseShadowDiagnostics(Scene &scene, const std::string &name)
