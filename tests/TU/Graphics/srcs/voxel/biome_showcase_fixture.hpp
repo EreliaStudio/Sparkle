@@ -54,7 +54,7 @@ namespace sparkle_test::biome_showcase
 		float opacity = 1.0f;
 	};
 
-	inline constexpr std::array<Tile, 13> Tiles{{{"grass", {104, 165, 71}}, {"soil", {126, 90, 61}}, {"rock", {132, 139, 143}}, {"sand", {222, 190, 130}}, {"terracotta", {191, 106, 66}}, {"red_rock", {145, 65, 49}}, {"ochre", {226, 158, 84}}, {"chalk", {231, 226, 206}}, {"water", {42, 137, 195}, 0.48f}, {"concrete", {147, 153, 164}}, {"glass", {83, 132, 160}}, {"basalt", {67, 64, 67}}, {"snow", {240, 244, 248}}}};
+	inline constexpr std::array<Tile, 13> Tiles{{{"grass", {104, 165, 71}}, {"soil", {126, 90, 61}}, {"rock", {132, 139, 143}}, {"sand", {222, 190, 130}}, {"terracotta", {191, 106, 66}}, {"red_rock", {145, 65, 49}}, {"ochre", {226, 158, 84}}, {"chalk", {231, 226, 206}}, {"water", {19, 89, 163}, 0.72f}, {"concrete", {147, 153, 164}}, {"glass", {83, 132, 160}}, {"basalt", {67, 64, 67}}, {"snow", {240, 244, 248}}}};
 
 	inline terrain::Registry registry()
 	{
@@ -143,12 +143,12 @@ namespace sparkle_test::biome_showcase
 						const auto &direction = directions[face];
 						const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
 						const float altitude = direction.y / length;
-						const float elevation = smooth(std::max(0.0f, altitude));
+						const float elevation = std::sqrt(std::max(0.0f, altitude));
 						const float below = smooth(std::max(0.0f, -altitude));
 						const float cloudField = std::sin(13.0f * direction.x / length + 3.0f * std::sin(11.0f * direction.z / length)) + 0.55f * std::sin(21.0f * direction.z / length - 6.0f * altitude);
 						const float cloud = 0.55f * smooth((cloudField - 0.7f) / 0.65f) * smooth(altitude * 5.0f) * (1.0f - smooth((altitude - 0.65f) / 0.35f));
-						const std::array<float, 3> horizon{201.0f, 225.0f, 242.0f};
-						const std::array<float, 3> zenith{65.0f, 137.0f, 217.0f};
+						const std::array<float, 3> horizon{185.0f, 217.0f, 246.0f};
+						const std::array<float, 3> zenith{34.0f, 105.0f, 210.0f};
 						const std::array<float, 3> nadir{150.0f, 174.0f, 191.0f};
 						const auto index = (y * Width + face * FaceSize + x) * 4;
 						for (std::size_t channel = 0; channel < horizon.size(); ++channel)
@@ -177,7 +177,7 @@ namespace sparkle_test::biome_showcase
 
 	inline float shore(const spk::Vector2 &p)
 	{
-		return p.x - 3.0f * std::sin(p.y * 0.09f);
+		return p.x - 5.0f * std::sin(p.y * 0.07f) - 2.0f * std::sin(p.y * 0.19f + 0.7f);
 	}
 
 	inline float canyonCenter(float z)
@@ -191,6 +191,59 @@ namespace sparkle_test::biome_showcase
 		Landscape _type;
 		spk::Perlin _broad{1103};
 		spk::Perlin _detail{2909};
+
+		struct VolcanicBasin
+		{
+			spk::Vector2 center;
+			spk::Vector2 radius;
+			float depth;
+		};
+
+		// World-space relief: overlapping volcanic ridges and asymmetric foothills.
+		float _volcanicMassif(const spk::Vector2 &p) const
+		{
+			const float broad = static_cast<float>(_broad.sample2D(p.x, p.y, -1.0f, 1.0f));
+			const float detail = static_cast<float>(_detail.sample2D(p.x, p.y, -1.0f, 1.0f));
+			const float u = p.x + 6.0f * broad;
+			const float v = p.y + 4.0f * detail;
+			const auto ridge = [u, v](float x, float z, float radiusX, float radiusZ, float angle, float height) {
+				const float dx = u - x;
+				const float dz = v - z;
+				const float along = (dx * std::cos(angle) + dz * std::sin(angle)) / radiusX;
+				const float across = (-dx * std::sin(angle) + dz * std::cos(angle)) / radiusZ;
+				return height * (1.0f - smooth(std::sqrt(along * along + across * across)));
+			};
+			const float main = ridge(-14, -8, 43, 30, 0.38f, 39);
+			const float east = ridge(21, 14, 34, 25, -0.62f, 26);
+			const float north = ridge(-26, 24, 27, 20, 0.9f, 18);
+			const float spur = ridge(12, -31, 33, 16, -0.8f, 13);
+			return 5.0f + main + east + north + spur + 3.0f * broad + 1.6f * detail;
+		}
+
+		float _volcanicHeight(const spk::Vector2 &p, float broad, float detail) const
+		{
+			// Shallow, closed basins at different elevations; no liquid voxels.
+			static constexpr std::array<VolcanicBasin, 3> basins{{
+				{{-14, -8}, {9, 7}, 5.0f},
+				{{21, 14}, {7, 5}, 3.5f},
+				{{-26, 24}, {6, 5}, 3.0f}}};
+			float height = _volcanicMassif(p);
+			for (const auto &basin : basins)
+			{
+				const float dx = (p.x - basin.center.x) / basin.radius.x;
+				const float dz = (p.y - basin.center.y) / basin.radius.y;
+				const float distance = std::sqrt(dx * dx + dz * dz) * (1.0f + 0.08f * broad + 0.06f * detail);
+				if (distance >= 1.35f)
+				{
+					continue;
+				}
+				const float rim = _volcanicMassif(basin.center) + 0.8f;
+				const float bowl = rim - basin.depth * (1.0f - smooth((distance - 0.28f) / 0.6f));
+				const float blend = 1.0f - smooth((distance - 0.9f) / 0.45f);
+				height += (bowl - height) * blend;
+			}
+			return std::clamp(height, 2.0f, 59.0f);
+		}
 
 		void _layer(std::uint32_t id, std::uint32_t thickness)
 		{
@@ -299,7 +352,13 @@ namespace sparkle_test::biome_showcase
 			case Landscape::Sea:
 				return -5.0f + 4.0f * smooth((shore(p) + 16.0f) / 16.0f) + broad;
 			case Landscape::Cliffs:
-				return 2.0f + 32.0f * smooth((shore(p) - 4.0f) / 3.0f) + 1.5f * broad;
+			{
+				const float inland = shore(p) + 2.0f * broad;
+				const float ledge = 9.0f + 3.0f * std::sin(p.y * 0.12f);
+				const float foot = smooth((inland - 2.0f) / 5.0f);
+				const float face = smooth((inland - ledge) / (4.0f + 2.0f * broad));
+				return 2.0f + 8.0f * foot + 23.0f * face + 2.0f * broad + 0.8f * detail;
+			}
 			case Landscape::City:
 			{
 				const float cx = std::floor((p.x + 9.0f) / 18.0f);
@@ -311,12 +370,12 @@ namespace sparkle_test::biome_showcase
 			}
 			case Landscape::Dunes:
 				return 9.0f + 6.0f * std::sin(p.x * 0.22f + 1.4f * std::sin(p.y * 0.06f)) + 2.0f * broad;
-			default:
-			{
-				const float distance = std::sqrt(p.x * p.x + p.y * p.y);
-				return 3.0f + 47.0f * (1.0f - smooth(distance / 39.0f)) - 25.0f * (1.0f - smooth(distance / 9.0f)) + 2.0f * broad;
+			case Landscape::Volcano:
+				return _volcanicHeight(p, broad, detail);
+			case Landscape::Coast:
+				break;
 			}
-			}
+			return 0.0f; // Coast is composed from Sea and Cliffs by the distribution pass.
 		}
 	};
 
