@@ -1,14 +1,13 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 
 #include "world/pass/surface_pass.hpp"
 #include "world/surface_biome.hpp"
 
 namespace spk::World
 {
-	template <typename TChunk, typename TGenerationData, std::size_t TCapacity = 4>
+	template <typename TChunk, typename TGenerationData, typename TDistributionData, std::size_t TCapacity = 4>
 	class SurfaceBiomeDistributionPass : public SurfacePass<TChunk, TGenerationData>
 	{
 	public:
@@ -16,21 +15,10 @@ namespace spk::World
 		using Cell = typename Grid::Cell;
 		using Configuration = typename Grid::Configuration;
 
-	protected:
-		// The factory resolves biome references once per column; both callables must support concurrent generation.
-		using Distribution = std::function<void(const spk::Vector2 &, Cell &)>;
-		using DistributionFactory = std::function<Distribution(const Biome::Registry &)>;
-
 	private:
-		const DistributionFactory *_distributionFactory = nullptr;
 		Configuration _configuration{{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, 1.0f};
 
 	protected:
-		void bind(const DistributionFactory *factory) noexcept
-		{
-			_distributionFactory = factory;
-		}
-
 		// Configure in the concrete pass before submitting generation work.
 		void setScale(float scale)
 		{
@@ -40,25 +28,21 @@ namespace spk::World
 			_configuration = configuration;
 		}
 
+		// Prepare local state once per column. Both hooks must support concurrent calls.
+		[[nodiscard]] virtual TDistributionData _prepareDistribution(const Biome::Registry &registry) const = 0;
+		virtual void _distribute(const spk::Vector2 &position, const TDistributionData &distributionData, Cell &cell) const = 0;
+
 		virtual const Biome::Registry *_biomeRegistry(const TGenerationData &data) const = 0;
 		virtual void _storeInfluenceGrid(const spk::Vector2Int &coordinate, TGenerationData &data, typename Grid::Lease grid) = 0;
 
 		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
-			if (_distributionFactory == nullptr || !*_distributionFactory)
-			{
-				throw spk::Exception("Biome distribution pass has no configured influence function");
-			}
 			const auto *registry = _biomeRegistry(data);
 			if (registry == nullptr)
 			{
 				throw spk::Exception("Biome distribution pass has no bound biome registry");
 			}
-			const auto distribution = (*_distributionFactory)(*registry);
-			if (!distribution)
-			{
-				throw spk::Exception("Biome distribution factory returned no influence function");
-			}
+			const auto distributionData = _prepareDistribution(*registry);
 			const auto &config = _configuration;
 			const spk::Vector2 origin{static_cast<float>(static_cast<double>(coordinate.x) * config.size.x), static_cast<float>(static_cast<double>(coordinate.y) * config.size.y)};
 			auto grid = Grid::obtain(config, origin);
@@ -68,7 +52,7 @@ namespace spk::World
 				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
 					auto &cell = grid->sample({x, z});
-					distribution(origin + grid->localPosition({x, z}), cell);
+					_distribute(origin + grid->localPosition({x, z}), distributionData, cell);
 					cell.normalize();
 				}
 			}

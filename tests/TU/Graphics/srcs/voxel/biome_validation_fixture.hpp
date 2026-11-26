@@ -280,11 +280,21 @@ namespace sparkle_test::biome_validation
 		using Data = typename Base::Data;
 		using Cell = typename Base::Cell;
 
-		class PlacementPass final : public Base::DistributionPass
+		struct DistributionData
+		{
+			const spk::World::SurfaceBiome *first;
+			const spk::World::SurfaceBiome *second;
+			const spk::World::SurfaceBiome *third;
+		};
+
+		class PlacementPass final : public Base::template DistributionPass<DistributionData>
 		{
 		private:
 			PlacementModel<TPlacement> _placement;
-			typename Base::DistributionPass::DistributionFactory _factory = [this](const spk::World::Biome::Registry &registry) -> typename Base::DistributionPass::Distribution {
+
+		protected:
+			DistributionData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+			{
 				const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
 				const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
 				const auto *third = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("third"));
@@ -292,16 +302,18 @@ namespace sparkle_test::biome_validation
 				{
 					throw spk::Exception("Missing surface biome");
 				}
-				return [this, first, second, third](const spk::Vector2 &position, Cell &cell) {
-					_placement.compute(position, cell, first, second, third);
-				};
-			};
+				return {first, second, third};
+			}
+
+			void _distribute(const spk::Vector2 &position, const DistributionData &data, Cell &cell) const override
+			{
+				_placement.compute(position, cell, data.first, data.second, data.third);
+			}
 
 		public:
 			explicit PlacementPass(Settings settings)
 			{
 				this->setScale(settings.scale);
-				this->bind(&_factory);
 			}
 		};
 

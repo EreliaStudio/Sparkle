@@ -30,7 +30,7 @@ namespace
 	static_assert(std::is_same_v<decltype(std::declval<DefaultGenerationData &>().column(spk::Vector2Int{})), DefaultGenerationData::Column &>);
 	static_assert(std::is_same_v<decltype(std::declval<DefaultGenerationData &>().chunk(spk::World::ChunkCoordinate{})), DefaultGenerationData::Chunk &>);
 	static_assert(std::is_same_v<spk::World::Voxel::Biome::Generator<Chunk>, spk::World::Voxel::Biome::Generator<Chunk, 4>>);
-	static_assert(std::is_same_v<spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData>, spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, 4>>);
+	static_assert(std::is_same_v<spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, int>, spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, int, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData>, spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData, 4>>);
 	static_assert(std::is_same_v<spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData>, spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData, 4>>);
 
@@ -79,31 +79,38 @@ namespace
 		}
 	};
 
+	using SingleBiomeData = const spk::World::SurfaceBiome *;
+
 	class Generator : public spk::World::Voxel::Biome::Generator<Chunk, 1>
 	{
 	private:
-		class SingleBiomeDistributionPass final : public DistributionPass
+		class SingleBiomeDistributionPass final : public DistributionPass<SingleBiomeData>
 		{
-		private:
-			DistributionFactory _factory = [this](const spk::World::Biome::Registry &registry) -> Distribution {
+		protected:
+			SingleBiomeData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+			{
+				++preparations;
 				const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("terrain"));
 				if (biome == nullptr)
 				{
 					throw spk::Exception("Missing surface biome");
 				}
-				return [this, biome](const spk::Vector2 &, Cell &cell) {
-					++samples;
-					cell[0] = {biome, 1};
-				};
-			};
+				return biome;
+			}
+
+			void _distribute(const spk::Vector2 &, const SingleBiomeData &biome, Cell &cell) const override
+			{
+				++samples;
+				cell[0] = {biome, 1};
+			}
 
 		public:
-			std::atomic<int> samples{0};
+			mutable std::atomic<int> samples{0};
+			mutable std::atomic<int> preparations{0};
 
 			explicit SingleBiomeDistributionPass(float scale)
 			{
 				setScale(scale);
-				bind(&_factory);
 			}
 		};
 
@@ -121,6 +128,7 @@ namespace
 
 	public:
 		std::atomic<int> &samples;
+		std::atomic<int> &preparations;
 
 		[[nodiscard]] std::size_t activeChunkCount() const
 		{
@@ -134,7 +142,8 @@ namespace
 
 		explicit Generator(float scale = 1.0f, Biome::StratumContainer layers = Biome().strata()) :
 			_distributionPass(addPass<SingleBiomeDistributionPass>(scale)),
-			samples(_distributionPass.samples)
+			samples(_distributionPass.samples),
+			preparations(_distributionPass.preparations)
 		{
 			_biomes.add<Biome>("terrain", std::move(layers));
 			bind(&_biomes);
@@ -162,24 +171,22 @@ namespace
 	class AlternateGenerator final : public spk::World::Voxel::Biome::Generator<Chunk, 1>
 	{
 	private:
-		class AlternateDistributionPass final : public DistributionPass
+		class AlternateDistributionPass final : public DistributionPass<SingleBiomeData>
 		{
-		private:
-			DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+		protected:
+			SingleBiomeData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+			{
 				const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("terrain"));
 				if (biome == nullptr)
 				{
 					throw spk::Exception("Missing surface biome");
 				}
-				return [biome](const spk::Vector2 &, Cell &cell) {
-					cell[0] = {biome, 1.0f};
-				};
-			};
+				return biome;
+			}
 
-		public:
-			AlternateDistributionPass()
+			void _distribute(const spk::Vector2 &, const SingleBiomeData &biome, Cell &cell) const override
 			{
-				bind(&_factory);
+				cell[0] = {biome, 1.0f};
 			}
 		};
 
@@ -200,26 +207,30 @@ namespace
 	class MixedGenerator final : public spk::World::Voxel::Biome::Generator<Chunk, 2>
 	{
 	private:
-		class MixedDistributionPass final : public DistributionPass
+		struct DistributionData
 		{
-		private:
-			DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+			const spk::World::SurfaceBiome *first;
+			const spk::World::SurfaceBiome *second;
+		};
+
+		class MixedDistributionPass final : public DistributionPass<DistributionData>
+		{
+		protected:
+			DistributionData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+			{
 				const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
 				const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
 				if (first == nullptr || second == nullptr)
 				{
 					throw spk::Exception("Missing surface biome");
 				}
-				return [first, second](const spk::Vector2 &, Cell &cell) {
-					cell[0] = {first, 0.8f};
-					cell[1] = {second, 0.2f};
-				};
-			};
+				return {first, second};
+			}
 
-		public:
-			MixedDistributionPass()
+			void _distribute(const spk::Vector2 &, const DistributionData &data, Cell &cell) const override
 			{
-				bind(&_factory);
+				cell[0] = {data.first, 0.8f};
+				cell[1] = {data.second, 0.2f};
 			}
 		};
 
@@ -303,6 +314,29 @@ TEST(VoxelBiomeGeneratorTest, StrataApplicationSupportsIndependentGenerationData
 	EXPECT_EQ(idAt(chunk, 0, 1, 0), 1u);
 	EXPECT_EQ(idAt(chunk, 0, 2, 0), 4u);
 	EXPECT_EQ(idAt(chunk, 0, 3, 0), 0u);
+}
+
+TEST(VoxelBiomeGeneratorTest, DistributionPreparationIsLocalToEachUncachedColumn)
+{
+	Generator generator;
+	ASSERT_TRUE(generator.generate({0, 0, 0}));
+	EXPECT_EQ(generator.preparations.load(), 1);
+	EXPECT_EQ(generator.samples.load(), 289);
+	ASSERT_TRUE(generator.generate({0, 1, 0}));
+	EXPECT_EQ(generator.preparations.load(), 1);
+	auto first = std::async(std::launch::async, [&] {
+		return generator.generate({1, 0, 0});
+	});
+	auto second = std::async(std::launch::async, [&] {
+		return generator.generate({-1, 0, 0});
+	});
+	ASSERT_TRUE(first.get());
+	ASSERT_TRUE(second.get());
+	EXPECT_EQ(generator.preparations.load(), 3);
+	EXPECT_EQ(generator.samples.load(), 867);
+	generator.flush();
+	ASSERT_TRUE(generator.generate({0, 0, 0}));
+	EXPECT_EQ(generator.preparations.load(), 4);
 }
 
 TEST(VoxelBiomeGeneratorTest, PlacementIsConfiguredByConcreteRecipe)

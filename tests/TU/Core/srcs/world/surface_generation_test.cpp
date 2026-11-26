@@ -60,35 +60,41 @@ namespace
 		}
 	};
 
-	class DistributionPass : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, 2>
+	struct DistributionData
+	{
+		const spk::World::SurfaceBiome *first;
+		const spk::World::SurfaceBiome *second;
+	};
+
+	class DistributionPass : public spk::World::SurfaceBiomeDistributionPass<Chunk, GenerationData, DistributionData, 2>
 	{
 	private:
 		std::atomic<int> _calls{0};
-		DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
-			const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
-			const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
-			if (first == nullptr || second == nullptr)
-			{
-				throw spk::Exception("Missing surface biome");
-			}
-			return [first, second](const spk::Vector2 &, Cell &cell) {
-				cell[0] = {first, 3.0f};
-				cell[1] = {second, 1.0f};
-			};
-		};
 
 	public:
-		DistributionPass()
-		{
-			bind(&_factory);
-		}
-
 		[[nodiscard]] int calls() const
 		{
 			return _calls.load();
 		}
 
 	protected:
+		DistributionData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+		{
+			const auto *first = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("first"));
+			const auto *second = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("second"));
+			if (first == nullptr || second == nullptr)
+			{
+				throw spk::Exception("Missing surface biome");
+			}
+			return {first, second};
+		}
+
+		void _distribute(const spk::Vector2 &, const DistributionData &data, Cell &cell) const override
+		{
+			cell[0] = {data.first, 3.0f};
+			cell[1] = {data.second, 1.0f};
+		}
+
 		const spk::World::Biome::Registry *_biomeRegistry(const GenerationData &data) const override
 		{
 			return data.world().biomeRegistry;

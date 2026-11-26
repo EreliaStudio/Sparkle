@@ -23,13 +23,15 @@ namespace spk::World::Voxel
 		using BiomeSelection = typename Strata::GenerationPass<TChunk, Data, TCapacity>::Selection;
 
 	protected:
-		using DistributionBase = spk::World::SurfaceBiomeDistributionPass<TChunk, Data, TCapacity>;
+		template <typename TDistributionData>
+		using DistributionBase = spk::World::SurfaceBiomeDistributionPass<TChunk, Data, TDistributionData, TCapacity>;
 		using CombinationBase = spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>;
 		using StrataBase = Strata::GenerationPass<TChunk, Data, TCapacity>;
 		using ApplicationBase = Strata::ApplicationPass<TChunk, Data>;
 
-		// Concrete recipes derive from this storage adapter and bind their own callable.
-		class DistributionPass : public DistributionBase
+		// Concrete recipes implement the distribution hooks; this adapter handles storage.
+		template <typename TDistributionData>
+		class DistributionPass : public DistributionBase<TDistributionData>
 		{
 		protected:
 			const spk::World::Biome::Registry *_biomeRegistry(const Data &data) const override

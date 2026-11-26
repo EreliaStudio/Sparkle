@@ -204,24 +204,24 @@ namespace sparkle_test::voxel_world
 			}
 		};
 
-		class TerrainDistribution final : public DistributionPass
+		using DistributionData = const spk::World::SurfaceBiome *;
+
+		class TerrainDistribution final : public DistributionPass<DistributionData>
 		{
-		private:
-			DistributionFactory _factory = [](const spk::World::Biome::Registry &registry) -> Distribution {
+		protected:
+			DistributionData _prepareDistribution(const spk::World::Biome::Registry &registry) const override
+			{
 				const auto *biome = dynamic_cast<const spk::World::SurfaceBiome *>(registry.get("terrain"));
 				if (biome == nullptr)
 				{
 					throw spk::Exception("Missing surface biome");
 				}
-				return [biome](const spk::Vector2 &, Cell &cell) {
-					cell[0] = {biome, 1.0f};
-				};
-			};
+				return biome;
+			}
 
-		public:
-			TerrainDistribution()
+			void _distribute(const spk::Vector2 &, const DistributionData &biome, Cell &cell) const override
 			{
-				bind(&_factory);
+				cell[0] = {biome, 1.0f};
 			}
 		};
 
