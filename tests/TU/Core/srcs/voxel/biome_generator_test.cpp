@@ -73,10 +73,23 @@ namespace
 		}
 	};
 
+	class SingleBiomeDistribution : public spk::World::SurfaceBiome::Influence::Distribution<1>
+	{
+	public:
+		Biome biome;
+		mutable std::atomic<int> samples{0};
+
+		void compute(const spk::Vector2 &, Cell &cell) const override
+		{
+			++samples;
+			cell[0] = {&biome, 1};
+		}
+	};
+
 	class Generator : public spk::World::Voxel::Biome::Generator<Chunk, 1>
 	{
 	private:
-		Biome _biome;
+		SingleBiomeDistribution _distribution;
 		std::atomic<const Data *> _observedData{nullptr};
 
 	protected:
@@ -87,14 +100,8 @@ namespace
 			return prepared;
 		}
 
-		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) const override
-		{
-			++samples;
-			cell[0] = {&_biome, 1};
-		}
-
 	public:
-		mutable std::atomic<int> samples{0};
+		std::atomic<int> &samples = _distribution.samples;
 
 		[[nodiscard]] std::size_t activeChunkCount() const
 		{
@@ -108,13 +115,14 @@ namespace
 
 		Biome &biome()
 		{
-			return _biome;
+			return _distribution.biome;
 		}
 
 		explicit Generator(float scale = 1.0f)
 		{
 			_setSurfaceScale(scale);
 			bind(&registry());
+			bindDistribution(&_distribution);
 		}
 	};
 
@@ -122,6 +130,23 @@ namespace
 	{
 		return spk::Voxel::Volume::PackedCell::definitionId(chunk.volume().atRaw({x, y, z}));
 	}
+}
+
+TEST(VoxelBiomeGeneratorTest, ConcreteGeneratorUsesBoundDistribution)
+{
+	SingleBiomeDistribution distribution;
+	spk::World::Voxel::Biome::Generator<Chunk, 1> generator;
+	generator.bind(&registry());
+	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
+	generator.bindDistribution(&distribution);
+	const auto first = generator.generate({0, 0, 0});
+	ASSERT_TRUE(first);
+	EXPECT_EQ(distribution.samples.load(), 289);
+	generator.bindDistribution(nullptr);
+	EXPECT_THROW((void)generator.generate({0, 1, 0}), spk::Exception);
+	generator.bindDistribution(&distribution);
+	ASSERT_TRUE(generator.generate({0, 1, 0}));
+	EXPECT_EQ(distribution.samples.load(), 578);
 }
 
 TEST(VoxelBiomeGeneratorTest, RegistryBindingIsRequiredAndCanBeDetached)
@@ -713,18 +738,13 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 	class EditedGenerator : public spk::World::Voxel::Biome::Generator<Chunk, 1>
 	{
 	private:
-		Biome _biome;
-
-	protected:
-		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) const override
-		{
-			cell[0] = {&_biome, 1};
-		}
+		SingleBiomeDistribution _distribution;
 
 	public:
 		EditedGenerator()
 		{
 			bind(&registry());
+			bindDistribution(&_distribution);
 			insertPass<RaiseSurface>(2);
 		}
 	};

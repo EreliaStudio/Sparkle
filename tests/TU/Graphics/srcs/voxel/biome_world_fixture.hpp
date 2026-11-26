@@ -44,7 +44,7 @@ namespace sparkle_test::biome_world
 		}
 	};
 
-	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
+	class PlacementDistribution final : public spk::World::SurfaceBiome::Influence::Distribution<3>
 	{
 	private:
 		Biome _plains{7.0f, 2.0f, 1, 11};
@@ -52,6 +52,37 @@ namespace sparkle_test::biome_world
 		Biome _mountain{24.0f, 6.0f, 3, 47};
 		spk::Perlin _boundary{123};
 		bool _hard;
+
+	public:
+		void compute(const spk::Vector2 &position, Cell &cell) const override
+		{
+			const float shift = _boundary.sample2D(position.x, position.y, -8.0f, 8.0f);
+			const float x = position.x + shift;
+			const float z = position.y + shift * 0.5f;
+			if (_hard)
+			{
+				const spk::World::SurfaceBiome *biome = x < -8.0f ? &_desert : (z > 3.0f ? &_mountain : &_plains);
+				cell[0] = {biome, 1.0f};
+				return;
+			}
+			const float desert = std::clamp((-x + 1.0f) / 18.0f, 0.0f, 1.0f);
+			const float mountain = std::clamp((z + 5.0f) / 20.0f, 0.0f, 1.0f);
+			cell[0] = {&_desert, desert};
+			cell[1] = {&_mountain, (1.0f - desert) * mountain};
+			cell[2] = {&_plains, (1.0f - desert) * (1.0f - mountain)};
+		}
+
+		explicit PlacementDistribution(bool hard) :
+			_hard(hard)
+		{
+			_boundary.setFrequency(0.055f);
+		}
+	};
+
+	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
+	{
+	private:
+		PlacementDistribution _distribution;
 
 		class FlattenRoad : public spk::World::SurfacePass<perlin_world::Chunk, Data>
 		{
@@ -73,32 +104,12 @@ namespace sparkle_test::biome_world
 			}
 		};
 
-	protected:
-		void _computeBiomePlacement(const spk::Vector2 &position, Cell &cell) const override
-		{
-			const float shift = _boundary.sample2D(position.x, position.y, -8.0f, 8.0f);
-			const float x = position.x + shift;
-			const float z = position.y + shift * 0.5f;
-			if (_hard)
-			{
-				const spk::World::SurfaceBiome *biome = x < -8.0f ? &_desert : (z > 3.0f ? &_mountain : &_plains);
-				cell[0] = {biome, 1.0f};
-				return;
-			}
-			const float desert = std::clamp((-x + 1.0f) / 18.0f, 0.0f, 1.0f);
-			const float mountain = std::clamp((z + 5.0f) / 20.0f, 0.0f, 1.0f);
-			cell[0] = {&_desert, desert};
-			cell[1] = {&_mountain, (1.0f - desert) * mountain};
-			cell[2] = {&_plains, (1.0f - desert) * (1.0f - mountain)};
-		}
-
 	public:
 		Generator(const perlin_world::Registry &registry, bool hard, bool edit) :
-
-			_hard(hard)
+			_distribution(hard)
 		{
 			bind(&registry);
-			_boundary.setFrequency(0.055f);
+			bindDistribution(&_distribution);
 			if (edit)
 			{
 				insertPass<FlattenRoad>(2);

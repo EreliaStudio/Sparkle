@@ -224,7 +224,7 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
-	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
+	class PlacementDistribution final : public spk::World::SurfaceBiome::Influence::Distribution<3>
 	{
 	private:
 		Settings _settings;
@@ -233,26 +233,8 @@ namespace sparkle_test::biome_validation
 		Biome _third;
 		spk::Perlin _regions{913};
 
-		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, Data>
-		{
-		public:
-			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
-			{
-				auto &column = data.column(coordinate);
-				auto &grid = *column.heights;
-				const auto layout = grid.sampleSize();
-				for (std::uint32_t z = 0; z < layout.y; ++z)
-				{
-					for (std::uint32_t x = 0; x < layout.x; ++x)
-					{
-						grid.sample({x, z}) = 4.0f * std::floor(grid.sample({x, z}) / 4.0f);
-					}
-				}
-			}
-		};
-
-	protected:
-		void _computeBiomePlacement(const spk::Vector2 &p, Cell &cell) const override
+	public:
+		void compute(const spk::Vector2 &p, Cell &cell) const override
 		{
 			switch (_settings.placement)
 			{
@@ -287,17 +269,46 @@ namespace sparkle_test::biome_validation
 			}
 		}
 
-	public:
-		Generator(const perlin_world::Registry &registry, Settings settings) :
-
+		explicit PlacementDistribution(Settings settings) :
 			_settings(settings),
 			_first(settings, 1, 0, 107),
 			_second(settings, 4, -12, 211),
 			_third(settings, 3, -5, 317)
 		{
+			_regions.setFrequency(0.048f);
+		}
+	};
+
+	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
+	{
+	private:
+		PlacementDistribution _distribution;
+
+		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, Data>
+		{
+		public:
+			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
+			{
+				auto &column = data.column(coordinate);
+				auto &grid = *column.heights;
+				const auto layout = grid.sampleSize();
+				for (std::uint32_t z = 0; z < layout.y; ++z)
+				{
+					for (std::uint32_t x = 0; x < layout.x; ++x)
+					{
+						grid.sample({x, z}) = 4.0f * std::floor(grid.sample({x, z}) / 4.0f);
+					}
+				}
+			}
+		};
+
+	public:
+		Generator(const perlin_world::Registry &registry, Settings settings) :
+			_distribution(settings)
+		{
 			bind(&registry);
 			_setSurfaceScale(settings.scale);
-			_regions.setFrequency(0.048f);
+			bindDistribution(&_distribution);
 			if (settings.terrace)
 			{
 				insertPass<Terrace>(2);

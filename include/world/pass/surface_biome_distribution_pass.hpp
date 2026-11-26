@@ -16,7 +16,7 @@ namespace spk::World
 	protected:
 		virtual Configuration _computeGridConfiguration(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
 		virtual void _storeInfluenceGrid(const spk::Vector2Int &coordinate, TGenerationData &data, typename Grid::Lease grid) = 0;
-		virtual void _computeBiomeInfluences(const spk::Vector2 &worldPosition, Cell &destination) = 0;
+		virtual void _computeBiomeInfluences(const spk::Vector2 &worldPosition, Cell &destination, const TGenerationData &data) = 0;
 
 		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
@@ -29,7 +29,7 @@ namespace spk::World
 				for (std::uint32_t x = 0; x < layout.x; ++x)
 				{
 					auto &cell = grid->sample({x, z});
-					_computeBiomeInfluences(origin + grid->localPosition({x, z}), cell);
+					_computeBiomeInfluences(origin + grid->localPosition({x, z}), cell, data);
 					cell.normalize();
 				}
 			}

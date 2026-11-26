@@ -69,7 +69,7 @@ namespace
 		{
 			data.column(coordinate).influences = std::move(grid);
 		}
-		void _computeBiomeInfluences(const spk::Vector2 &, Cell &cell) override
+		void _computeBiomeInfluences(const spk::Vector2 &, Cell &cell, const GenerationData &) override
 		{
 			cell[0] = {&_first, 3.0f};
 			cell[1] = {&_second, 1.0f};
