@@ -11,12 +11,12 @@
 #include <future>
 #include <limits>
 
-#include "voxel/biome_surface_data.hpp"
 #include "world/height_map.hpp"
 #include "world/pass/height_map_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
 #include "world/surface_biome.hpp"
+#include "world/voxel/biome_generation_data.hpp"
 
 namespace
 {
@@ -44,8 +44,8 @@ namespace
 		int value;
 	};
 
-	using GenerationData = spk::Voxel::BiomeGenerationData<2>;
-	using SurfaceData = GenerationData::ColumnData;
+	using GenerationData = spk::World::Voxel::Biome::GenerationData<2>;
+	using SurfaceData = GenerationData::Column;
 
 	struct StandaloneData : SurfaceData
 	{
