@@ -11,7 +11,7 @@ La responsabilité des tests figure aussi dans chaque [fiche de PR](implementati
 | 05 Observer | position/rayon XYZ, 405 coordonnées pour rayon 4/2/4, Registry EngineHeadless, mouvement intra-chunk sans modification, rayon et attach/detach |
 | 06 Streaming | union et priorité Manhattan monde anisotrope, replanification seulement au changement centre/rayon/observers, budget réel sous timeout, retry, version stale, nullopt quitté puis réentré |
 | 07 Voxel | dimensions Volume égales SX/SY/SZ, remplacement immuable, événement de setter, Builder::load, structure franchissant la frontière et génération déterministe |
-| 08 Graphics | Voxel::ChunkMesher outsideCell et six voisins au bake, arrivée/suppression/édition => invalidation, translucent/opaque, un seul rebake par coord avant rendu, aucun OpenGL headless |
+| 08 Graphics | World::Voxel::ChunkMesher outsideCell et six voisins au bake, arrivée/suppression/édition => invalidation, translucent/opaque, un seul rebake par coord avant rendu, aucun OpenGL headless |
 | 09 Multi-observateur | déplacements indépendants, union et éviction, latence et ordre mélangé des réponses, shutdown non bloquant du streaming, headless components |
 | 10 Release | démo intégrale, goldens inclinés et variés, contraintes lifetime, données de test non payantes, docs finalisées, aucun protocole ni dépendance Graphics en Core |
 

@@ -4,15 +4,15 @@
 
 ## Public API
 
-`spk::Voxel::ChunkMesher<SX, SY, SZ>` in `include/voxel/chunk_mesher.hpp` derives from the existing `Voxel::Mesher`. Construct it with a const reference to `World::ChunkCollection<Voxel::Chunk<SX,SY,SZ>>` and a chunk coordinate. It uses `outsideCell()` to look up boundary cells in the six adjacent chunks during each `bake()`; missing neighbors are treated as empty. The existing occlusion algorithm remains unchanged and handles opaque, translucent, and partially occluding shapes. No neighbor pointer is retained.
+`spk::World::Voxel::ChunkMesher<SX, SY, SZ>` in `include/world/voxel/chunk_mesher.hpp` derives from the existing `Voxel::Mesher`. Construct it with a const reference to `World::ChunkCollection<World::Voxel::Chunk<SX,SY,SZ>>` and a chunk coordinate. It uses `outsideCell()` to look up boundary cells in the six adjacent chunks during each `bake()`; missing neighbors are treated as empty. The existing occlusion algorithm remains unchanged and handles opaque, translucent, and partially occluding shapes. No neighbor pointer is retained.
 
-`spk::Voxel::ChunkRenderingSystem<SX, SY, SZ>` in `include/voxel/chunk_rendering_system.hpp` specializes the existing `Voxel::RenderingSystem`. Create it on a Graphics `spk::Engine`, attach a Core `World::ChunkCollection` to that same engine, then bind a palette explicitly:
+`spk::World::Voxel::ChunkRenderingSystem<SX, SY, SZ>` in `include/world/voxel/chunk_rendering_system.hpp` specializes the existing `Voxel::RenderingSystem`. Create it on a Graphics `spk::Engine`, attach a Core `World::ChunkCollection` to that same engine, then bind a palette explicitly:
 
 ```cpp
-using Chunk = spk::Voxel::Chunk<16, 16, 16>;
+using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 spk::World::ChunkCollection<Chunk> chunks;
 chunks.attach(engine);
-auto &renderer = engine.addSystem<spk::Voxel::ChunkRenderingSystem<16, 16, 16>>();
+auto &renderer = engine.addSystem<spk::World::Voxel::ChunkRenderingSystem<16, 16, 16>>();
 renderer.bind(chunks, materials);
 ```
 

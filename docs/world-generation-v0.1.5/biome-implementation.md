@@ -3,6 +3,9 @@
 This branch is an implementation proposal, including decisions that were previously open.
 The design branch remains unchanged. No merge is authorized by this record.
 
+
+World-specific voxel types live in `spk::World::Voxel` (`include/world/voxel/`). The reusable voxel primitives (`Definition`, `Shape`, `Cell`, `Volume`, `Geometry`, `Mesher`, `Renderer` and `Occlusion`) remain in `spk::Voxel`. Dependencies run from world adapters to voxel primitives, not the reverse.
+
 ## Layers
 
 - World::Biome / World::SurfaceBiome: identity and continuous absolute height.
@@ -11,10 +14,10 @@ The design branch remains unchanged. No merge is authorized by this record.
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid exposes direct floor access through at(position) and a protected bilinear-only weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling.
 - World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it receives the full generation data and owns no cache.
-- Voxel::Biome::Stratum::Instance: one pooled resolved vertical profile per voxel X/Z, containing absolute layer boundaries and selected voxel IDs. `voxelIDAt(height)` queries the profile without noise sampling, allocations or registry access. ID zero denotes air. Application passes nonzero IDs to the registry-bound Volume::Builder, which validates them. `Voxel::StrataGrid` is a `Grid2D<Instance::Lease>` with exactly the chunk footprint; releasing the grid returns every instance to its own capacity pool. Each instance retains its reserved layer storage for reuse.
-- Voxel::BiomeGenerationData<TCapacity = 4>: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
-- Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
-- Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
+- World::Voxel::Biome::Stratum::Instance: one pooled resolved vertical profile per voxel X/Z, containing absolute layer boundaries and selected voxel IDs. `voxelIDAt(height)` queries the profile without noise sampling, allocations or registry access. ID zero denotes air. Application passes nonzero IDs to the registry-bound Volume::Builder, which validates them. `World::Voxel::StrataGrid` is a `Grid2D<Instance::Lease>` with exactly the chunk footprint; releasing the grid returns every instance to its own capacity pool. Each instance retains its reserved layer storage for reuse.
+- World::Voxel::BiomeGenerationData<TCapacity = 4>: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
+- World::Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
+- World::Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
   The constructor registers all four private built-in passes in order: Distribution, Combination, Strata and Application. Derived generators append custom passes with `addPass<TPass>(...)` or insert them before an existing pass with `insertPass<TPass>(index, ...)`. For example, `insertPass<Erosion>(2)` edits the height map before Strata. Indices are zero-based, and the current pass count is a valid append index. Strata consumes the final height map and influence grid; Application only consumes the resolved strata grid.
   Existing PerlinTerrainPass and existing golden tests are not replaced.
 
@@ -25,7 +28,7 @@ spatial hierarchy or eviction policy. Each derived generator decides how to init
 synchronize and clean its data. Streaming requests no longer retain or release generator
 data. The generator must outlive all submitted jobs.
 
-Voxel::BiomeGenerationData owns WorldData (registry and surfaceScale), ColumnData keyed by X/Z and ChunkData keyed by the full chunk coordinate. All three types are nested in the concrete generation data. ChunkData contains the request-local Volume::Builder; ColumnData contains
+World::Voxel::BiomeGenerationData owns WorldData (registry and surfaceScale), ColumnData keyed by X/Z and ChunkData keyed by the full chunk coordinate. All three types are nested in the concrete generation data. ChunkData contains the request-local Volume::Builder; ColumnData contains
 influences, heights and strata. There are no shared pointers for generation data; private collection aliases name the column and chunk maps.
 
 The map mutex protects insertion, lookup, cleanup and flush. A mutex per column protects the first full generation; its lock is owned by the active ChunkData until cleanup. Other columns remain independent. BiomeGenerator overrides the generic pass invocation hook to skip all SurfacePass instances when the column is ready, including custom surface edits; chunk passes still run in their registered order for every chunk. The first job owns the column mutex through cleanup and marks the column ready only after successful chunk instantiation. Failed initial jobs clear partial grids and are retryable. Later jobs on a published column can read concurrently. Only one active generation per chunk coordinate

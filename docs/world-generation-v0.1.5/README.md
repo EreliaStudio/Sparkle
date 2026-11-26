@@ -11,7 +11,7 @@ Fournir une infrastructure réutilisable pour gérer des chunks, leurs entités 
 - Generator<TChunk,TGenerationData> possède les données persistantes ; les passes reçoivent apply(coord,data). _prepareGenerationData(coord,data) peut refuser une demande ; _instantiateChunk(coord,data) construit le chunk, _cleanGenerationData(coord,data) nettoie le scratch.
 - ChunkRequester<TChunk> encapsule des Tasks, avec réponse en std::optional<TChunk>. WorldStreamingSystem applique le résultat seulement sur l'Engine update, ignore les anciens résultats, ne cancelle pas les jobs, respecte une limite physique de requêtes, et oublie les absences quand l'intérêt disparaît.
 - WorldObserver fournit rayon XYZ et position ; union multi-observateurs. Recalcul de la file au changement de coordonnée centrale de chunk, de rayon ou d'ensemble d'observateurs seulement ; Manhattan en unités du monde.
-- Voxel::Chunk a un Volume de dimensions exactement SX×SY×SZ. Voxel::ChunkMesher redéfinit outsideCell pour consulter les six voisins à chaque bake. Modification => rebake du chunk et des six voisins, regroupé au rendu.
+- World::Voxel::Chunk a un Volume de dimensions exactement SX×SY×SZ. World::Voxel::ChunkMesher redéfinit outsideCell pour consulter les six voisins à chaque bake. Modification => rebake du chunk et des six voisins, regroupé au rendu.
 
 ## Lecture
 1. [Contrats actuels](contracts.md)
