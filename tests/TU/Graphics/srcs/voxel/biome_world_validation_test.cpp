@@ -313,7 +313,20 @@ namespace
 			std::vector<float> samples(ShadowResolution * ShadowResolution, 1.0f);
 			glReadPixels(0, 0, ShadowResolution, ShadowResolution, GL_DEPTH_COMPONENT, GL_FLOAT, samples.data());
 			EXPECT_EQ(glGetError(), GL_NO_ERROR);
-			EXPECT_LT(*std::min_element(samples.begin(), samples.end()), 1.0f);
+			bool occupied = *std::min_element(samples.begin(), samples.end()) < 1.0f;
+			for (const auto &texture : found->second.cascadeTextures)
+			{
+				if (occupied || !texture)
+				{
+					continue;
+				}
+				spk::Framebuffer cascadeDepth({ShadowResolution, ShadowResolution}, std::vector<spk::Texture::Handle>{}, texture);
+				cascadeDepth.activate(gl.renderContext());
+				glReadPixels(0, 0, ShadowResolution, ShadowResolution, GL_DEPTH_COMPONENT, GL_FLOAT, samples.data());
+				EXPECT_EQ(glGetError(), GL_NO_ERROR);
+				occupied |= *std::min_element(samples.begin(), samples.end()) < 1.0f;
+			}
+			EXPECT_TRUE(occupied);
 		}
 
 		~Scene()
@@ -478,6 +491,104 @@ TEST(BiomeWorldPerformance, ShadowMapComputationSeparateFromVoxelColorRendering)
 		snapshots[index++]->execute(gl.renderContext());
 		glFinish();
 	});
+	gl.requireNoErrors();
+	gl.reset();
+}
+
+TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(terrain::ImageSize);
+	Scene scene;
+	scene.fill(2);
+	scene.disableColorRendering();
+	constexpr std::size_t Cases = 16;
+	constexpr std::size_t Samples = 3;
+	constexpr std::array<std::uint32_t, 3> Resolutions{512, 1024, 2048};
+	// Initial regression ceilings for full GPU-synchronized rebuilds in CI,
+	// not a claim that the worst-case rebuild fits a 60 Hz frame.
+	constexpr std::array<double, 3> ColdBudgetsMs{16.7, 33.3, 66.7};
+	constexpr double WarmBudgetMs = 4.0;
+	std::uint32_t seed = 0xC45CADEu;
+	const auto sample = [&]() {
+		seed = seed * 1664525u + 1013904223u;
+		return static_cast<float>((seed >> 8) % 2001) / 1000.0f - 1.0f;
+	};
+	const auto published = [&]() {
+		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	};
+	const auto run = [&](const std::shared_ptr<const spk::RenderSnapshot> &snapshot) {
+		const auto begin = Clock::now();
+		snapshot->execute(gl.renderContext());
+		glFinish();
+		return std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+	};
+	for (std::size_t level = 0; level < Resolutions.size(); ++level)
+	{
+		scene.sun.setShadowResolution(Resolutions[level]);
+		scene.sun.setShadowDistance(80.0f);
+		std::vector<double> cold, warm, capture;
+		std::size_t coldOver = 0, warmOver = 0;
+		// Warm shaders and resources before the measured corpus.
+		scene.engine.refreshRenderSnapshot();
+		(void)run(scene.engine.latestRenderSnapshot());
+		for (std::size_t index = 0; index < Cases; ++index)
+		{
+			std::array<double, Samples> coldTimes{}, warmTimes{}, captureTimes{};
+			for (std::size_t trial = 0; trial < Samples; ++trial)
+			{
+				const spk::Vector3 eye{35 + 8 * sample(), 30 + 6 * sample(), 35 + 8 * sample()};
+				scene.setCamera(eye, {0, 8, 0});
+				const spk::Vector3 source{-36 + 10 * sample(), 50 + 10 * sample(), 20 + 10 * sample()};
+				scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source, {0, 0, 0}));
+				const auto begin = Clock::now();
+				scene.engine.refreshRenderSnapshot();
+				const auto snapshot = scene.engine.latestRenderSnapshot();
+				captureTimes[trial] = std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+				ASSERT_NE(snapshot, nullptr);
+				coldTimes[trial] = run(snapshot);
+				const auto first = published();
+				ASSERT_NE(first, nullptr);
+				const auto &entry = first->entries.at(scene.sun.registrationOrder());
+				ASSERT_GT(entry.cascadeSplits.back(), 0.0f);
+				for (const auto &texture : entry.cascadeTextures)
+				{
+					ASSERT_TRUE(texture);
+				}
+				warmTimes[trial] = run(snapshot);
+				const auto second = published();
+				ASSERT_NE(second, nullptr);
+				const auto &cached = second->entries.at(scene.sun.registrationOrder());
+				EXPECT_EQ(cached.generation, entry.generation);
+				for (std::size_t i = 0; i < entry.cascadeTextures.size(); ++i)
+				{
+					EXPECT_EQ(cached.cascadeTextures[i].identifier(), entry.cascadeTextures[i].identifier());
+				}
+			}
+			std::sort(coldTimes.begin(), coldTimes.end());
+			std::sort(warmTimes.begin(), warmTimes.end());
+			std::sort(captureTimes.begin(), captureTimes.end());
+			cold.push_back(coldTimes[Samples / 2]);
+			warm.push_back(warmTimes[Samples / 2]);
+			capture.push_back(captureTimes[Samples / 2]);
+			coldOver += cold.back() > ColdBudgetsMs[level] ? 1u : 0u;
+			warmOver += warm.back() > WarmBudgetMs ? 1u : 0u;
+		}
+		const auto report = [&](const char *name, std::vector<double> &times, double budget, std::size_t exceeding) {
+			std::sort(times.begin(), times.end());
+			std::cout << "[Directional shadow stress] resolution=" << Resolutions[level] << " phase=" << name
+					  << " cases=" << Cases << " median=" << times[Cases / 2] << "ms p95=" << times[Cases * 95 / 100]
+					  << "ms p99=" << times[Cases * 99 / 100] << "ms worst=" << times.back()
+					  << "ms budget=" << budget << " over_budget=" << exceeding << '\n';
+		};
+		report("cold_depth", cold, ColdBudgetsMs[level], coldOver);
+		report("warm_depth", warm, WarmBudgetMs, warmOver);
+		report("snapshot_capture", capture, 0.0, 0);
+#if defined(NDEBUG)
+		EXPECT_EQ(coldOver, 0u) << "Cold rebuild budget exceeded at resolution " << Resolutions[level];
+		EXPECT_EQ(warmOver, 0u) << "Warm reuse budget exceeded at resolution " << Resolutions[level];
+#endif
+	}
 	gl.requireNoErrors();
 	gl.reset();
 }
@@ -1037,6 +1148,18 @@ namespace
 		{
 			scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
 			captureCpuShadowReference(scene, name + "_close_sweep");
+			scene.shadowSystem.setDirectionalCascadesEnabled(true);
+			for (const std::uint32_t resolution : {512u, 1024u, 2048u})
+			{
+				scene.sun.setShadowResolution(resolution);
+				scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+				(void)scene.capture();
+				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_hard_" + std::to_string(resolution)));
+				scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+				(void)scene.capture();
+				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_pcf_" + std::to_string(resolution)));
+			}
+			scene.shadowSystem.setDirectionalCascadesEnabled(false);
 			captureShadowParameterSweep(scene, name + "_close_sweep");
 		}
 	}
@@ -1115,6 +1238,7 @@ namespace
 		scene.setCamera(view.camera, view.target);
 		if (shadowDiagnostics)
 		{
+			scene.shadowSystem.setDirectionalCascadesEnabled(false);
 			captureShadowDiagnostics(scene, name);
 			captureCloseShadowDiagnostics(scene, name);
 			return;
