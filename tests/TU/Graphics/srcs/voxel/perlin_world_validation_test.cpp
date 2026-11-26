@@ -51,7 +51,7 @@ namespace
 	using Chunk = terrain::Chunk;
 	using Coordinate = terrain::Coordinate;
 	using Collection = spk::World::ChunkCollection<Chunk>;
-	using ChunkGraphics = spk::World::Voxel::ChunkRenderingSystem<16, 16, 16>;
+	using ChunkGraphics = Chunk::RenderingSystem;
 	using Streamer = spk::World::WorldStreamingSystem<Chunk>;
 	using Clock = std::chrono::steady_clock;
 	constexpr const char *GoldenCategory = "rendering/perlin-world";
@@ -574,7 +574,7 @@ TEST(PerlinWorldPerformance, NeighborAwareMeshing25Chunks)
 	measure("neighbor_aware_meshing", 25, [&]() {
 		for (const auto &[coordinate, entry] : collection)
 		{
-			spk::World::Voxel::ChunkMesher<16, 16, 16> mesher(collection, coordinate);
+			Chunk::Mesher mesher(collection, coordinate);
 			mesher.attachCache(cache);
 			const auto geometry = mesher.bake(entry.chunk().volume());
 			vertices += geometry.opaqueMesh().vertexCount();

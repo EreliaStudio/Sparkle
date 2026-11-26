@@ -232,7 +232,7 @@ TEST(VoxelChunkMesherTest, AllSixAdjacentChunksHideInternalOpaqueFaces)
 	{
 		Collection collection;
 		collection.addChunk({0, 0, 0}, chunkWithCell(registry, sourcePositions[index]));
-		spk::World::Voxel::ChunkMesher<4, 4, 4> mesher(collection, {0, 0, 0});
+		Chunk::Mesher mesher(collection, {0, 0, 0});
 		const auto isolated = mesher.bake(collection.at({0, 0, 0}).volume());
 		EXPECT_EQ(isolated.opaqueMesh().vertexCount(), 36u);
 
@@ -253,7 +253,7 @@ TEST(VoxelChunkMesherTest, GlassSeamsAndPartialShapesReuseExistingOcclusion)
 	Collection collection;
 	collection.addChunk({-1, 0, 0}, chunkWithCell(registry, {3, 1, 1}, 2));
 	collection.addChunk({0, 0, 0}, chunkWithCell(registry, {0, 1, 1}, 2));
-	spk::World::Voxel::ChunkMesher<4, 4, 4> mesher(collection, {-1, 0, 0});
+	Chunk::Mesher mesher(collection, {-1, 0, 0});
 	const auto joinedGlass = mesher.bake(collection.at({-1, 0, 0}).volume());
 	EXPECT_EQ(joinedGlass.transparentMesh().vertexCount(), 30u);
 	EXPECT_EQ(joinedGlass.opaqueMesh().vertexCount(), 0u);
@@ -276,7 +276,7 @@ TEST(VoxelChunkRenderingTest, RebuildsEditedChunkAndNeighborsOnce)
 	Scene scene;
 	Collection collection;
 	collection.attach(scene.engine);
-	auto &system = scene.engine.addSystem<spk::World::Voxel::ChunkRenderingSystem<4, 4, 4>>();
+	auto &system = scene.engine.addSystem<Chunk::RenderingSystem>();
 	system.bind(collection, palette(atlas));
 
 	collection.addChunk({-1, 0, 0}, chunkWithCell(registry, {3, 1, 1}));
@@ -334,7 +334,7 @@ TEST(VoxelChunkGoldenTest, ThreeAdjacentChunksMatchSingleVolumeAtObliqueCamera)
 		Scene chunked;
 		Collection chunks;
 		chunks.attach(chunked.engine);
-		auto &system = chunked.engine.addSystem<spk::World::Voxel::ChunkRenderingSystem<4, 4, 4>>();
+		auto &system = chunked.engine.addSystem<Chunk::RenderingSystem>();
 		system.bind(chunks, materials);
 		for (std::int32_t x = -1; x <= 1; ++x)
 		{

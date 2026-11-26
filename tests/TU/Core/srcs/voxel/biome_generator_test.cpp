@@ -27,7 +27,7 @@ namespace
 	static_assert(std::is_same_v<spk::World::Voxel::BiomeGenerator<Chunk>, spk::World::Voxel::BiomeGenerator<Chunk, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData>, spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData>, spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData, 4>>);
-	static_assert(std::is_same_v<spk::World::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData>, spk::World::Voxel::StrataGenerationPass<Chunk, DefaultGenerationData, 4>>);
+	static_assert(std::is_same_v<spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData>, spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData, 4>>);
 
 	spk::Voxel::Definition::Registry registry()
 	{
@@ -587,7 +587,7 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 
 TEST(VoxelStratumInstanceTest, ResolvesAbsoluteHeightsAndVoxelIDs)
 {
-	using Instance = Biome::Stratum::Instance;
+	using Instance = spk::World::Voxel::Strata::Instance;
 	Biome biome;
 	auto instance = Instance::obtain(biome, {0, 0}, 17.75);
 	EXPECT_EQ(instance->voxelIDAt(18), 0u);
@@ -619,8 +619,8 @@ TEST(VoxelStratumInstanceTest, ResolvesAbsoluteHeightsAndVoxelIDs)
 
 TEST(VoxelStratumInstanceTest, ReusesGridAndInstancesWithoutKeepingOldLayers)
 {
-	using Instance = Biome::Stratum::Instance;
-	using Grid = spk::World::Voxel::StrataGrid;
+	using Instance = spk::World::Voxel::Strata::Instance;
+	using Grid = spk::World::Voxel::Strata::Grid;
 	Biome biome;
 	auto grid = Grid::obtain({2, 1});
 	(*grid)[{0, 0}] = Instance::obtain(biome, {0, 0}, 17);
@@ -649,7 +649,7 @@ TEST(VoxelStratumInstanceTest, ReusesGridAndInstancesWithoutKeepingOldLayers)
 
 TEST(VoxelStratumInstanceTest, FailedResolutionReturnsInstanceAndClearsPartialLayers)
 {
-	using Instance = Biome::Stratum::Instance;
+	using Instance = spk::World::Voxel::Strata::Instance;
 	Biome biome;
 	auto initial = Instance::obtain(biome, {0, 0}, 0);
 	const auto *address = initial.get();

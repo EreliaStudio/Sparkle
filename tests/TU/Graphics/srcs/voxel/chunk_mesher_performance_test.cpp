@@ -320,7 +320,7 @@ namespace
 		chunk.setVolume(makeVolume(model, registry));
 		spk::World::ChunkCollection<Chunk> collection;
 		collection.addChunk({-1, 0, 1}, std::move(chunk));
-		spk::World::Voxel::ChunkMesher<SX, SY, SZ> mesher(collection, {-1, 0, 1});
+		typename Chunk::Mesher mesher(collection, {-1, 0, 1});
 		spk::Voxel::Occlusion::Cache cache;
 		mesher.attachCache(cache);
 		const auto &volume = collection.at({-1, 0, 1}).volume();
@@ -370,7 +370,7 @@ namespace
 			MeshCounts result;
 			for (const auto &[coordinate, entry] : collection)
 			{
-				spk::World::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, coordinate);
+				typename Chunk::Mesher mesher(collection, coordinate);
 				mesher.attachCache(cache);
 				const auto current = countMesh(mesher.bake(entry.chunk().volume()));
 				result.vertices += current.vertices;
@@ -429,7 +429,7 @@ namespace
 		chunk.setVolume(builder.build());
 		spk::World::ChunkCollection<Chunk> collection;
 		collection.addChunk({0, 0, 0}, std::move(chunk));
-		spk::World::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, {0, 0, 0});
+		typename Chunk::Mesher mesher(collection, {0, 0, 0});
 		spk::Voxel::Occlusion::Cache cache;
 		mesher.attachCache(cache);
 		measure("Isolated cube/slab/slope/stair mix", 1, Side * Side * Side, occupied, expectedVertices, expectedVertices / 3, [&]() {
@@ -481,7 +481,7 @@ namespace
 		const auto registry = makeRegistry();
 		spk::World::ChunkCollection<Chunk> collection;
 		const Coordinate coordinate{-1, 2, -3};
-		spk::World::Voxel::ChunkMesher<Side, Side, Side> mesher(collection, coordinate);
+		typename Chunk::Mesher mesher(collection, coordinate);
 		spk::Voxel::Occlusion::Cache cache;
 		mesher.attachCache(cache);
 
