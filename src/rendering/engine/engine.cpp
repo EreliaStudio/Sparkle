@@ -518,6 +518,18 @@ namespace spk
 			{
 				try
 				{
+					contributor.prepareViewRenderSnapshot(context);
+				} catch (const std::exception &error)
+				{
+					throw spk::Exception("EngineView [" + context.name + "]: " + error.what(), std::current_exception());
+				}
+			}
+		});
+		_visitObjects([&](EngineView::Contributor &contributor) {
+			if (contributor.canContribute() && context.isLayerCompatible(contributor.layers()))
+			{
+				try
+				{
 					contributor.buildViewRenderSnapshot(builder, context);
 				} catch (const std::exception &error)
 				{

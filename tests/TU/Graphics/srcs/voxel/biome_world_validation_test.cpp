@@ -110,18 +110,17 @@ namespace
 		spk::Entity3D secondObserver{"Second observer"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
 		spk::EngineView &view;
-		ChunkGraphics &graphics;
 		spk::ShadowMap::RenderingSystem &shadowSystem;
+		ChunkGraphics &graphics;
 		spk::Light::Directional &sun = sunEntity.addComponent<spk::Light::Directional>();
 		Streamer *streamer = nullptr;
-		bool graphicsActive = true;
 		std::int64_t tickTime = 0;
 
 		explicit Scene(bool stream = false, terrain::Generator::Settings settings = {}) :
 			generator(definitions, settings),
 			view(createView()),
-			graphics(engine.addSystem<ChunkGraphics>()),
-			shadowSystem(engine.addSystem<spk::ShadowMap::RenderingSystem>())
+			shadowSystem(engine.addSystem<spk::ShadowMap::RenderingSystem>()),
+			graphics(engine.addSystem<ChunkGraphics>())
 		{
 			chunks.attach(engine);
 			graphics.bind(chunks, terrain::palette(atlas));
@@ -173,12 +172,11 @@ namespace
 					chunks.addChunk({x, 0, z}, std::move(*chunk));
 				}
 			}
-			refreshCasters();
+			synchronizeChunks();
 		}
 
-		void refreshCasters()
+		void verifyChunkCasters()
 		{
-			graphics.synchronize();
 			for (auto &[coordinate, entry] : chunks)
 			{
 				(void)coordinate;
@@ -186,20 +184,28 @@ namespace
 				ASSERT_NE(renderer, nullptr);
 				ASSERT_NE(renderer->geometry(), nullptr);
 				auto *caster = entry.entity().getComponent<spk::ShadowMap::Contributor>();
-				if (caster == nullptr)
+				ASSERT_NE(caster, nullptr);
+				EXPECT_EQ(caster->shadowMode(), spk::ShadowMap::Mode::Static);
+				const auto &instances = caster->meshFilter().instances();
+				ASSERT_EQ(instances.size(), 1u);
+				const auto &depth = renderer->geometry()->depthMesh();
+				EXPECT_EQ(instances.front().mesh.indexCount(), depth.indexCount());
+				if (!depth.empty())
 				{
-					caster = &entry.entity().addComponent<spk::ShadowMap::Contributor>();
-					caster->setShadowMode(spk::ShadowMap::Mode::Static);
+					EXPECT_EQ(&instances.front().mesh.layout(), &depth.layout());
 				}
-				caster->bind(renderer->geometry()->depthMesh());
 			}
+		}
+
+		void synchronizeChunks()
+		{
+			graphics.synchronize();
+			verifyChunkCasters();
 		}
 
 		void disableColorRendering()
 		{
-			graphics.unbind();
-			engine.removeSystem(graphics);
-			graphicsActive = false;
+			graphics.deactivate();
 		}
 
 		[[nodiscard]] std::size_t desiredChunks() const
@@ -259,7 +265,7 @@ namespace
 				EXPECT_TRUE(desired.contains(coordinate));
 			}
 			EXPECT_EQ(streamer->inFlightCount(), 0u);
-			refreshCasters();
+			synchronizeChunks();
 		}
 
 		[[nodiscard]] sparkle_test::FramebufferImage capture()
@@ -311,15 +317,46 @@ namespace
 				engine.removeEntity(&secondObserver);
 				engine.removeEntity(&firstObserver);
 			}
-			if (graphicsActive)
-			{
-				graphics.unbind();
-			}
+			graphics.unbind();
 			chunks.detach();
 			engine.removeEntity(&sunEntity);
 			engine.removeEntity(&cameraEntity);
 		}
 	};
+}
+
+TEST(BiomeWorldIntegration, SnapshotSynchronizesChunkShadowsBeforeCapture)
+{
+	Scene scene;
+	const Coordinate coordinate{0, 0, 0};
+	const auto chunk = scene.generator.generate(coordinate);
+	ASSERT_TRUE(chunk.has_value());
+	scene.chunks.addChunk(coordinate, *chunk);
+
+	// Shadow system is registered first. No manual synchronization is needed.
+	(void)scene.capture();
+	scene.verifyChunkCasters();
+	scene.verifyShadow();
+
+	scene.chunks.at(coordinate).setVolume(terrain::Builder({16, 16, 16}).build());
+	(void)scene.capture();
+	scene.verifyChunkCasters();
+	for (auto &[key, entry] : scene.chunks)
+	{
+		(void)key;
+		const auto *caster = entry.entity().getComponent<spk::ShadowMap::Contributor>();
+		ASSERT_NE(caster, nullptr);
+		ASSERT_EQ(caster->meshFilter().instances().size(), 1u);
+		EXPECT_TRUE(caster->meshFilter().instances().front().mesh.empty());
+	}
+
+	scene.graphics.unbind();
+	for (auto &[key, entry] : scene.chunks)
+	{
+		(void)key;
+		EXPECT_EQ(entry.entity().getComponent<spk::ShadowMap::Contributor>(), nullptr);
+		EXPECT_EQ(entry.entity().getComponent<spk::Voxel::Renderer>(), nullptr);
+	}
 }
 
 TEST(BiomeWorldIntegration, EditedChunkAndNeighborRemeshing)
@@ -340,7 +377,7 @@ TEST(BiomeWorldIntegration, EditedChunkAndNeighborRemeshing)
 	}
 	original->setVolume(edit.build());
 	EXPECT_NE(checksum(*original), before);
-	scene.refreshCasters();
+	scene.synchronizeChunks();
 	EXPECT_GE(scene.graphics.lastStatistics().chunks, 1u);
 	(void)scene.capture();
 	scene.verifyShadow();
@@ -483,7 +520,7 @@ namespace
 				}
 			}
 		}
-		scene.refreshCasters();
+		scene.synchronizeChunks();
 		scene.setCamera(camera, target);
 		const auto pixels = scene.capture();
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
@@ -678,7 +715,7 @@ namespace
 		}
 		ASSERT_GT(visibleVoxels, 0u);
 		ASSERT_EQ(scene.chunks.size(), coordinates.size());
-		scene.refreshCasters();
+		scene.synchronizeChunks();
 		scene.sun.setCastsShadows(view.shadows);
 		scene.setCamera(view.camera, view.target);
 		if (shadowDiagnostics)

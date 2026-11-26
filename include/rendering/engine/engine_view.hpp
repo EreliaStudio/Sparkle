@@ -150,6 +150,10 @@ namespace spk
 			void setLayers(Layers layers);
 			[[nodiscard]] const Layers &layers() const noexcept;
 			[[nodiscard]] bool canContribute() const;
+			// Prepare shared scene state before any contributor captures draw commands.
+			virtual void prepareViewRenderSnapshot(const CaptureContext &)
+			{
+			}
 			virtual void buildViewRenderSnapshot(RenderSnapshot::Builder &, const CaptureContext &)
 			{
 			}
