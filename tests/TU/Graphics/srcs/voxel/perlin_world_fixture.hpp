@@ -6,9 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <map>
-#include <mutex>
-#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -18,9 +15,8 @@
 #include "math/perlin.hpp"
 #include "voxel/definition.hpp"
 #include "voxel/palette.hpp"
-#include "world/generator.hpp"
+#include "world/voxel/biome_generator.hpp"
 #include "world/voxel/chunk.hpp"
-#include "world/voxel/pass/perlin_terrain_pass.hpp"
 
 namespace sparkle_test::perlin_world
 {
@@ -44,28 +40,6 @@ namespace sparkle_test::perlin_world
 		value *= 0x846CA68Bu;
 		return value ^ (value >> 16);
 	}
-
-	// Perlin is configured by the production pass, not implemented by this fixture.
-	struct GenerationData
-	{
-		void flush()
-		{
-		}
-
-		std::mutex mutex;
-		struct ChunkData
-		{
-			Builder builder;
-		};
-
-		std::map<Coordinate, ChunkData> chunks;
-
-		ChunkData &chunk(const Coordinate &coordinate)
-		{
-			const std::scoped_lock lock(mutex);
-			return chunks.at(coordinate);
-		}
-	};
 
 	[[nodiscard]] inline spk::Voxel::Shape shape(const char *name)
 	{
@@ -146,9 +120,9 @@ namespace sparkle_test::perlin_world
 		return result.build();
 	}
 
-	// Keep the test-owned palette/shapes separate from Sparkle's reusable pass.
-	using GeneratorBase = spk::World::Generator<Chunk, GenerationData>;
-	using TerrainPass = spk::World::Voxel::PerlinTerrainPass<Chunk, GenerationData>;
+	// The finite Perlin world is a single-biome recipe using the production pipeline.
+	using GeneratorBase = spk::World::Voxel::Biome::Generator<Chunk, 1>;
+	using GenerationData = GeneratorBase::Data;
 
 	class Generator final : public GeneratorBase
 	{
@@ -166,77 +140,111 @@ namespace sparkle_test::perlin_world
 		};
 
 	private:
-		const Registry &_registry;
-		TerrainPass *_terrain = nullptr;
+		class TerrainBiome final : public spk::World::Voxel::Biome
+		{
+		private:
+			Settings _settings;
+			spk::Perlin _broad;
+			spk::Perlin _detail;
 
+		public:
+			explicit TerrainBiome(Settings settings) :
+				_settings(settings),
+				_broad(settings.seed),
+				_detail(settings.seed + 17u)
+			{
+				_broad.setOctaves(1);
+				_broad.setFrequency(settings.broadFrequency);
+				_detail.setOctaves(1);
+				_detail.setFrequency(settings.detailFrequency);
+
+				Stratum surface;
+				surface.materials = {{1, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1}};
+				surface.distribution = Stratum::Distribution::Custom{[this](const spk::Vector2 &position) {
+					const auto x = static_cast<std::int64_t>(position.x);
+					const auto z = static_cast<std::int64_t>(position.y);
+					if (groundHeight(position) <= 5)
+					{
+						return 0.3f;
+					}
+					if (x % 13 == 0 && z % 11 == 0)
+					{
+						return 0.5f;
+					}
+					if (x % 17 == 0 && z % 7 == 0)
+					{
+						return 0.7f;
+					}
+					if (x % 19 == 0 && z % 13 == 0)
+					{
+						return 0.9f;
+					}
+					return 0.1f;
+				}};
+				strata().push_back(std::move(surface));
+
+				Stratum soil;
+				soil.thickness = Stratum::Thickness::Fixed{3};
+				soil.materials = {{2, 1}};
+				strata().push_back(std::move(soil));
+
+				Stratum deep;
+				deep.thickness = Stratum::Thickness::Infinite{};
+				deep.materials = {{3, 1}};
+				strata().push_back(std::move(deep));
+			}
+
+			[[nodiscard]] float groundHeight(const spk::Vector2 &position) const override
+			{
+				double elevation = _settings.baseHeight;
+				elevation += static_cast<double>(_settings.broadAmplitude) * _broad.sample2D(position.x, position.y, -1.0f, 1.0f);
+				elevation += static_cast<double>(_settings.detailAmplitude) * _detail.sample2D(position.x, position.y, -1.0f, 1.0f);
+				return static_cast<float>(std::floor(std::clamp(
+					elevation, static_cast<double>(_settings.minimumHeight), static_cast<double>(_settings.maximumHeight))));
+			}
+		};
+
+		class TerrainDistribution final : public DistributionPass
+		{
+		private:
+			TerrainBiome _biome;
+			Distribution _function = [this](const spk::Vector2 &, Cell &cell) {
+				cell[0] = {&_biome, 1.0f};
+			};
+
+		public:
+			explicit TerrainDistribution(Settings settings) :
+				_biome(settings)
+			{
+				bind(&_function);
+			}
+
+			[[nodiscard]] const TerrainBiome &biome() const noexcept
+			{
+				return _biome;
+			}
+		};
+
+		TerrainDistribution &_distribution;
+
+	protected:
 		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
 			if (coordinate.y != 0 || coordinate.x < -4 || coordinate.x > 4 || coordinate.z < -4 || coordinate.z > 4)
 			{
 				return false;
 			}
-			Builder builder({16, 16, 16});
-			builder.bind(_registry);
-			const std::scoped_lock lock(data.mutex);
-			if (!data.chunks.try_emplace(coordinate, GenerationData::ChunkData{std::move(builder)}).second)
-			{
-				throw spk::Exception("Chunk generation is already active");
-			}
-			return true;
-		}
-
-		[[nodiscard]] Chunk _instantiateChunk(const Coordinate &coordinate, GenerationData &data) override
-		{
-			Chunk chunk;
-			chunk.setVolume(data.chunk(coordinate).builder.build());
-			return chunk;
-		}
-
-		void _cleanGenerationData(const Coordinate &coordinate, GenerationData &data) noexcept override
-		{
-			const std::scoped_lock lock(data.mutex);
-			data.chunks.erase(coordinate);
+			return GeneratorBase::_prepareGenerationData(coordinate, data);
 		}
 
 	public:
 		explicit Generator(const Registry &definitions, Settings settings) :
-			_registry(definitions)
+			_distribution(addPass<TerrainDistribution>(settings))
 		{
-			auto &terrain = addPass<TerrainPass>();
-			_terrain = &terrain;
-			terrain.setBaseHeight(settings.baseHeight);
-			terrain.setHeightRange(settings.minimumHeight, settings.maximumHeight);
-			spk::Perlin broad(settings.seed);
-			broad.setOctaves(1);
-			broad.setFrequency(settings.broadFrequency);
-			terrain.addNoiseLayer(std::move(broad), settings.broadAmplitude);
-			spk::Perlin detail(settings.seed + 17u);
-			detail.setOctaves(1);
-			detail.setFrequency(settings.detailFrequency);
-			terrain.addNoiseLayer(std::move(detail), settings.detailAmplitude);
-			terrain.setSurfaceVoxel(1);
-			terrain.setSubsurfaceLayers({{2, 3}});
-			terrain.setDeepVoxel(3);
-			// The special voxel silhouettes here are purely demonstration data.
-			terrain.setSurfaceSelector([](std::int64_t x, std::int64_t z, std::int32_t height) -> std::uint32_t {
-				if (height <= 5)
-				{
-					return 4;
-				}
-				if (x % 13 == 0 && z % 11 == 0)
-				{
-					return 5;
-				}
-				if (x % 17 == 0 && z % 7 == 0)
-				{
-					return 6;
-				}
-				if (x % 19 == 0 && z % 13 == 0)
-				{
-					return 7;
-				}
-				return 1;
-			});
+			bind(&definitions);
+			addPass<CombinationPass>(HeightCombination::Dominant);
+			addPass<StrataGeneration>();
+			addPass<Application>();
 		}
 
 		explicit Generator(const Registry &definitions, std::uint32_t seed = Seed) :
@@ -246,7 +254,7 @@ namespace sparkle_test::perlin_world
 
 		[[nodiscard]] std::int32_t height(std::int64_t worldX, std::int64_t worldZ) const
 		{
-			return _terrain->computeHeight(worldX, worldZ);
+			return static_cast<std::int32_t>(_distribution.biome().groundHeight({static_cast<float>(worldX), static_cast<float>(worldZ)}));
 		}
 	};
 }
