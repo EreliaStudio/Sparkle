@@ -30,7 +30,7 @@ Une demande de chunk hors limites peut retourner false depuis `_prepareGeneratio
 ## Surcouche voxel
 spk::World::Voxel::Chunk<SX,SY,SZ> contient une valeur de type Voxel::Volume de dimensions exactes SX×SY×SZ. Les données de génération voxel utilisent le Voxel::Volume::Builder existant. On peut éditer le chunk par setVolume(nouveauVolume), qui notifie la collection ; l'ancien Volume demeure une valeur immuable valide.
 
-spk::World::Voxel::ChunkMesher exploite l'API existante du Mesher ; il cherche les six voisins au moment du bake, et outsideCell() consulte leur volume quand une face sort du chunk. L'adaptateur graphique reconstruit sans différentiel de bord le chunk modifié et ses six voisins.
+spk::World::Voxel::Chunk::Mesher exploite l'API existante du Mesher ; il cherche les six voisins au moment du bake, et outsideCell() consulte leur volume quand une face sort du chunk. L'adaptateur graphique reconstruit sans différentiel de bord le chunk modifié et ses six voisins.
 
 ## Extension headless
 Toute Entity3D de chunk existe sans Graphic Engine. Le ChunkFilter<TChunk> est une référence non propriétaire vers le chunk de la collection ; un futur composant physique ou gameplay peut utiliser le même accès. Aucun composant de collision n'est fourni par cette release.

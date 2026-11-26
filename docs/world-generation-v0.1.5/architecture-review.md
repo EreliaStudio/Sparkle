@@ -7,7 +7,7 @@
 - Generator avec addPass, insertPass et apply(coord,data), données persistantes synchronisées par leur propriétaire, instanciation et nettoyage par coordonnée ; aucun builder, colonne ou compteur d'intérêt imposé.
 - Task renvoie std::optional<TChunk>, nullopt succès et absence au seul sein de l'intérêt ; échec/timeout permettent retry contrôlé. Pas d'annulation, résultat ancien toujours rejeté.
 - WorldObserver et multi-observateur ; recalcul de l'union et file seulement au franchissement de coordonnée de chunk, rayon/observateurs modifiés. Manhattan à dimensions pondérées.
-- Volume voxel exactement SX×SY×SZ, setter sur chunk mutable, World::Voxel::ChunkMesher par héritage de Mesher avec outsideCell() et consultation des six voisins à chaque bake. À chaque changement, rebake le chunk et six voisins.
+- Volume voxel exactement SX×SY×SZ, setter sur chunk mutable, World::Voxel::Chunk::Mesher par héritage de Mesher avec outsideCell() et consultation des six voisins à chaque bake. À chaque changement, rebake le chunk et six voisins.
 
 ## Risques d'implémentation identifiés et affectation explicite
 | Risque / vérification | PR chargée |

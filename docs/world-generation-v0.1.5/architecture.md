@@ -3,7 +3,7 @@ Statut : conception, PR draft #85. Le C++ n'est pas encore implémenté ; les no
 
 ## Chaîne fonctionnelle
 WorldObserver (Component3D + EngineHeadless Registry) → WorldStreamingSystem<TChunk> (union, file Manhattan, gestion des requêtes) → ChunkRequester<TChunk> (Task<std::optional<TChunk>>) → Generator<TChunk,TGenerationData> ou source externe → ChunkCollection<TChunk> (TChunk + Entity3D/ChunkFilter) → consommateurs headless / adaptateur Graphics.
-En Graphics, World::Voxel::ChunkMesher consulte les six voisins lors de chaque cuisson, puis les composants de rendu sont actualisés.
+En Graphics, World::Voxel::Chunk::Mesher consulte les six voisins lors de chaque cuisson, puis les composants de rendu sont actualisés.
 
 ## Types et coordonnées
 - `spk::World` est un namespace regroupant les types du monde (`Chunk`, `ChunkCollection`, `ChunkCoordinate`, `ChunkFilter`, `ChunkInterest`, `ChunkRequester`, `Generator`, `LocalChunkRequester`, `WorldObserver`, `WorldStreamingSystem`). Ce n'est pas une classe ni une instance de monde.
@@ -47,7 +47,7 @@ En Graphics, World::Voxel::ChunkMesher consulte les six voisins lors de chaque c
 ## Voxel et Graphics
 - spk::World::Voxel::Chunk<SX,SY,SZ> hérite de spk::World::Chunk<SX,SY,SZ> et contient un Voxel::Volume de dimensions exactes SX×SY×SZ. Le chunk est modifiable, mais le Volume lui-même est une valeur immuable, dont les Data sont déjà partagées de manière const ; setVolume remplace la valeur puis notifie.
 - Il n'existe pas de `World::Voxel::Chunk::Builder` ni de constructeur prenant un `Volume`. Le chunk possède un volume vide par défaut et reçoit ses données avec `setVolume(Volume)`. Les modifications de cellules sont préparées dans `Voxel::Volume::Builder`.
-- spk::World::Voxel::ChunkMesher hérite de Voxel::Mesher ; outsideCell() consulte les six voisins de la collection lors de chaque bake. Pas de stockage durable des voisins, pas de MesherContext requis, pas de changement d'algorithme d'occlusion.
+- spk::World::Voxel::Chunk::Mesher hérite de Voxel::Mesher ; outsideCell() consulte les six voisins de la collection lors de chaque bake. Pas de stockage durable des voisins, pas de MesherContext requis, pas de changement d'algorithme d'occlusion.
 - L'adaptateur graphique est optionnel et se lie explicitement à ChunkCollection. Il scanne les chunks chargés au bind, puis place les coordonnées notifiées dans un set de dirty, traité une fois par rendu.
 - À chaque ajout/édition/remplacement : invalider systématiquement le chunk et **ses six voisins** ; à une suppression : destruction LifeCycle de l'entité puis invalidation des six voisins. Pas de détection coûteuse des frontières éditées.
 - L'entité et ses composants gameplay/headless persistent lors d'une édition, le rendu ajoute/réutilise ses propres composants. Unbind révoque ses souscriptions.

@@ -30,7 +30,7 @@ Les décisions ci-dessous reprennent la discussion de conception et les ajusteme
 | Nullopt cache | Absent mémorisé seulement tant que coordonnée intéressée, oublié à la sortie, redemandé à la réentrée |
 | Éviction | Tout chunk hors union retiré immédiatement ; pas de LRU |
 | Voxel Chunk | Construit par défaut avec Volume air SX×SY×SZ, modifiable via setVolume avec notifications ; ni `Chunk::Builder` ni constructeur prenant Volume |
-| ChunkMesher | Dérive de Mesher, outsideCell cherche voisins lors de chaque bake ; aucune conservation durable |
+| Chunk::Mesher | Dérive de Mesher, outsideCell cherche voisins lors de chaque bake ; aucune conservation durable |
 | Render sync | Bind scanne collection, événement immediate → dirty set, rebuild à render une fois par coord |
 | Six voisins | À toute modification, reconstruire chunk + six voisins sans différentiel de frontières ; destruction invalide six voisins |
 | Lifecycle | Acquisition/Release/Destruction distincts ; Widget, Entity et Pool<T> adaptés sans changer possession Lease |
