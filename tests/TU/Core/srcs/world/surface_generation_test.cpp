@@ -239,7 +239,7 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	std::atomic<int> calls{0};
 	const auto generate = [&](const Coordinate &coordinate) {
-		data.prepare(coordinate, {16, 16, 16});
+		data.prepareChunk(coordinate, {16, 16, 16});
 		if (!data.column(spk::Vector2Int{coordinate.x, coordinate.z}).heights)
 		{
 			++calls;
@@ -275,13 +275,13 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	const Coordinate coordinate{0, 0, 0};
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
-	data.prepare(coordinate, {16, 16, 16});
+	data.prepareChunk(coordinate, {16, 16, 16});
 	EXPECT_FALSE(data.column(coordinate).heights);
 	distribution.apply(coordinate, data);
 	EXPECT_FALSE(data.column(coordinate).ready());
 	// A failed job cleans its partially constructed column without publishing it.
 	data.clean(coordinate);
-	data.prepare(coordinate, {16, 16, 16});
+	data.prepareChunk(coordinate, {16, 16, 16});
 	EXPECT_FALSE(data.column(coordinate).heights);
 	EXPECT_FALSE(static_cast<bool>(data.column(spk::Vector2Int{0, 0}).influences));
 	EXPECT_FALSE(data.column(coordinate).ready());
@@ -290,7 +290,7 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	data.completeChunk(coordinate);
 	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
-	data.prepare(coordinate, {16, 16, 16});
+	data.prepareChunk(coordinate, {16, 16, 16});
 	EXPECT_TRUE(data.column(coordinate).heights);
 	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
@@ -399,7 +399,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	GenerationData data(registry);
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
-	data.prepare(idle, {16, 16, 16});
+	data.prepareChunk(idle, {16, 16, 16});
 	EXPECT_FALSE(data.column(idle).ready());
 	data.completeChunk(idle);
 	data.clean(idle);
@@ -409,7 +409,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	auto ready = entered.get_future();
 	auto gate = resume.get_future().share();
 	auto building = std::async(std::launch::async, [&] {
-		data.prepare(active, {16, 16, 16});
+		data.prepareChunk(active, {16, 16, 16});
 		entered.set_value();
 		gate.wait();
 		EXPECT_FALSE(data.column(active).ready());
@@ -421,7 +421,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	EXPECT_EQ(data.columnCount(), 1u);
 	resume.set_value();
 	building.get();
-	data.prepare(active, {16, 16, 16});
+	data.prepareChunk(active, {16, 16, 16});
 	EXPECT_TRUE(data.column(active).ready());
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);

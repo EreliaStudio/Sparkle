@@ -127,7 +127,7 @@ namespace spk::Voxel
 			bool _ready = false;
 
 		public:
-			// Read while the calling chunk is active, after prepare().
+			// Read while the calling chunk is active, after prepareChunk().
 			[[nodiscard]] bool ready() const noexcept
 			{
 				return _ready;
@@ -172,7 +172,7 @@ namespace spk::Voxel
 			return _world;
 		}
 
-		void prepare(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
+		void prepareChunk(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
 		{
 			Volume::Builder builder(dimensions);
 			builder.bind(_world.registry);

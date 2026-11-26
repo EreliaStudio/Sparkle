@@ -109,7 +109,7 @@ namespace spk::Voxel
 
 		bool _prepareGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
-			data.prepare(coordinate, spk::Vector3UInt{TChunk::Size});
+			data.prepareChunk(coordinate, spk::Vector3UInt{TChunk::Size});
 			return true;
 		}
 
