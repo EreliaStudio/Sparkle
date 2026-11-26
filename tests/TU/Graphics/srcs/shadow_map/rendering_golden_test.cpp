@@ -900,3 +900,81 @@ TEST(ShadowRenderingGolden, DirectionalFullLongShadowWithPCF)
 {
 	checkFullDirectionalShadows("directional_full_shadow_low_pcf", 3.0f, spk::Light::ShadowFilter::PCF3x3);
 }
+
+TEST(ShadowRenderingGolden, DirectionalOffscreenCasterStillShadowsVisibleFloor)
+{
+	Scene scene(true);
+	const spk::Vector3 eye{0, 10, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-4.0f, 4.0f, -3.0f, 3.0f, 0.1f, 18.0f);
+	const auto pillar = geometry({2, 8, 2});
+	scene.add(pillar, 1, {-19.0f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Static);
+	auto &sun = scene.addLight<spk::Light::Directional>({-3, 1, 0}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(18.0f);
+	sun.setShadowResolution(2048);
+	sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+
+	// The ray from the central floor probe towards the sun passes through
+	// the pillar at (-18, 5.8, 0), well outside the camera's horizontal extent.
+	const spk::Vector3 blocker{-18, 5.8f, 0};
+	const auto blockerClip = scene.camera.viewProjectionMatrix() * spk::Vector4(blocker, 1.0f);
+	ASSERT_GT(std::abs(blockerClip.x), blockerClip.w);
+	const std::array<spk::Vector3, 4> probes{{{0, -0.2f, 0}, {2, -0.2f, 0}, {0, -0.2f, -2}, {0, -0.2f, 2}}};
+	const std::string name = "directional_offscreen_caster";
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto capture = [&](bool enabled, const std::string &imageName, std::vector<int> &values) {
+		sun.setCastsShadows(enabled);
+		gl.reset(scene.imageSize);
+		const auto snapshot = scene.capture();
+		ASSERT_NE(snapshot, nullptr);
+		snapshot->execute(gl.renderContext());
+		spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+		spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = scene.imageSize})
+			.execute(gl.renderContext());
+		gl.save(sparkle_test::resultImagePath(Category, imageName));
+		for (const auto &probe : probes)
+		{
+			const auto clip = scene.camera.viewProjectionMatrix() * spk::Vector4(probe, 1.0f);
+			ASSERT_GT(clip.w, 0.0f);
+			const auto x = static_cast<GLint>((clip.x / clip.w * 0.5f + 0.5f) * scene.imageSize.x);
+			const auto y = static_cast<GLint>((clip.y / clip.w * 0.5f + 0.5f) * scene.imageSize.y);
+			ASSERT_GE(x, 0);
+			ASSERT_GE(y, 0);
+			ASSERT_LT(x, static_cast<GLint>(scene.imageSize.x));
+			ASSERT_LT(y, static_cast<GLint>(scene.imageSize.y));
+			std::array<std::uint8_t, 4> pixel{};
+			glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+			values.push_back(pixel[0] + pixel[1] + pixel[2]);
+		}
+		EXPECT_NO_THROW(gl.requireNoErrors());
+		gl.reset();
+	};
+
+	std::vector<int> unshadowed;
+	std::vector<int> shadowed;
+	capture(false, name + "_no_shadows", unshadowed);
+	capture(true, name, shadowed);
+	ASSERT_EQ(unshadowed.size(), probes.size());
+	ASSERT_EQ(shadowed.size(), probes.size());
+	for (std::size_t i = 0; i < probes.size(); ++i)
+	{
+		SCOPED_TRACE(i);
+		EXPECT_GT(unshadowed[i], 60);
+		if (i < 2)
+		{
+			EXPECT_LT(shadowed[i], unshadowed[i] * 0.8f) << "Offscreen caster must shadow visible receiver";
+		}
+		else
+		{
+			EXPECT_NEAR(shadowed[i], unshadowed[i], 24);
+		}
+	}
+	const auto actual = sparkle_test::resultImagePath(Category, name);
+	sparkle_test::ImageComparisonOptions tolerance;
+	tolerance.rgbTolerance = 8;
+	const auto difference = sparkle_test::compareImages(
+		actual, sparkle_test::resultImagePath(Category, name + "_no_shadows"), sparkle_test::resultImagePath(Category, name + "_shadow_difference"), tolerance);
+	EXPECT_GT(difference.differentPixelCount, 0u);
+	compareGolden(Category, name, actual);
+}
