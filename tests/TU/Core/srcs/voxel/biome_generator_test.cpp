@@ -33,17 +33,20 @@ namespace
 	static_assert(std::is_same_v<spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData>, spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData, 4>>);
 	static_assert(std::is_same_v<spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData>, spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData, 4>>);
 
-	spk::Voxel::Definition::Registry registry()
+	const spk::Voxel::Definition::Registry &registry()
 	{
-		spk::Voxel::Shape::Builder shape;
-		shape.addSlot("surface");
-		const auto definition = spk::Voxel::Definition(shape.build(), {{"surface", {"terrain"}}});
-		spk::Voxel::Definition::Registry::Builder builder;
-		for (std::uint32_t id = 1; id <= 4; ++id)
-		{
-			builder.add(id, definition);
-		}
-		return builder.build();
+		static const auto value = []() {
+			spk::Voxel::Shape::Builder shape;
+			shape.addSlot("surface");
+			const auto definition = spk::Voxel::Definition(shape.build(), {{"surface", {"terrain"}}});
+			spk::Voxel::Definition::Registry::Builder builder;
+			for (std::uint32_t id = 1; id <= 4; ++id)
+			{
+				builder.add(id, definition);
+			}
+			return builder.build();
+		}();
+		return value;
 	}
 
 	class Biome : public spk::World::Voxel::Biome
@@ -108,9 +111,10 @@ namespace
 			return _biome;
 		}
 
-		explicit Generator(float scale = 1.0f) :
-			spk::World::Voxel::Biome::Generator<Chunk, 1>(registry(), HeightCombination::Weighted, scale)
+		explicit Generator(float scale = 1.0f)
 		{
+			_setSurfaceScale(scale);
+			bind(&registry());
 		}
 	};
 
@@ -118,6 +122,24 @@ namespace
 	{
 		return spk::Voxel::Volume::PackedCell::definitionId(chunk.volume().atRaw({x, y, z}));
 	}
+}
+
+TEST(VoxelBiomeGeneratorTest, RegistryBindingIsRequiredAndCanBeDetached)
+{
+	Generator generator;
+	generator.bind(nullptr);
+	EXPECT_THROW((void)generator.generate({0, 0, 0}), spk::Exception);
+	EXPECT_EQ(generator.samples.load(), 0);
+	generator.bind(&registry());
+	const auto first = generator.generate({0, 0, 0});
+	ASSERT_TRUE(first);
+	EXPECT_EQ(generator.samples.load(), 289);
+	generator.bind(nullptr);
+	EXPECT_THROW((void)generator.generate({0, 1, 0}), spk::Exception);
+	generator.bind(&registry());
+	const auto second = generator.generate({0, 1, 0});
+	ASSERT_TRUE(second);
+	EXPECT_EQ(generator.samples.load(), 578);
 }
 
 TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
@@ -700,9 +722,9 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 		}
 
 	public:
-		EditedGenerator() :
-			spk::World::Voxel::Biome::Generator<Chunk, 1>(registry(), HeightCombination::Weighted)
+		EditedGenerator()
 		{
+			bind(&registry());
 			insertPass<RaiseSurface>(2);
 		}
 	};

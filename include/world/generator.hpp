@@ -40,6 +40,11 @@ namespace spk::World
 		{
 		}
 
+		[[nodiscard]] TGenerationData &_data() noexcept
+		{
+			return _generationData;
+		}
+
 		// A rejected or throwing preparation must leave no request-local state.
 		virtual bool _prepareGenerationData(const ChunkCoordinate &, TGenerationData &)
 		{

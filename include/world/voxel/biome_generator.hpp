@@ -98,6 +98,13 @@ namespace spk::World::Voxel
 		};
 
 	protected:
+		// Derived recipes can specialize the sampling scale before submitting work.
+		void _setSurfaceScale(float scale)
+		{
+			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
+			this->_data().setSurfaceScale(scale);
+		}
+
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
 
 		void _applyPass(typename spk::World::Generator<TChunk, Data>::Pass &pass, const spk::World::ChunkCoordinate &coordinate, Data &data) override
@@ -129,14 +136,17 @@ namespace spk::World::Voxel
 		}
 
 	public:
-		explicit Generator(const spk::Voxel::Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
-			spk::World::Generator<TChunk, Data>(registry, scale)
+		Generator()
 		{
-			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			this->template addPass<Distribution>(*this);
-			this->template addPass<Combination>(combination);
+			this->template addPass<Combination>(HeightCombination::Weighted);
 			this->template addPass<StrataGeneration>();
 			this->template addPass<Application>();
+		}
+
+		void bind(const spk::Voxel::Definition::Registry *registry)
+		{
+			this->_data().bind(registry);
 		}
 	};
 }

@@ -94,9 +94,10 @@ namespace sparkle_test::biome_world
 
 	public:
 		Generator(const perlin_world::Registry &registry, bool hard, bool edit) :
-			spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>(registry, HeightCombination::Weighted),
+
 			_hard(hard)
 		{
+			bind(&registry);
 			_boundary.setFrequency(0.055f);
 			if (edit)
 			{

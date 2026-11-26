@@ -233,7 +233,8 @@ TEST(SurfaceGridTest, DominantUsesFirstPositiveMaximumAndReflectsEdits)
 TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 {
 	const spk::Voxel::Definition::Registry registry;
-	GenerationData data(registry);
+	GenerationData data;
+	data.bind(&registry);
 	const Coordinate lower{-1, 0, 2};
 	const Coordinate upper{-1, 1, 2};
 	Distribution distribution;
@@ -272,7 +273,8 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 {
 	const spk::Voxel::Definition::Registry registry;
-	GenerationData data(registry);
+	GenerationData data;
+	data.bind(&registry);
 	const Coordinate coordinate{0, 0, 0};
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
@@ -397,7 +399,8 @@ TEST(SurfaceGenerationTest, HeightCombinationRejectsMissingAndInvalidContributio
 TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 {
 	const spk::Voxel::Definition::Registry registry;
-	GenerationData data(registry);
+	GenerationData data;
+	data.bind(&registry);
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
 	data.prepareChunk(idle, {16, 16, 16});
@@ -719,7 +722,9 @@ TEST(SurfaceGenerationTest, DominantHeightCombinationUsesWeightRatherThanHeight)
 
 TEST(SurfaceGenerationTest, MutableColumnAccessRequiresUnpublishedActiveGeneration)
 {
+	const spk::Voxel::Definition::Registry registry;
 	GenerationData data;
+	data.bind(&registry);
 	const Coordinate first{0, 0, 0};
 	const Coordinate second{0, 1, 0};
 	const spk::Vector2Int surface{0, 0};

@@ -18,7 +18,7 @@ World-specific voxel types live in `spk::World::Voxel` (`include/world/voxel/`).
 - World::Voxel::Biome::GenerationData<TCapacity = 4> (exposed as Biome::Generator<TChunk, TCapacity>::Data): owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
 - World::Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
 - World::Voxel::Biome::Generator: ready-to-use abstract generator; implement _computeBiomePlacement.
-  The constructor registers all four private built-in passes in order: Distribution, Combination, Strata and Application. Derived generators append custom passes with `addPass<TPass>(...)` or insert them before an existing pass with `insertPass<TPass>(index, ...)`. For example, `insertPass<Erosion>(2)` edits the height map before Strata. Indices are zero-based, and the current pass count is a valid append index. Strata consumes the final height map and influence grid; Application only consumes the resolved strata grid.
+  The parameterless constructor registers all four private built-in passes in order: Distribution, Combination, Strata and Application. The default surface scale is 1 and the height combination is Weighted. A non-owning `bind(const spk::Voxel::Definition::Registry*)` associates the registry; `bind(nullptr)` detaches it. Binding is permitted only while idle, invalidates cached columns, and the registry must remain alive while bound. Generation without a registry throws. Derived recipes may specialize the surface scale via `_setSurfaceScale` before generation. Derived generators append custom passes with `addPass<TPass>(...)` or insert them before an existing pass with `insertPass<TPass>(index, ...)`. For example, `insertPass<Erosion>(2)` edits the height map before Strata. Indices are zero-based, and the current pass count is a valid append index. Strata consumes the final height map and influence grid; Application only consumes the resolved strata grid.
   Existing PerlinTerrainPass and existing golden tests are not replaced.
 
 ## Lifetime and threading
@@ -54,7 +54,7 @@ before changing settings or definitions. No LRU or automatic eviction is impleme
   Influence and blended-height sample spacing are the same; voxel strata are sampled at
   unit spacing and use explicit bilinear dominance. Configuration is fixed
   during all active jobs. Drain workers and flush before changing definitions. Float world positions retain the existing Perlin precision limit.
-- Height combination is explicitly selected at construction: Weighted sums normalized
+- The generic height combination pass supports both modes; the voxel recipe selects Weighted at construction. Weighted sums normalized
   positive influences with double accumulation; Dominant evaluates only the biome with
   the greatest positive weight (first slot wins ties). Both reject missing contributions
   and non-finite results. This choice is independent of spatial influence interpolation. Custom edits run inside the

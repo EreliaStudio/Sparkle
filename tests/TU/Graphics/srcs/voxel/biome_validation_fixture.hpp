@@ -289,12 +289,14 @@ namespace sparkle_test::biome_validation
 
 	public:
 		Generator(const perlin_world::Registry &registry, Settings settings) :
-			spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>(registry, HeightCombination::Weighted, settings.scale),
+
 			_settings(settings),
 			_first(settings, 1, 0, 107),
 			_second(settings, 4, -12, 211),
 			_third(settings, 3, -5, 317)
 		{
+			bind(&registry);
+			_setSurfaceScale(settings.scale);
 			_regions.setFrequency(0.048f);
 			if (settings.terrace)
 			{

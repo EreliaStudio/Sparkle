@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <mutex>
 #include <set>
@@ -19,7 +20,7 @@ namespace spk::World::Voxel
 	public:
 		struct World
 		{
-			spk::Voxel::Definition::Registry registry;
+			const spk::Voxel::Definition::Registry *registry = nullptr;
 			float surfaceScale = 1.0f;
 		};
 
@@ -71,9 +72,33 @@ namespace spk::World::Voxel
 		ChunkCollection _chunks;
 
 	public:
-		explicit GenerationData(const spk::Voxel::Definition::Registry &registry = {}, float surfaceScale = 1.0f) :
-			_world{registry, surfaceScale}
+		GenerationData() = default;
+
+		// Bind only while the generator is idle. The registry must outlive its binding.
+		void bind(const spk::Voxel::Definition::Registry *registry)
 		{
+			const std::scoped_lock lock(_mutex);
+			if (!_chunks.empty())
+			{
+				throw spk::Exception("Cannot bind a voxel registry during generation");
+			}
+			_columns.clear();
+			_world.registry = registry;
+		}
+
+		void setSurfaceScale(float scale)
+		{
+			if (!std::isfinite(scale) || scale <= 0.0f)
+			{
+				throw spk::Exception("Invalid biome surface scale");
+			}
+			const std::scoped_lock lock(_mutex);
+			if (!_chunks.empty())
+			{
+				throw spk::Exception("Cannot change biome surface scale during generation");
+			}
+			_columns.clear();
+			_world.surfaceScale = scale;
 		}
 
 		[[nodiscard]] const World &world() const noexcept
@@ -84,7 +109,6 @@ namespace spk::World::Voxel
 		void prepareChunk(const spk::World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
 		{
 			spk::Voxel::Volume::Builder builder(dimensions);
-			builder.bind(_world.registry);
 			Column *columnData;
 			{
 				const std::scoped_lock lock(_mutex);
@@ -92,6 +116,11 @@ namespace spk::World::Voxel
 				{
 					throw spk::Exception("Chunk generation is already active for this coordinate");
 				}
+				if (_world.registry == nullptr)
+				{
+					throw spk::Exception("Voxel biome generator has no bound registry");
+				}
+				builder.bind(*_world.registry);
 				columnData = &_columns.try_emplace(spk::Vector2Int{coordinate.x, coordinate.z}).first->second;
 				_chunks.try_emplace(coordinate, Chunk(std::move(builder)));
 			}
