@@ -72,24 +72,31 @@ namespace spk::Voxel
 		class Strata : public StrataBase
 		{
 		protected:
-			const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const GenerationData &data) override
+			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).influences;
 			}
-			Strata::Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, GenerationData &data) override
+
+			const World::HeightMap::Grid &_heightMap(const spk::Vector2Int &coordinate, const GenerationData &data) override
 			{
-				return data.column(coordinate).strata;
+				return *data.column(coordinate).heights;
+			}
+
+			const Definition::Registry &_definitionRegistry(const GenerationData &data) override
+			{
+				return data.world().registry;
+			}
+
+			void _storeStrataGrid(const spk::Vector2Int &coordinate, GenerationData &data, StrataGrid::Lease grid) override
+			{
+				data.column(coordinate).strata = std::move(grid);
 			}
 		};
 
 		class Application : public ApplicationBase
 		{
 		protected:
-			const World::HeightMap::Grid &_heights(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
-			{
-				return *data.column(coordinate).heights;
-			}
-			const Strata::Grid &_strata(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
+			const StrataGrid &_strataGrid(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
 			{
 				return *data.column(coordinate).strata;
 			}

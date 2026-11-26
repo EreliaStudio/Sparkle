@@ -11,6 +11,7 @@
 #include <variant>
 #include <vector>
 
+#include "container/capacity_pool.hpp"
 #include "math/perlin.hpp"
 #include "voxel/volume.hpp"
 #include "world/surface_biome.hpp"
@@ -22,6 +23,8 @@ namespace spk::Voxel
 	public:
 		struct Stratum
 		{
+			class Instance;
+
 			struct Material
 			{
 				std::uint32_t voxelID;
@@ -216,6 +219,92 @@ namespace spk::Voxel
 				}
 				callback(_sample(stratum, position));
 			}
+		}
+	};
+
+	// Complete, resolved vertical profile for one horizontal world position.
+	class Biome::Stratum::Instance : public spk::LifeCycle
+	{
+	private:
+		struct ResolvedLayer
+		{
+			double bottom;
+			Definition::Registry::ID voxelID;
+		};
+
+		std::vector<ResolvedLayer> _layers;
+		std::optional<Definition::Registry> _registry;
+		double _surface = 0.0;
+		ReleaseContract _releaseContract;
+
+		explicit Instance(std::size_t capacity) :
+			_releaseContract(subscribeToRelease([this]() {
+				_layers.clear();
+				_registry.reset();
+				_surface = 0.0;
+			}))
+		{
+			_layers.reserve(capacity);
+		}
+
+	public:
+		using Lease = spk::CapacityPool<Instance>::Lease;
+
+		Instance(const Instance &) = delete;
+		Instance &operator=(const Instance &) = delete;
+
+		~Instance() override
+		{
+			terminateLifeCycle();
+		}
+
+		[[nodiscard]] static Lease obtain(const Biome &biome, const spk::Vector2 &position, double height, const Definition::Registry &registry)
+		{
+			if (!std::isfinite(height))
+			{
+				throw spk::Exception("Voxel terrain height must be finite");
+			}
+			static spk::CapacityPool<Instance> pool([](std::size_t capacity) {
+				return new Instance(capacity);
+			});
+			auto instance = pool.obtain(std::max(std::size_t{1}, biome.strata().size()));
+			instance->_registry.emplace(registry);
+			instance->_surface = std::floor(height);
+			double bottom = instance->_surface;
+			biome.sampleStrata(position, [&](const Biome::Layer &layer) {
+				(void)registry.at(layer.voxelID);
+				bottom = layer.thickness ? bottom - *layer.thickness : -std::numeric_limits<double>::infinity();
+				instance->_layers.push_back({bottom, layer.voxelID});
+			});
+			return instance;
+		}
+
+		// Height is absolute. Each layer owns its upper endpoint, but not its lower endpoint.
+		// ID zero and nullptr represent air, including below a finite profile.
+		[[nodiscard]] Definition::Registry::ID voxelIDAt(double height) const
+		{
+			if (!std::isfinite(height))
+			{
+				throw spk::Exception("Voxel terrain height must be finite");
+			}
+			if (height > _surface)
+			{
+				return 0;
+			}
+			for (const auto &layer : _layers)
+			{
+				if (height > layer.bottom)
+				{
+					return layer.voxelID;
+				}
+			}
+			return 0;
+		}
+
+		[[nodiscard]] const Definition *definitionAt(double height) const
+		{
+			const auto id = voxelIDAt(height);
+			return id == 0 ? nullptr : _registry->tryGet(id);
 		}
 	};
 }

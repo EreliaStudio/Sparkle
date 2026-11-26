@@ -10,30 +10,40 @@ namespace spk::Voxel
 	{
 	public:
 		using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
-		using Grid = Strata::Grid;
+		using Grid = StrataGrid;
 
 	protected:
-		virtual const InfluenceGrid &_influences(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
-		virtual Grid::Lease &_gridDestination(const spk::Vector2Int &coordinate, TGenerationData &data) = 0;
+		virtual const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
+		virtual const World::HeightMap::Grid &_heightMap(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
+		virtual const Definition::Registry &_definitionRegistry(const TGenerationData &data) = 0;
+		virtual void _storeStrataGrid(const spk::Vector2Int &coordinate, TGenerationData &data, Grid::Lease grid) = 0;
 
 		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
-			const auto &influences = _influences(coordinate, data);
-			auto grid = Grid::obtain({influences.configuration().size, 1.0f}, influences.worldOrigin());
-			const auto layout = grid->sampleSize();
-			for (std::uint32_t z = 0; z < layout.y; ++z)
+			const auto &influences = _influenceGrid(coordinate, data);
+			const auto &heights = _heightMap(coordinate, data);
+			const auto &registry = _definitionRegistry(data);
+			const spk::Vector2UInt size{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)};
+			const auto origin = TChunk::chunkCoordinateToWorld({coordinate.x, 0, coordinate.y});
+			const spk::Vector2 worldOrigin{static_cast<float>(origin.x), static_cast<float>(origin.z)};
+			if (influences.configuration().size != size || heights.configuration().size != size ||
+				influences.worldOrigin() != worldOrigin || heights.worldOrigin() != worldOrigin)
 			{
-				for (std::uint32_t x = 0; x < layout.x; ++x)
-				{
-					const auto *biome = dynamic_cast<const Biome *>(influences.interpolate(grid->localPosition({x, z})).dominant());
-					if (biome == nullptr)
-					{
-						throw spk::Exception("Voxel strata require a dominant voxel biome");
-					}
-					grid->buildCell({x, z}, *biome);
-				}
+				throw spk::Exception("Voxel surface grids do not match the chunk footprint");
 			}
-			_gridDestination(coordinate, data) = std::move(grid);
+
+			auto grid = Grid::obtain(size);
+			for (auto &&[position, instance] : *grid)
+			{
+				const spk::Vector2 localPosition{static_cast<float>(position.x), static_cast<float>(position.y)};
+				const auto *biome = dynamic_cast<const Biome *>(influences.interpolate(localPosition).dominant());
+				if (biome == nullptr)
+				{
+					throw spk::Exception("Voxel strata require a dominant voxel biome");
+				}
+				instance = Biome::Stratum::Instance::obtain(*biome, worldOrigin + localPosition, heights.interpolate(localPosition), registry);
+			}
+			_storeStrataGrid(coordinate, data, std::move(grid));
 		}
 	};
 }

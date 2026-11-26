@@ -9,50 +9,32 @@ namespace spk::Voxel
 	class StrataApplicationPass : public World::Generator<TChunk, TGenerationData>::Pass
 	{
 	protected:
-		virtual const World::HeightMap::Grid &_heights(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
-		virtual const Strata::Grid &_strata(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
+		virtual const StrataGrid &_strataGrid(const World::ChunkCoordinate &coordinate, const TGenerationData &data) = 0;
 
 	public:
 		void apply(const World::ChunkCoordinate &coordinate, TGenerationData &data) override
 		{
 			auto &builder = data.chunk(coordinate).builder;
-			const auto &heights = _heights(coordinate, data);
-			const auto &strata = _strata(coordinate, data);
+			const auto &strata = _strataGrid(coordinate, data);
 			const auto origin = TChunk::chunkCoordinateToWorld(coordinate);
 			const spk::Vector2UInt size{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)};
-			const spk::Vector2 expectedOrigin{static_cast<float>(origin.x), static_cast<float>(origin.z)};
-			if (heights.configuration().size != size || strata.configuration().size != size ||
-				heights.worldOrigin() != expectedOrigin || strata.worldOrigin() != expectedOrigin)
+			if (strata.size() != size)
 			{
-				throw spk::Exception("Voxel surface grids do not match the chunk footprint");
+				throw spk::Exception("Voxel strata grid does not match the chunk footprint");
 			}
-			for (std::uint32_t z = 0; z < size.y; ++z)
+
+			for (auto &&[position, instance] : strata)
 			{
-				for (std::uint32_t x = 0; x < size.x; ++x)
+				if (!instance)
 				{
-					const spk::Vector2 position{static_cast<float>(x), static_cast<float>(z)};
-					const double top = std::floor(heights.interpolate(position));
-					if (!std::isfinite(top))
+					throw spk::Exception("Missing voxel stratum instance");
+				}
+				for (std::uint32_t y = 0; y < static_cast<std::uint32_t>(TChunk::Size.y); ++y)
+				{
+					const auto id = instance->voxelIDAt(static_cast<double>(origin.y + y));
+					if (id != 0)
 					{
-						throw spk::Exception("Voxel terrain height must be finite");
-					}
-					const auto layers = strata.layers(position);
-					for (std::uint32_t y = 0; y < static_cast<std::uint32_t>(TChunk::Size.y); ++y)
-					{
-						double depth = top - static_cast<double>(origin.y + y);
-						if (depth < 0.0)
-						{
-							break;
-						}
-						for (const auto &layer : layers)
-						{
-							if (!layer.thickness || depth < *layer.thickness)
-							{
-								builder.set({x, y, z}, layer.voxelID);
-								break;
-							}
-							depth -= *layer.thickness;
-						}
+						builder.set({position.x, y, position.y}, id);
 					}
 				}
 			}

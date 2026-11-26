@@ -4,10 +4,9 @@
 #include <map>
 #include <mutex>
 #include <set>
-#include <span>
 #include <utility>
-#include <vector>
 
+#include "container/grid_2d.hpp"
 #include "voxel/biome.hpp"
 #include "voxel/volume.hpp"
 #include "world/chunk_coordinate.hpp"
@@ -15,93 +14,7 @@
 
 namespace spk::Voxel
 {
-	class Strata
-	{
-	public:
-		struct Cell
-		{
-			std::size_t offset = 0;
-			std::size_t count = 0;
-		};
-
-		class Grid : public World::SurfaceGrid<Cell>
-		{
-		private:
-			std::vector<Biome::Layer> _layers;
-
-			Grid() = default;
-
-		public:
-			using Lease = spk::Pool<Grid>::Lease;
-
-			[[nodiscard]] static Lease obtain(const Configuration &configuration, const spk::Vector2 &origin)
-			{
-				return _obtain<Grid>(configuration, origin, []() {
-					return new Grid();
-				},
-									 [](Grid &grid) {
-										 grid._layers.clear();
-									 });
-			}
-
-			// Building a cell may invalidate previously returned layer spans.
-			void buildCell(const spk::Vector2UInt &position, const Biome &biome)
-			{
-				const auto worldPosition = worldOrigin() + localPosition(position);
-				auto &cell = sample(position);
-				const auto previous = cell;
-				const auto offset = _layers.size();
-				try
-				{
-					biome.sampleStrata(worldPosition, [&](Biome::Layer layer) {
-						_layers.push_back(layer);
-					});
-				} catch (...)
-				{
-					_layers.resize(offset);
-					throw;
-				}
-
-				const auto count = _layers.size() - offset;
-				if (previous.count == 0)
-				{
-					cell = count == 0 ? Cell{} : Cell{offset, count};
-					return;
-				}
-
-				using Difference = std::vector<Biome::Layer>::difference_type;
-				const auto oldBegin = _layers.begin() + static_cast<Difference>(previous.offset);
-				const auto oldEnd = oldBegin + static_cast<Difference>(previous.count);
-				if (count == previous.count)
-				{
-					std::copy(_layers.begin() + static_cast<Difference>(offset), _layers.end(), oldBegin);
-					_layers.resize(offset);
-					return;
-				}
-
-				_layers.erase(oldBegin, oldEnd);
-				const auto dimensions = sampleSize();
-				for (std::uint32_t z = 0; z < dimensions.y; ++z)
-				{
-					for (std::uint32_t x = 0; x < dimensions.x; ++x)
-					{
-						auto &other = sample({x, z});
-						if (&other != &cell && other.count != 0 && other.offset > previous.offset)
-						{
-							other.offset -= previous.count;
-						}
-					}
-				}
-				cell = count == 0 ? Cell{} : Cell{offset - previous.count, count};
-			}
-
-			[[nodiscard]] std::span<const Biome::Layer> layers(const spk::Vector2 &position) const
-			{
-				const auto &cell = at(position);
-				return std::span<const Biome::Layer>(_layers).subspan(cell.offset, cell.count);
-			}
-		};
-	};
+	using StrataGrid = spk::Grid2D<Biome::Stratum::Instance::Lease>;
 
 	template <std::size_t TCapacity = 4>
 	class BiomeGenerationData
@@ -118,7 +31,7 @@ namespace spk::Voxel
 			using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
 			typename InfluenceGrid::Lease influences;
 			World::HeightMap::Grid::Lease heights;
-			Strata::Grid::Lease strata;
+			StrataGrid::Lease strata;
 
 		private:
 			friend class BiomeGenerationData;

@@ -11,11 +11,11 @@ The design branch remains unchanged. No merge is authorized by this record.
 - World::SurfaceGrid<T>: composes a Grid2D lease with origin, scale, inclusive bounds and floor access. sampleSize() returns the number of samples on each axis, distinct from the physical extent in Configuration::size. Specialized surface wrappers reuse a regular Pool; releasing the wrapper immediately returns its storage lease. SurfaceGrid exposes direct floor access through at(position) and a protected bilinear-only weighted sample traversal shared by specialized grids.
 - World::HeightMap: named Perlin layers, mutable construction grids, direct at(position) and bilinear interpolate(position) sampling.
 - World::SurfacePass<TChunk, TGenerationData>: a regular Generator::Pass adapting XYZ to X/Z; it receives the full generation data and owns no cache.
-- Voxel::Strata::Grid: contiguous sampled layers with offset/count cells. buildCell accepts a sample coordinate (Vector2UInt); rebuilding replaces old layers and repairs offsets, with rollback on sampling failure. Returned spans are valid only until the next mutation.
+- Voxel::Biome::Stratum::Instance: one pooled resolved vertical profile per voxel X/Z, containing absolute layer boundaries and selected voxel IDs. `voxelIDAt(height)` and `definitionAt(height)` query the same profile without noise sampling or allocations. ID zero and nullptr denote air. `Voxel::StrataGrid` is a `Grid2D<Instance::Lease>` with exactly the chunk footprint; releasing the grid returns every instance to its own capacity pool. Each instance retains its reserved layer storage for reuse.
 - Voxel::BiomeGenerationData<TCapacity = 4>: owns persistent column entries and request-local voxel builders; concrete passes consult their generation data to select the necessary work.
 - Voxel::Biome: ordered strata with variant-based thickness (Fixed, Variable, Infinite) and material distribution (Weighted, Perlin, Custom); only the active configuration is constructed. Material weights and sampled Layer semantics are unchanged.
 - Voxel::BiomeGenerator: ready-to-use abstract generator; implement _computeBiomePlacement.
-  Derived generators register custom passes, Strata and Application with addPass in dependency order; the base constructor registers Distribution and Combination.
+  Derived generators register custom surface-height edits before Strata, then Application, with addPass in dependency order; the base constructor registers Distribution and Combination. Strata consumes the final height map and influence grid; Application only consumes the resolved strata grid.
   Existing PerlinTerrainPass and existing golden tests are not replaced.
 
 ## Lifetime and threading

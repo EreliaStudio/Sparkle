@@ -567,61 +567,133 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 	EXPECT_EQ(generator.activeChunkCount(), 0u);
 }
 
-TEST(VoxelStrataGridTest, RebuildingCellsReclaimsLayersAndPreservesNeighbors)
+TEST(VoxelStratumInstanceTest, ResolvesAbsoluteHeightsAndDefinitions)
 {
+	using Instance = Biome::Stratum::Instance;
 	Biome biome;
-	Biome shorter;
-	shorter.strata().resize(1);
-	shorter.strata().front().materials = {{4, 1}};
-	Biome empty;
-	empty.strata().clear();
-	auto grid = spk::Voxel::Strata::Grid::obtain({{2, 0}, 1.0f}, {0, 0});
+	const auto definitions = registry();
+	auto instance = Instance::obtain(biome, {0, 0}, 17.75, definitions);
+	EXPECT_EQ(instance->voxelIDAt(18), 0u);
+	EXPECT_EQ(instance->definitionAt(18), nullptr);
+	EXPECT_EQ(instance->voxelIDAt(17), 1u);
+	EXPECT_EQ(instance->voxelIDAt(16), 2u);
+	EXPECT_EQ(instance->voxelIDAt(15), 2u);
+	EXPECT_EQ(instance->voxelIDAt(14), 3u);
+	EXPECT_EQ(instance->voxelIDAt(-200), 3u);
+	EXPECT_EQ(instance->definitionAt(16), &definitions.at(2));
+	EXPECT_THROW((void)instance->voxelIDAt(std::numeric_limits<double>::infinity()), spk::Exception);
 
-	grid->buildCell({0, 0}, biome);
-	grid->buildCell({1, 0}, biome);
-	grid->buildCell({2, 0}, empty);
-	ASSERT_EQ(grid->layers({0, 0}).size(), 3u);
-	EXPECT_TRUE(grid->layers({2, 0}).empty());
+	biome.strata().resize(2);
+	auto finite = Instance::obtain(biome, {0, 0}, -2.25, definitions);
+	EXPECT_EQ(finite->voxelIDAt(-2), 0u);
+	EXPECT_EQ(finite->voxelIDAt(-3), 1u);
+	EXPECT_EQ(finite->voxelIDAt(-4), 2u);
+	EXPECT_EQ(finite->voxelIDAt(-5), 2u);
+	EXPECT_EQ(finite->voxelIDAt(-6), 0u);
+	EXPECT_EQ(finite->definitionAt(-6), nullptr);
 
-	grid->buildCell({0, 0}, shorter);
-	ASSERT_EQ(grid->layers({0, 0}).size(), 1u);
-	EXPECT_EQ(grid->layers({0, 0}).front().voxelID, 4u);
-	ASSERT_EQ(grid->layers({1, 0}).size(), 3u);
-	EXPECT_EQ(grid->layers({1, 0})[2].voxelID, 3u);
-	EXPECT_EQ(grid->sample({1, 0}).offset, 0u);
-	EXPECT_EQ(grid->sample({0, 0}).offset, 3u);
-	EXPECT_TRUE(grid->layers({2, 0}).empty());
-
-	grid->buildCell({0, 0}, shorter);
-	EXPECT_EQ(grid->sample({0, 0}).offset, 3u);
-	grid->buildCell({0, 0}, empty);
-	EXPECT_TRUE(grid->layers({0, 0}).empty());
-	grid->buildCell({2, 0}, shorter);
-	EXPECT_EQ(grid->sample({2, 0}).offset, 3u);
-	grid->buildCell({1, 0}, empty);
-	EXPECT_EQ(grid->sample({2, 0}).offset, 0u);
-	grid->buildCell({0, 0}, biome);
-	EXPECT_EQ(grid->sample({0, 0}).offset, 1u);
-	ASSERT_EQ(grid->layers({0, 0}).size(), 3u);
-	EXPECT_EQ(grid->layers({0, 0})[1].voxelID, 2u);
-	EXPECT_EQ(grid->layers({2, 0}).front().voxelID, 4u);
+	biome.strata().clear();
+	auto empty = Instance::obtain(biome, {0, 0}, 0, definitions);
+	EXPECT_EQ(empty->voxelIDAt(0), 0u);
+	EXPECT_EQ(empty->voxelIDAt(-100), 0u);
 }
 
-TEST(VoxelStrataGridTest, FailedBuildPreservesCellsAndRollsBackAppendedLayers)
+TEST(VoxelStratumInstanceTest, ReusesGridAndInstancesWithoutKeepingOldLayers)
 {
+	using Instance = Biome::Stratum::Instance;
+	using Grid = spk::Voxel::StrataGrid;
 	Biome biome;
-	Biome invalid;
-	invalid.strata()[1].materials.clear();
-	auto grid = spk::Voxel::Strata::Grid::obtain({{1, 0}, 1.0f}, {0, 0});
-	grid->buildCell({0, 0}, biome);
-	EXPECT_THROW(grid->buildCell({0, 0}, invalid), spk::Exception);
-	ASSERT_EQ(grid->layers({0, 0}).size(), 3u);
-	EXPECT_EQ(grid->layers({0, 0})[1].voxelID, 2u);
-	EXPECT_THROW(grid->buildCell({1, 0}, invalid), spk::Exception);
-	EXPECT_TRUE(grid->layers({1, 0}).empty());
-	EXPECT_THROW(grid->buildCell({2, 0}, biome), spk::Exception);
-	grid->buildCell({1, 0}, biome);
-	EXPECT_EQ(grid->sample({1, 0}).offset, 3u);
-	ASSERT_EQ(grid->layers({1, 0}).size(), 3u);
-	EXPECT_EQ(grid->layers({1, 0})[2].voxelID, 3u);
+	const auto definitions = registry();
+	auto grid = Grid::obtain({2, 1});
+	(*grid)[{0, 0}] = Instance::obtain(biome, {0, 0}, 17, definitions);
+	(*grid)[{1, 0}] = Instance::obtain(biome, {1, 0}, 29, definitions);
+	const auto *gridAddress = grid.get();
+	const auto *first = (*grid)[{0, 0}].get();
+	const auto *second = (*grid)[{1, 0}].get();
+	EXPECT_NE(first, second);
+	grid = {};
+
+	auto recycled = Grid::obtain({2, 1});
+	EXPECT_EQ(recycled.get(), gridAddress);
+	EXPECT_FALSE(static_cast<bool>((*recycled)[{0, 0}]));
+	EXPECT_FALSE(static_cast<bool>((*recycled)[{1, 0}]));
+	biome.strata().back().thickness = Biome::Stratum::Thickness::Fixed{2};
+	(*recycled)[{0, 0}] = Instance::obtain(biome, {0, 0}, -10, definitions);
+	(*recycled)[{1, 0}] = Instance::obtain(biome, {1, 0}, 40, definitions);
+	const auto *a = (*recycled)[{0, 0}].get();
+	const auto *b = (*recycled)[{1, 0}].get();
+	EXPECT_TRUE((a == first && b == second) || (a == second && b == first));
+	EXPECT_EQ(a->voxelIDAt(-10), 1u);
+	EXPECT_EQ(a->voxelIDAt(-100), 0u);
+	EXPECT_EQ(b->voxelIDAt(40), 1u);
+	EXPECT_EQ(b->voxelIDAt(17), 0u);
+}
+
+TEST(VoxelStratumInstanceTest, FailedResolutionReturnsInstanceAndClearsPartialLayers)
+{
+	using Instance = Biome::Stratum::Instance;
+	Biome biome;
+	const auto definitions = registry();
+	auto initial = Instance::obtain(biome, {0, 0}, 0, definitions);
+	const auto *address = initial.get();
+	initial = {};
+	biome.strata()[1].materials.clear();
+	EXPECT_THROW((void)Instance::obtain(biome, {0, 0}, 50, definitions), spk::Exception);
+	biome.strata()[1].materials = {{2, 1}};
+	auto recovered = Instance::obtain(biome, {0, 0}, -1, definitions);
+	EXPECT_EQ(recovered.get(), address);
+	EXPECT_EQ(recovered->voxelIDAt(50), 0u);
+	EXPECT_EQ(recovered->voxelIDAt(-1), 1u);
+	EXPECT_EQ(recovered->voxelIDAt(-2), 2u);
+	EXPECT_EQ(recovered->voxelIDAt(-4), 3u);
+}
+
+TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
+{
+	class RaiseSurface : public Generator::SurfacePass
+	{
+	protected:
+		void _applySurface(const spk::Vector2Int &coordinate, Generator::GenerationData &data) override
+		{
+			auto &grid = *data.column(coordinate).heights;
+			const auto size = grid.sampleSize();
+			for (std::uint32_t z = 0; z < size.y; ++z)
+			{
+				for (std::uint32_t x = 0; x < size.x; ++x)
+				{
+					grid.sample({x, z}) += 16.0f;
+				}
+			}
+		}
+	};
+
+	class EditedGenerator : public spk::Voxel::BiomeGenerator<Chunk, 1>
+	{
+	private:
+		Biome _biome;
+
+	protected:
+		void _computeBiomePlacement(const spk::Vector2 &, Cell &cell) const override
+		{
+			cell[0] = {&_biome, 1};
+		}
+
+	public:
+		EditedGenerator() :
+			BiomeGenerator(registry(), HeightCombination::Weighted)
+		{
+			addPass<RaiseSurface>();
+			addPass<Strata>();
+			addPass<Application>();
+		}
+	};
+
+	EditedGenerator generator;
+	const auto lower = generator.generate({-1, 1, 0});
+	const auto upper = generator.generate({-1, 2, 0});
+	ASSERT_TRUE(lower && upper);
+	EXPECT_EQ(idAt(*lower, 0, 15, 0), 2u);
+	EXPECT_EQ(idAt(*upper, 0, 0, 0), 2u);
+	EXPECT_EQ(idAt(*upper, 0, 1, 0), 1u);
+	EXPECT_EQ(idAt(*upper, 0, 2, 0), 0u);
 }
