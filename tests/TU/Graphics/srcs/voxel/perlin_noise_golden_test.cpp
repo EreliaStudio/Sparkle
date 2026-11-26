@@ -41,7 +41,7 @@ namespace
 				spk::Vector2 position{static_cast<float>(x) / 8.0f - 32.0f, static_cast<float>(z) / 6.0f - 32.0f};
 				if (field == Field::Warped)
 				{
-					position = warp.warp2D(position);
+					position = warp.sample2D(position);
 				}
 				const float value = field == Field::ThreeDimensional ? noise.sample3D(position.x, 13.375f, position.y) : noise.sample2D(position.x, position.y);
 				const bool threshold = field == Field::Threshold || field == Field::Warped;

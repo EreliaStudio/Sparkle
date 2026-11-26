@@ -111,8 +111,8 @@ gradients in 3D. Quintic interpolation is the default; Linear and SmoothStep
 remain selectable. The seed and permutation remain deterministic, but existing
 procedural worlds will change with the revised gradients and default fade.
 DomainWarp is optional and does not silently alter any existing pipeline. It owns
-three independently configurable Perlin fields and exposes warp1D, warp2D and
-warp3D. Each axis samples the original input position at the requested dimension;
+three independently configurable Perlin fields and exposes sample1D, sample2D and
+sample3D. Each axis samples the original input position at the requested dimension;
 the 2D result is unchanged by the addition of the third field.
 Influence grids interpolate by biome identity, not slot index, preserving up to
 four cells' distinct biomes. Direct at(position) returns the selected cell by reference; interpolate(position)

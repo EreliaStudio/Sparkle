@@ -67,7 +67,7 @@ namespace spk
 			return _amplitude;
 		}
 
-		[[nodiscard]] float warp1D(float position) const
+		[[nodiscard]] float sample1D(float position) const
 		{
 			if (!std::isfinite(position))
 			{
@@ -85,7 +85,7 @@ namespace spk
 			return result;
 		}
 
-		[[nodiscard]] Vector2 warp2D(const Vector2 &position) const
+		[[nodiscard]] Vector2 sample2D(const Vector2 &position) const
 		{
 			if (!std::isfinite(position.x) || !std::isfinite(position.y))
 			{
@@ -105,7 +105,7 @@ namespace spk
 			return result;
 		}
 
-		[[nodiscard]] Vector3 warp3D(const Vector3 &position) const
+		[[nodiscard]] Vector3 sample3D(const Vector3 &position) const
 		{
 			if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z))
 			{
