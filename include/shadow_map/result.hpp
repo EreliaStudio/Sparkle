@@ -27,6 +27,11 @@ namespace spk::ShadowMap
 			Texture::Handle depthTexture;
 			std::array<Matrix4x4, 6> viewProjection{};
 			std::uint8_t faceCount = 1;
+			std::array<Texture::Handle, 4> cascadeTextures{};
+			std::array<float, 4> cascadeSplits{};
+			std::array<float, 4> cascadeDepthBias{};
+			std::array<float, 4> cascadeNormalBias{};
+			Matrix4x4 cascadeCameraView{};
 			float nearPlane = 0.0f;
 			float farPlane = 0.0f;
 			float depthBias = 0.0f;

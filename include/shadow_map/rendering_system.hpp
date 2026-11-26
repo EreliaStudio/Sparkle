@@ -18,6 +18,9 @@ namespace spk::ShadowMap
 
 	public:
 		RenderingSystem();
+		// Single-map mode is retained for diagnostic A/B comparisons.
+		void setDirectionalCascadesEnabled(bool enabled) noexcept;
+		[[nodiscard]] bool directionalCascadesEnabled() const noexcept;
 		[[nodiscard]] std::size_t maxPointShadowRebuildsPerImage() const noexcept;
 		void setMaxPointShadowRebuildsPerImage(std::size_t value) noexcept;
 		void buildViewRenderSnapshot(

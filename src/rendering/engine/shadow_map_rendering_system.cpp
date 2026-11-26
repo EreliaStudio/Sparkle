@@ -7,6 +7,7 @@
 #include <atomic>
 #include <bit>
 #include <cstddef>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -27,6 +28,7 @@
 #include "graphics/opengl/state.hpp"
 #include "graphics/opengl/uniform_buffer.hpp"
 #include "light/channel.hpp"
+#include "math/vector4.hpp"
 #include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/point_budget.hpp"
@@ -50,7 +52,24 @@ namespace spk::ShadowMap
 		{
 			Mesh mesh;
 			Matrix4x4 transform;
+			CasterBounds bounds;
 		};
+
+		[[nodiscard]] CasterBounds worldBounds(const Mesh &mesh, const Matrix4x4 &transform)
+		{
+			const auto &local = mesh.bounds();
+			const auto &lo = local.minimum;
+			const auto &hi = local.maximum;
+			const auto first = transform * Vector4(lo, 1.0f);
+			CasterBounds bounds{{first.x, first.y, first.z}, {first.x, first.y, first.z}};
+			for (std::size_t i = 1; i < 8; ++i)
+			{
+				const auto p = transform * Vector4{(i & 1) ? hi.x : lo.x, (i & 2) ? hi.y : lo.y, (i & 4) ? hi.z : lo.z, 1};
+				bounds.minimum = {std::min(bounds.minimum.x, p.x), std::min(bounds.minimum.y, p.y), std::min(bounds.minimum.z, p.z)};
+				bounds.maximum = {std::max(bounds.maximum.x, p.x), std::max(bounds.maximum.y, p.y), std::max(bounds.maximum.z, p.z)};
+			}
+			return bounds;
+		}
 
 		[[nodiscard]] std::uint64_t mix(std::uint64_t seed, std::uint64_t value) noexcept
 		{
@@ -297,8 +316,23 @@ namespace spk::ShadowMap
 
 	struct RenderingSystem::State final
 	{
+		struct CascadeCache
+		{
+			Matrix4x4 projection{};
+			std::uint64_t staticSignature = 0;
+			std::uint64_t dynamicSignature = 0;
+			Framebuffer::Handle staticTarget;
+			Texture::Handle staticTexture;
+			Framebuffer::Handle finalTarget;
+			Texture::Handle texture;
+		};
+
 		struct LightCache
 		{
+			std::array<CascadeCache, Projection::CascadeCount> cascades{};
+			bool cascaded = false;
+			Matrix4x4 cascadeCameraView{};
+			std::array<float, Projection::CascadeCount> cascadeSplits{};
 			std::uint32_t resolution = 0;
 			Matrix4x4 projection{};
 			std::uint64_t staticSignature = 0;
@@ -325,6 +359,7 @@ namespace spk::ShadowMap
 		std::mutex mutex;
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
 		std::atomic<std::size_t> maxPointRebuilds{1};
+		std::atomic<bool> directionalCascades{true};
 	};
 
 	class DepthCommand final : public RenderCommand
@@ -336,6 +371,8 @@ namespace spk::ShadowMap
 		std::uint64_t _viewIdentity;
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
+		bool _directionalCascades;
+		std::vector<CasterBounds> _bounds;
 		std::vector<Light::Selection::Entry> _lights;
 		std::vector<Caster> _staticCasters;
 		std::vector<Caster> _dynamicCasters;
@@ -440,6 +477,120 @@ namespace spk::ShadowMap
 			}
 		}
 
+		void _renderDirectional(
+			RenderContext &context, RenderingSystem::State::LightCache &cache,
+			const Light::Selection::Entry &light) const
+		{
+			if (cache.sourceCaptureOrdinal > _captureOrdinal)
+			{
+				return;
+			}
+			const auto projections = Projection::directionalCascades(light, _camera, _bounds);
+			auto cascades = cache.cascades;
+			bool changed = !cache.cascaded || cache.resolution != light.shadowResolution;
+			for (std::size_t i = 0; i < projections.size(); ++i)
+			{
+				const auto &projection = projections[i];
+				auto &cascade = cascades[i];
+				std::vector<Caster> staticCasters, dynamicCasters;
+				for (const auto &caster : _staticCasters)
+				{
+					if (projection.intersects(caster.bounds))
+					{
+						staticCasters.push_back(caster);
+					}
+				}
+				for (const auto &caster : _dynamicCasters)
+				{
+					if (projection.intersects(caster.bounds))
+					{
+						dynamicCasters.push_back(caster);
+					}
+				}
+				const auto staticSignature = signature(staticCasters);
+				const auto dynamicSignature = signature(dynamicCasters);
+				const bool staticDirty = !cache.cascaded || !cascade.staticTarget ||
+					cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection ||
+					cascade.staticSignature != staticSignature;
+				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cascade.dynamicSignature != dynamicSignature;
+				if (staticDirty)
+				{
+					auto frame = newDepthTarget(light.shadowResolution);
+					cascade.staticTarget = frame.handle();
+					cascade.staticTexture = *frame.depthStencilAttachmentHandle();
+					renderDepth(context, cascade.staticTarget, projection.viewProjection, staticCasters, true);
+				}
+				if (dynamicDirty)
+				{
+					// Static-only scenes need no copy or second depth allocation.
+					if (dynamicCasters.empty())
+					{
+						cascade.finalTarget = cascade.staticTarget;
+						cascade.texture = cascade.staticTexture;
+					}
+					else
+					{
+						auto frame = newDepthTarget(light.shadowResolution);
+						cascade.finalTarget = frame.handle();
+						cascade.texture = *frame.depthStencilAttachmentHandle();
+						copyDepth(context, cascade.staticTarget, cascade.finalTarget);
+						renderDepth(context, cascade.finalTarget, projection.viewProjection, dynamicCasters, false);
+					}
+				}
+				cascade.projection = projection.viewProjection;
+				cascade.staticSignature = staticSignature;
+				cascade.dynamicSignature = dynamicSignature;
+				changed |= dynamicDirty;
+			}
+			std::array<float, Projection::CascadeCount> splits{};
+			for (std::size_t i = 0; i < splits.size(); ++i)
+			{
+				splits[i] = projections[i].splitFar;
+			}
+			// Publish only if the maps or their selection metadata changed.
+			// Camera-space split selection still follows camera movement when
+			// stabilized maps are reusable.
+			const auto cameraView = _camera.viewMatrix();
+			if (!changed && cache.publishedAdmission == light.admission &&
+				cache.cascadeCameraView == cameraView && cache.cascadeSplits == splits)
+			{
+				return;
+			}
+			cache.cascades = std::move(cascades);
+			cache.cascaded = true;
+			cache.point = false;
+			cache.resolution = light.shadowResolution;
+			cache.sourceCaptureOrdinal = _captureOrdinal;
+			cache.cascadeCameraView = cameraView;
+			cache.cascadeSplits = splits;
+			ShadowMap::Result::Entry entry;
+			entry.registrationOrder = light.registrationOrder;
+			entry.admission = light.admission;
+			entry.generation = ++cache.generation;
+			entry.captureOrdinal = _captureOrdinal;
+			entry.light = light;
+			entry.resolution = light.shadowResolution;
+			entry.depthTexture = cache.cascades.front().texture;
+			entry.nearPlane = projections.front().nearPlane;
+			entry.farPlane = projections.front().farPlane;
+			entry.cascadeCameraView = cameraView;
+			entry.cascadeSplits = splits;
+			for (std::size_t i = 0; i < projections.size(); ++i)
+			{
+				const auto &projection = projections[i];
+				entry.cascadeTextures[i] = cache.cascades[i].texture;
+				entry.viewProjection[i] = projection.viewProjection;
+				entry.cascadeDepthBias[i] = std::max(0.000001f, 0.35f * projection.worldPerTexel / (projection.farPlane - projection.nearPlane));
+				entry.cascadeNormalBias[i] = 0.3f * projection.worldPerTexel;
+			}
+			entry.depthBias = entry.cascadeDepthBias[0];
+			entry.normalBias = entry.cascadeNormalBias[0];
+			if (_channel->publishShadowResult(*context.targetSurface, std::move(entry)))
+			{
+				cache.publishedAdmission = light.admission;
+			}
+		}
+
 		void _renderLight(
 			RenderContext &context,
 			RenderingSystem::State::LightCache &cache,
@@ -454,10 +605,15 @@ namespace spk::ShadowMap
 			{
 				return;
 			}
+			if (light.type == Light::Selection::Type::Directional && _directionalCascades)
+			{
+				_renderDirectional(context, cache, light);
+				return;
+			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
 											  ? Projection::spot(light)
 											  : Projection::directional(light, _camera);
-			const bool staticDirty = cache.point || !cache.staticTarget || cache.resolution != light.shadowResolution ||
+			const bool staticDirty = cache.point || cache.cascaded || !cache.staticTarget || cache.resolution != light.shadowResolution ||
 									 cache.projection != projection.viewProjection ||
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
@@ -482,6 +638,8 @@ namespace spk::ShadowMap
 			{
 				return;
 			}
+			cache.cascaded = false;
+			cache.cascades = {};
 			cache.staticTarget = std::move(staticTarget);
 			cache.finalTarget = std::move(finalTarget);
 			cache.finalTexture = std::move(finalTexture);
@@ -524,12 +682,25 @@ namespace spk::ShadowMap
 			_viewIdentity(view.identity),
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
+			_directionalCascades(_state->directionalCascades.load(std::memory_order_relaxed)),
 			_lights(std::move(lights)),
 			_staticCasters(std::move(staticCasters)),
 			_dynamicCasters(std::move(dynamicCasters)),
 			_staticSignature(signature(_staticCasters)),
 			_dynamicSignature(signature(_dynamicCasters))
 		{
+			if (_directionalCascades)
+			{
+				_bounds.reserve(_staticCasters.size() + _dynamicCasters.size());
+				for (const auto &caster : _staticCasters)
+				{
+					_bounds.push_back(caster.bounds);
+				}
+				for (const auto &caster : _dynamicCasters)
+				{
+					_bounds.push_back(caster.bounds);
+				}
+			}
 		}
 
 		[[nodiscard]] bool pointNeedsRebuild(
@@ -631,6 +802,16 @@ namespace spk::ShadowMap
 		_state->maxPointRebuilds.store(value, std::memory_order_relaxed);
 	}
 
+	void RenderingSystem::setDirectionalCascadesEnabled(bool enabled) noexcept
+	{
+		_state->directionalCascades.store(enabled, std::memory_order_relaxed);
+	}
+
+	bool RenderingSystem::directionalCascadesEnabled() const noexcept
+	{
+		return _state->directionalCascades.load(std::memory_order_relaxed);
+	}
+
 	RenderingSystem::RenderingSystem() :
 		spk::RenderingSystem("Shadow map rendering"),
 		_state(std::make_shared<State>())
@@ -704,7 +885,8 @@ namespace spk::ShadowMap
 			{
 				if (!instance.mesh.empty())
 				{
-					destination.push_back({instance.mesh, base * instance.localTransform});
+					const auto transform = base * instance.localTransform;
+					destination.push_back({instance.mesh, transform, worldBounds(instance.mesh, transform)});
 				}
 			}
 		}
