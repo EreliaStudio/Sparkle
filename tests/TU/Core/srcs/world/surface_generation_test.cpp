@@ -82,7 +82,10 @@ namespace
 	class Combination : public CombinationBase
 	{
 	public:
-		using CombinationBase::CombinationBase;
+		explicit Combination(CombinationBase::Combination combination = CombinationBase::Combination::Weighted)
+		{
+			setCombination(combination);
+		}
 
 	protected:
 		const InfluenceGrid &_influenceGrid(const spk::Vector2Int &, const StandaloneData &data) override
@@ -99,7 +102,10 @@ namespace
 	class ColumnCombination : public ColumnCombinationBase
 	{
 	public:
-		using ColumnCombinationBase::ColumnCombinationBase;
+		explicit ColumnCombination(ColumnCombinationBase::Combination combination = ColumnCombinationBase::Combination::Weighted)
+		{
+			setCombination(combination);
+		}
 
 	protected:
 		const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override

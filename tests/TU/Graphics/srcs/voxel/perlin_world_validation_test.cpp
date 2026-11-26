@@ -634,14 +634,23 @@ namespace
 	void captureBiomeWorld(const std::string &name, bool hard, spk::Vector3 camera, spk::Vector3 target, bool edit = false)
 	{
 		Scene scene;
-		sparkle_test::biome_world::Generator generator(scene.definitions, hard, edit);
+		using Base = spk::World::Voxel::Biome::Generator<Chunk, 3>;
+		std::unique_ptr<Base> generator;
+		if (hard)
+		{
+			generator = std::make_unique<sparkle_test::biome_world::Generator<true>>(scene.definitions, edit);
+		}
+		else
+		{
+			generator = std::make_unique<sparkle_test::biome_world::Generator<false>>(scene.definitions, edit);
+		}
 		for (int z = -2; z <= 2; ++z)
 		{
 			for (int x = -2; x <= 2; ++x)
 			{
 				for (int y = 0; y <= 1; ++y)
 				{
-					const auto chunk = generator.generate({x, y, z});
+					const auto chunk = generator->generate({x, y, z});
 					ASSERT_TRUE(chunk.has_value());
 					scene.chunks.addChunk({x, y, z}, *chunk);
 				}
@@ -696,7 +705,27 @@ namespace
 	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {})
 	{
 		Scene scene;
-		validation::Generator generator(scene.definitions, settings);
+		using Base = spk::World::Voxel::Biome::Generator<Chunk, 3>;
+		std::unique_ptr<Base> generator;
+		switch (settings.placement)
+		{
+		case validation::Placement::Single:
+			generator = std::make_unique<validation::Generator<validation::Placement::Single>>(scene.definitions, settings);
+			break;
+		case validation::Placement::Blend:
+			generator = std::make_unique<validation::Generator<validation::Placement::Blend>>(scene.definitions, settings);
+			break;
+		case validation::Placement::Islands:
+			generator = std::make_unique<validation::Generator<validation::Placement::Islands>>(scene.definitions, settings);
+			break;
+		case validation::Placement::Tie:
+			generator = std::make_unique<validation::Generator<validation::Placement::Tie>>(scene.definitions, settings);
+			break;
+		case validation::Placement::Checker:
+			generator = std::make_unique<validation::Generator<validation::Placement::Checker>>(scene.definitions, settings);
+			break;
+		}
+		ASSERT_NE(generator, nullptr);
 		const auto coordinates = view.coordinates();
 		auto generationOrder = coordinates;
 		if (view.reverseOrder)
@@ -706,7 +735,7 @@ namespace
 		std::size_t visibleVoxels = 0;
 		for (const auto &coordinate : generationOrder)
 		{
-			auto chunk = generator.generate(coordinate);
+			auto chunk = generator->generate(coordinate);
 			ASSERT_TRUE(chunk.has_value());
 			if (view.cut != validation::Cut::None)
 			{

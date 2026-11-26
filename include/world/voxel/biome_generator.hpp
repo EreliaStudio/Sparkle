@@ -8,8 +8,8 @@
 
 namespace spk::World::Voxel
 {
-	// Ready-to-use voxel terrain pipeline. Configure the influence function in a derived recipe.
-	// All four standard passes are registered by the constructor. Extend with addPass or insertPass before generating.
+	// Voxel pipeline foundation. A concrete generator registers its own distribution pass
+	// followed by the height combination, strata generation and application passes.
 	template <typename TChunk, std::size_t TCapacity>
 	class Biome::Generator : public spk::World::Generator<TChunk, Biome::GenerationData<TCapacity>>
 	{
@@ -21,35 +21,15 @@ namespace spk::World::Voxel
 		using Cell = typename InfluenceGrid::Cell;
 		using HeightCombination = typename spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>::Combination;
 
-	private:
+	protected:
 		using DistributionBase = spk::World::SurfaceBiomeDistributionPass<TChunk, Data, TCapacity>;
 		using CombinationBase = spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>;
 		using StrataBase = Strata::GenerationPass<TChunk, Data, TCapacity>;
 		using ApplicationBase = Strata::ApplicationPass<TChunk, Data>;
 
+		// Concrete recipes derive from this storage adapter and bind their own callable.
 		class DistributionPass : public DistributionBase
 		{
-		private:
-			typename DistributionBase::Distribution _influenceFunction;
-
-		public:
-			using DistributionBase::setScale;
-
-			DistributionPass()
-			{
-				this->bind(&_influenceFunction);
-			}
-
-			// Configure once, before submitting any generation work.
-			void setInfluenceFunction(typename DistributionBase::Distribution function)
-			{
-				if (_influenceFunction || !function)
-				{
-					throw spk::Exception("Biome influence function must be configured exactly once");
-				}
-				_influenceFunction = std::move(function);
-			}
-
 		protected:
 			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, Data &data, typename InfluenceGrid::Lease grid) override
 			{
@@ -57,13 +37,8 @@ namespace spk::World::Voxel
 			}
 		};
 
-		DistributionPass *_distributionPass = nullptr;
-
-		class Combination : public CombinationBase
+		class CombinationPass : public CombinationBase
 		{
-		public:
-			using CombinationBase::CombinationBase;
-
 		protected:
 			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const Data &data) override
 			{
@@ -103,11 +78,7 @@ namespace spk::World::Voxel
 			}
 		};
 
-	protected:
-		[[nodiscard]] DistributionPass &distribution() noexcept
-		{
-			return *_distributionPass;
-		}
+		Generator() = default;
 
 		void _applyPass(typename spk::World::Generator<TChunk, Data>::Pass &pass, const spk::World::ChunkCoordinate &coordinate, Data &data) override
 		{
@@ -138,14 +109,6 @@ namespace spk::World::Voxel
 		}
 
 	public:
-		Generator()
-		{
-			_distributionPass = &this->template addPass<DistributionPass>();
-			this->template addPass<Combination>(HeightCombination::Weighted);
-			this->template addPass<StrataGeneration>();
-			this->template addPass<Application>();
-		}
-
 		void bind(const spk::Voxel::Definition::Registry *registry)
 		{
 			this->_data().bind(registry);

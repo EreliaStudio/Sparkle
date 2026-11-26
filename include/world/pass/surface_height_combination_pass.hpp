@@ -19,23 +19,25 @@ namespace spk::World
 		};
 
 	private:
-		Combination _combination;
+		Combination _combination = Combination::Weighted;
 
 	protected:
 		virtual const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const TGenerationData &data) = 0;
 		virtual void _storeHeightMap(const spk::Vector2Int &coordinate, TGenerationData &data, Grid::Lease grid) = 0;
 
 	public:
-		explicit SurfaceHeightCombinationPass(Combination combination) :
-			_combination(combination)
+		SurfaceHeightCombinationPass() = default;
+
+	protected:
+		void setCombination(Combination combination)
 		{
 			if (combination != Combination::Weighted && combination != Combination::Dominant)
 			{
 				throw spk::Exception("Unknown biome height combination");
 			}
+			_combination = combination;
 		}
 
-	protected:
 		void _applySurface(const spk::Vector2Int &coordinate, TGenerationData &data) override
 		{
 			const auto &influences = _influenceGrid(coordinate, data);

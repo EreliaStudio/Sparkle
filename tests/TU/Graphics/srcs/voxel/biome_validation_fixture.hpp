@@ -224,10 +224,10 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
-	class Placement
+	template <Placement TPlacement>
+	class PlacementModel
 	{
 	private:
-		Settings _settings;
 		Biome _first;
 		Biome _second;
 		Biome _third;
@@ -236,7 +236,7 @@ namespace sparkle_test::biome_validation
 	public:
 		void compute(const spk::Vector2 &p, spk::World::SurfaceBiome::Influence::Cell<3> &cell) const
 		{
-			switch (_settings.placement)
+			switch (TPlacement)
 			{
 			case Placement::Single:
 				cell[0] = {&_first, 1};
@@ -269,8 +269,7 @@ namespace sparkle_test::biome_validation
 			}
 		}
 
-		explicit Placement(Settings settings) :
-			_settings(settings),
+		explicit PlacementModel(Settings settings) :
 			_first(settings, 1, 0, 107),
 			_second(settings, 4, -12, 211),
 			_third(settings, 3, -5, 317)
@@ -279,10 +278,30 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
+	template <Placement TPlacement>
 	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
 	{
 	private:
-		Placement _placement;
+		using Base = spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>;
+		using Data = typename Base::Data;
+		using Cell = typename Base::Cell;
+
+		class PlacementPass final : public Base::DistributionPass
+		{
+		private:
+			PlacementModel<TPlacement> _placement;
+			typename Base::DistributionPass::Distribution _function = [this](const spk::Vector2 &position, Cell &cell) {
+				_placement.compute(position, cell);
+			};
+
+		public:
+			explicit PlacementPass(Settings settings) :
+				_placement(settings)
+			{
+				this->setScale(settings.scale);
+				this->bind(&_function);
+			}
+		};
 
 		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, Data>
 		{
@@ -303,18 +322,17 @@ namespace sparkle_test::biome_validation
 		};
 
 	public:
-		Generator(const perlin_world::Registry &registry, Settings settings) :
-			_placement(settings)
+		Generator(const perlin_world::Registry &registry, Settings settings)
 		{
-			bind(&registry);
-			distribution().setScale(settings.scale);
-			distribution().setInfluenceFunction([this](const spk::Vector2 &position, Cell &cell) {
-				_placement.compute(position, cell);
-			});
+			this->bind(&registry);
+			this->template addPass<PlacementPass>(settings);
+			this->template addPass<typename Base::CombinationPass>();
 			if (settings.terrace)
 			{
-				insertPass<Terrace>(2);
+				this->template addPass<Terrace>();
 			}
+			this->template addPass<typename Base::StrataGeneration>();
+			this->template addPass<typename Base::Application>();
 		}
 	};
 }
