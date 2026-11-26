@@ -68,6 +68,8 @@ namespace spk::World
 		}
 
 		// Configure passes before submitting work; the generator must outlive its jobs.
+		// Constructor arguments describe the pass configuration (values, enums, settings).
+		// Passes own their implementation objects and exchange results through generation data.
 		// The data and passes are responsible for synchronization.
 		template <typename TPass, typename... TArgs>
 			requires std::derived_from<TPass, Pass>
@@ -80,6 +82,7 @@ namespace spk::World
 		}
 
 		// Insert before the current pass at index; index == size appends.
+		// Constructor arguments follow the same convention as addPass.
 		template <typename TPass, typename... TArgs>
 			requires std::derived_from<TPass, Pass>
 		TPass &insertPass(std::size_t index, TArgs &&...args)

@@ -150,6 +150,48 @@ namespace
 		}
 	};
 
+	class AlternateBiome final : public Biome
+	{
+	public:
+		AlternateBiome()
+		{
+			strata().front().materials = {{4, 1}};
+		}
+
+		float groundHeight(const spk::Vector2 &) const override
+		{
+			return 5.75f;
+		}
+	};
+
+	class AlternateGenerator final : public spk::World::Voxel::Biome::Generator<Chunk, 1>
+	{
+	private:
+		class AlternateDistributionPass final : public DistributionPass
+		{
+		private:
+			AlternateBiome _biome;
+			Distribution _function = [this](const spk::Vector2 &, Cell &cell) {
+				cell[0] = {&_biome, 1.0f};
+			};
+
+		public:
+			AlternateDistributionPass()
+			{
+				bind(&_function);
+			}
+		};
+
+	public:
+		AlternateGenerator()
+		{
+			addPass<AlternateDistributionPass>();
+			addPass<CombinationPass>(HeightCombination::Dominant);
+			addPass<StrataGeneration>();
+			addPass<Application>();
+		}
+	};
+
 	std::uint32_t idAt(const Chunk &chunk, std::uint32_t x, std::uint32_t y, std::uint32_t z)
 	{
 		return spk::Voxel::Volume::PackedCell::definitionId(chunk.volume().atRaw({x, y, z}));
@@ -165,6 +207,29 @@ TEST(VoxelBiomeGeneratorTest, PlacementIsConfiguredByConcreteRecipe)
 	EXPECT_EQ(generator.samples.load(), 289);
 	ASSERT_TRUE(generator.generate({0, 1, 0}));
 	EXPECT_EQ(generator.samples.load(), 289);
+}
+
+TEST(VoxelBiomeGeneratorTest, SeparateRecipesOwnTheirDistributionAndHeightMode)
+{
+	Generator first;
+	AlternateGenerator second;
+	second.bind(&registry());
+
+	const auto firstChunk = first.generate({0, 0, 0});
+	const auto secondChunk = second.generate({0, 0, 0});
+	ASSERT_TRUE(firstChunk);
+	ASSERT_TRUE(secondChunk);
+	EXPECT_EQ(idAt(*firstChunk, 0, 15, 0), 2u);
+	EXPECT_EQ(idAt(*secondChunk, 0, 5, 0), 4u);
+	EXPECT_EQ(idAt(*secondChunk, 0, 6, 0), 0u);
+
+	const auto firstUpper = first.generate({0, 1, 0});
+	const auto secondUpper = second.generate({0, 1, 0});
+	ASSERT_TRUE(firstUpper);
+	ASSERT_TRUE(secondUpper);
+	EXPECT_EQ(idAt(*firstUpper, 0, 1, 0), 1u);
+	EXPECT_EQ(idAt(*secondUpper, 0, 1, 0), 0u);
+	EXPECT_EQ(first.samples.load(), 289);
 }
 
 TEST(VoxelBiomeGeneratorTest, RegistryBindingIsRequiredAndCanBeDetached)

@@ -16,9 +16,9 @@ namespace spk::World
 		virtual HeightMap::Grid::Lease &_gridDestination(const ChunkCoordinate &coordinate, TGenerationData &data) = 0;
 
 	public:
-		void bind(const HeightMap &heightMap) noexcept
+		void bind(const HeightMap *heightMap) noexcept
 		{
-			_heightMap = &heightMap;
+			_heightMap = heightMap;
 		}
 
 		void apply(const ChunkCoordinate &coordinate, TGenerationData &data) override

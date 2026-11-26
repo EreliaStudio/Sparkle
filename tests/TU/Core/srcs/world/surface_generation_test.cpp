@@ -463,11 +463,13 @@ TEST(SurfaceGenerationTest, StandaloneHeightMapPassUsesWorldOriginAndRequiresBin
 	spk::Perlin noise(72);
 	noise.setFrequency(0.07f);
 	map.noiseLayers().emplace("relief", HeightMap::NoiseLayer{noise, -3, 3});
-	pass.bind(map);
+	pass.bind(&map);
 	pass.apply({-2, 7, 3}, data);
 	ASSERT_TRUE(data.heights);
 	EXPECT_EQ(data.heights->worldOrigin(), (spk::Vector2{-32, 24}));
 	EXPECT_FLOAT_EQ(data.heights->at({16, 8}), map.sample({-16, 32}));
+	pass.bind(nullptr);
+	EXPECT_THROW(pass.apply({-2, 7, 3}, data), spk::Exception);
 }
 
 TEST(SurfaceGridTest, BilinearInfluenceCombinesByBiomeIdentityRatherThanSlot)
