@@ -12,7 +12,7 @@
 #include "voxel/volume.hpp"
 #include "world/generator.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	// A reusable heightfield pass for real voxel chunks. All noise is sampled in
 	// absolute world coordinates, so generation is independent of chunk order.

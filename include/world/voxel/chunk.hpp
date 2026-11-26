@@ -7,17 +7,17 @@
 #include "voxel/volume.hpp"
 #include "world/chunk.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
 	class Chunk : public spk::World::Chunk<SX, SY, SZ>
 	{
 	private:
-		Volume _volume;
+		spk::Voxel::Volume _volume;
 
 	public:
 		Chunk() :
-			_volume(Volume::Builder({SX, SY, SZ}).build())
+			_volume(spk::Voxel::Volume::Builder({SX, SY, SZ}).build())
 		{
 		}
 
@@ -26,12 +26,12 @@ namespace spk::Voxel
 		Chunk &operator=(const Chunk &) = default;
 		Chunk &operator=(Chunk &&) = default;
 
-		[[nodiscard]] const Volume &volume() const noexcept
+		[[nodiscard]] const spk::Voxel::Volume &volume() const noexcept
 		{
 			return _volume;
 		}
 
-		void setVolume(Volume volume)
+		void setVolume(spk::Voxel::Volume volume)
 		{
 			if (volume.dimensions() != spk::Vector3UInt{SX, SY, SZ})
 			{

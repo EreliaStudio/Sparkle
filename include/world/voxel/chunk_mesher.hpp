@@ -3,14 +3,14 @@
 #include <cstdint>
 #include <limits>
 
-#include "voxel/chunk.hpp"
+#include "world/voxel/chunk.hpp"
 #include "voxel/mesher.hpp"
 #include "world/chunk_collection.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
-	class ChunkMesher : public Mesher
+	class ChunkMesher : public spk::Voxel::Mesher
 	{
 	private:
 		using ChunkType = Chunk<SX, SY, SZ>;
@@ -18,12 +18,12 @@ namespace spk::Voxel
 		World::ChunkCoordinate _coordinate;
 
 	protected:
-		[[nodiscard]] OutsideCell outsideCell(spk::Vector3UInt position, Shape::Face face) const override
+		[[nodiscard]] OutsideCell outsideCell(spk::Vector3UInt position, spk::Voxel::Shape::Face face) const override
 		{
 			World::ChunkCoordinate neighbor = _coordinate;
 			switch (face)
 			{
-			case Shape::Face::NegativeX:
+			case spk::Voxel::Shape::Face::NegativeX:
 				if (neighbor.x == std::numeric_limits<std::int32_t>::min())
 				{
 					return {};
@@ -31,7 +31,7 @@ namespace spk::Voxel
 				--neighbor.x;
 				position.x = SX - 1;
 				break;
-			case Shape::Face::PositiveX:
+			case spk::Voxel::Shape::Face::PositiveX:
 				if (neighbor.x == std::numeric_limits<std::int32_t>::max())
 				{
 					return {};
@@ -39,7 +39,7 @@ namespace spk::Voxel
 				++neighbor.x;
 				position.x = 0;
 				break;
-			case Shape::Face::NegativeY:
+			case spk::Voxel::Shape::Face::NegativeY:
 				if (neighbor.y == std::numeric_limits<std::int32_t>::min())
 				{
 					return {};
@@ -47,7 +47,7 @@ namespace spk::Voxel
 				--neighbor.y;
 				position.y = SY - 1;
 				break;
-			case Shape::Face::PositiveY:
+			case spk::Voxel::Shape::Face::PositiveY:
 				if (neighbor.y == std::numeric_limits<std::int32_t>::max())
 				{
 					return {};
@@ -55,7 +55,7 @@ namespace spk::Voxel
 				++neighbor.y;
 				position.y = 0;
 				break;
-			case Shape::Face::NegativeZ:
+			case spk::Voxel::Shape::Face::NegativeZ:
 				if (neighbor.z == std::numeric_limits<std::int32_t>::min())
 				{
 					return {};
@@ -63,7 +63,7 @@ namespace spk::Voxel
 				--neighbor.z;
 				position.z = SZ - 1;
 				break;
-			case Shape::Face::PositiveZ:
+			case spk::Voxel::Shape::Face::PositiveZ:
 				if (neighbor.z == std::numeric_limits<std::int32_t>::max())
 				{
 					return {};

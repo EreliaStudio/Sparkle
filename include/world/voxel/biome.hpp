@@ -16,7 +16,7 @@
 #include "voxel/volume.hpp"
 #include "world/surface_biome.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	class Biome : public World::SurfaceBiome
 	{
@@ -110,7 +110,7 @@ namespace spk::Voxel
 			double total = 0.0;
 			for (const auto &material : stratum.materials)
 			{
-				if (material.voxelID == 0 || material.voxelID > Volume::PackedCell::MaxDefinitionId ||
+				if (material.voxelID == 0 || material.voxelID > spk::Voxel::Volume::PackedCell::MaxDefinitionId ||
 					!std::isfinite(material.weight) || material.weight < 0.0f)
 				{
 					throw spk::Exception("Invalid voxel biome stratum material");

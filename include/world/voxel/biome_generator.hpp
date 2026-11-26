@@ -1,11 +1,11 @@
 #pragma once
 
-#include "voxel/pass/strata_application_pass.hpp"
-#include "voxel/pass/strata_generation_pass.hpp"
+#include "world/voxel/pass/strata_application_pass.hpp"
+#include "world/voxel/pass/strata_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	// Ready-to-use voxel terrain pipeline. Derive to supply the placement strategy.
 	// All four standard passes are registered by the constructor. Extend with addPass or insertPass before generating.
@@ -128,7 +128,7 @@ namespace spk::Voxel
 		}
 
 	public:
-		explicit BiomeGenerator(const Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
+		explicit BiomeGenerator(const spk::Voxel::Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
 			World::Generator<TChunk, GenerationData>(registry, scale)
 		{
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});

@@ -13,16 +13,16 @@
 #include "engine/entity3d.hpp"
 #include "exception.hpp"
 #include "rendering/engine/engine.hpp"
-#include "voxel/chunk_mesher.hpp"
+#include "world/voxel/chunk_mesher.hpp"
 #include "voxel/palette.hpp"
 #include "voxel/renderer.hpp"
 #include "voxel/rendering_system.hpp"
 #include "world/chunk_collection.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	template <std::int32_t SX, std::int32_t SY, std::int32_t SZ>
-	class ChunkRenderingSystem : public RenderingSystem
+	class ChunkRenderingSystem : public spk::Voxel::RenderingSystem
 	{
 	public:
 		using ChunkType = Chunk<SX, SY, SZ>;
@@ -65,7 +65,7 @@ namespace spk::Voxel
 		std::map<Coordinate, Tracked> _tracked;
 		std::set<Coordinate> _dirty;
 		Statistics _lastStatistics;
-		Occlusion::Cache _occlusionCache;
+		spk::Voxel::Occlusion::Cache _occlusionCache;
 
 		void _mark(const Coordinate &coordinate)
 		{
@@ -110,7 +110,7 @@ namespace spk::Voxel
 					continue;
 				}
 				_tracked.erase(coordinate);
-				const bool ownsRenderer = entry.entity().getComponent<Renderer>() == nullptr;
+				const bool ownsRenderer = entry.entity().getComponent<spk::Voxel::Renderer>() == nullptr;
 				auto destruction = entry.entity().subscribeToDestruction([this, coordinate]() {
 					_mark(coordinate);
 				});
@@ -174,7 +174,7 @@ namespace spk::Voxel
 				(void)coordinate;
 				if (tracked.ownsRenderer && tracked.destruction.isValid())
 				{
-					if (Renderer *renderer = tracked.entity->getComponent<Renderer>(); renderer != nullptr)
+					if (spk::Voxel::Renderer *renderer = tracked.entity->getComponent<spk::Voxel::Renderer>(); renderer != nullptr)
 					{
 						tracked.entity->removeComponent(*renderer);
 					}
@@ -193,7 +193,7 @@ namespace spk::Voxel
 			{
 				unbind();
 			}
-			RenderingSystem::attach(next);
+			spk::Voxel::RenderingSystem::attach(next);
 		}
 
 		void synchronize()
@@ -221,7 +221,7 @@ namespace spk::Voxel
 				ChunkMesher<SX, SY, SZ> mesher(*_collection, coordinate);
 				mesher.attachCache(_occlusionCache);
 				const auto start = std::chrono::steady_clock::now();
-				Geometry geometry = mesher.bake(chunk.volume());
+				spk::Voxel::Geometry geometry = mesher.bake(chunk.volume());
 				next.meshingTime += std::chrono::duration_cast<std::chrono::nanoseconds>(
 					std::chrono::steady_clock::now() - start);
 				++next.chunks;
@@ -232,10 +232,10 @@ namespace spk::Voxel
 				next.translucentTriangles += geometry.transparentMesh().indexCount() / 3;
 
 				Entity3D &entity = *found->second.entity;
-				Renderer *renderer = entity.getComponent<Renderer>();
+				spk::Voxel::Renderer *renderer = entity.getComponent<spk::Voxel::Renderer>();
 				if (renderer == nullptr)
 				{
-					renderer = &entity.addComponent<Renderer>();
+					renderer = &entity.addComponent<spk::Voxel::Renderer>();
 				}
 				renderer->bind(*_palette);
 				renderer->bind(std::move(geometry));
@@ -253,7 +253,7 @@ namespace spk::Voxel
 			const spk::EngineView::CaptureContext &context) override
 		{
 			synchronize();
-			RenderingSystem::buildViewRenderSnapshot(builder, context);
+			spk::Voxel::RenderingSystem::buildViewRenderSnapshot(builder, context);
 		}
 	};
 }

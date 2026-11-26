@@ -7,12 +7,12 @@
 #include <utility>
 
 #include "container/grid_2d.hpp"
-#include "voxel/biome.hpp"
+#include "world/voxel/biome.hpp"
 #include "voxel/volume.hpp"
 #include "world/chunk_coordinate.hpp"
 #include "world/height_map.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	using StrataGrid = spk::Grid2D<Biome::Stratum::Instance::Lease>;
 
@@ -22,7 +22,7 @@ namespace spk::Voxel
 	public:
 		struct WorldData
 		{
-			Definition::Registry registry;
+			spk::Voxel::Definition::Registry registry;
 			float surfaceScale = 1.0f;
 		};
 
@@ -48,13 +48,13 @@ namespace spk::Voxel
 
 		struct ChunkData
 		{
-			Volume::Builder builder;
+			spk::Voxel::Volume::Builder builder;
 
 		private:
 			friend class BiomeGenerationData;
 			std::unique_lock<std::mutex> _columnLock;
 
-			explicit ChunkData(Volume::Builder value) :
+			explicit ChunkData(spk::Voxel::Volume::Builder value) :
 				builder(std::move(value))
 			{
 			}
@@ -74,7 +74,7 @@ namespace spk::Voxel
 		ChunkCollection _chunks;
 
 	public:
-		explicit BiomeGenerationData(const Definition::Registry &registry = {}, float surfaceScale = 1.0f) :
+		explicit BiomeGenerationData(const spk::Voxel::Definition::Registry &registry = {}, float surfaceScale = 1.0f) :
 			_world{registry, surfaceScale}
 		{
 		}
@@ -86,7 +86,7 @@ namespace spk::Voxel
 
 		void prepareChunk(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
 		{
-			Volume::Builder builder(dimensions);
+			spk::Voxel::Volume::Builder builder(dimensions);
 			builder.bind(_world.registry);
 			ColumnData *columnData;
 			{

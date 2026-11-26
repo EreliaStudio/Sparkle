@@ -1,9 +1,9 @@
 #pragma once
 
-#include "voxel/biome_surface_data.hpp"
+#include "world/voxel/biome_generation_data.hpp"
 #include "world/pass/surface_pass.hpp"
 
-namespace spk::Voxel
+namespace spk::World::Voxel
 {
 	template <typename TChunk, typename TGenerationData, std::size_t TCapacity = 4>
 	class StrataGenerationPass : public World::SurfacePass<TChunk, TGenerationData>
