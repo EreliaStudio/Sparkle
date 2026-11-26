@@ -13,25 +13,25 @@
 
 namespace spk::World::Voxel
 {
-	template <std::size_t TCapacity = 4>
-	class BiomeGenerationData
+	template <std::size_t TCapacity>
+	class Biome::GenerationData
 	{
 	public:
-		struct WorldData
+		struct World
 		{
 			spk::Voxel::Definition::Registry registry;
 			float surfaceScale = 1.0f;
 		};
 
-		struct ColumnData
+		struct Column
 		{
-			using InfluenceGrid = World::SurfaceBiome::Influence::Grid<TCapacity>;
+			using InfluenceGrid = spk::World::SurfaceBiome::Influence::Grid<TCapacity>;
 			typename InfluenceGrid::Lease influences;
-			World::HeightMap::Grid::Lease heights;
+			spk::World::HeightMap::Grid::Lease heights;
 			Strata::Grid::Lease strata;
 
 		private:
-			friend class BiomeGenerationData;
+			friend class GenerationData;
 			mutable std::mutex _mutex;
 			bool _ready = false;
 
@@ -43,49 +43,49 @@ namespace spk::World::Voxel
 			}
 		};
 
-		struct ChunkData
+		struct Chunk
 		{
 			spk::Voxel::Volume::Builder builder;
 
 		private:
-			friend class BiomeGenerationData;
+			friend class GenerationData;
 			std::unique_lock<std::mutex> _columnLock;
 
-			explicit ChunkData(spk::Voxel::Volume::Builder value) :
+			explicit Chunk(spk::Voxel::Volume::Builder value) :
 				builder(std::move(value))
 			{
 			}
 
 		public:
-			ChunkData(ChunkData &&) = default;
-			ChunkData &operator=(ChunkData &&) = default;
+			Chunk(Chunk &&) = default;
+			Chunk &operator=(Chunk &&) = default;
 		};
 
 	private:
-		using ColumnCollection = std::map<spk::Vector2Int, ColumnData>;
-		using ChunkCollection = std::map<World::ChunkCoordinate, ChunkData>;
+		using ColumnCollection = std::map<spk::Vector2Int, Column>;
+		using ChunkCollection = std::map<spk::World::ChunkCoordinate, Chunk>;
 
 		mutable std::mutex _mutex;
-		WorldData _world;
+		World _world;
 		ColumnCollection _columns;
 		ChunkCollection _chunks;
 
 	public:
-		explicit BiomeGenerationData(const spk::Voxel::Definition::Registry &registry = {}, float surfaceScale = 1.0f) :
+		explicit GenerationData(const spk::Voxel::Definition::Registry &registry = {}, float surfaceScale = 1.0f) :
 			_world{registry, surfaceScale}
 		{
 		}
 
-		[[nodiscard]] const WorldData &world() const noexcept
+		[[nodiscard]] const World &world() const noexcept
 		{
 			return _world;
 		}
 
-		void prepareChunk(const World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
+		void prepareChunk(const spk::World::ChunkCoordinate &coordinate, const spk::Vector3UInt &dimensions)
 		{
 			spk::Voxel::Volume::Builder builder(dimensions);
 			builder.bind(_world.registry);
-			ColumnData *columnData;
+			Column *columnData;
 			{
 				const std::scoped_lock lock(_mutex);
 				if (_chunks.contains(coordinate))
@@ -93,7 +93,7 @@ namespace spk::World::Voxel
 					throw spk::Exception("Chunk generation is already active for this coordinate");
 				}
 				columnData = &_columns.try_emplace(spk::Vector2Int{coordinate.x, coordinate.z}).first->second;
-				_chunks.try_emplace(coordinate, ChunkData(std::move(builder)));
+				_chunks.try_emplace(coordinate, Chunk(std::move(builder)));
 			}
 			try
 			{
@@ -110,20 +110,20 @@ namespace spk::World::Voxel
 			}
 		}
 
-		[[nodiscard]] ChunkData &chunk(const World::ChunkCoordinate &coordinate)
+		[[nodiscard]] Chunk &chunk(const spk::World::ChunkCoordinate &coordinate)
 		{
 			const std::scoped_lock lock(_mutex);
 			return _chunks.at(coordinate);
 		}
 
-		[[nodiscard]] const ChunkData &chunk(const World::ChunkCoordinate &coordinate) const
+		[[nodiscard]] const Chunk &chunk(const spk::World::ChunkCoordinate &coordinate) const
 		{
 			const std::scoped_lock lock(_mutex);
 			return _chunks.at(coordinate);
 		}
 
 		// The calling surface pass must own the column lock.
-		[[nodiscard]] ColumnData &column(const spk::Vector2Int &coordinate)
+		[[nodiscard]] Column &column(const spk::Vector2Int &coordinate)
 		{
 			const std::scoped_lock lock(_mutex);
 			auto &columnData = _columns.at(coordinate);
@@ -134,14 +134,14 @@ namespace spk::World::Voxel
 			return columnData;
 		}
 
-		[[nodiscard]] const ColumnData &column(const spk::Vector2Int &coordinate) const
+		[[nodiscard]] const Column &column(const spk::Vector2Int &coordinate) const
 		{
 			const std::scoped_lock lock(_mutex);
 			return _columns.at(coordinate);
 		}
 
 		// References remain valid until the caller cleans its active chunk.
-		[[nodiscard]] ColumnData &column(const World::ChunkCoordinate &coordinate)
+		[[nodiscard]] Column &column(const spk::World::ChunkCoordinate &coordinate)
 		{
 			const std::scoped_lock lock(_mutex);
 			const auto it = _chunks.find(coordinate);
@@ -157,7 +157,7 @@ namespace spk::World::Voxel
 			return columnData;
 		}
 
-		[[nodiscard]] const ColumnData &column(const World::ChunkCoordinate &coordinate) const
+		[[nodiscard]] const Column &column(const spk::World::ChunkCoordinate &coordinate) const
 		{
 			const std::scoped_lock lock(_mutex);
 			if (!_chunks.contains(coordinate))
@@ -167,7 +167,7 @@ namespace spk::World::Voxel
 			return _columns.at({coordinate.x, coordinate.z});
 		}
 
-		void completeChunk(const World::ChunkCoordinate &coordinate)
+		void completeChunk(const spk::World::ChunkCoordinate &coordinate)
 		{
 			if (chunk(coordinate)._columnLock.owns_lock())
 			{
@@ -176,7 +176,7 @@ namespace spk::World::Voxel
 			}
 		}
 
-		void cleanChunk(const World::ChunkCoordinate &coordinate) noexcept
+		void cleanChunk(const spk::World::ChunkCoordinate &coordinate) noexcept
 		{
 			const std::scoped_lock lock(_mutex);
 			auto it = _chunks.find(coordinate);

@@ -20,11 +20,15 @@ namespace
 	using Chunk = spk::World::Voxel::Chunk<16, 16, 16>;
 
 	using Influence = spk::World::SurfaceBiome::Influence;
-	using DefaultGenerationData = spk::World::Voxel::BiomeGenerationData<>;
+	using DefaultGenerationData = spk::World::Voxel::Biome::Generator<Chunk>::Data;
 	static_assert(std::is_same_v<Influence::Cell<>, Influence::Cell<4>>);
 	static_assert(std::is_same_v<Influence::Grid<>, Influence::Grid<4>>);
-	static_assert(std::is_same_v<DefaultGenerationData, spk::World::Voxel::BiomeGenerationData<4>>);
-	static_assert(std::is_same_v<spk::World::Voxel::BiomeGenerator<Chunk>, spk::World::Voxel::BiomeGenerator<Chunk, 4>>);
+	static_assert(std::is_same_v<DefaultGenerationData, spk::World::Voxel::Biome::Generator<Chunk, 4>::Data>);
+	static_assert(std::is_same_v<DefaultGenerationData, spk::World::Voxel::Biome::GenerationData<4>>);
+	static_assert(std::is_same_v<decltype(std::declval<const DefaultGenerationData &>().world()), const DefaultGenerationData::World &>);
+	static_assert(std::is_same_v<decltype(std::declval<DefaultGenerationData &>().column(spk::Vector2Int{})), DefaultGenerationData::Column &>);
+	static_assert(std::is_same_v<decltype(std::declval<DefaultGenerationData &>().chunk(spk::World::ChunkCoordinate{})), DefaultGenerationData::Chunk &>);
+	static_assert(std::is_same_v<spk::World::Voxel::Biome::Generator<Chunk>, spk::World::Voxel::Biome::Generator<Chunk, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData>, spk::World::SurfaceBiomeDistributionPass<Chunk, DefaultGenerationData, 4>>);
 	static_assert(std::is_same_v<spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData>, spk::World::SurfaceHeightCombinationPass<Chunk, DefaultGenerationData, 4>>);
 	static_assert(std::is_same_v<spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData>, spk::World::Voxel::Strata::GenerationPass<Chunk, DefaultGenerationData, 4>>);
@@ -66,16 +70,16 @@ namespace
 		}
 	};
 
-	class Generator : public spk::World::Voxel::BiomeGenerator<Chunk, 1>
+	class Generator : public spk::World::Voxel::Biome::Generator<Chunk, 1>
 	{
 	private:
 		Biome _biome;
-		std::atomic<const GenerationData *> _observedData{nullptr};
+		std::atomic<const Data *> _observedData{nullptr};
 
 	protected:
-		bool _prepareGenerationData(const spk::World::ChunkCoordinate &coordinate, GenerationData &data) override
+		bool _prepareGenerationData(const spk::World::ChunkCoordinate &coordinate, Data &data) override
 		{
-			const bool prepared = BiomeGenerator::_prepareGenerationData(coordinate, data);
+			const bool prepared = spk::World::Voxel::Biome::Generator<Chunk, 1>::_prepareGenerationData(coordinate, data);
 			_observedData.store(&data);
 			return prepared;
 		}
@@ -105,7 +109,7 @@ namespace
 		}
 
 		explicit Generator(float scale = 1.0f) :
-			BiomeGenerator(registry(), HeightCombination::Weighted, scale)
+			spk::World::Voxel::Biome::Generator<Chunk, 1>(registry(), HeightCombination::Weighted, scale)
 		{
 		}
 	};
@@ -146,7 +150,7 @@ TEST(VoxelBiomeGeneratorTest, VerticalStackSharesDistributionAndAppliesStrata)
 
 TEST(VoxelBiomeGeneratorTest, StandardPipelineAcceptsSurfaceAndChunkPassesInOrder)
 {
-	using Data = Generator::GenerationData;
+	using Data = Generator::Data;
 	using Coordinate = spk::World::ChunkCoordinate;
 
 	class SurfaceProbe : public spk::World::SurfacePass<Chunk, Data>
@@ -217,7 +221,7 @@ TEST(VoxelBiomeGeneratorTest, FailedSurfacePassDoesNotPublishPartialColumn)
 		bool _first = true;
 
 	protected:
-		void _applySurface(const spk::Vector2Int &coordinate, Generator::GenerationData &data) override
+		void _applySurface(const spk::Vector2Int &coordinate, Generator::Data &data) override
 		{
 			auto &column = data.column(coordinate);
 			auto &height = column.heights->sample({0, 0});
@@ -516,7 +520,7 @@ TEST(VoxelBiomeGeneratorTest, LocalRequesterReusesCachedColumnWithoutObserver)
 {
 	Generator generator;
 	spk::WorkerPool workers(1);
-	spk::World::LocalChunkRequester<Chunk, Generator::GenerationData> requester(workers, generator);
+	spk::World::LocalChunkRequester<Chunk, Generator::Data> requester(workers, generator);
 	ASSERT_TRUE(generator.generate({0, 0, 0}));
 	std::promise<void> unblock;
 	auto gate = unblock.get_future().share();
@@ -553,7 +557,7 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 		{
 		}
 
-		void apply(const spk::World::ChunkCoordinate &, Generator::GenerationData &) override
+		void apply(const spk::World::ChunkCoordinate &, Generator::Data &) override
 		{
 			if (!_blocked.exchange(true))
 			{
@@ -670,7 +674,7 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 	class RaiseSurface : public Generator::SurfacePass
 	{
 	protected:
-		void _applySurface(const spk::Vector2Int &coordinate, Generator::GenerationData &data) override
+		void _applySurface(const spk::Vector2Int &coordinate, Generator::Data &data) override
 		{
 			auto &grid = *data.column(coordinate).heights;
 			const auto size = grid.sampleSize();
@@ -684,7 +688,7 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 		}
 	};
 
-	class EditedGenerator : public spk::World::Voxel::BiomeGenerator<Chunk, 1>
+	class EditedGenerator : public spk::World::Voxel::Biome::Generator<Chunk, 1>
 	{
 	private:
 		Biome _biome;
@@ -697,7 +701,7 @@ TEST(VoxelBiomeGeneratorTest, StrataUseFinalHeightMapAfterSurfaceEdits)
 
 	public:
 		EditedGenerator() :
-			BiomeGenerator(registry(), HeightCombination::Weighted)
+			spk::World::Voxel::Biome::Generator<Chunk, 1>(registry(), HeightCombination::Weighted)
 		{
 			insertPass<RaiseSurface>(2);
 		}

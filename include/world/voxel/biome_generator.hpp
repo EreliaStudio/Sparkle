@@ -10,34 +10,34 @@ namespace spk::World::Voxel
 {
 	// Ready-to-use voxel terrain pipeline. Derive to supply the placement strategy.
 	// All four standard passes are registered by the constructor. Extend with addPass or insertPass before generating.
-	template <typename TChunk, std::size_t TCapacity = 4>
-	class BiomeGenerator : public World::Generator<TChunk, BiomeGenerationData<TCapacity>>
+	template <typename TChunk, std::size_t TCapacity>
+	class Biome::Generator : public spk::World::Generator<TChunk, Biome::GenerationData<TCapacity>>
 	{
 	public:
-		using GenerationData = BiomeGenerationData<TCapacity>;
-		using SurfacePass = World::SurfacePass<TChunk, GenerationData>;
-		using ColumnData = typename GenerationData::ColumnData;
+		using Data = Biome::GenerationData<TCapacity>;
+		using SurfacePass = spk::World::SurfacePass<TChunk, Data>;
+		using ColumnData = typename Data::Column;
 		using InfluenceGrid = typename ColumnData::InfluenceGrid;
 		using Cell = typename InfluenceGrid::Cell;
-		using HeightCombination = typename World::SurfaceHeightCombinationPass<TChunk, GenerationData, TCapacity>::Combination;
+		using HeightCombination = typename spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>::Combination;
 
 	private:
-		using DistributionBase = World::SurfaceBiomeDistributionPass<TChunk, GenerationData, TCapacity>;
-		using CombinationBase = World::SurfaceHeightCombinationPass<TChunk, GenerationData, TCapacity>;
-		using StrataBase = Strata::GenerationPass<TChunk, GenerationData, TCapacity>;
-		using ApplicationBase = Strata::ApplicationPass<TChunk, GenerationData>;
+		using DistributionBase = spk::World::SurfaceBiomeDistributionPass<TChunk, Data, TCapacity>;
+		using CombinationBase = spk::World::SurfaceHeightCombinationPass<TChunk, Data, TCapacity>;
+		using StrataBase = Strata::GenerationPass<TChunk, Data, TCapacity>;
+		using ApplicationBase = Strata::ApplicationPass<TChunk, Data>;
 
 		class Distribution : public DistributionBase
 		{
 		private:
-			BiomeGenerator &_generator;
+			Generator &_generator;
 
 		protected:
-			typename InfluenceGrid::Configuration _computeGridConfiguration(const spk::Vector2Int &, const GenerationData &data) override
+			typename InfluenceGrid::Configuration _computeGridConfiguration(const spk::Vector2Int &, const Data &data) override
 			{
 				return {{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, data.world().surfaceScale};
 			}
-			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, GenerationData &data, typename InfluenceGrid::Lease grid) override
+			void _storeInfluenceGrid(const spk::Vector2Int &coordinate, Data &data, typename InfluenceGrid::Lease grid) override
 			{
 				data.column(coordinate).influences = std::move(grid);
 			}
@@ -47,7 +47,7 @@ namespace spk::World::Voxel
 			}
 
 		public:
-			explicit Distribution(BiomeGenerator &generator) :
+			explicit Distribution(Generator &generator) :
 				_generator(generator)
 			{
 			}
@@ -59,11 +59,11 @@ namespace spk::World::Voxel
 			using CombinationBase::CombinationBase;
 
 		protected:
-			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
+			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const Data &data) override
 			{
 				return *data.column(coordinate).influences;
 			}
-			void _storeHeightMap(const spk::Vector2Int &coordinate, GenerationData &data, World::HeightMap::Grid::Lease grid) override
+			void _storeHeightMap(const spk::Vector2Int &coordinate, Data &data, spk::World::HeightMap::Grid::Lease grid) override
 			{
 				data.column(coordinate).heights = std::move(grid);
 			}
@@ -72,17 +72,17 @@ namespace spk::World::Voxel
 		class StrataGeneration : public StrataBase
 		{
 		protected:
-			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const GenerationData &data) override
+			const InfluenceGrid &_influenceGrid(const spk::Vector2Int &coordinate, const Data &data) override
 			{
 				return *data.column(coordinate).influences;
 			}
 
-			const World::HeightMap::Grid &_heightMap(const spk::Vector2Int &coordinate, const GenerationData &data) override
+			const spk::World::HeightMap::Grid &_heightMap(const spk::Vector2Int &coordinate, const Data &data) override
 			{
 				return *data.column(coordinate).heights;
 			}
 
-			void _storeStrataGrid(const spk::Vector2Int &coordinate, GenerationData &data, Strata::Grid::Lease grid) override
+			void _storeStrataGrid(const spk::Vector2Int &coordinate, Data &data, Strata::Grid::Lease grid) override
 			{
 				data.column(coordinate).strata = std::move(grid);
 			}
@@ -91,7 +91,7 @@ namespace spk::World::Voxel
 		class Application : public ApplicationBase
 		{
 		protected:
-			const Strata::Grid &_strataGrid(const World::ChunkCoordinate &coordinate, const GenerationData &data) override
+			const Strata::Grid &_strataGrid(const spk::World::ChunkCoordinate &coordinate, const Data &data) override
 			{
 				return *data.column(coordinate).strata;
 			}
@@ -100,7 +100,7 @@ namespace spk::World::Voxel
 	protected:
 		virtual void _computeBiomePlacement(const spk::Vector2 &worldPosition, Cell &destination) const = 0;
 
-		void _applyPass(typename World::Generator<TChunk, GenerationData>::Pass &pass, const World::ChunkCoordinate &coordinate, GenerationData &data) override
+		void _applyPass(typename spk::World::Generator<TChunk, Data>::Pass &pass, const spk::World::ChunkCoordinate &coordinate, Data &data) override
 		{
 			if (dynamic_cast<SurfacePass *>(&pass) != nullptr && std::as_const(data).column(coordinate).ready())
 			{
@@ -109,13 +109,13 @@ namespace spk::World::Voxel
 			pass.apply(coordinate, data);
 		}
 
-		bool _prepareGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) override
+		bool _prepareGenerationData(const spk::World::ChunkCoordinate &coordinate, Data &data) override
 		{
 			data.prepareChunk(coordinate, spk::Vector3UInt{TChunk::Size});
 			return true;
 		}
 
-		TChunk _instantiateChunk(const World::ChunkCoordinate &coordinate, GenerationData &data) override
+		TChunk _instantiateChunk(const spk::World::ChunkCoordinate &coordinate, Data &data) override
 		{
 			TChunk chunk;
 			chunk.setVolume(data.chunk(coordinate).builder.build());
@@ -123,14 +123,14 @@ namespace spk::World::Voxel
 			return chunk;
 		}
 
-		void _cleanGenerationData(const World::ChunkCoordinate &coordinate, GenerationData &data) noexcept override
+		void _cleanGenerationData(const spk::World::ChunkCoordinate &coordinate, Data &data) noexcept override
 		{
 			data.cleanChunk(coordinate);
 		}
 
 	public:
-		explicit BiomeGenerator(const spk::Voxel::Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
-			World::Generator<TChunk, GenerationData>(registry, scale)
+		explicit Generator(const spk::Voxel::Definition::Registry &registry, HeightCombination combination, float scale = 1.0f) :
+			spk::World::Generator<TChunk, Data>(registry, scale)
 		{
 			(void)InfluenceGrid::sampleSizeFor({{static_cast<std::uint32_t>(TChunk::Size.x), static_cast<std::uint32_t>(TChunk::Size.z)}, scale});
 			this->template addPass<Distribution>(*this);

@@ -44,7 +44,7 @@ namespace sparkle_test::biome_world
 		}
 	};
 
-	class Generator final : public spk::World::Voxel::BiomeGenerator<perlin_world::Chunk, 3>
+	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
 	{
 	private:
 		Biome _plains{7.0f, 2.0f, 1, 11};
@@ -53,10 +53,10 @@ namespace sparkle_test::biome_world
 		spk::Perlin _boundary{123};
 		bool _hard;
 
-		class FlattenRoad : public spk::World::SurfacePass<perlin_world::Chunk, GenerationData>
+		class FlattenRoad : public spk::World::SurfacePass<perlin_world::Chunk, Data>
 		{
 		public:
-			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
+			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
 			{
 				auto &column = data.column(coordinate);
 				auto &grid = *column.heights;
@@ -94,7 +94,7 @@ namespace sparkle_test::biome_world
 
 	public:
 		Generator(const perlin_world::Registry &registry, bool hard, bool edit) :
-			BiomeGenerator(registry, HeightCombination::Weighted),
+			spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>(registry, HeightCombination::Weighted),
 			_hard(hard)
 		{
 			_boundary.setFrequency(0.055f);

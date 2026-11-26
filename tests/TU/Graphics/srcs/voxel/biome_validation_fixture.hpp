@@ -224,7 +224,7 @@ namespace sparkle_test::biome_validation
 		}
 	};
 
-	class Generator final : public spk::World::Voxel::BiomeGenerator<perlin_world::Chunk, 3>
+	class Generator final : public spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>
 	{
 	private:
 		Settings _settings;
@@ -233,10 +233,10 @@ namespace sparkle_test::biome_validation
 		Biome _third;
 		spk::Perlin _regions{913};
 
-		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, GenerationData>
+		class Terrace final : public spk::World::SurfacePass<perlin_world::Chunk, Data>
 		{
 		public:
-			void _applySurface(const spk::Vector2Int &coordinate, GenerationData &data) override
+			void _applySurface(const spk::Vector2Int &coordinate, Data &data) override
 			{
 				auto &column = data.column(coordinate);
 				auto &grid = *column.heights;
@@ -289,7 +289,7 @@ namespace sparkle_test::biome_validation
 
 	public:
 		Generator(const perlin_world::Registry &registry, Settings settings) :
-			BiomeGenerator(registry, HeightCombination::Weighted, settings.scale),
+			spk::World::Voxel::Biome::Generator<perlin_world::Chunk, 3>(registry, HeightCombination::Weighted, settings.scale),
 			_settings(settings),
 			_first(settings, 1, 0, 107),
 			_second(settings, 4, -12, 211),

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -20,6 +21,12 @@ namespace spk::World::Voxel
 	class Biome : public World::SurfaceBiome
 	{
 	public:
+		template <std::size_t TCapacity = 4>
+		class GenerationData;
+
+		template <typename TChunk, std::size_t TCapacity = 4>
+		class Generator;
+
 		struct Stratum
 		{
 			struct Material
