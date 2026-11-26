@@ -1,9 +1,9 @@
 #pragma once
 
-#include "world/voxel/pass/strata_application_pass.hpp"
-#include "world/voxel/pass/strata_generation_pass.hpp"
 #include "world/pass/surface_biome_distribution_pass.hpp"
 #include "world/pass/surface_height_combination_pass.hpp"
+#include "world/voxel/pass/strata_application_pass.hpp"
+#include "world/voxel/pass/strata_generation_pass.hpp"
 
 namespace spk::World::Voxel
 {

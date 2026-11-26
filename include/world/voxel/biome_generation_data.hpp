@@ -7,10 +7,10 @@
 #include <utility>
 
 #include "container/grid_2d.hpp"
-#include "world/voxel/biome.hpp"
 #include "voxel/volume.hpp"
 #include "world/chunk_coordinate.hpp"
 #include "world/height_map.hpp"
+#include "world/voxel/biome.hpp"
 
 namespace spk::World::Voxel
 {

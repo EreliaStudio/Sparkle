@@ -1,7 +1,7 @@
 #pragma once
 
-#include "world/voxel/biome_generation_data.hpp"
 #include "world/generator.hpp"
+#include "world/voxel/biome_generation_data.hpp"
 
 namespace spk::World::Voxel
 {

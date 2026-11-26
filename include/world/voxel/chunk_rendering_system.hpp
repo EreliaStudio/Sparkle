@@ -13,11 +13,11 @@
 #include "engine/entity3d.hpp"
 #include "exception.hpp"
 #include "rendering/engine/engine.hpp"
-#include "world/voxel/chunk_mesher.hpp"
 #include "voxel/palette.hpp"
 #include "voxel/renderer.hpp"
 #include "voxel/rendering_system.hpp"
 #include "world/chunk_collection.hpp"
+#include "world/voxel/chunk_mesher.hpp"
 
 namespace spk::World::Voxel
 {
