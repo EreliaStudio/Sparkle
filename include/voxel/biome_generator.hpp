@@ -82,11 +82,6 @@ namespace spk::Voxel
 				return *data.column(coordinate).heights;
 			}
 
-			const Definition::Registry &_definitionRegistry(const GenerationData &data) override
-			{
-				return data.world().registry;
-			}
-
 			void _storeStrataGrid(const spk::Vector2Int &coordinate, GenerationData &data, StrataGrid::Lease grid) override
 			{
 				data.column(coordinate).strata = std::move(grid);

@@ -229,18 +229,16 @@ namespace spk::Voxel
 		struct ResolvedLayer
 		{
 			double bottom;
-			Definition::Registry::ID voxelID;
+			std::uint32_t voxelID;
 		};
 
 		std::vector<ResolvedLayer> _layers;
-		std::optional<Definition::Registry> _registry;
 		double _surface = 0.0;
 		ReleaseContract _releaseContract;
 
 		explicit Instance(std::size_t capacity) :
 			_releaseContract(subscribeToRelease([this]() {
 				_layers.clear();
-				_registry.reset();
 				_surface = 0.0;
 			}))
 		{
@@ -258,7 +256,7 @@ namespace spk::Voxel
 			terminateLifeCycle();
 		}
 
-		[[nodiscard]] static Lease obtain(const Biome &biome, const spk::Vector2 &position, double height, const Definition::Registry &registry)
+		[[nodiscard]] static Lease obtain(const Biome &biome, const spk::Vector2 &position, double height)
 		{
 			if (!std::isfinite(height))
 			{
@@ -268,11 +266,9 @@ namespace spk::Voxel
 				return new Instance(capacity);
 			});
 			auto instance = pool.obtain(std::max(std::size_t{1}, biome.strata().size()));
-			instance->_registry.emplace(registry);
 			instance->_surface = std::floor(height);
 			double bottom = instance->_surface;
 			biome.sampleStrata(position, [&](const Biome::Layer &layer) {
-				(void)registry.at(layer.voxelID);
 				bottom = layer.thickness ? bottom - *layer.thickness : -std::numeric_limits<double>::infinity();
 				instance->_layers.push_back({bottom, layer.voxelID});
 			});
@@ -280,8 +276,8 @@ namespace spk::Voxel
 		}
 
 		// Height is absolute. Each layer owns its upper endpoint, but not its lower endpoint.
-		// ID zero and nullptr represent air, including below a finite profile.
-		[[nodiscard]] Definition::Registry::ID voxelIDAt(double height) const
+		// ID zero represents air, including below a finite profile.
+		[[nodiscard]] std::uint32_t voxelIDAt(double height) const
 		{
 			if (!std::isfinite(height))
 			{
@@ -299,12 +295,6 @@ namespace spk::Voxel
 				}
 			}
 			return 0;
-		}
-
-		[[nodiscard]] const Definition *definitionAt(double height) const
-		{
-			const auto id = voxelIDAt(height);
-			return id == 0 ? nullptr : _registry->tryGet(id);
 		}
 	};
 }

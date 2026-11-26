@@ -567,33 +567,34 @@ TEST(VoxelBiomeGeneratorTest, SimultaneousDuplicateCoordinatesAreRejectedWithout
 	EXPECT_EQ(generator.activeChunkCount(), 0u);
 }
 
-TEST(VoxelStratumInstanceTest, ResolvesAbsoluteHeightsAndDefinitions)
+TEST(VoxelStratumInstanceTest, ResolvesAbsoluteHeightsAndVoxelIDs)
 {
 	using Instance = Biome::Stratum::Instance;
 	Biome biome;
-	const auto definitions = registry();
-	auto instance = Instance::obtain(biome, {0, 0}, 17.75, definitions);
+	auto instance = Instance::obtain(biome, {0, 0}, 17.75);
 	EXPECT_EQ(instance->voxelIDAt(18), 0u);
-	EXPECT_EQ(instance->definitionAt(18), nullptr);
 	EXPECT_EQ(instance->voxelIDAt(17), 1u);
 	EXPECT_EQ(instance->voxelIDAt(16), 2u);
 	EXPECT_EQ(instance->voxelIDAt(15), 2u);
 	EXPECT_EQ(instance->voxelIDAt(14), 3u);
 	EXPECT_EQ(instance->voxelIDAt(-200), 3u);
-	EXPECT_EQ(instance->definitionAt(16), &definitions.at(2));
+	// Resolving a profile does not require the world's registry.
+	biome.strata().front().materials = {{5, 1}};
+	auto unregistered = Instance::obtain(biome, {0, 0}, 17.75);
+	EXPECT_EQ(unregistered->voxelIDAt(17), 5u);
+	biome.strata().front().materials = {{1, 1}};
 	EXPECT_THROW((void)instance->voxelIDAt(std::numeric_limits<double>::infinity()), spk::Exception);
 
 	biome.strata().resize(2);
-	auto finite = Instance::obtain(biome, {0, 0}, -2.25, definitions);
+	auto finite = Instance::obtain(biome, {0, 0}, -2.25);
 	EXPECT_EQ(finite->voxelIDAt(-2), 0u);
 	EXPECT_EQ(finite->voxelIDAt(-3), 1u);
 	EXPECT_EQ(finite->voxelIDAt(-4), 2u);
 	EXPECT_EQ(finite->voxelIDAt(-5), 2u);
 	EXPECT_EQ(finite->voxelIDAt(-6), 0u);
-	EXPECT_EQ(finite->definitionAt(-6), nullptr);
 
 	biome.strata().clear();
-	auto empty = Instance::obtain(biome, {0, 0}, 0, definitions);
+	auto empty = Instance::obtain(biome, {0, 0}, 0);
 	EXPECT_EQ(empty->voxelIDAt(0), 0u);
 	EXPECT_EQ(empty->voxelIDAt(-100), 0u);
 }
@@ -603,10 +604,9 @@ TEST(VoxelStratumInstanceTest, ReusesGridAndInstancesWithoutKeepingOldLayers)
 	using Instance = Biome::Stratum::Instance;
 	using Grid = spk::Voxel::StrataGrid;
 	Biome biome;
-	const auto definitions = registry();
 	auto grid = Grid::obtain({2, 1});
-	(*grid)[{0, 0}] = Instance::obtain(biome, {0, 0}, 17, definitions);
-	(*grid)[{1, 0}] = Instance::obtain(biome, {1, 0}, 29, definitions);
+	(*grid)[{0, 0}] = Instance::obtain(biome, {0, 0}, 17);
+	(*grid)[{1, 0}] = Instance::obtain(biome, {1, 0}, 29);
 	const auto *gridAddress = grid.get();
 	const auto *first = (*grid)[{0, 0}].get();
 	const auto *second = (*grid)[{1, 0}].get();
@@ -618,8 +618,8 @@ TEST(VoxelStratumInstanceTest, ReusesGridAndInstancesWithoutKeepingOldLayers)
 	EXPECT_FALSE(static_cast<bool>((*recycled)[{0, 0}]));
 	EXPECT_FALSE(static_cast<bool>((*recycled)[{1, 0}]));
 	biome.strata().back().thickness = Biome::Stratum::Thickness::Fixed{2};
-	(*recycled)[{0, 0}] = Instance::obtain(biome, {0, 0}, -10, definitions);
-	(*recycled)[{1, 0}] = Instance::obtain(biome, {1, 0}, 40, definitions);
+	(*recycled)[{0, 0}] = Instance::obtain(biome, {0, 0}, -10);
+	(*recycled)[{1, 0}] = Instance::obtain(biome, {1, 0}, 40);
 	const auto *a = (*recycled)[{0, 0}].get();
 	const auto *b = (*recycled)[{1, 0}].get();
 	EXPECT_TRUE((a == first && b == second) || (a == second && b == first));
@@ -633,14 +633,13 @@ TEST(VoxelStratumInstanceTest, FailedResolutionReturnsInstanceAndClearsPartialLa
 {
 	using Instance = Biome::Stratum::Instance;
 	Biome biome;
-	const auto definitions = registry();
-	auto initial = Instance::obtain(biome, {0, 0}, 0, definitions);
+	auto initial = Instance::obtain(biome, {0, 0}, 0);
 	const auto *address = initial.get();
 	initial = {};
 	biome.strata()[1].materials.clear();
-	EXPECT_THROW((void)Instance::obtain(biome, {0, 0}, 50, definitions), spk::Exception);
+	EXPECT_THROW((void)Instance::obtain(biome, {0, 0}, 50), spk::Exception);
 	biome.strata()[1].materials = {{2, 1}};
-	auto recovered = Instance::obtain(biome, {0, 0}, -1, definitions);
+	auto recovered = Instance::obtain(biome, {0, 0}, -1);
 	EXPECT_EQ(recovered.get(), address);
 	EXPECT_EQ(recovered->voxelIDAt(50), 0u);
 	EXPECT_EQ(recovered->voxelIDAt(-1), 1u);
