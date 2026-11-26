@@ -166,6 +166,7 @@ namespace
 		spk::Engine engine;
 		spk::Entity3D cameraEntity{"Shadow test camera"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+		spk::Vector2UInt imageSize;
 		spk::EngineView &view;
 		spk::Voxel::RenderingSystem &voxels;
 		spk::ShadowMap::RenderingSystem &shadows;
@@ -175,18 +176,20 @@ namespace
 		spk::Voxel::Geometry slope = geometry({1, 1, 1}, "slope.json");
 		spk::Voxel::Geometry stair = geometry({1, 1, 1}, "stair.json");
 		spk::Voxel::Geometry mixed = mixedGeometry();
-		spk::Voxel::Geometry floor = geometry({7, 1, 7});
+		spk::Voxel::Geometry floor;
 		std::vector<std::unique_ptr<spk::Entity3D>> objects;
 		std::vector<std::unique_ptr<spk::Entity3D>> lights;
 
-		Scene() :
+		explicit Scene(bool wide = false) :
+			imageSize(wide ? spk::Vector2UInt{960, 720} : ImageSize),
 			view(_initializeView()),
 			voxels(engine.addSystem<spk::Voxel::RenderingSystem>()),
-			shadows(engine.addSystem<spk::ShadowMap::RenderingSystem>())
+			shadows(engine.addSystem<spk::ShadowMap::RenderingSystem>()),
+			floor(geometry(wide ? spk::Vector3UInt{48, 1, 32} : spk::Vector3UInt{7, 1, 7}))
 		{
 			view.ambientLight().setColor({1.0f, 1.0f, 1.0f});
 			view.ambientLight().setIntensity(0.12f);
-			add(floor, 3, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::None);
+			add(floor, 3, wide ? spk::Vector3{-24.0f, -1.2f, -16.0f} : spk::Vector3{-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::None);
 		}
 
 		spk::EngineView &_initializeView()
@@ -194,9 +197,9 @@ namespace
 			const spk::Vector3 eye{6.0f, 4.2f, 8.0f};
 			cameraEntity.transform().place(eye);
 			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.4f, 0}));
-			camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 40.0f);
+			camera.setPerspective(0.78f, static_cast<float>(imageSize.x) / imageSize.y, 0.1f, 40.0f);
 			engine.addEntity(&cameraEntity);
-			return engine.addView("shadow", &camera, ImageSize);
+			return engine.addView("shadow", &camera, imageSize);
 		}
 
 		spk::Entity3D &add(
@@ -340,6 +343,107 @@ namespace
 		EXPECT_NO_THROW(gl.requireNoErrors());
 		gl.reset();
 	}
+	// Sample the floor in world space, not arbitrary screen pixels. Compare
+	// identical geometry with shadows enabled and disabled, independently of
+	// the golden image, so an incorrect new baseline cannot hide a short shadow.
+	void checkFullDirectionalShadows(const std::string &name, float runPerHeight, spk::Light::ShadowFilter filter)
+	{
+		Scene scene(true);
+		const spk::Vector3 eye{0, 35, 24};
+		scene.cameraEntity.transform().place(eye);
+		scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+		scene.camera.setOrthographic(-26.0f, 26.0f, -19.5f, 19.5f, 0.1f, 80.0f);
+
+		const std::array<std::uint32_t, 3> heights{3, 6, 9};
+		const std::array<float, 3> lanes{-8.0f, 0.0f, 8.0f};
+		std::array<spk::Voxel::Geometry, 3> pillars{
+			geometry({2, 3, 2}), geometry({2, 6, 2}), geometry({2, 9, 2})};
+		std::vector<spk::Vector3> probes;
+		for (std::size_t i = 0; i < heights.size(); ++i)
+		{
+			scene.add(pillars[i], 1, {-12.0f, -0.2f, lanes[i] - 1.0f}, spk::ShadowMap::Mode::Static);
+			const float length = static_cast<float>(heights[i]) * runPerHeight;
+			// +X is the light travel direction. The trailing edge is x=-10.
+			probes.push_back({-14.0f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + 0.75f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + length * 0.5f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + length - 0.75f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + length + 1.5f, -0.2f, lanes[i]});
+		}
+
+		auto &sun = scene.addLight<spk::Light::Directional>({-runPerHeight, 1, 0}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+		sun.setShadowDistance(80.0f);
+		sun.setShadowResolution(2048);
+		sun.setShadowFilter(filter);
+		const auto direction = sun.worldDirection();
+		EXPECT_GT(direction.x, 0.0f);
+		EXPECT_LT(direction.y, 0.0f);
+
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto capture = [&](bool enabled, const std::string &imageName, std::vector<int> &values) {
+			sun.setCastsShadows(enabled);
+			gl.reset(scene.imageSize);
+			const auto snapshot = scene.capture();
+			ASSERT_NE(snapshot, nullptr);
+			snapshot->execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = scene.imageSize})
+				.execute(gl.renderContext());
+			gl.save(sparkle_test::resultImagePath(Category, imageName));
+			for (const auto &probe : probes)
+			{
+				const auto clip = scene.camera.viewProjectionMatrix() * spk::Vector4(probe, 1.0f);
+				ASSERT_GT(clip.w, 0.0f);
+				const auto x = static_cast<GLint>((clip.x / clip.w * 0.5f + 0.5f) * scene.imageSize.x);
+				const auto y = static_cast<GLint>((clip.y / clip.w * 0.5f + 0.5f) * scene.imageSize.y);
+				ASSERT_GE(x, 0);
+				ASSERT_GE(y, 0);
+				ASSERT_LT(x, static_cast<GLint>(scene.imageSize.x));
+				ASSERT_LT(y, static_cast<GLint>(scene.imageSize.y));
+				std::array<std::uint8_t, 4> pixel{};
+				glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+				values.push_back(pixel[0] + pixel[1] + pixel[2]);
+			}
+			EXPECT_NO_THROW(gl.requireNoErrors());
+			gl.reset();
+		};
+
+		std::vector<int> unshadowed;
+		std::vector<int> shadowed;
+		capture(false, name + "_no_shadows", unshadowed);
+		capture(true, name, shadowed);
+		ASSERT_EQ(unshadowed.size(), probes.size());
+		ASSERT_EQ(shadowed.size(), probes.size());
+		for (std::size_t i = 0; i < heights.size(); ++i)
+		{
+			SCOPED_TRACE(::testing::Message() << "Pillar height " << heights[i] << ", expected shadow extension "
+											 << heights[i] * runPerHeight);
+			const std::size_t start = i * 5;
+			for (std::size_t j = 0; j < 5; ++j)
+			{
+				const auto index = start + j;
+				EXPECT_GT(unshadowed[index], 60) << "Floor probe " << j << " must be illuminated";
+				if (j == 0 || j == 4)
+				{
+					EXPECT_NEAR(shadowed[index], unshadowed[index], 24) << "Unexpected shadow outside its footprint at probe " << j;
+				}
+				else
+				{
+					EXPECT_LT(shadowed[index], unshadowed[index] * 0.8f) << "Missing shadow at interior probe " << j;
+				}
+			}
+		}
+
+		const auto actual = sparkle_test::resultImagePath(Category, name);
+		const auto unshadowedPath = sparkle_test::resultImagePath(Category, name + "_no_shadows");
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		const auto difference = sparkle_test::compareImages(
+			actual, unshadowedPath, sparkle_test::resultImagePath(Category, name + "_shadow_difference"), tolerance);
+		EXPECT_GT(difference.differentPixelCount, 0u);
+		compareGolden(Category, name, actual);
+	}
+
 }
 
 TEST(ShadowRenderingGolden, SpotStaticCasterHasVisibleShadowAndD32FDepth)
@@ -780,4 +884,19 @@ TEST(PointShadowDepthTest, NonCubeCastersPopulateEveryCardinalFace)
 	}
 	EXPECT_NO_THROW(gl.requireNoErrors());
 	gl.reset();
+}
+
+TEST(ShadowRenderingGolden, DirectionalFullShadowAt45Degrees)
+{
+	checkFullDirectionalShadows("directional_full_shadow_45", 1.0f, spk::Light::ShadowFilter::Hard);
+}
+
+TEST(ShadowRenderingGolden, DirectionalFullLongShadowAtLowElevation)
+{
+	checkFullDirectionalShadows("directional_full_shadow_low", 3.0f, spk::Light::ShadowFilter::Hard);
+}
+
+TEST(ShadowRenderingGolden, DirectionalFullLongShadowWithPCF)
+{
+	checkFullDirectionalShadows("directional_full_shadow_low_pcf", 3.0f, spk::Light::ShadowFilter::PCF3x3);
 }
