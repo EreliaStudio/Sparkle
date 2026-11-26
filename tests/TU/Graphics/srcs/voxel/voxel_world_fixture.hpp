@@ -199,8 +199,7 @@ namespace sparkle_test::voxel_world
 				double elevation = _settings.baseHeight;
 				elevation += static_cast<double>(_settings.broadAmplitude) * _broad.sample2D(position.x, position.y, -1.0f, 1.0f);
 				elevation += static_cast<double>(_settings.detailAmplitude) * _detail.sample2D(position.x, position.y, -1.0f, 1.0f);
-				return static_cast<float>(std::floor(std::clamp(
-					elevation, static_cast<double>(_settings.minimumHeight), static_cast<double>(_settings.maximumHeight))));
+				return static_cast<float>(std::floor(std::clamp(elevation, static_cast<double>(_settings.minimumHeight), static_cast<double>(_settings.maximumHeight))));
 			}
 		};
 
