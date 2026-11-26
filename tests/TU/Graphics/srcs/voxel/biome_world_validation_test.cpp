@@ -630,6 +630,117 @@ namespace
 		return height;
 	}
 
+	// Use the original close-up camera and a single sun. Vary only the
+	// projection extent and resolution first, then replay the same snapshot
+	// with different receiver biases using its immutable published depth map.
+	void captureShadowParameterSweep(Scene &scene, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto save = [&](const std::string &suffix) {
+			gl.save(sparkle_test::resultImagePath("rendering/biome-world", name + suffix));
+		};
+
+		// Check the actual GPU input, not only the number of vertices.
+		for (auto &[coordinate, entry] : scene.chunks)
+		{
+			(void)coordinate;
+			const auto *renderer = entry.entity().getComponent<spk::Voxel::Renderer>();
+			ASSERT_NE(renderer, nullptr);
+			const auto *geometry = renderer->geometry();
+			ASSERT_NE(geometry, nullptr);
+			const auto &opaque = geometry->opaqueMesh();
+			const auto &depth = geometry->depthMesh();
+			ASSERT_EQ(opaque.vertexCount(), depth.vertexCount());
+			ASSERT_EQ(opaque.indexCount(), depth.indexCount());
+			if (opaque.empty())
+			{
+				continue;
+			}
+			const auto vertices = opaque.layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>();
+			const auto depthVertices = depth.layout().vertexBuffer().cast<spk::Vector3>();
+			const auto indices = opaque.layout().indexBuffer().cast<std::uint32_t>();
+			const auto depthIndices = depth.layout().indexBuffer().cast<std::uint32_t>();
+			ASSERT_EQ(vertices.size(), depthVertices.size());
+			ASSERT_EQ(indices.size(), depthIndices.size());
+			for (std::size_t i = 0; i < vertices.size(); ++i)
+			{
+				ASSERT_EQ(vertices[i].position, depthVertices[i]);
+			}
+			ASSERT_TRUE(std::equal(indices.begin(), indices.end(), depthIndices.begin()));
+		}
+
+		scene.sun.setCastsShadows(true);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		for (const float distance : {160.0f, 80.0f, 40.0f, 24.0f})
+		{
+			scene.sun.setShadowDistance(distance);
+			for (const std::uint32_t resolution : {512u, 2048u, 4096u})
+			{
+				scene.sun.setShadowResolution(resolution);
+				const auto pixels = scene.capture();
+				EXPECT_EQ(pixels.size, terrain::ImageSize);
+				save("_distance_" + std::to_string(static_cast<int>(distance)) + "_resolution_" + std::to_string(resolution));
+			}
+		}
+
+		// Keep the original shadow projection and depth texture for all
+		// receiver-bias variants. This does not change production settings.
+		scene.sun.setShadowDistance(160.0f);
+		scene.sun.setShadowResolution(2048);
+		(void)scene.capture();
+		const auto snapshot = scene.engine.latestRenderSnapshot();
+		ASSERT_NE(snapshot, nullptr);
+		auto &channel = scene.view.lightChannel();
+		const auto selection = channel.current();
+		ASSERT_NE(selection, nullptr);
+		ASSERT_EQ(selection->directional.size(), 1u);
+		const auto published = channel.shadowResultCollection().acquireLatest(gl.surface());
+		ASSERT_NE(published, nullptr);
+		const auto found = published->entries.find(selection->directional.front().registrationOrder);
+		ASSERT_NE(found, published->entries.end());
+		auto result = found->second;
+		ASSERT_EQ(result.resolution, 2048u);
+		const float originalDepthBias = result.depthBias;
+		const float originalNormalBias = result.normalBias;
+		struct BiasVariant
+		{
+			const char *suffix;
+			float depth;
+			float normal;
+		};
+		const std::array<BiasVariant, 9> variants{{
+			{"_bias_original", originalDepthBias, originalNormalBias},
+			{"_bias_depth_zero", 0.0f, originalNormalBias},
+			{"_bias_depth_quarter", originalDepthBias * 0.25f, originalNormalBias},
+			{"_bias_depth_double", originalDepthBias * 2.0f, originalNormalBias},
+			{"_bias_normal_zero", originalDepthBias, 0.0f},
+			{"_bias_normal_quarter", originalDepthBias, originalNormalBias * 0.25f},
+			{"_bias_normal_double", originalDepthBias, originalNormalBias * 2.0f},
+			{"_bias_both_zero", 0.0f, 0.0f},
+			{"_bias_both_quarter", originalDepthBias * 0.25f, originalNormalBias * 0.25f}}};
+		for (const auto &variant : variants)
+		{
+			result.depthBias = variant.depth;
+			result.normalBias = variant.normal;
+			++result.generation;
+			ASSERT_TRUE(channel.publishShadowResult(gl.surface(), result));
+			// Replay the same capture: its static and dynamic depth caches
+			// remain valid, and lighting resolves the newly published biases.
+			snapshot->execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			gl.requireNoErrors();
+			const auto effective = channel.shadowResultCollection().acquireLatest(gl.surface());
+			ASSERT_NE(effective, nullptr);
+			const auto &applied = effective->entries.at(result.registrationOrder);
+			EXPECT_EQ(applied.generation, result.generation);
+			EXPECT_FLOAT_EQ(applied.depthBias, variant.depth);
+			EXPECT_FLOAT_EQ(applied.normalBias, variant.normal);
+			EXPECT_EQ(applied.viewProjection, result.viewProjection);
+			save(variant.suffix);
+		}
+	}
+
 	void captureCloseShadowDiagnostics(Scene &scene, const std::string &name)
 	{
 		// Position the camera above the actual generated surface rather than
@@ -644,6 +755,14 @@ namespace
 		const float seamCameraHeight = std::max(seamHeight, surfaceHeight(scene, 9, -9)) + 5.0f;
 		scene.setCamera({9.5f, seamCameraHeight, -8.5f}, {16.5f, seamHeight, 0.5f});
 		captureShadowDiagnostics(scene, name + "_close_seam");
+
+		// Run only on the exact scene exhibiting the reported irregular edge.
+		// Leave the bias replay last: it deliberately publishes test results.
+		if (name == "shadow_diagnostic_grid_scale_four")
+		{
+			scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
+			captureShadowParameterSweep(scene, name + "_close_sweep");
+		}
 	}
 
 	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {}, bool shadowDiagnostics = false)
