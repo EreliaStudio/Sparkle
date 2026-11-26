@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iomanip>
+#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -40,6 +41,7 @@
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
+#include "biome_showcase_fixture.hpp"
 #include "biome_validation_fixture.hpp"
 #include "biome_world_fixture.hpp"
 #include "voxel_world_fixture.hpp"
@@ -109,6 +111,7 @@ namespace
 		spk::Entity3D firstObserver{"First observer"};
 		spk::Entity3D secondObserver{"Second observer"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+		spk::Vector2UInt imageSize;
 		spk::EngineView &view;
 		ChunkGraphics &graphics;
 		spk::ShadowMap::RenderingSystem &shadowSystem;
@@ -117,8 +120,9 @@ namespace
 		bool graphicsActive = true;
 		std::int64_t tickTime = 0;
 
-		explicit Scene(bool stream = false, terrain::Generator::Settings settings = {}) :
+		explicit Scene(bool stream = false, terrain::Generator::Settings settings = {}, spk::Vector2UInt resolution = terrain::ImageSize) :
 			generator(definitions, settings),
+			imageSize(resolution),
 			view(createView()),
 			graphics(engine.addSystem<ChunkGraphics>()),
 			shadowSystem(engine.addSystem<spk::ShadowMap::RenderingSystem>())
@@ -151,9 +155,9 @@ namespace
 		spk::EngineView &createView()
 		{
 			setCamera({46.0f, 44.0f, 53.0f}, {0, 6, 0});
-			camera.setPerspective(0.90f, static_cast<float>(terrain::ImageSize.x) / terrain::ImageSize.y, 0.1f, 240.0f);
+			camera.setPerspective(0.90f, static_cast<float>(imageSize.x) / imageSize.y, 0.1f, 240.0f);
 			engine.addEntity(&cameraEntity);
-			return engine.addView("Biome", &camera, terrain::ImageSize);
+			return engine.addView("Biome", &camera, imageSize);
 		}
 
 		void setCamera(spk::Vector3 position, spk::Vector3 target)
@@ -265,7 +269,7 @@ namespace
 		[[nodiscard]] sparkle_test::FramebufferImage capture()
 		{
 			auto &gl = sparkle_test::OpenGLTestContext::instance();
-			gl.reset(terrain::ImageSize);
+			gl.reset(imageSize);
 			engine.refreshRenderSnapshot();
 			const auto snapshot = engine.latestRenderSnapshot();
 			EXPECT_NE(snapshot, nullptr);
@@ -274,8 +278,8 @@ namespace
 				return {};
 			}
 			snapshot->execute(gl.renderContext());
-			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
-			spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = imageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = imageSize}).execute(gl.renderContext());
 			gl.requireNoErrors();
 			return gl.capture();
 		}
@@ -734,4 +738,108 @@ TEST(BiomeWorldGolden, NegativeCoordinateChunkSeams)
 TEST(BiomeWorldGolden, CustomTerracedHeightPass)
 {
 	captureBiomeValidation("height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {});
+}
+
+namespace
+{
+	namespace showcase = sparkle_test::biome_showcase;
+	struct ShowcaseView
+	{
+		const char *name;
+		spk::Vector3 camera;
+		spk::Vector3 target;
+	};
+
+	void captureLandscape(showcase::Landscape landscape, const char *name, std::initializer_list<ShowcaseView> views, int maximumY)
+	{
+		const auto definitions = showcase::registry();
+		showcase::Atlas atlas;
+		showcase::Generator generator(definitions, landscape);
+		Scene scene(false, {}, showcase::ImageSize);
+		scene.graphics.unbind();
+		scene.graphics.bind(scene.chunks, showcase::palette(atlas));
+		scene.camera.setPerspective(0.95f, static_cast<float>(showcase::ImageSize.x) / showcase::ImageSize.y, 0.1f, 300.0f);
+		scene.view.ambientLight().setIntensity(0.32f);
+		scene.sun.setCastsShadows(false);
+		for (int z = -3; z <= 2; ++z)
+		{
+			for (int x = -3; x <= 2; ++x)
+			{
+				for (int y = -1; y <= maximumY; ++y)
+				{
+					const auto chunk = generator.generate({x, y, z});
+					ASSERT_TRUE(chunk.has_value());
+					scene.chunks.addChunk({x, y, z}, *chunk);
+				}
+			}
+		}
+		scene.graphics.synchronize();
+
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		for (const auto &view : views)
+		{
+			scene.setCamera(view.camera, view.target);
+			const auto pixels = scene.capture();
+			const std::string imageName = std::string(name) + "_" + view.name;
+			const auto actual = sparkle_test::resultImagePath("rendering/biome-showcase", imageName);
+			gl.save(actual);
+			EXPECT_EQ(pixels.size, showcase::ImageSize);
+			const auto expected = sparkle_test::expectedImagePath("rendering/biome-showcase", imageName);
+			if (!std::filesystem::exists(expected))
+			{
+				ADD_FAILURE() << "Review and promote rendered landscape baseline: " << actual;
+				continue;
+			}
+			sparkle_test::ImageComparisonOptions tolerance;
+			tolerance.rgbTolerance = 8;
+			tolerance.alphaTolerance = 8;
+			const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-showcase", imageName + "_difference"), tolerance);
+			EXPECT_TRUE(result.matches) << imageName << ": " << result.differentPixelCount << " different pixels";
+		}
+	}
+}
+
+TEST(BiomeShowcaseGolden, MesaCanyon)
+{
+	captureLandscape(showcase::Landscape::Canyon, "mesa_canyon", {{"overview", {85, 83, 91}, {0, 20, 0}}, {"ravine", {0, 10, -32}, {1, 26, 5}}, {"rim", {-19, 48, -18}, {3, 20, 10}}}, 2);
+}
+
+TEST(BiomeShowcaseGolden, HighPeaks)
+{
+	captureLandscape(showcase::Landscape::Peaks, "high_peaks", {{"overview", {93, 96, 92}, {0, 25, 0}}, {"valley", {13, 8, -38}, {0, 36, 0}}, {"aerial", {-25, 90, 45}, {4, 20, -10}}}, 3);
+}
+
+TEST(BiomeShowcaseGolden, RollingPlains)
+{
+	captureLandscape(showcase::Landscape::Plains, "rolling_plains", {{"overview", {77, 56, 80}, {0, 8, 0}}, {"ground", {-35, 18, -28}, {10, 9, 10}}}, 0);
+}
+
+TEST(BiomeShowcaseGolden, Sea)
+{
+	captureLandscape(showcase::Landscape::Sea, "sea", {{"overview", {-68, 44, 70}, {0, -1, 0}}, {"surface", {-34, 8, -28}, {5, -2, 12}}}, 0);
+}
+
+TEST(BiomeShowcaseGolden, ChalkCliffs)
+{
+	captureLandscape(showcase::Landscape::Cliffs, "chalk_cliffs", {{"overview", {-85, 65, 80}, {0, 16, 0}}, {"foot", {-26, 8, -22}, {8, 22, 4}}}, 2);
+}
+
+TEST(BiomeShowcaseGolden, CoastalTransition)
+{
+	captureLandscape(showcase::Landscape::Coast, "coastal_transition", {{"overview", {-83, 72, 87}, {0, 14, 0}}, {"beach", {-22, 7, -28}, {8, 24, 0}}, {"cliff_top", {15, 43, 25}, {-16, 0, -10}}}, 2);
+}
+
+TEST(BiomeShowcaseGolden, CitySkyline)
+{
+	captureLandscape(showcase::Landscape::City, "city_skyline", {{"overview", {88, 85, 90}, {0, 24, 0}}, {"street", {9, 6, -37}, {0, 34, 0}}}, 3);
+}
+
+TEST(BiomeShowcaseGolden, DesertDunes)
+{
+	captureLandscape(showcase::Landscape::Dunes, "desert_dunes", {{"overview", {80, 57, 82}, {0, 9, 0}}, {"ground", {-36, 22, -30}, {8, 10, 8}}}, 1);
+}
+
+TEST(BiomeShowcaseGolden, VolcanicCrater)
+{
+	captureLandscape(showcase::Landscape::Volcano, "volcanic_crater", {{"overview", {80, 83, 85}, {0, 22, 0}}, {"crater", {3, 85, -15}, {0, 25, 0}}}, 3);
 }
