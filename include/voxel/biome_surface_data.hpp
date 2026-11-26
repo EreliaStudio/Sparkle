@@ -212,11 +212,16 @@ namespace spk::Voxel
 			return _chunks.at(coordinate);
 		}
 
-		// Surface passes may write only while their active job owns the column lock.
+		// The calling surface pass must own the column lock.
 		[[nodiscard]] ColumnData &column(const spk::Vector2Int &coordinate)
 		{
 			const std::scoped_lock lock(_mutex);
-			return _columns.at(coordinate);
+			auto &columnData = _columns.at(coordinate);
+			if (columnData._ready)
+			{
+				throw spk::Exception("Published column cannot be modified");
+			}
+			return columnData;
 		}
 
 		[[nodiscard]] const ColumnData &column(const spk::Vector2Int &coordinate) const
@@ -226,6 +231,22 @@ namespace spk::Voxel
 		}
 
 		// References remain valid until the caller cleans its active chunk.
+		[[nodiscard]] ColumnData &column(const World::ChunkCoordinate &coordinate)
+		{
+			const std::scoped_lock lock(_mutex);
+			const auto it = _chunks.find(coordinate);
+			if (it == _chunks.end())
+			{
+				throw spk::Exception("Chunk generation is not active");
+			}
+			auto &columnData = _columns.at({coordinate.x, coordinate.z});
+			if (columnData._ready || !it->second._columnLock.owns_lock())
+			{
+				throw spk::Exception("Chunk does not own an unpublished column");
+			}
+			return columnData;
+		}
+
 		[[nodiscard]] const ColumnData &column(const World::ChunkCoordinate &coordinate) const
 		{
 			const std::scoped_lock lock(_mutex);

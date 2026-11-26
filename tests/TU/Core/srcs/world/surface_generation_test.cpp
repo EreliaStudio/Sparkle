@@ -1,4 +1,5 @@
 #include "container/grid_2d.hpp"
+#include <utility>
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <type_traits>
@@ -240,14 +241,14 @@ TEST(SurfaceGenerationTest, ConcurrentRequestsShareOneWeightedColumnUntilFlush)
 	std::atomic<int> calls{0};
 	const auto generate = [&](const Coordinate &coordinate) {
 		data.prepareChunk(coordinate, {16, 16, 16});
-		if (!data.column(spk::Vector2Int{coordinate.x, coordinate.z}).heights)
+		if (!std::as_const(data).column(coordinate).ready())
 		{
 			++calls;
 			distribution.apply(coordinate, data);
 			combination.apply(coordinate, data);
 			data.completeChunk(coordinate);
 		}
-		const float height = data.column(coordinate).heights->at({0, 0});
+		const float height = std::as_const(data).column(coordinate).heights->at({0, 0});
 		data.clean(coordinate);
 		return height;
 	};
@@ -276,23 +277,23 @@ TEST(SurfaceGenerationTest, FailedColumnBuildCanBeRetried)
 	Distribution distribution;
 	ColumnCombination combination(ColumnCombinationBase::Combination::Weighted);
 	data.prepareChunk(coordinate, {16, 16, 16});
-	EXPECT_FALSE(data.column(coordinate).heights);
+	EXPECT_FALSE(std::as_const(data).column(coordinate).heights);
 	distribution.apply(coordinate, data);
-	EXPECT_FALSE(data.column(coordinate).ready());
+	EXPECT_FALSE(std::as_const(data).column(coordinate).ready());
 	// A failed job cleans its partially constructed column without publishing it.
 	data.clean(coordinate);
 	data.prepareChunk(coordinate, {16, 16, 16});
-	EXPECT_FALSE(data.column(coordinate).heights);
-	EXPECT_FALSE(static_cast<bool>(data.column(spk::Vector2Int{0, 0}).influences));
-	EXPECT_FALSE(data.column(coordinate).ready());
+	EXPECT_FALSE(std::as_const(data).column(coordinate).heights);
+	EXPECT_FALSE(static_cast<bool>(std::as_const(data).column(spk::Vector2Int{0, 0}).influences));
+	EXPECT_FALSE(std::as_const(data).column(coordinate).ready());
 	distribution.apply(coordinate, data);
 	combination.apply(coordinate, data);
 	data.completeChunk(coordinate);
-	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
+	EXPECT_FLOAT_EQ(std::as_const(data).column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
 	data.prepareChunk(coordinate, {16, 16, 16});
-	EXPECT_TRUE(data.column(coordinate).heights);
-	EXPECT_FLOAT_EQ(data.column(coordinate).heights->at({0, 0}), 40);
+	EXPECT_TRUE(std::as_const(data).column(coordinate).heights);
+	EXPECT_FLOAT_EQ(std::as_const(data).column(coordinate).heights->at({0, 0}), 40);
 	data.clean(coordinate);
 }
 
@@ -400,7 +401,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	const Coordinate active{-1, 0, 0};
 	const Coordinate idle{0, 0, 0};
 	data.prepareChunk(idle, {16, 16, 16});
-	EXPECT_FALSE(data.column(idle).ready());
+	EXPECT_FALSE(std::as_const(data).column(idle).ready());
 	data.completeChunk(idle);
 	data.clean(idle);
 
@@ -412,7 +413,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 		data.prepareChunk(active, {16, 16, 16});
 		entered.set_value();
 		gate.wait();
-		EXPECT_FALSE(data.column(active).ready());
+		EXPECT_FALSE(std::as_const(data).column(active).ready());
 		data.completeChunk(active);
 		data.clean(active);
 	});
@@ -422,7 +423,7 @@ TEST(SurfaceGenerationTest, FlushReclaimsOnlyIdleColumns)
 	resume.set_value();
 	building.get();
 	data.prepareChunk(active, {16, 16, 16});
-	EXPECT_TRUE(data.column(active).ready());
+	EXPECT_TRUE(std::as_const(data).column(active).ready());
 	data.flush();
 	EXPECT_EQ(data.columnCount(), 1u);
 	data.clean(active);
@@ -714,4 +715,30 @@ TEST(SurfaceGenerationTest, DominantHeightCombinationUsesWeightRatherThanHeight)
 	data.influences->sample({0, 0}) = {};
 	EXPECT_THROW(dominant.apply({}, data), spk::Exception);
 	EXPECT_EQ(data.heights.get(), previous);
+}
+
+TEST(SurfaceGenerationTest, MutableColumnAccessRequiresUnpublishedActiveGeneration)
+{
+	GenerationData data;
+	const Coordinate first{0, 0, 0};
+	const Coordinate second{0, 1, 0};
+	const spk::Vector2Int surface{0, 0};
+	EXPECT_THROW((void)data.column(first), spk::Exception);
+
+	data.prepareChunk(first, {16, 16, 16});
+	EXPECT_EQ(&data.column(first), &data.column(surface));
+	EXPECT_FALSE(std::as_const(data).column(first).ready());
+	data.completeChunk(first);
+	EXPECT_THROW((void)data.column(first), spk::Exception);
+	EXPECT_THROW((void)data.column(surface), spk::Exception);
+	EXPECT_TRUE(std::as_const(data).column(first).ready());
+	data.clean(first);
+
+	data.prepareChunk(second, {16, 16, 16});
+	EXPECT_THROW((void)data.column(second), spk::Exception);
+	EXPECT_TRUE(std::as_const(data).column(second).ready());
+	EXPECT_EQ(&std::as_const(data).column(second), &std::as_const(data).column(surface));
+	data.clean(second);
+	EXPECT_THROW((void)data.column(second), spk::Exception);
+	EXPECT_THROW((void)std::as_const(data).column(second), spk::Exception);
 }

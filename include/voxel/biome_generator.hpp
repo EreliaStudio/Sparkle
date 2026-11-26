@@ -100,7 +100,7 @@ namespace spk::Voxel
 
 		void _applyPass(typename World::Generator<TChunk, GenerationData>::Pass &pass, const World::ChunkCoordinate &coordinate, GenerationData &data) override
 		{
-			if (data.column(coordinate).ready() && dynamic_cast<SurfacePass *>(&pass) != nullptr)
+			if (dynamic_cast<SurfacePass *>(&pass) != nullptr && std::as_const(data).column(coordinate).ready())
 			{
 				return;
 			}

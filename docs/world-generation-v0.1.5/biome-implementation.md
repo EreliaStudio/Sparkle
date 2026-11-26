@@ -35,7 +35,7 @@ Distinct coordinates may be generated concurrently.
 Active chunks protect their X/Z column from eviction. References to chunk or column
 data are valid only until the calling chunk is cleaned. The generator calls cleanup
 after successful preparation, on success or failure; preparation itself must be
-exception-safe. Surface callbacks may access the current X/Z column through the construction-only accessors. All voxel surface passes run once per column under the concrete cache policy; generic Generator and SurfacePass do not impose caching. Do not read a grid in an earlier chunk pass if a later surface pass modifies it; cached columns contain final results. Queued jobs
+exception-safe. Mutable column access is restricted to unpublished columns. The chunk-coordinate overload also verifies that the active chunk owns the column lock; surface callbacks using X/Z must already own that lock. Read access uses the const overloads. All voxel surface passes run once per column under the concrete cache policy; generic Generator and SurfacePass do not impose caching. Do not read a grid in an earlier chunk pass if a later surface pass modifies it; cached columns contain final results. Queued jobs
 need no reservations. Completed columns remain cached until flush(), which derives
 the active X/Z keys from the chunk map and evicts only unused columns. A duplicate
 streaming request after timeout can fail temporarily; retry policy is unchanged.
