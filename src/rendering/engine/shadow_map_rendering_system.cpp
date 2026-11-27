@@ -618,20 +618,31 @@ void main()
 			{
 				cascades[i] = {};
 			}
+			std::vector<const Caster *> staticCasters, dynamicCasters;
+			staticCasters.reserve(_staticCasters.size());
+			dynamicCasters.reserve(_dynamicCasters.size());
 			for (std::size_t i = 0; i < count; ++i)
 			{
 				const auto &projection = projections[i];
 				auto &cascade = cascades[i];
-				std::vector<const Caster *> staticCasters, dynamicCasters;
-				staticCasters.reserve(_staticCasters.size());
-				dynamicCasters.reserve(_dynamicCasters.size());
-				for (const auto &caster : _staticCasters)
+				const bool staticTargetDirty = !cache.cascaded || cache.cascadeCount != count || !cascade.staticTarget ||
+											   cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection;
+				const bool reuseStaticSelection = !staticTargetDirty && cache.staticSignature == _staticSignature;
+				auto staticSignature = cascade.staticSignature;
+				if (!reuseStaticSelection)
 				{
-					if (projection.intersects(caster.bounds))
+					staticCasters.clear();
+					for (const auto &caster : _staticCasters)
 					{
-						staticCasters.push_back(&caster);
+						if (projection.intersects(caster.bounds))
+						{
+							staticCasters.push_back(&caster);
+						}
 					}
+					staticSignature = signature(staticCasters);
+					cascade.statistics.staticCasters = staticCasters.size();
 				}
+				dynamicCasters.clear();
 				for (const auto &caster : _dynamicCasters)
 				{
 					if (projection.intersects(caster.bounds))
@@ -639,11 +650,8 @@ void main()
 						dynamicCasters.push_back(&caster);
 					}
 				}
-				const auto staticSignature = signature(staticCasters);
 				const auto dynamicSignature = signature(dynamicCasters);
-				const bool staticDirty = !cache.cascaded || cache.cascadeCount != count || !cascade.staticTarget ||
-										 cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection ||
-										 cascade.staticSignature != staticSignature;
+				const bool staticDirty = staticTargetDirty || cascade.staticSignature != staticSignature;
 				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cache.separateDynamic != separateDynamic || cascade.dynamicSignature != dynamicSignature;
 				if (staticDirty)
 				{
@@ -675,7 +683,6 @@ void main()
 				cascade.projection = projection.viewProjection;
 				cascade.staticSignature = staticSignature;
 				cascade.dynamicSignature = dynamicSignature;
-				cascade.statistics.staticCasters = staticCasters.size();
 				cascade.statistics.dynamicCasters = dynamicCasters.size();
 			}
 			renderer.finish();
