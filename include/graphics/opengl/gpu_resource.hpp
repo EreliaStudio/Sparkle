@@ -102,6 +102,12 @@ namespace spk
 			{
 				return _state != nullptr;
 			}
+			// Used by resource pools to avoid modifying storage still held by an
+			// immutable publication or another reader.
+			[[nodiscard]] bool hasUniqueOwner() const noexcept
+			{
+				return _state.use_count() == 1;
+			}
 			explicit operator bool() const noexcept
 			{
 				return valid();

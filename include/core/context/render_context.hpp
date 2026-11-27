@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 
 #include "core/window_surface_render_target.hpp"
@@ -37,6 +38,17 @@ namespace spk
 		friend class Uniform;
 
 	public:
+		// Optional instrumentation of actual render passes, including nested
+		// snapshots. The observer is borrowed for the duration of execution.
+		class PassObserver
+		{
+		public:
+			virtual ~PassObserver() = default;
+			virtual void beforePass(std::string_view name) = 0;
+			virtual void afterPass(std::string_view name) = 0;
+		};
+
+		PassObserver *passObserver = nullptr;
 		Window::Surface *targetSurface;
 		Profiler &profiler;
 		ActiveProgram _activeProgram{};

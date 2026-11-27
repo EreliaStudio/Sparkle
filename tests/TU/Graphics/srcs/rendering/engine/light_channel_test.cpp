@@ -137,21 +137,21 @@ TEST(GraphicsLightChannel, CapturedShadowFilterIsImmutableAndChangingItInvalidat
 	ASSERT_NE(before, nullptr);
 	ASSERT_EQ(before->local.size(), 1u);
 	ASSERT_EQ(before->directional.size(), 1u);
-	EXPECT_EQ(before->local.front().shadowFilter, spk::Light::ShadowFilter::Hard);
-	EXPECT_EQ(before->directional.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(before->local.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(before->directional.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
 
 	const auto generation = view.lightChannel().generation();
-	spot.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	spot.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_GT(view.lightChannel().generation(), generation);
-	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	directional.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	scene.engine.refreshRenderSnapshot();
 	const auto after = view.lightChannel().current();
 	ASSERT_NE(after, nullptr);
 	EXPECT_NE(after.get(), before.get());
-	EXPECT_EQ(after->local.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
-	EXPECT_EQ(after->directional.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
-	EXPECT_EQ(before->local.front().shadowFilter, spk::Light::ShadowFilter::Hard);
-	EXPECT_EQ(before->directional.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(after->local.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(after->directional.front().shadowFilter, spk::Light::ShadowFilter::Hard);
+	EXPECT_EQ(before->local.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
+	EXPECT_EQ(before->directional.front().shadowFilter, spk::Light::ShadowFilter::PCF3x3);
 }
 
 TEST(GraphicsLightChannel, IncumbentsSurviveUntilHysteresisThresholdOrReset)

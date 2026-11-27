@@ -35,7 +35,7 @@ namespace spk::Light
 			float shadowDistance = 0.0f;
 			bool castsShadows = false;
 			std::uint32_t shadowResolution = 1024;
-			ShadowFilter shadowFilter = ShadowFilter::Hard;
+			ShadowFilter shadowFilter = ShadowFilter::PCF3x3;
 			float score = 0.0f;
 			enum class PointShadowStatus
 			{

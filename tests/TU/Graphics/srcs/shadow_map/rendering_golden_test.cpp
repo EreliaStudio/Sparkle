@@ -4,11 +4,14 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <iostream>
 #include <limits>
 #include <memory>
+#include <set>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -39,10 +42,12 @@
 #include "voxel/renderer.hpp"
 #include "voxel/rendering_system.hpp"
 
+#include "shadow_pass_timing.hpp"
+
 namespace
 {
 	constexpr spk::Vector2UInt ImageSize{320, 240};
-	constexpr std::uint32_t ShadowSize = 512;
+	constexpr std::uint32_t ShadowSize = 1024;
 	constexpr const char *Category = "rendering/shadow-maps";
 
 	class Atlas final : public spk::Texture
@@ -166,6 +171,7 @@ namespace
 		spk::Engine engine;
 		spk::Entity3D cameraEntity{"Shadow test camera"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
+		spk::Vector2UInt imageSize;
 		spk::EngineView &view;
 		spk::Voxel::RenderingSystem &voxels;
 		spk::ShadowMap::RenderingSystem &shadows;
@@ -175,18 +181,20 @@ namespace
 		spk::Voxel::Geometry slope = geometry({1, 1, 1}, "slope.json");
 		spk::Voxel::Geometry stair = geometry({1, 1, 1}, "stair.json");
 		spk::Voxel::Geometry mixed = mixedGeometry();
-		spk::Voxel::Geometry floor = geometry({7, 1, 7});
+		spk::Voxel::Geometry floor;
 		std::vector<std::unique_ptr<spk::Entity3D>> objects;
 		std::vector<std::unique_ptr<spk::Entity3D>> lights;
 
-		Scene() :
+		explicit Scene(bool wide = false) :
+			imageSize(wide ? spk::Vector2UInt{960, 720} : ImageSize),
 			view(_initializeView()),
 			voxels(engine.addSystem<spk::Voxel::RenderingSystem>()),
-			shadows(engine.addSystem<spk::ShadowMap::RenderingSystem>())
+			shadows(engine.addSystem<spk::ShadowMap::RenderingSystem>()),
+			floor(geometry(wide ? spk::Vector3UInt{48, 1, 32} : spk::Vector3UInt{7, 1, 7}))
 		{
 			view.ambientLight().setColor({1.0f, 1.0f, 1.0f});
 			view.ambientLight().setIntensity(0.12f);
-			add(floor, 3, {-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::None);
+			add(floor, 3, wide ? spk::Vector3{-24.0f, -1.2f, -16.0f} : spk::Vector3{-3.5f, -1.2f, -3.5f}, spk::ShadowMap::Mode::None);
 		}
 
 		spk::EngineView &_initializeView()
@@ -194,9 +202,9 @@ namespace
 			const spk::Vector3 eye{6.0f, 4.2f, 8.0f};
 			cameraEntity.transform().place(eye);
 			cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.4f, 0}));
-			camera.setPerspective(0.78f, static_cast<float>(ImageSize.x) / ImageSize.y, 0.1f, 40.0f);
+			camera.setPerspective(0.78f, static_cast<float>(imageSize.x) / imageSize.y, 0.1f, 40.0f);
 			engine.addEntity(&cameraEntity);
-			return engine.addView("shadow", &camera, ImageSize);
+			return engine.addView("shadow", &camera, imageSize);
 		}
 
 		spk::Entity3D &add(
@@ -230,6 +238,7 @@ namespace
 			light.setIntensity(intensity);
 			light.setCastsShadows(true);
 			light.setShadowResolution(ShadowSize);
+			light.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 			if constexpr (std::is_same_v<TLight, spk::Light::Spot>)
 			{
 				light.setRange(12.0f);
@@ -314,6 +323,8 @@ namespace
 
 	void render(Scene &scene, const std::string &name, const std::string &depthName = {})
 	{
+		// Preserve single-map reference images while the new CSM goldens await review.
+		scene.shadows.setDirectionalCascadesEnabled(false);
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		gl.reset(ImageSize);
 		const auto snapshot = scene.capture();
@@ -340,6 +351,106 @@ namespace
 		EXPECT_NO_THROW(gl.requireNoErrors());
 		gl.reset();
 	}
+	// Sample the floor in world space, not arbitrary screen pixels. Compare
+	// identical geometry with shadows enabled and disabled, independently of
+	// the golden image, so an incorrect new baseline cannot hide a short shadow.
+	void checkFullDirectionalShadows(const std::string &name, float runPerHeight, spk::Light::ShadowFilter filter)
+	{
+		Scene scene(true);
+		const spk::Vector3 eye{0, 35, 24};
+		scene.cameraEntity.transform().place(eye);
+		scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+		scene.camera.setOrthographic(-26.0f, 26.0f, -19.5f, 19.5f, 0.1f, 80.0f);
+
+		const std::array<std::uint32_t, 3> heights{3, 6, 9};
+		const std::array<float, 3> lanes{-8.0f, 0.0f, 8.0f};
+		std::array<spk::Voxel::Geometry, 3> pillars{
+			geometry({2, 3, 2}), geometry({2, 6, 2}), geometry({2, 9, 2})};
+		std::vector<spk::Vector3> probes;
+		for (std::size_t i = 0; i < heights.size(); ++i)
+		{
+			scene.add(pillars[i], 1, {-12.0f, -0.2f, lanes[i] - 1.0f}, spk::ShadowMap::Mode::Static);
+			const float length = static_cast<float>(heights[i]) * runPerHeight;
+			// +X is the light travel direction. The trailing edge is x=-10.
+			probes.push_back({-14.0f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + 0.75f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + length * 0.5f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + length - 0.75f, -0.2f, lanes[i]});
+			probes.push_back({-10.0f + length + 1.5f, -0.2f, lanes[i]});
+		}
+
+		auto &sun = scene.addLight<spk::Light::Directional>({-runPerHeight, 1, 0}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+		sun.setShadowDistance(80.0f);
+		sun.setShadowResolution(ShadowSize);
+		sun.setShadowFilter(filter);
+		const auto direction = sun.worldDirection();
+		EXPECT_GT(direction.x, 0.0f);
+		EXPECT_LT(direction.y, 0.0f);
+
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto capture = [&](bool enabled, const std::string &imageName, std::vector<int> &values) {
+			sun.setCastsShadows(enabled);
+			gl.reset(scene.imageSize);
+			const auto snapshot = scene.capture();
+			ASSERT_NE(snapshot, nullptr);
+			snapshot->execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = scene.imageSize})
+				.execute(gl.renderContext());
+			gl.save(sparkle_test::resultImagePath(Category, imageName));
+			for (const auto &probe : probes)
+			{
+				const auto clip = scene.camera.viewProjectionMatrix() * spk::Vector4(probe, 1.0f);
+				ASSERT_GT(clip.w, 0.0f);
+				const auto x = static_cast<GLint>((clip.x / clip.w * 0.5f + 0.5f) * scene.imageSize.x);
+				const auto y = static_cast<GLint>((clip.y / clip.w * 0.5f + 0.5f) * scene.imageSize.y);
+				ASSERT_GE(x, 0);
+				ASSERT_GE(y, 0);
+				ASSERT_LT(x, static_cast<GLint>(scene.imageSize.x));
+				ASSERT_LT(y, static_cast<GLint>(scene.imageSize.y));
+				std::array<std::uint8_t, 4> pixel{};
+				glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+				values.push_back(pixel[0] + pixel[1] + pixel[2]);
+			}
+			EXPECT_NO_THROW(gl.requireNoErrors());
+			gl.reset();
+		};
+
+		std::vector<int> unshadowed;
+		std::vector<int> shadowed;
+		capture(false, name + "_no_shadows", unshadowed);
+		capture(true, name, shadowed);
+		ASSERT_EQ(unshadowed.size(), probes.size());
+		ASSERT_EQ(shadowed.size(), probes.size());
+		for (std::size_t i = 0; i < heights.size(); ++i)
+		{
+			SCOPED_TRACE(::testing::Message() << "Pillar height " << heights[i] << ", expected shadow extension " << heights[i] * runPerHeight);
+			const std::size_t start = i * 5;
+			for (std::size_t j = 0; j < 5; ++j)
+			{
+				const auto index = start + j;
+				EXPECT_GT(unshadowed[index], 60) << "Floor probe " << j << " must be illuminated";
+				if (j == 0 || j == 4)
+				{
+					EXPECT_NEAR(shadowed[index], unshadowed[index], 24) << "Unexpected shadow outside its footprint at probe " << j;
+				}
+				else
+				{
+					EXPECT_LT(shadowed[index], unshadowed[index] * 0.8f) << "Missing shadow at interior probe " << j;
+				}
+			}
+		}
+
+		const auto actual = sparkle_test::resultImagePath(Category, name);
+		const auto unshadowedPath = sparkle_test::resultImagePath(Category, name + "_no_shadows");
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		const auto difference = sparkle_test::compareImages(
+			actual, unshadowedPath, sparkle_test::resultImagePath(Category, name + "_shadow_difference"), tolerance);
+		EXPECT_GT(difference.differentPixelCount, 0u);
+		compareGolden(Category, name, actual);
+	}
+
 }
 
 TEST(ShadowRenderingGolden, SpotStaticCasterHasVisibleShadowAndD32FDepth)
@@ -418,6 +529,7 @@ TEST(ShadowRenderingGolden, SpotHardAndDirectionalSoftUseIndependentFilters)
 	scene.add(scene.cube, 2, {0.9f, -0.2f, 0.6f}, spk::ShadowMap::Mode::Dynamic);
 	auto &spot = scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 8.0f);
 	auto &directional = scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {1.0f, 0.9f, 0.6f}, 1.7f);
+	spot.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "mixed_shadow_filters");
@@ -429,6 +541,7 @@ TEST(ShadowRenderingGolden, PointCubeProjectsOmnidirectionalHardShadowsAndSixDep
 	scene.add(scene.cube, 0, {-0.8f, -0.2f, -0.4f}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 1, {0.7f, -0.2f, -0.8f}, spk::ShadowMap::Mode::Static);
 	auto &light = scene.addLight<spk::Light::Point>({0, 2.5f, 1}, {0, 0, 0}, {1, 0.92f, 0.75f}, 7.0f);
+	light.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_EQ(light.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	render(scene, "point_hard_floor");
 }
@@ -534,7 +647,7 @@ TEST(ShadowRenderingGolden, PointHardAndNineTapPCFHaveDistinctReferences)
 	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 1, {0.7f, -0.2f, 0.4f}, spk::ShadowMap::Mode::Dynamic);
 	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3, 1.5f}, {0, 0, 0}, {1, 1, 1}, 9.0f);
-	point.setShadowResolution(128);
+	point.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	render(scene, "point_hard_compare");
 	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "point_pcf3x3_compare");
@@ -721,6 +834,7 @@ TEST(ShadowRenderingGolden, PointAndSpotMixedShapeCastersUseIndependentFilters)
 	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3.0f, 1.0f}, {0, 0, 0}, {1, 0.45f, 0.35f}, 7.0f);
 	auto &spot = scene.addLight<spk::Light::Spot>({2.0f, 4.0f, 2.0f}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 7.0f);
 	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	spot.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	render(scene, "point_spot_non_cube_mixed");
 }
@@ -779,5 +893,299 @@ TEST(PointShadowDepthTest, NonCubeCastersPopulateEveryCardinalFace)
 		EXPECT_GT(occupied, 8) << "No meaningful non-cube coverage in face " << face;
 	}
 	EXPECT_NO_THROW(gl.requireNoErrors());
+	gl.reset();
+}
+
+TEST(ShadowRenderingGolden, DirectionalFullShadowAt45Degrees)
+{
+	checkFullDirectionalShadows("directional_full_shadow_45", 1.0f, spk::Light::ShadowFilter::Hard);
+}
+
+TEST(ShadowRenderingGolden, DirectionalFullLongShadowAtLowElevation)
+{
+	checkFullDirectionalShadows("directional_full_shadow_low", 3.0f, spk::Light::ShadowFilter::Hard);
+}
+
+TEST(ShadowRenderingGolden, DirectionalFullLongShadowWithPCF)
+{
+	checkFullDirectionalShadows("directional_full_shadow_low_pcf", 3.0f, spk::Light::ShadowFilter::PCF3x3);
+}
+
+TEST(ShadowRenderingGolden, DirectionalOffscreenCasterStillShadowsVisibleFloor)
+{
+	Scene scene(true);
+	const spk::Vector3 eye{0, 10, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-4.0f, 4.0f, -3.0f, 3.0f, 0.1f, 18.0f);
+	const auto pillar = geometry({2, 8, 2});
+	scene.add(pillar, 1, {-19.0f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Static);
+	auto &sun = scene.addLight<spk::Light::Directional>({-3, 1, 0}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(18.0f);
+	sun.setShadowResolution(ShadowSize);
+	sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+
+	// The ray from the central floor probe towards the sun passes through
+	// the pillar at (-18, 5.8, 0), well outside the camera's horizontal extent.
+	const spk::Vector3 blocker{-18, 5.8f, 0};
+	const auto blockerClip = scene.camera.viewProjectionMatrix() * spk::Vector4(blocker, 1.0f);
+	ASSERT_GT(std::abs(blockerClip.x), blockerClip.w);
+	const std::array<spk::Vector3, 4> probes{{{0, -0.2f, 0}, {2, -0.2f, 0}, {0, -0.2f, -2}, {0, -0.2f, 2}}};
+	const std::string name = "directional_offscreen_caster";
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto capture = [&](bool enabled, const std::string &imageName, std::vector<int> &values) {
+		sun.setCastsShadows(enabled);
+		gl.reset(scene.imageSize);
+		const auto snapshot = scene.capture();
+		ASSERT_NE(snapshot, nullptr);
+		snapshot->execute(gl.renderContext());
+		spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+		spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = scene.imageSize})
+			.execute(gl.renderContext());
+		gl.save(sparkle_test::resultImagePath(Category, imageName));
+		for (const auto &probe : probes)
+		{
+			const auto clip = scene.camera.viewProjectionMatrix() * spk::Vector4(probe, 1.0f);
+			ASSERT_GT(clip.w, 0.0f);
+			const auto x = static_cast<GLint>((clip.x / clip.w * 0.5f + 0.5f) * scene.imageSize.x);
+			const auto y = static_cast<GLint>((clip.y / clip.w * 0.5f + 0.5f) * scene.imageSize.y);
+			ASSERT_GE(x, 0);
+			ASSERT_GE(y, 0);
+			ASSERT_LT(x, static_cast<GLint>(scene.imageSize.x));
+			ASSERT_LT(y, static_cast<GLint>(scene.imageSize.y));
+			std::array<std::uint8_t, 4> pixel{};
+			glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel.data());
+			values.push_back(pixel[0] + pixel[1] + pixel[2]);
+		}
+		EXPECT_NO_THROW(gl.requireNoErrors());
+		gl.reset();
+	};
+
+	std::vector<int> unshadowed;
+	std::vector<int> shadowed;
+	capture(false, name + "_no_shadows", unshadowed);
+	capture(true, name, shadowed);
+	ASSERT_EQ(unshadowed.size(), probes.size());
+	ASSERT_EQ(shadowed.size(), probes.size());
+	for (std::size_t i = 0; i < probes.size(); ++i)
+	{
+		SCOPED_TRACE(i);
+		EXPECT_GT(unshadowed[i], 60);
+		if (i < 2)
+		{
+			EXPECT_LT(shadowed[i], unshadowed[i] * 0.8f) << "Offscreen caster must shadow visible receiver";
+		}
+		else
+		{
+			EXPECT_NEAR(shadowed[i], unshadowed[i], 24);
+		}
+	}
+	const auto actual = sparkle_test::resultImagePath(Category, name);
+	sparkle_test::ImageComparisonOptions tolerance;
+	tolerance.rgbTolerance = 8;
+	const auto difference = sparkle_test::compareImages(
+		actual, sparkle_test::resultImagePath(Category, name + "_no_shadows"), sparkle_test::resultImagePath(Category, name + "_shadow_difference"), tolerance);
+	EXPECT_GT(difference.differentPixelCount, 0u);
+	compareGolden(Category, name, actual);
+}
+
+TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
+{
+	Scene scene(true);
+	const spk::Vector3 eye{0, 12, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-12, 12, -9, 9, 0.1f, 30);
+	const auto pillar = geometry({2, 3, 2});
+	for (int x = -8; x <= 8; x += 2)
+	{
+		scene.add(scene.cube, 0, {static_cast<float>(x), -0.2f, -4}, spk::ShadowMap::Mode::Static);
+	}
+	auto &moving = scene.add(pillar, 1, {0, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	auto &sun = scene.addLight<spk::Light::Directional>({0, 10, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(24);
+	sun.setShadowResolution(1024);
+	scene.voxels.deactivate();
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	const auto execute = [&]() {
+		const auto snapshot = scene.capture();
+		return sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext()).completion;
+	};
+	(void)execute();
+	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	ASSERT_NE(first, nullptr);
+	const auto original = first->entries.at(sun.registrationOrder());
+	ASSERT_EQ(original.cascadeCount, 4u);
+	ASSERT_TRUE(std::ranges::any_of(original.cascadeDynamicTextures, [](const auto &texture) {
+		return static_cast<bool>(texture);
+	}));
+	constexpr std::size_t Cases = 32;
+	constexpr double BudgetMs = 1.0;
+	std::array<double, Cases> times{};
+	std::size_t overBudget = 0;
+	std::uint32_t seed = 0xA11CEu;
+	for (std::size_t index = 0; index < Cases; ++index)
+	{
+		seed = seed * 1664525u + 1013904223u;
+		const float x = 1.0f + static_cast<float>((seed >> 8) % 500) / 100.0f;
+		std::array<double, 3> samples{};
+		for (auto &sample : samples)
+		{
+			moving.transform().place({-x, -0.2f, 0});
+			(void)execute();
+			moving.transform().place({x, -0.2f, 0});
+			sample = execute();
+			const auto published = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+			ASSERT_NE(published, nullptr);
+			const auto &entry = published->entries.at(sun.registrationOrder());
+			std::size_t dynamicRebuilds = 0;
+			EXPECT_TRUE(std::ranges::any_of(entry.cascadeDynamicTextures, [](const auto &texture) {
+				return static_cast<bool>(texture);
+			}));
+			for (std::size_t i = 0; i < entry.cascadeCount; ++i)
+			{
+				EXPECT_EQ(entry.cascadeStatistics[i].staticBuilds, original.cascadeStatistics[i].staticBuilds)
+					<< "Moving a caster must not rebuild unchanged static depth";
+				EXPECT_EQ(entry.cascadeTextures[i].identifier(), original.cascadeTextures[i].identifier());
+				dynamicRebuilds += entry.cascadeStatistics[i].dynamicBuilds;
+			}
+			EXPECT_GT(dynamicRebuilds, 0u);
+		}
+		std::sort(samples.begin(), samples.end());
+		times[index] = samples[1];
+		overBudget += times[index] > BudgetMs ? 1u : 0u;
+	}
+	std::sort(times.begin(), times.end());
+	std::cout << "[Directional dynamic stress] cases=" << Cases << " median=" << times[Cases / 2]
+			  << "ms p95=" << times[Cases * 95 / 100] << "ms p99=" << times[Cases * 99 / 100]
+			  << "ms worst=" << times.back() << "ms budget=" << BudgetMs << " over_budget=" << overBudget << '\n';
+#if defined(NDEBUG)
+	EXPECT_EQ(overBudget, 0u);
+#endif
+	gl.requireNoErrors();
+	gl.reset();
+}
+
+TEST(ShadowRendering, SeparateDynamicDepthMatchesCombinedStaticDepth)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto render = [&](spk::ShadowMap::Mode mode, const std::string &name) {
+		Scene scene;
+		const auto pillar = geometry({2, 3, 2});
+		scene.add(pillar, 0, {-2.0f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Static);
+		scene.add(pillar, 1, {0.5f, -0.2f, 0.0f}, mode);
+		auto &sun = scene.addLight<spk::Light::Directional>({-4, 8, 3}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+		sun.setShadowResolution(1024);
+		sun.setShadowDistance(24);
+		sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		gl.reset(scene.imageSize);
+		scene.capture()->execute(gl.renderContext());
+		spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+		spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+		const auto image = gl.capture();
+		gl.save(sparkle_test::resultImagePath(Category, name));
+		const auto result = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+		EXPECT_NE(result, nullptr);
+		if (result)
+		{
+			const auto &entry = result->entries.at(sun.registrationOrder());
+			const bool hasOverlay = std::ranges::any_of(entry.cascadeDynamicTextures, [](const auto &texture) {
+				return static_cast<bool>(texture);
+			});
+			EXPECT_EQ(hasOverlay, mode == spk::ShadowMap::Mode::Dynamic);
+		}
+		gl.requireNoErrors();
+		gl.reset();
+		return image;
+	};
+
+	const auto combined = render(spk::ShadowMap::Mode::Static, "directional_combined_static_depth");
+	const auto separate = render(spk::ShadowMap::Mode::Dynamic, "directional_separate_dynamic_depth");
+	ASSERT_EQ(combined.pixels.size(), separate.pixels.size());
+	std::size_t differentPixels = 0;
+	for (std::size_t i = 0; i < combined.pixels.size(); i += 4)
+	{
+		bool different = false;
+		for (std::size_t channel = 0; channel < 3; ++channel)
+		{
+			different |= std::abs(static_cast<int>(combined.pixels[i + channel]) - static_cast<int>(separate.pixels[i + channel])) > 2;
+		}
+		differentPixels += different ? 1u : 0u;
+	}
+	EXPECT_LE(differentPixels, combined.pixels.size() / (4 * 1000))
+		<< "Separate depth maps must reproduce the combined hard-shadow result";
+}
+
+TEST(ShadowRendering, RecycledTargetsPreserveHeldDepthPublication)
+{
+	Scene scene;
+	scene.add(geometry({2, 3, 2}), 1, {0, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	auto &sun = scene.addLight<spk::Light::Directional>({-3, 8, 4}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowResolution(512);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	const auto execute = [&]() {
+		const auto snapshot = scene.capture();
+		snapshot->execute(gl.renderContext());
+		glFinish();
+		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	};
+	auto original = execute();
+	ASSERT_NE(original, nullptr);
+	const auto &entry = original->entries.at(sun.registrationOrder());
+	std::size_t index = 0;
+	while (index < entry.cascadeCount && entry.cascadeStatistics[index].staticCasters == 0)
+	{
+		++index;
+	}
+	ASSERT_LT(index, entry.cascadeCount);
+	auto retained = entry.cascadeTextures[index];
+	const auto readDepth = [&](const spk::Texture::Handle &texture) {
+		spk::OpenGL::State::Scope restore(gl.renderContext());
+		spk::Framebuffer target({512, 512}, std::vector<spk::Texture::Handle>{}, texture);
+		target.activate(gl.renderContext());
+		std::vector<float> depth(512 * 512);
+		glReadPixels(0, 0, 512, 512, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
+		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		return depth;
+	};
+	const auto originalDepth = readDepth(retained);
+	ASSERT_LT(*std::min_element(originalDepth.begin(), originalDepth.end()), 1.0f);
+	std::set<spk::GPUResource::Identifier> held;
+	for (std::size_t i = 0; i < entry.cascadeCount; ++i)
+	{
+		held.insert(entry.cascadeTextures[i].identifier());
+	}
+	std::set<spk::GPUResource::Identifier> previous = held;
+	std::set<spk::GPUResource::Identifier> retired;
+	bool recycled = false;
+	for (int step = 0; step < 10; ++step)
+	{
+		const spk::Vector3 source{-3.0f + static_cast<float>(step + 1), 8, 4};
+		scene.lights.front()->transform().setRotation(spk::Quaternion::lookAt(source, {0, 0, 0}));
+		const auto current = execute();
+		ASSERT_NE(current, nullptr);
+		const auto &published = current->entries.at(sun.registrationOrder());
+		std::set<spk::GPUResource::Identifier> currentIds;
+		for (std::size_t i = 0; i < published.cascadeCount; ++i)
+		{
+			const auto id = published.cascadeTextures[i].identifier();
+			EXPECT_FALSE(held.contains(id));
+			recycled |= retired.contains(id) && !previous.contains(id);
+			currentIds.insert(id);
+		}
+		for (const auto id : previous)
+		{
+			if (!currentIds.contains(id) && !held.contains(id))
+			{
+				retired.insert(id);
+			}
+		}
+		previous = std::move(currentIds);
+	}
+	EXPECT_TRUE(recycled) << "At least one released depth target should be recycled";
+	EXPECT_EQ(originalDepth, readDepth(retained)) << "A retained historical publication was modified";
+	gl.requireNoErrors();
 	gl.reset();
 }

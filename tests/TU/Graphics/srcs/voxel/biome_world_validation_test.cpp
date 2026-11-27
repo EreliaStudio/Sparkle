@@ -4,14 +4,18 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
@@ -20,6 +24,9 @@
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/program.hpp"
+#include "graphics/opengl/state.hpp"
+#include "graphics/opengl/uniform_buffer.hpp"
 #include "light/directional.hpp"
 #include "rendering/command/draw_engine_view_command.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
@@ -40,6 +47,7 @@
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
+#include "../shadow_map/shadow_pass_timing.hpp"
 #include "biome_validation_fixture.hpp"
 #include "biome_world_fixture.hpp"
 #include "voxel_world_fixture.hpp"
@@ -55,6 +63,8 @@ namespace
 	using Streamer = spk::World::WorldStreamingSystem<Chunk>;
 	using Clock = std::chrono::steady_clock;
 	constexpr std::uint32_t ShadowResolution = 512;
+	constexpr spk::Vector2UInt ShowcaseImageSize{terrain::ImageSize.x * 2u, terrain::ImageSize.y * 2u};
+	constexpr std::uint32_t ShowcaseShadowResolution = 1024;
 
 	[[nodiscard]] std::uint64_t checksum(const Chunk &chunk)
 	{
@@ -110,18 +120,17 @@ namespace
 		spk::Entity3D secondObserver{"Second observer"};
 		spk::CameraComponent3D &camera = cameraEntity.addComponent<spk::CameraComponent3D>();
 		spk::EngineView &view;
-		ChunkGraphics &graphics;
 		spk::ShadowMap::RenderingSystem &shadowSystem;
+		ChunkGraphics &graphics;
 		spk::Light::Directional &sun = sunEntity.addComponent<spk::Light::Directional>();
 		Streamer *streamer = nullptr;
-		bool graphicsActive = true;
 		std::int64_t tickTime = 0;
 
 		explicit Scene(bool stream = false, terrain::Generator::Settings settings = {}) :
 			generator(definitions, settings),
 			view(createView()),
-			graphics(engine.addSystem<ChunkGraphics>()),
-			shadowSystem(engine.addSystem<spk::ShadowMap::RenderingSystem>())
+			shadowSystem(engine.addSystem<spk::ShadowMap::RenderingSystem>()),
+			graphics(engine.addSystem<ChunkGraphics>())
 		{
 			chunks.attach(engine);
 			graphics.bind(chunks, terrain::palette(atlas));
@@ -156,6 +165,15 @@ namespace
 			return engine.addView("Biome", &camera, terrain::ImageSize);
 		}
 
+		void useShowcaseQuality()
+		{
+			// Render into larger EngineView targets, not an upscaled screenshot.
+			// The aspect ratio is unchanged, so the existing camera framing is preserved.
+			view.setResolution(ShowcaseImageSize);
+			sun.setShadowResolution(ShowcaseShadowResolution);
+			sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		}
+
 		void setCamera(spk::Vector3 position, spk::Vector3 target)
 		{
 			cameraEntity.transform().place(position);
@@ -173,12 +191,11 @@ namespace
 					chunks.addChunk({x, 0, z}, std::move(*chunk));
 				}
 			}
-			refreshCasters();
+			synchronizeChunks();
 		}
 
-		void refreshCasters()
+		void verifyChunkCasters()
 		{
-			graphics.synchronize();
 			for (auto &[coordinate, entry] : chunks)
 			{
 				(void)coordinate;
@@ -186,20 +203,28 @@ namespace
 				ASSERT_NE(renderer, nullptr);
 				ASSERT_NE(renderer->geometry(), nullptr);
 				auto *caster = entry.entity().getComponent<spk::ShadowMap::Contributor>();
-				if (caster == nullptr)
+				ASSERT_NE(caster, nullptr);
+				EXPECT_EQ(caster->shadowMode(), spk::ShadowMap::Mode::Static);
+				const auto &instances = caster->meshFilter().instances();
+				ASSERT_EQ(instances.size(), 1u);
+				const auto &depth = renderer->geometry()->depthMesh();
+				EXPECT_EQ(instances.front().mesh.indexCount(), depth.indexCount());
+				if (!depth.empty())
 				{
-					caster = &entry.entity().addComponent<spk::ShadowMap::Contributor>();
-					caster->setShadowMode(spk::ShadowMap::Mode::Static);
+					EXPECT_EQ(&instances.front().mesh.layout(), &depth.layout());
 				}
-				caster->bind(renderer->geometry()->depthMesh());
 			}
+		}
+
+		void synchronizeChunks()
+		{
+			graphics.synchronize();
+			verifyChunkCasters();
 		}
 
 		void disableColorRendering()
 		{
-			graphics.unbind();
-			engine.removeSystem(graphics);
-			graphicsActive = false;
+			graphics.deactivate();
 		}
 
 		[[nodiscard]] std::size_t desiredChunks() const
@@ -259,13 +284,14 @@ namespace
 				EXPECT_TRUE(desired.contains(coordinate));
 			}
 			EXPECT_EQ(streamer->inFlightCount(), 0u);
-			refreshCasters();
+			synchronizeChunks();
 		}
 
 		[[nodiscard]] sparkle_test::FramebufferImage capture()
 		{
 			auto &gl = sparkle_test::OpenGLTestContext::instance();
-			gl.reset(terrain::ImageSize);
+			const auto imageSize = view.resolution();
+			gl.reset(imageSize);
 			engine.refreshRenderSnapshot();
 			const auto snapshot = engine.latestRenderSnapshot();
 			EXPECT_NE(snapshot, nullptr);
@@ -274,8 +300,8 @@ namespace
 				return {};
 			}
 			snapshot->execute(gl.renderContext());
-			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
-			spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = imageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = imageSize}).execute(gl.renderContext());
 			gl.requireNoErrors();
 			return gl.capture();
 		}
@@ -300,7 +326,20 @@ namespace
 			std::vector<float> samples(ShadowResolution * ShadowResolution, 1.0f);
 			glReadPixels(0, 0, ShadowResolution, ShadowResolution, GL_DEPTH_COMPONENT, GL_FLOAT, samples.data());
 			EXPECT_EQ(glGetError(), GL_NO_ERROR);
-			EXPECT_LT(*std::min_element(samples.begin(), samples.end()), 1.0f);
+			bool occupied = *std::min_element(samples.begin(), samples.end()) < 1.0f;
+			for (const auto &texture : found->second.cascadeTextures)
+			{
+				if (occupied || !texture)
+				{
+					continue;
+				}
+				spk::Framebuffer cascadeDepth({ShadowResolution, ShadowResolution}, std::vector<spk::Texture::Handle>{}, texture);
+				cascadeDepth.activate(gl.renderContext());
+				glReadPixels(0, 0, ShadowResolution, ShadowResolution, GL_DEPTH_COMPONENT, GL_FLOAT, samples.data());
+				EXPECT_EQ(glGetError(), GL_NO_ERROR);
+				occupied |= *std::min_element(samples.begin(), samples.end()) < 1.0f;
+			}
+			EXPECT_TRUE(occupied);
 		}
 
 		~Scene()
@@ -311,15 +350,46 @@ namespace
 				engine.removeEntity(&secondObserver);
 				engine.removeEntity(&firstObserver);
 			}
-			if (graphicsActive)
-			{
-				graphics.unbind();
-			}
+			graphics.unbind();
 			chunks.detach();
 			engine.removeEntity(&sunEntity);
 			engine.removeEntity(&cameraEntity);
 		}
 	};
+}
+
+TEST(BiomeWorldIntegration, SnapshotSynchronizesChunkShadowsBeforeCapture)
+{
+	Scene scene;
+	const Coordinate coordinate{0, 0, 0};
+	const auto chunk = scene.generator.generate(coordinate);
+	ASSERT_TRUE(chunk.has_value());
+	scene.chunks.addChunk(coordinate, *chunk);
+
+	// Shadow system is registered first. No manual synchronization is needed.
+	(void)scene.capture();
+	scene.verifyChunkCasters();
+	scene.verifyShadow();
+
+	scene.chunks.at(coordinate).setVolume(terrain::Builder({16, 16, 16}).build());
+	(void)scene.capture();
+	scene.verifyChunkCasters();
+	for (auto &[key, entry] : scene.chunks)
+	{
+		(void)key;
+		const auto *caster = entry.entity().getComponent<spk::ShadowMap::Contributor>();
+		ASSERT_NE(caster, nullptr);
+		ASSERT_EQ(caster->meshFilter().instances().size(), 1u);
+		EXPECT_TRUE(caster->meshFilter().instances().front().mesh.empty());
+	}
+
+	scene.graphics.unbind();
+	for (auto &[key, entry] : scene.chunks)
+	{
+		(void)key;
+		EXPECT_EQ(entry.entity().getComponent<spk::ShadowMap::Contributor>(), nullptr);
+		EXPECT_EQ(entry.entity().getComponent<spk::Voxel::Renderer>(), nullptr);
+	}
 }
 
 TEST(BiomeWorldIntegration, EditedChunkAndNeighborRemeshing)
@@ -340,7 +410,7 @@ TEST(BiomeWorldIntegration, EditedChunkAndNeighborRemeshing)
 	}
 	original->setVolume(edit.build());
 	EXPECT_NE(checksum(*original), before);
-	scene.refreshCasters();
+	scene.synchronizeChunks();
 	EXPECT_GE(scene.graphics.lastStatistics().chunks, 1u);
 	(void)scene.capture();
 	scene.verifyShadow();
@@ -438,6 +508,130 @@ TEST(BiomeWorldPerformance, ShadowMapComputationSeparateFromVoxelColorRendering)
 	gl.reset();
 }
 
+TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(terrain::ImageSize);
+	Scene scene;
+	scene.fill(2);
+	scene.disableColorRendering();
+	constexpr std::size_t Cases = 16;
+	constexpr std::size_t Samples = 3;
+	constexpr std::array<std::uint32_t, 3> Resolutions{512, 1024, 2048};
+	// Strict real-time targets for GPU-synchronized rebuilds.
+	// Optimize the renderer rather than relaxing these limits.
+	constexpr std::array<double, 3> ColdBudgetsMs{1.0, 2.0, 4.0};
+	constexpr double WarmBudgetMs = 0.1;
+	std::uint32_t seed = 0xC45CADEu;
+	const auto sample = [&]() {
+		seed = seed * 1664525u + 1013904223u;
+		return static_cast<float>((seed >> 8) % 2001) / 1000.0f - 1.0f;
+	};
+	const auto published = [&]() {
+		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	};
+	const auto run = [&](const std::shared_ptr<const spk::RenderSnapshot> &snapshot) {
+		return sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext());
+	};
+	for (std::size_t level = 0; level < Resolutions.size(); ++level)
+	{
+		scene.sun.setShadowResolution(Resolutions[level]);
+		scene.sun.setShadowDistance(80.0f);
+		seed = 0xC45CADEu;
+		std::vector<double> cold, warm, capture, coldSubmission, warmCompletion, frameCompletion;
+		std::size_t coldOver = 0, warmOver = 0;
+		// Warm shaders and resources before the measured corpus.
+		scene.engine.refreshRenderSnapshot();
+		(void)run(scene.engine.latestRenderSnapshot());
+		for (std::size_t index = 0; index < Cases; ++index)
+		{
+			std::array<double, Samples> coldTimes{}, warmTimes{}, captureTimes{}, submissionTimes{}, warmCompletionTimes{}, frameTimes{};
+			const spk::Vector3 eye{35 + 8 * sample(), 30 + 6 * sample(), 35 + 8 * sample()};
+			const spk::Vector3 source{-36 + 10 * sample(), 50 + 10 * sample(), 20 + 10 * sample()};
+			for (std::size_t trial = 0; trial < Samples; ++trial)
+			{
+				// Invalidate outside the timed interval, then rebuild the
+				// identical case instead of averaging unrelated scenes.
+				if (trial != 0)
+				{
+					scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source + spk::Vector3{15, 0, 0}, {0, 0, 0}));
+					scene.engine.refreshRenderSnapshot();
+					(void)run(scene.engine.latestRenderSnapshot());
+				}
+				scene.setCamera(eye, {0, 8, 0});
+				scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source, {0, 0, 0}));
+				const auto begin = Clock::now();
+				scene.engine.refreshRenderSnapshot();
+				const auto snapshot = scene.engine.latestRenderSnapshot();
+				captureTimes[trial] = std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+				ASSERT_NE(snapshot, nullptr);
+				const auto coldTiming = run(snapshot);
+				coldTimes[trial] = coldTiming.completion;
+				submissionTimes[trial] = coldTiming.submission;
+				const auto first = published();
+				ASSERT_NE(first, nullptr);
+				const auto &entry = first->entries.at(scene.sun.registrationOrder());
+				ASSERT_EQ(entry.cascadeCount, 4u);
+				ASSERT_GT(entry.cascadeSplits.back(), 0.0f);
+				for (const auto &texture : entry.cascadeTextures)
+				{
+					ASSERT_TRUE(texture);
+				}
+				const auto warmTiming = run(snapshot);
+				warmTimes[trial] = warmTiming.submission;
+				warmCompletionTimes[trial] = warmTiming.completion;
+				const auto frameBegin = Clock::now();
+				snapshot->execute(gl.renderContext());
+				glFinish();
+				frameTimes[trial] = std::chrono::duration<double, std::milli>(Clock::now() - frameBegin).count();
+				const auto second = published();
+				ASSERT_NE(second, nullptr);
+				const auto &cached = second->entries.at(scene.sun.registrationOrder());
+				EXPECT_EQ(cached.generation, entry.generation);
+				for (std::size_t i = 0; i < entry.cascadeTextures.size(); ++i)
+				{
+					EXPECT_EQ(cached.cascadeTextures[i].identifier(), entry.cascadeTextures[i].identifier());
+					EXPECT_EQ(cached.cascadeStatistics[i].staticBuilds, entry.cascadeStatistics[i].staticBuilds);
+					EXPECT_EQ(cached.cascadeStatistics[i].dynamicBuilds, 0u);
+				}
+			}
+			std::sort(coldTimes.begin(), coldTimes.end());
+			std::sort(warmTimes.begin(), warmTimes.end());
+			std::sort(captureTimes.begin(), captureTimes.end());
+			std::sort(submissionTimes.begin(), submissionTimes.end());
+			std::sort(warmCompletionTimes.begin(), warmCompletionTimes.end());
+			std::sort(frameTimes.begin(), frameTimes.end());
+			cold.push_back(coldTimes[Samples / 2]);
+			warm.push_back(warmTimes[Samples / 2]);
+			capture.push_back(captureTimes[Samples / 2]);
+			coldSubmission.push_back(submissionTimes[Samples / 2]);
+			warmCompletion.push_back(warmCompletionTimes[Samples / 2]);
+			frameCompletion.push_back(frameTimes[Samples / 2]);
+			coldOver += cold.back() > ColdBudgetsMs[level] ? 1u : 0u;
+			warmOver += warm.back() > WarmBudgetMs ? 1u : 0u;
+		}
+		const auto report = [&](const char *name, std::vector<double> &times, double budget, std::size_t exceeding) {
+			std::sort(times.begin(), times.end());
+			std::cout << "[Directional shadow stress] resolution=" << Resolutions[level] << " phase=" << name
+					  << " cases=" << Cases << " median=" << times[Cases / 2] << "ms p95=" << times[Cases * 95 / 100]
+					  << "ms p99=" << times[Cases * 99 / 100] << "ms worst=" << times.back()
+					  << "ms budget=" << budget << " over_budget=" << exceeding << '\n';
+		};
+		report("cold_depth", cold, ColdBudgetsMs[level], coldOver);
+		report("warm_cpu_submission", warm, WarmBudgetMs, warmOver);
+		report("cold_cpu_submission", coldSubmission, 0.0, 0);
+		report("warm_gpu_synchronized", warmCompletion, 0.0, 0);
+		report("warm_full_snapshot", frameCompletion, 0.0, 0);
+		report("snapshot_capture", capture, 0.0, 0);
+#if defined(NDEBUG)
+		EXPECT_EQ(coldOver, 0u) << "Cold rebuild budget exceeded at resolution " << Resolutions[level];
+		EXPECT_EQ(warmOver, 0u) << "Warm reuse budget exceeded at resolution " << Resolutions[level];
+#endif
+	}
+	gl.requireNoErrors();
+	gl.reset();
+}
+
 TEST(BiomeWorldPerformance, ColorRenderWithoutShadows)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
@@ -461,6 +655,7 @@ namespace
 	void captureBiomeWorld(const std::string &name, bool hard, spk::Vector3 camera, spk::Vector3 target, bool edit = false)
 	{
 		Scene scene;
+		scene.useShowcaseQuality();
 		using Base = spk::World::Voxel::Biome::Generator<Chunk, 3>;
 		std::unique_ptr<Base> generator;
 		if (hard)
@@ -483,7 +678,7 @@ namespace
 				}
 			}
 		}
-		scene.refreshCasters();
+		scene.synchronizeChunks();
 		scene.setCamera(camera, target);
 		const auto pixels = scene.capture();
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
@@ -496,7 +691,7 @@ namespace
 		tolerance.alphaTolerance = 8;
 		const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
-		EXPECT_EQ(pixels.size, terrain::ImageSize);
+		EXPECT_EQ(pixels.size, ShowcaseImageSize);
 	}
 }
 
@@ -529,7 +724,538 @@ namespace
 {
 	namespace validation = sparkle_test::biome_validation;
 
-	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {})
+	void captureShowcaseShadowComparison(Scene &scene, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto capture = [&](const std::string &suffix) {
+			const auto pixels = scene.capture();
+			EXPECT_EQ(pixels.size, ShowcaseImageSize);
+			gl.save(sparkle_test::resultImagePath("rendering/biome-world", name + suffix));
+		};
+
+		scene.useShowcaseQuality();
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		capture("_showcase_hard_1024");
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		capture("_showcase_pcf_1024");
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		scene.sun.setShadowResolution(2048);
+		capture("_showcase_hard_2048");
+
+		// Restore the original diagnostic configuration for the existing captures.
+		scene.view.setResolution(terrain::ImageSize);
+		scene.sun.setShadowResolution(ShadowResolution);
+	}
+
+	void captureShadowDiagnostics(Scene &scene, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto capture = [&](const std::string &suffix) {
+			const auto pixels = scene.capture();
+			EXPECT_EQ(pixels.size, terrain::ImageSize);
+			const auto path = sparkle_test::resultImagePath("rendering/biome-world", name + suffix);
+			gl.save(path);
+			return path;
+		};
+
+		scene.sun.setCastsShadows(true);
+		scene.sun.setShadowResolution(ShadowResolution);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		const auto hard = capture("_hard_512");
+		scene.verifyShadow();
+
+		scene.sun.setCastsShadows(false);
+		const auto unshadowed = capture("_no_shadows");
+
+		scene.sun.setCastsShadows(true);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		capture("_pcf_512");
+
+		scene.sun.setShadowResolution(2048);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		capture("_hard_2048");
+
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		capture("_pcf_2048");
+
+		// Use the unshadowed render as the reference to isolate the contribution
+		// of the shadow map without changing terrain geometry or lighting.
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		tolerance.alphaTolerance = 8;
+		const auto difference = sparkle_test::compareImages(
+			hard, unshadowed, sparkle_test::resultImagePath("rendering/biome-world", name + "_shadow_difference"), tolerance);
+		EXPECT_GT(difference.differentPixelCount, 0u);
+	}
+
+	[[nodiscard]] float surfaceHeight(const Scene &scene, std::int64_t x, std::int64_t z)
+	{
+		float height = 0.0f;
+		for (const auto &[coordinate, entry] : scene.chunks)
+		{
+			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
+			const auto localX = x - origin.x;
+			const auto localZ = z - origin.z;
+			if (localX < 0 || localX >= 16 || localZ < 0 || localZ >= 16)
+			{
+				continue;
+			}
+			for (std::uint32_t y = 0; y < 16; ++y)
+			{
+				if (entry.chunk().volume().atRaw({static_cast<std::uint32_t>(localX), y, static_cast<std::uint32_t>(localZ)}) != 0)
+				{
+					height = std::max(height, static_cast<float>(origin.y + y + 1));
+				}
+			}
+		}
+		return height;
+	}
+
+	// Independent ray traversal through the occupied unit cubes in the exact
+	// validation scene. No mesher, shadow projection, bias or GPU sampling.
+	// White: directly lit; black: occluded; gray: back-facing or background.
+	void captureCpuShadowReference(Scene &scene, const std::string &name, std::vector<std::uint8_t> &reference)
+	{
+		using Point = std::array<double, 3>;
+		using Cell = std::array<int, 3>;
+		constexpr Cell minimum{-32, 0, -32};
+		constexpr Cell maximum{48, 48, 48};
+		constexpr int width = maximum[0] - minimum[0];
+		constexpr int height = maximum[1] - minimum[1];
+		constexpr int depth = maximum[2] - minimum[2];
+		std::vector<std::uint8_t> occupied(width * height * depth, 0);
+		const auto inside = [&](const Cell &p) {
+			return p[0] >= minimum[0] && p[0] < maximum[0] &&
+				   p[1] >= minimum[1] && p[1] < maximum[1] &&
+				   p[2] >= minimum[2] && p[2] < maximum[2];
+		};
+		const auto indexOf = [&](const Cell &p) {
+			return static_cast<std::size_t>((p[2] - minimum[2]) * width * height + (p[1] - minimum[1]) * width + p[0] - minimum[0]);
+		};
+		for (const auto &[coordinate, entry] : scene.chunks)
+		{
+			const auto origin = Chunk::chunkCoordinateToWorld(coordinate);
+			for (std::uint32_t z = 0; z < 16; ++z)
+			{
+				for (std::uint32_t y = 0; y < 16; ++y)
+				{
+					for (std::uint32_t x = 0; x < 16; ++x)
+					{
+						const Cell p{static_cast<int>(origin.x) + static_cast<int>(x), static_cast<int>(origin.y) + static_cast<int>(y), static_cast<int>(origin.z) + static_cast<int>(z)};
+						ASSERT_TRUE(inside(p));
+						occupied[indexOf(p)] = entry.chunk().volume().atRaw({x, y, z}) != 0;
+					}
+				}
+			}
+		}
+
+		struct Hit
+		{
+			Point position;
+			Point normal;
+		};
+		const auto trace = [&](const Point &origin, const Point &direction) -> std::optional<Hit> {
+			Cell cell{};
+			Cell step{};
+			Point next{};
+			Point delta{};
+			Point normal{};
+			for (std::size_t axis = 0; axis < 3; ++axis)
+			{
+				cell[axis] = static_cast<int>(std::floor(origin[axis]));
+				step[axis] = direction[axis] >= 0.0 ? 1 : -1;
+				if (std::abs(direction[axis]) < 1.0e-12)
+				{
+					next[axis] = delta[axis] = std::numeric_limits<double>::infinity();
+				}
+				else
+				{
+					const double boundary = cell[axis] + (step[axis] > 0 ? 1.0 : 0.0);
+					next[axis] = (boundary - origin[axis]) / direction[axis];
+					delta[axis] = std::abs(1.0 / direction[axis]);
+				}
+			}
+			double distance = 0.0;
+			while (distance < 240.0)
+			{
+				if (inside(cell) && occupied[indexOf(cell)] != 0)
+				{
+					return Hit{{origin[0] + distance * direction[0], origin[1] + distance * direction[1], origin[2] + distance * direction[2]}, normal};
+				}
+				bool cannotEnter = false;
+				for (std::size_t axis = 0; axis < 3; ++axis)
+				{
+					cannotEnter |= (cell[axis] < minimum[axis] && direction[axis] <= 0.0) ||
+								   (cell[axis] >= maximum[axis] && direction[axis] >= 0.0);
+				}
+				if (cannotEnter)
+				{
+					break;
+				}
+				const auto axis = static_cast<std::size_t>(std::min_element(next.begin(), next.end()) - next.begin());
+				distance = next[axis];
+				cell[axis] += step[axis];
+				next[axis] += delta[axis];
+				normal = {};
+				normal[axis] = -step[axis];
+			}
+			return std::nullopt;
+		};
+
+		const auto camera = scene.camera.captureCamera();
+		const auto inverseView = scene.camera.inverseViewMatrix();
+		const auto projection = camera.projectionMatrix();
+		const auto eye = camera.position();
+		const Point origin{eye.x, eye.y, eye.z};
+		const auto light = -scene.sun.worldDirection();
+		const Point lightDirection{light.x, light.y, light.z};
+		std::vector<std::uint8_t> rgba(terrain::ImageSize.x * terrain::ImageSize.y * 4, 255);
+		std::size_t litCount = 0;
+		std::size_t shadowCount = 0;
+		for (std::uint32_t y = 0; y < terrain::ImageSize.y; ++y)
+		{
+			for (std::uint32_t x = 0; x < terrain::ImageSize.x; ++x)
+			{
+				const float u = (2.0f * (x + 0.5f) / terrain::ImageSize.x - 1.0f) / projection[0][0];
+				const float v = (1.0f - 2.0f * (y + 0.5f) / terrain::ImageSize.y) / projection[1][1];
+				const auto world = inverseView * spk::Vector4{u, v, -1.0f, 0.0f};
+				const auto ray = spk::Vector3{world.x, world.y, world.z}.normalized();
+				const auto hit = trace(origin, {ray.x, ray.y, ray.z});
+				std::uint8_t shade = 127;
+				if (hit)
+				{
+					double cosine = 0.0;
+					Point start = hit->position;
+					for (std::size_t axis = 0; axis < 3; ++axis)
+					{
+						cosine += hit->normal[axis] * lightDirection[axis];
+						start[axis] += hit->normal[axis] * 0.0001;
+					}
+					if (cosine > 0.0)
+					{
+						const bool blocked = trace(start, lightDirection).has_value();
+						shade = blocked ? 0 : 255;
+						shadowCount += blocked ? 1u : 0u;
+						litCount += blocked ? 0u : 1u;
+					}
+				}
+				const std::size_t pixel = (static_cast<std::size_t>(y) * terrain::ImageSize.x + x) * 4;
+				rgba[pixel] = rgba[pixel + 1] = rgba[pixel + 2] = shade;
+			}
+		}
+		EXPECT_GT(litCount, 0u);
+		EXPECT_GT(shadowCount, 0u);
+		std::cout << "[CPU shadow reference] lit=" << litCount << " shadowed=" << shadowCount << '\n';
+		class ReferenceTexture final : public spk::Texture
+		{
+		public:
+			void save(const std::vector<std::uint8_t> &pixels, const std::filesystem::path &path)
+			{
+				setPixels(std::span<const std::uint8_t>(pixels), terrain::ImageSize, Format::RGBA);
+				validate();
+				saveAsPng(path);
+			}
+		};
+		ReferenceTexture{}.save(rgba, sparkle_test::resultImagePath("rendering/biome-world", name + "_cpu_reference"));
+		reference = std::move(rgba);
+	}
+
+	// Use the original close-up camera and a single sun. Vary only the
+	// projection extent and resolution first, then replay the same snapshot
+	// with different receiver biases using its immutable published depth map.
+	void captureShadowParameterSweep(Scene &scene, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto save = [&](const std::string &suffix) {
+			gl.save(sparkle_test::resultImagePath("rendering/biome-world", name + suffix));
+		};
+
+		// Check the actual GPU input, not only the number of vertices.
+		for (auto &[coordinate, entry] : scene.chunks)
+		{
+			(void)coordinate;
+			const auto *renderer = entry.entity().getComponent<spk::Voxel::Renderer>();
+			ASSERT_NE(renderer, nullptr);
+			const auto *geometry = renderer->geometry();
+			ASSERT_NE(geometry, nullptr);
+			const auto &opaque = geometry->opaqueMesh();
+			const auto &depth = geometry->depthMesh();
+			ASSERT_EQ(opaque.vertexCount(), depth.vertexCount());
+			ASSERT_EQ(opaque.indexCount(), depth.indexCount());
+			if (opaque.empty())
+			{
+				continue;
+			}
+			const auto vertices = opaque.layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>();
+			const auto depthVertices = depth.layout().vertexBuffer().cast<spk::Vector3>();
+			const auto indices = opaque.layout().indexBuffer().cast<std::uint32_t>();
+			const auto depthIndices = depth.layout().indexBuffer().cast<std::uint32_t>();
+			ASSERT_EQ(vertices.size(), depthVertices.size());
+			ASSERT_EQ(indices.size(), depthIndices.size());
+			for (std::size_t i = 0; i < vertices.size(); ++i)
+			{
+				ASSERT_EQ(vertices[i].position, depthVertices[i]);
+			}
+			ASSERT_TRUE(std::equal(indices.begin(), indices.end(), depthIndices.begin()));
+		}
+
+		scene.sun.setCastsShadows(true);
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		for (const float distance : {160.0f, 80.0f, 40.0f, 24.0f})
+		{
+			scene.sun.setShadowDistance(distance);
+			for (const std::uint32_t resolution : {512u, 2048u, 4096u})
+			{
+				scene.sun.setShadowResolution(resolution);
+				const auto pixels = scene.capture();
+				EXPECT_EQ(pixels.size, terrain::ImageSize);
+				save("_distance_" + std::to_string(static_cast<int>(distance)) + "_resolution_" + std::to_string(resolution));
+				const auto selected = scene.view.lightChannel().current();
+				ASSERT_NE(selected, nullptr);
+				ASSERT_EQ(selected->directional.size(), 1u);
+				const auto publishedMap = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+				ASSERT_NE(publishedMap, nullptr);
+				const auto &map = publishedMap->entries.at(selected->directional.front().registrationOrder);
+				const auto &matrix = map.viewProjection[0];
+				const auto rowLength = [&](std::size_t row) {
+					return std::sqrt(matrix[0][row] * matrix[0][row] + matrix[1][row] * matrix[1][row] + matrix[2][row] * matrix[2][row]);
+				};
+				std::cout << "[Shadow density] distance=" << distance << " resolution=" << resolution
+						  << " world_per_texel_x=" << 2.0f / (resolution * rowLength(0))
+						  << " world_per_texel_y=" << 2.0f / (resolution * rowLength(1))
+						  << " depth_range=" << map.farPlane - map.nearPlane << '\n';
+			}
+		}
+
+		// Keep the original shadow projection and depth texture for all
+		// receiver-bias variants. This does not change production settings.
+		scene.sun.setShadowDistance(160.0f);
+		scene.sun.setShadowResolution(2048);
+		(void)scene.capture();
+		const auto snapshot = scene.engine.latestRenderSnapshot();
+		ASSERT_NE(snapshot, nullptr);
+		auto &channel = scene.view.lightChannel();
+		const auto selection = channel.current();
+		ASSERT_NE(selection, nullptr);
+		ASSERT_EQ(selection->directional.size(), 1u);
+		const auto published = channel.shadowResultCollection().acquireLatest(gl.surface());
+		ASSERT_NE(published, nullptr);
+		const auto found = published->entries.find(selection->directional.front().registrationOrder);
+		ASSERT_NE(found, published->entries.end());
+		auto result = found->second;
+		ASSERT_EQ(result.resolution, 2048u);
+		const float originalDepthBias = result.depthBias;
+		const float originalNormalBias = result.normalBias;
+		struct BiasVariant
+		{
+			const char *suffix;
+			float depth;
+			float normal;
+		};
+		const std::array<BiasVariant, 9> variants{{{"_bias_original", originalDepthBias, originalNormalBias}, {"_bias_depth_zero", 0.0f, originalNormalBias}, {"_bias_depth_quarter", originalDepthBias * 0.25f, originalNormalBias}, {"_bias_depth_double", originalDepthBias * 2.0f, originalNormalBias}, {"_bias_normal_zero", originalDepthBias, 0.0f}, {"_bias_normal_quarter", originalDepthBias, originalNormalBias * 0.25f}, {"_bias_normal_double", originalDepthBias, originalNormalBias * 2.0f}, {"_bias_both_zero", 0.0f, 0.0f}, {"_bias_both_quarter", originalDepthBias * 0.25f, originalNormalBias * 0.25f}}};
+		for (const auto &variant : variants)
+		{
+			result.depthBias = variant.depth;
+			result.normalBias = variant.normal;
+			++result.generation;
+			ASSERT_TRUE(channel.publishShadowResult(gl.surface(), result));
+			// Replay the same capture: its static and dynamic depth caches
+			// remain valid, and lighting resolves the newly published biases.
+			snapshot->execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			gl.requireNoErrors();
+			const auto effective = channel.shadowResultCollection().acquireLatest(gl.surface());
+			ASSERT_NE(effective, nullptr);
+			const auto &applied = effective->entries.at(result.registrationOrder);
+			EXPECT_EQ(applied.generation, result.generation);
+			EXPECT_FLOAT_EQ(applied.depthBias, variant.depth);
+			EXPECT_FLOAT_EQ(applied.normalBias, variant.normal);
+			EXPECT_EQ(applied.viewProjection, result.viewProjection);
+			save(variant.suffix);
+		}
+
+		// Independently rebuild the same depth map using the same shader,
+		// geometry, matrix, and raster state. Only the polygon offset or
+		// culling changes. Keep this experimentation entirely in the test.
+		spk::Program program(
+			"#version 460 core\n"
+			"layout(location = 0) in vec3 inPosition;\n"
+			"layout(std140, binding = 4) uniform ShadowCamera { mat4 uShadowViewProjection; };\n"
+			"layout(std140, binding = 5) uniform ShadowModel { mat4 uShadowModel; };\n"
+			"void main() { gl_Position = uShadowViewProjection * uShadowModel * vec4(inPosition, 1.0); }\n",
+			"#version 460 core\nvoid main() {}\n");
+		program.bindUniformBlock("ShadowCamera", 4);
+		program.bindUniformBlock("ShadowModel", 5);
+
+		struct RasterVariant
+		{
+			const char *suffix;
+			float factor;
+			float units;
+			bool cull;
+		};
+		const std::array<RasterVariant, 6> rasterVariants{{{"_raster_original", 1.5f, 2.0f, true}, {"_raster_offset_zero", 0.0f, 0.0f, true}, {"_raster_offset_quarter", 0.375f, 0.5f, true}, {"_raster_offset_double", 3.0f, 4.0f, true}, {"_raster_no_culling", 1.5f, 2.0f, false}, {"_raster_no_culling_no_offset", 0.0f, 0.0f, false}}};
+
+		for (const auto &variant : rasterVariants)
+		{
+			spk::Framebuffer depthTarget(
+				{result.resolution, result.resolution}, {}, spk::Texture::Format::Depth32F);
+			auto &context = gl.renderContext();
+			{
+				spk::OpenGL::State::Scope scope(context);
+				depthTarget.activate(context);
+				const auto size = depthTarget.size();
+				spk::OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply(context);
+				spk::OpenGL::State::Scissor{.enabled = false}.apply(context);
+				spk::OpenGL::State::ColorOutput::writable(context, false).apply(context);
+				spk::OpenGL::State::DepthTest{}.apply(context);
+				spk::OpenGL::State::Blend::disabled(context).apply(context);
+				auto raster = spk::OpenGL::State::Rasterization{};
+				raster.cullEnabled = variant.cull;
+				raster.polygonOffsetEnabled = variant.factor != 0.0f || variant.units != 0.0f;
+				raster.polygonOffsetFactor = variant.factor;
+				raster.polygonOffsetUnits = variant.units;
+				raster.apply(context);
+				spk::OpenGL::State::Clear::depth(context);
+				spk::UniformBuffer cameraBuffer(4, sizeof(spk::Matrix4x4));
+				cameraBuffer.setData(result.viewProjection[0]);
+				cameraBuffer.validate();
+				cameraBuffer.activate(context);
+				program.activate(context);
+				for (auto &[coordinate, entry] : scene.chunks)
+				{
+					(void)coordinate;
+					const auto *caster = entry.entity().getComponent<spk::ShadowMap::Contributor>();
+					const auto base = entry.entity().transform().modelMatrix() * caster->meshFilter().baseTransform();
+					for (const auto &instance : caster->meshFilter().instances())
+					{
+						if (instance.mesh.empty())
+						{
+							continue;
+						}
+						spk::UniformBuffer modelBuffer(5, sizeof(spk::Matrix4x4));
+						modelBuffer.setData(base * instance.localTransform);
+						modelBuffer.validate();
+						modelBuffer.activate(context);
+						instance.mesh.layout().activate(context);
+						program.render(spk::Program::Primitive::Triangles, instance.mesh.indexType(), 0, instance.mesh.indexCount());
+					}
+				}
+			}
+			gl.requireNoErrors();
+			result.depthTexture = *depthTarget.depthStencilAttachmentHandle();
+			result.depthBias = originalDepthBias;
+			result.normalBias = originalNormalBias;
+			++result.generation;
+			ASSERT_TRUE(channel.publishShadowResult(gl.surface(), result));
+			snapshot->execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(context);
+			spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(context);
+			gl.requireNoErrors();
+			save(variant.suffix);
+		}
+
+		// Validate the diagnostic renderer itself against production.
+		const auto category = "rendering/biome-world";
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		const auto difference = sparkle_test::compareImages(
+			sparkle_test::resultImagePath(category, name + "_raster_original"),
+			sparkle_test::resultImagePath(category, name + "_bias_original"),
+			sparkle_test::resultImagePath(category, name + "_raster_control_difference"),
+			tolerance);
+		EXPECT_TRUE(difference.matches) << "Diagnostic rasterization must reproduce the production depth map";
+	}
+
+	void captureCloseShadowDiagnostics(Scene &scene, const std::string &name)
+	{
+		// Position the camera above the actual generated surface rather than
+		// changing terrain or guessing a height that may be inside a voxel.
+		const float centerHeight = surfaceHeight(scene, 2, 2);
+		const float cameraHeight = std::max(centerHeight, surfaceHeight(scene, 12, 10)) + 5.0f;
+		scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
+		captureShadowDiagnostics(scene, name + "_close");
+
+		// Look across the x=16 chunk seam from the opposite side.
+		const float seamHeight = surfaceHeight(scene, 16, 0);
+		const float seamCameraHeight = std::max(seamHeight, surfaceHeight(scene, 9, -9)) + 5.0f;
+		scene.setCamera({9.5f, seamCameraHeight, -8.5f}, {16.5f, seamHeight, 0.5f});
+		captureShadowDiagnostics(scene, name + "_close_seam");
+
+		// Run only on the exact scene exhibiting the reported irregular edge.
+		// Leave the bias replay last: it deliberately publishes test results.
+		if (name == "shadow_diagnostic_grid_scale_four")
+		{
+			scene.setCamera({12.5f, cameraHeight, 10.5f}, {2.5f, centerHeight, 2.5f});
+			std::vector<std::uint8_t> reference;
+			captureCpuShadowReference(scene, name + "_close_sweep", reference);
+			scene.sun.setCastsShadows(false);
+			const auto unshadowed = scene.capture();
+			ASSERT_EQ(reference.size(), unshadowed.pixels.size());
+			scene.sun.setCastsShadows(true);
+			const auto countErrors = [&](const sparkle_test::FramebufferImage &image, const std::string &label) {
+				std::size_t errors = 0, compared = 0, falseLit = 0, falseShadow = 0;
+				for (std::size_t i = 0; i < reference.size(); i += 4)
+				{
+					if (reference[i] == 127)
+					{
+						continue;
+					}
+					const int baseline = unshadowed.pixels[i] + unshadowed.pixels[i + 1] + unshadowed.pixels[i + 2];
+					const int actual = image.pixels[i] + image.pixels[i + 1] + image.pixels[i + 2];
+					// Exclude very dark texture outlines: they provide too
+					// little direct-light contrast for a robust classification.
+					if (baseline < 60)
+					{
+						continue;
+					}
+					const bool expectedShadow = reference[i] == 0;
+					const bool actualShadow = actual < baseline * 0.85f;
+					++compared;
+					errors += expectedShadow != actualShadow ? 1u : 0u;
+					falseLit += expectedShadow && !actualShadow ? 1u : 0u;
+					falseShadow += !expectedShadow && actualShadow ? 1u : 0u;
+				}
+				std::cout << "[Directional CPU comparison] mode=" << label << " pixels=" << compared
+						  << " errors=" << errors << " false_lit=" << falseLit << " false_shadow=" << falseShadow << '\n';
+				EXPECT_GT(compared, 0u);
+				return errors;
+			};
+			scene.sun.setShadowResolution(2048);
+			scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+			const auto single = scene.capture();
+			const auto singleErrors = countErrors(single, "single_2048");
+			scene.shadowSystem.setDirectionalCascadesEnabled(true);
+			for (const std::uint32_t resolution : {512u, 1024u, 2048u})
+			{
+				scene.sun.setShadowResolution(resolution);
+				scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+				const auto hard = scene.capture();
+				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_hard_" + std::to_string(resolution)));
+				const auto errors = countErrors(hard, "csm_hard_" + std::to_string(resolution));
+				if (resolution == 2048)
+				{
+					EXPECT_LT(errors, singleErrors) << "Cascades must improve the original terrain against the independent CPU reference";
+				}
+				scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+				const auto soft = scene.capture();
+				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_pcf_" + std::to_string(resolution)));
+				(void)countErrors(soft, "csm_pcf_" + std::to_string(resolution));
+			}
+			scene.useShowcaseQuality();
+			scene.sun.setShadowResolution(2048);
+			scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+			const auto showcase = scene.capture();
+			EXPECT_EQ(showcase.size, ShowcaseImageSize);
+			sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_showcase_2048"));
+			scene.view.setResolution(terrain::ImageSize);
+			scene.shadowSystem.setDirectionalCascadesEnabled(false);
+			captureShadowParameterSweep(scene, name + "_close_sweep");
+		}
+	}
+
+	void captureBiomeValidation(const std::string &name, validation::Settings settings, validation::View view = {}, bool shadowDiagnostics = false)
 	{
 		Scene scene;
 		using Base = spk::World::Voxel::Biome::Generator<Chunk, 3>;
@@ -598,9 +1324,18 @@ namespace
 		}
 		ASSERT_GT(visibleVoxels, 0u);
 		ASSERT_EQ(scene.chunks.size(), coordinates.size());
-		scene.refreshCasters();
+		scene.synchronizeChunks();
 		scene.sun.setCastsShadows(view.shadows);
 		scene.setCamera(view.camera, view.target);
+		if (shadowDiagnostics)
+		{
+			captureShowcaseShadowComparison(scene, name);
+			scene.shadowSystem.setDirectionalCascadesEnabled(false);
+			captureShadowDiagnostics(scene, name);
+			captureCloseShadowDiagnostics(scene, name);
+			return;
+		}
+		scene.useShowcaseQuality();
 		const auto pixels = scene.capture();
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		const auto actual = sparkle_test::resultImagePath("rendering/biome-world", name);
@@ -612,7 +1347,7 @@ namespace
 		tolerance.alphaTolerance = 8;
 		const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
-		EXPECT_EQ(pixels.size, terrain::ImageSize);
+		EXPECT_EQ(pixels.size, ShowcaseImageSize);
 	}
 }
 
@@ -734,4 +1469,14 @@ TEST(BiomeWorldGolden, NegativeCoordinateChunkSeams)
 TEST(BiomeWorldGolden, CustomTerracedHeightPass)
 {
 	captureBiomeValidation("height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {});
+}
+
+TEST(BiomeWorldShadowDiagnostics, CoarseFourVoxelSurfaceGrid)
+{
+	captureBiomeValidation("shadow_diagnostic_grid_scale_four", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .scale = 4.0f}, {}, true);
+}
+
+TEST(BiomeWorldShadowDiagnostics, CustomTerracedHeightPass)
+{
+	captureBiomeValidation("shadow_diagnostic_height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {}, true);
 }

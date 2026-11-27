@@ -28,7 +28,7 @@ namespace spk::Light
 		float _priorityWeight = 1.0f;
 		bool _castsShadows = false;
 		std::uint32_t _shadowResolution = 1024;
-		ShadowFilter _shadowFilter = ShadowFilter::Hard;
+		ShadowFilter _shadowFilter = ShadowFilter::PCF3x3;
 		std::uint64_t _registrationOrder = 0;
 		OnEditionContractProvider _onEditionContractProvider;
 		ContextualizableTrait<EngineHeadless *>::OnContextEditionContract _onContextEditionContract;

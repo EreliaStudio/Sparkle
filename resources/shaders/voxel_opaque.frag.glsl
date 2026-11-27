@@ -37,6 +37,10 @@ struct ShadowData
 	vec4 parameters;
 	vec4 pointPositionNear;
 	vec4 pointFarResolution;
+	vec4 cascadeSplits;
+	vec4 cascadeDepthBias;
+	vec4 cascadeNormalBias;
+	vec4 cascadeDynamicSlots;
 };
 
 layout(std430) readonly buffer ForwardShadows
@@ -182,24 +186,46 @@ float pointShadowVisibility(ShadowData shadow, int slot, vec3 position, vec3 nor
 	return visibility / 9.0;
 }
 
-float shadowVisibility(uint i, vec3 position, vec3 normal)
+// Cascade selection varies per fragment. Constant sampler indices avoid
+// undefined non-uniform indexing of opaque GLSL sampler arrays.
+float sampleShadowMap(int slot, vec3 coordinates)
 {
-	ShadowData shadow = shadows[i];
-	int slot = int(shadow.parameters.w) - 1;
-	if (slot < 0)
+	switch (slot)
 	{
-		return 1.0;
+		case 0: return texture(uShadowMaps[0], coordinates);
+		case 1: return texture(uShadowMaps[1], coordinates);
+		case 2: return texture(uShadowMaps[2], coordinates);
+		case 3: return texture(uShadowMaps[3], coordinates);
+		case 4: return texture(uShadowMaps[4], coordinates);
+		case 5: return texture(uShadowMaps[5], coordinates);
+		case 6: return texture(uShadowMaps[6], coordinates);
+		case 7: return texture(uShadowMaps[7], coordinates);
+		case 8: return texture(uShadowMaps[8], coordinates);
+		case 9: return texture(uShadowMaps[9], coordinates);
+		case 10: return texture(uShadowMaps[10], coordinates);
+		case 11: return texture(uShadowMaps[11], coordinates);
+		case 12: return texture(uShadowMaps[12], coordinates);
+		case 13: return texture(uShadowMaps[13], coordinates);
+		case 14: return texture(uShadowMaps[14], coordinates);
+		case 15: return texture(uShadowMaps[15], coordinates);
+		default: return 1.0;
 	}
-	if (shadow.pointFarResolution.w != 0.0)
+}
+
+float combinedShadowTap(int staticSlot, int dynamicSlot, vec3 coordinate)
+{
+	float visibility = sampleShadowMap(staticSlot, coordinate);
+	if (dynamicSlot >= 0 && visibility > 0.0)
 	{
-		return slot < 8 ? pointShadowVisibility(shadow, slot, position, normal) : 1.0;
+		visibility = min(visibility, sampleShadowMap(dynamicSlot, coordinate));
 	}
-	if (slot >= 16)
-	{
-		return 1.0;
-	}
-	vec3 receiver = position + normal * shadow.parameters.y;
-	vec4 clip = shadow.viewProjection[0] * vec4(receiver, 1.0);
+	return visibility;
+}
+
+float shadowMapVisibility(ShadowData shadow, int slot, int cascade, vec3 position, vec3 normal, float depthBias, float normalBias)
+{
+	vec3 receiver = position + normal * normalBias;
+	vec4 clip = shadow.viewProjection[cascade] * vec4(receiver, 1.0);
 	if (clip.w <= 0.0)
 	{
 		return 1.0;
@@ -211,10 +237,11 @@ float shadowVisibility(uint i, vec3 position, vec3 normal)
 	{
 		return 1.0;
 	}
-	float bias = shadow.parameters.x;
+	float bias = depthBias;
+	int dynamicSlot = int(shadow.cascadeDynamicSlots[cascade]) - 1;
 	if (shadow.parameters.z == 0.0)
 	{
-		return texture(uShadowMaps[slot], vec3(projected.xy, projected.z - bias));
+		return combinedShadowTap(slot, dynamicSlot, vec3(projected.xy, projected.z - bias));
 	}
 	float visibility = 0.0;
 	for (int y = -1; y <= 1; ++y)
@@ -222,10 +249,46 @@ float shadowVisibility(uint i, vec3 position, vec3 normal)
 		for (int x = -1; x <= 1; ++x)
 		{
 			vec2 sampleUV = projected.xy + vec2(x, y) * shadow.parameters.z;
-			visibility += texture(uShadowMaps[slot], vec3(sampleUV, projected.z - bias));
+			visibility += combinedShadowTap(slot, dynamicSlot, vec3(sampleUV, projected.z - bias));
 		}
 	}
 	return visibility / 9.0;
+}
+
+float shadowVisibility(uint i, vec3 position, vec3 normal)
+{
+	ShadowData shadow = shadows[i];
+	int slot = int(shadow.parameters.w) - 1;
+	if (slot < 0) return 1.0;
+	if (shadow.pointFarResolution.w != 0.0)
+	{
+		return slot < 8 ? pointShadowVisibility(shadow, slot, position, normal) : 1.0;
+	}
+	if (slot >= 16) return 1.0;
+	if (shadow.cascadeSplits.w <= 0.0)
+	{
+		return shadowMapVisibility(shadow, slot, 0, position, normal, shadow.parameters.x, shadow.parameters.y);
+	}
+	float depth = -(shadow.viewProjection[4] * vec4(position, 1.0)).z;
+	if (depth > shadow.cascadeSplits.w || slot + 3 >= 16) return 1.0;
+	int cascade = 0;
+	while (cascade < 3 && depth > shadow.cascadeSplits[cascade]) ++cascade;
+	float value = shadowMapVisibility(shadow, slot + cascade, cascade, position, normal,
+		shadow.cascadeDepthBias[cascade], shadow.cascadeNormalBias[cascade]);
+	if (cascade < 3)
+	{
+		float previous = cascade == 0 ? shadow.parameters.x : shadow.cascadeSplits[cascade - 1];
+		float edge = shadow.cascadeSplits[cascade];
+		float weight = smoothstep(edge - (edge - previous) * 0.08, edge, depth);
+		if (weight > 0.0)
+		{
+			int next = cascade + 1;
+			float other = shadowMapVisibility(shadow, slot + next, next, position, normal,
+				shadow.cascadeDepthBias[next], shadow.cascadeNormalBias[next]);
+			value = mix(value, other, weight);
+		}
+	}
+	return value;
 }
 
 void main()

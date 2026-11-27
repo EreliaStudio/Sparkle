@@ -13,6 +13,7 @@
 #include "engine/entity3d.hpp"
 #include "exception.hpp"
 #include "rendering/engine/engine.hpp"
+#include "shadow_map/contributor.hpp"
 #include "voxel/palette.hpp"
 #include "voxel/renderer.hpp"
 #include "voxel/rendering_system.hpp"
@@ -56,6 +57,7 @@ namespace spk::World::Voxel
 			Entity3D *entity;
 			LifeCycle::DestructionContract destruction;
 			bool ownsRenderer;
+			bool ownsShadowContributor;
 		};
 
 		Collection *_collection = nullptr;
@@ -111,10 +113,11 @@ namespace spk::World::Voxel
 				}
 				_tracked.erase(coordinate);
 				const bool ownsRenderer = entry.entity().getComponent<spk::Voxel::Renderer>() == nullptr;
+				const bool ownsShadowContributor = entry.entity().getComponent<spk::ShadowMap::Contributor>() == nullptr;
 				auto destruction = entry.entity().subscribeToDestruction([this, coordinate]() {
 					_mark(coordinate);
 				});
-				_tracked.emplace(coordinate, Tracked{&entry.entity(), std::move(destruction), ownsRenderer});
+				_tracked.emplace(coordinate, Tracked{&entry.entity(), std::move(destruction), ownsRenderer, ownsShadowContributor});
 			}
 			for (auto it = _tracked.begin(); it != _tracked.end();)
 			{
@@ -172,6 +175,13 @@ namespace spk::World::Voxel
 			for (auto &[coordinate, tracked] : _tracked)
 			{
 				(void)coordinate;
+				if (tracked.ownsShadowContributor && tracked.destruction.isValid())
+				{
+					if (auto *caster = tracked.entity->getComponent<spk::ShadowMap::Contributor>(); caster != nullptr)
+					{
+						tracked.entity->removeComponent(*caster);
+					}
+				}
 				if (tracked.ownsRenderer && tracked.destruction.isValid())
 				{
 					if (spk::Voxel::Renderer *renderer = tracked.entity->getComponent<spk::Voxel::Renderer>(); renderer != nullptr)
@@ -239,6 +249,19 @@ namespace spk::World::Voxel
 				}
 				renderer->bind(*_palette);
 				renderer->bind(std::move(geometry));
+
+				auto *caster = entity.getComponent<spk::ShadowMap::Contributor>();
+				if (caster == nullptr)
+				{
+					caster = &entity.addComponent<spk::ShadowMap::Contributor>();
+					caster->setShadowMode(spk::ShadowMap::Mode::Static);
+					found->second.ownsShadowContributor = true;
+				}
+				// A caller-supplied contributor remains an explicit shadow override.
+				if (found->second.ownsShadowContributor)
+				{
+					caster->bind(renderer->geometry()->depthMesh());
+				}
 			}
 			_lastStatistics = next;
 		}
@@ -246,6 +269,11 @@ namespace spk::World::Voxel
 		[[nodiscard]] const Statistics &lastStatistics() const noexcept
 		{
 			return _lastStatistics;
+		}
+
+		void prepareViewRenderSnapshot(const spk::EngineView::CaptureContext &) override
+		{
+			synchronize();
 		}
 
 		void buildViewRenderSnapshot(

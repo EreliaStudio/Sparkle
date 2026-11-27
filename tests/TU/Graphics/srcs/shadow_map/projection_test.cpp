@@ -1,8 +1,13 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <iostream>
 #include <limits>
+#include <random>
+#include <vector>
 
 #include "exception.hpp"
 #include "math/vector4.hpp"
@@ -108,4 +113,176 @@ TEST(ShadowProjectionTest, PointRejectsZeroRangeAndNonFiniteInput)
 	light.position = {0, 0, 0};
 	light.range = std::numeric_limits<float>::infinity();
 	EXPECT_THROW((void)spk::ShadowMap::Projection::point(light), spk::Exception);
+}
+
+TEST(ShadowProjectionTest, CascadesIncludeOffscreenBlockersAndRejectUnrelatedCasters)
+{
+	spk::Camera3D camera;
+	camera.setPosition({0, 10, 8});
+	camera.lookAt({0, -0.2f, 0});
+	camera.setOrthographic(-4, 4, -3, 3, 0.1f, 18);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {3, -1, 0};
+	light.shadowDistance = 18;
+	light.shadowResolution = 2048;
+	const std::array<spk::ShadowMap::CasterBounds, 2> bounds{{{{-19, -0.2f, -1}, {-17, 7.8f, 1}}, {{100, 0, 100}, {102, 8, 102}}}};
+	const auto cascades = spk::ShadowMap::Projection::directionalCascades(light, camera, bounds);
+	const auto receiverDepth = -(camera.viewMatrix() * spk::Vector4{0, -0.2f, 0, 1}).z;
+	std::size_t index = 0;
+	while (index + 1 < cascades.size() && receiverDepth > cascades[index].splitFar)
+	{
+		++index;
+	}
+	EXPECT_TRUE(cascades[index].intersects(bounds[0]));
+	EXPECT_FALSE(cascades[index].intersects(bounds[1]));
+	for (std::size_t i = 1; i < cascades.size(); ++i)
+	{
+		EXPECT_GT(cascades[i].splitFar, cascades[i - 1].splitFar);
+	}
+	EXPECT_NEAR(cascades.back().splitFar, 18.0f, 0.001f);
+}
+
+TEST(ShadowProjectionTest, NearPerspectiveCascadesHaveHigherSpatialPrecision)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 240.0f);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {36, -75, -20};
+	light.shadowDistance = 160;
+	light.shadowResolution = 2048;
+	const auto cascades = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	for (std::size_t i = 1; i < cascades.size(); ++i)
+	{
+		EXPECT_GT(cascades[i].worldPerTexel, cascades[i - 1].worldPerTexel);
+	}
+	EXPECT_LT(cascades.front().worldPerTexel, cascades.back().worldPerTexel * 0.25f);
+	for (const auto &cascade : cascades)
+	{
+		EXPECT_GT(cascade.farPlane, cascade.nearPlane);
+		EXPECT_GT(cascade.worldPerTexel, 0.0f);
+	}
+}
+
+TEST(ShadowProjectionPerformance, Randomized128CastersHardBudget)
+{
+	using Clock = std::chrono::steady_clock;
+	constexpr std::size_t Cases = 128;
+	constexpr std::size_t CasterCount = 128;
+	constexpr double BudgetMs = 0.25;
+	std::mt19937 random(0x5A4D0u);
+	const auto sample = [&]() {
+		return static_cast<float>(random() % 2001) / 1000.0f - 1.0f;
+	};
+	std::vector<double> medians;
+	medians.reserve(Cases);
+	std::size_t selected = 0;
+	std::size_t overBudget = 0;
+	for (std::size_t index = 0; index < Cases; ++index)
+	{
+		spk::Camera3D camera;
+		const spk::Vector3 eye{sample() * 40, 30 + sample() * 10, sample() * 40};
+		camera.setPosition(eye);
+		camera.lookAt({0, 0, 0});
+		camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 240);
+		spk::Light::Selection::Entry light;
+		light.type = spk::Light::Selection::Type::Directional;
+		light.direction = {sample(), -0.2f - std::abs(sample()), sample()};
+		light.shadowDistance = 160;
+		light.shadowResolution = 2048;
+		std::array<spk::ShadowMap::CasterBounds, CasterCount> casters{};
+		for (auto &caster : casters)
+		{
+			caster.minimum = {sample() * 100, sample() * 20, sample() * 100};
+			caster.maximum = caster.minimum + spk::Vector3{16, 16, 16};
+		}
+		std::array<double, 7> times{};
+		for (auto &time : times)
+		{
+			const auto begin = Clock::now();
+			const auto cascades = spk::ShadowMap::Projection::directionalCascades(light, camera, casters);
+			for (const auto &cascade : cascades)
+			{
+				for (const auto &caster : casters)
+				{
+					selected += cascade.intersects(caster) ? 1u : 0u;
+				}
+			}
+			time = std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+		}
+		std::sort(times.begin(), times.end());
+		medians.push_back(times[times.size() / 2]);
+		overBudget += medians.back() > BudgetMs ? 1u : 0u;
+	}
+	std::sort(medians.begin(), medians.end());
+	std::cout << "[Directional projection stress] cases=" << Cases << " casters=" << CasterCount
+			  << " median=" << medians[Cases / 2] << "ms p95=" << medians[Cases * 95 / 100]
+			  << "ms p99=" << medians[Cases * 99 / 100] << "ms worst=" << medians.back()
+			  << "ms over_budget=" << overBudget << " budget=" << BudgetMs << "ms\n";
+	EXPECT_GT(selected, 0u);
+	EXPECT_LT(selected, Cases * 7 * CasterCount * spk::ShadowMap::Projection::CascadeCount);
+#if defined(NDEBUG)
+	EXPECT_EQ(overBudget, 0u) << "Optimize projection and caster selection before raising the budget";
+#endif
+}
+
+TEST(ShadowProjectionTest, CascadesRemainStableUnderSubTexelCameraTranslation)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 100.0f);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {0, 0, -1};
+	light.shadowDistance = 80;
+	light.shadowResolution = 2048;
+	const auto first = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	camera.setPosition({first.front().worldPerTexel * 0.1f, 0, 0});
+	const auto second = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	for (std::size_t i = 0; i < first.size(); ++i)
+	{
+		EXPECT_EQ(first[i].viewProjection, second[i].viewProjection);
+	}
+}
+
+TEST(ShadowProjectionTest, SingleCascadeFallbackKeepsOffscreenCasterCoverage)
+{
+	spk::Camera3D camera;
+	camera.setPosition({0, 10, 8});
+	camera.lookAt({0, -0.2f, 0});
+	camera.setOrthographic(-4, 4, -3, 3, 0.1f, 18);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {3, -1, 0};
+	light.shadowDistance = 80;
+	light.shadowResolution = 2048;
+	const std::array<spk::ShadowMap::CasterBounds, 1> bounds{{{{-19, -0.2f, -1}, {-17, 7.8f, 1}}}};
+	const auto cascades = spk::ShadowMap::Projection::directionalCascades(light, camera, bounds, 1);
+	EXPECT_TRUE(cascades.front().intersects(bounds.front()));
+	EXPECT_NEAR(cascades.front().splitFar, 18.0f, 0.001f);
+	EXPECT_FLOAT_EQ(cascades.back().splitFar, 0.0f);
+}
+
+TEST(ShadowProjectionTest, GuardBandReusesMapsAcrossCameraMotion)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 100.0f);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {0, 0, -1};
+	light.shadowDistance = 80;
+	light.shadowResolution = 2048;
+	const auto first = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	// Move by eight texels: this is much more than the old snap-only cache allowed.
+	camera.setPosition({first.front().worldPerTexel * 8.0f, 0, 0});
+	const auto moved = spk::ShadowMap::Projection::directionalCascades(light, camera, {}, first.size(), first);
+	for (std::size_t i = 0; i < first.size(); ++i)
+	{
+		EXPECT_EQ(first[i].viewProjection, moved[i].viewProjection);
+		EXPECT_FLOAT_EQ(first[i].worldPerTexel, moved[i].worldPerTexel);
+	}
+	// A large movement must invalidate the old footprint.
+	camera.setPosition({100, 0, 0});
+	const auto far = spk::ShadowMap::Projection::directionalCascades(light, camera, {}, moved.size(), moved);
+	EXPECT_NE(far.front().viewProjection, moved.front().viewProjection);
 }

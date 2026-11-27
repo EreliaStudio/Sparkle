@@ -1,9 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <concepts>
 #include <cstdint>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <utility>
 
 #include "exception.hpp"
@@ -15,10 +18,55 @@ namespace spk::ShadowMap
 	class Mesh final : public spk::Mesh<spk::Vector3>
 	{
 	public:
+		struct Bounds
+		{
+			Vector3 minimum{};
+			Vector3 maximum{};
+		};
+
+	private:
+		struct BoundsCache
+		{
+			std::once_flag once;
+			Bounds value;
+		};
+		std::shared_ptr<BoundsCache> _bounds;
+
+	public:
+		// Shared, lazy bounds: no additional vertex scan on the meshing path,
+		// and all copies of an immutable shadow mesh reuse the same result.
+		[[nodiscard]] const Bounds &bounds() const
+		{
+			static const Bounds empty{};
+			if (!_bounds)
+			{
+				return empty;
+			}
+			std::call_once(_bounds->once, [this] {
+				const auto vertices = layout().vertexBuffer().cast<Vector3>();
+				if (vertices.empty())
+				{
+					return;
+				}
+				auto &value = _bounds->value;
+				value.minimum = value.maximum = vertices.front();
+				for (const auto &v : vertices)
+				{
+					value.minimum = {std::min(value.minimum.x, v.x), std::min(value.minimum.y, v.y), std::min(value.minimum.z, v.z)};
+					value.maximum = {std::max(value.maximum.x, v.x), std::max(value.maximum.y, v.y), std::max(value.maximum.z, v.z)};
+				}
+			});
+			return _bounds->value;
+		}
+
 		class Builder final : public spk::Mesh<spk::Vector3>::Builder<Mesh>
 		{
 		private:
 			void _setupAttributes(spk::VertexBuffer &buffer) override;
+			void _setupMesh(Mesh &mesh) override
+			{
+				mesh._bounds = std::make_shared<BoundsCache>();
+			}
 		};
 
 		template <typename TVertex, typename TExtractor>

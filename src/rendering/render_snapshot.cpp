@@ -101,7 +101,15 @@ namespace spk
 				renderContext.profiler.timeMeasurement(pass.name + Profiler::RenderPassDuration));
 			try
 			{
+				if (renderContext.passObserver != nullptr)
+				{
+					renderContext.passObserver->beforePass(pass.name);
+				}
 				pass.commands->execute(renderContext);
+				if (renderContext.passObserver != nullptr)
+				{
+					renderContext.passObserver->afterPass(pass.name);
+				}
 			} catch (...)
 			{
 				throw spk::Exception(
