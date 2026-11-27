@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include "rendering/engine/rendering_system.hpp"
@@ -23,7 +24,17 @@ namespace spk::ShadowMap
 			DepthOnly
 		};
 
+		enum class CascadeMode : std::uint8_t
+		{
+			SinglePass = 1,
+			DualPass = 2,
+			TriplePass = 3,
+			QuadraPass = 4
+		};
+
 		RenderingSystem();
+		void setDirectionalCascadeMode(CascadeMode mode);
+		[[nodiscard]] CascadeMode directionalCascadeMode() const noexcept;
 		void setStateScopeMode(StateScopeMode mode) noexcept;
 		[[nodiscard]] StateScopeMode stateScopeMode() const noexcept;
 		// Single-map mode is retained for diagnostic A/B comparisons.

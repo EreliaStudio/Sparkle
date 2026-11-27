@@ -548,6 +548,7 @@ void main()
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
 		std::atomic<std::size_t> maxPointRebuilds{1};
 		std::atomic<bool> directionalCascades{true};
+		std::atomic<RenderingSystem::CascadeMode> directionalCascadeMode{RenderingSystem::CascadeMode::QuadraPass};
 		std::atomic<RenderingSystem::StateScopeMode> stateScopeMode{RenderingSystem::StateScopeMode::DepthOnly};
 	};
 
@@ -561,6 +562,7 @@ void main()
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
 		bool _directionalCascades;
+		std::size_t _directionalCascadeCount;
 		RenderingSystem::StateScopeMode _stateScopeMode;
 		std::vector<CasterBounds> _bounds;
 		std::vector<Light::Selection::Entry> _lights;
@@ -961,6 +963,7 @@ void main()
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
 			_directionalCascades(_state->directionalCascades.load(std::memory_order_relaxed)),
+			_directionalCascadeCount(static_cast<std::size_t>(_state->directionalCascadeMode.load(std::memory_order_relaxed))),
 			_stateScopeMode(_state->stateScopeMode.load(std::memory_order_relaxed)),
 			_lights(std::move(lights)),
 			_staticCasters(std::move(staticCasters)),
@@ -1043,14 +1046,15 @@ void main()
 				bool separateDynamic = false;
 				if (light.type != Light::Selection::Type::Point)
 				{
-					if (_directionalCascades && light.type == Light::Selection::Type::Directional && slots >= remaining + 3)
+					if (_directionalCascades && light.type == Light::Selection::Type::Directional)
 					{
-						cascadeCount = Projection::CascadeCount;
+						const auto available = slots >= remaining ? slots - remaining + 1 : 1;
+						cascadeCount = std::min(_directionalCascadeCount, available);
 					}
 					// Prefer independent static/dynamic depth, without a full-size
 					// blit on every object movement. Keep one slot for each other
 					// admitted light; fall back to combined depth under pressure.
-					separateDynamic = cascadeCount == Projection::CascadeCount &&
+					separateDynamic = _directionalCascades && light.type == Light::Selection::Type::Directional &&
 									  !_dynamicCasters.empty() && slots >= remaining + 2 * cascadeCount - 1;
 					const std::size_t used = separateDynamic ? 2 * cascadeCount : cascadeCount;
 					slots = slots >= used ? slots - used : 0;
@@ -1100,6 +1104,22 @@ void main()
 	void RenderingSystem::setMaxPointShadowRebuildsPerImage(std::size_t value) noexcept
 	{
 		_state->maxPointRebuilds.store(value, std::memory_order_relaxed);
+	}
+
+	void RenderingSystem::setDirectionalCascadeMode(CascadeMode mode)
+	{
+		const auto count = static_cast<std::size_t>(mode);
+		if (count == 0 || count > Projection::CascadeCount)
+		{
+			throw spk::Exception("Invalid directional cascade mode");
+		}
+		_state->directionalCascadeMode.store(mode, std::memory_order_relaxed);
+		_state->directionalCascades.store(true, std::memory_order_relaxed);
+	}
+
+	RenderingSystem::CascadeMode RenderingSystem::directionalCascadeMode() const noexcept
+	{
+		return _state->directionalCascadeMode.load(std::memory_order_relaxed);
 	}
 
 	void RenderingSystem::setDirectionalCascadesEnabled(bool enabled) noexcept

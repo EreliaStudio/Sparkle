@@ -1314,3 +1314,39 @@ TEST(ShadowRendering, RecycledTargetsPreserveHeldDepthPublication)
 	gl.requireNoErrors();
 	gl.reset();
 }
+
+TEST(ShadowRenderingTest, ConfiguredCascadeModesPublishOnlyActiveMaps)
+{
+	using Mode = spk::ShadowMap::RenderingSystem::CascadeMode;
+	Scene scene(true);
+	const spk::Vector3 eye{0, 12, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-12, 12, -9, 9, 0.1f, 30);
+	scene.add(scene.cube, 0, {0, -0.2f, -4}, spk::ShadowMap::Mode::Static);
+	auto &sun = scene.addLight<spk::Light::Directional>({0, 10, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(24);
+	sun.setShadowResolution(512);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	EXPECT_EQ(scene.shadows.directionalCascadeMode(), Mode::QuadraPass);
+	for (const auto mode : {Mode::QuadraPass, Mode::DualPass, Mode::SinglePass, Mode::TriplePass, Mode::QuadraPass})
+	{
+		scene.shadows.setDirectionalCascadeMode(mode);
+		const auto snapshot = scene.capture();
+		ASSERT_NE(snapshot, nullptr);
+		snapshot->execute(gl.renderContext());
+		gl.requireNoErrors();
+		const auto result = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+		ASSERT_NE(result, nullptr);
+		const auto &entry = result->entries.at(sun.registrationOrder());
+		const auto count = static_cast<std::size_t>(mode);
+		ASSERT_EQ(entry.cascadeCount, count);
+		EXPECT_NEAR(entry.cascadeSplits[count - 1], 24.0f, 0.001f);
+		for (std::size_t i = 0; i < entry.cascadeTextures.size(); ++i)
+		{
+			EXPECT_EQ(static_cast<bool>(entry.cascadeTextures[i]), i < count);
+		}
+	}
+	gl.reset();
+}

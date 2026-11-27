@@ -265,17 +265,19 @@ float shadowVisibility(uint i, vec3 position, vec3 normal)
 		return slot < 8 ? pointShadowVisibility(shadow, slot, position, normal) : 1.0;
 	}
 	if (slot >= 16) return 1.0;
-	if (shadow.cascadeSplits.w <= 0.0)
+	if (shadow.cascadeSplits.x <= 0.0)
 	{
 		return shadowMapVisibility(shadow, slot, 0, position, normal, shadow.parameters.x, shadow.parameters.y);
 	}
+	int lastCascade = 0;
+	while (lastCascade < 3 && shadow.cascadeSplits[lastCascade + 1] > 0.0) ++lastCascade;
 	float depth = -(shadow.viewProjection[4] * vec4(position, 1.0)).z;
-	if (depth > shadow.cascadeSplits.w || slot + 3 >= 16) return 1.0;
+	if (depth > shadow.cascadeSplits[lastCascade] || slot + lastCascade >= 16) return 1.0;
 	int cascade = 0;
-	while (cascade < 3 && depth > shadow.cascadeSplits[cascade]) ++cascade;
+	while (cascade < lastCascade && depth > shadow.cascadeSplits[cascade]) ++cascade;
 	float value = shadowMapVisibility(shadow, slot + cascade, cascade, position, normal,
 		shadow.cascadeDepthBias[cascade], shadow.cascadeNormalBias[cascade]);
-	if (cascade < 3)
+	if (cascade < lastCascade)
 	{
 		float previous = cascade == 0 ? shadow.parameters.x : shadow.cascadeSplits[cascade - 1];
 		float edge = shadow.cascadeSplits[cascade];

@@ -286,3 +286,29 @@ TEST(ShadowProjectionTest, GuardBandReusesMapsAcrossCameraMotion)
 	const auto far = spk::ShadowMap::Projection::directionalCascades(light, camera, {}, moved.size(), moved);
 	EXPECT_NE(far.front().viewProjection, moved.front().viewProjection);
 }
+
+TEST(ShadowProjectionTest, AllCascadeCountsCoverTheFullShadowDistance)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 100.0f);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {0, -1, -1};
+	light.shadowDistance = 80.0f;
+	for (std::size_t count = 1; count <= spk::ShadowMap::Projection::CascadeCount; ++count)
+	{
+		const auto projections = spk::ShadowMap::Projection::directionalCascades(light, camera, {}, count);
+		EXPECT_NEAR(projections[count - 1].splitFar, 80.0f, 0.001f);
+		for (std::size_t i = 0; i < count; ++i)
+		{
+			EXPECT_GT(projections[i].splitFar, projections[i].splitNear);
+			EXPECT_GT(projections[i].worldPerTexel, 0.0f);
+		}
+		for (std::size_t i = count; i < projections.size(); ++i)
+		{
+			EXPECT_FLOAT_EQ(projections[i].splitFar, 0.0f);
+		}
+	}
+	EXPECT_THROW((void)spk::ShadowMap::Projection::directionalCascades(light, camera, {}, 0), spk::Exception);
+	EXPECT_THROW((void)spk::ShadowMap::Projection::directionalCascades(light, camera, {}, 5), spk::Exception);
+}

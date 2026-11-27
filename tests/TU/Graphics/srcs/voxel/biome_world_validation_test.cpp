@@ -1652,3 +1652,44 @@ TEST(BiomeWorldShadowDiagnostics, CustomTerracedHeightPass)
 {
 	captureBiomeValidation("shadow_diagnostic_height_custom_terraces", {.height = validation::Height::Multilayer, .placement = validation::Placement::Blend, .terrace = true}, {}, true);
 }
+
+TEST(BiomeWorldPerformance, DualVersusQuadraPass1024)
+{
+	using Mode = spk::ShadowMap::RenderingSystem::CascadeMode;
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(terrain::ImageSize);
+	Scene scene;
+	scene.fill(2);
+	scene.sun.setShadowResolution(1024);
+	scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	scene.sun.setShadowDistance(80.0f);
+	for (const auto mode : {Mode::DualPass, Mode::QuadraPass})
+	{
+		scene.shadowSystem.setDirectionalCascadeMode(mode);
+		(void)scene.capture();
+		gl.save(sparkle_test::resultImagePath("rendering/biome-world", mode == Mode::DualPass ? "cascade_dual_1024" : "cascade_quadra_1024"));
+	}
+	scene.disableColorRendering();
+	std::array<std::vector<double>, 2> times;
+	for (int sample = 0; sample < 16; ++sample)
+	{
+		for (int order = 0; order < 2; ++order)
+		{
+			const auto index = static_cast<std::size_t>((sample + order) % 2);
+			scene.shadowSystem.setDirectionalCascadeMode(index == 0 ? Mode::DualPass : Mode::QuadraPass);
+			scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-20, 50, 25}, {0, 0, 0}));
+			scene.engine.refreshRenderSnapshot();
+			(void)sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext());
+			scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-40.0f + sample, 50, 25}, {0, 0, 0}));
+			scene.engine.refreshRenderSnapshot();
+			times[index].push_back(sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext()).completion);
+		}
+	}
+	for (std::size_t index = 0; index < times.size(); ++index)
+	{
+		std::sort(times[index].begin(), times[index].end());
+		std::cout << "[Cascade A/B] count=" << (index == 0 ? 2 : 4) << " resolution=1024 median=" << times[index][times[index].size() / 2] << "ms\n";
+	}
+	gl.requireNoErrors();
+	gl.reset();
+}
