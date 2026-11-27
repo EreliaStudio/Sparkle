@@ -171,7 +171,7 @@ namespace
 			// The aspect ratio is unchanged, so the existing camera framing is preserved.
 			view.setResolution(ShowcaseImageSize);
 			sun.setShadowResolution(ShowcaseShadowResolution);
-			sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+			sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
 		}
 
 		void setCamera(spk::Vector3 position, spk::Vector3 target)
