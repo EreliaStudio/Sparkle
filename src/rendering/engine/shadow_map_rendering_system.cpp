@@ -7,6 +7,7 @@
 #include <atomic>
 #include <bit>
 #include <cmath>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -35,12 +36,45 @@
 #include "rendering/render_command.hpp"
 #include "shadow_map/contributor.hpp"
 #include "shadow_map/point_budget.hpp"
+#include "shadow_map/profile.hpp"
 #include "shadow_map/projection.hpp"
 
 namespace spk::ShadowMap
 {
 	namespace
 	{
+		class ProfileScope final
+		{
+		private:
+			using Clock = std::chrono::steady_clock;
+			double *_duration = nullptr;
+			Clock::time_point _begin{};
+
+		public:
+			ProfileScope(Profile *profile, double Profile::*field)
+			{
+				if (profile)
+				{
+					_duration = &(profile->*field);
+					_begin = Clock::now();
+				}
+			}
+
+			void stop() noexcept
+			{
+				if (_duration)
+				{
+					*_duration += std::chrono::duration<double, std::milli>(Clock::now() - _begin).count();
+					_duration = nullptr;
+				}
+			}
+
+			~ProfileScope()
+			{
+				stop();
+			}
+		};
+
 		using PointKey = std::tuple<const void *, std::uint64_t, std::uint64_t, std::uint64_t>;
 
 		std::atomic<std::uint64_t> nextPointBudgetIdentity{1};
@@ -230,8 +264,9 @@ namespace spk::ShadowMap
 			}
 
 		public:
-			[[nodiscard]] Framebuffer::Handle acquire(std::uint32_t resolution)
+			[[nodiscard]] Framebuffer::Handle acquire(std::uint32_t resolution, Profile *profile = nullptr)
 			{
+				ProfileScope timing(profile, &Profile::targetAcquire);
 				for (auto it = _retired.begin(); it != _retired.end(); ++it)
 				{
 					if ((*it)->size().x == resolution && it->hasUniqueOwner() &&
@@ -240,8 +275,16 @@ namespace spk::ShadowMap
 						auto result = std::move(*it);
 						_bytes -= bytes(result);
 						_retired.erase(it);
+						if (profile)
+						{
+							++profile->targetHits;
+						}
 						return result;
 					}
+				}
+				if (profile)
+				{
+					++profile->targetMisses;
 				}
 				return newDepthTarget(resolution).handle();
 			}
@@ -346,8 +389,13 @@ namespace spk::ShadowMap
 				return true;
 			}
 
-			void _pack(const SourceCollection &sources)
+			void _pack(const SourceCollection &sources, Profile *profile)
 			{
+				ProfileScope timing(profile, &Profile::geometryPack);
+				if (profile)
+				{
+					++profile->geometryPacks;
+				}
 				Mesh::Builder builder;
 				std::map<Key, Range> ranges;
 				std::size_t indexOffset = 0;
@@ -357,6 +405,10 @@ namespace spk::ShadowMap
 					const auto base = builder.addVertices(layout.vertexBuffer().cast<Vector3>());
 					const auto indices = layout.indexBuffer().cast<std::uint32_t>();
 					builder.addIndices(indices);
+					if (profile)
+					{
+						profile->geometryBytes += mesh->vertexCount() * sizeof(Vector3) + indices.size_bytes();
+					}
 					ranges.emplace(key, Range{static_cast<GLsizei>(indices.size()), indexOffset * sizeof(std::uint32_t), static_cast<GLint>(base)});
 					indexOffset += indices.size();
 				}
@@ -365,8 +417,9 @@ namespace spk::ShadowMap
 			}
 
 		public:
-			[[nodiscard]] bool prepare(const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters)
+			[[nodiscard]] bool prepare(const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters, Profile *profile)
 			{
+				ProfileScope timing(profile, &Profile::sourceLookup);
 				SourceCollection sources;
 				for (const auto *casters : {&staticCasters, &dynamicCasters})
 				{
@@ -383,7 +436,8 @@ namespace spk::ShadowMap
 				{
 					return false;
 				}
-				_pack(sources);
+				timing.stop();
+				_pack(sources, profile);
 				return true;
 			}
 
@@ -404,8 +458,13 @@ namespace spk::ShadowMap
 				_models.push_back(caster.transform);
 			}
 
-			void uploadTransforms(ShaderStorageBuffer &buffer)
+			void uploadTransforms(ShaderStorageBuffer &buffer, Profile *profile)
 			{
+				if (profile)
+				{
+					++profile->transformUploads;
+					profile->transformBytes += _models.size() * sizeof(Matrix4x4);
+				}
 				buffer.setUsage(BufferGPUResource::Usage::StreamDraw);
 				buffer.resize(_models.size());
 				buffer.setDynamicData(std::span<const Matrix4x4>(_models));
@@ -414,6 +473,8 @@ namespace spk::ShadowMap
 
 			void draw(RenderContext &context, std::optional<std::size_t> cachedSlot)
 			{
+				auto *profile = context.shadowProfile;
+				ProfileScope prepare(profile, &Profile::transformPrepare);
 				if (cachedSlot)
 				{
 					// Distinct storage for each draw in a light pass. Unchanged
@@ -425,17 +486,33 @@ namespace spk::ShadowMap
 					auto &slot = _transformSlots[*cachedSlot];
 					if (slot.models != _models)
 					{
-						uploadTransforms(slot.buffer);
+						uploadTransforms(slot.buffer, profile);
 						slot.models = _models;
 					}
+					else if (profile)
+					{
+						++profile->transformCacheHits;
+					}
+					prepare.stop();
+					ProfileScope activate(profile, &Profile::transformActivate);
 					slot.buffer.activate(context);
 				}
 				else
 				{
-					uploadTransforms(_transforms);
+					uploadTransforms(_transforms, profile);
+					prepare.stop();
+					ProfileScope activate(profile, &Profile::transformActivate);
 					_transforms.activate(context);
 				}
-				_mesh.layout().activate(context);
+				{
+					ProfileScope activate(profile, &Profile::geometryActivate);
+					_mesh.layout().activate(context);
+				}
+				if (profile)
+				{
+					++profile->drawCalls;
+				}
+				ProfileScope drawTiming(profile, &Profile::draw);
 				glMultiDrawElementsBaseVertex(GL_TRIANGLES, _counts.data(), GL_UNSIGNED_INT, _offsets.data(),
 					static_cast<GLsizei>(_counts.size()), _baseVertices.data());
 			}
@@ -533,6 +610,7 @@ void main()
 				{
 					return;
 				}
+				ProfileScope timing(_context.shadowProfile, &Profile::stateSetup);
 				if (_mode == RenderingSystem::StateScopeMode::Full)
 				{
 					_fullScope.emplace(_context);
@@ -581,6 +659,17 @@ void main()
 			void render(const Framebuffer::Handle &framebuffer, const Matrix4x4 &projection, const std::vector<TCaster> &casters, bool clear)
 			{
 				_begin();
+				auto *profile = _context.shadowProfile;
+				if (profile)
+				{
+					++profile->mapsRendered;
+					profile->meshDraws += casters.size();
+					for (const auto &item : casters)
+					{
+						profile->triangles += casterRef(item).mesh.indexCount() / 3;
+					}
+				}
+				ProfileScope targetTiming(profile, &Profile::targetActivate);
 				const Window::Surface::RenderTarget target(*_context.targetSurface, framebuffer);
 				target.activate(_context);
 				_context.activeRenderTarget = target;
@@ -589,8 +678,10 @@ void main()
 					_size = target.size();
 					OpenGL::State::Viewport{{0, 0, static_cast<int>(_size.x), static_cast<int>(_size.y)}}.apply(_context);
 				}
+				targetTiming.stop();
 				if (clear)
 				{
+					ProfileScope timing(profile, &Profile::clear);
 					OpenGL::State::Clear::depth(_context);
 				}
 				if (casters.empty())
@@ -599,39 +690,60 @@ void main()
 				}
 				if (_batchEnabled && !_batchPrepared)
 				{
-					_batchEnabled = _batch.prepare(_staticCasters, _dynamicCasters);
+					_batchEnabled = _batch.prepare(_staticCasters, _dynamicCasters, profile);
 					_batchPrepared = true;
 				}
 				if (_batchEnabled && casters.size() <= static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()))
 				{
+					ProfileScope programTiming(profile, &Profile::programSetup);
 					if (!_batchBindings)
 					{
 						_batchBindings.emplace();
 					}
 					batchProgram().activate(_context);
 					glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+					programTiming.stop();
+					ProfileScope listTiming(profile, &Profile::drawList);
 					_batch.begin();
 					for (const auto &item : casters)
 					{
 						_batch.append(casterRef(item));
 					}
+					listTiming.stop();
 					_batch.draw(_context, _cacheTransforms ? std::optional<std::size_t>{_batchDrawIndex++} : std::nullopt);
 					return;
 				}
-				program().activate(_context);
-				glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+				{
+					ProfileScope timing(profile, &Profile::programSetup);
+					program().activate(_context);
+					glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+				}
 				for (const auto &item : casters)
 				{
 					const Caster &caster = casterRef(item);
-					glUniformMatrix4fv(4, 1, GL_FALSE, &caster.transform[0][0]);
-					caster.mesh.layout().activate(_context);
-					program().render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
+					{
+						ProfileScope timing(profile, &Profile::transformActivate);
+						glUniformMatrix4fv(4, 1, GL_FALSE, &caster.transform[0][0]);
+					}
+					{
+						ProfileScope timing(profile, &Profile::geometryActivate);
+						caster.mesh.layout().activate(_context);
+					}
+					{
+						ProfileScope timing(profile, &Profile::draw);
+						program().render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
+					}
+				}
+				if (profile)
+				{
+					profile->drawCalls += casters.size();
 				}
 			}
 
 			void copy(const Framebuffer::Handle &source, const Framebuffer::Handle &destination)
 			{
 				_begin();
+				ProfileScope timing(_context.shadowProfile, &Profile::depthCopy);
 				source.activate(_context);
 				GLint read = 0;
 				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &read);
@@ -946,7 +1058,9 @@ void main()
 			const bool canReuseProjection = cache.cascaded && cache.cascadeCount == count &&
 											cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
 			const auto previousProjections = canReuseProjection ? std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
+			ProfileScope projectionTiming(context.shadowProfile, &Profile::projection);
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
+			projectionTiming.stop();
 			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
@@ -958,6 +1072,7 @@ void main()
 			dynamicCasters.reserve(_dynamicCasters.size());
 			for (std::size_t i = 0; i < count; ++i)
 			{
+				ProfileScope selectionTiming(context.shadowProfile, &Profile::selection);
 				const auto &projection = projections[i];
 				auto &cascade = cascades[i];
 				const bool staticTargetDirty = !cache.cascaded || cache.cascadeCount != count || !cascade.staticTarget ||
@@ -992,9 +1107,10 @@ void main()
 				const bool staticAffectsDynamic = staticDirty && (!separateDynamic || dynamicCasters.empty());
 				const bool dynamicDirty = staticTargetDirty || staticAffectsDynamic || !cascade.finalTarget ||
 										  cache.separateDynamic != separateDynamic || cascade.dynamicSignature != dynamicSignature;
+				selectionTiming.stop();
 				if (staticDirty)
 				{
-					cascade.staticTarget = cache.depthTargets.acquire(light.shadowResolution);
+					cascade.staticTarget = cache.depthTargets.acquire(light.shadowResolution, context.shadowProfile);
 					cascade.staticTexture = cascade.staticTarget->depthStencilAttachment()->texture();
 					renderer.render(cascade.staticTarget, projection.viewProjection, staticCasters, true);
 					++cascade.statistics.staticBuilds;
@@ -1009,7 +1125,7 @@ void main()
 					}
 					else
 					{
-						cascade.finalTarget = cache.depthTargets.acquire(light.shadowResolution);
+						cascade.finalTarget = cache.depthTargets.acquire(light.shadowResolution, context.shadowProfile);
 						cascade.texture = cascade.finalTarget->depthStencilAttachment()->texture();
 						if (!separateDynamic)
 						{
@@ -1025,6 +1141,7 @@ void main()
 				cascade.statistics.dynamicCasters = dynamicCasters.size();
 			}
 			renderer.finish();
+			ProfileScope publicationTiming(context.shadowProfile, &Profile::publication);
 			for (std::size_t i = 0; i < cascades.size(); ++i)
 			{
 				const auto &previous = cache.cascades[i];
@@ -1134,7 +1251,7 @@ void main()
 			Framebuffer::Handle staticTarget = cache.staticTarget;
 			if (staticDirty)
 			{
-				staticTarget = cache.depthTargets.acquire(light.shadowResolution);
+				staticTarget = cache.depthTargets.acquire(light.shadowResolution, context.shadowProfile);
 				renderer.render(staticTarget, projection.viewProjection, _staticCasters, true);
 			}
 			Framebuffer::Handle finalTarget = cache.finalTarget;
@@ -1148,7 +1265,7 @@ void main()
 				}
 				else
 				{
-					finalTarget = cache.depthTargets.acquire(light.shadowResolution);
+					finalTarget = cache.depthTargets.acquire(light.shadowResolution, context.shadowProfile);
 					finalTexture = finalTarget->depthStencilAttachment()->texture();
 					renderer.copy(staticTarget, finalTarget);
 					renderer.render(finalTarget, projection.viewProjection, _dynamicCasters, false);
@@ -1278,6 +1395,7 @@ void main()
 
 		void execute(RenderContext &context) const override
 		{
+			ProfileScope timing(context.shadowProfile, &Profile::command);
 			if (context.targetSurface == nullptr || context.targetSurface->lifeCycle() != Window::LifeCycle::Ready ||
 				_channel->isClosed())
 			{

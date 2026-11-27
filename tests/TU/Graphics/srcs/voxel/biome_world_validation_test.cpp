@@ -1854,6 +1854,68 @@ namespace
 		times.cached.push_back(warm.completion);
 	}
 
+	void reportShadowProfile(std::size_t chunks, const char *configuration, const char *phase, int sample,
+		const spk::ShadowMap::Profile &p, const sparkle_test::ShadowPassTiming::Sample &timing)
+	{
+		const auto measured = p.projection + p.selection + p.targetAcquire + p.stateSetup + p.targetActivate + p.clear +
+			p.sourceLookup + p.geometryPack + p.drawList + p.programSetup + p.transformPrepare + p.transformActivate +
+			p.geometryActivate + p.draw + p.depthCopy + p.publication;
+		std::cout << "[Shadow profile] chunks=" << chunks << " configuration=" << configuration << " phase=" << phase
+			<< " sample=" << sample << " submission_ms=" << timing.submission << " completion_ms=" << timing.completion
+			<< " gpu_query_ms=" << timing.gpuElapsed << " command_ms=" << p.command
+			<< " projection_ms=" << p.projection << " selection_ms=" << p.selection
+			<< " target_acquire_ms=" << p.targetAcquire << " state_setup_ms=" << p.stateSetup
+			<< " target_activate_ms=" << p.targetActivate << " clear_ms=" << p.clear
+			<< " source_lookup_ms=" << p.sourceLookup << " geometry_pack_ms=" << p.geometryPack
+			<< " draw_list_ms=" << p.drawList << " program_setup_ms=" << p.programSetup
+			<< " transform_prepare_ms=" << p.transformPrepare << " transform_activate_ms=" << p.transformActivate
+			<< " geometry_activate_ms=" << p.geometryActivate << " draw_ms=" << p.draw
+			<< " copy_ms=" << p.depthCopy << " publication_ms=" << p.publication
+			<< " other_command_ms=" << p.command - measured
+			<< " maps=" << p.mapsRendered << " target_hits=" << p.targetHits << " target_misses=" << p.targetMisses
+			<< " packs=" << p.geometryPacks << " packed_bytes=" << p.geometryBytes
+			<< " transform_uploads=" << p.transformUploads << " transform_bytes=" << p.transformBytes
+			<< " transform_cache_hits=" << p.transformCacheHits << " draw_calls=" << p.drawCalls
+			<< " mesh_draws=" << p.meshDraws << " triangles=" << p.triangles << std::endl;
+	}
+
+	void profileScaling(Scene &scene, std::size_t chunks)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		for (int sample = 0; sample < 3; ++sample)
+		{
+			for (std::size_t order = 0; order < ScalingConfigurations.size(); ++order)
+			{
+				const auto &configuration = ScalingConfigurations[(static_cast<std::size_t>(sample) + order) % ScalingConfigurations.size()];
+				configureScaling(scene, configuration);
+				scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-20, 50, 25}, {0, 0, 0}));
+				scene.engine.refreshRenderSnapshot();
+				(void)sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext());
+				scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-40.0f + static_cast<float>(sample), 50, 25}, {0, 0, 0}));
+				scene.engine.refreshRenderSnapshot();
+				const auto snapshot = scene.engine.latestRenderSnapshot();
+				ASSERT_NE(snapshot, nullptr);
+				spk::ShadowMap::Profile cold;
+				const auto timing = sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext(), &cold);
+				reportShadowProfile(chunks, configuration.name, "rebuild", sample, cold, timing);
+				EXPECT_EQ(cold.mapsRendered, static_cast<std::size_t>(configuration.cascades));
+				EXPECT_GT(cold.triangles, 0u);
+				EXPECT_GT(cold.drawCalls, 0u);
+				EXPECT_LE(cold.drawCalls, cold.meshDraws);
+				if (configuration.submission == DepthSubmission::Individual)
+				{
+					EXPECT_EQ(cold.drawCalls, cold.meshDraws);
+					EXPECT_EQ(cold.transformUploads, 0u);
+				}
+				spk::ShadowMap::Profile warm;
+				const auto cached = sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext(), &warm);
+				reportShadowProfile(chunks, configuration.name, "cached", sample, warm, cached);
+				EXPECT_EQ(warm.mapsRendered, 0u);
+				EXPECT_EQ(warm.drawCalls, 0u);
+			}
+		}
+	}
+
 	void benchmarkScaling(int radius)
 	{
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
@@ -1885,7 +1947,9 @@ namespace
 		scene.engine.refreshRenderSnapshot();
 		const auto first = scene.engine.latestRenderSnapshot();
 		ASSERT_NE(first, nullptr);
-		const auto initial = sparkle_test::ShadowPassTiming::measure(*first, gl.renderContext());
+		spk::ShadowMap::Profile initialProfile;
+		const auto initial = sparkle_test::ShadowPassTiming::measure(*first, gl.renderContext(), &initialProfile);
+		reportShadowProfile(count, ScalingConfigurations.back().name, "initial", 0, initialProfile, initial);
 		std::cout << "[Shadow scaling initial] chunks=" << count << " submission=" << initial.submission
 			<< "ms completion=" << initial.completion << "ms" << std::endl;
 		compareScalingImages(scene, count);
@@ -1904,6 +1968,7 @@ namespace
 			ASSERT_EQ(results[i].completion.size(), 12u);
 			reportScaling(count, ScalingConfigurations[i], results[i]);
 		}
+		profileScaling(scene, count);
 		gl.requireNoErrors();
 		gl.reset();
 	}

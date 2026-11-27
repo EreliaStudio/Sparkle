@@ -10,6 +10,7 @@
 #include "core/context/render_context.hpp"
 #include "rendering/engine/engine_view.hpp"
 #include "rendering/render_snapshot.hpp"
+#include "shadow_map/profile.hpp"
 
 namespace sparkle_test
 {
@@ -22,12 +23,14 @@ namespace sparkle_test
 		using Clock = std::chrono::steady_clock;
 		Clock::time_point _begin{};
 		std::size_t _samples = 0;
+		GLuint _query = 0;
 
 	public:
 		struct Sample
 		{
 			double submission = 0;
 			double completion = 0;
+			double gpuElapsed = 0;
 		};
 
 	private:
@@ -38,6 +41,10 @@ namespace sparkle_test
 			if (name == spk::EngineView::ShadowPassKey.name)
 			{
 				glFinish();
+				if (_query)
+				{
+					glBeginQuery(GL_TIME_ELAPSED, _query);
+				}
 				_begin = Clock::now();
 			}
 		}
@@ -47,10 +54,20 @@ namespace sparkle_test
 			if (name == spk::EngineView::ShadowPassKey.name)
 			{
 				const auto submitted = Clock::now();
+				if (_query)
+				{
+					glEndQuery(GL_TIME_ELAPSED);
+				}
 				glFinish();
 				const auto completed = Clock::now();
 				_sample.submission += std::chrono::duration<double, std::milli>(submitted - _begin).count();
 				_sample.completion += std::chrono::duration<double, std::milli>(completed - _begin).count();
+				if (_query)
+				{
+					GLuint64 elapsed = 0;
+					glGetQueryObjectui64v(_query, GL_QUERY_RESULT, &elapsed);
+					_sample.gpuElapsed += static_cast<double>(elapsed) / 1000000.0;
+				}
 				++_samples;
 			}
 		}
@@ -60,26 +77,42 @@ namespace sparkle_test
 		private:
 			spk::RenderContext &_context;
 			spk::RenderContext::PassObserver *_previous;
+			spk::ShadowMap::Profile *_previousProfile;
 
 		public:
-			Scope(spk::RenderContext &context, ShadowPassTiming &observer) :
+			Scope(spk::RenderContext &context, ShadowPassTiming &observer, spk::ShadowMap::Profile *profile) :
 				_context(context),
-				_previous(context.passObserver)
+				_previous(context.passObserver),
+				_previousProfile(context.shadowProfile)
 			{
 				_context.passObserver = &observer;
+				_context.shadowProfile = profile;
 			}
 
 			~Scope()
 			{
 				_context.passObserver = _previous;
+				_context.shadowProfile = _previousProfile;
 			}
 		};
 
 	public:
-		[[nodiscard]] static Sample measure(const spk::RenderSnapshot &snapshot, spk::RenderContext &context)
+		~ShadowPassTiming() override
+		{
+			if (_query)
+			{
+				glDeleteQueries(1, &_query);
+			}
+		}
+
+		[[nodiscard]] static Sample measure(const spk::RenderSnapshot &snapshot, spk::RenderContext &context, spk::ShadowMap::Profile *profile = nullptr)
 		{
 			ShadowPassTiming observer;
-			Scope scope(context, observer);
+			if (profile)
+			{
+				glGenQueries(1, &observer._query);
+			}
+			Scope scope(context, observer, profile);
 			snapshot.execute(context);
 			glFinish();
 			EXPECT_EQ(observer._samples, 1u) << "Expected exactly one captured EngineView shadow pass";
