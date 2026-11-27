@@ -493,6 +493,7 @@ void main()
 			DepthTargetPool depthTargets;
 			std::array<CascadeCache, Projection::CascadeCount> cascades{};
 			bool cascaded = false;
+			bool separateDynamic = false;
 			std::size_t cascadeCount = 0;
 			Matrix4x4 cascadeCameraView{};
 			Matrix4x4 cascadeCameraProjection{};
@@ -645,7 +646,7 @@ void main()
 
 		void _renderDirectional(
 			RenderContext &context, RenderingSystem::State::LightCache &cache,
-			const Light::Selection::Entry &light, std::size_t count) const
+			const Light::Selection::Entry &light, std::size_t count, bool separateDynamic) const
 		{
 			if (cache.sourceCaptureOrdinal > _captureOrdinal)
 			{
@@ -653,7 +654,7 @@ void main()
 			}
 			const auto cameraView = _camera.viewMatrix();
 			const auto cameraProjection = _camera.projectionMatrix();
-			if (cache.cascaded && cache.cascadeCount == count && cache.resolution == light.shadowResolution &&
+			if (cache.cascaded && cache.cascadeCount == count && cache.separateDynamic == separateDynamic && cache.resolution == light.shadowResolution &&
 				cache.publishedAdmission == light.admission && cache.cascadeCameraView == cameraView &&
 				cache.cascadeCameraProjection == cameraProjection && cache.cascadeDirection == light.direction &&
 				cache.cascadeDistance == light.shadowDistance && cache.staticSignature == _staticSignature &&
@@ -694,7 +695,7 @@ void main()
 				const bool staticDirty = !cache.cascaded || cache.cascadeCount != count || !cascade.staticTarget ||
 					cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection ||
 					cascade.staticSignature != staticSignature;
-				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cascade.dynamicSignature != dynamicSignature;
+				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cache.separateDynamic != separateDynamic || cascade.dynamicSignature != dynamicSignature;
 				if (staticDirty)
 				{
 					cascade.staticTarget = cache.depthTargets.acquire(light.shadowResolution);
@@ -714,8 +715,11 @@ void main()
 					{
 						cascade.finalTarget = cache.depthTargets.acquire(light.shadowResolution);
 						cascade.texture = cascade.finalTarget->depthStencilAttachment()->texture();
-						copyDepth(context, cascade.staticTarget, cascade.finalTarget);
-						renderer.render(cascade.finalTarget, projection.viewProjection, dynamicCasters, false);
+												if (!separateDynamic)
+						{
+							copyDepth(context, cascade.staticTarget, cascade.finalTarget);
+						}
+						renderer.render(cascade.finalTarget, projection.viewProjection, dynamicCasters, separateDynamic);
 						++cascade.statistics.dynamicBuilds;
 					}
 				}
@@ -753,6 +757,7 @@ void main()
 			cache.cascades = std::move(cascades);
 			cache.cascaded = true;
 			cache.cascadeCount = count;
+			cache.separateDynamic = separateDynamic;
 			cache.point = false;
 			cache.resolution = light.shadowResolution;
 			cache.sourceCaptureOrdinal = _captureOrdinal;
@@ -770,7 +775,7 @@ void main()
 			entry.captureOrdinal = _captureOrdinal;
 			entry.light = light;
 			entry.resolution = light.shadowResolution;
-			entry.depthTexture = cache.cascades.front().texture;
+			entry.depthTexture = separateDynamic ? cache.cascades.front().staticTexture : cache.cascades.front().texture;
 			entry.nearPlane = projections.front().nearPlane;
 			entry.farPlane = projections.front().farPlane;
 			entry.cascadeCameraView = cameraView;
@@ -780,7 +785,12 @@ void main()
 			for (std::size_t i = 0; i < count; ++i)
 			{
 				const auto &projection = projections[i];
-				entry.cascadeTextures[i] = cache.cascades[i].texture;
+				const auto &cascade = cache.cascades[i];
+				entry.cascadeTextures[i] = separateDynamic ? cascade.staticTexture : cascade.texture;
+				if (separateDynamic && cascade.statistics.dynamicCasters != 0)
+				{
+					entry.cascadeDynamicTextures[i] = cascade.texture;
+				}
 				entry.cascadeStatistics[i] = cache.cascades[i].statistics;
 				entry.viewProjection[i] = projection.viewProjection;
 				entry.cascadeDepthBias[i] = std::max(0.000001f, 0.35f * projection.worldPerTexel / (projection.farPlane - projection.nearPlane));
@@ -797,7 +807,7 @@ void main()
 		void _renderLight(
 			RenderContext &context,
 			RenderingSystem::State::LightCache &cache,
-			const Light::Selection::Entry &light, std::size_t cascadeCount) const
+			const Light::Selection::Entry &light, std::size_t cascadeCount, bool separateDynamic) const
 		{
 			if (light.type == Light::Selection::Type::Point)
 			{
@@ -810,7 +820,7 @@ void main()
 			}
 			if (light.type == Light::Selection::Type::Directional && _directionalCascades)
 			{
-				_renderDirectional(context, cache, light, cascadeCount);
+				_renderDirectional(context, cache, light, cascadeCount, separateDynamic);
 				return;
 			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
@@ -964,13 +974,20 @@ void main()
 			for (const auto &light : _lights)
 			{
 				std::size_t cascadeCount = 1;
+				bool separateDynamic = false;
 				if (light.type != Light::Selection::Type::Point)
 				{
 					if (_directionalCascades && light.type == Light::Selection::Type::Directional && slots >= remaining + 3)
 					{
 						cascadeCount = Projection::CascadeCount;
 					}
-					slots = slots >= cascadeCount ? slots - cascadeCount : 0;
+										// Prefer independent static/dynamic depth, without a full-size
+					// blit on every object movement. Keep one slot for each other
+					// admitted light; fall back to combined depth under pressure.
+					separateDynamic = cascadeCount == Projection::CascadeCount &&
+						!_dynamicCasters.empty() && slots >= remaining + 2 * cascadeCount - 1;
+					const std::size_t used = separateDynamic ? 2 * cascadeCount : cascadeCount;
+					slots = slots >= used ? slots - used : 0;
 					--remaining;
 				}
 				if (!_channel->isAdmissionCurrent(light.registrationOrder, light.admission))
@@ -987,7 +1004,7 @@ void main()
 					}
 				}
 				auto &cache = surface->lights[{_viewIdentity, light.registrationOrder}];
-				_renderLight(context, cache, light, cascadeCount);
+				_renderLight(context, cache, light, cascadeCount, separateDynamic);
 			}
 		}
 	};

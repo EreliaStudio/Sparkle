@@ -38,6 +38,8 @@ namespace spk::ShadowMap
 			std::uint8_t cascadeCount = 0;
 			float cascadeNear = 0.0f;
 			std::array<Texture::Handle, 4> cascadeTextures{};
+			// Optional dynamic-only depth maps share their static map projection.
+			std::array<Texture::Handle, 4> cascadeDynamicTextures{};
 			std::array<float, 4> cascadeSplits{};
 			std::array<float, 4> cascadeDepthBias{};
 			std::array<float, 4> cascadeNormalBias{};

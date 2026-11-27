@@ -40,6 +40,7 @@ struct ShadowData
 	vec4 cascadeSplits;
 	vec4 cascadeDepthBias;
 	vec4 cascadeNormalBias;
+	vec4 cascadeDynamicSlots;
 };
 
 layout(std430) readonly buffer ForwardShadows
@@ -211,6 +212,16 @@ float sampleShadowMap(int slot, vec3 coordinates)
 	}
 }
 
+float combinedShadowTap(int staticSlot, int dynamicSlot, vec3 coordinate)
+{
+	float visibility = sampleShadowMap(staticSlot, coordinate);
+	if (dynamicSlot >= 0 && visibility > 0.0)
+	{
+		visibility = min(visibility, sampleShadowMap(dynamicSlot, coordinate));
+	}
+	return visibility;
+}
+
 float shadowMapVisibility(ShadowData shadow, int slot, int cascade, vec3 position, vec3 normal, float depthBias, float normalBias)
 {
 	vec3 receiver = position + normal * normalBias;
@@ -227,9 +238,10 @@ float shadowMapVisibility(ShadowData shadow, int slot, int cascade, vec3 positio
 		return 1.0;
 	}
 	float bias = depthBias;
+	int dynamicSlot = int(shadow.cascadeDynamicSlots[cascade]) - 1;
 	if (shadow.parameters.z == 0.0)
 	{
-		return sampleShadowMap(slot, vec3(projected.xy, projected.z - bias));
+		return combinedShadowTap(slot, dynamicSlot, vec3(projected.xy, projected.z - bias));
 	}
 	float visibility = 0.0;
 	for (int y = -1; y <= 1; ++y)
@@ -237,7 +249,7 @@ float shadowMapVisibility(ShadowData shadow, int slot, int cascade, vec3 positio
 		for (int x = -1; x <= 1; ++x)
 		{
 			vec2 sampleUV = projected.xy + vec2(x, y) * shadow.parameters.z;
-			visibility += sampleShadowMap(slot, vec3(sampleUV, projected.z - bias));
+			visibility += combinedShadowTap(slot, dynamicSlot, vec3(sampleUV, projected.z - bias));
 		}
 	}
 	return visibility / 9.0;

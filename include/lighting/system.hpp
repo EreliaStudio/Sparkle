@@ -78,9 +78,10 @@ namespace spk::Lighting
 			std::array<float, 4> cascadeSplits{};
 			std::array<float, 4> cascadeDepthBias{};
 			std::array<float, 4> cascadeNormalBias{};
+			std::array<float, 4> cascadeDynamicSlots{};
 		};
 
-		static_assert(sizeof(ShadowData) == 480 && alignof(ShadowData) == 16);
+		static_assert(sizeof(ShadowData) == 496 && alignof(ShadowData) == 16);
 
 		struct ShadowBindings
 		{
