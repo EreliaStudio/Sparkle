@@ -437,31 +437,38 @@ namespace spk::Voxel
 			std::size_t _cellCount;
 			std::array<FaceMask, 6> _faces;
 			std::vector<Candidate> _candidates;
-			std::vector<spk::Vector3> _mergedVertices;
-
-			void _emitRectangle(Face face, std::size_t plane, std::size_t x, std::size_t y, std::size_t width, std::size_t height)
+			struct Rectangle
 			{
-				const auto axis = static_cast<std::size_t>(face) / 2;
+				Face face;
+				std::size_t plane;
+				std::size_t x;
+				std::size_t y;
+				std::size_t width;
+				std::size_t height;
+			};
+
+			std::vector<Rectangle> _rectangles;
+
+			[[nodiscard]] static std::array<spk::Vector3, 6> _vertices(const Rectangle &rectangle)
+			{
+				const auto axis = static_cast<std::size_t>(rectangle.face) / 2;
 				const auto u = (axis + 1) % 3;
 				const auto v = (axis + 2) % 3;
-				const bool positive = (static_cast<unsigned>(face) & 1U) != 0;
+				const bool positive = (static_cast<unsigned>(rectangle.face) & 1U) != 0;
 				spk::Vector3 a{};
-				a.data[axis] = static_cast<float>(plane + (positive ? 1 : 0));
-				a.data[u] = static_cast<float>(x);
-				a.data[v] = static_cast<float>(y);
+				a.data[axis] = static_cast<float>(rectangle.plane + (positive ? 1 : 0));
+				a.data[u] = static_cast<float>(rectangle.x);
+				a.data[v] = static_cast<float>(rectangle.y);
 				auto b = a, c = a, d = a;
-				b.data[u] += static_cast<float>(width);
-				c.data[u] += static_cast<float>(width);
-				c.data[v] += static_cast<float>(height);
-				d.data[v] += static_cast<float>(height);
+				b.data[u] += static_cast<float>(rectangle.width);
+				c.data[u] += static_cast<float>(rectangle.width);
+				c.data[v] += static_cast<float>(rectangle.height);
+				d.data[v] += static_cast<float>(rectangle.height);
 				if (positive)
 				{
-					_mergedVertices.insert(_mergedVertices.end(), {a, b, c, a, c, d});
+					return {a, b, c, a, c, d};
 				}
-				else
-				{
-					_mergedVertices.insert(_mergedVertices.end(), {a, c, b, a, d, c});
-				}
+				return {a, c, b, a, d, c};
 			}
 
 			void _mergePlane(Face face, std::size_t plane, std::size_t width, std::size_t height, FaceMask &pending, FaceMask &merged)
@@ -483,25 +490,25 @@ namespace spk::Voxel
 						{
 							++h;
 						}
-						_consumeRectangle(face, plane, x, y, w, h, row + x, width, pending, merged);
+						_consumeRectangle({face, plane, x, y, w, h}, row + x, width, pending, merged);
 						x += w;
 					}
 				}
 			}
 
-			void _consumeRectangle(Face face, std::size_t plane, std::size_t x, std::size_t y, std::size_t w, std::size_t h, std::size_t start, std::size_t stride, FaceMask &pending, FaceMask &merged)
+			void _consumeRectangle(const Rectangle &rectangle, std::size_t start, std::size_t stride, FaceMask &pending, FaceMask &merged)
 			{
-				for (std::size_t dy = 0; dy < h; ++dy)
+				for (std::size_t dy = 0; dy < rectangle.height; ++dy)
 				{
-					pending.clear(start + dy * stride, w);
+					pending.clear(start + dy * stride, rectangle.width);
 				}
-				if (w == 1 && h == 1)
+				if (rectangle.width == 1 && rectangle.height == 1)
 				{
 					merged.clear(start, 1);
 				}
 				else
 				{
-					_emitRectangle(face, plane, x, y, w, h);
+					_rectangles.push_back(rectangle);
 				}
 			}
 
@@ -566,7 +573,7 @@ namespace spk::Voxel
 			[[nodiscard]] spk::ShadowMap::Mesh build(const Geometry::SurfaceMesh &opaque, const MeshVertexContainer &vertices)
 			{
 				_mergeFaces();
-				if (_mergedVertices.empty())
+				if (_rectangles.empty())
 				{
 					return spk::ShadowMap::Mesh::from(opaque, [](const Geometry::Vertex &vertex) {
 						return vertex.position;
@@ -577,14 +584,21 @@ namespace spk::Voxel
 				});
 				spk::ShadowMap::Mesh::Builder builder;
 				const std::size_t remaining = vertices.size() - _candidates.size() * 6;
-				const std::size_t count = remaining + _mergedVertices.size();
+				const std::size_t count = remaining + _rectangles.size() * 6;
 				std::size_t source = 0, removed = 0;
+				std::array<spk::Vector3, 6> rectangleVertices{};
 				// Write directly into the final depth mesh: keep exact opaque
 				// positions in their original order and append greedy rectangles.
 				(void)builder.addGeneratedVertices(count, [&](std::size_t index) {
 					if (index >= remaining)
 					{
-						return _mergedVertices[index - remaining];
+						const auto rectangleIndex = (index - remaining) / 6;
+						const auto vertexIndex = (index - remaining) % 6;
+						if (vertexIndex == 0)
+						{
+							rectangleVertices = _vertices(_rectangles[rectangleIndex]);
+						}
+						return rectangleVertices[vertexIndex];
 					}
 					while (removed < _candidates.size() && source == _candidates[removed].vertexOffset)
 					{
