@@ -548,43 +548,6 @@ TEST(MesherGeometry, SimplifiedShadowSurfacePreservesHoleAndWinding)
 	}
 }
 
-TEST(MesherGeometry, AdjacentHalfSlabsMergeWithoutChangingTheirHeight)
-{
-	const auto slab = definition(fixture("slab"), "stone_");
-	Volume::Builder builder({4, 1, 3});
-	builder.bind(registry({slab}));
-	for (std::uint32_t z = 0; z < 3; ++z)
-	{
-		for (std::uint32_t x = 0; x < 4; ++x)
-		{
-			builder.set({x, 0, z}, 1);
-		}
-	}
-	const Geometry model = Mesher().bake(builder.build());
-	EXPECT_EQ(model.depthMesh().indexCount(), 36u);
-	EXPECT_LT(model.depthMesh().indexCount(), model.opaqueMesh().indexCount());
-	EXPECT_NEAR(shadowArea(model), 31.0f, 1.0e-5f);
-	EXPECT_NEAR(shadowArea(model), visualArea(model.opaqueMesh()), 1.0e-5f);
-	const auto &bounds = model.depthMesh().bounds();
-	EXPECT_EQ(bounds.minimum, (spk::Vector3{0, 0, 0}));
-	EXPECT_EQ(bounds.maximum, (spk::Vector3{4, 0.5f, 3}));
-}
-
-TEST(MesherGeometry, HalfSlabsOnDifferentPlanesKeepTheirSeparateShadowSurfaces)
-{
-	const auto slab = definition(fixture("slab"), "stone_");
-	Volume::Builder builder({2, 1, 1});
-	builder.bind(registry({slab}));
-	builder.set({0, 0, 0}, 1, Horizontal::XPositive, Vertical::YPositive);
-	builder.set({1, 0, 0}, 1, Horizontal::XPositive, Vertical::YNegative);
-	const Geometry model = Mesher().bake(builder.build());
-	EXPECT_NEAR(shadowArea(model), 8.0f, 1.0e-5f);
-	EXPECT_NEAR(shadowArea(model), visualArea(model.opaqueMesh()), 1.0e-5f);
-	const auto &bounds = model.depthMesh().bounds();
-	EXPECT_EQ(bounds.minimum, (spk::Vector3{0, 0, 0}));
-	EXPECT_EQ(bounds.maximum, (spk::Vector3{2, 1, 1}));
-}
-
 TEST(MesherGeometry, AirGapPreservesBothIndependentCubeShadowSurfaces)
 {
 	const auto stone = definition(fixture("cube"), "stone_");

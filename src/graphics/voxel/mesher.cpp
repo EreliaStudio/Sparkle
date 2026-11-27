@@ -9,7 +9,6 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -158,7 +157,7 @@ namespace spk::Voxel
 		};
 
 		// Only two correctly wound triangles covering an exact unit square qualify.
-		// This fast path handles complete voxel faces; smaller rectangles are classified separately.
+		// Partial, overlapping, sloped and non-grid faces keep their original triangles.
 		[[nodiscard]] bool isFullOpaqueFace(const MeshVertexContainer &vertices, Face face)
 		{
 			if (vertices.size() != 6)
@@ -192,81 +191,6 @@ namespace spk::Voxel
 			return (masks[0] | masks[1]) == 15U && (shared == 6U || shared == 9U);
 		}
 
-		// Exact half-grid rectangles can be joined without resampling or
-		// moving a vertex. Sloped, clipped and arbitrary polygons fall back.
-		struct ShadowRectangle
-		{
-			Face face;
-			float plane, left, right, bottom, top;
-		};
-
-		[[nodiscard]] bool halfGrid(float value)
-		{
-			return value == 0.0f || value == 0.5f || value == 1.0f;
-		}
-
-		[[nodiscard]] std::optional<ShadowRectangle> rectangleOnAxis(const MeshVertexContainer &vertices, std::size_t axis)
-		{
-			const auto u = (axis + 1) % 3;
-			const auto v = (axis + 2) % 3;
-			const float plane = vertices.front().position.data[axis];
-			float left = 1, right = 0, bottom = 1, top = 0;
-			for (const auto &vertex : vertices)
-			{
-				const auto &p = vertex.position;
-				if (p.data[axis] != plane || !halfGrid(plane) || !halfGrid(p.data[u]) || !halfGrid(p.data[v]))
-				{
-					return std::nullopt;
-				}
-				left = std::min(left, p.data[u]);
-				right = std::max(right, p.data[u]);
-				bottom = std::min(bottom, p.data[v]);
-				top = std::max(top, p.data[v]);
-			}
-			const float area = (right - left) * (top - bottom);
-			if (area == 0.0f)
-			{
-				return std::nullopt;
-			}
-			std::array<unsigned, 2> masks{};
-			for (std::size_t i = 0; i < vertices.size(); ++i)
-			{
-				const auto &p = vertices[i].position;
-				if ((p.data[u] != left && p.data[u] != right) || (p.data[v] != bottom && p.data[v] != top))
-				{
-					return std::nullopt;
-				}
-				masks[i / 3] |= 1U << ((p.data[u] == right ? 1U : 0U) + (p.data[v] == top ? 2U : 0U));
-			}
-			const auto winding = [&](std::size_t i) {
-				const auto a = vertices[i + 1].position - vertices[i].position;
-				const auto b = vertices[i + 2].position - vertices[i].position;
-				return a.data[u] * b.data[v] - a.data[v] * b.data[u];
-			};
-			const float direction = winding(0);
-			const unsigned shared = masks[0] & masks[1];
-			if (std::abs(direction) != area || winding(3) != direction || (masks[0] | masks[1]) != 15U || (shared != 6U && shared != 9U))
-			{
-				return std::nullopt;
-			}
-			return ShadowRectangle{static_cast<Face>(axis * 2 + (direction > 0 ? 1 : 0)), plane, left, right, bottom, top};
-		}
-
-		[[nodiscard]] std::optional<ShadowRectangle> shadowRectangle(const MeshVertexContainer &vertices)
-		{
-			if (vertices.size() == 6)
-			{
-				for (std::size_t axis = 0; axis < 3; ++axis)
-				{
-					if (auto rectangle = rectangleOnAxis(vertices, axis))
-					{
-						return rectangle;
-					}
-				}
-			}
-			return std::nullopt;
-		}
-
 		struct CellTemplate
 		{
 			Cell cell;
@@ -276,8 +200,6 @@ namespace spk::Voxel
 			bool hasInner = false;
 			std::array<bool, 6> hasOuter{};
 			std::array<bool, 6> fullOpaqueFace{};
-			std::array<std::optional<ShadowRectangle>, 6> partialOpaqueFace{};
-			std::optional<ShadowRectangle> innerRectangle;
 			std::array<std::optional<bool>, 6> fullyOccludes{};
 		};
 
@@ -314,12 +236,7 @@ namespace spk::Voxel
 			{
 				const auto i = static_cast<std::size_t>(face);
 				result.fullOpaqueFace[i] = isFullOpaqueFace(result.outer[i].opaque, face);
-				if (!result.fullOpaqueFace[i])
-				{
-					result.partialOpaqueFace[i] = shadowRectangle(result.outer[i].opaque);
-				}
 			}
-			result.innerRectangle = shadowRectangle(result.inner.opaque);
 			return result;
 		}
 
@@ -432,87 +349,16 @@ namespace spk::Voxel
 			std::vector<std::size_t> _removedOffsets;
 			std::vector<spk::Vector3> _mergedVertices;
 
-			struct RectangleEntry
-			{
-				ShadowRectangle rectangle;
-				std::size_t offset;
-				bool merged = false;
-			};
-			std::vector<RectangleEntry> _partialRectangles;
-
-			void _remove(RectangleEntry &entry)
-			{
-				if (!entry.merged)
-				{
-					_removedOffsets.push_back(entry.offset);
-					entry.merged = true;
-				}
-			}
-
-			void _mergePartialAxis(bool horizontal)
-			{
-				auto key = [horizontal](const RectangleEntry &entry) {
-					const auto &r = entry.rectangle;
-					return horizontal ? std::tuple{r.face, r.plane, r.bottom, r.top, r.left, r.right} :
-										std::tuple{r.face, r.plane, r.left, r.right, r.bottom, r.top};
-				};
-				std::sort(_partialRectangles.begin(), _partialRectangles.end(), [&](const auto &a, const auto &b) {
-					return key(a) < key(b);
-				});
-				std::size_t count = 0;
-				for (auto &entry : _partialRectangles)
-				{
-					if (count != 0)
-					{
-						auto &previous = _partialRectangles[count - 1];
-						auto &a = previous.rectangle;
-						const auto &b = entry.rectangle;
-						const bool adjacent = horizontal ? a.bottom == b.bottom && a.top == b.top && a.right == b.left :
-														 a.left == b.left && a.right == b.right && a.top == b.bottom;
-						if (a.face == b.face && a.plane == b.plane && adjacent)
-						{
-							_remove(previous);
-							_remove(entry);
-							if (horizontal)
-							{
-								a.right = b.right;
-							}
-							else
-							{
-								a.top = b.top;
-							}
-							continue;
-						}
-					}
-					_partialRectangles[count++] = entry;
-				}
-				_partialRectangles.resize(count);
-			}
-
-			void _mergePartialRectangles()
-			{
-				_mergePartialAxis(true);
-				_mergePartialAxis(false);
-				for (const auto &entry : _partialRectangles)
-				{
-					if (entry.merged)
-					{
-						const auto &r = entry.rectangle;
-						_emitRectangle(r.face, r.plane, r.left, r.bottom, r.right - r.left, r.top - r.bottom);
-					}
-				}
-			}
-
-			void _emitRectangle(Face face, float plane, float x, float y, float width, float height)
+			void _emitRectangle(Face face, std::size_t plane, std::size_t x, std::size_t y, std::size_t width, std::size_t height)
 			{
 				const auto axis = static_cast<std::size_t>(face) / 2;
 				const auto u = (axis + 1) % 3;
 				const auto v = (axis + 2) % 3;
 				const bool positive = (static_cast<unsigned>(face) & 1U) != 0;
 				spk::Vector3 a{};
-				a.data[axis] = plane;
-				a.data[u] = x;
-				a.data[v] = y;
+				a.data[axis] = static_cast<float>(plane + (positive ? 1 : 0));
+				a.data[u] = static_cast<float>(x);
+				a.data[v] = static_cast<float>(y);
 				auto b = a, c = a, d = a;
 				b.data[u] += static_cast<float>(width);
 				c.data[u] += static_cast<float>(width);
@@ -566,7 +412,7 @@ namespace spk::Voxel
 						}
 						if (w != 1 || h != 1)
 						{
-							_emitRectangle(face, static_cast<float>(plane + ((static_cast<unsigned>(face) & 1U) ? 1 : 0)), static_cast<float>(x), static_cast<float>(y), static_cast<float>(w), static_cast<float>(h));
+							_emitRectangle(face, plane, x, y, w, h);
 						}
 					}
 				}
@@ -589,7 +435,6 @@ namespace spk::Voxel
 						_mergePlane(face, plane, width, height, std::span<std::size_t>(mask).subspan(plane * width * height, width * height));
 					}
 				}
-				_mergePartialRectangles();
 				std::sort(_removedOffsets.begin(), _removedOffsets.end());
 			}
 
@@ -617,24 +462,6 @@ namespace spk::Voxel
 				const auto v = (axis + 2) % 3;
 				const auto index = (static_cast<std::size_t>(position.data[axis]) * _dimensions.data[v] + position.data[v]) * _dimensions.data[u] + position.data[u];
 				mask[index] = vertexOffset;
-			}
-
-			void record(const std::optional<ShadowRectangle> &rectangle, Position position, std::size_t vertexOffset)
-			{
-				if (!rectangle || _dimensions.x > (1U << 23) || _dimensions.y > (1U << 23) || _dimensions.z > (1U << 23))
-				{
-					return;
-				}
-				auto r = *rectangle;
-				const auto axis = static_cast<std::size_t>(r.face) / 2;
-				const auto u = (axis + 1) % 3;
-				const auto v = (axis + 2) % 3;
-				r.plane += static_cast<float>(position.data[axis]);
-				r.left += static_cast<float>(position.data[u]);
-				r.right += static_cast<float>(position.data[u]);
-				r.bottom += static_cast<float>(position.data[v]);
-				r.top += static_cast<float>(position.data[v]);
-				_partialRectangles.push_back({r, vertexOffset});
 			}
 
 			[[nodiscard]] spk::ShadowMap::Mesh build(const Geometry::SurfaceMesh &opaque, const MeshVertexContainer &vertices)
@@ -922,10 +749,6 @@ namespace spk::Voxel
 									{
 										shadowSimplifier.record(face, position, opaque.size());
 									}
-									else
-									{
-										shadowSimplifier.record(faces.partialOpaqueFace[faceIndex], position, opaque.size());
-									}
 									appendTranslated(opaque, translucent, faceTriangles, position);
 								}
 								else
@@ -944,16 +767,11 @@ namespace spk::Voxel
 							{
 								shadowSimplifier.record(face, position, opaque.size());
 							}
-							else
-							{
-								shadowSimplifier.record(faces.partialOpaqueFace[faceIndex], position, opaque.size());
-							}
 							appendTranslated(opaque, translucent, faceTriangles, position);
 						}
 					}
 					if (!closed)
 					{
-						shadowSimplifier.record(faces.innerRectangle, position, opaque.size());
 						appendTranslated(opaque, translucent, faces.inner, position);
 					}
 				}
