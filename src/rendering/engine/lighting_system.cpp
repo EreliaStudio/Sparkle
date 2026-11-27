@@ -107,6 +107,11 @@ namespace spk::Lighting
 					const bool point = light.type == Light::Selection::Type::Point;
 					const bool pointCompatible = resolved->faceCount == 6 && resolved->depthTexture->target() == Texture::Target::TextureCubeMap && resolved->depthTexture->format() == Texture::Format::Depth32F && resolved->depthTexture->size().x == resolved->resolution && resolved->depthTexture->size().y == resolved->resolution;
 					const bool compatible = point ? pointCompatible : (resolved->faceCount == 1 && resolved->depthTexture->target() == Texture::Target::Texture2D);
+					std::size_t dynamicMapCount = 0;
+					for (const auto &texture : resolved->cascadeDynamicTextures)
+					{
+						dynamicMapCount += texture ? 1u : 0u;
+					}
 					if (compatible && point && cubeCount < MaxPointShadowSamplers)
 					{
 						const auto &geometry = resolved->light;
@@ -132,10 +137,7 @@ namespace spk::Lighting
 						bindings->samplers.back().setTexture(resolved->depthTexture);
 						bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 					}
-					else if (compatible && !point && resolved->cascadeCount > 0 && resolved->cascadeCount <= resolved->cascadeTextures.size() && map2DCount + resolved->cascadeCount + static_cast<std::size_t>(std::count_if(resolved->cascadeDynamicTextures.begin(), resolved->cascadeDynamicTextures.end(), [](const auto &texture) {
-																								  return static_cast<bool>(texture);
-																							  })) <=
-																								  MaxShadowSamplers)
+					else if (compatible && !point && resolved->cascadeCount > 0 && resolved->cascadeCount <= resolved->cascadeTextures.size() && map2DCount + resolved->cascadeCount + dynamicMapCount <= MaxShadowSamplers)
 					{
 						shadow.viewProjection = resolved->viewProjection;
 						shadow.viewProjection[4] = resolved->cascadeCameraView;

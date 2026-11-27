@@ -331,16 +331,25 @@ namespace spk::ShadowMap
 			[[nodiscard]] static Key _key(const Mesh &mesh)
 			{
 				const auto &layout = mesh.layout();
-				return {layout.vertexBuffer().identifier(), layout.vertexBuffer().generation(),
-					layout.indexBuffer().identifier(), layout.indexBuffer().generation()};
+				return {layout.vertexBuffer().identifier(), layout.vertexBuffer().generation(), layout.indexBuffer().identifier(), layout.indexBuffer().generation()};
 			}
 
 			[[nodiscard]] bool _matches(const SourceCollection &sources) const
 			{
-				return sources.size() == _ranges.size() &&
-					std::equal(sources.begin(), sources.end(), _ranges.begin(), [](const auto &source, const auto &range) {
-						return source.first == range.first;
-					});
+				if (sources.size() != _ranges.size())
+				{
+					return false;
+				}
+				auto range = _ranges.begin();
+				for (const auto &source : sources)
+				{
+					if (source.first != range->first)
+					{
+						return false;
+					}
+					++range;
+				}
+				return true;
 			}
 
 			[[nodiscard]] static bool _fits(const SourceCollection &sources)
@@ -457,9 +466,10 @@ namespace spk::ShadowMap
 				if (profile)
 				{
 					profile->drawCalls += _models.size();
+					profile->transformUploads += _models.size();
+					profile->transformBytes += _models.size() * sizeof(Matrix4x4);
 				}
 			}
-
 		};
 
 		// All shadow maps share a depth-only pass. No UBO allocation per
@@ -506,12 +516,17 @@ void main()
 				rasterization.polygonOffsetFactor = 1.5f;
 				rasterization.polygonOffsetUnits = 2.0f;
 				rasterization.apply(_context);
+				timing.stop();
+				ProfileScope programTiming(_context.shadowProfile, &Profile::programSetup);
 				program().activate(_context);
 			}
 
 		public:
-			DepthRenderer(RenderContext &context, DepthBatch &batch,
-				const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters) :
+			DepthRenderer(
+				RenderContext &context,
+				DepthBatch &batch,
+				const std::vector<Caster> &staticCasters,
+				const std::vector<Caster> &dynamicCasters) :
 				_context(context),
 				_batch(batch),
 				_staticCasters(staticCasters),
@@ -600,6 +615,8 @@ void main()
 				if (profile)
 				{
 					profile->drawCalls += casters.size();
+					profile->transformUploads += casters.size();
+					profile->transformBytes += casters.size() * sizeof(Matrix4x4);
 				}
 			}
 

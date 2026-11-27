@@ -31,9 +31,9 @@ namespace spk::ShadowMap
 		std::size_t mapsRendered = 0;
 		std::size_t geometryPacks = 0;
 		std::size_t geometryBytes = 0;
+		// Uniform MVP transfers, one per drawn caster in the production path.
 		std::size_t transformUploads = 0;
 		std::size_t transformBytes = 0;
-		std::size_t transformCacheHits = 0;
 		std::size_t drawCalls = 0;
 		std::size_t meshDraws = 0;
 		std::size_t triangles = 0;

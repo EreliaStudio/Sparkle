@@ -203,11 +203,7 @@ namespace spk::ShadowMap
 		// by ten percent of its width for the shader's transition.
 		// Keep the established four-cascade splits exactly; smaller modes
 		// retain a near-biased distribution and cover the full shadow distance.
-		constexpr std::array<std::array<float, CascadeCount>, CascadeCount> fractions{{
-			{1.0f, 0.0f, 0.0f, 0.0f},
-			{0.28125f, 1.0f, 0.0f, 0.0f},
-			{0.125f, 0.53125f, 1.0f, 0.0f},
-			{0.125f, 0.28125f, 0.53125f, 1.0f}}};
+		constexpr std::array<std::array<float, CascadeCount>, CascadeCount> fractions{{{1.0f, 0.0f, 0.0f, 0.0f}, {0.28125f, 1.0f, 0.0f, 0.0f}, {0.125f, 0.53125f, 1.0f, 0.0f}, {0.125f, 0.28125f, 0.53125f, 1.0f}}};
 		std::array<Projection, CascadeCount> result{};
 		float previous = nearDepth;
 		float previousWidth = 0.0f;
