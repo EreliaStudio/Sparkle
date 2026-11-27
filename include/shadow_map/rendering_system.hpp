@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include "rendering/engine/rendering_system.hpp"
@@ -17,7 +18,17 @@ namespace spk::ShadowMap
 		std::shared_ptr<State> _state;
 
 	public:
+		enum class CascadeMode : std::uint8_t
+		{
+			SinglePass = 1,
+			DualPass = 2,
+			TriplePass = 3,
+			QuadraPass = 4
+		};
+
 		RenderingSystem();
+		void setDirectionalCascadeMode(CascadeMode mode);
+		[[nodiscard]] CascadeMode directionalCascadeMode() const noexcept;
 		// Single-map mode is retained for diagnostic A/B comparisons.
 		void setDirectionalCascadesEnabled(bool enabled) noexcept;
 		[[nodiscard]] bool directionalCascadesEnabled() const noexcept;

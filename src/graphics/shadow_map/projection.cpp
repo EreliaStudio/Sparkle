@@ -161,7 +161,7 @@ namespace spk::ShadowMap
 	std::array<Projection, Projection::CascadeCount> Projection::directionalCascades(
 		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters, std::size_t count, std::span<const Projection> previousProjections)
 	{
-		if (light.type != Light::Selection::Type::Directional || light.shadowResolution == 0 || (count != 1 && count != CascadeCount))
+		if (light.type != Light::Selection::Type::Directional || light.shadowResolution == 0 || (count == 0 || count > CascadeCount))
 		{
 			throw spk::Exception("Invalid directional cascade parameters");
 		}
@@ -201,13 +201,15 @@ namespace spk::ShadowMap
 
 		// Fractions of the receiver depth interval; overlap the preceding slice
 		// by ten percent of its width for the shader's transition.
-		constexpr std::array<float, CascadeCount> fractions{0.125f, 0.28125f, 0.53125f, 1.0f};
+		// Keep the established four-cascade splits exactly; smaller modes
+		// retain a near-biased distribution and cover the full shadow distance.
+		constexpr std::array<std::array<float, CascadeCount>, CascadeCount> fractions{{{1.0f, 0.0f, 0.0f, 0.0f}, {0.28125f, 1.0f, 0.0f, 0.0f}, {0.125f, 0.53125f, 1.0f, 0.0f}, {0.125f, 0.28125f, 0.53125f, 1.0f}}};
 		std::array<Projection, CascadeCount> result{};
 		float previous = nearDepth;
 		float previousWidth = 0.0f;
 		for (std::size_t i = 0; i < count; ++i)
 		{
-			const float split = nearDepth + (farDepth - nearDepth) * (count == 1 ? 1.0f : fractions[i]);
+			const float split = nearDepth + (farDepth - nearDepth) * fractions[count - 1][i];
 			const auto corners = truncatedFrustum(camera, split, previous - previousWidth * 0.1f);
 			Vector3 minimum{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
 			Vector3 maximum{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()};

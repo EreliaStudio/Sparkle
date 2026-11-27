@@ -107,6 +107,11 @@ namespace spk::Lighting
 					const bool point = light.type == Light::Selection::Type::Point;
 					const bool pointCompatible = resolved->faceCount == 6 && resolved->depthTexture->target() == Texture::Target::TextureCubeMap && resolved->depthTexture->format() == Texture::Format::Depth32F && resolved->depthTexture->size().x == resolved->resolution && resolved->depthTexture->size().y == resolved->resolution;
 					const bool compatible = point ? pointCompatible : (resolved->faceCount == 1 && resolved->depthTexture->target() == Texture::Target::Texture2D);
+					std::size_t dynamicMapCount = 0;
+					for (const auto &texture : resolved->cascadeDynamicTextures)
+					{
+						dynamicMapCount += texture ? 1u : 0u;
+					}
 					if (compatible && point && cubeCount < MaxPointShadowSamplers)
 					{
 						const auto &geometry = resolved->light;
@@ -132,10 +137,7 @@ namespace spk::Lighting
 						bindings->samplers.back().setTexture(resolved->depthTexture);
 						bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 					}
-					else if (compatible && !point && resolved->cascadeSplits.back() > 0.0f && map2DCount + resolved->cascadeTextures.size() + static_cast<std::size_t>(std::count_if(resolved->cascadeDynamicTextures.begin(), resolved->cascadeDynamicTextures.end(), [](const auto &texture) {
-																								  return static_cast<bool>(texture);
-																							  })) <=
-																								  MaxShadowSamplers)
+					else if (compatible && !point && resolved->cascadeCount > 0 && resolved->cascadeCount <= resolved->cascadeTextures.size() && map2DCount + resolved->cascadeCount + dynamicMapCount <= MaxShadowSamplers)
 					{
 						shadow.viewProjection = resolved->viewProjection;
 						shadow.viewProjection[4] = resolved->cascadeCameraView;
@@ -146,7 +148,7 @@ namespace spk::Lighting
 						const bool soft = light.shadowFilter == Light::ShadowFilter::PCF3x3;
 						shadow.parameters[2] = soft ? 1.0f / static_cast<float>(resolved->resolution) : 0.0f;
 						shadow.parameters[3] = static_cast<float>(map2DCount + 1);
-						for (std::size_t i = 0; i < resolved->cascadeTextures.size(); ++i)
+						for (std::size_t i = 0; i < resolved->cascadeCount; ++i)
 						{
 							const auto &texture = resolved->cascadeTextures[i];
 							// With an independent dynamic map, combine binary
@@ -160,7 +162,7 @@ namespace spk::Lighting
 							bindings->samplers.back().setTexture(texture);
 							bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 						}
-						for (std::size_t i = 0; i < resolved->cascadeDynamicTextures.size(); ++i)
+						for (std::size_t i = 0; i < resolved->cascadeCount; ++i)
 						{
 							const auto &texture = resolved->cascadeDynamicTextures[i];
 							if (!texture)
@@ -174,7 +176,7 @@ namespace spk::Lighting
 							bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 						}
 					}
-					else if (compatible && !point && resolved->cascadeSplits.back() == 0.0f && map2DCount < MaxShadowSamplers)
+					else if (compatible && !point && resolved->cascadeCount == 0 && map2DCount < MaxShadowSamplers)
 					{
 						const std::size_t index = map2DCount++;
 						shadow.viewProjection[0] = resolved->viewProjection[0];

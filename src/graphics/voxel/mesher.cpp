@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -155,6 +157,41 @@ namespace spk::Voxel
 			MeshVertexContainer translucent;
 		};
 
+		// Only two correctly wound triangles covering an exact unit square qualify.
+		// Partial, overlapping, sloped and non-grid faces keep their original triangles.
+		[[nodiscard]] bool isFullOpaqueFace(const MeshVertexContainer &vertices, Face face)
+		{
+			if (vertices.size() != 6)
+			{
+				return false;
+			}
+			const auto axis = static_cast<std::size_t>(face) / 2;
+			const auto u = (axis + 1) % 3;
+			const auto v = (axis + 2) % 3;
+			const float plane = static_cast<unsigned>(face) & 1U ? 1.0f : 0.0f;
+			std::array<unsigned, 2> masks{};
+			for (std::size_t i = 0; i < vertices.size(); ++i)
+			{
+				const auto &p = vertices[i].position;
+				if (p.data[axis] != plane || (p.data[u] != 0 && p.data[u] != 1) || (p.data[v] != 0 && p.data[v] != 1))
+				{
+					return false;
+				}
+				masks[i / 3] |= 1U << (static_cast<unsigned>(p.data[u]) + 2U * static_cast<unsigned>(p.data[v]));
+			}
+			for (std::size_t i = 0; i < 6; i += 3)
+			{
+				const auto a = vertices[i + 1].position - vertices[i].position;
+				const auto b = vertices[i + 2].position - vertices[i].position;
+				if (a.data[u] * b.data[v] - a.data[v] * b.data[u] != (plane == 1.0f ? 1.0f : -1.0f))
+				{
+					return false;
+				}
+			}
+			const unsigned shared = masks[0] & masks[1];
+			return (masks[0] | masks[1]) == 15U && (shared == 6U || shared == 9U);
+		}
+
 		struct CellTemplate
 		{
 			Cell cell;
@@ -163,6 +200,7 @@ namespace spk::Voxel
 			std::optional<SurfaceTriangles> isolated;
 			bool hasInner = false;
 			std::array<bool, 6> hasOuter{};
+			std::array<bool, 6> fullOpaqueFace{};
 			std::array<std::optional<bool>, 6> fullyOccludes{};
 		};
 
@@ -194,6 +232,11 @@ namespace spk::Voxel
 					continue;
 				}
 				emit(polygon, {0, 0, 0}, slots, surface->opaque, surface->translucent, tolerance);
+			}
+			for (const Face face : Faces)
+			{
+				const auto i = static_cast<std::size_t>(face);
+				result.fullOpaqueFace[i] = isFullOpaqueFace(result.outer[i].opaque, face);
 			}
 			return result;
 		}
@@ -296,6 +339,365 @@ namespace spk::Voxel
 			}
 			return std::move(builder).build();
 		}
+
+		class FaceMask
+		{
+		private:
+			static constexpr std::size_t WordBits = 64;
+			std::vector<std::uint64_t> _words;
+
+			[[nodiscard]] static std::uint64_t _lowBits(std::size_t count)
+			{
+				return count == WordBits ? ~std::uint64_t{0} : (std::uint64_t{1} << count) - 1;
+			}
+
+		public:
+			[[nodiscard]] bool empty() const
+			{
+				return _words.empty();
+			}
+
+			void resize(std::size_t count)
+			{
+				_words.resize(count / WordBits + (count % WordBits != 0));
+			}
+
+			void set(std::size_t index)
+			{
+				_words[index / WordBits] |= std::uint64_t{1} << (index % WordBits);
+			}
+
+			[[nodiscard]] std::uint64_t read(std::size_t index, std::size_t count) const
+			{
+				const auto word = index / WordBits;
+				const auto shift = index % WordBits;
+				auto bits = _words[word] >> shift;
+				if (shift + count > WordBits)
+				{
+					bits |= _words[word + 1] << (WordBits - shift);
+				}
+				return bits & _lowBits(count);
+			}
+
+			[[nodiscard]] bool test(std::size_t index) const
+			{
+				return (_words[index / WordBits] & (std::uint64_t{1} << (index % WordBits))) != 0;
+			}
+
+			void clearBits(std::size_t index, std::uint64_t bits)
+			{
+				const auto word = index / WordBits;
+				const auto shift = index % WordBits;
+				_words[word] &= ~(bits << shift);
+				if (shift != 0 && (bits >> (WordBits - shift)) != 0)
+				{
+					_words[word + 1] &= ~(bits >> (WordBits - shift));
+				}
+			}
+
+			void clear(std::size_t index, std::size_t count)
+			{
+				while (count != 0)
+				{
+					const auto shift = index % WordBits;
+					const auto length = std::min(count, WordBits - shift);
+					_words[index / WordBits] &= ~(_lowBits(length) << shift);
+					index += length;
+					count -= length;
+				}
+			}
+
+			[[nodiscard]] std::size_t first(std::size_t index, std::size_t count) const
+			{
+				std::size_t offset = 0;
+				while (offset < count)
+				{
+					const auto length = std::min(WordBits, count - offset);
+					const auto bits = read(index + offset, length);
+					if (bits != 0)
+					{
+						return offset + static_cast<std::size_t>(std::countr_zero(bits));
+					}
+					offset += length;
+				}
+				return count;
+			}
+
+			[[nodiscard]] std::size_t run(std::size_t index, std::size_t count) const
+			{
+				std::size_t offset = 0;
+				while (offset < count)
+				{
+					const auto length = std::min(WordBits, count - offset);
+					const auto occupied = static_cast<std::size_t>(std::countr_one(read(index + offset, length)));
+					offset += std::min(occupied, length);
+					if (occupied < length)
+					{
+						break;
+					}
+				}
+				return offset;
+			}
+		};
+
+		class ShadowMeshSimplifier
+		{
+		private:
+			struct Candidate
+			{
+				std::size_t key;
+				std::size_t vertexOffset;
+			};
+
+			Position _dimensions;
+			std::size_t _cellCount;
+			bool _enabled;
+			std::array<FaceMask, 6> _faces;
+			std::vector<Candidate> _candidates;
+			struct Rectangle
+			{
+				Face face;
+				std::size_t plane;
+				std::size_t x;
+				std::size_t y;
+				std::size_t width;
+				std::size_t height;
+			};
+
+			std::vector<Rectangle> _rectangles;
+
+			[[nodiscard]] static std::array<spk::Vector3, 6> _vertices(const Rectangle &rectangle)
+			{
+				const auto axis = static_cast<std::size_t>(rectangle.face) / 2;
+				const auto u = (axis + 1) % 3;
+				const auto v = (axis + 2) % 3;
+				const bool positive = (static_cast<unsigned>(rectangle.face) & 1U) != 0;
+				spk::Vector3 a{};
+				a.data[axis] = static_cast<float>(rectangle.plane + (positive ? 1 : 0));
+				a.data[u] = static_cast<float>(rectangle.x);
+				a.data[v] = static_cast<float>(rectangle.y);
+				auto b = a, c = a, d = a;
+				b.data[u] += static_cast<float>(rectangle.width);
+				c.data[u] += static_cast<float>(rectangle.width);
+				c.data[v] += static_cast<float>(rectangle.height);
+				d.data[v] += static_cast<float>(rectangle.height);
+				if (positive)
+				{
+					return {a, b, c, a, c, d};
+				}
+				return {a, c, b, a, d, c};
+			}
+
+			// A complete row fits in one word for ordinary chunk sizes.
+			// Remove isolated faces in bulk and keep the original greedy order.
+			void _mergeNarrowPlane(Face face, std::size_t plane, std::size_t width, std::size_t height, FaceMask &pending, FaceMask &merged)
+			{
+				const auto base = plane * width * height;
+				for (std::size_t y = 0; y < height; ++y)
+				{
+					const auto row = base + y * width;
+					auto bits = pending.read(row, width);
+					if (bits == 0)
+					{
+						continue;
+					}
+					const auto below = y + 1 < height ? pending.read(row + width, width) : std::uint64_t{0};
+					const auto isolated = bits & ~(bits << 1) & ~(bits >> 1) & ~below;
+					merged.clearBits(row, isolated);
+					bits &= ~isolated;
+					while (bits != 0)
+					{
+						const auto x = static_cast<std::size_t>(std::countr_zero(bits));
+						const auto w = static_cast<std::size_t>(std::countr_one(bits >> x));
+						const auto mask = w == 64 ? ~std::uint64_t{0} : ((std::uint64_t{1} << w) - 1) << x;
+						std::size_t h = 1;
+						while (y + h < height && (pending.read(row + h * width, width) & mask) == mask)
+						{
+							pending.clearBits(row + h * width, mask);
+							++h;
+						}
+						if (w == 1 && h == 1)
+						{
+							merged.clearBits(row, mask);
+						}
+						else
+						{
+							_rectangles.push_back({face, plane, x, y, w, h});
+						}
+						bits &= ~mask;
+					}
+				}
+			}
+
+			void _mergePlane(Face face, std::size_t plane, std::size_t width, std::size_t height, FaceMask &pending, FaceMask &merged)
+			{
+				const auto base = plane * width * height;
+				for (std::size_t y = 0; y < height; ++y)
+				{
+					const auto row = base + y * width;
+					for (std::size_t x = 0; x < width;)
+					{
+						x += pending.first(row + x, width - x);
+						if (x == width)
+						{
+							break;
+						}
+						const auto w = pending.run(row + x, width - x);
+						std::size_t h = 1;
+						while (y + h < height && pending.run(row + h * width + x, w) == w)
+						{
+							++h;
+						}
+						_consumeRectangle({face, plane, x, y, w, h}, row + x, width, pending, merged);
+						x += w;
+					}
+				}
+			}
+
+			void _consumeRectangle(const Rectangle &rectangle, std::size_t start, std::size_t stride, FaceMask &pending, FaceMask &merged)
+			{
+				for (std::size_t dy = 0; dy < rectangle.height; ++dy)
+				{
+					pending.clear(start + dy * stride, rectangle.width);
+				}
+				if (rectangle.width == 1 && rectangle.height == 1)
+				{
+					merged.clear(start, 1);
+				}
+				else
+				{
+					_rectangles.push_back(rectangle);
+				}
+			}
+
+			void _mergeFaces()
+			{
+				// Only one direction needs a temporary working mask at a time.
+				// The original mask becomes the set of faces replaced by rectangles.
+				for (const Face face : Faces)
+				{
+					auto &merged = _faces[static_cast<std::size_t>(face)];
+					if (merged.empty())
+					{
+						continue;
+					}
+					auto pending = merged;
+					const auto axis = static_cast<std::size_t>(face) / 2;
+					const std::size_t width = _dimensions.data[(axis + 1) % 3];
+					const std::size_t height = _dimensions.data[(axis + 2) % 3];
+					for (std::size_t plane = 0; plane < _dimensions.data[axis]; ++plane)
+					{
+						if (width <= 64)
+						{
+							_mergeNarrowPlane(face, plane, width, height, pending, merged);
+						}
+						else
+						{
+							_mergePlane(face, plane, width, height, pending, merged);
+						}
+					}
+				}
+			}
+
+			[[nodiscard]] bool _isMerged(const Candidate &candidate) const
+			{
+				return _faces[candidate.key & 7U].test(candidate.key >> 3U);
+			}
+
+		public:
+			ShadowMeshSimplifier(Position dimensions, std::size_t cellCount) :
+				_dimensions(dimensions),
+				_cellCount(cellCount),
+				_enabled(dimensions.x <= (1U << 24) && dimensions.y <= (1U << 24) && dimensions.z <= (1U << 24) && cellCount <= std::numeric_limits<std::size_t>::max() / 8U)
+			{
+			}
+
+			void record(Face face, Position position, std::size_t vertexOffset)
+			{
+				// Float positions must exactly represent both ends of a unit face.
+				if (!_enabled)
+				{
+					return;
+				}
+				const auto direction = static_cast<std::size_t>(face);
+				auto &mask = _faces[direction];
+				if (mask.empty())
+				{
+					mask.resize(_cellCount);
+				}
+				const auto axis = direction / 2;
+				const auto u = (axis + 1) % 3;
+				const auto v = (axis + 2) % 3;
+				const auto index = (static_cast<std::size_t>(position.data[axis]) * _dimensions.data[v] + position.data[v]) * _dimensions.data[u] + position.data[u];
+				mask.set(index);
+				// The occlusion pass visits opaque vertices in output order. Keep
+				// this order rather than sorting the offsets after greedy merging.
+				if (_candidates.empty())
+				{
+					_candidates.reserve(std::min<std::size_t>(_cellCount, 4096));
+				}
+				_candidates.push_back({(index << 3U) | direction, vertexOffset});
+			}
+
+			[[nodiscard]] static spk::Vector3 checkedPosition(const Geometry::Vertex &vertex)
+			{
+				const auto position = vertex.position;
+				if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z))
+				{
+					throw spk::Exception("ShadowMap mesh position must be finite");
+				}
+				return position;
+			}
+
+			[[nodiscard]] spk::ShadowMap::Mesh build(const MeshVertexContainer &vertices)
+			{
+				_mergeFaces();
+				if (_rectangles.empty())
+				{
+					// The opaque output is already a sequential triangle list.
+					// Generate its depth positions directly, without copying or validating an index buffer.
+					spk::ShadowMap::Mesh::Builder builder;
+					if (!vertices.empty())
+					{
+						(void)builder.addGeneratedVertices(vertices.size(), [&](std::size_t index) {
+							return checkedPosition(vertices[index]);
+						});
+						builder.addSequentialIndices(vertices.size());
+					}
+					return std::move(builder).build();
+				}
+				std::erase_if(_candidates, [this](const Candidate &candidate) {
+					return !_isMerged(candidate);
+				});
+				spk::ShadowMap::Mesh::Builder builder;
+				const std::size_t remaining = vertices.size() - _candidates.size() * 6;
+				const std::size_t count = remaining + _rectangles.size() * 6;
+				std::size_t source = 0, removed = 0;
+				std::array<spk::Vector3, 6> rectangleVertices{};
+				// Write directly into the final depth mesh: keep exact opaque
+				// positions in their original order and append greedy rectangles.
+				(void)builder.addGeneratedVertices(count, [&](std::size_t index) {
+					if (index >= remaining)
+					{
+						const auto rectangleIndex = (index - remaining) / 6;
+						const auto vertexIndex = (index - remaining) % 6;
+						if (vertexIndex == 0)
+						{
+							rectangleVertices = _vertices(_rectangles[rectangleIndex]);
+						}
+						return rectangleVertices[vertexIndex];
+					}
+					while (removed < _candidates.size() && source == _candidates[removed].vertexOffset)
+					{
+						source += 6;
+						++removed;
+					}
+					return checkedPosition(vertices[source++]);
+				});
+				builder.addSequentialIndices(count);
+				return std::move(builder).build();
+			}
+		};
 
 		struct PreparedVolume
 		{
@@ -432,6 +834,7 @@ namespace spk::Voxel
 		opaque.reserve(std::min<std::size_t>(prepared.occupied, 2500) * 40);
 		MeshVertexContainer translucent;
 		const auto dimensions = volume.dimensions();
+		ShadowMeshSimplifier shadowSimplifier(dimensions, prepared.cells.size());
 		CellTemplateContainer templates(prepared.definitions.size());
 		const std::array<std::size_t, 3> strides{1, dimensions.x, static_cast<std::size_t>(dimensions.x) * dimensions.y};
 		std::vector<CellTemplate *> cellTemplates(prepared.cells.size(), nullptr);
@@ -542,6 +945,10 @@ namespace spk::Voxel
 							{
 								if (!blockerCanOcclude)
 								{
+									if (faces.fullOpaqueFace[faceIndex])
+									{
+										shadowSimplifier.record(face, position, opaque.size());
+									}
 									appendTranslated(opaque, translucent, faceTriangles, position);
 								}
 								else
@@ -556,6 +963,10 @@ namespace spk::Voxel
 						}
 						else
 						{
+							if (faces.fullOpaqueFace[faceIndex])
+							{
+								shadowSimplifier.record(face, position, opaque.size());
+							}
 							appendTranslated(opaque, translucent, faceTriangles, position);
 						}
 					}
@@ -566,10 +977,8 @@ namespace spk::Voxel
 				}
 			}
 		}
+		auto depth = shadowSimplifier.build(opaque);
 		Geometry::SurfaceMesh opaqueMesh = buildSurface(opaque);
-		auto depth = spk::ShadowMap::Mesh::from(opaqueMesh, [](const Geometry::Vertex &vertex) {
-			return vertex.position;
-		});
 		return Geometry(std::move(opaqueMesh), buildSurface(translucent), std::move(depth), std::move(prepared.slots));
 	}
 }
