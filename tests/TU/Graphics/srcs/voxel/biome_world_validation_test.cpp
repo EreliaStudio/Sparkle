@@ -64,7 +64,7 @@ namespace
 	using Clock = std::chrono::steady_clock;
 	constexpr std::uint32_t ShadowResolution = 512;
 	constexpr spk::Vector2UInt ShowcaseImageSize{terrain::ImageSize.x * 2u, terrain::ImageSize.y * 2u};
-	constexpr std::uint32_t ShowcaseShadowResolution = ShadowResolution * 2u;
+	constexpr std::uint32_t ShowcaseShadowResolution = 1024;
 
 	[[nodiscard]] std::uint64_t checksum(const Chunk &chunk)
 	{
@@ -171,7 +171,7 @@ namespace
 			// The aspect ratio is unchanged, so the existing camera framing is preserved.
 			view.setResolution(ShowcaseImageSize);
 			sun.setShadowResolution(ShowcaseShadowResolution);
-			sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+			sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 		}
 
 		void setCamera(spk::Vector3 position, spk::Vector3 target)
@@ -734,6 +734,7 @@ namespace
 		};
 
 		scene.useShowcaseQuality();
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
 		capture("_showcase_hard_1024");
 		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 		capture("_showcase_pcf_1024");
@@ -1267,6 +1268,7 @@ namespace
 			}
 			scene.useShowcaseQuality();
 			scene.sun.setShadowResolution(2048);
+			scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 			const auto showcase = scene.capture();
 			EXPECT_EQ(showcase.size, ShowcaseImageSize);
 			sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_showcase_2048"));

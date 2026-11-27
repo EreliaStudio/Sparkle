@@ -47,7 +47,7 @@
 namespace
 {
 	constexpr spk::Vector2UInt ImageSize{320, 240};
-	constexpr std::uint32_t ShadowSize = 512;
+	constexpr std::uint32_t ShadowSize = 1024;
 	constexpr const char *Category = "rendering/shadow-maps";
 
 	class Atlas final : public spk::Texture
@@ -238,6 +238,7 @@ namespace
 			light.setIntensity(intensity);
 			light.setCastsShadows(true);
 			light.setShadowResolution(ShadowSize);
+			light.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 			if constexpr (std::is_same_v<TLight, spk::Light::Spot>)
 			{
 				light.setRange(12.0f);
@@ -380,7 +381,7 @@ namespace
 
 		auto &sun = scene.addLight<spk::Light::Directional>({-runPerHeight, 1, 0}, {0, 0, 0}, {1, 1, 1}, 2.0f);
 		sun.setShadowDistance(80.0f);
-		sun.setShadowResolution(2048);
+		sun.setShadowResolution(ShadowSize);
 		sun.setShadowFilter(filter);
 		const auto direction = sun.worldDirection();
 		EXPECT_GT(direction.x, 0.0f);
@@ -529,6 +530,7 @@ TEST(ShadowRenderingGolden, SpotHardAndDirectionalSoftUseIndependentFilters)
 	scene.add(scene.cube, 2, {0.9f, -0.2f, 0.6f}, spk::ShadowMap::Mode::Dynamic);
 	auto &spot = scene.addLight<spk::Light::Spot>({2, 4, 2}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 8.0f);
 	auto &directional = scene.addLight<spk::Light::Directional>({-5, 8, 4}, {0, 0, 0}, {1.0f, 0.9f, 0.6f}, 1.7f);
+	spot.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	directional.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "mixed_shadow_filters");
@@ -540,6 +542,7 @@ TEST(ShadowRenderingGolden, PointCubeProjectsOmnidirectionalHardShadowsAndSixDep
 	scene.add(scene.cube, 0, {-0.8f, -0.2f, -0.4f}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 1, {0.7f, -0.2f, -0.8f}, spk::ShadowMap::Mode::Static);
 	auto &light = scene.addLight<spk::Light::Point>({0, 2.5f, 1}, {0, 0, 0}, {1, 0.92f, 0.75f}, 7.0f);
+	light.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_EQ(light.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	render(scene, "point_hard_floor");
 }
@@ -645,7 +648,7 @@ TEST(ShadowRenderingGolden, PointHardAndNineTapPCFHaveDistinctReferences)
 	scene.add(scene.cube, 0, {-1.0f, -0.2f, 0}, spk::ShadowMap::Mode::Static);
 	scene.add(scene.cube, 1, {0.7f, -0.2f, 0.4f}, spk::ShadowMap::Mode::Dynamic);
 	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3, 1.5f}, {0, 0, 0}, {1, 1, 1}, 9.0f);
-	point.setShadowResolution(128);
+	point.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	render(scene, "point_hard_compare");
 	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 	render(scene, "point_pcf3x3_compare");
@@ -832,6 +835,7 @@ TEST(ShadowRenderingGolden, PointAndSpotMixedShapeCastersUseIndependentFilters)
 	auto &point = scene.addLight<spk::Light::Point>({-1.5f, 3.0f, 1.0f}, {0, 0, 0}, {1, 0.45f, 0.35f}, 7.0f);
 	auto &spot = scene.addLight<spk::Light::Spot>({2.0f, 4.0f, 2.0f}, {0, -1, 0}, {0.3f, 0.65f, 1.0f}, 7.0f);
 	point.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+	spot.setShadowFilter(spk::Light::ShadowFilter::Hard);
 	EXPECT_EQ(spot.shadowFilter(), spk::Light::ShadowFilter::Hard);
 	render(scene, "point_spot_non_cube_mixed");
 }
@@ -919,7 +923,7 @@ TEST(ShadowRenderingGolden, DirectionalOffscreenCasterStillShadowsVisibleFloor)
 	scene.add(pillar, 1, {-19.0f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Static);
 	auto &sun = scene.addLight<spk::Light::Directional>({-3, 1, 0}, {0, 0, 0}, {1, 1, 1}, 2.0f);
 	sun.setShadowDistance(18.0f);
-	sun.setShadowResolution(2048);
+	sun.setShadowResolution(ShadowSize);
 	sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
 
 	// The ray from the central floor probe towards the sun passes through
