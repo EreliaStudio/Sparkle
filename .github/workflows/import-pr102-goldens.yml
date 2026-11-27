@@ -1,0 +1,63 @@
+name: Import verified PR102 golden images (one-off)
+on:
+  push:
+    branches:
+      - maintenance/pr102-golden-pcf1024
+permissions:
+  contents: write
+  actions: read
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ca757ca2c6e191fb7aeacbe8bd27319f5932395f
+      - name: Download and verify exact CI artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/EreliaStudio/Sparkle/actions/artifacts/15183159941/zip > "$RUNNER_TEMP/goldens.zip"
+          echo "ce1b93c1d1d92cfc5c19260f27b199c7b2ee65afe6ab09a628978e6d669ccbcc  $RUNNER_TEMP/goldens.zip" | sha256sum -c -
+          python3 - <<'PY'
+          import hashlib, os, re, zipfile
+          from pathlib import Path, PurePosixPath
+          archive = Path(os.environ["RUNNER_TEMP"]) / "goldens.zip"
+          with zipfile.ZipFile(archive) as z:
+              s = z.read("Testing/Temporary/LastTest.log").decode(errors="replace")
+              paths = set()
+              for block in re.split(r"(?m)^\d+/\d+ Testing: ", s)[1:]:
+                  if "Test Failed." not in block or not any(x in block[:150] for x in ("ShadowRenderingGolden", "BiomeWorldGolden")):
+                      continue
+                  for m in re.finditer(r'expectedImages[\\/]+rendering[\\/]+([^"\r\n]+?\.png)|Missing shadow golden image\. Inspect CI result "[^"\r\n]*?results[\\/]+rendering[\\/]+([^"\r\n]+?\.png)', block):
+                      paths.add((m.group(1) or m.group(2)).replace("\\\\", "/").replace("\\", "/"))
+              assert len(paths) == 92, len(paths)
+              files = {}
+              for path in sorted(paths):
+                  p = PurePosixPath(path)
+                  assert not p.is_absolute() and ".." not in p.parts
+                  assert p.parts[0] in ("biome-world", "shadow-maps")
+                  assert "_difference" not in path and "shadow_diagnostic" not in path and "_no_shadows" not in path
+                  data = z.read("tests/TU/Graphics/results/rendering/" + path)
+                  assert data.startswith(b"\x89PNG\r\n\x1a\n")
+                  files[path] = data
+              manifest = "".join(f"{hashlib.sha256(data).hexdigest()}  {path}\n" for path, data in files.items())
+              assert hashlib.sha256(manifest.encode()).hexdigest() == "96826a16b370519e6a1c9c8c8f34ea1e3ea657f6b1af68c70df15648b69cf217"
+              root = Path("tests/TU/Graphics/resources/expectedImages/rendering")
+              for path, data in files.items():
+                  dest = root / path
+                  dest.parent.mkdir(parents=True, exist_ok=True)
+                  dest.write_bytes(data)
+                  assert dest.read_bytes() == data
+              print(f"Verified and copied {len(files)} PNG files")
+          PY
+      - name: Commit only verified images and update PR branch
+        run: |
+          test "$(git rev-parse HEAD)" = "ca757ca2c6e191fb7aeacbe8bd27319f5932395f"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- tests/TU/Graphics/resources/expectedImages/rendering/biome-world tests/TU/Graphics/resources/expectedImages/rendering/shadow-maps
+          git diff --cached --stat
+          git diff --cached --name-only | python3 -c 'import sys; p=sys.stdin.read().splitlines(); assert p and all(x.endswith(".png") and x.startswith("tests/TU/Graphics/resources/expectedImages/rendering/") for x in p)'
+          git commit -m "Update verified shadow and biome golden images"
+          git push origin HEAD:refs/heads/fix/v0.1.5-voxel-world-shadows
