@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -339,14 +340,103 @@ namespace spk::Voxel
 			return std::move(builder).build();
 		}
 
+		class FaceMask
+		{
+		private:
+			static constexpr std::size_t WordBits = 64;
+			std::vector<std::uint64_t> _words;
+
+			[[nodiscard]] static std::uint64_t _lowBits(std::size_t count)
+			{
+				return count == WordBits ? ~std::uint64_t{0} : (std::uint64_t{1} << count) - 1;
+			}
+
+		public:
+			[[nodiscard]] bool empty() const
+			{
+				return _words.empty();
+			}
+
+			void resize(std::size_t count)
+			{
+				_words.resize(count / WordBits + (count % WordBits != 0));
+			}
+
+			void set(std::size_t index)
+			{
+				_words[index / WordBits] |= std::uint64_t{1} << (index % WordBits);
+			}
+
+			[[nodiscard]] std::uint64_t read(std::size_t index, std::size_t count) const
+			{
+				const auto word = index / WordBits;
+				const auto shift = index % WordBits;
+				auto bits = _words[word] >> shift;
+				if (shift + count > WordBits)
+				{
+					bits |= _words[word + 1] << (WordBits - shift);
+				}
+				return bits & _lowBits(count);
+			}
+
+			void clear(std::size_t index, std::size_t count)
+			{
+				while (count != 0)
+				{
+					const auto shift = index % WordBits;
+					const auto length = std::min(count, WordBits - shift);
+					_words[index / WordBits] &= ~(_lowBits(length) << shift);
+					index += length;
+					count -= length;
+				}
+			}
+
+			[[nodiscard]] std::size_t first(std::size_t index, std::size_t count) const
+			{
+				std::size_t offset = 0;
+				while (offset < count)
+				{
+					const auto length = std::min(WordBits, count - offset);
+					const auto bits = read(index + offset, length);
+					if (bits != 0)
+					{
+						return offset + static_cast<std::size_t>(std::countr_zero(bits));
+					}
+					offset += length;
+				}
+				return count;
+			}
+
+			[[nodiscard]] std::size_t run(std::size_t index, std::size_t count) const
+			{
+				std::size_t offset = 0;
+				while (offset < count)
+				{
+					const auto length = std::min(WordBits, count - offset);
+					const auto occupied = static_cast<std::size_t>(std::countr_one(read(index + offset, length)));
+					offset += std::min(occupied, length);
+					if (occupied < length)
+					{
+						break;
+					}
+				}
+				return offset;
+			}
+		};
+
 		class ShadowMeshSimplifier
 		{
 		private:
-			static constexpr std::size_t Missing = std::numeric_limits<std::size_t>::max();
+			struct Candidate
+			{
+				std::size_t key;
+				std::size_t vertexOffset;
+			};
+
 			Position _dimensions;
 			std::size_t _cellCount;
-			std::array<std::vector<std::size_t>, 6> _faces;
-			std::vector<std::size_t> _removedOffsets;
+			std::array<FaceMask, 6> _faces;
+			std::vector<Candidate> _candidates;
 			std::vector<spk::Vector3> _mergedVertices;
 
 			void _emitRectangle(Face face, std::size_t plane, std::size_t x, std::size_t y, std::size_t width, std::size_t height)
@@ -374,68 +464,72 @@ namespace spk::Voxel
 				}
 			}
 
-			void _mergePlane(Face face, std::size_t plane, std::size_t width, std::size_t height, std::span<std::size_t> mask)
+			void _mergePlane(Face face, std::size_t plane, std::size_t width, std::size_t height, FaceMask &pending, FaceMask &merged)
 			{
+				const auto base = plane * width * height;
 				for (std::size_t y = 0; y < height; ++y)
 				{
-					for (std::size_t x = 0; x < width; ++x)
+					const auto row = base + y * width;
+					for (std::size_t x = 0; x < width;)
 					{
-						if (mask[y * width + x] == Missing)
+						x += pending.first(row + x, width - x);
+						if (x == width)
 						{
-							continue;
+							break;
 						}
-						std::size_t w = 1, h = 1;
-						while (x + w < width && mask[y * width + x + w] != Missing)
+						const auto w = pending.run(row + x, width - x);
+						std::size_t h = 1;
+						while (y + h < height && pending.run(row + h * width + x, w) == w)
 						{
-							++w;
-						}
-						while (y + h < height)
-						{
-							const auto row = mask.subspan((y + h) * width + x, w);
-							if (std::find(row.begin(), row.end(), Missing) != row.end())
-							{
-								break;
-							}
 							++h;
 						}
-						for (std::size_t dy = 0; dy < h; ++dy)
-						{
-							for (std::size_t dx = 0; dx < w; ++dx)
-							{
-								auto &offset = mask[(y + dy) * width + x + dx];
-								if (w != 1 || h != 1)
-								{
-									_removedOffsets.push_back(offset);
-								}
-								offset = Missing;
-							}
-						}
-						if (w != 1 || h != 1)
-						{
-							_emitRectangle(face, plane, x, y, w, h);
-						}
+						_consumeRectangle(face, plane, x, y, w, h, row + x, width, pending, merged);
+						x += w;
 					}
+				}
+			}
+
+			void _consumeRectangle(Face face, std::size_t plane, std::size_t x, std::size_t y, std::size_t w, std::size_t h, std::size_t start, std::size_t stride, FaceMask &pending, FaceMask &merged)
+			{
+				for (std::size_t dy = 0; dy < h; ++dy)
+				{
+					pending.clear(start + dy * stride, w);
+				}
+				if (w == 1 && h == 1)
+				{
+					merged.clear(start, 1);
+				}
+				else
+				{
+					_emitRectangle(face, plane, x, y, w, h);
 				}
 			}
 
 			void _mergeFaces()
 			{
+				// Only one direction needs a temporary working mask at a time.
+				// The original mask becomes the set of faces replaced by rectangles.
 				for (const Face face : Faces)
 				{
-					auto &mask = _faces[static_cast<std::size_t>(face)];
-					if (mask.empty())
+					auto &merged = _faces[static_cast<std::size_t>(face)];
+					if (merged.empty())
 					{
 						continue;
 					}
+					auto pending = merged;
 					const auto axis = static_cast<std::size_t>(face) / 2;
 					const std::size_t width = _dimensions.data[(axis + 1) % 3];
 					const std::size_t height = _dimensions.data[(axis + 2) % 3];
 					for (std::size_t plane = 0; plane < _dimensions.data[axis]; ++plane)
 					{
-						_mergePlane(face, plane, width, height, std::span<std::size_t>(mask).subspan(plane * width * height, width * height));
+						_mergePlane(face, plane, width, height, pending, merged);
 					}
 				}
-				std::sort(_removedOffsets.begin(), _removedOffsets.end());
+			}
+
+			[[nodiscard]] bool _isMerged(const Candidate &candidate) const
+			{
+				return _faces[candidate.key / _cellCount].read(candidate.key % _cellCount, 1) != 0;
 			}
 
 		public:
@@ -448,41 +542,51 @@ namespace spk::Voxel
 			void record(Face face, Position position, std::size_t vertexOffset)
 			{
 				// Float positions must exactly represent both ends of a unit face.
-				if (_dimensions.x > (1U << 24) || _dimensions.y > (1U << 24) || _dimensions.z > (1U << 24))
+				if (_dimensions.x > (1U << 24) || _dimensions.y > (1U << 24) || _dimensions.z > (1U << 24) ||
+					_cellCount > std::numeric_limits<std::size_t>::max() / Faces.size())
 				{
 					return;
 				}
-				auto &mask = _faces[static_cast<std::size_t>(face)];
+				const auto direction = static_cast<std::size_t>(face);
+				auto &mask = _faces[direction];
 				if (mask.empty())
 				{
-					mask.resize(_cellCount, Missing);
+					mask.resize(_cellCount);
 				}
-				const auto axis = static_cast<std::size_t>(face) / 2;
+				const auto axis = direction / 2;
 				const auto u = (axis + 1) % 3;
 				const auto v = (axis + 2) % 3;
 				const auto index = (static_cast<std::size_t>(position.data[axis]) * _dimensions.data[v] + position.data[v]) * _dimensions.data[u] + position.data[u];
-				mask[index] = vertexOffset;
+				mask.set(index);
+				// The occlusion pass visits opaque vertices in output order. Keep
+				// this order rather than sorting the offsets after greedy merging.
+				_candidates.push_back({direction * _cellCount + index, vertexOffset});
 			}
 
 			[[nodiscard]] spk::ShadowMap::Mesh build(const Geometry::SurfaceMesh &opaque, const MeshVertexContainer &vertices)
 			{
 				_mergeFaces();
-				if (_removedOffsets.empty())
+				if (_mergedVertices.empty())
 				{
 					return spk::ShadowMap::Mesh::from(opaque, [](const Geometry::Vertex &vertex) {
 						return vertex.position;
 					});
 				}
+				std::erase_if(_candidates, [this](const Candidate &candidate) {
+					return !_isMerged(candidate);
+				});
 				spk::ShadowMap::Mesh::Builder builder;
-				const std::size_t remaining = vertices.size() - _removedOffsets.size() * 6;
+				const std::size_t remaining = vertices.size() - _candidates.size() * 6;
 				const std::size_t count = remaining + _mergedVertices.size();
 				std::size_t source = 0, removed = 0;
+				// Write directly into the final depth mesh: keep exact opaque
+				// positions in their original order and append greedy rectangles.
 				(void)builder.addGeneratedVertices(count, [&](std::size_t index) {
 					if (index >= remaining)
 					{
 						return _mergedVertices[index - remaining];
 					}
-					while (removed < _removedOffsets.size() && source == _removedOffsets[removed])
+					while (removed < _candidates.size() && source == _candidates[removed].vertexOffset)
 					{
 						source += 6;
 						++removed;

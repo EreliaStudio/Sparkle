@@ -502,6 +502,29 @@ TEST(MesherGeometry, SolidMixedMaterialChunkCollapsesToTwelveShadowTriangles)
 	}
 }
 
+TEST(MesherGeometry, GreedyMaskMergesNonAlignedRowsAcrossWordBoundaries)
+{
+	const auto stone = definition(fixture("cube"), "stone_");
+	Volume::Builder builder({65, 2, 3});
+	builder.bind(registry({stone}));
+	for (std::uint32_t z = 0; z < 3; ++z)
+	{
+		for (std::uint32_t y = 0; y < 2; ++y)
+		{
+			for (std::uint32_t x = 0; x < 65; ++x)
+			{
+				builder.set({x, y, z}, 1);
+			}
+		}
+	}
+	const Geometry model = Mesher().bake(builder.build());
+	EXPECT_EQ(model.depthMesh().indexCount(), 36u);
+	EXPECT_NEAR(shadowArea(model), 662.0f, 1.0e-4f);
+	EXPECT_NEAR(shadowArea(model), visualArea(model.opaqueMesh()), 1.0e-4f);
+	EXPECT_EQ(model.depthMesh().bounds().minimum, (spk::Vector3{0, 0, 0}));
+	EXPECT_EQ(model.depthMesh().bounds().maximum, (spk::Vector3{65, 2, 3}));
+}
+
 TEST(MesherGeometry, SimplifiedShadowSurfacePreservesHoleAndWinding)
 {
 	const auto stone = definition(fixture("cube"), "stone_");
