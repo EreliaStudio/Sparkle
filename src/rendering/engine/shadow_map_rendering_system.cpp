@@ -652,7 +652,11 @@ void main()
 				}
 				const auto dynamicSignature = signature(dynamicCasters);
 				const bool staticDirty = staticTargetDirty || cascade.staticSignature != staticSignature;
-				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cache.separateDynamic != separateDynamic || cascade.dynamicSignature != dynamicSignature;
+				// An independent dynamic map does not depend on static depth.
+				// Combined maps and static-only aliases still require rebuilding.
+				const bool staticAffectsDynamic = staticDirty && (!separateDynamic || dynamicCasters.empty());
+				const bool dynamicDirty = staticTargetDirty || staticAffectsDynamic || !cascade.finalTarget ||
+										  cache.separateDynamic != separateDynamic || cascade.dynamicSignature != dynamicSignature;
 				if (staticDirty)
 				{
 					cascade.staticTarget = cache.depthTargets.acquire(light.shadowResolution);

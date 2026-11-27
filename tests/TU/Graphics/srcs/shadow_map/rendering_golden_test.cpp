@@ -1067,6 +1067,53 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 	gl.reset();
 }
 
+TEST(ShadowRendering, ChangingStaticCasterReusesIndependentDynamicDepth)
+{
+	Scene scene(true);
+	const spk::Vector3 eye{0, 12, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-12, 12, -9, 9, 0.1f, 30);
+	const auto pillar = geometry({2, 3, 2});
+	auto &moving = scene.add(pillar, 0, {0, -0.2f, -2}, spk::ShadowMap::Mode::Static);
+	scene.add(pillar, 1, {0, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	auto &sun = scene.addLight<spk::Light::Directional>({0, 10, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(24);
+	sun.setShadowResolution(512);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	const auto execute = [&]() {
+		scene.capture()->execute(gl.renderContext());
+		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	};
+	const auto first = execute();
+	ASSERT_NE(first, nullptr);
+	const auto &original = first->entries.at(sun.registrationOrder());
+	ASSERT_EQ(original.cascadeCount, 4u);
+	moving.transform().place({0.25f, -0.2f, -2});
+	const auto second = execute();
+	ASSERT_NE(second, nullptr);
+	const auto &updated = second->entries.at(sun.registrationOrder());
+	ASSERT_EQ(updated.cascadeCount, original.cascadeCount);
+	std::size_t reused = 0;
+	for (std::size_t i = 0; i < original.cascadeCount; ++i)
+	{
+		if (original.viewProjection[i] != updated.viewProjection[i] ||
+			!original.cascadeDynamicTextures[i] || !updated.cascadeDynamicTextures[i] ||
+			original.cascadeStatistics[i].staticBuilds == updated.cascadeStatistics[i].staticBuilds)
+		{
+			continue;
+		}
+		EXPECT_EQ(updated.cascadeStatistics[i].dynamicBuilds, original.cascadeStatistics[i].dynamicBuilds);
+		EXPECT_EQ(updated.cascadeDynamicTextures[i].identifier(), original.cascadeDynamicTextures[i].identifier());
+		EXPECT_NE(updated.cascadeTextures[i].identifier(), original.cascadeTextures[i].identifier());
+		++reused;
+	}
+	EXPECT_GT(reused, 0u) << "At least one rebuilt static cascade must retain its independent dynamic depth";
+	gl.requireNoErrors();
+	gl.reset();
+}
+
 TEST(ShadowRendering, SeparateDynamicDepthMatchesCombinedStaticDepth)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
