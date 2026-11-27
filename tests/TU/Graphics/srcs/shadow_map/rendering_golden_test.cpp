@@ -1016,7 +1016,7 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 	const auto original = first->entries.at(sun.registrationOrder());
 	ASSERT_EQ(original.cascadeCount, 4u);
 	constexpr std::size_t Cases = 32;
-	constexpr double BudgetMs = 16.7;
+	constexpr double BudgetMs = 1.0;
 	std::array<double, Cases> times{};
 	std::size_t overBudget = 0;
 	std::uint32_t seed = 0xA11CEu;

@@ -505,10 +505,10 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 	constexpr std::size_t Cases = 16;
 	constexpr std::size_t Samples = 3;
 	constexpr std::array<std::uint32_t, 3> Resolutions{512, 1024, 2048};
-	// Initial regression ceilings for full GPU-synchronized rebuilds in CI,
-	// not a claim that the worst-case rebuild fits a 60 Hz frame.
-	constexpr std::array<double, 3> ColdBudgetsMs{16.7, 33.3, 66.7};
-	constexpr double WarmBudgetMs = 4.0;
+	// Strict real-time targets for GPU-synchronized rebuilds.
+	// Optimize the renderer rather than relaxing these limits.
+	constexpr std::array<double, 3> ColdBudgetsMs{1.0, 2.0, 4.0};
+	constexpr double WarmBudgetMs = 0.1;
 	std::uint32_t seed = 0xC45CADEu;
 	const auto sample = [&]() {
 		seed = seed * 1664525u + 1013904223u;

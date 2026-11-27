@@ -172,7 +172,7 @@ TEST(ShadowProjectionPerformance, Randomized128CastersHardBudget)
 	using Clock = std::chrono::steady_clock;
 	constexpr std::size_t Cases = 128;
 	constexpr std::size_t CasterCount = 128;
-	constexpr double BudgetMs = 2.0;
+	constexpr double BudgetMs = 0.25;
 	std::mt19937 random(0x5A4D0u);
 	const auto sample = [&]() {
 		return static_cast<float>(random() % 2001) / 1000.0f - 1.0f;
