@@ -6,12 +6,13 @@
 #include <array>
 #include <atomic>
 #include <bit>
-#include <cstddef>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -54,6 +55,7 @@ namespace spk::ShadowMap
 			Mesh mesh;
 			Matrix4x4 transform;
 			CasterBounds bounds;
+			std::uint64_t signature = 0;
 		};
 
 		[[nodiscard]] CasterBounds worldBounds(const Mesh &mesh, const Matrix4x4 &transform)
@@ -77,23 +79,38 @@ namespace spk::ShadowMap
 			return seed ^ (value + 0x9e3779b97f4a7c15ull + (seed << 6) + (seed >> 2));
 		}
 
+		[[nodiscard]] std::uint64_t casterSignature(const Caster &caster)
+		{
+			const auto &mesh = caster.mesh.layout();
+			std::uint64_t result = mix(mesh.vertexBuffer().identifier(), mesh.vertexBuffer().generation());
+			result = mix(result, mesh.indexBuffer().identifier());
+			result = mix(result, mesh.indexBuffer().generation());
+			for (std::size_t column = 0; column < 4; ++column)
+			{
+				for (std::size_t row = 0; row < 4; ++row)
+				{
+					result = mix(result, std::bit_cast<std::uint32_t>(caster.transform[column][row]));
+				}
+			}
+			return result;
+		}
+
 		[[nodiscard]] std::uint64_t signature(const std::vector<Caster> &casters)
 		{
 			std::uint64_t result = mix(0x46a9c3bbull, casters.size());
 			for (const auto &caster : casters)
 			{
-				const auto &mesh = caster.mesh.layout();
-				result = mix(result, mesh.vertexBuffer().identifier());
-				result = mix(result, mesh.vertexBuffer().generation());
-				result = mix(result, mesh.indexBuffer().identifier());
-				result = mix(result, mesh.indexBuffer().generation());
-				for (std::size_t column = 0; column < 4; ++column)
-				{
-					for (std::size_t row = 0; row < 4; ++row)
-					{
-						result = mix(result, std::bit_cast<std::uint32_t>(caster.transform[column][row]));
-					}
-				}
+				result = mix(result, caster.signature);
+			}
+			return result;
+		}
+
+		[[nodiscard]] std::uint64_t signature(const std::vector<const Caster *> &casters)
+		{
+			std::uint64_t result = mix(0x46a9c3bbull, casters.size());
+			for (const auto *caster : casters)
+			{
+				result = mix(result, caster->signature);
 			}
 			return result;
 		}
@@ -123,6 +140,57 @@ namespace spk::ShadowMap
 		{
 			return Framebuffer({resolution, resolution}, {}, Texture::Format::Depth32F);
 		}
+
+		// Retired depth targets remain immutable until all publication readers
+		// release both the framebuffer and its depth texture. The pool is
+		// surface-local and bounded; it never waits on CPU readers.
+		class DepthTargetPool final
+		{
+		private:
+			static constexpr std::size_t MaxBytes = 128u * 1024u * 1024u;
+			std::vector<Framebuffer::Handle> _retired;
+			std::size_t _bytes = 0;
+
+			[[nodiscard]] static std::size_t bytes(const Framebuffer::Handle &target)
+			{
+				return static_cast<std::size_t>(target->size().x) * target->size().y * sizeof(float);
+			}
+
+		public:
+			[[nodiscard]] Framebuffer::Handle acquire(std::uint32_t resolution)
+			{
+				for (auto it = _retired.begin(); it != _retired.end(); ++it)
+				{
+					if ((*it)->size().x == resolution && it->hasUniqueOwner() &&
+						(*it)->depthStencilAttachment()->texture().hasUniqueOwner())
+					{
+						auto result = std::move(*it);
+						_bytes -= bytes(result);
+						_retired.erase(it);
+						return result;
+					}
+				}
+				return newDepthTarget(resolution).handle();
+			}
+
+			void retire(const Framebuffer::Handle &target)
+			{
+				if (!target || bytes(target) > MaxBytes ||
+					std::any_of(_retired.begin(), _retired.end(), [&](const auto &other) {
+						return other.identifier() == target.identifier();
+					}))
+				{
+					return;
+				}
+				while (!_retired.empty() && _bytes > MaxBytes - bytes(target))
+				{
+					_bytes -= bytes(_retired.front());
+					_retired.erase(_retired.begin());
+				}
+				_retired.push_back(target);
+				_bytes += bytes(target);
+			}
+		};
 
 		struct CubeTargets
 		{
@@ -213,6 +281,97 @@ namespace spk::ShadowMap
 				throw spk::Exception("Shadow depth rendering failed with OpenGL error " + std::to_string(error));
 			}
 		}
+
+		// Directional maps share a depth-only pass. No UBO allocation per
+		// caster, no repeated capture/restore of all GL state per cascade.
+		class DirectionalDepthRenderer final
+		{
+		private:
+			RenderContext &_context;
+			std::optional<TargetScope> _scope;
+			Vector2UInt _size{0, 0};
+
+			[[nodiscard]] static Program &program()
+			{
+				static Program value(
+					R"(#version 460 core
+layout(location = 0) in vec3 inPosition;
+layout(location = 0) uniform mat4 uShadowViewProjection;
+layout(location = 4) uniform mat4 uShadowModel;
+void main()
+{
+	gl_Position = uShadowViewProjection * uShadowModel * vec4(inPosition, 1.0);
+}
+)",
+					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
+				return value;
+			}
+
+			void _begin()
+			{
+				if (_scope.has_value())
+				{
+					return;
+				}
+				_scope.emplace(_context);
+				OpenGL::State::Scissor{.enabled = false}.apply(_context);
+				OpenGL::State::ColorOutput::writable(_context, false).apply(_context);
+				OpenGL::State::DepthTest{}.apply(_context);
+				OpenGL::State::Blend::disabled(_context).apply(_context);
+				auto rasterization = OpenGL::State::Rasterization{};
+				rasterization.polygonOffsetEnabled = true;
+				rasterization.polygonOffsetFactor = 1.5f;
+				rasterization.polygonOffsetUnits = 2.0f;
+				rasterization.apply(_context);
+				program().activate(_context);
+			}
+
+		public:
+			explicit DirectionalDepthRenderer(RenderContext &context) :
+				_context(context)
+			{
+			}
+
+			void render(const Framebuffer::Handle &framebuffer, const Matrix4x4 &projection,
+						const std::vector<const Caster *> &casters, bool clear)
+			{
+				_begin();
+				const Window::Surface::RenderTarget target(*_context.targetSurface, framebuffer);
+				target.activate(_context);
+				_context.activeRenderTarget = target;
+				if (_size != target.size())
+				{
+					_size = target.size();
+					OpenGL::State::Viewport{{0, 0, static_cast<int>(_size.x), static_cast<int>(_size.y)}}.apply(_context);
+				}
+				if (clear)
+				{
+					OpenGL::State::Clear::depth(_context);
+				}
+				if (casters.empty())
+				{
+					return;
+				}
+				glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+				for (const auto *caster : casters)
+				{
+					glUniformMatrix4fv(4, 1, GL_FALSE, &caster->transform[0][0]);
+					caster->mesh.layout().activate(_context);
+					program().render(Program::Primitive::Triangles, caster->mesh.indexType(), 0, caster->mesh.indexCount());
+				}
+			}
+
+			void finish() const
+			{
+				if (_scope.has_value())
+				{
+					if (const GLenum error = glGetError(); error != GL_NO_ERROR)
+					{
+						throw spk::Exception("Directional shadow rendering failed with OpenGL error " + std::to_string(error));
+					}
+				}
+			}
+		};
 
 		void copyDepth(RenderContext &context, const Framebuffer::Handle &source, const Framebuffer::Handle &destination)
 		{
@@ -331,6 +490,7 @@ namespace spk::ShadowMap
 
 		struct LightCache
 		{
+			DepthTargetPool depthTargets;
 			std::array<CascadeCache, Projection::CascadeCount> cascades{};
 			bool cascaded = false;
 			std::size_t cascadeCount = 0;
@@ -502,6 +662,7 @@ namespace spk::ShadowMap
 				return;
 			}
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count);
+			DirectionalDepthRenderer renderer(context);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
 			{
@@ -511,19 +672,21 @@ namespace spk::ShadowMap
 			{
 				const auto &projection = projections[i];
 				auto &cascade = cascades[i];
-				std::vector<Caster> staticCasters, dynamicCasters;
+				std::vector<const Caster *> staticCasters, dynamicCasters;
+				staticCasters.reserve(_staticCasters.size());
+				dynamicCasters.reserve(_dynamicCasters.size());
 				for (const auto &caster : _staticCasters)
 				{
 					if (projection.intersects(caster.bounds))
 					{
-						staticCasters.push_back(caster);
+						staticCasters.push_back(&caster);
 					}
 				}
 				for (const auto &caster : _dynamicCasters)
 				{
 					if (projection.intersects(caster.bounds))
 					{
-						dynamicCasters.push_back(caster);
+						dynamicCasters.push_back(&caster);
 					}
 				}
 				const auto staticSignature = signature(staticCasters);
@@ -534,10 +697,9 @@ namespace spk::ShadowMap
 				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cascade.dynamicSignature != dynamicSignature;
 				if (staticDirty)
 				{
-					auto frame = newDepthTarget(light.shadowResolution);
-					cascade.staticTarget = frame.handle();
-					cascade.staticTexture = *frame.depthStencilAttachmentHandle();
-					renderDepth(context, cascade.staticTarget, projection.viewProjection, staticCasters, true);
+					cascade.staticTarget = cache.depthTargets.acquire(light.shadowResolution);
+					cascade.staticTexture = cascade.staticTarget->depthStencilAttachment()->texture();
+					renderer.render(cascade.staticTarget, projection.viewProjection, staticCasters, true);
 					++cascade.statistics.staticBuilds;
 				}
 				if (dynamicDirty)
@@ -550,11 +712,10 @@ namespace spk::ShadowMap
 					}
 					else
 					{
-						auto frame = newDepthTarget(light.shadowResolution);
-						cascade.finalTarget = frame.handle();
-						cascade.texture = *frame.depthStencilAttachmentHandle();
+						cascade.finalTarget = cache.depthTargets.acquire(light.shadowResolution);
+						cascade.texture = cascade.finalTarget->depthStencilAttachment()->texture();
 						copyDepth(context, cascade.staticTarget, cascade.finalTarget);
-						renderDepth(context, cascade.finalTarget, projection.viewProjection, dynamicCasters, false);
+						renderer.render(cascade.finalTarget, projection.viewProjection, dynamicCasters, false);
 						++cascade.statistics.dynamicBuilds;
 					}
 				}
@@ -563,6 +724,20 @@ namespace spk::ShadowMap
 				cascade.dynamicSignature = dynamicSignature;
 				cascade.statistics.staticCasters = staticCasters.size();
 				cascade.statistics.dynamicCasters = dynamicCasters.size();
+			}
+			renderer.finish();
+			for (std::size_t i = 0; i < cascades.size(); ++i)
+			{
+				const auto &previous = cache.cascades[i];
+				const auto &next = cascades[i];
+				for (const auto &target : {previous.staticTarget, previous.finalTarget})
+				{
+					if (target.identifier() != next.staticTarget.identifier() &&
+						target.identifier() != next.finalTarget.identifier())
+					{
+						cache.depthTargets.retire(target);
+					}
+				}
 			}
 			std::array<float, Projection::CascadeCount> splits{};
 			for (std::size_t i = 0; i < count; ++i)
@@ -931,7 +1106,9 @@ namespace spk::ShadowMap
 				if (!instance.mesh.empty())
 				{
 					const auto transform = base * instance.localTransform;
-					destination.push_back({instance.mesh, transform, needsBounds ? worldBounds(instance.mesh, transform) : CasterBounds{}});
+					Caster caster{instance.mesh, transform, needsBounds ? worldBounds(instance.mesh, transform) : CasterBounds{}};
+					caster.signature = casterSignature(caster);
+					destination.push_back(std::move(caster));
 				}
 			}
 		}
