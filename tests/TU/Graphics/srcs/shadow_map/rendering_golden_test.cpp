@@ -1114,6 +1114,86 @@ TEST(ShadowRendering, ChangingStaticCasterReusesIndependentDynamicDepth)
 	gl.reset();
 }
 
+TEST(ShadowRendering, DepthPassPreservesCallerBindings)
+{
+	Scene scene;
+	scene.add(scene.cube, 0, {0, 0, 0}, spk::ShadowMap::Mode::Static);
+	auto &sun = scene.addLight<spk::Light::Directional>({0, 10, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowResolution(512);
+	auto &point = scene.addLight<spk::Light::Point>({2, 3, 2}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	point.setShadowResolution(512);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+
+	class Observer final : public spk::RenderContext::PassObserver
+	{
+	private:
+		static constexpr std::array<GLenum, 10> bindings()
+		{
+			return {GL_DRAW_FRAMEBUFFER_BINDING, GL_READ_FRAMEBUFFER_BINDING, GL_CURRENT_PROGRAM,
+					GL_VERTEX_ARRAY_BINDING, GL_ARRAY_BUFFER_BINDING, GL_ACTIVE_TEXTURE,
+					GL_TEXTURE_BINDING_2D, GL_TEXTURE_BINDING_CUBE_MAP, GL_SAMPLER_BINDING, GL_UNPACK_ALIGNMENT};
+		}
+
+		std::array<GLint, 10> _before{};
+		std::array<GLint, 4> _viewport{};
+		std::array<GLint, 4> _scissor{};
+		GLint _unit = GL_TEXTURE0;
+
+	public:
+		std::size_t samples = 0;
+
+		void beforePass(std::string_view name) override
+		{
+			if (name != spk::EngineView::ShadowPassKey.name)
+			{
+				return;
+			}
+			glGetIntegerv(GL_ACTIVE_TEXTURE, &_unit);
+			glActiveTexture(GL_TEXTURE3);
+			const auto names = bindings();
+			for (std::size_t i = 0; i < names.size(); ++i)
+			{
+				glGetIntegerv(names[i], &_before[i]);
+			}
+			glGetIntegerv(GL_VIEWPORT, _viewport.data());
+			glGetIntegerv(GL_SCISSOR_BOX, _scissor.data());
+		}
+
+		void afterPass(std::string_view name) override
+		{
+			if (name != spk::EngineView::ShadowPassKey.name)
+			{
+				return;
+			}
+			const auto names = bindings();
+			for (std::size_t i = 0; i < names.size(); ++i)
+			{
+				GLint actual = 0;
+				glGetIntegerv(names[i], &actual);
+				EXPECT_EQ(actual, _before[i]) << "Binding " << names[i];
+			}
+			std::array<GLint, 4> viewport{}, scissor{};
+			glGetIntegerv(GL_VIEWPORT, viewport.data());
+			glGetIntegerv(GL_SCISSOR_BOX, scissor.data());
+			EXPECT_EQ(viewport, _viewport);
+			EXPECT_EQ(scissor, _scissor);
+			glActiveTexture(static_cast<GLenum>(_unit));
+			++samples;
+		}
+	};
+
+	Observer observer;
+	auto &context = gl.renderContext();
+	auto *previous = context.passObserver;
+	context.passObserver = &observer;
+	EXPECT_NO_THROW(scene.capture()->execute(context));
+	context.passObserver = previous;
+	EXPECT_EQ(observer.samples, 1u);
+	gl.requireNoErrors();
+	gl.reset();
+}
+
 TEST(ShadowRendering, SeparateDynamicDepthMatchesCombinedStaticDepth)
 {
 	auto &gl = sparkle_test::OpenGLTestContext::instance();

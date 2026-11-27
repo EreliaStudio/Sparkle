@@ -114,23 +114,73 @@ namespace spk::ShadowMap
 			return result;
 		}
 
+		// Depth-only FBOs have no color or stencil attachments. Preserve only
+		// the states touched by the pass and lazy resource realization.
 		class TargetScope final
 		{
 		private:
-			OpenGL::State::Scope _state;
+			struct Bindings
+			{
+				GLint drawFramebuffer = 0, readFramebuffer = 0, program = 0, vertexArray = 0;
+				GLint arrayBuffer = 0, texture2D = 0, cubeMap = 0;
+
+				Bindings()
+				{
+					glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer);
+					glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFramebuffer);
+					glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+					glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vertexArray);
+					glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
+					// Resource activation binds on the current unit; it does not
+					// change the active unit or bind any sampler.
+					glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture2D);
+					glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &cubeMap);
+				}
+
+				void restore() const noexcept
+				{
+					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(drawFramebuffer));
+					glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(readFramebuffer));
+					glUseProgram(static_cast<GLuint>(program));
+					glBindVertexArray(static_cast<GLuint>(vertexArray));
+					glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
+					glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture2D));
+					glBindTexture(GL_TEXTURE_CUBE_MAP, static_cast<GLuint>(cubeMap));
+				}
+			};
+
 			RenderContext &_context;
 			Window::Surface::RenderTarget _previous;
+			decltype(RenderContext::_activeProgram) _program;
+			Bindings _bindings;
+			OpenGL::State::DepthTest _depth;
+			OpenGL::State::Rasterization _rasterization;
+			OpenGL::State::Viewport _viewport;
+			bool _scissorEnabled;
 
 		public:
 			explicit TargetScope(RenderContext &context) :
-				_state(context),
 				_context(context),
-				_previous(context.activeRenderTarget)
+				_previous(context.activeRenderTarget),
+				_program(context._activeProgram),
+				_depth(OpenGL::State::DepthTest::capture(context)),
+				_rasterization(OpenGL::State::Rasterization::capture(context)),
+				_viewport(OpenGL::State::Viewport::capture(context)),
+				_scissorEnabled(glIsEnabled(GL_SCISSOR_TEST) == GL_TRUE)
 			{
 			}
 
 			~TargetScope()
 			{
+				_bindings.restore();
+				_depth.apply(_context);
+				_rasterization.apply(_context);
+				_viewport.apply(_context);
+				if (_scissorEnabled)
+				{
+					glEnable(GL_SCISSOR_TEST);
+				}
+				_context._activeProgram = _program;
 				_context.activeRenderTarget = _previous;
 			}
 		};
@@ -245,10 +295,8 @@ void main()
 					return;
 				}
 				_scope.emplace(_context);
-				OpenGL::State::Scissor{.enabled = false}.apply(_context);
-				OpenGL::State::ColorOutput::writable(_context, false).apply(_context);
+				glDisable(GL_SCISSOR_TEST);
 				OpenGL::State::DepthTest{}.apply(_context);
-				OpenGL::State::Blend::disabled(_context).apply(_context);
 				auto rasterization = OpenGL::State::Rasterization{};
 				rasterization.polygonOffsetEnabled = true;
 				rasterization.polygonOffsetFactor = 1.5f;
