@@ -608,8 +608,7 @@ namespace spk::Voxel
 			ShadowMeshSimplifier(Position dimensions, std::size_t cellCount) :
 				_dimensions(dimensions),
 				_cellCount(cellCount),
-				_enabled(dimensions.x <= (1U << 24) && dimensions.y <= (1U << 24) && dimensions.z <= (1U << 24) &&
-						 cellCount <= std::numeric_limits<std::size_t>::max() / 8U)
+				_enabled(dimensions.x <= (1U << 24) && dimensions.y <= (1U << 24) && dimensions.z <= (1U << 24) && cellCount <= std::numeric_limits<std::size_t>::max() / 8U)
 			{
 			}
 
