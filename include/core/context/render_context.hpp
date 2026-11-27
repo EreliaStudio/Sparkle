@@ -10,11 +10,6 @@
 
 namespace spk
 {
-	namespace ShadowMap
-	{
-		struct Profile;
-	}
-
 	class RenderContextProgramAccess;
 	template <typename TType>
 	class Uniform;
@@ -54,8 +49,6 @@ namespace spk
 		};
 
 		PassObserver *passObserver = nullptr;
-		// Borrowed optional diagnostics; null on the regular rendering path.
-		ShadowMap::Profile *shadowProfile = nullptr;
 		Window::Surface *targetSurface;
 		Profiler &profiler;
 		ActiveProgram _activeProgram{};
