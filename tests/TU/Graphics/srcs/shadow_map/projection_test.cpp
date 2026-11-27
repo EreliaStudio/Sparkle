@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <vector>
-#include <cmath>
-#include <limits>
 
 #include "exception.hpp"
 #include "math/vector4.hpp"
@@ -126,9 +126,7 @@ TEST(ShadowProjectionTest, CascadesIncludeOffscreenBlockersAndRejectUnrelatedCas
 	light.direction = {3, -1, 0};
 	light.shadowDistance = 18;
 	light.shadowResolution = 2048;
-	const std::array<spk::ShadowMap::CasterBounds, 2> bounds{{
-		{{-19, -0.2f, -1}, {-17, 7.8f, 1}},
-		{{100, 0, 100}, {102, 8, 102}}}};
+	const std::array<spk::ShadowMap::CasterBounds, 2> bounds{{{{-19, -0.2f, -1}, {-17, 7.8f, 1}}, {{100, 0, 100}, {102, 8, 102}}}};
 	const auto cascades = spk::ShadowMap::Projection::directionalCascades(light, camera, bounds);
 	const auto receiverDepth = -(camera.viewMatrix() * spk::Vector4{0, -0.2f, 0, 1}).z;
 	std::size_t index = 0;

@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
-#include <memory>
-#include <mutex>
 #include <concepts>
 #include <cstdint>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <utility>
 
 #include "exception.hpp"

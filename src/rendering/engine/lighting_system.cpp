@@ -132,10 +132,10 @@ namespace spk::Lighting
 						bindings->samplers.back().setTexture(resolved->depthTexture);
 						bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 					}
-					else if (compatible && !point && resolved->cascadeSplits.back() > 0.0f &&
-							 map2DCount + resolved->cascadeTextures.size() + static_cast<std::size_t>(std::count_if(
-								 resolved->cascadeDynamicTextures.begin(), resolved->cascadeDynamicTextures.end(),
-								 [](const auto &texture) { return static_cast<bool>(texture); })) <= MaxShadowSamplers)
+					else if (compatible && !point && resolved->cascadeSplits.back() > 0.0f && map2DCount + resolved->cascadeTextures.size() + static_cast<std::size_t>(std::count_if(resolved->cascadeDynamicTextures.begin(), resolved->cascadeDynamicTextures.end(), [](const auto &texture) {
+																								  return static_cast<bool>(texture);
+																							  })) <=
+																								  MaxShadowSamplers)
 					{
 						shadow.viewProjection = resolved->viewProjection;
 						shadow.viewProjection[4] = resolved->cascadeCameraView;
@@ -169,8 +169,7 @@ namespace spk::Lighting
 							}
 							shadow.cascadeDynamicSlots[i] = static_cast<float>(map2DCount + 1);
 							bindings->samplers.emplace_back(
-								1 + map2DCount++, Sampler::Filtering::Nearest,
-								Sampler::Wrap::ClampToBorder, Sampler::MipmapFiltering::Disabled);
+								1 + map2DCount++, Sampler::Filtering::Nearest, Sampler::Wrap::ClampToBorder, Sampler::MipmapFiltering::Disabled);
 							bindings->samplers.back().setTexture(texture);
 							bindings->samplers.back().setDepthComparison(Sampler::DepthComparison::LessEqual);
 						}

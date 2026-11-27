@@ -159,8 +159,7 @@ namespace spk::ShadowMap
 	}
 
 	std::array<Projection, Projection::CascadeCount> Projection::directionalCascades(
-		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters, std::size_t count,
-		std::span<const Projection> previousProjections)
+		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters, std::size_t count, std::span<const Projection> previousProjections)
 	{
 		if (light.type != Light::Selection::Type::Directional || light.shadowResolution == 0 || (count != 1 && count != CascadeCount))
 		{
@@ -173,10 +172,8 @@ namespace spk::ShadowMap
 		}
 		const auto &projection = camera.projectionMatrix();
 		const bool perspective = camera.projectionMode() == Camera3D::ProjectionMode::Perspective;
-		const float nearDepth = perspective ? projection[3][2] / (projection[2][2] - 1.0f) :
-											  (projection[3][2] + 1.0f) / projection[2][2];
-		const float cameraFar = perspective ? projection[3][2] / (projection[2][2] + 1.0f) :
-											  (projection[3][2] - 1.0f) / projection[2][2];
+		const float nearDepth = perspective ? projection[3][2] / (projection[2][2] - 1.0f) : (projection[3][2] + 1.0f) / projection[2][2];
+		const float cameraFar = perspective ? projection[3][2] / (projection[2][2] + 1.0f) : (projection[3][2] - 1.0f) / projection[2][2];
 		const float distance = std::isfinite(cameraFar) ? std::min(cameraFar, light.shadowDistance) : light.shadowDistance;
 		const float farDepth = std::max(nearDepth + 0.004f, distance);
 		Camera3D lightCamera;
@@ -225,7 +222,9 @@ namespace spk::ShadowMap
 			const float resolution = static_cast<float>(light.shadowResolution);
 			const float paddedHalf = resolution >= 8.0f ? half / (1.0f - 4.0f / resolution) : half;
 			float texel = 2.0f * paddedHalf / resolution;
-			const auto snap = [&](float coordinate) { return resolution >= 8.0f ? std::round(coordinate / texel) * texel : coordinate; };
+			const auto snap = [&](float coordinate) {
+				return resolution >= 8.0f ? std::round(coordinate / texel) * texel : coordinate;
+			};
 			const float x = snap((minimum.x + maximum.x) * 0.5f);
 			const float y = snap((minimum.y + maximum.y) * 0.5f);
 			float left = x - paddedHalf, right = x + paddedHalf;
@@ -240,8 +239,8 @@ namespace spk::ShadowMap
 				const auto &coverage = cached->lightSpaceCoverage;
 				const float border = 2.0f * cached->worldPerTexel;
 				reuseFootprint = minimum.x >= coverage.minimum.x + border &&
-					maximum.x <= coverage.maximum.x - border && minimum.y >= coverage.minimum.y + border &&
-					maximum.y <= coverage.maximum.y - border;
+								 maximum.x <= coverage.maximum.x - border && minimum.y >= coverage.minimum.y + border &&
+								 maximum.y <= coverage.maximum.y - border;
 				if (reuseFootprint)
 				{
 					left = coverage.minimum.x;
@@ -271,9 +270,7 @@ namespace spk::ShadowMap
 				nearPlane = cached->nearPlane;
 				farPlane = cached->farPlane;
 			}
-			result[i] = {Matrix4x4::ortho(left, right, bottom, top, nearPlane, farPlane) * view,
-						 nearPlane, farPlane, split, texel, previous,
-						 {{left, bottom, -farPlane}, {right, top, -nearPlane}}};
+			result[i] = {Matrix4x4::ortho(left, right, bottom, top, nearPlane, farPlane) * view, nearPlane, farPlane, split, texel, previous, {{left, bottom, -farPlane}, {right, top, -nearPlane}}};
 			previousWidth = split - previous;
 			previous = split;
 		}

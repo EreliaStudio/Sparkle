@@ -424,8 +424,7 @@ namespace
 		ASSERT_EQ(shadowed.size(), probes.size());
 		for (std::size_t i = 0; i < heights.size(); ++i)
 		{
-			SCOPED_TRACE(::testing::Message() << "Pillar height " << heights[i] << ", expected shadow extension "
-											 << heights[i] * runPerHeight);
+			SCOPED_TRACE(::testing::Message() << "Pillar height " << heights[i] << ", expected shadow extension " << heights[i] * runPerHeight);
 			const std::size_t start = i * 5;
 			for (std::size_t j = 0; j < 5; ++j)
 			{
@@ -1018,7 +1017,9 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 	ASSERT_NE(first, nullptr);
 	const auto original = first->entries.at(sun.registrationOrder());
 	ASSERT_EQ(original.cascadeCount, 4u);
-	ASSERT_TRUE(std::ranges::any_of(original.cascadeDynamicTextures, [](const auto &texture) { return static_cast<bool>(texture); }));
+	ASSERT_TRUE(std::ranges::any_of(original.cascadeDynamicTextures, [](const auto &texture) {
+		return static_cast<bool>(texture);
+	}));
 	constexpr std::size_t Cases = 32;
 	constexpr double BudgetMs = 1.0;
 	std::array<double, Cases> times{};
@@ -1039,7 +1040,9 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 			ASSERT_NE(published, nullptr);
 			const auto &entry = published->entries.at(sun.registrationOrder());
 			std::size_t dynamicRebuilds = 0;
-			EXPECT_TRUE(std::ranges::any_of(entry.cascadeDynamicTextures, [](const auto &texture) { return static_cast<bool>(texture); }));
+			EXPECT_TRUE(std::ranges::any_of(entry.cascadeDynamicTextures, [](const auto &texture) {
+				return static_cast<bool>(texture);
+			}));
 			for (std::size_t i = 0; i < entry.cascadeCount; ++i)
 			{
 				EXPECT_EQ(entry.cascadeStatistics[i].staticBuilds, original.cascadeStatistics[i].staticBuilds)
@@ -1106,8 +1109,7 @@ TEST(ShadowRendering, SeparateDynamicDepthMatchesCombinedStaticDepth)
 		bool different = false;
 		for (std::size_t channel = 0; channel < 3; ++channel)
 		{
-			different |= std::abs(static_cast<int>(combined.pixels[i + channel]) -
-								  static_cast<int>(separate.pixels[i + channel])) > 2;
+			different |= std::abs(static_cast<int>(combined.pixels[i + channel]) - static_cast<int>(separate.pixels[i + channel])) > 2;
 		}
 		differentPixels += different ? 1u : 0u;
 	}

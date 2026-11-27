@@ -263,12 +263,17 @@ void main()
 			{
 			}
 
-			static const Caster &casterRef(const Caster &caster) { return caster; }
-			static const Caster &casterRef(const Caster *caster) { return *caster; }
+			static const Caster &casterRef(const Caster &caster)
+			{
+				return caster;
+			}
+			static const Caster &casterRef(const Caster *caster)
+			{
+				return *caster;
+			}
 
 			template <typename TCaster>
-			void render(const Framebuffer::Handle &framebuffer, const Matrix4x4 &projection,
-						const std::vector<TCaster> &casters, bool clear)
+			void render(const Framebuffer::Handle &framebuffer, const Matrix4x4 &projection, const std::vector<TCaster> &casters, bool clear)
 			{
 				_begin();
 				const Window::Surface::RenderTarget target(*_context.targetSurface, framebuffer);
@@ -307,10 +312,7 @@ void main()
 				GLint draw = 0;
 				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
 				const auto size = destination->size();
-				glBlitNamedFramebuffer(static_cast<GLuint>(read), static_cast<GLuint>(draw),
-					0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y),
-					0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y),
-					GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+				glBlitNamedFramebuffer(static_cast<GLuint>(read), static_cast<GLuint>(draw), 0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y), 0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
 
 			void finish() const
@@ -324,7 +326,6 @@ void main()
 				}
 			}
 		};
-
 
 	}
 
@@ -591,8 +592,7 @@ void main()
 		}
 
 		void _renderDirectional(
-			RenderContext &context, RenderingSystem::State::LightCache &cache,
-			const Light::Selection::Entry &light, std::size_t count, bool separateDynamic) const
+			RenderContext &context, RenderingSystem::State::LightCache &cache, const Light::Selection::Entry &light, std::size_t count, bool separateDynamic) const
 		{
 			if (cache.sourceCaptureOrdinal > _captureOrdinal)
 			{
@@ -609,9 +609,8 @@ void main()
 				return;
 			}
 			const bool canReuseProjection = cache.cascaded && cache.cascadeCount == count &&
-				cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
-			const auto previousProjections = canReuseProjection ?
-				std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
+											cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
+			const auto previousProjections = canReuseProjection ? std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
 			DepthRenderer renderer(context);
 			auto cascades = cache.cascades;
@@ -643,8 +642,8 @@ void main()
 				const auto staticSignature = signature(staticCasters);
 				const auto dynamicSignature = signature(dynamicCasters);
 				const bool staticDirty = !cache.cascaded || cache.cascadeCount != count || !cascade.staticTarget ||
-					cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection ||
-					cascade.staticSignature != staticSignature;
+										 cache.resolution != light.shadowResolution || cascade.projection != projection.viewProjection ||
+										 cascade.staticSignature != staticSignature;
 				const bool dynamicDirty = staticDirty || !cascade.finalTarget || cache.separateDynamic != separateDynamic || cascade.dynamicSignature != dynamicSignature;
 				if (staticDirty)
 				{
@@ -758,7 +757,9 @@ void main()
 		void _renderLight(
 			RenderContext &context,
 			RenderingSystem::State::LightCache &cache,
-			const Light::Selection::Entry &light, std::size_t cascadeCount, bool separateDynamic) const
+			const Light::Selection::Entry &light,
+			std::size_t cascadeCount,
+			bool separateDynamic) const
 		{
 			if (light.type == Light::Selection::Type::Point)
 			{
@@ -948,11 +949,11 @@ void main()
 					{
 						cascadeCount = Projection::CascadeCount;
 					}
-										// Prefer independent static/dynamic depth, without a full-size
+					// Prefer independent static/dynamic depth, without a full-size
 					// blit on every object movement. Keep one slot for each other
 					// admitted light; fall back to combined depth under pressure.
 					separateDynamic = cascadeCount == Projection::CascadeCount &&
-						!_dynamicCasters.empty() && slots >= remaining + 2 * cascadeCount - 1;
+									  !_dynamicCasters.empty() && slots >= remaining + 2 * cascadeCount - 1;
 					const std::size_t used = separateDynamic ? 2 * cascadeCount : cascadeCount;
 					slots = slots >= used ? slots - used : 0;
 					--remaining;
@@ -1071,8 +1072,8 @@ void main()
 			return;
 		}
 		const bool needsBounds = directionalCascadesEnabled() && std::any_of(lights.begin(), lights.end(), [](const auto &light) {
-			return light.type == Light::Selection::Type::Directional;
-		});
+									 return light.type == Light::Selection::Type::Directional;
+								 });
 		std::vector<Caster> staticCasters;
 		std::vector<Caster> dynamicCasters;
 		for (const ShadowMap::Contributor *contributor : Registry<ShadowMap::Contributor, EngineHeadless *>::instance().elements(engine()))

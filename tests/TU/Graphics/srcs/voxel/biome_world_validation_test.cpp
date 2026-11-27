@@ -11,9 +11,9 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <optional>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <span>
 #include <string>
@@ -47,10 +47,10 @@
 #include "world/world_observer.hpp"
 #include "world/world_streaming_system.hpp"
 
+#include "../shadow_map/shadow_pass_timing.hpp"
 #include "biome_validation_fixture.hpp"
 #include "biome_world_fixture.hpp"
 #include "voxel_world_fixture.hpp"
-#include "../shadow_map/shadow_pass_timing.hpp"
 
 namespace
 {
@@ -830,8 +830,7 @@ namespace
 				   p[2] >= minimum[2] && p[2] < maximum[2];
 		};
 		const auto indexOf = [&](const Cell &p) {
-			return static_cast<std::size_t>((p[2] - minimum[2]) * width * height +
-											(p[1] - minimum[1]) * width + p[0] - minimum[0]);
+			return static_cast<std::size_t>((p[2] - minimum[2]) * width * height + (p[1] - minimum[1]) * width + p[0] - minimum[0]);
 		};
 		for (const auto &[coordinate, entry] : scene.chunks)
 		{
@@ -842,9 +841,7 @@ namespace
 				{
 					for (std::uint32_t x = 0; x < 16; ++x)
 					{
-						const Cell p{static_cast<int>(origin.x) + static_cast<int>(x),
-									 static_cast<int>(origin.y) + static_cast<int>(y),
-									 static_cast<int>(origin.z) + static_cast<int>(z)};
+						const Cell p{static_cast<int>(origin.x) + static_cast<int>(x), static_cast<int>(origin.y) + static_cast<int>(y), static_cast<int>(origin.z) + static_cast<int>(z)};
 						ASSERT_TRUE(inside(p));
 						occupied[indexOf(p)] = entry.chunk().volume().atRaw({x, y, z}) != 0;
 					}
@@ -883,10 +880,7 @@ namespace
 			{
 				if (inside(cell) && occupied[indexOf(cell)] != 0)
 				{
-					return Hit{{origin[0] + distance * direction[0],
-								origin[1] + distance * direction[1],
-								origin[2] + distance * direction[2]},
-							   normal};
+					return Hit{{origin[0] + distance * direction[0], origin[1] + distance * direction[1], origin[2] + distance * direction[2]}, normal};
 				}
 				bool cannotEnter = false;
 				for (std::size_t axis = 0; axis < 3; ++axis)
@@ -1024,9 +1018,7 @@ namespace
 				const auto &map = publishedMap->entries.at(selected->directional.front().registrationOrder);
 				const auto &matrix = map.viewProjection[0];
 				const auto rowLength = [&](std::size_t row) {
-					return std::sqrt(matrix[0][row] * matrix[0][row] +
-									 matrix[1][row] * matrix[1][row] +
-									 matrix[2][row] * matrix[2][row]);
+					return std::sqrt(matrix[0][row] * matrix[0][row] + matrix[1][row] * matrix[1][row] + matrix[2][row] * matrix[2][row]);
 				};
 				std::cout << "[Shadow density] distance=" << distance << " resolution=" << resolution
 						  << " world_per_texel_x=" << 2.0f / (resolution * rowLength(0))
@@ -1060,16 +1052,7 @@ namespace
 			float depth;
 			float normal;
 		};
-		const std::array<BiasVariant, 9> variants{{
-			{"_bias_original", originalDepthBias, originalNormalBias},
-			{"_bias_depth_zero", 0.0f, originalNormalBias},
-			{"_bias_depth_quarter", originalDepthBias * 0.25f, originalNormalBias},
-			{"_bias_depth_double", originalDepthBias * 2.0f, originalNormalBias},
-			{"_bias_normal_zero", originalDepthBias, 0.0f},
-			{"_bias_normal_quarter", originalDepthBias, originalNormalBias * 0.25f},
-			{"_bias_normal_double", originalDepthBias, originalNormalBias * 2.0f},
-			{"_bias_both_zero", 0.0f, 0.0f},
-			{"_bias_both_quarter", originalDepthBias * 0.25f, originalNormalBias * 0.25f}}};
+		const std::array<BiasVariant, 9> variants{{{"_bias_original", originalDepthBias, originalNormalBias}, {"_bias_depth_zero", 0.0f, originalNormalBias}, {"_bias_depth_quarter", originalDepthBias * 0.25f, originalNormalBias}, {"_bias_depth_double", originalDepthBias * 2.0f, originalNormalBias}, {"_bias_normal_zero", originalDepthBias, 0.0f}, {"_bias_normal_quarter", originalDepthBias, originalNormalBias * 0.25f}, {"_bias_normal_double", originalDepthBias, originalNormalBias * 2.0f}, {"_bias_both_zero", 0.0f, 0.0f}, {"_bias_both_quarter", originalDepthBias * 0.25f, originalNormalBias * 0.25f}}};
 		for (const auto &variant : variants)
 		{
 			result.depthBias = variant.depth;
@@ -1112,13 +1095,7 @@ namespace
 			float units;
 			bool cull;
 		};
-		const std::array<RasterVariant, 6> rasterVariants{{
-			{"_raster_original", 1.5f, 2.0f, true},
-			{"_raster_offset_zero", 0.0f, 0.0f, true},
-			{"_raster_offset_quarter", 0.375f, 0.5f, true},
-			{"_raster_offset_double", 3.0f, 4.0f, true},
-			{"_raster_no_culling", 1.5f, 2.0f, false},
-			{"_raster_no_culling_no_offset", 0.0f, 0.0f, false}}};
+		const std::array<RasterVariant, 6> rasterVariants{{{"_raster_original", 1.5f, 2.0f, true}, {"_raster_offset_zero", 0.0f, 0.0f, true}, {"_raster_offset_quarter", 0.375f, 0.5f, true}, {"_raster_offset_double", 3.0f, 4.0f, true}, {"_raster_no_culling", 1.5f, 2.0f, false}, {"_raster_no_culling_no_offset", 0.0f, 0.0f, false}}};
 
 		for (const auto &variant : rasterVariants)
 		{
