@@ -514,6 +514,20 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 	gl.reset(terrain::ImageSize);
 	Scene scene;
 	scene.fill(2);
+	std::size_t opaqueTriangles = 0, shadowTriangles = 0;
+	for (auto &[coordinate, entry] : scene.chunks)
+	{
+		(void)coordinate;
+		const auto *renderer = entry.entity().getComponent<spk::Voxel::Renderer>();
+		ASSERT_NE(renderer, nullptr);
+		const auto *geometry = renderer->geometry();
+		ASSERT_NE(geometry, nullptr);
+		opaqueTriangles += geometry->opaqueMesh().indexCount() / 3;
+		shadowTriangles += geometry->depthMesh().indexCount() / 3;
+	}
+	std::cout << "[Directional shadow geometry] opaque_triangles=" << opaqueTriangles
+			  << " depth_triangles=" << shadowTriangles << '\n';
+	EXPECT_LE(shadowTriangles, opaqueTriangles);
 	scene.disableColorRendering();
 	constexpr std::size_t Cases = 16;
 	constexpr std::size_t Samples = 3;
@@ -980,8 +994,9 @@ namespace
 			ASSERT_NE(geometry, nullptr);
 			const auto &opaque = geometry->opaqueMesh();
 			const auto &depth = geometry->depthMesh();
-			ASSERT_EQ(opaque.vertexCount(), depth.vertexCount());
-			ASSERT_EQ(opaque.indexCount(), depth.indexCount());
+			ASSERT_LE(depth.vertexCount(), opaque.vertexCount());
+			ASSERT_LE(depth.indexCount(), opaque.indexCount());
+			ASSERT_EQ(depth.empty(), opaque.empty());
 			if (opaque.empty())
 			{
 				continue;
@@ -990,13 +1005,36 @@ namespace
 			const auto depthVertices = depth.layout().vertexBuffer().cast<spk::Vector3>();
 			const auto indices = opaque.layout().indexBuffer().cast<std::uint32_t>();
 			const auto depthIndices = depth.layout().indexBuffer().cast<std::uint32_t>();
-			ASSERT_EQ(vertices.size(), depthVertices.size());
-			ASSERT_EQ(indices.size(), depthIndices.size());
-			for (std::size_t i = 0; i < vertices.size(); ++i)
+			ASSERT_EQ(depthIndices.size() % 3, 0u);
+			for (const auto index : depthIndices)
 			{
-				ASSERT_EQ(vertices[i].position, depthVertices[i]);
+				ASSERT_LT(index, depthVertices.size());
 			}
-			ASSERT_TRUE(std::equal(indices.begin(), indices.end(), depthIndices.begin()));
+			double opaqueArea = 0.0, depthArea = 0.0;
+			for (std::size_t i = 0; i < indices.size(); i += 3)
+			{
+				const auto &a = vertices[indices[i]].position;
+				const auto &b = vertices[indices[i + 1]].position;
+				const auto &c = vertices[indices[i + 2]].position;
+				opaqueArea += (b - a).cross(c - a).length() * 0.5;
+			}
+			for (std::size_t i = 0; i < depthIndices.size(); i += 3)
+			{
+				const auto &a = depthVertices[depthIndices[i]];
+				const auto &b = depthVertices[depthIndices[i + 1]];
+				const auto &c = depthVertices[depthIndices[i + 2]];
+				depthArea += (b - a).cross(c - a).length() * 0.5;
+			}
+			ASSERT_NEAR(opaqueArea, depthArea, 1.0e-4);
+			if (indices.size() == depthIndices.size())
+			{
+				ASSERT_EQ(vertices.size(), depthVertices.size());
+				for (std::size_t i = 0; i < vertices.size(); ++i)
+				{
+					ASSERT_EQ(vertices[i].position, depthVertices[i]);
+				}
+				ASSERT_TRUE(std::equal(indices.begin(), indices.end(), depthIndices.begin()));
+			}
 		}
 
 		scene.sun.setCastsShadows(true);

@@ -822,7 +822,7 @@ namespace
 			put(builder, 1, 0, 0, Block::Brick);
 		});
 		EXPECT_EQ(geometry.opaqueMesh().indexCount(), 60u);
-		EXPECT_EQ(geometry.depthMesh().indexCount(), 60u);
+		EXPECT_EQ(geometry.depthMesh().indexCount(), 36u);
 	}
 
 	TEST(VoxelSceneFunctionalTest, FloorCullsSharedFacesBetweenAdjacentVoxels)
@@ -838,7 +838,7 @@ namespace
 		});
 		constexpr std::uint32_t ExposedFaces = 3 * 3 * 2 + 3 * 4;
 		EXPECT_EQ(geometry.opaqueMesh().indexCount(), ExposedFaces * 6);
-		EXPECT_EQ(geometry.depthMesh().indexCount(), ExposedFaces * 6);
+		EXPECT_EQ(geometry.depthMesh().indexCount(), 36u);
 	}
 
 	TEST(VoxelSceneFunctionalTest, RoomMeshCullsInternalCellBoundaries)
