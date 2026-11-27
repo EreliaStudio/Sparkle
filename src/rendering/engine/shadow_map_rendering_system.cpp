@@ -27,7 +27,6 @@
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/state.hpp"
-#include "graphics/opengl/uniform_buffer.hpp"
 #include "light/channel.hpp"
 #include "lighting/system.hpp"
 #include "math/vector4.hpp"
@@ -214,77 +213,9 @@ namespace spk::ShadowMap
 			return result;
 		}
 
-		[[nodiscard]] Program &depthProgram()
-		{
-			static Program program = [] {
-				Program value(
-					std::string(resources::text("shaders/shadow_depth.vert.glsl")),
-					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
-				value.bindUniformBlock("ShadowCamera", 4);
-				value.bindUniformBlock("ShadowModel", 5);
-				return value;
-			}();
-			return program;
-		}
-
-		void renderDepth(
-			RenderContext &context,
-			const Framebuffer::Handle &framebuffer,
-			const Matrix4x4 &projection,
-			const std::vector<Caster> &casters,
-			bool clear)
-		{
-			TargetScope scope(context);
-			const Window::Surface::RenderTarget target(*context.targetSurface, framebuffer);
-			target.activate(context);
-			context.activeRenderTarget = target;
-			const auto size = target.size();
-			OpenGL::State::Viewport{{0, 0, static_cast<int>(size.x), static_cast<int>(size.y)}}.apply(context);
-			OpenGL::State::Scissor{.enabled = false}.apply(context);
-			OpenGL::State::ColorOutput::writable(context, false).apply(context);
-			OpenGL::State::DepthTest{}.apply(context);
-			OpenGL::State::Blend::disabled(context).apply(context);
-			auto rasterization = OpenGL::State::Rasterization{};
-			rasterization.polygonOffsetEnabled = true;
-			rasterization.polygonOffsetFactor = 1.5f;
-			rasterization.polygonOffsetUnits = 2.0f;
-			rasterization.apply(context);
-			if (clear)
-			{
-				OpenGL::State::Clear::depth(context);
-			}
-			if (casters.empty())
-			{
-				if (const GLenum error = glGetError(); error != GL_NO_ERROR)
-				{
-					throw spk::Exception("Shadow depth rendering failed with OpenGL error " + std::to_string(error));
-				}
-				return;
-			}
-			UniformBuffer cameraBuffer(4, sizeof(Matrix4x4));
-			cameraBuffer.setData(projection);
-			cameraBuffer.validate();
-			cameraBuffer.activate(context);
-			Program &program = depthProgram();
-			program.activate(context);
-			for (const Caster &caster : casters)
-			{
-				UniformBuffer modelBuffer(5, sizeof(Matrix4x4));
-				modelBuffer.setData(caster.transform);
-				modelBuffer.validate();
-				modelBuffer.activate(context);
-				caster.mesh.layout().activate(context);
-				program.render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
-			}
-			if (const GLenum error = glGetError(); error != GL_NO_ERROR)
-			{
-				throw spk::Exception("Shadow depth rendering failed with OpenGL error " + std::to_string(error));
-			}
-		}
-
-		// Directional maps share a depth-only pass. No UBO allocation per
-		// caster, no repeated capture/restore of all GL state per cascade.
-		class DirectionalDepthRenderer final
+		// All shadow maps share a depth-only pass. No UBO allocation per
+		// caster, no repeated capture/restore of all GL state per face.
+		class DepthRenderer final
 		{
 		private:
 			RenderContext &_context;
@@ -327,13 +258,17 @@ void main()
 			}
 
 		public:
-			explicit DirectionalDepthRenderer(RenderContext &context) :
+			explicit DepthRenderer(RenderContext &context) :
 				_context(context)
 			{
 			}
 
+			static const Caster &casterRef(const Caster &caster) { return caster; }
+			static const Caster &casterRef(const Caster *caster) { return *caster; }
+
+			template <typename TCaster>
 			void render(const Framebuffer::Handle &framebuffer, const Matrix4x4 &projection,
-						const std::vector<const Caster *> &casters, bool clear)
+						const std::vector<TCaster> &casters, bool clear)
 			{
 				_begin();
 				const Window::Surface::RenderTarget target(*_context.targetSurface, framebuffer);
@@ -353,12 +288,29 @@ void main()
 					return;
 				}
 				glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
-				for (const auto *caster : casters)
+				for (const auto &item : casters)
 				{
-					glUniformMatrix4fv(4, 1, GL_FALSE, &caster->transform[0][0]);
-					caster->mesh.layout().activate(_context);
-					program().render(Program::Primitive::Triangles, caster->mesh.indexType(), 0, caster->mesh.indexCount());
+					const Caster &caster = casterRef(item);
+					glUniformMatrix4fv(4, 1, GL_FALSE, &caster.transform[0][0]);
+					caster.mesh.layout().activate(_context);
+					program().render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
 				}
+			}
+
+			void copy(const Framebuffer::Handle &source, const Framebuffer::Handle &destination)
+			{
+				_begin();
+				source.activate(_context);
+				GLint read = 0;
+				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &read);
+				destination.activate(_context);
+				GLint draw = 0;
+				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
+				const auto size = destination->size();
+				glBlitNamedFramebuffer(static_cast<GLuint>(read), static_cast<GLuint>(draw),
+					0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y),
+					0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y),
+					GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
 
 			void finish() const
@@ -367,30 +319,13 @@ void main()
 				{
 					if (const GLenum error = glGetError(); error != GL_NO_ERROR)
 					{
-						throw spk::Exception("Directional shadow rendering failed with OpenGL error " + std::to_string(error));
+						throw spk::Exception("Shadow depth rendering failed with OpenGL error " + std::to_string(error));
 					}
 				}
 			}
 		};
 
-		void copyDepth(RenderContext &context, const Framebuffer::Handle &source, const Framebuffer::Handle &destination)
-		{
-			TargetScope scope(context);
-			source.activate(context);
-			GLint read = 0;
-			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &read);
-			destination.activate(context);
-			GLint draw = 0;
-			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &draw);
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(read));
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(draw));
-			const GLsizei size = static_cast<GLsizei>(destination->size().x);
-			glBlitFramebuffer(0, 0, size, size, 0, 0, size, size, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-			if (const GLenum error = glGetError(); error != GL_NO_ERROR)
-			{
-				throw spk::Exception("Shadow depth copy failed with OpenGL error " + std::to_string(error));
-			}
-		}
+
 	}
 
 	PointBudget::PointBudget() :
@@ -586,6 +521,7 @@ void main()
 			}
 			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature || cache.publishedAdmission != light.admission;
 			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
+			DepthRenderer renderer(context);
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
 			{
@@ -593,22 +529,31 @@ void main()
 				staticFaces = std::move(targets.faces);
 				for (std::size_t face = 0; face < staticFaces.size(); ++face)
 				{
-					renderDepth(context, staticFaces[face], matrices[face], _staticCasters, true);
+					renderer.render(staticFaces[face], matrices[face], _staticCasters, true);
 				}
 			}
 			std::array<Framebuffer::Handle, 6> finalFaces = cache.pointFinalFaces;
 			Texture::Handle finalTexture = cache.finalTexture;
 			if (dynamicDirty)
 			{
-				auto targets = newCubeTargets(light.shadowResolution);
-				finalTexture = std::move(targets.depth);
-				finalFaces = std::move(targets.faces);
-				for (std::size_t face = 0; face < finalFaces.size(); ++face)
+				if (_dynamicCasters.empty())
 				{
-					copyDepth(context, staticFaces[face], finalFaces[face]);
-					renderDepth(context, finalFaces[face], matrices[face], _dynamicCasters, false);
+					finalFaces = staticFaces;
+					finalTexture = staticFaces.front()->depthStencilAttachment()->texture();
+				}
+				else
+				{
+					auto targets = newCubeTargets(light.shadowResolution);
+					finalTexture = std::move(targets.depth);
+					finalFaces = std::move(targets.faces);
+					for (std::size_t face = 0; face < finalFaces.size(); ++face)
+					{
+						renderer.copy(staticFaces[face], finalFaces[face]);
+						renderer.render(finalFaces[face], matrices[face], _dynamicCasters, false);
+					}
 				}
 			}
+			renderer.finish();
 			// Commit only after every face was generated successfully. The previous
 			// depth texture remains untouched and valid for historical readers.
 			if (!dynamicDirty && cache.publishedAdmission == light.admission)
@@ -668,7 +613,7 @@ void main()
 			const auto previousProjections = canReuseProjection ?
 				std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
-			DirectionalDepthRenderer renderer(context);
+			DepthRenderer renderer(context);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
 			{
@@ -722,7 +667,7 @@ void main()
 						cascade.texture = cascade.finalTarget->depthStencilAttachment()->texture();
 						if (!separateDynamic)
 						{
-							copyDepth(context, cascade.staticTarget, cascade.finalTarget);
+							renderer.copy(cascade.staticTarget, cascade.finalTarget);
 						}
 						renderer.render(cascade.finalTarget, projection.viewProjection, dynamicCasters, separateDynamic);
 						++cascade.statistics.dynamicBuilds;
@@ -837,25 +782,41 @@ void main()
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
 									  cache.dynamicSignature != _dynamicSignature;
+			DepthRenderer renderer(context);
 			Framebuffer::Handle staticTarget = cache.staticTarget;
 			if (staticDirty)
 			{
-				staticTarget = newDepthTarget(light.shadowResolution).handle();
-				renderDepth(context, staticTarget, projection.viewProjection, _staticCasters, true);
+				staticTarget = cache.depthTargets.acquire(light.shadowResolution);
+				renderer.render(staticTarget, projection.viewProjection, _staticCasters, true);
 			}
 			Framebuffer::Handle finalTarget = cache.finalTarget;
 			Texture::Handle finalTexture = cache.finalTexture;
 			if (dynamicDirty)
 			{
-				Framebuffer finalFrame = newDepthTarget(light.shadowResolution);
-				finalTexture = *finalFrame.depthStencilAttachmentHandle();
-				finalTarget = finalFrame.handle();
-				copyDepth(context, staticTarget, finalTarget);
-				renderDepth(context, finalTarget, projection.viewProjection, _dynamicCasters, false);
+				if (_dynamicCasters.empty())
+				{
+					finalTarget = staticTarget;
+					finalTexture = staticTarget->depthStencilAttachment()->texture();
+				}
+				else
+				{
+					finalTarget = cache.depthTargets.acquire(light.shadowResolution);
+					finalTexture = finalTarget->depthStencilAttachment()->texture();
+					renderer.copy(staticTarget, finalTarget);
+					renderer.render(finalTarget, projection.viewProjection, _dynamicCasters, false);
+				}
 			}
 			if (!dynamicDirty && cache.publishedAdmission == light.admission)
 			{
 				return;
+			}
+			renderer.finish();
+			for (const auto &target : {cache.staticTarget, cache.finalTarget})
+			{
+				if (target.identifier() != staticTarget.identifier() && target.identifier() != finalTarget.identifier())
+				{
+					cache.depthTargets.retire(target);
+				}
 			}
 			cache.cascaded = false;
 			cache.cascades = {};
