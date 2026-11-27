@@ -724,6 +724,28 @@ namespace
 {
 	namespace validation = sparkle_test::biome_validation;
 
+	void captureShowcaseShadowComparison(Scene &scene, const std::string &name)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const auto capture = [&](const std::string &suffix) {
+			const auto pixels = scene.capture();
+			EXPECT_EQ(pixels.size, ShowcaseImageSize);
+			gl.save(sparkle_test::resultImagePath("rendering/biome-world", name + suffix));
+		};
+
+		scene.useShowcaseQuality();
+		capture("_showcase_hard_1024");
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
+		capture("_showcase_pcf_1024");
+		scene.sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		scene.sun.setShadowResolution(2048);
+		capture("_showcase_hard_2048");
+
+		// Restore the original diagnostic configuration for the existing captures.
+		scene.view.setResolution(terrain::ImageSize);
+		scene.sun.setShadowResolution(ShadowResolution);
+	}
+
 	void captureShadowDiagnostics(Scene &scene, const std::string &name)
 	{
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
@@ -1328,6 +1350,7 @@ namespace
 		scene.setCamera(view.camera, view.target);
 		if (shadowDiagnostics)
 		{
+			captureShowcaseShadowComparison(scene, name);
 			scene.shadowSystem.setDirectionalCascadesEnabled(false);
 			captureShadowDiagnostics(scene, name);
 			captureCloseShadowDiagnostics(scene, name);
