@@ -8,9 +8,10 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
-#include <limits>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <set>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -1057,6 +1058,114 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 #if defined(NDEBUG)
 	EXPECT_EQ(overBudget, 0u);
 #endif
+	gl.requireNoErrors();
+	gl.reset();
+}
+
+TEST(ShadowRendering, SeparateDynamicDepthMatchesCombinedStaticDepth)
+{
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	const auto render = [&](spk::ShadowMap::Mode mode, const std::string &name) {
+		Scene scene;
+		const auto pillar = geometry({2, 3, 2});
+		scene.add(pillar, 0, {-2.0f, -0.2f, -1.0f}, spk::ShadowMap::Mode::Static);
+		scene.add(pillar, 1, {0.5f, -0.2f, 0.0f}, mode);
+		auto &sun = scene.addLight<spk::Light::Directional>({-4, 8, 3}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+		sun.setShadowResolution(1024);
+		sun.setShadowDistance(24);
+		sun.setShadowFilter(spk::Light::ShadowFilter::Hard);
+		gl.reset(scene.imageSize);
+		scene.capture()->execute(gl.renderContext());
+		spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+		spk::DrawEngineViewCommand(scene.view.output(), {.anchor = {0, 0}, .size = scene.imageSize}).execute(gl.renderContext());
+		const auto image = gl.capture();
+		gl.save(sparkle_test::resultImagePath(Category, name));
+		const auto result = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+		EXPECT_NE(result, nullptr);
+		if (result)
+		{
+			const auto &entry = result->entries.at(sun.registrationOrder());
+			const bool hasOverlay = std::ranges::any_of(entry.cascadeDynamicTextures, [](const auto &texture) {
+				return static_cast<bool>(texture);
+			});
+			EXPECT_EQ(hasOverlay, mode == spk::ShadowMap::Mode::Dynamic);
+		}
+		gl.requireNoErrors();
+		gl.reset();
+		return image;
+	};
+
+	const auto combined = render(spk::ShadowMap::Mode::Static, "directional_combined_static_depth");
+	const auto separate = render(spk::ShadowMap::Mode::Dynamic, "directional_separate_dynamic_depth");
+	ASSERT_EQ(combined.pixels.size(), separate.pixels.size());
+	std::size_t differentPixels = 0;
+	for (std::size_t i = 0; i < combined.pixels.size(); i += 4)
+	{
+		bool different = false;
+		for (std::size_t channel = 0; channel < 3; ++channel)
+		{
+			different |= std::abs(static_cast<int>(combined.pixels[i + channel]) -
+								  static_cast<int>(separate.pixels[i + channel])) > 2;
+		}
+		differentPixels += different ? 1u : 0u;
+	}
+	EXPECT_LE(differentPixels, combined.pixels.size() / (4 * 1000))
+		<< "Separate depth maps must reproduce the combined hard-shadow result";
+}
+
+TEST(ShadowRendering, RecycledTargetsPreserveHeldDepthPublication)
+{
+	Scene scene;
+	scene.add(geometry({2, 3, 2}), 1, {0, -0.2f, 0}, spk::ShadowMap::Mode::Static);
+	auto &sun = scene.addLight<spk::Light::Directional>({-3, 8, 4}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowResolution(512);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	const auto execute = [&]() {
+		const auto snapshot = scene.capture();
+		EXPECT_TRUE(snapshot->executePass(spk::EngineView::ShadowPassKey.name, gl.renderContext()));
+		glFinish();
+		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	};
+	auto original = execute();
+	ASSERT_NE(original, nullptr);
+	const auto &entry = original->entries.at(sun.registrationOrder());
+	std::size_t index = 0;
+	while (index < entry.cascadeCount && entry.cascadeStatistics[index].staticCasters == 0)
+	{
+		++index;
+	}
+	ASSERT_LT(index, entry.cascadeCount);
+	auto retained = entry.cascadeTextures[index];
+	const auto readDepth = [&](const spk::Texture::Handle &texture) {
+		spk::OpenGL::State::Scope restore(gl.renderContext());
+		spk::Framebuffer target({512, 512}, std::vector<spk::Texture::Handle>{}, texture);
+		target.activate(gl.renderContext());
+		std::vector<float> depth(512 * 512);
+		glReadPixels(0, 0, 512, 512, GL_DEPTH_COMPONENT, GL_FLOAT, depth.data());
+		EXPECT_EQ(glGetError(), GL_NO_ERROR);
+		return depth;
+	};
+	const auto originalDepth = readDepth(retained);
+	ASSERT_LT(*std::min_element(originalDepth.begin(), originalDepth.end()), 1.0f);
+	std::set<spk::GPUResource::Identifier> seen;
+	bool recycled = false;
+	for (int step = 0; step < 10; ++step)
+	{
+		const spk::Vector3 source{-3.0f + static_cast<float>(step + 1), 8, 4};
+		scene.lights.front()->transform().setRotation(spk::Quaternion::lookAt(source, {0, 0, 0}));
+		const auto current = execute();
+		ASSERT_NE(current, nullptr);
+		const auto &published = current->entries.at(sun.registrationOrder());
+		for (std::size_t i = 0; i < published.cascadeCount; ++i)
+		{
+			const auto id = published.cascadeTextures[i].identifier();
+			EXPECT_NE(id, retained.identifier());
+			recycled |= !seen.insert(id).second;
+		}
+	}
+	EXPECT_TRUE(recycled) << "At least one released depth target should be recycled";
+	EXPECT_EQ(originalDepth, readDepth(retained)) << "A retained historical publication was modified";
 	gl.requireNoErrors();
 	gl.reset();
 }
