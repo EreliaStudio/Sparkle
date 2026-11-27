@@ -137,6 +137,7 @@ namespace sparkle_test::voxel_world
 			float baseHeight = 8.5f;
 			std::int32_t minimumHeight = 3;
 			std::int32_t maximumHeight = 15;
+			std::int32_t chunkRadius = 4;
 		};
 
 	private:
@@ -225,11 +226,12 @@ namespace sparkle_test::voxel_world
 		};
 
 		spk::World::Biome::Registry _biomes;
+		std::int32_t _chunkRadius;
 
 	protected:
 		[[nodiscard]] bool _prepareGenerationData(const Coordinate &coordinate, GenerationData &data) override
 		{
-			if (coordinate.y != 0 || coordinate.x < -4 || coordinate.x > 4 || coordinate.z < -4 || coordinate.z > 4)
+			if (coordinate.y != 0 || coordinate.x < -_chunkRadius || coordinate.x > _chunkRadius || coordinate.z < -_chunkRadius || coordinate.z > _chunkRadius)
 			{
 				return false;
 			}
@@ -237,7 +239,8 @@ namespace sparkle_test::voxel_world
 		}
 
 	public:
-		explicit Generator(const Registry &definitions, Settings settings)
+		explicit Generator(const Registry &definitions, Settings settings) :
+			_chunkRadius(settings.chunkRadius)
 		{
 			_biomes.add<TerrainBiome>("terrain", settings);
 			bind(&_biomes);

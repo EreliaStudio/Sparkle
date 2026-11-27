@@ -1846,7 +1846,7 @@ namespace
 	{
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		gl.reset(ShowcaseImageSize);
-		Scene scene;
+		Scene scene(false, terrain::Generator::Settings{.chunkRadius = radius});
 		const auto side = static_cast<std::size_t>(radius * 2 + 1);
 		const auto count = side * side;
 		const auto start = Clock::now();
