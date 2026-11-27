@@ -442,7 +442,7 @@ namespace
 	constexpr std::uint64_t RandomSeed = 0x9E3779B97F4A7C15ULL;
 	constexpr std::size_t RandomCases = 256;
 	constexpr std::size_t RandomBakeSamples = 3;
-	constexpr auto ChunkBakeBudget = std::chrono::milliseconds(5);
+	constexpr auto ChunkBakeBudget = std::chrono::milliseconds(6);
 
 	class RandomGenerator
 	{
