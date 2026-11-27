@@ -27,7 +27,8 @@ namespace spk::ShadowMap
 		enum class DepthSubmissionMode
 		{
 			Individual,
-			Batched
+			Batched,
+			BatchedCached
 		};
 
 		void setDepthSubmissionMode(DepthSubmissionMode mode) noexcept;

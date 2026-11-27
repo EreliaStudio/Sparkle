@@ -1713,11 +1713,13 @@ namespace
 		DepthSubmission submission;
 	};
 
-	constexpr std::array<ScalingConfiguration, 4> ScalingConfigurations{{
+	constexpr std::array<ScalingConfiguration, 6> ScalingConfigurations{{
 		{"dual_individual", CascadeMode::DualPass, DepthSubmission::Individual},
 		{"dual_batched", CascadeMode::DualPass, DepthSubmission::Batched},
 		{"quadra_individual", CascadeMode::QuadraPass, DepthSubmission::Individual},
-		{"quadra_batched", CascadeMode::QuadraPass, DepthSubmission::Batched}}};
+		{"quadra_batched", CascadeMode::QuadraPass, DepthSubmission::Batched},
+		{"dual_batched_cached", CascadeMode::DualPass, DepthSubmission::BatchedCached},
+		{"quadra_batched_cached", CascadeMode::QuadraPass, DepthSubmission::BatchedCached}}};
 
 	void configureScaling(Scene &scene, const ScalingConfiguration &configuration)
 	{
@@ -1741,7 +1743,7 @@ namespace
 		sparkle_test::ImageComparisonOptions tolerance;
 		tolerance.rgbTolerance = 8;
 		tolerance.alphaTolerance = 8;
-		for (std::size_t mode = 0; mode < ScalingConfigurations.size(); mode += 2)
+		for (std::size_t mode = 0; mode < 4; mode += 2)
 		{
 			const std::string name = "shadow_scaling_" + std::to_string(chunkCount) +
 				(mode == 0 ? "_dual_1024" : "_quadra_1024");
@@ -1763,6 +1765,16 @@ namespace
 			const auto parity = sparkle_test::compareImages(actual, individual,
 				sparkle_test::resultImagePath(category, name + "_batch_difference"), tolerance);
 			EXPECT_TRUE(parity.matches) << name << ": " << parity.differentPixelCount << " batching differences";
+			const auto cached = sparkle_test::resultImagePath(category, name + "_cached");
+			configureScaling(scene, ScalingConfigurations[4 + mode / 2]);
+			scene.sun.setShadowResolution(512);
+			(void)scene.capture();
+			scene.sun.setShadowResolution(1024);
+			EXPECT_EQ(scene.capture().size, ShowcaseImageSize);
+			gl.save(cached);
+			const auto cachedParity = sparkle_test::compareImages(cached, individual,
+				sparkle_test::resultImagePath(category, name + "_cached_difference"), tolerance);
+			EXPECT_TRUE(cachedParity.matches) << name << ": " << cachedParity.differentPixelCount << " cached batching differences";
 			const auto expected = sparkle_test::expectedImagePath(category, name);
 			if (std::filesystem::exists(expected))
 			{
@@ -1879,7 +1891,7 @@ namespace
 		compareScalingImages(scene, count);
 		scene.disableColorRendering();
 		std::array<ScalingMeasurements, ScalingConfigurations.size()> results;
-		for (int sample = 0; sample < 8; ++sample)
+		for (int sample = 0; sample < 12; ++sample)
 		{
 			for (std::size_t order = 0; order < ScalingConfigurations.size(); ++order)
 			{
@@ -1889,7 +1901,7 @@ namespace
 		}
 		for (std::size_t i = 0; i < results.size(); ++i)
 		{
-			ASSERT_EQ(results[i].completion.size(), 8u);
+			ASSERT_EQ(results[i].completion.size(), 12u);
 			reportScaling(count, ScalingConfigurations[i], results[i]);
 		}
 		gl.requireNoErrors();

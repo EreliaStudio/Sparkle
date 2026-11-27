@@ -308,6 +308,13 @@ namespace spk::ShadowMap
 			std::vector<GLint> _baseVertices;
 			std::vector<Matrix4x4> _models;
 
+			struct TransformSlot
+			{
+				ShaderStorageBuffer buffer{5, 0, sizeof(Matrix4x4)};
+				std::vector<Matrix4x4> models;
+			};
+			std::vector<TransformSlot> _transformSlots;
+
 			[[nodiscard]] static Key _key(const Mesh &mesh)
 			{
 				const auto &layout = mesh.layout();
@@ -397,13 +404,37 @@ namespace spk::ShadowMap
 				_models.push_back(caster.transform);
 			}
 
-			void draw(RenderContext &context)
+			void uploadTransforms(ShaderStorageBuffer &buffer)
 			{
-				_transforms.setUsage(BufferGPUResource::Usage::StreamDraw);
-				_transforms.resize(_models.size());
-				_transforms.setDynamicData(std::span<const Matrix4x4>(_models));
-				_transforms.validate();
-				_transforms.activate(context);
+				buffer.setUsage(BufferGPUResource::Usage::StreamDraw);
+				buffer.resize(_models.size());
+				buffer.setDynamicData(std::span<const Matrix4x4>(_models));
+				buffer.validate();
+			}
+
+			void draw(RenderContext &context, std::optional<std::size_t> cachedSlot)
+			{
+				if (cachedSlot)
+				{
+					// Distinct storage for each draw in a light pass. Unchanged
+					// transforms need no upload, even if the light has moved.
+					if (_transformSlots.size() <= *cachedSlot)
+					{
+						_transformSlots.resize(*cachedSlot + 1);
+					}
+					auto &slot = _transformSlots[*cachedSlot];
+					if (slot.models != _models)
+					{
+						uploadTransforms(slot.buffer);
+						slot.models = _models;
+					}
+					slot.buffer.activate(context);
+				}
+				else
+				{
+					uploadTransforms(_transforms);
+					_transforms.activate(context);
+				}
 				_mesh.layout().activate(context);
 				glMultiDrawElementsBaseVertex(GL_TRIANGLES, _counts.data(), GL_UNSIGNED_INT, _offsets.data(),
 					static_cast<GLsizei>(_counts.size()), _baseVertices.data());
@@ -457,6 +488,8 @@ namespace spk::ShadowMap
 			const std::vector<Caster> &_dynamicCasters;
 			bool _batchEnabled;
 			bool _batchPrepared = false;
+			bool _cacheTransforms;
+			std::size_t _batchDrawIndex = 0;
 			std::optional<DepthBatchBindingScope> _batchBindings;
 
 			[[nodiscard]] static Program &program()
@@ -524,13 +557,14 @@ void main()
 
 		public:
 			DepthRenderer(RenderContext &context, RenderingSystem::StateScopeMode mode, DepthBatch &batch,
-				const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters, bool batchEnabled) :
+				const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters, RenderingSystem::DepthSubmissionMode submissionMode) :
 				_context(context),
 				_mode(mode),
 				_batch(batch),
 				_staticCasters(staticCasters),
 				_dynamicCasters(dynamicCasters),
-				_batchEnabled(batchEnabled)
+				_batchEnabled(submissionMode != RenderingSystem::DepthSubmissionMode::Individual),
+				_cacheTransforms(submissionMode == RenderingSystem::DepthSubmissionMode::BatchedCached)
 			{
 			}
 
@@ -581,7 +615,7 @@ void main()
 					{
 						_batch.append(casterRef(item));
 					}
-					_batch.draw(_context);
+					_batch.draw(_context, _cacheTransforms ? std::optional<std::size_t>{_batchDrawIndex++} : std::nullopt);
 					return;
 				}
 				program().activate(_context);
@@ -772,7 +806,7 @@ void main()
 		std::uint64_t _viewIdentity;
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
-		bool _batchEnabled;
+		RenderingSystem::DepthSubmissionMode _submissionMode;
 		bool _directionalCascades;
 		std::size_t _directionalCascadeCount;
 		RenderingSystem::StateScopeMode _stateScopeMode;
@@ -823,7 +857,7 @@ void main()
 			}
 			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature || cache.publishedAdmission != light.admission;
 			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _batchEnabled);
+			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
 			{
@@ -913,7 +947,7 @@ void main()
 											cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
 			const auto previousProjections = canReuseProjection ? std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
-			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _batchEnabled);
+			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
 			{
@@ -1096,7 +1130,7 @@ void main()
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
 									  cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _batchEnabled);
+			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
 			Framebuffer::Handle staticTarget = cache.staticTarget;
 			if (staticDirty)
 			{
@@ -1176,7 +1210,7 @@ void main()
 			_viewIdentity(view.identity),
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
-			_batchEnabled(_state->depthSubmissionMode.load(std::memory_order_relaxed) == RenderingSystem::DepthSubmissionMode::Batched),
+			_submissionMode(_state->depthSubmissionMode.load(std::memory_order_relaxed)),
 			_directionalCascades(_state->directionalCascades.load(std::memory_order_relaxed)),
 			_directionalCascadeCount(static_cast<std::size_t>(_state->directionalCascadeMode.load(std::memory_order_relaxed))),
 			_stateScopeMode(_state->stateScopeMode.load(std::memory_order_relaxed)),
