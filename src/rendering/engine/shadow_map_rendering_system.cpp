@@ -6,8 +6,8 @@
 #include <array>
 #include <atomic>
 #include <bit>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -28,7 +28,6 @@
 #include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/program.hpp"
-#include "graphics/opengl/shader_storage_buffer.hpp"
 #include "graphics/opengl/state.hpp"
 #include "light/channel.hpp"
 #include "lighting/system.hpp"
@@ -151,27 +150,6 @@ namespace spk::ShadowMap
 		}
 
 		// Retain the original path for same-runner performance comparisons.
-		class FullTargetScope final
-		{
-		private:
-			OpenGL::State::Scope _state;
-			RenderContext &_context;
-			Window::Surface::RenderTarget _previous;
-
-		public:
-			explicit FullTargetScope(RenderContext &context) :
-				_state(context),
-				_context(context),
-				_previous(context.activeRenderTarget)
-			{
-			}
-
-			~FullTargetScope()
-			{
-				_context.activeRenderTarget = _previous;
-			}
-		};
-
 		// Depth-only FBOs have no color or stencil attachments. Preserve only
 		// the states touched by the pass and lazy resource realization.
 		class TargetScope final
@@ -345,61 +323,10 @@ namespace spk::ShadowMap
 			using SourceCollection = std::map<Key, const Mesh *>;
 			std::map<Key, Range> _ranges;
 			Mesh _mesh;
-			ShaderStorageBuffer _transforms{5, 0, sizeof(Matrix4x4)};
 			std::vector<GLsizei> _counts;
 			std::vector<const void *> _offsets;
 			std::vector<GLint> _baseVertices;
 			std::vector<Matrix4x4> _models;
-
-			struct TransformSlot
-			{
-				ShaderStorageBuffer buffer{5, 0, sizeof(Matrix4x4)};
-				std::vector<Matrix4x4> models;
-			};
-			std::vector<TransformSlot> _transformSlots;
-
-			struct MergedSlot
-			{
-				std::vector<std::pair<Key, Matrix4x4>> sources;
-				Mesh mesh;
-			};
-			std::vector<MergedSlot> _mergedSlots;
-
-			struct IndirectCommand
-			{
-				GLuint count;
-				GLuint instanceCount;
-				GLuint firstIndex;
-				GLint baseVertex;
-				GLuint baseInstance;
-			};
-			static_assert(sizeof(IndirectCommand) == 5 * sizeof(GLuint));
-			std::vector<IndirectCommand> _indirectCommands;
-
-			// A temporary indirect buffer, local to the current GL context.
-			class IndirectBuffer final
-			{
-				GLint _previous = 0;
-				GLuint _id = 0;
-
-			public:
-				IndirectBuffer()
-				{
-					glGetIntegerv(GL_DRAW_INDIRECT_BUFFER_BINDING, &_previous);
-					glGenBuffers(1, &_id);
-					glBindBuffer(GL_DRAW_INDIRECT_BUFFER, _id);
-				}
-
-				~IndirectBuffer()
-				{
-					glBindBuffer(GL_DRAW_INDIRECT_BUFFER, static_cast<GLuint>(_previous));
-					glDeleteBuffers(1, &_id);
-				}
-
-				IndirectBuffer(const IndirectBuffer &) = delete;
-				IndirectBuffer &operator=(const IndirectBuffer &) = delete;
-			};
-
 
 			[[nodiscard]] static Key _key(const Mesh &mesh)
 			{
@@ -504,23 +431,16 @@ namespace spk::ShadowMap
 				_models.push_back(caster.transform);
 			}
 
-			void uploadTransforms(ShaderStorageBuffer &buffer, Profile *profile)
-			{
-				if (profile)
-				{
-					++profile->transformUploads;
-					profile->transformBytes += _models.size() * sizeof(Matrix4x4);
-				}
-				buffer.setUsage(BufferGPUResource::Usage::StreamDraw);
-				buffer.resize(_models.size());
-				buffer.setDynamicData(std::span<const Matrix4x4>(_models));
-				buffer.validate();
-			}
-
-			// No SSBO and no gl_DrawID: use the same packed geometry with ordinary draws.
-			void drawPackedIndividual(RenderContext &context)
+			void draw(RenderContext &context, const Matrix4x4 &projection)
 			{
 				auto *profile = context.shadowProfile;
+				{
+					ProfileScope timing(profile, &Profile::transformPrepare);
+					for (auto &model : _models)
+					{
+						model = projection * model;
+					}
+				}
 				{
 					ProfileScope timing(profile, &Profile::geometryActivate);
 					_mesh.layout().activate(context);
@@ -540,227 +460,6 @@ namespace spk::ShadowMap
 				}
 			}
 
-			// The GL 4.6 minimum of 1024 vertex uniform components guarantees 64 mat4s.
-			// gl_DrawID restarts at zero for every multidraw, including each sub-batch.
-			void drawUniform(RenderContext &context)
-			{
-				auto *profile = context.shadowProfile;
-				{
-					ProfileScope timing(profile, &Profile::geometryActivate);
-					_mesh.layout().activate(context);
-				}
-				for (std::size_t first = 0; first < _models.size(); first += 64)
-				{
-					const auto count = static_cast<GLsizei>(std::min<std::size_t>(64, _models.size() - first));
-					{
-						ProfileScope timing(profile, &Profile::transformActivate);
-						glUniformMatrix4fv(0, count, GL_FALSE, &_models[first][0][0]);
-					}
-					if (profile)
-					{
-						++profile->drawCalls;
-						++profile->transformUploads;
-						profile->transformBytes += static_cast<std::size_t>(count) * sizeof(Matrix4x4);
-					}
-					ProfileScope timing(profile, &Profile::draw);
-					glMultiDrawElementsBaseVertex(GL_TRIANGLES, _counts.data() + first, GL_UNSIGNED_INT,
-						_offsets.data() + first, count, _baseVertices.data() + first);
-				}
-			}
-
-			void drawIndirect(Profile *profile)
-			{
-				ProfileScope prepare(profile, &Profile::drawList);
-				_indirectCommands.clear();
-				_indirectCommands.reserve(_counts.size());
-				for (std::size_t i = 0; i < _counts.size(); ++i)
-				{
-					_indirectCommands.push_back({static_cast<GLuint>(_counts[i]), 1,
-						static_cast<GLuint>(reinterpret_cast<std::uintptr_t>(_offsets[i]) / sizeof(std::uint32_t)),
-						_baseVertices[i], 0});
-				}
-				IndirectBuffer buffer;
-				glBufferData(GL_DRAW_INDIRECT_BUFFER,
-					static_cast<GLsizeiptr>(_indirectCommands.size() * sizeof(IndirectCommand)),
-					_indirectCommands.data(), GL_STREAM_DRAW);
-				prepare.stop();
-				ProfileScope timing(profile, &Profile::draw);
-				glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(_counts.size()), 0);
-			}
-
-			// A true merged draw: bake positions into world space once per selected caster set.
-			// Each slot is reused only while its ordered mesh identities and transforms match.
-			[[nodiscard]] bool drawMerged(RenderContext &context, std::size_t slotIndex,
-				const std::vector<const Caster *> &casters)
-			{
-				auto *profile = context.shadowProfile;
-				ProfileScope lookup(profile, &Profile::sourceLookup);
-				std::size_t vertices = 0;
-				std::size_t indices = 0;
-				std::vector<std::pair<Key, Matrix4x4>> sources;
-				sources.reserve(casters.size());
-				for (const auto *caster : casters)
-				{
-					const auto &m = caster->transform;
-					// World-space xyz is sufficient only for affine model transforms.
-					if (m[0][3] != 0 || m[1][3] != 0 || m[2][3] != 0 || m[3][3] != 1 ||
-						caster->mesh.vertexCount() > std::numeric_limits<std::uint32_t>::max() - vertices ||
-						caster->mesh.indexCount() > static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()) - indices)
-					{
-						return false;
-					}
-					vertices += caster->mesh.vertexCount();
-					indices += caster->mesh.indexCount();
-					sources.emplace_back(_key(caster->mesh), m);
-				}
-				if (_mergedSlots.size() <= slotIndex)
-				{
-					_mergedSlots.resize(slotIndex + 1);
-				}
-				auto &slot = _mergedSlots[slotIndex];
-				lookup.stop();
-				if (slot.sources != sources)
-				{
-					ProfileScope pack(profile, &Profile::geometryPack);
-					Mesh::Builder builder;
-					builder.reserve(vertices, indices);
-					std::vector<std::uint32_t> adjusted;
-					for (const auto *caster : casters)
-					{
-						const auto &layout = caster->mesh.layout();
-						const auto local = layout.vertexBuffer().cast<Vector3>();
-						const auto base = builder.addGeneratedVertices(local.size(), [&](std::size_t i) {
-							const auto p = caster->transform * Vector4(local[i], 1.0f);
-							return Vector3{p.x, p.y, p.z};
-						});
-						const auto original = layout.indexBuffer().cast<std::uint32_t>();
-						adjusted.resize(original.size());
-						std::transform(original.begin(), original.end(), adjusted.begin(), [base](auto index) { return base + index; });
-						builder.addIndices(adjusted);
-					}
-					slot.mesh = std::move(builder).build();
-					slot.sources = std::move(sources);
-					if (profile)
-					{
-						++profile->geometryPacks;
-						profile->geometryBytes += vertices * sizeof(Vector3) + indices * sizeof(std::uint32_t);
-					}
-				}
-				{
-					ProfileScope timing(profile, &Profile::geometryActivate);
-					slot.mesh.layout().activate(context);
-				}
-				if (profile)
-				{
-					++profile->drawCalls;
-				}
-				ProfileScope timing(profile, &Profile::draw);
-				glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices), GL_UNSIGNED_INT, nullptr);
-				return true;
-			}
-
-			void draw(RenderContext &context, std::optional<std::size_t> cachedSlot, const Matrix4x4 *projection,
-				RenderingSystem::DepthSubmissionMode submission)
-			{
-				auto *profile = context.shadowProfile;
-				ProfileScope prepare(profile, &Profile::transformPrepare);
-				if (projection)
-				{
-					for (auto &model : _models)
-					{
-						model = *projection * model;
-					}
-				}
-				if (submission == RenderingSystem::DepthSubmissionMode::PackedIndividual)
-				{
-					prepare.stop();
-					drawPackedIndividual(context);
-					return;
-				}
-				if (submission == RenderingSystem::DepthSubmissionMode::BatchedUniform)
-				{
-					prepare.stop();
-					drawUniform(context);
-					return;
-				}
-				if (cachedSlot)
-				{
-					// Distinct storage for each draw in a light pass. Unchanged
-					// transforms need no upload, even if the light has moved.
-					if (_transformSlots.size() <= *cachedSlot)
-					{
-						_transformSlots.resize(*cachedSlot + 1);
-					}
-					auto &slot = _transformSlots[*cachedSlot];
-					if (slot.models != _models)
-					{
-						uploadTransforms(slot.buffer, profile);
-						slot.models = _models;
-					}
-					else if (profile)
-					{
-						++profile->transformCacheHits;
-					}
-					prepare.stop();
-					ProfileScope activate(profile, &Profile::transformActivate);
-					slot.buffer.activate(context);
-				}
-				else
-				{
-					uploadTransforms(_transforms, profile);
-					prepare.stop();
-					ProfileScope activate(profile, &Profile::transformActivate);
-					_transforms.activate(context);
-				}
-				{
-					ProfileScope activate(profile, &Profile::geometryActivate);
-					_mesh.layout().activate(context);
-				}
-				if (profile)
-				{
-					++profile->drawCalls;
-				}
-				if (submission == RenderingSystem::DepthSubmissionMode::BatchedIndirect)
-				{
-					drawIndirect(profile);
-					return;
-				}
-				ProfileScope drawTiming(profile, &Profile::draw);
-				glMultiDrawElementsBaseVertex(GL_TRIANGLES, _counts.data(), GL_UNSIGNED_INT, _offsets.data(),
-					static_cast<GLsizei>(_counts.size()), _baseVertices.data());
-			}
-		};
-
-		// Preserve both the indexed and generic SSBO bindings used by the batch.
-		class DepthBatchBindingScope final
-		{
-		private:
-			GLint _generic = 0;
-			GLint _indexed = 0;
-			GLint64 _offset = 0;
-			GLint64 _size = 0;
-
-		public:
-			DepthBatchBindingScope()
-			{
-				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &_generic);
-				glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 5, &_indexed);
-				glGetInteger64i_v(GL_SHADER_STORAGE_BUFFER_START, 5, &_offset);
-				glGetInteger64i_v(GL_SHADER_STORAGE_BUFFER_SIZE, 5, &_size);
-			}
-
-			~DepthBatchBindingScope()
-			{
-				if (_indexed != 0 && _size > 0)
-				{
-					glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 5, static_cast<GLuint>(_indexed), _offset, _size);
-				}
-				else
-				{
-					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, static_cast<GLuint>(_indexed));
-				}
-				glBindBuffer(GL_SHADER_STORAGE_BUFFER, static_cast<GLuint>(_generic));
-			}
 		};
 
 		// All shadow maps share a depth-only pass. No UBO allocation per
@@ -769,93 +468,15 @@ namespace spk::ShadowMap
 		{
 		private:
 			RenderContext &_context;
-			RenderingSystem::StateScopeMode _mode;
 			std::optional<TargetScope> _scope;
-			std::optional<FullTargetScope> _fullScope;
 			Vector2UInt _size{0, 0};
 			DepthBatch &_batch;
 			const std::vector<Caster> &_staticCasters;
 			const std::vector<Caster> &_dynamicCasters;
-			bool _batchEnabled;
+			bool _batchEnabled = true;
 			bool _batchPrepared = false;
-			bool _cacheTransforms;
-			RenderingSystem::DepthSubmissionMode _submissionMode;
-			std::size_t _batchDrawIndex = 0;
-			std::optional<DepthBatchBindingScope> _batchBindings;
 
 			[[nodiscard]] static Program &program()
-			{
-				static Program value(
-					R"(#version 460 core
-layout(location = 0) in vec3 inPosition;
-layout(location = 0) uniform mat4 uShadowViewProjection;
-layout(location = 4) uniform mat4 uShadowModel;
-void main()
-{
-	gl_Position = uShadowViewProjection * uShadowModel * vec4(inPosition, 1.0);
-}
-)",
-					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
-				return value;
-			}
-
-			[[nodiscard]] static Program &batchProgram()
-			{
-				static Program value(
-					R"(#version 460 core
-layout(location = 0) in vec3 inPosition;
-layout(location = 0) uniform mat4 uShadowViewProjection;
-layout(std430, binding = 5) readonly buffer ShadowModels
-{
-	mat4 uShadowModels[];
-};
-void main()
-{
-	gl_Position = uShadowViewProjection * uShadowModels[gl_DrawID] * vec4(inPosition, 1.0);
-}
-)",
-					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
-				return value;
-			}
-
-			[[nodiscard]] static Program &batchVectorProgram()
-			{
-				static Program value(
-					R"(#version 460 core
-layout(location = 0) in vec3 inPosition;
-layout(location = 0) uniform mat4 uShadowViewProjection;
-layout(std430, binding = 5) readonly buffer ShadowModels
-{
-	mat4 uShadowModels[];
-};
-void main()
-{
-	gl_Position = uShadowViewProjection * (uShadowModels[gl_DrawID] * vec4(inPosition, 1.0));
-}
-)",
-					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
-				return value;
-			}
-
-			[[nodiscard]] static Program &batchPrecomputedProgram()
-			{
-				static Program value(
-					R"(#version 460 core
-layout(location = 0) in vec3 inPosition;
-layout(std430, binding = 5) readonly buffer ShadowModels
-{
-	mat4 uShadowMVPs[];
-};
-void main()
-{
-	gl_Position = uShadowMVPs[gl_DrawID] * vec4(inPosition, 1.0);
-}
-)",
-					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
-				return value;
-			}
-
-			[[nodiscard]] static Program &singleMatrixProgram()
 			{
 				static Program value(
 					R"(#version 460 core
@@ -870,60 +491,16 @@ void main()
 				return value;
 			}
 
-			[[nodiscard]] static Program &uniformBatchProgram()
-			{
-				static Program value(
-					R"(#version 460 core
-layout(location = 0) in vec3 inPosition;
-layout(location = 0) uniform mat4 uShadowMVPs[64];
-void main()
-{
-	gl_Position = uShadowMVPs[gl_DrawID] * vec4(inPosition, 1.0);
-}
-)",
-					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
-				return value;
-			}
-
-			[[nodiscard]] Program &selectedBatchProgram() const
-			{
-				switch (_submissionMode)
-				{
-				case RenderingSystem::DepthSubmissionMode::BatchedVector:
-					return batchVectorProgram();
-				case RenderingSystem::DepthSubmissionMode::BatchedPrecomputed:
-				case RenderingSystem::DepthSubmissionMode::BatchedIndirect:
-					return batchPrecomputedProgram();
-				case RenderingSystem::DepthSubmissionMode::PackedIndividual:
-					return singleMatrixProgram();
-				case RenderingSystem::DepthSubmissionMode::BatchedUniform:
-					return uniformBatchProgram();
-				default:
-					return batchProgram();
-				}
-			}
-
 			void _begin()
 			{
-				if (_scope.has_value() || _fullScope.has_value())
+				if (_scope.has_value())
 				{
 					return;
 				}
 				ProfileScope timing(_context.shadowProfile, &Profile::stateSetup);
-				if (_mode == RenderingSystem::StateScopeMode::Full)
-				{
-					_fullScope.emplace(_context);
-					OpenGL::State::Scissor{.enabled = false}.apply(_context);
-					OpenGL::State::ColorOutput::writable(_context, false).apply(_context);
-					OpenGL::State::DepthTest{}.apply(_context);
-					OpenGL::State::Blend::disabled(_context).apply(_context);
-				}
-				else
-				{
-					_scope.emplace(_context);
-					glDisable(GL_SCISSOR_TEST);
-					OpenGL::State::DepthTest{}.apply(_context);
-				}
+				_scope.emplace(_context);
+				glDisable(GL_SCISSOR_TEST);
+				OpenGL::State::DepthTest{}.apply(_context);
 				auto rasterization = OpenGL::State::Rasterization{};
 				rasterization.polygonOffsetEnabled = true;
 				rasterization.polygonOffsetFactor = 1.5f;
@@ -933,18 +510,12 @@ void main()
 			}
 
 		public:
-			DepthRenderer(RenderContext &context, RenderingSystem::StateScopeMode mode, DepthBatch &batch,
-				const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters, RenderingSystem::DepthSubmissionMode submissionMode) :
+			DepthRenderer(RenderContext &context, DepthBatch &batch,
+				const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters) :
 				_context(context),
-				_mode(mode),
 				_batch(batch),
 				_staticCasters(staticCasters),
-				_dynamicCasters(dynamicCasters),
-				_batchEnabled(submissionMode != RenderingSystem::DepthSubmissionMode::Individual &&
-					submissionMode != RenderingSystem::DepthSubmissionMode::IndividualPrecomputed &&
-					submissionMode != RenderingSystem::DepthSubmissionMode::MergedWorld),
-				_cacheTransforms(submissionMode == RenderingSystem::DepthSubmissionMode::BatchedCached),
-				_submissionMode(submissionMode)
+				_dynamicCasters(dynamicCasters)
 			{
 			}
 
@@ -990,49 +561,13 @@ void main()
 				{
 					return;
 				}
-				if (_submissionMode == RenderingSystem::DepthSubmissionMode::MergedWorld)
-				{
-					{
-						ProfileScope timing(profile, &Profile::programSetup);
-						singleMatrixProgram().activate(_context);
-						glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
-					}
-					std::vector<const Caster *> selected;
-					{
-						ProfileScope timing(profile, &Profile::drawList);
-						selected.reserve(casters.size());
-						for (const auto &item : casters)
-						{
-							selected.push_back(&casterRef(item));
-						}
-					}
-					if (_batch.drawMerged(_context, _batchDrawIndex++, selected))
-					{
-						return;
-					}
-				}
 				if (_batchEnabled && !_batchPrepared)
 				{
 					_batchEnabled = _batch.prepare(_staticCasters, _dynamicCasters, profile);
 					_batchPrepared = true;
 				}
-				if (_batchEnabled && casters.size() <= static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()))
+				if (_batchEnabled)
 				{
-					ProfileScope programTiming(profile, &Profile::programSetup);
-					if (!_batchBindings)
-					{
-						_batchBindings.emplace();
-					}
-					const bool precomputed = _submissionMode == RenderingSystem::DepthSubmissionMode::BatchedPrecomputed ||
-						_submissionMode == RenderingSystem::DepthSubmissionMode::PackedIndividual ||
-						_submissionMode == RenderingSystem::DepthSubmissionMode::BatchedUniform ||
-						_submissionMode == RenderingSystem::DepthSubmissionMode::BatchedIndirect;
-					selectedBatchProgram().activate(_context);
-					if (!precomputed)
-					{
-						glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
-					}
-					programTiming.stop();
 					ProfileScope listTiming(profile, &Profile::drawList);
 					_batch.begin();
 					for (const auto &item : casters)
@@ -1040,33 +575,18 @@ void main()
 						_batch.append(casterRef(item));
 					}
 					listTiming.stop();
-					_batch.draw(_context, _cacheTransforms ? std::optional<std::size_t>{_batchDrawIndex++} : std::nullopt, precomputed ? &projection : nullptr, _submissionMode);
+					_batch.draw(_context, projection);
 					return;
 				}
-				const bool precomputed = _submissionMode == RenderingSystem::DepthSubmissionMode::IndividualPrecomputed;
-				auto &individualProgram = precomputed ? singleMatrixProgram() : program();
-				{
-					ProfileScope timing(profile, &Profile::programSetup);
-					individualProgram.activate(_context);
-					if (!precomputed)
-					{
-						glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
-					}
-				}
+				// Oversized geometry cannot be represented in a shared index buffer.
+				// Preserve correctness by drawing the original meshes individually.
 				for (const auto &item : casters)
 				{
 					const Caster &caster = casterRef(item);
 					{
 						ProfileScope timing(profile, &Profile::transformActivate);
-						if (precomputed)
-						{
-							const auto mvp = projection * caster.transform;
-							glUniformMatrix4fv(0, 1, GL_FALSE, &mvp[0][0]);
-						}
-						else
-						{
-							glUniformMatrix4fv(4, 1, GL_FALSE, &caster.transform[0][0]);
-						}
+						const auto mvp = projection * caster.transform;
+						glUniformMatrix4fv(0, 1, GL_FALSE, &mvp[0][0]);
 					}
 					{
 						ProfileScope timing(profile, &Profile::geometryActivate);
@@ -1074,7 +594,7 @@ void main()
 					}
 					{
 						ProfileScope timing(profile, &Profile::draw);
-						individualProgram.render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
+						program().render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
 					}
 				}
 				if (profile)
@@ -1099,7 +619,7 @@ void main()
 
 			void finish() const
 			{
-				if (_scope.has_value() || _fullScope.has_value())
+				if (_scope.has_value())
 				{
 					if (const GLenum error = glGetError(); error != GL_NO_ERROR)
 					{
@@ -1246,10 +766,8 @@ void main()
 		std::mutex mutex;
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
 		std::atomic<std::size_t> maxPointRebuilds{1};
-		std::atomic<RenderingSystem::DepthSubmissionMode> depthSubmissionMode{RenderingSystem::DepthSubmissionMode::Batched};
 		std::atomic<bool> directionalCascades{true};
 		std::atomic<RenderingSystem::CascadeMode> directionalCascadeMode{RenderingSystem::CascadeMode::QuadraPass};
-		std::atomic<RenderingSystem::StateScopeMode> stateScopeMode{RenderingSystem::StateScopeMode::DepthOnly};
 	};
 
 	class DepthCommand final : public RenderCommand
@@ -1261,10 +779,8 @@ void main()
 		std::uint64_t _viewIdentity;
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
-		RenderingSystem::DepthSubmissionMode _submissionMode;
 		bool _directionalCascades;
 		std::size_t _directionalCascadeCount;
-		RenderingSystem::StateScopeMode _stateScopeMode;
 		std::vector<CasterBounds> _bounds;
 		std::vector<Light::Selection::Entry> _lights;
 		std::vector<Caster> _staticCasters;
@@ -1312,7 +828,7 @@ void main()
 			}
 			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature || cache.publishedAdmission != light.admission;
 			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
+			DepthRenderer renderer(context, batch, _staticCasters, _dynamicCasters);
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
 			{
@@ -1404,7 +920,7 @@ void main()
 			ProfileScope projectionTiming(context.shadowProfile, &Profile::projection);
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
 			projectionTiming.stop();
-			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
+			DepthRenderer renderer(context, batch, _staticCasters, _dynamicCasters);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
 			{
@@ -1590,7 +1106,7 @@ void main()
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
 									  cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _submissionMode);
+			DepthRenderer renderer(context, batch, _staticCasters, _dynamicCasters);
 			Framebuffer::Handle staticTarget = cache.staticTarget;
 			if (staticDirty)
 			{
@@ -1670,10 +1186,8 @@ void main()
 			_viewIdentity(view.identity),
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
-			_submissionMode(_state->depthSubmissionMode.load(std::memory_order_relaxed)),
 			_directionalCascades(_state->directionalCascades.load(std::memory_order_relaxed)),
 			_directionalCascadeCount(static_cast<std::size_t>(_state->directionalCascadeMode.load(std::memory_order_relaxed))),
-			_stateScopeMode(_state->stateScopeMode.load(std::memory_order_relaxed)),
 			_lights(std::move(lights)),
 			_staticCasters(std::move(staticCasters)),
 			_dynamicCasters(std::move(dynamicCasters)),
@@ -1816,16 +1330,6 @@ void main()
 		_state->maxPointRebuilds.store(value, std::memory_order_relaxed);
 	}
 
-	void RenderingSystem::setDepthSubmissionMode(DepthSubmissionMode mode) noexcept
-	{
-		_state->depthSubmissionMode.store(mode, std::memory_order_relaxed);
-	}
-
-	RenderingSystem::DepthSubmissionMode RenderingSystem::depthSubmissionMode() const noexcept
-	{
-		return _state->depthSubmissionMode.load(std::memory_order_relaxed);
-	}
-
 	void RenderingSystem::setDirectionalCascadeMode(CascadeMode mode)
 	{
 		const auto count = static_cast<std::size_t>(mode);
@@ -1850,16 +1354,6 @@ void main()
 	bool RenderingSystem::directionalCascadesEnabled() const noexcept
 	{
 		return _state->directionalCascades.load(std::memory_order_relaxed);
-	}
-
-	void RenderingSystem::setStateScopeMode(StateScopeMode mode) noexcept
-	{
-		_state->stateScopeMode.store(mode, std::memory_order_relaxed);
-	}
-
-	RenderingSystem::StateScopeMode RenderingSystem::stateScopeMode() const noexcept
-	{
-		return _state->stateScopeMode.load(std::memory_order_relaxed);
 	}
 
 	RenderingSystem::RenderingSystem() :
