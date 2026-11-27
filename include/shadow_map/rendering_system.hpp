@@ -24,6 +24,15 @@ namespace spk::ShadowMap
 			DepthOnly
 		};
 
+		enum class DepthSubmissionMode
+		{
+			Individual,
+			Batched
+		};
+
+		void setDepthSubmissionMode(DepthSubmissionMode mode) noexcept;
+		[[nodiscard]] DepthSubmissionMode depthSubmissionMode() const noexcept;
+
 		enum class CascadeMode : std::uint8_t
 		{
 			SinglePass = 1,

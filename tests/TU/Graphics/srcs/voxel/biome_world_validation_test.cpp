@@ -1656,6 +1656,7 @@ TEST(BiomeWorldShadowDiagnostics, CustomTerracedHeightPass)
 TEST(BiomeWorldPerformance, DualVersusQuadraPass1024)
 {
 	using Mode = spk::ShadowMap::RenderingSystem::CascadeMode;
+	using Submission = spk::ShadowMap::RenderingSystem::DepthSubmissionMode;
 	auto &gl = sparkle_test::OpenGLTestContext::instance();
 	gl.reset(terrain::ImageSize);
 	Scene scene;
@@ -1670,25 +1671,30 @@ TEST(BiomeWorldPerformance, DualVersusQuadraPass1024)
 		gl.save(sparkle_test::resultImagePath("rendering/biome-world", mode == Mode::DualPass ? "cascade_dual_1024" : "cascade_quadra_1024"));
 	}
 	scene.disableColorRendering();
-	std::array<std::vector<double>, 2> times;
+	std::array<std::vector<double>, 4> submissionTimes, completionTimes;
 	for (int sample = 0; sample < 16; ++sample)
 	{
-		for (int order = 0; order < 2; ++order)
+		for (int order = 0; order < 4; ++order)
 		{
-			const auto index = static_cast<std::size_t>((sample + order) % 2);
-			scene.shadowSystem.setDirectionalCascadeMode(index == 0 ? Mode::DualPass : Mode::QuadraPass);
+			const auto index = static_cast<std::size_t>((sample + order) % 4);
+			scene.shadowSystem.setDirectionalCascadeMode(index < 2 ? Mode::DualPass : Mode::QuadraPass);
+			scene.shadowSystem.setDepthSubmissionMode(index % 2 == 0 ? Submission::Individual : Submission::Batched);
 			scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-20, 50, 25}, {0, 0, 0}));
 			scene.engine.refreshRenderSnapshot();
 			(void)sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext());
 			scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-40.0f + sample, 50, 25}, {0, 0, 0}));
 			scene.engine.refreshRenderSnapshot();
-			times[index].push_back(sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext()).completion);
+			const auto timing = sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext());
+			submissionTimes[index].push_back(timing.submission);
+			completionTimes[index].push_back(timing.completion);
 		}
 	}
-	for (std::size_t index = 0; index < times.size(); ++index)
+	for (std::size_t index = 0; index < completionTimes.size(); ++index)
 	{
-		std::sort(times[index].begin(), times[index].end());
-		std::cout << "[Cascade A/B] count=" << (index == 0 ? 2 : 4) << " resolution=1024 median=" << times[index][times[index].size() / 2] << "ms\n";
+		std::sort(submissionTimes[index].begin(), submissionTimes[index].end());
+		std::sort(completionTimes[index].begin(), completionTimes[index].end());
+		std::cout << "[Cascade A/B] count=" << (index < 2 ? 2 : 4) << " resolution=1024 submission=" << (index % 2 == 0 ? "individual" : "batched")
+			<< " cpu_median=" << submissionTimes[index][8] << "ms completion_median=" << completionTimes[index][8] << "ms\n";
 	}
 	gl.requireNoErrors();
 	gl.reset();

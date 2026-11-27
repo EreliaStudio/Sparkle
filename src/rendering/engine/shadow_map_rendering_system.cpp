@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -26,6 +27,7 @@
 #include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
 #include "graphics/opengl/program.hpp"
+#include "graphics/opengl/shader_storage_buffer.hpp"
 #include "graphics/opengl/state.hpp"
 #include "light/channel.hpp"
 #include "lighting/system.hpp"
@@ -285,6 +287,161 @@ namespace spk::ShadowMap
 			return result;
 		}
 
+		// Geometry is packed only when the set of mesh resource versions changes.
+		// Model transforms and draw lists are independent of the shared geometry.
+		class DepthBatch final
+		{
+		private:
+			using Key = std::tuple<GPUResource::Identifier, GPUResource::Generation, GPUResource::Identifier, GPUResource::Generation>;
+			struct Range
+			{
+				GLsizei count;
+				std::uintptr_t offset;
+				GLint baseVertex;
+			};
+			using SourceCollection = std::map<Key, const Mesh *>;
+			std::map<Key, Range> _ranges;
+			Mesh _mesh;
+			ShaderStorageBuffer _transforms{5, 0, sizeof(Matrix4x4)};
+			std::vector<GLsizei> _counts;
+			std::vector<const void *> _offsets;
+			std::vector<GLint> _baseVertices;
+			std::vector<Matrix4x4> _models;
+
+			[[nodiscard]] static Key _key(const Mesh &mesh)
+			{
+				const auto &layout = mesh.layout();
+				return {layout.vertexBuffer().identifier(), layout.vertexBuffer().generation(),
+					layout.indexBuffer().identifier(), layout.indexBuffer().generation()};
+			}
+
+			[[nodiscard]] bool _matches(const SourceCollection &sources) const
+			{
+				return sources.size() == _ranges.size() &&
+					std::equal(sources.begin(), sources.end(), _ranges.begin(), [](const auto &source, const auto &range) {
+						return source.first == range.first;
+					});
+			}
+
+			[[nodiscard]] static bool _fits(const SourceCollection &sources)
+			{
+				std::size_t vertices = 0;
+				for (const auto &[key, mesh] : sources)
+				{
+					(void)key;
+					if (mesh->vertexCount() > static_cast<std::size_t>(std::numeric_limits<GLint>::max()) - vertices ||
+						mesh->indexCount() > static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()))
+					{
+						return false;
+					}
+					vertices += mesh->vertexCount();
+				}
+				return true;
+			}
+
+			void _pack(const SourceCollection &sources)
+			{
+				Mesh::Builder builder;
+				std::map<Key, Range> ranges;
+				std::size_t indexOffset = 0;
+				for (const auto &[key, mesh] : sources)
+				{
+					const auto &layout = mesh->layout();
+					const auto base = builder.addVertices(layout.vertexBuffer().cast<Vector3>());
+					const auto indices = layout.indexBuffer().cast<std::uint32_t>();
+					builder.addIndices(indices);
+					ranges.emplace(key, Range{static_cast<GLsizei>(indices.size()), indexOffset * sizeof(std::uint32_t), static_cast<GLint>(base)});
+					indexOffset += indices.size();
+				}
+				_mesh = std::move(builder).build();
+				_ranges = std::move(ranges);
+			}
+
+		public:
+			[[nodiscard]] bool prepare(const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters)
+			{
+				SourceCollection sources;
+				for (const auto *casters : {&staticCasters, &dynamicCasters})
+				{
+					for (const auto &caster : *casters)
+					{
+						sources.try_emplace(_key(caster.mesh), &caster.mesh);
+					}
+				}
+				if (_matches(sources))
+				{
+					return true;
+				}
+				if (!_fits(sources))
+				{
+					return false;
+				}
+				_pack(sources);
+				return true;
+			}
+
+			void begin()
+			{
+				_counts.clear();
+				_offsets.clear();
+				_baseVertices.clear();
+				_models.clear();
+			}
+
+			void append(const Caster &caster)
+			{
+				const auto &range = _ranges.at(_key(caster.mesh));
+				_counts.push_back(range.count);
+				_offsets.push_back(reinterpret_cast<const void *>(range.offset));
+				_baseVertices.push_back(range.baseVertex);
+				_models.push_back(caster.transform);
+			}
+
+			void draw(RenderContext &context)
+			{
+				_transforms.setUsage(BufferGPUResource::Usage::StreamDraw);
+				_transforms.resize(_models.size());
+				_transforms.setDynamicData(std::span<const Matrix4x4>(_models));
+				_transforms.validate();
+				_transforms.activate(context);
+				_mesh.layout().activate(context);
+				glMultiDrawElementsBaseVertex(GL_TRIANGLES, _counts.data(), GL_UNSIGNED_INT, _offsets.data(),
+					static_cast<GLsizei>(_counts.size()), _baseVertices.data());
+			}
+		};
+
+		// Preserve both the indexed and generic SSBO bindings used by the batch.
+		class DepthBatchBindingScope final
+		{
+		private:
+			GLint _generic = 0;
+			GLint _indexed = 0;
+			GLint64 _offset = 0;
+			GLint64 _size = 0;
+
+		public:
+			DepthBatchBindingScope()
+			{
+				glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &_generic);
+				glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 5, &_indexed);
+				glGetInteger64i_v(GL_SHADER_STORAGE_BUFFER_START, 5, &_offset);
+				glGetInteger64i_v(GL_SHADER_STORAGE_BUFFER_SIZE, 5, &_size);
+			}
+
+			~DepthBatchBindingScope()
+			{
+				if (_indexed != 0 && _size > 0)
+				{
+					glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 5, static_cast<GLuint>(_indexed), _offset, _size);
+				}
+				else
+				{
+					glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, static_cast<GLuint>(_indexed));
+				}
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, static_cast<GLuint>(_generic));
+			}
+		};
+
 		// All shadow maps share a depth-only pass. No UBO allocation per
 		// caster, no repeated capture/restore of all GL state per face.
 		class DepthRenderer final
@@ -295,6 +452,12 @@ namespace spk::ShadowMap
 			std::optional<TargetScope> _scope;
 			std::optional<FullTargetScope> _fullScope;
 			Vector2UInt _size{0, 0};
+			DepthBatch &_batch;
+			const std::vector<Caster> &_staticCasters;
+			const std::vector<Caster> &_dynamicCasters;
+			bool _batchEnabled;
+			bool _batchPrepared = false;
+			std::optional<DepthBatchBindingScope> _batchBindings;
 
 			[[nodiscard]] static Program &program()
 			{
@@ -306,6 +469,25 @@ layout(location = 4) uniform mat4 uShadowModel;
 void main()
 {
 	gl_Position = uShadowViewProjection * uShadowModel * vec4(inPosition, 1.0);
+}
+)",
+					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
+				return value;
+			}
+
+			[[nodiscard]] static Program &batchProgram()
+			{
+				static Program value(
+					R"(#version 460 core
+layout(location = 0) in vec3 inPosition;
+layout(location = 0) uniform mat4 uShadowViewProjection;
+layout(std430, binding = 5) readonly buffer ShadowModels
+{
+	mat4 uShadowModels[];
+};
+void main()
+{
+	gl_Position = uShadowViewProjection * uShadowModels[gl_DrawID] * vec4(inPosition, 1.0);
 }
 )",
 					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
@@ -341,9 +523,14 @@ void main()
 			}
 
 		public:
-			DepthRenderer(RenderContext &context, RenderingSystem::StateScopeMode mode) :
+			DepthRenderer(RenderContext &context, RenderingSystem::StateScopeMode mode, DepthBatch &batch,
+				const std::vector<Caster> &staticCasters, const std::vector<Caster> &dynamicCasters, bool batchEnabled) :
 				_context(context),
-				_mode(mode)
+				_mode(mode),
+				_batch(batch),
+				_staticCasters(staticCasters),
+				_dynamicCasters(dynamicCasters),
+				_batchEnabled(batchEnabled)
 			{
 			}
 
@@ -376,6 +563,28 @@ void main()
 				{
 					return;
 				}
+				if (_batchEnabled && !_batchPrepared)
+				{
+					_batchEnabled = _batch.prepare(_staticCasters, _dynamicCasters);
+					_batchPrepared = true;
+				}
+				if (_batchEnabled && casters.size() <= static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()))
+				{
+					if (!_batchBindings)
+					{
+						_batchBindings.emplace();
+					}
+					batchProgram().activate(_context);
+					glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+					_batch.begin();
+					for (const auto &item : casters)
+					{
+						_batch.append(casterRef(item));
+					}
+					_batch.draw(_context);
+					return;
+				}
+				program().activate(_context);
 				glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
 				for (const auto &item : casters)
 				{
@@ -541,12 +750,14 @@ void main()
 		{
 			std::mutex mutex;
 			std::map<std::pair<std::uint64_t, std::uint64_t>, LightCache> lights;
+			DepthBatch depthBatch;
 			Window::Surface::DestructionContract destruction;
 		};
 
 		std::mutex mutex;
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
 		std::atomic<std::size_t> maxPointRebuilds{1};
+		std::atomic<RenderingSystem::DepthSubmissionMode> depthSubmissionMode{RenderingSystem::DepthSubmissionMode::Batched};
 		std::atomic<bool> directionalCascades{true};
 		std::atomic<RenderingSystem::CascadeMode> directionalCascadeMode{RenderingSystem::CascadeMode::QuadraPass};
 		std::atomic<RenderingSystem::StateScopeMode> stateScopeMode{RenderingSystem::StateScopeMode::DepthOnly};
@@ -561,6 +772,7 @@ void main()
 		std::uint64_t _viewIdentity;
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
+		bool _batchEnabled;
 		bool _directionalCascades;
 		std::size_t _directionalCascadeCount;
 		RenderingSystem::StateScopeMode _stateScopeMode;
@@ -595,6 +807,7 @@ void main()
 
 		void _renderPoint(
 			RenderContext &context,
+			DepthBatch &batch,
 			RenderingSystem::State::LightCache &cache,
 			const Light::Selection::Entry &light) const
 		{
@@ -610,7 +823,7 @@ void main()
 			}
 			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature || cache.publishedAdmission != light.admission;
 			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context, _stateScopeMode);
+			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _batchEnabled);
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
 			{
@@ -680,7 +893,7 @@ void main()
 		}
 
 		void _renderDirectional(
-			RenderContext &context, RenderingSystem::State::LightCache &cache, const Light::Selection::Entry &light, std::size_t count, bool separateDynamic) const
+			RenderContext &context, DepthBatch &batch, RenderingSystem::State::LightCache &cache, const Light::Selection::Entry &light, std::size_t count, bool separateDynamic) const
 		{
 			if (cache.sourceCaptureOrdinal > _captureOrdinal)
 			{
@@ -700,7 +913,7 @@ void main()
 											cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
 			const auto previousProjections = canReuseProjection ? std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
-			DepthRenderer renderer(context, _stateScopeMode);
+			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _batchEnabled);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
 			{
@@ -855,6 +1068,7 @@ void main()
 
 		void _renderLight(
 			RenderContext &context,
+			DepthBatch &batch,
 			RenderingSystem::State::LightCache &cache,
 			const Light::Selection::Entry &light,
 			std::size_t cascadeCount,
@@ -862,7 +1076,7 @@ void main()
 		{
 			if (light.type == Light::Selection::Type::Point)
 			{
-				_renderPoint(context, cache, light);
+				_renderPoint(context, batch, cache, light);
 				return;
 			}
 			if (cache.sourceCaptureOrdinal > _captureOrdinal)
@@ -871,7 +1085,7 @@ void main()
 			}
 			if (light.type == Light::Selection::Type::Directional && _directionalCascades)
 			{
-				_renderDirectional(context, cache, light, cascadeCount, separateDynamic);
+				_renderDirectional(context, batch, cache, light, cascadeCount, separateDynamic);
 				return;
 			}
 			const Projection projection = light.type == Light::Selection::Type::Spot
@@ -882,7 +1096,7 @@ void main()
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
 									  cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context, _stateScopeMode);
+			DepthRenderer renderer(context, _stateScopeMode, batch, _staticCasters, _dynamicCasters, _batchEnabled);
 			Framebuffer::Handle staticTarget = cache.staticTarget;
 			if (staticDirty)
 			{
@@ -962,6 +1176,7 @@ void main()
 			_viewIdentity(view.identity),
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
+			_batchEnabled(_state->depthSubmissionMode.load(std::memory_order_relaxed) == RenderingSystem::DepthSubmissionMode::Batched),
 			_directionalCascades(_state->directionalCascades.load(std::memory_order_relaxed)),
 			_directionalCascadeCount(static_cast<std::size_t>(_state->directionalCascadeMode.load(std::memory_order_relaxed))),
 			_stateScopeMode(_state->stateScopeMode.load(std::memory_order_relaxed)),
@@ -1074,7 +1289,7 @@ void main()
 					}
 				}
 				auto &cache = surface->lights[{_viewIdentity, light.registrationOrder}];
-				_renderLight(context, cache, light, cascadeCount, separateDynamic);
+				_renderLight(context, surface->depthBatch, cache, light, cascadeCount, separateDynamic);
 			}
 		}
 	};
@@ -1104,6 +1319,16 @@ void main()
 	void RenderingSystem::setMaxPointShadowRebuildsPerImage(std::size_t value) noexcept
 	{
 		_state->maxPointRebuilds.store(value, std::memory_order_relaxed);
+	}
+
+	void RenderingSystem::setDepthSubmissionMode(DepthSubmissionMode mode) noexcept
+	{
+		_state->depthSubmissionMode.store(mode, std::memory_order_relaxed);
+	}
+
+	RenderingSystem::DepthSubmissionMode RenderingSystem::depthSubmissionMode() const noexcept
+	{
+		return _state->depthSubmissionMode.load(std::memory_order_relaxed);
 	}
 
 	void RenderingSystem::setDirectionalCascadeMode(CascadeMode mode)

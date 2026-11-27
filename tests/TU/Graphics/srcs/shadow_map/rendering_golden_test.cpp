@@ -1350,3 +1350,62 @@ TEST(ShadowRenderingTest, ConfiguredCascadeModesPublishOnlyActiveMaps)
 	}
 	gl.reset();
 }
+
+TEST(ShadowRenderingTest, BatchedAndIndividualDepthAgree)
+{
+	using Submission = spk::ShadowMap::RenderingSystem::DepthSubmissionMode;
+	Scene scene(true);
+	const spk::Vector3 eye{0, 12, 8};
+	scene.cameraEntity.transform().place(eye);
+	scene.cameraEntity.transform().setRotation(spk::Quaternion::lookAt(eye, {0, -0.2f, 0}));
+	scene.camera.setOrthographic(-12, 12, -9, 9, 0.1f, 30);
+	for (int x = -4; x <= 4; x += 2)
+	{
+		scene.add(scene.cube, 0, {static_cast<float>(x), -0.2f, -4}, spk::ShadowMap::Mode::Static);
+	}
+	scene.add(geometry({2, 3, 2}), 1, {0, -0.2f, 0}, spk::ShadowMap::Mode::Dynamic);
+	auto &sun = scene.addLight<spk::Light::Directional>({0, 10, 5}, {0, 0, 0}, {1, 1, 1}, 2.0f);
+	sun.setShadowDistance(24);
+	sun.setShadowResolution(512);
+	auto &gl = sparkle_test::OpenGLTestContext::instance();
+	gl.reset(scene.imageSize);
+	const auto execute = [&]() {
+		const auto snapshot = scene.capture();
+		snapshot->execute(gl.renderContext());
+		gl.requireNoErrors();
+		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+	};
+	const auto read = [&](const spk::Texture::Handle &texture) {
+		spk::OpenGL::State::Scope restore(gl.renderContext());
+		spk::Framebuffer target({512, 512}, std::vector<spk::Texture::Handle>{}, texture);
+		target.activate(gl.renderContext());
+		std::vector<float> pixels(512 * 512);
+		glReadPixels(0, 0, 512, 512, GL_DEPTH_COMPONENT, GL_FLOAT, pixels.data());
+		return pixels;
+	};
+	scene.shadows.setDepthSubmissionMode(Submission::Individual);
+	const auto reference = execute();
+	ASSERT_NE(reference, nullptr);
+	scene.shadows.setDepthSubmissionMode(Submission::Batched);
+	sun.setShadowResolution(256);
+	(void)execute();
+	sun.setShadowResolution(512);
+	const auto actual = execute();
+	ASSERT_NE(actual, nullptr);
+	const auto &expected = reference->entries.at(sun.registrationOrder());
+	const auto &observed = actual->entries.at(sun.registrationOrder());
+	ASSERT_EQ(expected.cascadeCount, observed.cascadeCount);
+	for (std::size_t i = 0; i < expected.cascadeCount; ++i)
+	{
+		const auto a = read(expected.cascadeTextures[i]);
+		const auto b = read(observed.cascadeTextures[i]);
+		EXPECT_EQ(a, b);
+		ASSERT_EQ(static_cast<bool>(expected.cascadeDynamicTextures[i]), static_cast<bool>(observed.cascadeDynamicTextures[i]));
+		if (expected.cascadeDynamicTextures[i])
+		{
+			EXPECT_EQ(read(expected.cascadeDynamicTextures[i]), read(observed.cascadeDynamicTextures[i]));
+		}
+	}
+	gl.requireNoErrors();
+	gl.reset();
+}
