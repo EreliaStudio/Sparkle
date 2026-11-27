@@ -63,6 +63,8 @@ namespace
 	using Streamer = spk::World::WorldStreamingSystem<Chunk>;
 	using Clock = std::chrono::steady_clock;
 	constexpr std::uint32_t ShadowResolution = 512;
+	constexpr spk::Vector2UInt ShowcaseImageSize{terrain::ImageSize.x * 2u, terrain::ImageSize.y * 2u};
+	constexpr std::uint32_t ShowcaseShadowResolution = ShadowResolution * 2u;
 
 	[[nodiscard]] std::uint64_t checksum(const Chunk &chunk)
 	{
@@ -161,6 +163,15 @@ namespace
 			camera.setPerspective(0.90f, static_cast<float>(terrain::ImageSize.x) / terrain::ImageSize.y, 0.1f, 240.0f);
 			engine.addEntity(&cameraEntity);
 			return engine.addView("Biome", &camera, terrain::ImageSize);
+		}
+
+		void useShowcaseQuality()
+		{
+			// Render into larger EngineView targets, not an upscaled screenshot.
+			// The aspect ratio is unchanged, so the existing camera framing is preserved.
+			view.setResolution(ShowcaseImageSize);
+			sun.setShadowResolution(ShowcaseShadowResolution);
+			sun.setShadowFilter(spk::Light::ShadowFilter::PCF3x3);
 		}
 
 		void setCamera(spk::Vector3 position, spk::Vector3 target)
@@ -279,7 +290,8 @@ namespace
 		[[nodiscard]] sparkle_test::FramebufferImage capture()
 		{
 			auto &gl = sparkle_test::OpenGLTestContext::instance();
-			gl.reset(terrain::ImageSize);
+			const auto imageSize = view.resolution();
+			gl.reset(imageSize);
 			engine.refreshRenderSnapshot();
 			const auto snapshot = engine.latestRenderSnapshot();
 			EXPECT_NE(snapshot, nullptr);
@@ -288,8 +300,8 @@ namespace
 				return {};
 			}
 			snapshot->execute(gl.renderContext());
-			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
-			spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = terrain::ImageSize}).execute(gl.renderContext());
+			spk::ViewportUniformRenderCommand({.anchor = {0, 0}, .size = imageSize}).execute(gl.renderContext());
+			spk::DrawEngineViewCommand(view.output(), {.anchor = {0, 0}, .size = imageSize}).execute(gl.renderContext());
 			gl.requireNoErrors();
 			return gl.capture();
 		}
@@ -643,6 +655,7 @@ namespace
 	void captureBiomeWorld(const std::string &name, bool hard, spk::Vector3 camera, spk::Vector3 target, bool edit = false)
 	{
 		Scene scene;
+		scene.useShowcaseQuality();
 		using Base = spk::World::Voxel::Biome::Generator<Chunk, 3>;
 		std::unique_ptr<Base> generator;
 		if (hard)
@@ -678,7 +691,7 @@ namespace
 		tolerance.alphaTolerance = 8;
 		const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
-		EXPECT_EQ(pixels.size, terrain::ImageSize);
+		EXPECT_EQ(pixels.size, ShowcaseImageSize);
 	}
 }
 
@@ -1230,6 +1243,12 @@ namespace
 				sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_pcf_" + std::to_string(resolution)));
 				(void)countErrors(soft, "csm_pcf_" + std::to_string(resolution));
 			}
+			scene.useShowcaseQuality();
+			scene.sun.setShadowResolution(2048);
+			const auto showcase = scene.capture();
+			EXPECT_EQ(showcase.size, ShowcaseImageSize);
+			sparkle_test::OpenGLTestContext::instance().save(sparkle_test::resultImagePath("rendering/biome-world", name + "_close_csm_showcase_2048"));
+			scene.view.setResolution(terrain::ImageSize);
 			scene.shadowSystem.setDirectionalCascadesEnabled(false);
 			captureShadowParameterSweep(scene, name + "_close_sweep");
 		}
@@ -1314,6 +1333,7 @@ namespace
 			captureCloseShadowDiagnostics(scene, name);
 			return;
 		}
+		scene.useShowcaseQuality();
 		const auto pixels = scene.capture();
 		auto &gl = sparkle_test::OpenGLTestContext::instance();
 		const auto actual = sparkle_test::resultImagePath("rendering/biome-world", name);
@@ -1325,7 +1345,7 @@ namespace
 		tolerance.alphaTolerance = 8;
 		const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/biome-world", name + "_difference"), tolerance);
 		EXPECT_TRUE(result.matches) << name << ": " << result.differentPixelCount << " different pixels";
-		EXPECT_EQ(pixels.size, terrain::ImageSize);
+		EXPECT_EQ(pixels.size, ShowcaseImageSize);
 	}
 }
 
