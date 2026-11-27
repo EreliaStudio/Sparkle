@@ -18,6 +18,7 @@
 #include <span>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "core/context/update_context.hpp"
@@ -642,6 +643,139 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 		EXPECT_EQ(warmOver, 0u) << "Warm reuse budget exceeded at resolution " << Resolutions[level];
 #endif
 	}
+
+	// Compare every combination on one surface, using the exact same mesh
+	// instances, camera/light corpus and number of cold rebuilds. Keep the
+	// production hard budgets above independent of this diagnostic comparison.
+	using ScopeMode = spk::ShadowMap::RenderingSystem::StateScopeMode;
+	struct MeshPair
+	{
+		spk::ShadowMap::Contributor *contributor;
+		spk::ShadowMap::Mesh original;
+		spk::ShadowMap::Mesh greedy;
+	};
+	std::vector<MeshPair> meshes;
+	for (auto &[coordinate, entry] : scene.chunks)
+	{
+		(void)coordinate;
+		auto *contributor = entry.entity().getComponent<spk::ShadowMap::Contributor>();
+		const auto *renderer = entry.entity().getComponent<spk::Voxel::Renderer>();
+		ASSERT_NE(renderer, nullptr);
+		const auto *geometry = renderer->geometry();
+		ASSERT_NE(contributor, nullptr);
+		ASSERT_NE(geometry, nullptr);
+		auto original = spk::ShadowMap::Mesh::from(geometry->opaqueMesh(), [](const spk::Voxel::Geometry::Vertex &v) {
+			return v.position;
+		});
+		meshes.push_back({contributor, std::move(original), geometry->depthMesh()});
+	}
+
+	struct Configuration
+	{
+		const char *name;
+		bool greedy;
+		ScopeMode scope;
+	};
+	constexpr std::array<Configuration, 4> configurations{
+		Configuration{"original_full", false, ScopeMode::Full},
+		Configuration{"original_depth_only", false, ScopeMode::DepthOnly},
+		Configuration{"greedy_full", true, ScopeMode::Full},
+		Configuration{"greedy_depth_only", true, ScopeMode::DepthOnly}};
+	struct Measurements
+	{
+		std::vector<double> submission;
+		std::vector<double> completion;
+		std::vector<double> warm;
+	};
+	const auto reportAB = [&](std::uint32_t resolution, const Configuration &configuration, const char *phase, std::vector<double> times) {
+		ASSERT_EQ(times.size(), Cases * Samples);
+		const double mean = std::accumulate(times.begin(), times.end(), 0.0) / static_cast<double>(times.size());
+		std::sort(times.begin(), times.end());
+		std::cout << "[Shadow A/B] resolution=" << resolution << " configuration=" << configuration.name
+				  << " phase=" << phase << " samples=" << times.size() << " mean=" << mean
+				  << "ms median=" << (times[times.size() / 2 - 1] + times[times.size() / 2]) * 0.5
+				  << "ms p95=" << times[(times.size() * 95 + 99) / 100 - 1]
+				  << "ms min=" << times.front() << "ms max=" << times.back() << "ms" << std::endl;
+	};
+	const auto configure = [&](const Configuration &configuration) {
+		scene.shadowSystem.setStateScopeMode(configuration.scope);
+		for (auto &mesh : meshes)
+		{
+			mesh.contributor->bind(configuration.greedy ? mesh.greedy : mesh.original);
+		}
+	};
+	for (const auto resolution : Resolutions)
+	{
+		scene.sun.setShadowResolution(resolution);
+		std::array<Measurements, configurations.size()> results;
+		// Prewarm both geometry sets and both state paths at this resolution.
+		for (const auto &configuration : configurations)
+		{
+			configure(configuration);
+			scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-20, 50, 25}, {0, 0, 0}));
+			scene.engine.refreshRenderSnapshot();
+			(void)run(scene.engine.latestRenderSnapshot());
+			scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-40, 50, 25}, {0, 0, 0}));
+			scene.engine.refreshRenderSnapshot();
+			(void)run(scene.engine.latestRenderSnapshot());
+		}
+		seed = 0xC45CADEu;
+		for (std::size_t index = 0; index < Cases; ++index)
+		{
+			const spk::Vector3 eye{35 + 8 * sample(), 30 + 6 * sample(), 35 + 8 * sample()};
+			const spk::Vector3 source{-36 + 10 * sample(), 50 + 10 * sample(), 20 + 10 * sample()};
+			scene.setCamera(eye, {0, 8, 0});
+			for (std::size_t trial = 0; trial < Samples; ++trial)
+			{
+				// Balanced rotation: each configuration occupies each position
+				// equally often across the complete corpus of 48 repetitions.
+				for (std::size_t position = 0; position < configurations.size(); ++position)
+				{
+					const auto mode = (index * Samples + trial + position) % configurations.size();
+					configure(configurations[mode]);
+					scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source + spk::Vector3{15, 0, 0}, {0, 0, 0}));
+					scene.engine.refreshRenderSnapshot();
+					(void)run(scene.engine.latestRenderSnapshot());
+					auto previous = published();
+					ASSERT_NE(previous, nullptr);
+					const auto previousGeneration = previous->entries.at(scene.sun.registrationOrder()).generation;
+					const auto previousStatistics = previous->entries.at(scene.sun.registrationOrder()).cascadeStatistics;
+					previous.reset();
+					scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt(source, {0, 0, 0}));
+					scene.engine.refreshRenderSnapshot();
+					const auto snapshot = scene.engine.latestRenderSnapshot();
+					ASSERT_NE(snapshot, nullptr);
+					const auto cold = run(snapshot);
+					const auto first = published();
+					ASSERT_NE(first, nullptr);
+					const auto &entry = first->entries.at(scene.sun.registrationOrder());
+					ASSERT_EQ(entry.cascadeCount, 4u);
+					EXPECT_GT(entry.generation, previousGeneration);
+					const auto warm = run(snapshot);
+					const auto second = published();
+					ASSERT_NE(second, nullptr);
+					const auto &cached = second->entries.at(scene.sun.registrationOrder());
+					EXPECT_EQ(cached.generation, entry.generation);
+					for (std::size_t i = 0; i < entry.cascadeTextures.size(); ++i)
+					{
+						EXPECT_TRUE(entry.cascadeTextures[i]);
+						EXPECT_GT(entry.cascadeStatistics[i].staticBuilds, previousStatistics[i].staticBuilds);
+						EXPECT_EQ(cached.cascadeTextures[i].identifier(), entry.cascadeTextures[i].identifier());
+					}
+					results[mode].submission.push_back(cold.submission);
+					results[mode].completion.push_back(cold.completion);
+					results[mode].warm.push_back(warm.submission);
+				}
+			}
+		}
+		for (std::size_t mode = 0; mode < configurations.size(); ++mode)
+		{
+			reportAB(resolution, configurations[mode], "cold_submission", results[mode].submission);
+			reportAB(resolution, configurations[mode], "cold_completion", results[mode].completion);
+			reportAB(resolution, configurations[mode], "warm_submission", results[mode].warm);
+		}
+	}
+	configure(configurations.back());
 	gl.requireNoErrors();
 	gl.reset();
 }

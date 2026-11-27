@@ -114,6 +114,28 @@ namespace spk::ShadowMap
 			return result;
 		}
 
+		// Retain the original path for same-runner performance comparisons.
+		class FullTargetScope final
+		{
+		private:
+			OpenGL::State::Scope _state;
+			RenderContext &_context;
+			Window::Surface::RenderTarget _previous;
+
+		public:
+			explicit FullTargetScope(RenderContext &context) :
+				_state(context),
+				_context(context),
+				_previous(context.activeRenderTarget)
+			{
+			}
+
+			~FullTargetScope()
+			{
+				_context.activeRenderTarget = _previous;
+			}
+		};
+
 		// Depth-only FBOs have no color or stencil attachments. Preserve only
 		// the states touched by the pass and lazy resource realization.
 		class TargetScope final
@@ -269,7 +291,9 @@ namespace spk::ShadowMap
 		{
 		private:
 			RenderContext &_context;
+			RenderingSystem::StateScopeMode _mode;
 			std::optional<TargetScope> _scope;
+			std::optional<FullTargetScope> _fullScope;
 			Vector2UInt _size{0, 0};
 
 			[[nodiscard]] static Program &program()
@@ -290,13 +314,24 @@ void main()
 
 			void _begin()
 			{
-				if (_scope.has_value())
+				if (_scope.has_value() || _fullScope.has_value())
 				{
 					return;
 				}
-				_scope.emplace(_context);
-				glDisable(GL_SCISSOR_TEST);
-				OpenGL::State::DepthTest{}.apply(_context);
+				if (_mode == RenderingSystem::StateScopeMode::Full)
+				{
+					_fullScope.emplace(_context);
+					OpenGL::State::Scissor{.enabled = false}.apply(_context);
+					OpenGL::State::ColorOutput::writable(_context, false).apply(_context);
+					OpenGL::State::DepthTest{}.apply(_context);
+					OpenGL::State::Blend::disabled(_context).apply(_context);
+				}
+				else
+				{
+					_scope.emplace(_context);
+					glDisable(GL_SCISSOR_TEST);
+					OpenGL::State::DepthTest{}.apply(_context);
+				}
 				auto rasterization = OpenGL::State::Rasterization{};
 				rasterization.polygonOffsetEnabled = true;
 				rasterization.polygonOffsetFactor = 1.5f;
@@ -306,8 +341,9 @@ void main()
 			}
 
 		public:
-			explicit DepthRenderer(RenderContext &context) :
-				_context(context)
+			DepthRenderer(RenderContext &context, RenderingSystem::StateScopeMode mode) :
+				_context(context),
+				_mode(mode)
 			{
 			}
 
@@ -365,7 +401,7 @@ void main()
 
 			void finish() const
 			{
-				if (_scope.has_value())
+				if (_scope.has_value() || _fullScope.has_value())
 				{
 					if (const GLenum error = glGetError(); error != GL_NO_ERROR)
 					{
@@ -512,6 +548,7 @@ void main()
 		std::map<UUID, std::shared_ptr<SurfaceCache>> surfaces;
 		std::atomic<std::size_t> maxPointRebuilds{1};
 		std::atomic<bool> directionalCascades{true};
+		std::atomic<RenderingSystem::StateScopeMode> stateScopeMode{RenderingSystem::StateScopeMode::DepthOnly};
 	};
 
 	class DepthCommand final : public RenderCommand
@@ -524,6 +561,7 @@ void main()
 		std::uint64_t _captureOrdinal;
 		Camera3D _camera;
 		bool _directionalCascades;
+		RenderingSystem::StateScopeMode _stateScopeMode;
 		std::vector<CasterBounds> _bounds;
 		std::vector<Light::Selection::Entry> _lights;
 		std::vector<Caster> _staticCasters;
@@ -570,7 +608,7 @@ void main()
 			}
 			const bool staticDirty = !cache.point || !cache.pointStaticFaces[0] || cache.resolution != light.shadowResolution || cache.pointProjections != matrices || cache.staticSignature != _staticSignature || cache.publishedAdmission != light.admission;
 			const bool dynamicDirty = staticDirty || !cache.pointFinalFaces[0] || cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context);
+			DepthRenderer renderer(context, _stateScopeMode);
 			std::array<Framebuffer::Handle, 6> staticFaces = cache.pointStaticFaces;
 			if (staticDirty)
 			{
@@ -660,7 +698,7 @@ void main()
 											cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
 			const auto previousProjections = canReuseProjection ? std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
 			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
-			DepthRenderer renderer(context);
+			DepthRenderer renderer(context, _stateScopeMode);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
 			{
@@ -842,7 +880,7 @@ void main()
 									 cache.staticSignature != _staticSignature;
 			const bool dynamicDirty = staticDirty || !cache.finalTarget ||
 									  cache.dynamicSignature != _dynamicSignature;
-			DepthRenderer renderer(context);
+			DepthRenderer renderer(context, _stateScopeMode);
 			Framebuffer::Handle staticTarget = cache.staticTarget;
 			if (staticDirty)
 			{
@@ -923,6 +961,7 @@ void main()
 			_captureOrdinal(view.captureOrdinal),
 			_camera(view.cameraSnapshot),
 			_directionalCascades(_state->directionalCascades.load(std::memory_order_relaxed)),
+			_stateScopeMode(_state->stateScopeMode.load(std::memory_order_relaxed)),
 			_lights(std::move(lights)),
 			_staticCasters(std::move(staticCasters)),
 			_dynamicCasters(std::move(dynamicCasters)),
@@ -1071,6 +1110,16 @@ void main()
 	bool RenderingSystem::directionalCascadesEnabled() const noexcept
 	{
 		return _state->directionalCascades.load(std::memory_order_relaxed);
+	}
+
+	void RenderingSystem::setStateScopeMode(StateScopeMode mode) noexcept
+	{
+		_state->stateScopeMode.store(mode, std::memory_order_relaxed);
+	}
+
+	RenderingSystem::StateScopeMode RenderingSystem::stateScopeMode() const noexcept
+	{
+		return _state->stateScopeMode.load(std::memory_order_relaxed);
 	}
 
 	RenderingSystem::RenderingSystem() :

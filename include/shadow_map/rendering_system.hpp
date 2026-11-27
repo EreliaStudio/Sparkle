@@ -17,7 +17,15 @@ namespace spk::ShadowMap
 		std::shared_ptr<State> _state;
 
 	public:
+		enum class StateScopeMode
+		{
+			Full,
+			DepthOnly
+		};
+
 		RenderingSystem();
+		void setStateScopeMode(StateScopeMode mode) noexcept;
+		[[nodiscard]] StateScopeMode stateScopeMode() const noexcept;
 		// Single-map mode is retained for diagnostic A/B comparisons.
 		void setDirectionalCascadesEnabled(bool enabled) noexcept;
 		[[nodiscard]] bool directionalCascadesEnabled() const noexcept;
