@@ -1006,7 +1006,7 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 	const auto execute = [&]() {
 		const auto snapshot = scene.capture();
 		const auto begin = Clock::now();
-		snapshot->execute(gl.renderContext());
+		EXPECT_TRUE(snapshot->executePass(spk::EngineView::ShadowPassKey.name, gl.renderContext()));
 		glFinish();
 		return std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
 	};
@@ -1015,6 +1015,7 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 	ASSERT_NE(first, nullptr);
 	const auto original = first->entries.at(sun.registrationOrder());
 	ASSERT_EQ(original.cascadeCount, 4u);
+	ASSERT_TRUE(std::ranges::any_of(original.cascadeDynamicTextures, [](const auto &texture) { return static_cast<bool>(texture); }));
 	constexpr std::size_t Cases = 32;
 	constexpr double BudgetMs = 1.0;
 	std::array<double, Cases> times{};
@@ -1035,10 +1036,12 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 			ASSERT_NE(published, nullptr);
 			const auto &entry = published->entries.at(sun.registrationOrder());
 			std::size_t dynamicRebuilds = 0;
+			EXPECT_TRUE(std::ranges::any_of(entry.cascadeDynamicTextures, [](const auto &texture) { return static_cast<bool>(texture); }));
 			for (std::size_t i = 0; i < entry.cascadeCount; ++i)
 			{
 				EXPECT_EQ(entry.cascadeStatistics[i].staticBuilds, original.cascadeStatistics[i].staticBuilds)
 					<< "Moving a caster must not rebuild unchanged static depth";
+				EXPECT_EQ(entry.cascadeTextures[i].identifier(), original.cascadeTextures[i].identifier());
 				dynamicRebuilds += entry.cascadeStatistics[i].dynamicBuilds;
 			}
 			EXPECT_GT(dynamicRebuilds, 0u);

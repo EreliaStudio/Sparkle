@@ -715,7 +715,7 @@ void main()
 					{
 						cascade.finalTarget = cache.depthTargets.acquire(light.shadowResolution);
 						cascade.texture = cascade.finalTarget->depthStencilAttachment()->texture();
-												if (!separateDynamic)
+						if (!separateDynamic)
 						{
 							copyDepth(context, cascade.staticTarget, cascade.finalTarget);
 						}

@@ -111,6 +111,17 @@ namespace spk
 		}
 	}
 
+	bool RenderSnapshot::executePass(const RenderPass::Name &name, RenderContext &renderContext) const
+	{
+		const auto pass = std::ranges::find(_renderPasses, name, &Pass::name);
+		if (pass == _renderPasses.end())
+		{
+			return false;
+		}
+		pass->commands->execute(renderContext);
+		return true;
+	}
+
 	RenderSnapshot::RenderSnapshot(
 		std::vector<Pass> passes) :
 		_renderPasses(std::move(passes))

@@ -517,25 +517,34 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 	const auto published = [&]() {
 		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	};
+	struct Timing
+	{
+		double submission = 0;
+		double completion = 0;
+	};
 	const auto run = [&](const std::shared_ptr<const spk::RenderSnapshot> &snapshot) {
 		const auto begin = Clock::now();
-		snapshot->execute(gl.renderContext());
+		EXPECT_TRUE(snapshot->executePass(spk::EngineView::ShadowPassKey.name, gl.renderContext()));
+		const auto submitted = Clock::now();
 		glFinish();
-		return std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+		const auto completed = Clock::now();
+		return Timing{
+			std::chrono::duration<double, std::milli>(submitted - begin).count(),
+			std::chrono::duration<double, std::milli>(completed - begin).count()};
 	};
 	for (std::size_t level = 0; level < Resolutions.size(); ++level)
 	{
 		scene.sun.setShadowResolution(Resolutions[level]);
 		scene.sun.setShadowDistance(80.0f);
 		seed = 0xC45CADEu;
-		std::vector<double> cold, warm, capture;
+		std::vector<double> cold, warm, capture, coldSubmission, warmCompletion, frameCompletion;
 		std::size_t coldOver = 0, warmOver = 0;
 		// Warm shaders and resources before the measured corpus.
 		scene.engine.refreshRenderSnapshot();
 		(void)run(scene.engine.latestRenderSnapshot());
 		for (std::size_t index = 0; index < Cases; ++index)
 		{
-			std::array<double, Samples> coldTimes{}, warmTimes{}, captureTimes{};
+			std::array<double, Samples> coldTimes{}, warmTimes{}, captureTimes{}, submissionTimes{}, warmCompletionTimes{}, frameTimes{};
 			const spk::Vector3 eye{35 + 8 * sample(), 30 + 6 * sample(), 35 + 8 * sample()};
 			const spk::Vector3 source{-36 + 10 * sample(), 50 + 10 * sample(), 20 + 10 * sample()};
 			for (std::size_t trial = 0; trial < Samples; ++trial)
@@ -555,7 +564,9 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 				const auto snapshot = scene.engine.latestRenderSnapshot();
 				captureTimes[trial] = std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
 				ASSERT_NE(snapshot, nullptr);
-				coldTimes[trial] = run(snapshot);
+				const auto coldTiming = run(snapshot);
+				coldTimes[trial] = coldTiming.completion;
+				submissionTimes[trial] = coldTiming.submission;
 				const auto first = published();
 				ASSERT_NE(first, nullptr);
 				const auto &entry = first->entries.at(scene.sun.registrationOrder());
@@ -565,7 +576,13 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 				{
 					ASSERT_TRUE(texture);
 				}
-				warmTimes[trial] = run(snapshot);
+				const auto warmTiming = run(snapshot);
+				warmTimes[trial] = warmTiming.submission;
+				warmCompletionTimes[trial] = warmTiming.completion;
+				const auto frameBegin = Clock::now();
+				snapshot->execute(gl.renderContext());
+				glFinish();
+				frameTimes[trial] = std::chrono::duration<double, std::milli>(Clock::now() - frameBegin).count();
 				const auto second = published();
 				ASSERT_NE(second, nullptr);
 				const auto &cached = second->entries.at(scene.sun.registrationOrder());
@@ -580,9 +597,15 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 			std::sort(coldTimes.begin(), coldTimes.end());
 			std::sort(warmTimes.begin(), warmTimes.end());
 			std::sort(captureTimes.begin(), captureTimes.end());
+			std::sort(submissionTimes.begin(), submissionTimes.end());
+			std::sort(warmCompletionTimes.begin(), warmCompletionTimes.end());
+			std::sort(frameTimes.begin(), frameTimes.end());
 			cold.push_back(coldTimes[Samples / 2]);
 			warm.push_back(warmTimes[Samples / 2]);
 			capture.push_back(captureTimes[Samples / 2]);
+			coldSubmission.push_back(submissionTimes[Samples / 2]);
+			warmCompletion.push_back(warmCompletionTimes[Samples / 2]);
+			frameCompletion.push_back(frameTimes[Samples / 2]);
 			coldOver += cold.back() > ColdBudgetsMs[level] ? 1u : 0u;
 			warmOver += warm.back() > WarmBudgetMs ? 1u : 0u;
 		}
@@ -594,7 +617,10 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 					  << "ms budget=" << budget << " over_budget=" << exceeding << '\n';
 		};
 		report("cold_depth", cold, ColdBudgetsMs[level], coldOver);
-		report("warm_depth", warm, WarmBudgetMs, warmOver);
+		report("warm_cpu_submission", warm, WarmBudgetMs, warmOver);
+		report("cold_cpu_submission", coldSubmission, 0.0, 0);
+		report("warm_gpu_synchronized", warmCompletion, 0.0, 0);
+		report("warm_full_snapshot", frameCompletion, 0.0, 0);
 		report("snapshot_capture", capture, 0.0, 0);
 #if defined(NDEBUG)
 		EXPECT_EQ(coldOver, 0u) << "Cold rebuild budget exceeded at resolution " << Resolutions[level];

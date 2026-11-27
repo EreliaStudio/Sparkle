@@ -40,6 +40,8 @@ namespace spk
 
 		RenderSnapshot() = default;
 		void execute(RenderContext &renderContext) const;
+		// Execute only the named pass. Callers must establish its prerequisites.
+		[[nodiscard]] bool executePass(const RenderPass::Name &name, RenderContext &renderContext) const;
 
 	private:
 		struct Pass
