@@ -471,10 +471,17 @@ namespace spk::ShadowMap
 				buffer.validate();
 			}
 
-			void draw(RenderContext &context, std::optional<std::size_t> cachedSlot)
+			void draw(RenderContext &context, std::optional<std::size_t> cachedSlot, const Matrix4x4 *projection)
 			{
 				auto *profile = context.shadowProfile;
 				ProfileScope prepare(profile, &Profile::transformPrepare);
+				if (projection)
+				{
+					for (auto &model : _models)
+					{
+						model = *projection * model;
+					}
+				}
 				if (cachedSlot)
 				{
 					// Distinct storage for each draw in a light pass. Unchanged
@@ -566,6 +573,7 @@ namespace spk::ShadowMap
 			bool _batchEnabled;
 			bool _batchPrepared = false;
 			bool _cacheTransforms;
+			RenderingSystem::DepthSubmissionMode _submissionMode;
 			std::size_t _batchDrawIndex = 0;
 			std::optional<DepthBatchBindingScope> _batchBindings;
 
@@ -602,6 +610,56 @@ void main()
 )",
 					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
 				return value;
+			}
+
+			[[nodiscard]] static Program &batchVectorProgram()
+			{
+				static Program value(
+					R"(#version 460 core
+layout(location = 0) in vec3 inPosition;
+layout(location = 0) uniform mat4 uShadowViewProjection;
+layout(std430, binding = 5) readonly buffer ShadowModels
+{
+	mat4 uShadowModels[];
+};
+void main()
+{
+	gl_Position = uShadowViewProjection * (uShadowModels[gl_DrawID] * vec4(inPosition, 1.0));
+}
+)",
+					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
+				return value;
+			}
+
+			[[nodiscard]] static Program &batchPrecomputedProgram()
+			{
+				static Program value(
+					R"(#version 460 core
+layout(location = 0) in vec3 inPosition;
+layout(std430, binding = 5) readonly buffer ShadowModels
+{
+	mat4 uShadowMVPs[];
+};
+void main()
+{
+	gl_Position = uShadowMVPs[gl_DrawID] * vec4(inPosition, 1.0);
+}
+)",
+					std::string(resources::text("shaders/shadow_depth.frag.glsl")));
+				return value;
+			}
+
+			[[nodiscard]] Program &selectedBatchProgram() const
+			{
+				switch (_submissionMode)
+				{
+				case RenderingSystem::DepthSubmissionMode::BatchedVector:
+					return batchVectorProgram();
+				case RenderingSystem::DepthSubmissionMode::BatchedPrecomputed:
+					return batchPrecomputedProgram();
+				default:
+					return batchProgram();
+				}
 			}
 
 			void _begin()
@@ -642,7 +700,8 @@ void main()
 				_staticCasters(staticCasters),
 				_dynamicCasters(dynamicCasters),
 				_batchEnabled(submissionMode != RenderingSystem::DepthSubmissionMode::Individual),
-				_cacheTransforms(submissionMode == RenderingSystem::DepthSubmissionMode::BatchedCached)
+				_cacheTransforms(submissionMode == RenderingSystem::DepthSubmissionMode::BatchedCached),
+				_submissionMode(submissionMode)
 			{
 			}
 
@@ -700,8 +759,12 @@ void main()
 					{
 						_batchBindings.emplace();
 					}
-					batchProgram().activate(_context);
-					glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+					const bool precomputed = _submissionMode == RenderingSystem::DepthSubmissionMode::BatchedPrecomputed;
+					selectedBatchProgram().activate(_context);
+					if (!precomputed)
+					{
+						glUniformMatrix4fv(0, 1, GL_FALSE, &projection[0][0]);
+					}
 					programTiming.stop();
 					ProfileScope listTiming(profile, &Profile::drawList);
 					_batch.begin();
@@ -710,7 +773,7 @@ void main()
 						_batch.append(casterRef(item));
 					}
 					listTiming.stop();
-					_batch.draw(_context, _cacheTransforms ? std::optional<std::size_t>{_batchDrawIndex++} : std::nullopt);
+					_batch.draw(_context, _cacheTransforms ? std::optional<std::size_t>{_batchDrawIndex++} : std::nullopt, precomputed ? &projection : nullptr);
 					return;
 				}
 				{
