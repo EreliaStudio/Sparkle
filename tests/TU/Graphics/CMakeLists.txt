@@ -64,10 +64,81 @@ if(WIN32)
     gtest_discover_tests(SparkleClipboardTestSuite
         TEST_PREFIX "Graphics.Native."
         PROPERTIES
+            LABELS "Graphics\;Native"
             RUN_SERIAL TRUE
     )
 endif()
 
-gtest_discover_tests(SparkleGraphicsTestSuite
-    TEST_PREFIX "Graphics."
+# Only audited context-free suites enter the parallel CPU partition.
+# New or unaudited Graphics tests remain in the conservative serial partition.
+string(JOIN ":" cpuSuites
+    "MesherGeometry.*"
+    "MesherTest.*"
+    "MesherMaterialIndices.*"
+    "ShadowProjectionTest.*"
+    "GraphicsColorTest.*"
+    "BufferCPUStorageTest.*"
+    "MeshTest.*"
+    "ColorMesh2DTest.*"
+    "TextureMesh2DTest.*"
+    "TextureMesh3DTest.*"
 )
+set(cpuStress "MesherFixtures.*")
+set(cpuGolden "PerlinNoiseGolden.*")
+
+string(JOIN ":" goldenSuites
+    "BiomeWorldGolden.*"
+    "BiomeWorldShadowDiagnostics.*"
+    "ShadowRenderingGolden.*"
+    "VoxelForwardLightingGolden.*"
+    "VoxelTransparencyGolden.*"
+    "VoxelTransparencyWindowGolden.*"
+    "VoxelViewMaterialGoldenTest.*"
+    "VoxelRendererGoldenTest.*"
+    "VoxelChunkGoldenTest.*"
+    "VoxelShapeGoldenTest.*"
+    "VoxelArrangementGoldenTest.*"
+    "VoxelCharacterGoldenTest.*"
+    "VoxelRoomGoldenTest.*"
+    "WidgetGoldenRenderTest.*"
+    "WidgetGoldenRenderStateTest.*"
+    "Object3DGoldenTest.*"
+    "EngineViewModel3DRoomGoldenTest.*"
+    "EngineViewFirstImageTest.*"
+)
+
+string(JOIN ":" cpuPerformance
+    "VoxelChunkPerformanceTest.RandomizedHighExposureCubes16HardBudget"
+    "VoxelChunkPerformanceTest.RandomizedMixedShapes16HardBudget"
+    "ShadowProjectionPerformance.Randomized128CastersHardBudget"
+)
+string(JOIN ":" graphicsPerformance
+    "ShadowRenderingPerformance.MovingDynamicCasterReusesStaticCascades"
+    "BiomeWorldPerformance.DirectionalCascadeDepthRebuildAndCacheHardBudget"
+)
+string(JOIN ":" benchmarkSuites
+    "VoxelChunkPerformanceTest.*"
+    "ShadowProjectionPerformance.*"
+    "ShadowRenderingPerformance.*"
+    "BiomeWorldPerformance.*"
+)
+set(performanceCases "${cpuPerformance}:${graphicsPerformance}")
+
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${cpuSuites}" "Graphics;CPU;Fast")
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${cpuStress}" "Graphics;CPU;Stress")
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${cpuGolden}" "Graphics;CPU;Golden" RESOURCE_LOCK SparkleGraphics)
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${goldenSuites}" "Graphics;Golden" RESOURCE_LOCK SparkleGraphics)
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${cpuPerformance}" "Graphics;CPU;Performance;Randomized" RUN_SERIAL TRUE)
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${graphicsPerformance}" "Graphics;Performance" RUN_SERIAL TRUE)
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${benchmarkSuites}-${performanceCases}" "Graphics;Benchmark" RUN_SERIAL TRUE)
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "*-${cpuSuites}:${cpuStress}:${cpuGolden}:${goldenSuites}:${benchmarkSuites}"
+    "Graphics;Functional" RESOURCE_LOCK SparkleGraphics)
+

@@ -27,7 +27,36 @@ target_link_libraries(SparkleCoreTestSuite
 )
 set_target_properties(SparkleCoreTestSuite PROPERTIES CXX_EXTENSIONS OFF)
 
-gtest_discover_tests(SparkleCoreTestSuite
-    TEST_PREFIX "Core."
+# Explicit suite registration; the complement includes every unclassified test.
+# The two lifecycle regressions intentionally run both normally and under ASan.
+string(JOIN ":" stressSuites
+    "DoubleBufferStressTest.*"
+    "EntityHierarchyStressTest.*"
+    "NetworkStressTest.*"
+    "PublishableStressTest.*"
 )
+string(JOIN ":" memorySuites
+    "EntityHierarchyMemorySafetyTest.*"
+    "NetworkMemorySafetyTest.*"
+    "PublishableMemorySafetyTest.*"
+)
+set(lifecycleCases "NetworkConcurrencyTest.ClientDestructor*")
+set(repeatConcurrency "NetworkStressTest.ManyClientsConnectAndExchangeConcurrently")
+set(repeatRandomized "NetworkStressTest.SeededRandomPayloadsPreserveEveryByte")
+set(randomizedScheduler "NetworkStressTest.SeededSchedulerAccountsForRandomPagesAndPriorities")
+
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "${repeatConcurrency}" "Core;Stress;RepeatConcurrency")
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "${repeatRandomized}" "Core;Stress;Randomized;RepeatRandomized")
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "${randomizedScheduler}" "Core;Stress;Randomized")
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "${stressSuites}-${repeatConcurrency}:${repeatRandomized}:${randomizedScheduler}" "Core;Stress")
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "${memorySuites}" "Core;MemorySafety")
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "${lifecycleCases}" "Core;Fast;Integration;MemorySafety")
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "*-${stressSuites}:${memorySuites}:${lifecycleCases}" "Core;Fast")
 
