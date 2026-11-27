@@ -30,7 +30,12 @@ namespace spk::ShadowMap
 			Batched,
 			BatchedCached,
 			BatchedVector,
-			BatchedPrecomputed
+			BatchedPrecomputed,
+			IndividualPrecomputed,
+			PackedIndividual,
+			BatchedUniform,
+			BatchedIndirect,
+			MergedWorld
 		};
 
 		void setDepthSubmissionMode(DepthSubmissionMode mode) noexcept;

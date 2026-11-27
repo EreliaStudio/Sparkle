@@ -1713,7 +1713,7 @@ namespace
 		DepthSubmission submission;
 	};
 
-	constexpr std::array<ScalingConfiguration, 10> ScalingConfigurations{{
+	constexpr std::array<ScalingConfiguration, 20> ScalingConfigurations{{
 		{"dual_individual", CascadeMode::DualPass, DepthSubmission::Individual},
 		{"dual_batched", CascadeMode::DualPass, DepthSubmission::Batched},
 		{"quadra_individual", CascadeMode::QuadraPass, DepthSubmission::Individual},
@@ -1723,7 +1723,17 @@ namespace
 		{"dual_batched_vector", CascadeMode::DualPass, DepthSubmission::BatchedVector},
 		{"quadra_batched_vector", CascadeMode::QuadraPass, DepthSubmission::BatchedVector},
 		{"dual_batched_precomputed", CascadeMode::DualPass, DepthSubmission::BatchedPrecomputed},
-		{"quadra_batched_precomputed", CascadeMode::QuadraPass, DepthSubmission::BatchedPrecomputed}}};
+		{"quadra_batched_precomputed", CascadeMode::QuadraPass, DepthSubmission::BatchedPrecomputed},
+		{"dual_individual_precomputed", CascadeMode::DualPass, DepthSubmission::IndividualPrecomputed},
+		{"quadra_individual_precomputed", CascadeMode::QuadraPass, DepthSubmission::IndividualPrecomputed},
+		{"dual_packed_individual", CascadeMode::DualPass, DepthSubmission::PackedIndividual},
+		{"quadra_packed_individual", CascadeMode::QuadraPass, DepthSubmission::PackedIndividual},
+		{"dual_batched_uniform", CascadeMode::DualPass, DepthSubmission::BatchedUniform},
+		{"quadra_batched_uniform", CascadeMode::QuadraPass, DepthSubmission::BatchedUniform},
+		{"dual_batched_indirect", CascadeMode::DualPass, DepthSubmission::BatchedIndirect},
+		{"quadra_batched_indirect", CascadeMode::QuadraPass, DepthSubmission::BatchedIndirect},
+		{"dual_merged_world", CascadeMode::DualPass, DepthSubmission::MergedWorld},
+		{"quadra_merged_world", CascadeMode::QuadraPass, DepthSubmission::MergedWorld}}};
 
 	void configureScaling(Scene &scene, const ScalingConfiguration &configuration)
 	{
@@ -1779,9 +1789,13 @@ namespace
 			const auto cachedParity = sparkle_test::compareImages(cached, individual,
 				sparkle_test::resultImagePath(category, name + "_cached_difference"), tolerance);
 			EXPECT_TRUE(cachedParity.matches) << name << ": " << cachedParity.differentPixelCount << " cached batching differences";
-			for (const std::size_t offset : {6u, 8u})
+			constexpr std::array<const char *, 7> suffixes{
+				"_vector", "_precomputed", "_individual_precomputed", "_packed_individual",
+				"_uniform", "_indirect", "_merged_world"};
+			for (std::size_t variantIndex = 0; variantIndex < suffixes.size(); ++variantIndex)
 			{
-				const std::string suffix = offset == 6 ? "_vector" : "_precomputed";
+				const std::size_t offset = 6 + 2 * variantIndex;
+				const std::string suffix = suffixes[variantIndex];
 				const auto variant = sparkle_test::resultImagePath(category, name + suffix);
 				configureScaling(scene, ScalingConfigurations[offset + mode / 2]);
 				scene.sun.setShadowResolution(512);
@@ -1920,7 +1934,7 @@ namespace
 				EXPECT_GT(cold.triangles, 0u);
 				EXPECT_GT(cold.drawCalls, 0u);
 				EXPECT_LE(cold.drawCalls, cold.meshDraws);
-				if (configuration.submission == DepthSubmission::Individual)
+				if (configuration.submission == DepthSubmission::Individual || configuration.submission == DepthSubmission::IndividualPrecomputed)
 				{
 					EXPECT_EQ(cold.drawCalls, cold.meshDraws);
 					EXPECT_EQ(cold.transformUploads, 0u);
@@ -1970,6 +1984,16 @@ namespace
 		reportShadowProfile(count, ScalingConfigurations[5].name, "initial", 0, initialProfile, initial);
 		std::cout << "[Shadow scaling initial] chunks=" << count << " submission=" << initial.submission
 			<< "ms completion=" << initial.completion << "ms" << std::endl;
+		configureScaling(scene, ScalingConfigurations[2]);
+		scene.sun.setShadowResolution(512);
+		scene.engine.refreshRenderSnapshot();
+		(void)sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext());
+		configureScaling(scene, ScalingConfigurations.back());
+		scene.sun.setShadowResolution(1024);
+		scene.engine.refreshRenderSnapshot();
+		spk::ShadowMap::Profile mergedInitial;
+		const auto mergedTiming = sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext(), &mergedInitial);
+		reportShadowProfile(count, ScalingConfigurations.back().name, "initial", 0, mergedInitial, mergedTiming);
 		compareScalingImages(scene, count);
 		scene.disableColorRendering();
 		std::array<ScalingMeasurements, ScalingConfigurations.size()> results;
