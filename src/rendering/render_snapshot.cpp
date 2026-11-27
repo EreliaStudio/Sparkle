@@ -101,7 +101,15 @@ namespace spk
 				renderContext.profiler.timeMeasurement(pass.name + Profiler::RenderPassDuration));
 			try
 			{
+				if (renderContext.passObserver != nullptr)
+				{
+					renderContext.passObserver->beforePass(pass.name);
+				}
 				pass.commands->execute(renderContext);
+				if (renderContext.passObserver != nullptr)
+				{
+					renderContext.passObserver->afterPass(pass.name);
+				}
 			} catch (...)
 			{
 				throw spk::Exception(
@@ -109,17 +117,6 @@ namespace spk
 					std::current_exception());
 			}
 		}
-	}
-
-	bool RenderSnapshot::executePass(const RenderPass::Name &name, RenderContext &renderContext) const
-	{
-		const auto pass = std::ranges::find(_renderPasses, name, &Pass::name);
-		if (pass == _renderPasses.end())
-		{
-			return false;
-		}
-		pass->commands->execute(renderContext);
-		return true;
 	}
 
 	RenderSnapshot::RenderSnapshot(

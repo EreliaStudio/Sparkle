@@ -50,6 +50,7 @@
 #include "biome_validation_fixture.hpp"
 #include "biome_world_fixture.hpp"
 #include "voxel_world_fixture.hpp"
+#include "../shadow_map/shadow_pass_timing.hpp"
 
 namespace
 {
@@ -517,20 +518,8 @@ TEST(BiomeWorldPerformance, DirectionalCascadeDepthRebuildAndCacheHardBudget)
 	const auto published = [&]() {
 		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	};
-	struct Timing
-	{
-		double submission = 0;
-		double completion = 0;
-	};
 	const auto run = [&](const std::shared_ptr<const spk::RenderSnapshot> &snapshot) {
-		const auto begin = Clock::now();
-		EXPECT_TRUE(snapshot->executePass(spk::EngineView::ShadowPassKey.name, gl.renderContext()));
-		const auto submitted = Clock::now();
-		glFinish();
-		const auto completed = Clock::now();
-		return Timing{
-			std::chrono::duration<double, std::milli>(submitted - begin).count(),
-			std::chrono::duration<double, std::milli>(completed - begin).count()};
+		return sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext());
 	};
 	for (std::size_t level = 0; level < Resolutions.size(); ++level)
 	{

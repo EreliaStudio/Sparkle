@@ -42,6 +42,8 @@
 #include "voxel/renderer.hpp"
 #include "voxel/rendering_system.hpp"
 
+#include "shadow_pass_timing.hpp"
+
 namespace
 {
 	constexpr spk::Vector2UInt ImageSize{320, 240};
@@ -986,7 +988,6 @@ TEST(ShadowRenderingGolden, DirectionalOffscreenCasterStillShadowsVisibleFloor)
 
 TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 {
-	using Clock = std::chrono::steady_clock;
 	Scene scene(true);
 	const spk::Vector3 eye{0, 12, 8};
 	scene.cameraEntity.transform().place(eye);
@@ -1006,10 +1007,7 @@ TEST(ShadowRenderingPerformance, MovingDynamicCasterReusesStaticCascades)
 	gl.reset(scene.imageSize);
 	const auto execute = [&]() {
 		const auto snapshot = scene.capture();
-		const auto begin = Clock::now();
-		EXPECT_TRUE(snapshot->executePass(spk::EngineView::ShadowPassKey.name, gl.renderContext()));
-		glFinish();
-		return std::chrono::duration<double, std::milli>(Clock::now() - begin).count();
+		return sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext()).completion;
 	};
 	(void)execute();
 	const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
@@ -1123,7 +1121,7 @@ TEST(ShadowRendering, RecycledTargetsPreserveHeldDepthPublication)
 	gl.reset(scene.imageSize);
 	const auto execute = [&]() {
 		const auto snapshot = scene.capture();
-		EXPECT_TRUE(snapshot->executePass(spk::EngineView::ShadowPassKey.name, gl.renderContext()));
+		snapshot->execute(gl.renderContext());
 		glFinish();
 		return scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
 	};
@@ -1148,7 +1146,13 @@ TEST(ShadowRendering, RecycledTargetsPreserveHeldDepthPublication)
 	};
 	const auto originalDepth = readDepth(retained);
 	ASSERT_LT(*std::min_element(originalDepth.begin(), originalDepth.end()), 1.0f);
-	std::set<spk::GPUResource::Identifier> seen;
+	std::set<spk::GPUResource::Identifier> held;
+	for (std::size_t i = 0; i < entry.cascadeCount; ++i)
+	{
+		held.insert(entry.cascadeTextures[i].identifier());
+	}
+	std::set<spk::GPUResource::Identifier> previous = held;
+	std::set<spk::GPUResource::Identifier> retired;
 	bool recycled = false;
 	for (int step = 0; step < 10; ++step)
 	{
@@ -1157,12 +1161,22 @@ TEST(ShadowRendering, RecycledTargetsPreserveHeldDepthPublication)
 		const auto current = execute();
 		ASSERT_NE(current, nullptr);
 		const auto &published = current->entries.at(sun.registrationOrder());
+		std::set<spk::GPUResource::Identifier> currentIds;
 		for (std::size_t i = 0; i < published.cascadeCount; ++i)
 		{
 			const auto id = published.cascadeTextures[i].identifier();
-			EXPECT_NE(id, retained.identifier());
-			recycled |= !seen.insert(id).second;
+			EXPECT_FALSE(held.contains(id));
+			recycled |= retired.contains(id) && !previous.contains(id);
+			currentIds.insert(id);
 		}
+		for (const auto id : previous)
+		{
+			if (!currentIds.contains(id) && !held.contains(id))
+			{
+				retired.insert(id);
+			}
+		}
+		previous = std::move(currentIds);
 	}
 	EXPECT_TRUE(recycled) << "At least one released depth target should be recycled";
 	EXPECT_EQ(originalDepth, readDepth(retained)) << "A retained historical publication was modified";
