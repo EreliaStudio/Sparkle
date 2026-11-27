@@ -1699,3 +1699,220 @@ TEST(BiomeWorldPerformance, DualVersusQuadraPass1024)
 	gl.requireNoErrors();
 	gl.reset();
 }
+
+
+namespace
+{
+	using CascadeMode = spk::ShadowMap::RenderingSystem::CascadeMode;
+	using DepthSubmission = spk::ShadowMap::RenderingSystem::DepthSubmissionMode;
+
+	struct ScalingConfiguration
+	{
+		const char *name;
+		CascadeMode cascades;
+		DepthSubmission submission;
+	};
+
+	constexpr std::array<ScalingConfiguration, 4> ScalingConfigurations{{
+		{"dual_individual", CascadeMode::DualPass, DepthSubmission::Individual},
+		{"dual_batched", CascadeMode::DualPass, DepthSubmission::Batched},
+		{"quadra_individual", CascadeMode::QuadraPass, DepthSubmission::Individual},
+		{"quadra_batched", CascadeMode::QuadraPass, DepthSubmission::Batched}}};
+
+	void configureScaling(Scene &scene, const ScalingConfiguration &configuration)
+	{
+		scene.shadowSystem.setDirectionalCascadeMode(configuration.cascades);
+		scene.shadowSystem.setDepthSubmissionMode(configuration.submission);
+	}
+
+	void configureScalingView(Scene &scene, float width)
+	{
+		const float scale = width / 80.0f;
+		scene.setCamera({62.0f * scale, 85.0f * scale, 72.0f * scale}, {0, 6, 0});
+		scene.camera.setPerspective(0.90f, static_cast<float>(terrain::ImageSize.x) / terrain::ImageSize.y, 0.1f, 4.0f * width);
+		scene.sun.setShadowDistance(3.0f * width);
+		scene.useShowcaseQuality();
+	}
+
+	void compareScalingImages(Scene &scene, std::size_t chunkCount)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		const std::string category = "rendering/biome-world";
+		sparkle_test::ImageComparisonOptions tolerance;
+		tolerance.rgbTolerance = 8;
+		tolerance.alphaTolerance = 8;
+		for (std::size_t mode = 0; mode < ScalingConfigurations.size(); mode += 2)
+		{
+			const std::string name = "shadow_scaling_" + std::to_string(chunkCount) +
+				(mode == 0 ? "_dual_1024" : "_quadra_1024");
+			const auto individual = sparkle_test::resultImagePath(category, name + "_individual");
+			const auto actual = sparkle_test::resultImagePath(category, name);
+			configureScaling(scene, ScalingConfigurations[mode]);
+			// Force a rebuild: changing submission mode alone can reuse cached depth.
+			scene.sun.setShadowResolution(512);
+			(void)scene.capture();
+			scene.sun.setShadowResolution(1024);
+			EXPECT_EQ(scene.capture().size, ShowcaseImageSize);
+			gl.save(individual);
+			configureScaling(scene, ScalingConfigurations[mode + 1]);
+			scene.sun.setShadowResolution(512);
+			(void)scene.capture();
+			scene.sun.setShadowResolution(1024);
+			EXPECT_EQ(scene.capture().size, ShowcaseImageSize);
+			gl.save(actual);
+			const auto parity = sparkle_test::compareImages(actual, individual,
+				sparkle_test::resultImagePath(category, name + "_batch_difference"), tolerance);
+			EXPECT_TRUE(parity.matches) << name << ": " << parity.differentPixelCount << " batching differences";
+			const auto expected = sparkle_test::expectedImagePath(category, name);
+			if (std::filesystem::exists(expected))
+			{
+				const auto comparison = sparkle_test::compareImages(actual, expected,
+					sparkle_test::resultImagePath(category, name + "_difference"), tolerance);
+				EXPECT_TRUE(comparison.matches) << name << ": " << comparison.differentPixelCount << " different pixels";
+			}
+			else
+			{
+				ADD_FAILURE() << "Review and promote rendered scaling baseline: " << actual;
+			}
+		}
+	}
+
+	struct ScalingMeasurements
+	{
+		std::vector<double> capture;
+		std::vector<double> submission;
+		std::vector<double> completion;
+		std::vector<double> cached;
+		std::size_t minCasterDraws = std::numeric_limits<std::size_t>::max();
+		std::size_t maxCasterDraws = 0;
+	};
+
+	double scalingMedian(std::vector<double> values)
+	{
+		std::sort(values.begin(), values.end());
+		return (values[(values.size() - 1) / 2] + values[values.size() / 2]) * 0.5;
+	}
+
+	void reportScaling(std::size_t chunks, const ScalingConfiguration &configuration, const ScalingMeasurements &times)
+	{
+		std::cout << "[Shadow scaling] chunks=" << chunks << " configuration=" << configuration.name
+			<< " resolution=1024 samples=" << times.completion.size()
+			<< " snapshot_median=" << scalingMedian(times.capture)
+			<< "ms submission_median=" << scalingMedian(times.submission)
+			<< "ms completion_median=" << scalingMedian(times.completion)
+			<< "ms completion_max=" << *std::max_element(times.completion.begin(), times.completion.end())
+			<< "ms cached_median=" << scalingMedian(times.cached)
+			<< "ms selected_casters_min=" << times.minCasterDraws
+			<< " selected_casters_max=" << times.maxCasterDraws << std::endl;
+	}
+
+	void measureScalingCase(Scene &scene, const ScalingConfiguration &configuration, int sample, ScalingMeasurements &times)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		configureScaling(scene, configuration);
+		scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-20, 50, 25}, {0, 0, 0}));
+		scene.engine.refreshRenderSnapshot();
+		(void)sparkle_test::ShadowPassTiming::measure(*scene.engine.latestRenderSnapshot(), gl.renderContext());
+		scene.sunEntity.transform().setRotation(spk::Quaternion::lookAt({-40.0f + static_cast<float>(sample), 50, 25}, {0, 0, 0}));
+		const auto begin = Clock::now();
+		scene.engine.refreshRenderSnapshot();
+		times.capture.push_back(std::chrono::duration<double, std::milli>(Clock::now() - begin).count());
+		const auto snapshot = scene.engine.latestRenderSnapshot();
+		ASSERT_NE(snapshot, nullptr);
+		const auto cold = sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext());
+		const auto first = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+		ASSERT_NE(first, nullptr);
+		const auto &entry = first->entries.at(scene.sun.registrationOrder());
+		ASSERT_EQ(entry.cascadeCount, static_cast<std::size_t>(configuration.cascades));
+		std::size_t draws = 0;
+		for (std::size_t i = 0; i < entry.cascadeCount; ++i)
+		{
+			ASSERT_TRUE(entry.cascadeTextures[i]);
+			draws += entry.cascadeStatistics[i].staticCasters;
+		}
+		EXPECT_GT(draws, 0u);
+		times.minCasterDraws = std::min(times.minCasterDraws, draws);
+		times.maxCasterDraws = std::max(times.maxCasterDraws, draws);
+		const auto warm = sparkle_test::ShadowPassTiming::measure(*snapshot, gl.renderContext());
+		const auto cached = scene.view.lightChannel().shadowResultCollection().acquireLatest(gl.surface());
+		ASSERT_NE(cached, nullptr);
+		EXPECT_EQ(cached->entries.at(scene.sun.registrationOrder()).generation, entry.generation);
+		times.submission.push_back(cold.submission);
+		times.completion.push_back(cold.completion);
+		times.cached.push_back(warm.completion);
+	}
+
+	void benchmarkScaling(int radius)
+	{
+		auto &gl = sparkle_test::OpenGLTestContext::instance();
+		gl.reset(ShowcaseImageSize);
+		Scene scene;
+		const auto side = static_cast<std::size_t>(radius * 2 + 1);
+		const auto count = side * side;
+		const auto start = Clock::now();
+		scene.fill(radius);
+		const auto setup = std::chrono::duration<double, std::milli>(Clock::now() - start).count();
+		ASSERT_EQ(scene.chunks.size(), count);
+		configureScalingView(scene, static_cast<float>(side * 16));
+		std::size_t nonempty = 0, triangles = 0;
+		for (const auto &[coordinate, entry] : scene.chunks)
+		{
+			(void)coordinate;
+			const auto *renderer = entry.entity().getComponent<spk::Voxel::Renderer>();
+			ASSERT_NE(renderer, nullptr);
+			ASSERT_NE(renderer->geometry(), nullptr);
+			const auto &mesh = renderer->geometry()->depthMesh();
+			nonempty += !mesh.empty() ? 1u : 0u;
+			triangles += mesh.indexCount() / 3;
+		}
+		EXPECT_GT(nonempty, 0u);
+		std::cout << "[Shadow scaling scene] chunks=" << count << " nonempty_meshes=" << nonempty
+			<< " depth_triangles=" << triangles << " generation_and_meshing=" << setup << "ms" << std::endl;
+		// Includes the initial geometry packing, allocation and any lazy GPU realization.
+		configureScaling(scene, ScalingConfigurations.back());
+		scene.engine.refreshRenderSnapshot();
+		const auto first = scene.engine.latestRenderSnapshot();
+		ASSERT_NE(first, nullptr);
+		const auto initial = sparkle_test::ShadowPassTiming::measure(*first, gl.renderContext());
+		std::cout << "[Shadow scaling initial] chunks=" << count << " submission=" << initial.submission
+			<< "ms completion=" << initial.completion << "ms" << std::endl;
+		compareScalingImages(scene, count);
+		scene.disableColorRendering();
+		std::array<ScalingMeasurements, ScalingConfigurations.size()> results;
+		for (int sample = 0; sample < 8; ++sample)
+		{
+			for (std::size_t order = 0; order < ScalingConfigurations.size(); ++order)
+			{
+				const auto index = (static_cast<std::size_t>(sample) + order) % ScalingConfigurations.size();
+				measureScalingCase(scene, ScalingConfigurations[index], sample, results[index]);
+			}
+		}
+		for (std::size_t i = 0; i < results.size(); ++i)
+		{
+			ASSERT_EQ(results[i].completion.size(), 8u);
+			reportScaling(count, ScalingConfigurations[i], results[i]);
+		}
+		gl.requireNoErrors();
+		gl.reset();
+	}
+}
+
+TEST(BiomeWorldScaling, Chunks25)
+{
+	benchmarkScaling(2);
+}
+
+TEST(BiomeWorldScaling, Chunks81)
+{
+	benchmarkScaling(4);
+}
+
+TEST(BiomeWorldScaling, Chunks289)
+{
+	benchmarkScaling(8);
+}
+
+TEST(BiomeWorldScaling, Chunks1089)
+{
+	benchmarkScaling(16);
+}
