@@ -159,7 +159,8 @@ namespace spk::ShadowMap
 	}
 
 	std::array<Projection, Projection::CascadeCount> Projection::directionalCascades(
-		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters, std::size_t count)
+		const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters, std::size_t count,
+		std::span<const Projection> previousProjections)
 	{
 		if (light.type != Light::Selection::Type::Directional || light.shadowResolution == 0 || (count != 1 && count != CascadeCount))
 		{
@@ -220,15 +221,36 @@ namespace spk::ShadowMap
 				maximum = {std::max(maximum.x, p.x), std::max(maximum.y, p.y), std::max(maximum.z, p.z)};
 			}
 			const float extent = std::max(maximum.x - minimum.x, maximum.y - minimum.y);
-			const float half = std::ceil(std::max(0.01f, extent * 0.51f) * 64.0f) / 64.0f;
+			const float half = std::ceil(std::max(0.01f, extent * 0.54f) * 64.0f) / 64.0f;
 			const float resolution = static_cast<float>(light.shadowResolution);
 			const float paddedHalf = resolution >= 8.0f ? half / (1.0f - 4.0f / resolution) : half;
-			const float texel = 2.0f * paddedHalf / resolution;
+			float texel = 2.0f * paddedHalf / resolution;
 			const auto snap = [&](float coordinate) { return resolution >= 8.0f ? std::round(coordinate / texel) * texel : coordinate; };
 			const float x = snap((minimum.x + maximum.x) * 0.5f);
 			const float y = snap((minimum.y + maximum.y) * 0.5f);
-			const float left = x - paddedHalf, right = x + paddedHalf;
-			const float bottom = y - paddedHalf, top = y + paddedHalf;
+			float left = x - paddedHalf, right = x + paddedHalf;
+			float bottom = y - paddedHalf, top = y + paddedHalf;
+			// A light-space guard band makes the map independent of small
+			// camera translations and rotations. Never reuse a larger map if
+			// doing so would materially reduce the requested texel density.
+			const Projection *cached = i < previousProjections.size() ? &previousProjections[i] : nullptr;
+			bool reuseFootprint = false;
+			if (cached && cached->worldPerTexel > 0.0f && cached->worldPerTexel <= texel * 1.10f)
+			{
+				const auto &coverage = cached->lightSpaceCoverage;
+				const float border = 2.0f * cached->worldPerTexel;
+				reuseFootprint = minimum.x >= coverage.minimum.x + border &&
+					maximum.x <= coverage.maximum.x - border && minimum.y >= coverage.minimum.y + border &&
+					maximum.y <= coverage.maximum.y - border;
+				if (reuseFootprint)
+				{
+					left = coverage.minimum.x;
+					right = coverage.maximum.x;
+					bottom = coverage.minimum.y;
+					top = coverage.maximum.y;
+					texel = cached->worldPerTexel;
+				}
+			}
 			// Only extend towards the light for casters overlapping the receiver
 			// footprint. Off-camera blockers remain in the shadow map.
 			for (const auto &box : lightBounds)
@@ -239,10 +261,19 @@ namespace spk::ShadowMap
 					maximum.z = std::max(maximum.z, box.maximum.z);
 				}
 			}
-			const float nearPlane = std::floor((-maximum.z - texel) / texel) * texel;
-			const float farPlane = std::ceil((-minimum.z + texel) / texel) * texel;
+			const float depthPadding = std::max(texel, (right - left) * 0.02f);
+			float nearPlane = std::floor((-maximum.z - depthPadding) / texel) * texel;
+			float farPlane = std::ceil((-minimum.z + depthPadding) / texel) * texel;
+			if (reuseFootprint && cached->nearPlane <= -maximum.z - texel &&
+				cached->farPlane >= -minimum.z + texel &&
+				cached->farPlane - cached->nearPlane <= 1.5f * (farPlane - nearPlane))
+			{
+				nearPlane = cached->nearPlane;
+				farPlane = cached->farPlane;
+			}
 			result[i] = {Matrix4x4::ortho(left, right, bottom, top, nearPlane, farPlane) * view,
-						 nearPlane, farPlane, split, texel, previous};
+						 nearPlane, farPlane, split, texel, previous,
+						 {{left, bottom, -farPlane}, {right, top, -nearPlane}}};
 			previousWidth = split - previous;
 			previous = split;
 		}

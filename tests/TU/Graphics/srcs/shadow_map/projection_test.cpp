@@ -264,3 +264,27 @@ TEST(ShadowProjectionTest, SingleCascadeFallbackKeepsOffscreenCasterCoverage)
 	EXPECT_NEAR(cascades.front().splitFar, 18.0f, 0.001f);
 	EXPECT_FLOAT_EQ(cascades.back().splitFar, 0.0f);
 }
+
+TEST(ShadowProjectionTest, GuardBandReusesMapsAcrossCameraMotion)
+{
+	spk::Camera3D camera;
+	camera.setPerspective(0.9f, 4.0f / 3.0f, 0.1f, 100.0f);
+	spk::Light::Selection::Entry light;
+	light.type = spk::Light::Selection::Type::Directional;
+	light.direction = {0, 0, -1};
+	light.shadowDistance = 80;
+	light.shadowResolution = 2048;
+	const auto first = spk::ShadowMap::Projection::directionalCascades(light, camera, {});
+	// Move by eight texels: this is much more than the old snap-only cache allowed.
+	camera.setPosition({first.front().worldPerTexel * 8.0f, 0, 0});
+	const auto moved = spk::ShadowMap::Projection::directionalCascades(light, camera, {}, first.size(), first);
+	for (std::size_t i = 0; i < first.size(); ++i)
+	{
+		EXPECT_EQ(first[i].viewProjection, moved[i].viewProjection);
+		EXPECT_FLOAT_EQ(first[i].worldPerTexel, moved[i].worldPerTexel);
+	}
+	// A large movement must invalidate the old footprint.
+	camera.setPosition({100, 0, 0});
+	const auto far = spk::ShadowMap::Projection::directionalCascades(light, camera, {}, moved.size(), moved);
+	EXPECT_NE(far.front().viewProjection, moved.front().viewProjection);
+}

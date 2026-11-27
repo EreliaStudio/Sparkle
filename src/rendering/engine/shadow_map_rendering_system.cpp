@@ -500,6 +500,7 @@ void main()
 			Vector3 cascadeDirection{};
 			float cascadeDistance = 0.0f;
 			std::array<float, Projection::CascadeCount> cascadeSplits{};
+			std::array<Projection, Projection::CascadeCount> cascadeProjections{};
 			std::uint32_t resolution = 0;
 			Matrix4x4 projection{};
 			std::uint64_t staticSignature = 0;
@@ -662,7 +663,11 @@ void main()
 			{
 				return;
 			}
-			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count);
+			const bool canReuseProjection = cache.cascaded && cache.cascadeCount == count &&
+				cache.resolution == light.shadowResolution && cache.cascadeDirection == light.direction;
+			const auto previousProjections = canReuseProjection ?
+				std::span<const Projection>(cache.cascadeProjections.data(), count) : std::span<const Projection>{};
+			const auto projections = Projection::directionalCascades(light, _camera, _bounds, count, previousProjections);
 			DirectionalDepthRenderer renderer(context);
 			auto cascades = cache.cascades;
 			for (std::size_t i = count; i < cascades.size(); ++i)
@@ -768,6 +773,7 @@ void main()
 			cache.staticSignature = _staticSignature;
 			cache.dynamicSignature = _dynamicSignature;
 			cache.cascadeSplits = splits;
+			cache.cascadeProjections = projections;
 			ShadowMap::Result::Entry entry;
 			entry.registrationOrder = light.registrationOrder;
 			entry.admission = light.admission;

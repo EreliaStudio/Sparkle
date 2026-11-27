@@ -23,6 +23,7 @@ namespace spk::ShadowMap
 		float splitFar = 0.0f;
 		float worldPerTexel = 0.0f;
 		float splitNear = 0.0f;
+		CasterBounds lightSpaceCoverage{};
 		static constexpr std::size_t CascadeCount = 4;
 
 		[[nodiscard]] static std::array<Projection, 6> point(const Light::Selection::Entry &light);
@@ -30,7 +31,7 @@ namespace spk::ShadowMap
 		[[nodiscard]] static Projection directional(const Light::Selection::Entry &light, const Camera3D &camera);
 		[[nodiscard]] static std::array<Projection, CascadeCount> directionalCascades(
 			const Light::Selection::Entry &light, const Camera3D &camera, std::span<const CasterBounds> casters,
-			std::size_t count = CascadeCount);
+			std::size_t count = CascadeCount, std::span<const Projection> previousProjections = {});
 		[[nodiscard]] bool intersects(const CasterBounds &bounds) const;
 	};
 }
