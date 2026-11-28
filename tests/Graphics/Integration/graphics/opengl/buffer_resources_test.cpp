@@ -450,10 +450,13 @@ TEST(BufferGPUResourceTest, UsageAndGpuRetrievalTrackCpuEditsAcrossGenerations)
 	buffer.bind(&cpu);
 	const auto first = buffer.retrieve(openGL.renderContext());
 	EXPECT_EQ(first.size(), sizeof(std::uint32_t) * 3);
+	buffer.setUsage(spk::BufferGPUResource::Usage::StreamDraw);
+	buffer.activate(openGL.renderContext());
+	GLint usage = 0;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_USAGE, &usage);
+	EXPECT_EQ(usage, GL_STREAM_DRAW);
 	cpu.cast<std::uint32_t>()[1] = 42;
 	cpu.validate();
-	buffer.setUsage(spk::BufferGPUResource::Usage::StreamDraw);
-	buffer.validate();
 	const auto second = buffer.retrieve(openGL.renderContext());
 	std::uint32_t middle = 0;
 	std::memcpy(&middle, second.data() + sizeof(std::uint32_t), sizeof(middle));

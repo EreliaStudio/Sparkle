@@ -91,8 +91,11 @@ namespace spk
 	bool BufferGPUResource::State::_needsSynchronization(const GPUResource::Instance &base) const
 	{
 		const auto &instance = static_cast<const BufferGPUResource::Instance &>(base);
-		return _buffer != nullptr && (instance.uploadedBuffer != _buffer ||
-			instance.uploadedVersion != _buffer->version() || instance.uploadedSize != _buffer->size());
+		if (_buffer == nullptr)
+		{
+			return false;
+		}
+		return instance.uploadedBuffer != _buffer || instance.uploadedVersion != _buffer->version() || instance.uploadedSize != _buffer->size();
 	}
 
 	void BufferGPUResource::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
@@ -146,6 +149,7 @@ namespace spk
 			return;
 		}
 		content._usage = usage;
+		validate();
 	}
 
 	BufferGPUResource::Usage BufferGPUResource::usage() const noexcept

@@ -66,7 +66,6 @@ namespace spk
 		return *program;
 	}
 
-
 	NineSliceRenderCommand::NineSliceRenderCommand(
 		const SpriteSheet *spriteSheet,
 		Rect2D rect,

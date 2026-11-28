@@ -15,7 +15,6 @@ namespace spk
 		static constexpr std::size_t MatrixUBOBindingPoint = 0;
 
 	private:
-
 		Matrix4x4 _matrix;
 
 	public:

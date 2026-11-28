@@ -84,6 +84,7 @@ namespace spk
 
 	public:
 		// Non-owning: the CPU buffer must outlive this resource and every retained handle.
+		// Rebind after replacing the contents of the buffer object by assignment.
 		void bind(const Buffer *buffer);
 		[[nodiscard]] const Buffer *buffer() const noexcept;
 		void setUsage(Usage usage);
