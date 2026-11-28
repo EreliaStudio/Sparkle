@@ -163,7 +163,7 @@ namespace spk
 		try
 		{
 			auto &entry = context.targetSurface->_gpuResources()._entry(state, context);
-			if (entry.generation != state.version())
+			if (entry.generation != state.version() || state._needsSynchronization(*entry.instance))
 			{
 				state._synchronize(*entry.instance, context);
 				entry.generation = state.version();

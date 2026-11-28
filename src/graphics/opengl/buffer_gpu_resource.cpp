@@ -13,6 +13,9 @@ namespace spk
 		GLuint identifier = 0;
 		std::size_t allocatedSize = 0;
 		std::optional<Usage> allocationUsage;
+		const Buffer *uploadedBuffer = nullptr;
+		std::uint64_t uploadedVersion = 0;
+		std::size_t uploadedSize = 0;
 
 		Instance()
 		{
@@ -131,6 +134,10 @@ namespace spk
 	void BufferGPUResource::_append(const void *data, std::size_t size)
 	{
 		auto &content = state<State>();
+		if (content._buffer != nullptr)
+		{
+			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
+		}
 		if (size > std::numeric_limits<std::size_t>::max() - content._storage.size())
 		{
 			throw std::overflow_error("GPU buffer size overflow");
@@ -141,6 +148,10 @@ namespace spk
 	void BufferGPUResource::_write(const void *data, std::size_t size, std::size_t offset)
 	{
 		auto &content = state<State>();
+		if (content._buffer != nullptr)
+		{
+			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
+		}
 		if (offset > content._storage.size() || size > content._storage.size() - offset)
 		{
 			throw std::out_of_range("GPU buffer write exceeds buffer size");
@@ -157,6 +168,10 @@ namespace spk
 	void BufferGPUResource::_resize(std::size_t size)
 	{
 		auto &content = state<State>();
+		if (content._buffer != nullptr)
+		{
+			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
+		}
 		if (content._storage.size() == size)
 		{
 			return;
@@ -166,22 +181,40 @@ namespace spk
 
 	void BufferGPUResource::_reserve(std::size_t size)
 	{
-		state<State>()._storage.reserve(size);
+		auto &content = state<State>();
+		if (content._buffer != nullptr)
+		{
+			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
+		}
+		content._storage.reserve(size);
 	}
 
-	std::byte *BufferGPUResource::_data() noexcept
+	std::byte *BufferGPUResource::_data()
 	{
-		return state<State>()._storage.data();
+		auto &content = state<State>();
+		if (content._buffer != nullptr)
+		{
+			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
+		}
+		return content._storage.data();
 	}
 
-	const std::byte *BufferGPUResource::_data() const noexcept
+	const std::byte *BufferGPUResource::_data() const
 	{
-		return state<State>()._storage.data();
+		const auto &content = state<State>();
+		return content._buffer != nullptr ? content._buffer->data() : content._storage.data();
 	}
 
 	std::unique_ptr<GPUResource::Instance> BufferGPUResource::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
+	}
+
+	bool BufferGPUResource::State::_needsSynchronization(const GPUResource::Instance &base) const
+	{
+		const auto &instance = static_cast<const BufferGPUResource::Instance &>(base);
+		return _buffer != nullptr && (instance.uploadedBuffer != _buffer ||
+			instance.uploadedVersion != _buffer->version() || instance.uploadedSize != _buffer->size());
 	}
 
 	void BufferGPUResource::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
@@ -195,8 +228,11 @@ namespace spk
 		}
 		if (size() != 0)
 		{
-			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _storage.data());
+			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _buffer != nullptr ? _buffer->data() : _storage.data());
 		}
+		instance.uploadedBuffer = _buffer;
+		instance.uploadedVersion = dataVersion();
+		instance.uploadedSize = size();
 	}
 
 	void BufferGPUResource::State::_bind(GPUResource::Instance &base, RenderContext &) const
@@ -204,8 +240,25 @@ namespace spk
 		glBindBuffer(_target(), static_cast<Instance &>(base).identifier);
 	}
 
+	void BufferGPUResource::bind(const Buffer *buffer)
+	{
+		auto &content = state<State>();
+		content._storage = {};
+		content._buffer = buffer;
+		validate();
+	}
+
+	const Buffer *BufferGPUResource::buffer() const noexcept
+	{
+		return state<State>()._buffer;
+	}
+
 	void BufferGPUResource::clear()
 	{
+		if (buffer() != nullptr)
+		{
+			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
+		}
 		if (size() == 0)
 		{
 			return;
@@ -230,14 +283,14 @@ namespace spk
 
 	std::size_t BufferGPUResource::size() const noexcept
 	{
-		return state<State>()._storage.size();
+		return state<State>().size();
 	}
 
 	std::vector<std::byte> BufferGPUResource::retrieve(RenderContext &context) const
 	{
 		activate(context);
 
-		std::vector<std::byte> result(state<State>()._storage.size());
+		std::vector<std::byte> result(size());
 
 		if (result.empty())
 		{

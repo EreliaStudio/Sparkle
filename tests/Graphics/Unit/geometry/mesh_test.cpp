@@ -262,3 +262,21 @@ TEST(MeshTest, GeneratedVertexOverflowAndSequentialIndexBoundsAreRejected)
 	builder.addSequentialIndices(1);
 	EXPECT_EQ(std::move(builder).build().indexCount(), 1u);
 }
+
+TEST(MeshTest, PublishedMeshKeepsItsCpuBuffersAtStableAddresses)
+{
+	SimpleMesh::Builder builder;
+	(void)builder.addVertex({1.0f, 2.0f});
+	builder.addIndex(0);
+	auto mesh = std::move(builder).build();
+	auto copy = mesh;
+	const auto *vertices = mesh.layout().vertexBuffer().buffer();
+	const auto *indices = mesh.layout().indexBuffer().buffer();
+	ASSERT_NE(vertices, nullptr);
+	ASSERT_NE(indices, nullptr);
+	mesh = SimpleMesh{};
+	EXPECT_EQ(copy.layout().vertexBuffer().buffer(), vertices);
+	EXPECT_EQ(copy.layout().indexBuffer().buffer(), indices);
+	EXPECT_FLOAT_EQ(vertices->cast<SimpleVertex>()[0].y, 2.0f);
+	EXPECT_EQ(indices->cast<std::uint32_t>()[0], 0u);
+}

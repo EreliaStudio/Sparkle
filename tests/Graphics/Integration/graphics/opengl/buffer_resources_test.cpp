@@ -417,3 +417,64 @@ TEST(BufferGPUResourceTest, UsageAndGpuRetrievalTrackCpuEditsAcrossGenerations)
 	EXPECT_EQ(middle, 42u);
 	EXPECT_EQ(buffer.usage(), spk::BufferGPUResource::Usage::StreamDraw);
 }
+
+TEST(BufferGPUResourceTest, ImmutableRebindingUploadsNewDataWithSameVersion)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	spk::Buffer::Builder firstBuilder;
+	firstBuilder.pushBack(std::uint32_t{11});
+	auto first = std::move(firstBuilder).build();
+	spk::Buffer::Builder secondBuilder;
+	secondBuilder.pushBack(std::uint32_t{22});
+	auto second = std::move(secondBuilder).build();
+	spk::UniformBuffer gpu;
+	gpu.bind(&first);
+	EXPECT_EQ(gpu.retrieve<std::uint32_t>(openGL.renderContext()), 11u);
+	gpu.bind(&second);
+	EXPECT_EQ(gpu.retrieve<std::uint32_t>(openGL.renderContext()), 22u);
+}
+
+TEST(BufferGPUResourceTest, MutableCpuBufferUpdatesUploadThroughExistingHandle)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	spk::Buffer::Builder builder;
+	builder.pushBack(std::uint32_t{11});
+	auto cpu = std::move(builder).buildMutable();
+	spk::UniformBuffer gpu;
+	gpu.bind(&cpu);
+	auto handle = gpu.handle();
+	EXPECT_EQ(gpu.retrieve<std::uint32_t>(openGL.renderContext()), 11u);
+	cpu.cast<std::uint32_t>()[0] = 77;
+	cpu.validate();
+	handle.activate(openGL.renderContext());
+	std::uint32_t result = 0;
+	glGetBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(result), &result);
+	EXPECT_EQ(result, 77u);
+}
+
+TEST(LayoutBufferTest, MutableCpuEditsUploadWithoutReconfiguringVertexArray)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	spk::Buffer::Builder vertexBuilder;
+	vertexBuilder.pushBack(Vertex{1.0f, 2.0f, 3u});
+	auto vertices = std::move(vertexBuilder).buildMutable();
+	spk::Buffer::Builder indexBuilder;
+	indexBuilder.pushBack(std::uint32_t{0});
+	auto indices = std::move(indexBuilder).build();
+	spk::LayoutBuffer layout;
+	configureVertexBuffer(layout.vertexBuffer());
+	layout.indexBuffer().setType(spk::IndexBuffer::Type::UnsignedInt);
+	layout.vertexBuffer().bind(&vertices);
+	layout.indexBuffer().bind(&indices);
+	layout.validate();
+	layout.activate(openGL.renderContext());
+	vertices.cast<Vertex>()[0].color = 42u;
+	vertices.validate();
+	layout.activate(openGL.renderContext());
+	Vertex actual{};
+	glGetBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(actual), &actual);
+	EXPECT_EQ(actual.color, 42u);
+}

@@ -16,6 +16,12 @@ namespace spk
 		GPUResource::Identifier vertexBufferIdentifier = 0;
 		GPUResource::Identifier indexBufferIdentifier = 0;
 		GPUResource::Generation vertexConfigurationGeneration = 0;
+		GPUResource::Generation vertexGeneration = 0;
+		GPUResource::Generation indexGeneration = 0;
+		std::uint64_t vertexDataVersion = 0;
+		std::uint64_t indexDataVersion = 0;
+		std::size_t vertexSize = 0;
+		std::size_t indexSize = 0;
 		std::vector<GLuint> enabledAttributes;
 
 		Instance()
@@ -121,6 +127,12 @@ namespace spk
 		instance.vertexBufferIdentifier = _vertexBuffer.identifier();
 		instance.indexBufferIdentifier = _indexBuffer.identifier();
 		instance.vertexConfigurationGeneration = _vertexBuffer->configurationGeneration();
+		instance.vertexGeneration = _vertexBuffer.generation();
+		instance.indexGeneration = _indexBuffer.generation();
+		instance.vertexDataVersion = _vertexBuffer->dataVersion();
+		instance.indexDataVersion = _indexBuffer->dataVersion();
+		instance.vertexSize = _vertexBuffer->size();
+		instance.indexSize = _indexBuffer->size();
 	}
 
 	std::unique_ptr<GPUResource::Instance> VertexArray::State::_create(RenderContext &) const
@@ -145,6 +157,21 @@ namespace spk
 		if (_needsConfiguration(instance))
 		{
 			_configure(instance, context);
+			return;
+		}
+		if (instance.vertexGeneration != _vertexBuffer.generation() || instance.vertexDataVersion != _vertexBuffer->dataVersion() || instance.vertexSize != _vertexBuffer->size())
+		{
+			_vertexBuffer.activate(context);
+			instance.vertexGeneration = _vertexBuffer.generation();
+			instance.vertexDataVersion = _vertexBuffer->dataVersion();
+			instance.vertexSize = _vertexBuffer->size();
+		}
+		if (instance.indexGeneration != _indexBuffer.generation() || instance.indexDataVersion != _indexBuffer->dataVersion() || instance.indexSize != _indexBuffer->size())
+		{
+			_indexBuffer.activate(context);
+			instance.indexGeneration = _indexBuffer.generation();
+			instance.indexDataVersion = _indexBuffer->dataVersion();
+			instance.indexSize = _indexBuffer->size();
 		}
 	}
 
