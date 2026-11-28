@@ -1,6 +1,8 @@
 name: CI experiments
 on:
   workflow_dispatch:
+  pull_request:
+    types: [labeled]
 permissions:
   contents: read
 defaults:
@@ -12,6 +14,7 @@ env:
   MESA_GLSL_VERSION_OVERRIDE: '460'
 jobs:
   experiment:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ci-experiments'
     name: Windows Release experiment (${{ matrix.mode }})
     runs-on: windows-2022
     timeout-minutes: 60
@@ -55,18 +58,22 @@ jobs:
           "Build: $($timer.Elapsed.TotalSeconds) seconds (exit $code)" >> $env:GITHUB_STEP_SUMMARY
           if ($code -ne 0) { exit $code }
       - name: Install software OpenGL
+        id: mesa
         run: ./tools/ci/install-mesa.ps1 -Destination build/experiment/tests/Graphics
       - name: Run isolated performance
         run: ctest --test-dir build/experiment -L '^(Performance|Benchmark)$' --parallel 1 --output-on-failure --no-tests=error --timeout 120 --output-junit results-performance.xml
       - name: Run Core tests
-        if: success()
+        if: always() && !cancelled() && steps.mesa.outcome == 'success'
         run: ctest --test-dir build/experiment -L '^Core$' --parallel 1 --output-on-failure --no-tests=error --timeout 120 --output-junit results-core.xml
+      - name: Run audited concurrent Graphics candidates
+        if: always() && !cancelled() && steps.mesa.outcome == 'success' && matrix.mode == 'parallel'
+        run: ctest --test-dir build/experiment -L '^ExperimentalParallel$' --parallel 2 --output-on-failure --no-tests=error --timeout 120 --output-junit results-parallel.xml
       - name: Run Graphics correctness
-        if: success()
-        run: ctest --test-dir build/experiment -L '^Graphics$' -LE '^(Golden|Performance|Benchmark)$' --parallel ${{ matrix.mode == 'parallel' && '2' || '1' }} --output-on-failure --no-tests=error --timeout 120 --output-junit results-graphics.xml
+        if: always() && !cancelled() && steps.mesa.outcome == 'success'
+        run: ctest --test-dir build/experiment -L '^Graphics$' -LE '^(Golden|Performance|Benchmark|ExperimentalParallel)$' --parallel 1 --output-on-failure --no-tests=error --timeout 120 --output-junit results-graphics.xml
       - name: Run Golden images
-        if: success()
-        run: ctest --test-dir build/experiment -L '^Golden$' --parallel ${{ matrix.mode == 'parallel' && '2' || '1' }} --output-on-failure --no-tests=error --timeout 120 --output-junit results-golden.xml
+        if: always() && !cancelled() && steps.mesa.outcome == 'success'
+        run: ctest --test-dir build/experiment -L '^Golden$' -LE '^ExperimentalParallel$' --parallel 1 --output-on-failure --no-tests=error --timeout 120 --output-junit results-golden.xml
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4

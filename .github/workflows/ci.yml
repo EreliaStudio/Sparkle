@@ -19,6 +19,8 @@ defaults:
     shell: pwsh
 
 env:
+  SCCACHE_GHA_ENABLED: "true"
+  SCCACHE_IGNORE_SERVER_IO_ERROR: "1"
   GALLIUM_DRIVER: llvmpipe
   # Sparkle requests a 4.6 core context and compiles GLSL 460 shaders.
   MESA_GL_VERSION_OVERRIDE: '4.6'
@@ -56,7 +58,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
         with:
           arch: x64
       - name: Set up compilation and dependency caches
@@ -65,7 +66,6 @@ jobs:
         with:
           scope: ${{ github.job }}
       - name: Configure Core and Graphics (Windows)
-        if: runner.os == 'Windows'
         run: >-
           cmake -S . -B build/standard-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
@@ -78,28 +78,9 @@ jobs:
           -DSPARKLE_BUILD_GRAPHICS=ON
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Configure Core (Linux)
-        if: runner.os == 'Linux'
-        run: >-
-          cmake -S . -B build/standard-test -G Ninja
-          -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_BUILD_TYPE=Debug
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-linux
-          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=OFF
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Build Core and Graphics test executables (Windows)
-        if: runner.os == 'Windows'
         run: cmake --build build/standard-test --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
-      - name: Build Core test executable (Linux)
-        if: runner.os == 'Linux'
-        run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
       - name: Install software OpenGL for test discovery
-        if: runner.os == 'Windows'
         run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Export reusable libraries and test bundles
         run: ./tools/ci/export-standard-build.ps1 -Configuration Debug
@@ -116,7 +97,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload Graphics test executables and registrations
-        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: standard-graphics-windows-2022-Debug
@@ -144,7 +124,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
         with:
           arch: x64
       - name: Set up compilation and dependency caches
@@ -153,7 +132,6 @@ jobs:
         with:
           scope: ${{ github.job }}
       - name: Configure Core and Graphics (Windows)
-        if: runner.os == 'Windows'
         run: >-
           cmake -S . -B build/standard-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
@@ -166,28 +144,9 @@ jobs:
           -DSPARKLE_BUILD_GRAPHICS=ON
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Configure Core (Linux)
-        if: runner.os == 'Linux'
-        run: >-
-          cmake -S . -B build/standard-test -G Ninja
-          -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-linux
-          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=OFF
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Build Core and Graphics test executables (Windows)
-        if: runner.os == 'Windows'
         run: cmake --build build/standard-test --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
-      - name: Build Core test executable (Linux)
-        if: runner.os == 'Linux'
-        run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
       - name: Install software OpenGL for test discovery
-        if: runner.os == 'Windows'
         run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Export reusable libraries and test bundles
         run: ./tools/ci/export-standard-build.ps1 -Configuration Release
@@ -204,7 +163,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload Graphics test executables and registrations
-        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: standard-graphics-windows-2022-Release
@@ -231,36 +189,16 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
-        with:
-          arch: x64
       - name: Set up compilation and dependency caches
         uses: ./.github/actions/build-cache
         continue-on-error: true
         with:
           scope: ${{ github.job }}
-      - name: Configure Core and Graphics (Windows)
-        if: runner.os == 'Windows'
-        run: >-
-          cmake -S . -B build/standard-test -G Ninja
-          -DCMAKE_CXX_COMPILER=clang-cl
-          -DCMAKE_BUILD_TYPE=Debug
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
-          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=ON
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Configure Core (Linux)
-        if: runner.os == 'Linux'
         run: >-
           cmake -S . -B build/standard-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang++
           -DCMAKE_BUILD_TYPE=Debug
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-linux
           -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
@@ -268,15 +206,8 @@ jobs:
           -DSPARKLE_BUILD_GRAPHICS=OFF
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Build Core and Graphics test executables (Windows)
-        if: runner.os == 'Windows'
-        run: cmake --build build/standard-test --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
       - name: Build Core test executable (Linux)
-        if: runner.os == 'Linux'
         run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
-      - name: Install software OpenGL for test discovery
-        if: runner.os == 'Windows'
-        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Export reusable libraries and test bundles
         run: ./tools/ci/export-standard-build.ps1 -Configuration Debug
       - name: Report compiler cache statistics
@@ -289,14 +220,6 @@ jobs:
         with:
           name: standard-core-ubuntu-24.04-Debug
           path: build/ci-bundles/Core
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload Graphics test executables and registrations
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: standard-graphics-ubuntu-24.04-Debug
-          path: build/ci-bundles/Graphics
           if-no-files-found: error
           retention-days: 7
       - name: Upload compiled Sparkle libraries
@@ -319,36 +242,16 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
-        with:
-          arch: x64
       - name: Set up compilation and dependency caches
         uses: ./.github/actions/build-cache
         continue-on-error: true
         with:
           scope: ${{ github.job }}
-      - name: Configure Core and Graphics (Windows)
-        if: runner.os == 'Windows'
-        run: >-
-          cmake -S . -B build/standard-test -G Ninja
-          -DCMAKE_CXX_COMPILER=clang-cl
-          -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
-          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=ON
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Configure Core (Linux)
-        if: runner.os == 'Linux'
         run: >-
           cmake -S . -B build/standard-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang++
           -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-linux
           -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
@@ -356,15 +259,8 @@ jobs:
           -DSPARKLE_BUILD_GRAPHICS=OFF
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Build Core and Graphics test executables (Windows)
-        if: runner.os == 'Windows'
-        run: cmake --build build/standard-test --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
       - name: Build Core test executable (Linux)
-        if: runner.os == 'Linux'
         run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
-      - name: Install software OpenGL for test discovery
-        if: runner.os == 'Windows'
-        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Export reusable libraries and test bundles
         run: ./tools/ci/export-standard-build.ps1 -Configuration Release
       - name: Report compiler cache statistics
@@ -377,14 +273,6 @@ jobs:
         with:
           name: standard-core-ubuntu-24.04-Release
           path: build/ci-bundles/Core
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload Graphics test executables and registrations
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: standard-graphics-ubuntu-24.04-Release
-          path: build/ci-bundles/Graphics
           if-no-files-found: error
           retention-days: 7
       - name: Upload compiled Sparkle libraries
@@ -694,7 +582,7 @@ jobs:
         id: mesa
         run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Run Release performance regressions and benchmarks
-        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.configuration == 'Release'
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && false
         id: performance
         run: >-
           ctest --test-dir build/standard-test -L '^(Performance|Benchmark)$'
@@ -776,7 +664,7 @@ jobs:
         id: mesa
         run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Run Release performance regressions and benchmarks
-        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.configuration == 'Release'
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && true
         id: performance
         run: >-
           ctest --test-dir build/standard-test -L '^(Performance|Benchmark)$'
@@ -951,7 +839,6 @@ jobs:
           cmake -S . -B build/compiler-compat -G Ninja
           -DCMAKE_CXX_COMPILER=g++
           -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
-          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-linux
           -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
