@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <new>
 #include <span>
 #include <type_traits>
 #include <vector>
@@ -20,10 +21,49 @@ namespace spk
 		class Mutable;
 
 	private:
+		static constexpr std::size_t StorageAlignment = alignof(std::max_align_t) < 16 ? 16 : alignof(std::max_align_t);
+
+		template <typename T>
+		class StorageAllocator
+		{
+		private:
+			static constexpr auto Alignment = std::align_val_t{alignof(T) > StorageAlignment ? alignof(T) : StorageAlignment};
+
+		public:
+			using value_type = T;
+
+			StorageAllocator() = default;
+
+			template <typename U>
+			StorageAllocator(const StorageAllocator<U> &) noexcept
+			{
+			}
+
+			[[nodiscard]] T *allocate(std::size_t count)
+			{
+				if (count > std::numeric_limits<std::size_t>::max() / sizeof(T))
+				{
+					throw std::bad_array_new_length();
+				}
+				return static_cast<T *>(::operator new(count * sizeof(T), Alignment));
+			}
+
+			void deallocate(T *memory, std::size_t) noexcept
+			{
+				::operator delete(memory, Alignment);
+			}
+
+			template <typename U>
+			[[nodiscard]] bool operator==(const StorageAllocator<U> &) const noexcept
+			{
+				return true;
+			}
+		};
+
 		class Data
 		{
 		private:
-			std::vector<std::byte> _storage;
+			std::vector<std::byte, StorageAllocator<std::byte>> _storage;
 			std::uint64_t _version = 0;
 
 		public:
@@ -45,7 +85,7 @@ namespace spk
 		{
 			static_assert(std::is_trivially_copyable_v<T>);
 			static_assert(!std::is_volatile_v<T>);
-			static_assert(alignof(T) <= alignof(std::max_align_t));
+			static_assert(alignof(T) <= StorageAlignment);
 #if defined(__cpp_lib_is_implicit_lifetime)
 			static_assert(std::is_implicit_lifetime_v<T>);
 #endif

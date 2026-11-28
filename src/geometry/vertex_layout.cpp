@@ -146,7 +146,6 @@ namespace spk
 
 	void VertexLayout::addPadding(std::size_t byteCount)
 	{
-
 		if (_stride > std::numeric_limits<std::size_t>::max() - byteCount)
 		{
 			throw std::overflow_error("VertexLayout stride overflow");

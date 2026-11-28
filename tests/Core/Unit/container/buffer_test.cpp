@@ -142,3 +142,23 @@ TEST(BufferTest, PoolReusesGrownBufferAndResetsVersion)
 	EXPECT_TRUE(builder.empty());
 	EXPECT_EQ(std::move(builder).build().version(), 0u);
 }
+
+TEST(BufferTest, SupportsSixteenByteAlignedShaderDataAfterResizeAndPublication)
+{
+	struct alignas(16) Value
+	{
+		std::array<std::uint32_t, 4> elements;
+	};
+
+	Buffer::Builder builder;
+	builder.pushBack(Value{{1, 2, 3, 4}});
+	EXPECT_EQ(reinterpret_cast<std::uintptr_t>(builder.data()) % alignof(Value), 0u);
+	auto buffer = std::move(builder).buildMutable();
+	buffer.resize<Value>(4096);
+	EXPECT_EQ(reinterpret_cast<std::uintptr_t>(buffer.data()) % alignof(Value), 0u);
+	EXPECT_EQ(buffer.cast<Value>()[0].elements[3], 4u);
+	buffer.cast<Value>()[4095].elements[0] = 123u;
+	buffer.validate();
+	const Buffer &view = buffer;
+	EXPECT_EQ(view.cast<Value>()[4095].elements[0], 123u);
+}

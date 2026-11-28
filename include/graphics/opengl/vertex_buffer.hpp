@@ -67,7 +67,6 @@ namespace spk
 		void _validateType() const
 		{
 			static_assert(std::is_trivially_copyable_v<TVertex>, "VertexBuffer requires a trivially copyable type.");
-			static_assert(alignof(TVertex) <= alignof(std::max_align_t), "VertexBuffer cannot store an over-aligned type.");
 			const auto &content = state<State>();
 			if (content._layout.stride() == 0)
 			{

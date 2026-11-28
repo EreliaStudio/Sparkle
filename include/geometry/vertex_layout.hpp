@@ -2,7 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace spk
@@ -62,6 +64,17 @@ namespace spk
 			Interpretation interpretation = Interpretation::Floating,
 			bool normalized = false);
 		void addPadding(std::size_t byteCount);
+
+		template <typename T>
+		void addPadding(std::size_t count)
+		{
+			if (count > std::numeric_limits<std::size_t>::max() / sizeof(T))
+			{
+				throw std::overflow_error("VertexLayout padding overflow");
+			}
+			addPadding(sizeof(T) * count);
+		}
+
 		void clear();
 
 		[[nodiscard]] std::size_t stride() const noexcept;
