@@ -20,6 +20,7 @@ Copy-Item "$source/tests/Packaging/GraphicsConsumer" "$root/default-consumer" -R
 $dependencies = Join-Path $root 'dependencies'
 $common = @('-G', 'Ninja', '-DCMAKE_CXX_COMPILER=clang-cl', "-DCMAKE_BUILD_TYPE=$Configuration",
     '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>',
+    '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded',
     "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake",
     '-DVCPKG_TARGET_TRIPLET=x64-windows-static', "-DVCPKG_INSTALLED_DIR=$dependencies")
 $consumerOptions = $common + @('-DVCPKG_MANIFEST_MODE=OFF', '-DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF',

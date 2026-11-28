@@ -70,6 +70,7 @@ $configureArguments = @(
     "-B", $coverageBuildDirectory,
     "-G", "Ninja",
     "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded",
     "-DSPARKLE_BUILD_TESTS=ON",
     "-DVCPKG_MANIFEST_FEATURES=tests",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchainFile",
@@ -91,7 +92,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Building Core and Graphics test suites..."
-& cmake --build $coverageBuildDirectory --target SparkleCoreTestSuite SparkleGraphicsTestSuite
+& cmake --build $coverageBuildDirectory --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
 if ($LASTEXITCODE -ne 0) {
     throw "Coverage build failed with exit code $LASTEXITCODE."
 }
@@ -110,8 +111,12 @@ $testExitCode = 0
 try {
     $env:LLVM_PROFILE_FILE = Join-Path $profileDirectory "sparkle-%p-%m.profraw"
     Write-Host "Running the complete test suite..."
-    & ctest --test-dir $coverageBuildDirectory --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results.xml")
-    $testExitCode = $LASTEXITCODE
+    # Fast and its complement are disjoint and exhaustive. Do not run
+    # timing, native, stress or unaudited graphical workloads in parallel.
+    & ctest --test-dir $coverageBuildDirectory -L '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit (Join-Path $runDirectory "results-fast.xml")
+    $fastExitCode = $LASTEXITCODE
+    & ctest --test-dir $coverageBuildDirectory -LE '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results-serial.xml")
+    $testExitCode = if ($fastExitCode -ne 0) { $fastExitCode } else { $LASTEXITCODE }
 }
 finally {
     if ($null -eq $previousProfilePattern) {
@@ -121,6 +126,20 @@ finally {
         $env:LLVM_PROFILE_FILE = $previousProfilePattern
     }
 }
+
+# Merge JUnit cases without dropping failures from either phase.
+$combined = [xml] '<testsuites/>'
+foreach ($name in @('results-fast.xml', 'results-serial.xml')) {
+    $path = Join-Path $runDirectory $name
+    if (Test-Path -LiteralPath $path) {
+        $part = [xml](Get-Content -LiteralPath $path -Raw)
+        $suites = if ($part.DocumentElement.Name -eq 'testsuite') { @($part.DocumentElement) } else { @($part.DocumentElement.SelectNodes('testsuite')) }
+        foreach ($suite in $suites) {
+            [void]$combined.DocumentElement.AppendChild($combined.ImportNode($suite, $true))
+        }
+    }
+}
+$combined.Save((Join-Path $runDirectory 'results.xml'))
 
 $profilePaths = @(Get-ChildItem -LiteralPath $profileDirectory -Filter "*.profraw" -File | Select-Object -ExpandProperty FullName)
 if ($profilePaths.Count -eq 0) {

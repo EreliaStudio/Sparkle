@@ -95,6 +95,14 @@ string(JOIN ":" cpuSuites
     "ColorMesh2DTest.*"
     "TextureMesh2DTest.*"
     "TextureMesh3DTest.*"
+    "EventTest.*"
+    "MouseMovedEventTest.*"
+    "EventDispatcherTest.*"
+    "InputStateTest.*"
+    "FocusModeTest.*"
+    "UpdatableByDeviceTraitTest.*"
+    "KeyboardTest.*"
+    "MouseTest.*"
 )
 set(cpuStress "MesherFixtures.*")
 set(cpuGolden "PerlinNoiseGolden.*")
@@ -143,8 +151,12 @@ sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuStress}" "Graphics;CPU;Stress")
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuGolden}" "Graphics;CPU;Golden" RESOURCE_LOCK SparkleGraphics)
+set(graphicsIsolation RESOURCE_LOCK SparkleGraphics)
+if(SPARKLE_EXPERIMENTAL_PARALLEL_GRAPHICS)
+    set(graphicsIsolation)
+endif()
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-    "${goldenSuites}" "Graphics;Golden" RESOURCE_LOCK SparkleGraphics)
+    "${goldenSuites}" "Graphics;Golden" ${graphicsIsolation})
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuPerformance}" "Graphics;CPU;Performance;Randomized" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
@@ -153,5 +165,5 @@ sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${benchmarkSuites}-${performanceCases}" "Graphics;Benchmark" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "*-${cpuSuites}:${cpuStress}:${cpuGolden}:${goldenSuites}:${benchmarkSuites}"
-    "Graphics;Functional" RESOURCE_LOCK SparkleGraphics)
+    "Graphics;Functional" ${graphicsIsolation})
 
