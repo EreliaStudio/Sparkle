@@ -7,19 +7,13 @@
 
 namespace spk
 {
-	std::size_t ShaderStorageBuffer::_checkedSize(std::size_t nbElement) const
+	void ShaderStorageBuffer::State::_validateBuffer(const Buffer &buffer) const
 	{
-		const auto &content = state<State>();
-		if (content._dynamicElementSize == 0)
+		if (_dynamicElementSize == 0 || buffer.size() < _fixedPartSize ||
+			(buffer.size() - _fixedPartSize) % _dynamicElementSize != 0)
 		{
-			throw std::logic_error("ShaderStorageBuffer has no configured dynamic element size");
+			throw std::invalid_argument("ShaderStorageBuffer data size is invalid");
 		}
-		if (nbElement > (std::numeric_limits<std::size_t>::max() - content._fixedPartSize) / content._dynamicElementSize)
-		{
-			throw std::overflow_error("ShaderStorageBuffer size overflow");
-		}
-
-		return content._fixedPartSize + nbElement * content._dynamicElementSize;
 	}
 
 	GLenum ShaderStorageBuffer::State::_target() const noexcept
@@ -39,46 +33,11 @@ namespace spk
 		{
 			throw std::invalid_argument("ShaderStorageBuffer dynamic element size cannot be zero");
 		}
-
-		_resize(fixedPartSize);
 	}
 
 	ShaderStorageBuffer::ShaderStorageBuffer() :
 		BufferGPUResource(std::make_shared<State>())
 	{
-	}
-
-	void ShaderStorageBuffer::resize(std::size_t nbElement)
-	{
-		auto &content = state<State>();
-		if (content._dynamicElementCount == nbElement)
-		{
-			return;
-		}
-
-		_resize(_checkedSize(nbElement));
-		content._dynamicElementCount = nbElement;
-	}
-
-	void ShaderStorageBuffer::setFixedData(const void *data, std::size_t size)
-	{
-		if (size != state<State>()._fixedPartSize)
-		{
-			throw std::invalid_argument("ShaderStorageBuffer fixed data size is invalid");
-		}
-
-		_write(data, size);
-	}
-
-	void ShaderStorageBuffer::setDynamicData(const void *data, std::size_t nbElement)
-	{
-		const auto &content = state<State>();
-		if (nbElement != content._dynamicElementCount)
-		{
-			throw std::invalid_argument("ShaderStorageBuffer dynamic element count is invalid");
-		}
-
-		_write(data, nbElement * content._dynamicElementSize, content._fixedPartSize);
 	}
 
 	std::size_t ShaderStorageBuffer::bindingPoint() const noexcept

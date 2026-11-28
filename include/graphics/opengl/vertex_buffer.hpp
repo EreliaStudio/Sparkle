@@ -71,6 +71,7 @@ namespace spk
 				return std::make_unique<State>(*this);
 			}
 			[[nodiscard]] GLenum _target() const noexcept override;
+			void _validateBuffer(const Buffer &buffer) const override;
 
 		public:
 			[[nodiscard]] std::size_t stride() const noexcept
@@ -112,8 +113,6 @@ namespace spk
 			}
 		}
 
-		[[nodiscard]] static std::size_t _checkedSize(std::size_t count, std::size_t stride);
-
 	public:
 		VertexBuffer();
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
@@ -149,59 +148,10 @@ namespace spk
 		void clearConfiguration();
 
 		template <typename TVertex>
-		void resize(std::size_t count)
-		{
-			_validateType<TVertex>();
-			_resize(_checkedSize(count, state<State>()._stride));
-		}
-
-		template <typename TVertex>
-		void reserve(std::size_t count)
-		{
-			_validateType<TVertex>();
-			_reserve(_checkedSize(count, state<State>()._stride));
-		}
-
-		template <typename TVertex>
-		void pushBack(const TVertex &vertex)
-		{
-			_validateType<TVertex>();
-			_append(std::addressof(vertex), sizeof(TVertex));
-		}
-
-		template <typename TVertex, typename... TArguments>
-		void emplace(TArguments &&...arguments)
-		{
-			_validateType<TVertex>();
-			TVertex vertex(std::forward<TArguments>(arguments)...);
-			_append(std::addressof(vertex), sizeof(TVertex));
-		}
-
-		template <typename TVertex>
-		void insert(std::span<const TVertex> vertices)
-		{
-			_validateType<TVertex>();
-			_append(vertices.data(), vertices.size_bytes());
-		}
-
-		template <typename TVertex>
-		void insert(std::initializer_list<TVertex> vertices)
-		{
-			insert<TVertex>(std::span<const TVertex>(vertices.begin(), vertices.size()));
-		}
-
-		template <typename TVertex>
-		[[nodiscard]] std::span<TVertex> cast()
-		{
-			_validateType<TVertex>();
-			return {reinterpret_cast<TVertex *>(_data()), count()};
-		}
-
-		template <typename TVertex>
 		[[nodiscard]] std::span<const TVertex> cast() const
 		{
 			_validateType<TVertex>();
-			return {reinterpret_cast<const TVertex *>(_data()), count()};
+			return buffer() != nullptr ? buffer()->cast<TVertex>() : std::span<const TVertex>{};
 		}
 
 		[[nodiscard]] std::size_t stride() const noexcept;

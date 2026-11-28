@@ -135,17 +135,19 @@ TEST(GPUResourceHandleTest, TextureHandleCreatesInstanceAfterOwnerWasDestroyed)
 	EXPECT_NE(identifier, 0);
 }
 
-TEST(GPUResourceHandleTest, BufferHandlesRetainTheirLiveDataAndBindings)
+TEST(GPUResourceHandleTest, BufferHandlesRetainBindingsWhileCpuOwnersRemainAlive)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
 
+	spk::Buffer::Builder vertexBuilder;
+	vertexBuilder.pushBack(Vertex{2.0f, 3.0f});
+	auto vertexData = std::move(vertexBuilder).build();
 	spk::VertexBuffer::Handle vertices;
 	{
 		spk::VertexBuffer buffer;
 		buffer.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
-		buffer.pushBack(Vertex{2.0f, 3.0f});
-		buffer.validate();
+		buffer.bind(&vertexData);
 		vertices = buffer.handle();
 	}
 	EXPECT_EQ(vertices->size(), sizeof(Vertex));
@@ -155,11 +157,13 @@ TEST(GPUResourceHandleTest, BufferHandlesRetainTheirLiveDataAndBindings)
 	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &vertexIdentifier);
 	EXPECT_NE(vertexIdentifier, 0);
 
+	spk::Buffer::Builder uniformBuilder;
+	uniformBuilder.pushBack(std::uint32_t{42});
+	auto uniformData = std::move(uniformBuilder).build();
 	spk::UniformBuffer::Handle uniform;
 	{
 		spk::UniformBuffer buffer(3, sizeof(std::uint32_t));
-		buffer.setData(std::uint32_t{42});
-		buffer.validate();
+		buffer.bind(&uniformData);
 		uniform = buffer.handle();
 	}
 	EXPECT_NO_THROW(uniform.activate(openGL.renderContext()));
@@ -167,13 +171,13 @@ TEST(GPUResourceHandleTest, BufferHandlesRetainTheirLiveDataAndBindings)
 	glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, 3, &uniformIdentifier);
 	EXPECT_NE(uniformIdentifier, 0);
 
+	spk::Buffer::Builder storageBuilder;
+	storageBuilder.pushBack(std::uint32_t{77});
+	auto storageData = std::move(storageBuilder).build();
 	spk::ShaderStorageBuffer::Handle storage;
 	{
 		spk::ShaderStorageBuffer buffer(4, 0, sizeof(std::uint32_t));
-		buffer.resize(1);
-		const std::array<std::uint32_t, 1> value{77};
-		buffer.setDynamicData<std::uint32_t>(value);
-		buffer.validate();
+		buffer.bind(&storageData);
 		storage = buffer.handle();
 	}
 	EXPECT_NO_THROW(storage.activate(openGL.renderContext()));
@@ -186,17 +190,21 @@ TEST(GPUResourceHandleTest, VertexArrayStateRetainsBothBufferDependencies)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
+	spk::Buffer::Builder vertexBuilder;
+	vertexBuilder.pushBack(Vertex{0.0f, 0.0f});
+	auto vertexData = std::move(vertexBuilder).build();
+	spk::Buffer::Builder indexBuilder;
+	indexBuilder.pushBack(std::uint32_t{0});
+	auto indexData = std::move(indexBuilder).build();
 	spk::VertexArray::Handle arrayHandle;
 	{
 		spk::VertexBuffer vertices;
 		vertices.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
-		vertices.pushBack(Vertex{0.0f, 0.0f});
-		vertices.validate();
+		vertices.bind(&vertexData);
 
 		spk::IndexBuffer indices;
 		indices.setType(spk::IndexBuffer::Type::UnsignedInt);
-		indices.pushBack(std::uint32_t{0});
-		indices.validate();
+		indices.bind(&indexData);
 
 		spk::VertexArray array;
 		array.setVertexBuffer(vertices);

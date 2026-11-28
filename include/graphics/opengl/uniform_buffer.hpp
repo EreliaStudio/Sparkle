@@ -24,6 +24,7 @@ namespace spk
 
 		private:
 			std::size_t _bindingPoint = 0;
+			std::optional<std::size_t> _expectedSize;
 
 		protected:
 			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
@@ -31,18 +32,17 @@ namespace spk
 				return std::make_unique<State>(*this);
 			}
 			[[nodiscard]] GLenum _target() const noexcept override;
+			void _validateBuffer(const Buffer &buffer) const override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
 		public:
-			explicit State(std::size_t bindingPoint) :
-				_bindingPoint(bindingPoint)
+			explicit State(std::size_t bindingPoint, std::optional<std::size_t> expectedSize = {}) :
+				_bindingPoint(bindingPoint),
+				_expectedSize(expectedSize)
 			{
 			}
 		};
 		using Handle = GPUResource::Handle<State>;
-
-	private:
-		using BufferGPUResource::clear;
 
 	public:
 		UniformBuffer();
@@ -60,44 +60,15 @@ namespace spk
 
 		[[nodiscard]] std::size_t bindingPoint() const noexcept;
 
-		void setData(const void *data, std::size_t size);
-		void setData(const std::vector<std::byte> &data);
-
-		template <typename TType>
-		void setData(const TType &data)
-		{
-			static_assert(std::is_trivially_copyable_v<TType>, "UniformBuffer requires a trivially copyable type.");
-
-			if (sizeof(TType) != size())
-			{
-				throw std::logic_error("UniformBuffer size is different than the provided type");
-			}
-
-			setData(std::addressof(data), sizeof(TType));
-		}
-
-		template <typename TType>
-		[[nodiscard]] TType &cast()
-		{
-			static_assert(std::is_trivially_copyable_v<TType>, "UniformBuffer requires a trivially copyable type.");
-			if (size() != sizeof(TType))
-			{
-				throw std::logic_error("UniformBuffer size is different than the requested type");
-			}
-
-			return *reinterpret_cast<TType *>(_data());
-		}
-
 		template <typename TType>
 		[[nodiscard]] const TType &cast() const
 		{
-			static_assert(std::is_trivially_copyable_v<TType>, "UniformBuffer requires a trivially copyable type.");
-			if (size() != sizeof(TType))
+			static_assert(std::is_trivially_copyable_v<TType>);
+			if (buffer() == nullptr || size() != sizeof(TType))
 			{
 				throw std::logic_error("UniformBuffer size is different than the requested type");
 			}
-
-			return *reinterpret_cast<const TType *>(_data());
+			return buffer()->cast<TType>().front();
 		}
 
 		template <typename TType>

@@ -56,7 +56,6 @@ namespace spk
 			std::size_t _bindingPoint = 0;
 			std::size_t _fixedPartSize = 0;
 			std::size_t _dynamicElementSize = 0;
-			std::size_t _dynamicElementCount = 0;
 
 		protected:
 			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
@@ -64,15 +63,12 @@ namespace spk
 				return std::make_unique<State>(*this);
 			}
 			[[nodiscard]] GLenum _target() const noexcept override;
+			void _validateBuffer(const Buffer &buffer) const override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
 		public:
 			[[nodiscard]] std::size_t dynamicElementCount() const noexcept
 			{
-				if (buffer() == nullptr)
-				{
-					return _dynamicElementCount;
-				}
 				return _dynamicElementSize != 0 && size() >= _fixedPartSize ? (size() - _fixedPartSize) / _dynamicElementSize : 0;
 			}
 
@@ -87,10 +83,6 @@ namespace spk
 		using Handle = GPUResource::Handle<State>;
 
 	private:
-		using BufferGPUResource::clear;
-
-		[[nodiscard]] std::size_t _checkedSize(std::size_t nbElement) const;
-
 		template <typename TType>
 		using ConstIfNotVoid = std::conditional_t<
 			std::is_void_v<TType>,
@@ -135,6 +127,10 @@ namespace spk
 		{
 			_validateTypes<TFixedPart, TDynamicElement>();
 			const auto &content = state<State>();
+			if (size() < content._fixedPartSize || (size() - content._fixedPartSize) % content._dynamicElementSize != 0)
+			{
+				throw std::logic_error("ShaderStorageBuffer data size is invalid");
+			}
 
 			const auto dynamicAddress =
 				reinterpret_cast<std::uintptr_t>(_data() + content._fixedPartSize);
@@ -175,62 +171,6 @@ namespace spk
 		[[nodiscard]] std::size_t dynamicElementSize() const noexcept;
 		[[nodiscard]] std::size_t dynamicElementCount() const noexcept;
 
-		void resize(std::size_t nbElement);
-
-		void setFixedData(const void *data, std::size_t size);
-		void setDynamicData(const void *data, std::size_t nbElement);
-
-		template <typename TFixedPart>
-		void setFixedData(const TFixedPart &data)
-		{
-			static_assert(
-				std::is_trivially_copyable_v<TFixedPart>,
-				"ShaderStorageBuffer fixed part requires a trivially copyable type.");
-
-			if (sizeof(TFixedPart) != state<State>()._fixedPartSize)
-			{
-				throw std::invalid_argument("ShaderStorageBuffer fixed part size does not match the provided type");
-			}
-
-			setFixedData(std::addressof(data), sizeof(TFixedPart));
-		}
-
-		template <typename TDynamicElement>
-		void setDynamicData(std::span<const TDynamicElement> data)
-		{
-			static_assert(
-				std::is_trivially_copyable_v<TDynamicElement>,
-				"ShaderStorageBuffer dynamic element requires a trivially copyable type.");
-
-			if (sizeof(TDynamicElement) != state<State>()._dynamicElementSize)
-			{
-				throw std::invalid_argument("ShaderStorageBuffer dynamic element size does not match the provided type");
-			}
-
-			setDynamicData(data.data(), data.size());
-		}
-
-		template <typename TFixedPart, typename TDynamicElement>
-		[[nodiscard]] View<TFixedPart, TDynamicElement> cast()
-		{
-			_validateCast<TFixedPart, TDynamicElement>();
-			const auto &content = state<State>();
-
-			if constexpr (std::is_void_v<TFixedPart>)
-			{
-				return {
-					.nbElement = content.dynamicElementCount(),
-					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + content._fixedPartSize)};
-			}
-			else
-			{
-				return {
-					.fixedPart = *reinterpret_cast<TFixedPart *>(_data()),
-					.nbElement = content.dynamicElementCount(),
-					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + content._fixedPartSize)};
-			}
-		}
-
 		template <typename TFixedPart, typename TDynamicElement>
 		[[nodiscard]] View<ConstIfNotVoid<TFixedPart>, const TDynamicElement> cast() const
 		{
@@ -255,7 +195,7 @@ namespace spk
 		template <typename TFixedPart, typename TDynamicElement>
 		[[nodiscard]] GPUView<TFixedPart, TDynamicElement> retrieve(RenderContext &context) const
 		{
-			_validateTypes<TFixedPart, TDynamicElement>();
+			_validateCast<TFixedPart, TDynamicElement>();
 			const auto &content = state<State>();
 
 			const auto data = BufferGPUResource::retrieve(context);

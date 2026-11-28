@@ -40,15 +40,29 @@ namespace
 		float y;
 	};
 
-	void configure(spk::VertexBuffer &vertices, spk::IndexBuffer &indices)
+	struct GeometryData
+	{
+		spk::Buffer::Immutable vertices;
+		spk::Buffer::Immutable indices;
+	};
+
+	GeometryData geometryData()
+	{
+		spk::Buffer::Builder vertices;
+		vertices.pushBack(Position{1.0f, 2.0f});
+		spk::Buffer::Builder indices;
+		indices.pushBack(std::uint32_t{0});
+		return {std::move(vertices).build(), std::move(indices).build()};
+	}
+
+	void configure(spk::VertexBuffer &vertices, spk::IndexBuffer &indices, const GeometryData &data)
 	{
 		vertices.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
-		vertices.pushBack(Position{1.0f, 2.0f});
 		indices.setType(spk::IndexBuffer::Type::UnsignedInt);
-		indices.pushBack<std::uint32_t>(0);
-		vertices.validate();
-		indices.validate();
+		vertices.bind(&data.vertices);
+		indices.bind(&data.indices);
 	}
+
 }
 
 TEST(TextureTest, PixelSectionsUseTexelCentersAndValidateBounds)
@@ -275,7 +289,8 @@ TEST(VertexArrayTest, MissingEitherBufferIsRejected)
 	EXPECT_THROW(array.activate(openGL.renderContext()), spk::Exception);
 	spk::VertexBuffer vertices;
 	spk::IndexBuffer indices;
-	configure(vertices, indices);
+	const auto data = geometryData();
+	configure(vertices, indices, data);
 	spk::VertexArray onlyVertices;
 	onlyVertices.setVertexBuffer(vertices);
 	onlyVertices.validate();
@@ -288,7 +303,8 @@ TEST(VertexArrayTest, ConfiguresAttributesAndReconfiguresAfterBufferReplacement)
 	openGL.reset();
 	spk::VertexBuffer firstVertices;
 	spk::IndexBuffer firstIndices;
-	configure(firstVertices, firstIndices);
+	const auto firstData = geometryData();
+	configure(firstVertices, firstIndices, firstData);
 	spk::VertexArray array;
 	array.setVertexBuffer(firstVertices);
 	array.setIndexBuffer(firstIndices);
@@ -300,7 +316,8 @@ TEST(VertexArrayTest, ConfiguresAttributesAndReconfiguresAfterBufferReplacement)
 
 	spk::VertexBuffer secondVertices;
 	spk::IndexBuffer secondIndices;
-	configure(secondVertices, secondIndices);
+	const auto secondData = geometryData();
+	configure(secondVertices, secondIndices, secondData);
 	array.setVertexBuffer(secondVertices);
 	array.setIndexBuffer(secondIndices);
 	EXPECT_NO_THROW(array.activate(openGL.renderContext()));

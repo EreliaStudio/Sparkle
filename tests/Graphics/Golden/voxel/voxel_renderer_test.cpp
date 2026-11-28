@@ -566,23 +566,26 @@ TEST(VoxelRendererTest, SingleDrawCommandRestoresItsOwnResourcesAfterAnotherPipe
 	gl.reset(ImageSize);
 	const std::array<spk::Matrix4x4, 1> shiftedModels{spk::Matrix4x4::translation(50, 0, 0)};
 	spk::ShaderStorageBuffer otherInstances(0, 0, sizeof(spk::Matrix4x4));
-	otherInstances.resize(1);
-	otherInstances.setDynamicData(std::span<const spk::Matrix4x4>(shiftedModels));
-	otherInstances.validate();
+	spk::Buffer::Builder instanceDataBuilder;
+	instanceDataBuilder.insert(std::span<const spk::Matrix4x4>(shiftedModels));
+	auto instanceData = std::move(instanceDataBuilder).build();
+	otherInstances.bind(&instanceData);
 	otherInstances.activate(gl.renderContext());
 
 	const std::array<std::array<float, 4>, 2> otherUVs{{{0, 0, 0, 0}, {0, 0, 0, 0}}};
 	spk::ShaderStorageBuffer otherMaterials(1, 0, sizeof(otherUVs[0]));
-	otherMaterials.resize(2);
-	otherMaterials.setDynamicData(std::span<const std::array<float, 4>>(otherUVs));
-	otherMaterials.validate();
+	spk::Buffer::Builder materialDataBuilder;
+	materialDataBuilder.insert(std::span<const std::array<float, 4>>(otherUVs));
+	auto materialData = std::move(materialDataBuilder).build();
+	otherMaterials.bind(&materialData);
 	otherMaterials.activate(gl.renderContext());
 
 	const std::array<std::uint32_t, 1> otherIndices{1};
 	spk::ShaderStorageBuffer otherRemap(2, 0, sizeof(std::uint32_t));
-	otherRemap.resize(1);
-	otherRemap.setDynamicData(std::span<const std::uint32_t>(otherIndices));
-	otherRemap.validate();
+	spk::Buffer::Builder remapDataBuilder;
+	remapDataBuilder.insert(std::span<const std::uint32_t>(otherIndices));
+	auto remapData = std::move(remapDataBuilder).build();
+	otherRemap.bind(&remapData);
 	otherRemap.activate(gl.renderContext());
 
 	const spk::Lighting::System otherLighting(spk::Light::Selection{}, spk::RGB{0, 0, 0});

@@ -4,6 +4,14 @@
 
 namespace spk
 {
+	void UniformBuffer::State::_validateBuffer(const Buffer &buffer) const
+	{
+		if (_expectedSize && buffer.size() != *_expectedSize)
+		{
+			throw std::invalid_argument("UniformBuffer data size is invalid");
+		}
+	}
+
 	GLenum UniformBuffer::State::_target() const noexcept
 	{
 		return GL_UNIFORM_BUFFER;
@@ -20,9 +28,8 @@ namespace spk
 	}
 
 	UniformBuffer::UniformBuffer(std::size_t bindingPoint, std::size_t size) :
-		BufferGPUResource(std::make_shared<State>(bindingPoint))
+		BufferGPUResource(std::make_shared<State>(bindingPoint, size))
 	{
-		_resize(size);
 	}
 
 	std::size_t UniformBuffer::bindingPoint() const noexcept
@@ -30,18 +37,4 @@ namespace spk
 		return state<State>()._bindingPoint;
 	}
 
-	void UniformBuffer::setData(const void *data, std::size_t size)
-	{
-		if (size != BufferGPUResource::size())
-		{
-			throw std::invalid_argument("Data size invalid");
-		}
-
-		_write(data, size);
-	}
-
-	void UniformBuffer::setData(const std::vector<std::byte> &data)
-	{
-		setData(data.data(), data.size());
-	}
 }

@@ -24,13 +24,12 @@ namespace spk
 		return 0;
 	}
 
-	std::size_t IndexBuffer::_checkedSize(std::size_t count, std::size_t stride)
+	void IndexBuffer::State::_validateBuffer(const Buffer &buffer) const
 	{
-		if (stride != 0 && count > std::numeric_limits<std::size_t>::max() / stride)
+		if (!buffer.empty() && (_stride == 0 || buffer.size() % _stride != 0))
 		{
-			throw std::overflow_error("IndexBuffer size overflow");
+			throw std::logic_error("IndexBuffer data size does not match its configured stride");
 		}
-		return count * stride;
 	}
 
 	GLenum IndexBuffer::State::_target() const noexcept

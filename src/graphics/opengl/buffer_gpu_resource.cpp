@@ -35,60 +35,6 @@ namespace spk
 		}
 	};
 
-	std::size_t BufferGPUResource::State::Storage::_unitCount(std::size_t size) noexcept
-	{
-		return (size + sizeof(std::max_align_t) - 1) / sizeof(std::max_align_t);
-	}
-
-	void BufferGPUResource::State::Storage::resize(std::size_t size)
-	{
-		const std::size_t previousSize = _size;
-		_storage.resize(_unitCount(size));
-		_size = size;
-		if (size > previousSize)
-		{
-			std::memset(data() + previousSize, 0, size - previousSize);
-		}
-	}
-
-	void BufferGPUResource::State::Storage::reserve(std::size_t size)
-	{
-		_storage.reserve(_unitCount(size));
-	}
-
-	void BufferGPUResource::State::Storage::append(const void *source, std::size_t size)
-	{
-		if (size == 0)
-		{
-			return;
-		}
-		const std::size_t offset = _size;
-		_storage.resize(_unitCount(_size + size));
-		std::memcpy(data() + offset, source, size);
-		_size += size;
-	}
-
-	void BufferGPUResource::State::Storage::clear()
-	{
-		_storage.clear();
-		_size = 0;
-	}
-
-	std::byte *BufferGPUResource::State::Storage::data() noexcept
-	{
-		return reinterpret_cast<std::byte *>(_storage.data());
-	}
-
-	const std::byte *BufferGPUResource::State::Storage::data() const noexcept
-	{
-		return reinterpret_cast<const std::byte *>(_storage.data());
-	}
-
-	std::size_t BufferGPUResource::State::Storage::size() const noexcept
-	{
-		return _size;
-	}
-
 	GPUResource::Kind BufferGPUResource::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Buffer;
@@ -131,78 +77,10 @@ namespace spk
 		instance.allocationUsage = _usage;
 	}
 
-	void BufferGPUResource::_append(const void *data, std::size_t size)
-	{
-		auto &content = state<State>();
-		if (content._buffer != nullptr)
-		{
-			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
-		}
-		if (size > std::numeric_limits<std::size_t>::max() - content._storage.size())
-		{
-			throw std::overflow_error("GPU buffer size overflow");
-		}
-		content._storage.append(data, size);
-	}
-
-	void BufferGPUResource::_write(const void *data, std::size_t size, std::size_t offset)
-	{
-		auto &content = state<State>();
-		if (content._buffer != nullptr)
-		{
-			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
-		}
-		if (offset > content._storage.size() || size > content._storage.size() - offset)
-		{
-			throw std::out_of_range("GPU buffer write exceeds buffer size");
-		}
-
-		if (size == 0)
-		{
-			return;
-		}
-
-		std::memcpy(content._storage.data() + offset, data, size);
-	}
-
-	void BufferGPUResource::_resize(std::size_t size)
-	{
-		auto &content = state<State>();
-		if (content._buffer != nullptr)
-		{
-			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
-		}
-		if (content._storage.size() == size)
-		{
-			return;
-		}
-		content._storage.resize(size);
-	}
-
-	void BufferGPUResource::_reserve(std::size_t size)
-	{
-		auto &content = state<State>();
-		if (content._buffer != nullptr)
-		{
-			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
-		}
-		content._storage.reserve(size);
-	}
-
-	std::byte *BufferGPUResource::_data()
-	{
-		auto &content = state<State>();
-		if (content._buffer != nullptr)
-		{
-			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
-		}
-		return content._storage.data();
-	}
-
 	const std::byte *BufferGPUResource::_data() const
 	{
-		const auto &content = state<State>();
-		return content._buffer != nullptr ? content._buffer->data() : content._storage.data();
+		const auto *source = buffer();
+		return source != nullptr ? source->data() : nullptr;
 	}
 
 	std::unique_ptr<GPUResource::Instance> BufferGPUResource::State::_create(RenderContext &) const
@@ -220,6 +98,10 @@ namespace spk
 	void BufferGPUResource::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
 		auto &instance = static_cast<Instance &>(base);
+		if (_buffer != nullptr)
+		{
+			_validateBuffer(*_buffer);
+		}
 		glBindBuffer(_target(), instance.identifier);
 		const bool usageChanged = !instance.allocationUsage.has_value() || *instance.allocationUsage != _usage;
 		if (size() != 0 && (size() > instance.allocatedSize || usageChanged))
@@ -228,7 +110,7 @@ namespace spk
 		}
 		if (size() != 0)
 		{
-			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _buffer != nullptr ? _buffer->data() : _storage.data());
+			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _buffer->data());
 		}
 		instance.uploadedBuffer = _buffer;
 		instance.uploadedVersion = dataVersion();
@@ -243,7 +125,10 @@ namespace spk
 	void BufferGPUResource::bind(const Buffer *buffer)
 	{
 		auto &content = state<State>();
-		content._storage = {};
+		if (buffer != nullptr)
+		{
+			content._validateBuffer(*buffer);
+		}
 		content._buffer = buffer;
 		validate();
 	}
@@ -251,19 +136,6 @@ namespace spk
 	const Buffer *BufferGPUResource::buffer() const noexcept
 	{
 		return state<State>()._buffer;
-	}
-
-	void BufferGPUResource::clear()
-	{
-		if (buffer() != nullptr)
-		{
-			throw std::logic_error("Edit the bound CPU Buffer instead of the GPU resource");
-		}
-		if (size() == 0)
-		{
-			return;
-		}
-		state<State>()._storage.clear();
 	}
 
 	void BufferGPUResource::setUsage(Usage usage)

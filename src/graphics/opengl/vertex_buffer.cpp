@@ -128,14 +128,12 @@ namespace spk
 		}
 	}
 
-	std::size_t VertexBuffer::_checkedSize(std::size_t count, std::size_t stride)
+	void VertexBuffer::State::_validateBuffer(const Buffer &buffer) const
 	{
-		if (stride != 0 && count > std::numeric_limits<std::size_t>::max() / stride)
+		if (!buffer.empty() && (_stride == 0 || buffer.size() % _stride != 0))
 		{
-			throw std::overflow_error("VertexBuffer size overflow");
+			throw std::logic_error("VertexBuffer data size does not match its configured stride");
 		}
-
-		return count * stride;
 	}
 
 	GLenum VertexBuffer::State::_target() const noexcept
