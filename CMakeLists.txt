@@ -170,6 +170,11 @@ foreach(SPARKLE_TARGET IN ITEMS sparkle_core sparkle SparkleTestLibrary SparkleC
         endif()
     endif()
     if(SPARKLE_EXPERIMENTAL_UNITY)
+        # Windows SDK macros must not leak between sources in a unity batch.
+        # Keep this experiment private and leave standard build cache keys intact.
+        if(WIN32)
+            target_compile_definitions(${SPARKLE_TARGET} PRIVATE NOMINMAX)
+        endif()
         set_target_properties(${SPARKLE_TARGET} PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 4)
     endif()
 endforeach()
