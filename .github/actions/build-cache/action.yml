@@ -37,6 +37,8 @@ runs:
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
     - name: Install sccache
       uses: mozilla-actions/sccache-action@v0.0.11
+      with:
+        version: 'v0.20.1'
       env:
         SCCACHE_GHA_ENABLED: 'true'
         SCCACHE_IGNORE_SERVER_IO_ERROR: '1'
