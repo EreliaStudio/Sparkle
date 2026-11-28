@@ -149,27 +149,10 @@ sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuSuites}" "Graphics;CPU;Fast")
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuStress}" "Graphics;CPU;Stress")
-# The experimental partition is separate from all unaudited tests. It is
-# absent from standard builds, leaving their labels and resource locks intact.
-if(SPARKLE_EXPERIMENTAL_PARALLEL_GRAPHICS)
-    set(parallelFunctionalSuites "FramebufferTest.*:ProgramTest.*:VertexBufferTest.*:IndexBufferTest.*:UniformBufferTest.*:ShaderStorageBufferTest.*:LayoutBufferTest.*:BufferGPUResourceTest.*:SamplerTest.*:VertexArrayTest.*")
-    set(parallelGoldenSuites "VoxelShapeGoldenTest.*:VoxelArrangementGoldenTest.*:VoxelCharacterGoldenTest.*:VoxelRoomGoldenTest.*")
-    sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-        "${parallelFunctionalSuites}" "Graphics;Functional;ExperimentalParallel")
-    sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-        "${parallelGoldenSuites}" "Graphics;Golden;ExperimentalParallel")
-    sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-        "${cpuGolden}" "Graphics;CPU;Golden;ExperimentalParallel")
-    set(goldenFilter "${goldenSuites}-${parallelGoldenSuites}")
-    set(functionalExclusions ":${parallelFunctionalSuites}")
-else()
-    sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-        "${cpuGolden}" "Graphics;CPU;Golden" RESOURCE_LOCK SparkleGraphics)
-    set(goldenFilter "${goldenSuites}")
-    set(functionalExclusions "")
-endif()
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-    "${goldenFilter}" "Graphics;Golden" RESOURCE_LOCK SparkleGraphics)
+    "${cpuGolden}" "Graphics;CPU;Golden" RESOURCE_LOCK SparkleGraphics)
+sparkle_discover_category(SparkleGraphicsTestSuite Graphics
+    "${goldenSuites}" "Graphics;Golden" RESOURCE_LOCK SparkleGraphics)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuPerformance}" "Graphics;CPU;Performance;Randomized" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
@@ -177,6 +160,6 @@ sparkle_discover_category(SparkleGraphicsTestSuite Graphics
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${benchmarkSuites}-${performanceCases}" "Graphics;Benchmark" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-    "*-${cpuSuites}:${cpuStress}:${cpuGolden}:${goldenSuites}:${benchmarkSuites}${functionalExclusions}"
+    "*-${cpuSuites}:${cpuStress}:${cpuGolden}:${goldenSuites}:${benchmarkSuites}"
     "Graphics;Functional" RESOURCE_LOCK SparkleGraphics)
 

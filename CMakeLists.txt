@@ -14,9 +14,6 @@ include(CTest)
 option(SPARKLE_BUILD_GRAPHICS "Build Sparkle graphical application, input, UI and OpenGL support" ON)
 option(SPARKLE_BUILD_TESTS "Build the Sparkle unit-test suites" OFF)
 option(SPARKLE_BUILD_TEST_LIBRARY "Build and install reusable graphical test utilities" OFF)
-option(SPARKLE_EXPERIMENTAL_PCH "Experiment with stable private precompiled headers" OFF)
-option(SPARKLE_EXPERIMENTAL_UNITY "Experiment with batched unity compilation" OFF)
-option(SPARKLE_EXPERIMENTAL_PARALLEL_GRAPHICS "Experiment with isolated graphical test concurrency" OFF)
 
 set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -155,29 +152,6 @@ endif()
 if(SPARKLE_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
-
-# Opt-in experiments: no flags or public headers are exported to consumers.
-foreach(SPARKLE_TARGET IN ITEMS sparkle_core sparkle SparkleTestLibrary SparkleCoreTestSuite SparkleGraphicsTestSuite)
-    if(NOT TARGET ${SPARKLE_TARGET})
-        continue()
-    endif()
-    if(SPARKLE_EXPERIMENTAL_PCH)
-        target_precompile_headers(${SPARKLE_TARGET} PRIVATE
-            <algorithm> <array> <cstddef> <cstdint> <memory> <span> <string> <utility> <vector>
-        )
-        if(SPARKLE_TARGET MATCHES "TestSuite$")
-            target_precompile_headers(${SPARKLE_TARGET} PRIVATE <gtest/gtest.h>)
-        endif()
-    endif()
-    if(SPARKLE_EXPERIMENTAL_UNITY)
-        # Windows SDK macros must not leak between sources in a unity batch.
-        # Keep this experiment private and leave standard build cache keys intact.
-        if(WIN32)
-            target_compile_definitions(${SPARKLE_TARGET} PRIVATE NOMINMAX)
-        endif()
-        set_target_properties(${SPARKLE_TARGET} PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 4)
-    endif()
-endforeach()
 
 install(
     TARGETS sparkle_core
