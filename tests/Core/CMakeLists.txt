@@ -68,7 +68,7 @@ string(JOIN ":" voxelPerformance
 )
 set(benchmarkSuites "PerlinPerformanceTest.*:VoxelChunkPerformanceTest.*")
 sparkle_discover_category(SparkleCoreTestSuite Core
-    "${voxelPerformance}" "Core;Performance;Randomized" RUN_SERIAL TRUE)
+    "${voxelPerformance}" "Core;Performance;Benchmark;Randomized" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleCoreTestSuite Core
     "${benchmarkSuites}-${voxelPerformance}" "Core;Benchmark" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleCoreTestSuite Core
