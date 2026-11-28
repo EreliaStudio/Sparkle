@@ -9,6 +9,7 @@
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
+#include "graphics/palette.hpp"
 #include "lighting/system.hpp"
 #include "math/matrix.hpp"
 #include "rendering/command/camera_uniform_render_command.hpp"
