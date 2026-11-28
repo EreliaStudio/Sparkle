@@ -14,12 +14,13 @@ $source = Join-Path $root 'source'
 # Build an isolated copy so relocation can remove the original source AND build trees.
 Invoke-Checked git @('-C', $repo, 'archive', '--format=zip', '-o', "$root/source.zip", 'HEAD')
 Expand-Archive "$root/source.zip" $source -Force
-Copy-Item "$source/tests/package-consumer" "$root/consumer" -Recurse
-Copy-Item "$source/tests/package-core-consumer" "$root/core-consumer" -Recurse
-Copy-Item "$source/tests/package-default" "$root/default-consumer" -Recurse
+Copy-Item "$source/tests/Packaging/TestLibraryConsumer" "$root/consumer" -Recurse
+Copy-Item "$source/tests/Packaging/CoreConsumer" "$root/core-consumer" -Recurse
+Copy-Item "$source/tests/Packaging/GraphicsConsumer" "$root/default-consumer" -Recurse
 $dependencies = Join-Path $root 'dependencies'
 $common = @('-G', 'Ninja', '-DCMAKE_CXX_COMPILER=clang-cl', "-DCMAKE_BUILD_TYPE=$Configuration",
     '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>',
+    '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded',
     "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake",
     '-DVCPKG_TARGET_TRIPLET=x64-windows-static', "-DVCPKG_INSTALLED_DIR=$dependencies")
 $consumerOptions = $common + @('-DVCPKG_MANIFEST_MODE=OFF', '-DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF',

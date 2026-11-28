@@ -63,6 +63,24 @@
         "SPARKLE_BUILD_TESTS": "ON",
         "VCPKG_MANIFEST_FEATURES": "tests"
       }
+    },
+    {
+      "name": "testAsan",
+      "displayName": "Core AddressSanitizer (Linux)",
+      "inherits": "testRelease",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address",
+        "SPARKLE_BUILD_GRAPHICS": "OFF",
+        "VCPKG_MANIFEST_NO_DEFAULT_FEATURES": "ON",
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
     }
   ],
   "buildPresets": [
@@ -93,6 +111,13 @@
         "SparkleCoreTestSuite",
         "SparkleGraphicsTestSuite"
       ]
+    },
+    {
+      "name": "testAsan",
+      "configurePreset": "testAsan",
+      "targets": [
+        "SparkleCoreTestSuite"
+      ]
     }
   ],
   "testPresets": [
@@ -108,6 +133,194 @@
       "configurePreset": "testRelease",
       "output": {
         "outputOnFailure": true
+      }
+    },
+    {
+      "name": "testFast",
+      "displayName": "Fast functional tests",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Fast$"
+        }
+      },
+      "execution": {
+        "jobs": 2,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testCore",
+      "displayName": "All Core tests",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Core$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testGraphicsCPU",
+      "displayName": "Graphics CPU correctness",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^CPU$"
+        },
+        "exclude": {
+          "label": "^(Performance|Benchmark|Golden)$"
+        }
+      },
+      "execution": {
+        "jobs": 2,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testGraphics",
+      "displayName": "Graphics functional and golden tests",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Graphics$"
+        },
+        "exclude": {
+          "label": "^(Performance|Benchmark)$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testGolden",
+      "displayName": "Golden image regression",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Golden$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testPerformance",
+      "displayName": "Release hard-budget regressions",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Performance$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testBenchmarks",
+      "displayName": "Release measurement-only benchmarks",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Benchmark$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testStress",
+      "displayName": "Stress and exhaustive correctness",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^Stress$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testMemorySafety",
+      "displayName": "Memory-safety cases (uninstrumented)",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^MemorySafety$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "noTestsAction": "error",
+        "timeout": 120
+      }
+    },
+    {
+      "name": "testAsan",
+      "configurePreset": "testAsan",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1"
+      },
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "^MemorySafety$"
+        }
+      },
+      "execution": {
+        "jobs": 1,
+        "timeout": 120,
+        "noTestsAction": "error"
       }
     }
   ],

@@ -19,6 +19,8 @@ defaults:
     shell: pwsh
 
 env:
+  SCCACHE_GHA_ENABLED: "true"
+  SCCACHE_IGNORE_SERVER_IO_ERROR: "1"
   GALLIUM_DRIVER: llvmpipe
   # Sparkle requests a 4.6 core context and compiles GLSL 460 shaders.
   MESA_GL_VERSION_OVERRIDE: '4.6'
@@ -26,7 +28,7 @@ env:
 
 jobs:
   format-check:
-    name: Clang-format (changed C++ files)
+    name: Format / C++
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,8 +51,8 @@ jobs:
           git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.cpp' '*.hpp' '*.c' '*.h' '*.cc' '*.hh' |
             xargs -0 -r clang-format --style=file --dry-run --Werror
 
-  core-unit-tests:
-    name: Core unit tests (${{ matrix.os }}, ${{ matrix.configuration }})
+  standard-build:
+    name: Build+Test / ${{ matrix.os == 'windows-2022' && 'Core+Graphics / Windows' || 'Core / Linux' }} / ${{ matrix.configuration }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -64,24 +66,29 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - name: Configure Core (Windows)
+      - name: Set up compilation and dependency caches
+        uses: ./.github/actions/build-cache
+        continue-on-error: true
+        with:
+          scope: standard-build
+      - name: Configure Core and Graphics (Windows)
         if: runner.os == 'Windows'
         run: >-
-          cmake -S . -B build/core-test -G Ninja
+          cmake -S . -B build/standard-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
+          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
           -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
           -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=OFF
+          -DSPARKLE_BUILD_GRAPHICS=ON
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Configure Core (Linux)
         if: runner.os == 'Linux'
         run: >-
-          cmake -S . -B build/core-test -G Ninja
+          cmake -S . -B build/standard-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang++
           -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -91,22 +98,73 @@ jobs:
           -DSPARKLE_BUILD_GRAPHICS=OFF
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Build Core tests
-        run: cmake --build build/core-test --target SparkleCoreTestSuite --parallel 4
+      - name: Build Core and Graphics test executables (Windows)
+        id: build-windows
+        if: runner.os == 'Windows'
+        run: cmake --build build/standard-test --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
+      - name: Build Core test executable (Linux)
+        id: build-linux
+        if: runner.os == 'Linux'
+        run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
+      - name: Install software OpenGL for test discovery
+        if: runner.os == 'Windows'
+        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
+      - name: Export Graphics test bundle
+        if: runner.os == 'Windows'
+        run: ./tools/ci/export-standard-build.ps1 -Configuration ${{ matrix.configuration }}
+      - name: Report compiler cache statistics
+        if: always()
+        continue-on-error: true
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
+      - name: Upload Graphics test executables and registrations
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-graphics-${{ matrix.os }}-${{ matrix.configuration }}
+          path: build/ci-bundles/Graphics
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-build-diagnostics-${{ matrix.os }}-${{ matrix.configuration }}
+          path: build/standard-test/CMakeFiles/CMakeConfigureLog.yaml
       - name: Run functional Core tests
-        run: ctest --test-dir build/core-test -R '^Core[.]' -E '^Core[.].*(StressTest|MemorySafetyTest)[.]' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success')
+        run: ctest --test-dir build/standard-test/tests/Core -L '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+      - name: Run Core stress suites
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^Stress$'
+          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit stress-results.xml
+      - name: Repeat concurrent networking workload
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^RepeatConcurrency$'
+          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
+      - name: Repeat deterministic randomized network workload
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^RepeatRandomized$'
+          --repeat until-fail:5 --output-on-failure --no-tests=error --timeout 120
+      - name: Run Core benchmark
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^Benchmark$'
+          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit benchmark-results.xml
       - name: Upload Core test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: core-unit-tests-${{ matrix.os }}-${{ matrix.configuration }}
+          name: core-tests-${{ matrix.os }}-${{ matrix.configuration }}
           path: |
-            build/core-test/Testing
-            build/core-test/results.xml
-            build/core-test/CMakeFiles/CMakeConfigureLog.yaml
+            build/standard-test/tests/Core/Testing
+            build/standard-test/tests/Core/*results.xml
 
   address-sanitizer:
-    name: AddressSanitizer and leak checks (${{ matrix.os }})
+    name: Test / Core / ${{ matrix.os == 'windows-2022' && 'ASan / Windows' || 'ASan+LSan / Linux' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -119,6 +177,11 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
+      - name: Set up compilation and dependency caches
+        uses: ./.github/actions/build-cache
+        continue-on-error: true
+        with:
+          scope: ${{ github.job }}
       - name: Locate Windows sanitizer runtime
         if: runner.os == 'Windows'
         run: |
@@ -133,7 +196,7 @@ jobs:
           cmake -S . -B build/asan -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
           -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_CXX_FLAGS=/fsanitize=address /EHsc /Zi /D_DISABLE_STRING_ANNOTATION /D_DISABLE_VECTOR_ANNOTATION'
+          '-DCMAKE_CXX_FLAGS=/fsanitize=address /EHsc /Z7 /D_DISABLE_STRING_ANNOTATION /D_DISABLE_VECTOR_ANNOTATION'
           '-DCMAKE_EXE_LINKER_FLAGS=/DEBUG:FULL /wholearchive:clang_rt.asan-x86_64.lib /wholearchive:clang_rt.asan_cxx-x86_64.lib'
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
@@ -166,7 +229,7 @@ jobs:
           ASAN_OPTIONS: detect_leaks=0:halt_on_error=1:detect_odr_violation=0:fast_unwind_on_malloc=0:windows_hook_rtl_allocators=false
         run: >-
           ctest --test-dir build/asan
-          -R '^Core[.](.*MemorySafetyTest[.]|NetworkConcurrencyTest[.]ClientDestructor)'
+          -L '^MemorySafety$'
           --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
       - name: Run memory-safety and leak tests (Linux)
         if: runner.os == 'Linux'
@@ -174,8 +237,13 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
         run: >-
           ctest --test-dir build/asan
-          -R '^Core[.](.*MemorySafetyTest[.]|NetworkConcurrencyTest[.]ClientDestructor)'
+          -L '^MemorySafety$'
           --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Report compiler cache statistics
+        if: always()
+        continue-on-error: true
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
       - name: Upload sanitizer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -186,119 +254,78 @@ jobs:
             build/asan/results.xml
             build/asan/CMakeFiles/CMakeConfigureLog.yaml
 
-  core-stress:
-    name: Core stress and randomized correctness (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, ubuntu-24.04]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
-        with:
-          arch: x64
-      - name: Configure Windows stress tests
-        if: runner.os == 'Windows'
-        run: >-
-          cmake -S . -B build/stress -G Ninja
-          -DCMAKE_CXX_COMPILER=clang-cl
-          -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded'
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=OFF
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Configure Linux stress tests
-        if: runner.os == 'Linux'
-        run: >-
-          cmake -S . -B build/stress -G Ninja
-          -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-linux
-          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=OFF
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Build Core stress tests
-        run: cmake --build build/stress --target SparkleCoreTestSuite --parallel 4
-      - name: Run stress suites
-        run: >-
-          ctest --test-dir build/stress -R '^Core[.].*StressTest[.]'
-          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
-      - name: Repeat concurrent networking workload
-        run: >-
-          ctest --test-dir build/stress
-          -R '^Core[.]NetworkStressTest[.]ManyClientsConnectAndExchangeConcurrently$'
-          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
-      - name: Repeat deterministic randomized network workload
-        run: >-
-          ctest --test-dir build/stress -R '^Core[.]NetworkStressTest[.]SeededRandomPayloadsPreserveEveryByte$'
-          --repeat until-fail:5 --output-on-failure --no-tests=error --timeout 120
-      - name: Upload stress evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: core-stress-${{ matrix.os }}
-          path: |
-            build/stress/Testing
-            build/stress/results.xml
-            build/stress/CMakeFiles/CMakeConfigureLog.yaml
-
   graphics-unit-tests:
-    name: Graphics unit tests (${{ matrix.configuration }})
+    name: Test / Graphics / ${{ matrix.category }} / Windows / ${{ matrix.configuration }}
+    needs: standard-build
+    if: always() && !cancelled()
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        configuration: [Debug, Release]
+        include:
+          - category: Functional
+            configuration: Debug
+          - category: Functional
+            configuration: Release
+          - category: Golden
+            configuration: Debug
+          - category: Golden
+            configuration: Release
+          - category: Benchmark
+            configuration: Release
     steps:
       - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Download compiled Graphics tests
+        uses: actions/download-artifact@v4
         with:
-          arch: x64
-      - name: Configure Graphics
-        run: >-
-          cmake -S . -B build/graphics-test -G Ninja
-          -DCMAKE_CXX_COMPILER=clang-cl
-          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
-          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          -DVCPKG_MANIFEST_FEATURES=tests
-          -DSPARKLE_BUILD_GRAPHICS=ON
-          -DSPARKLE_BUILD_TESTS=ON
-          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Build Graphics tests
-        run: cmake --build build/graphics-test --target SparkleGraphicsTestSuite --parallel 4
+          name: standard-graphics-windows-2022-${{ matrix.configuration }}
+          path: build/standard-test
+      - name: Verify executable origin and test inventory
+        id: restore-graphics
+        run: ./tools/ci/restore-standard-build.ps1 -Suite Graphics -Configuration ${{ matrix.configuration }}
       - name: Install software OpenGL
-        run: ./tools/ci/install-mesa.ps1 -Destination build/graphics-test/tests/TU/Graphics
-      - name: Run Graphics tests
-        run: ctest --test-dir build/graphics-test -R '^Graphics\.' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
-      - name: Report voxel chunk meshing performance
-        if: matrix.configuration == 'Release'
-        run: ctest --test-dir build/graphics-test -R '^Graphics[.]VoxelChunkPerformanceTest[.]' --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1
+        id: mesa
+        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
+      - name: Run Release performance regressions and benchmarks
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Benchmark'
+        id: performance
+        run: >-
+          ctest --test-dir build/standard-test -L '^(Performance|Benchmark)$'
+          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit performance-results.xml
+      - name: Publish measurements from the same execution
+        if: always() && !cancelled() && matrix.category == 'Benchmark' && steps.performance.outcome != 'skipped'
+        run: >-
+          python tools/ci/performance-report.py
+          --build build/standard-test --configuration Release
+      - name: Run Graphics CPU correctness
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Functional'
+        run: >-
+          ctest --test-dir build/standard-test -L '^CPU$' -LE '^(Performance|Benchmark|Golden)$'
+          --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit cpu-results.xml
+      - name: Run Graphics functional and native tests
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Functional'
+        run: >-
+          ctest --test-dir build/standard-test -L '^Graphics$' -LE '^(CPU|Golden|Performance|Benchmark)$'
+          --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Run golden-image regression tests
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Golden'
+        run: >-
+          ctest --test-dir build/standard-test -L '^Golden$'
+          --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit golden-results.xml
       - name: Build visual comparison gallery
         if: always()
         run: >-
           python tools/ci/image-diff-report.py
-          --results build/graphics-test/tests/TU/Graphics/results
-          --references tests/TU/Graphics/resources/expectedImages
+          --results build/standard-test/tests/Graphics/results
+          --references tests/Graphics/resources/expectedImages
           --output build/visual-diffs
       - name: Upload visual comparisons
         if: always()
         id: visual-diffs
         uses: actions/upload-artifact@v4
         with:
-          name: visual-diffs-${{ matrix.configuration }}
+          name: visual-diffs-${{ matrix.category }}-${{ matrix.configuration }}
           path: build/visual-diffs
           if-no-files-found: error
           retention-days: 30
@@ -307,22 +334,24 @@ jobs:
         env:
           ARTIFACT_URL: ${{ steps.visual-diffs.outputs.artifact-url }}
         run: |
-          "### Visual comparisons (${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
+          "### Visual comparisons (${{ matrix.category }} / ${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
           "[Download reference / actual / difference images]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
           'Extract the ZIP and open index.html for the gallery, or inspect the PNG folders directly.' >> $env:GITHUB_STEP_SUMMARY
       - name: Upload Graphics test logs and image differences
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: graphics-unit-tests-${{ matrix.configuration }}
+          name: graphics-unit-tests-${{ matrix.category }}-${{ matrix.configuration }}
           path: |
-            build/graphics-test/Testing
-            build/graphics-test/results.xml
-            build/graphics-test/tests/TU/Graphics/results
-            build/graphics-test/CMakeFiles/CMakeConfigureLog.yaml
+            build/standard-test/Testing
+            build/standard-test/*results.xml
+            build/standard-test/performance-report.md
+            build/standard-test/performance.log
+            build/standard-test/tests/Graphics/results
+            build/standard-test/build-origin.json
 
   package:
-    name: Installed package (${{ matrix.configuration }})
+    name: Test / Package / Install+Relocation / Windows / ${{ matrix.configuration }}
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
@@ -334,8 +363,18 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+      - name: Set up compilation and dependency caches
+        uses: ./.github/actions/build-cache
+        continue-on-error: true
+        with:
+          scope: ${{ github.job }}
       - name: Verify optional component, installation and relocation
         run: ./tools/ci/test-package.ps1 -Configuration ${{ matrix.configuration }}
+      - name: Report compiler cache statistics
+        if: always()
+        continue-on-error: true
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
       - name: Upload packaging evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -348,21 +387,35 @@ jobs:
             build/package-check/**/consumer-fixture
 
   vcpkg-port:
-    name: vcpkg port consumers
+    name: Test / Package / vcpkg / ${{ matrix.component }} / Windows
     runs-on: windows-2022
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [Core, Graphics, TestLibrary]
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+      - name: Set up compilation and dependency caches
+        uses: ./.github/actions/build-cache
+        continue-on-error: true
+        with:
+          scope: vcpkg-port-${{ matrix.component }}
       - name: Validate erelia-sparkle overlay port
-        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release
+        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release -Component ${{ matrix.component }}
+      - name: Report compiler cache statistics
+        if: always()
+        continue-on-error: true
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
       - name: Upload vcpkg port evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vcpkg-port
+          name: vcpkg-port-${{ matrix.component }}
           path: |
             build/vcpkg-port-check/verification.log
             build/vcpkg-port-check/**/CMakeConfigureLog.yaml
@@ -370,7 +423,7 @@ jobs:
 
 
   compiler-compatibility:
-    name: Compiler compatibility (${{ matrix.os }}, ${{ matrix.configuration }}, ${{ matrix.compiler }})
+    name: Build / ${{ matrix.compiler == 'cl' && 'Core+Graphics / MSVC / Windows' || 'Core / GCC / Linux' }} / ${{ matrix.configuration }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -383,31 +436,24 @@ jobs:
             compiler: cl
           - os: ubuntu-24.04
             compiler: g++
-    env:
-      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - name: Install sccache for MSVC Release
-        if: runner.os == 'Windows' && matrix.configuration == 'Release'
-        uses: mozilla-actions/sccache-action@v0.0.11
-      - name: Configure GitHub Actions cache credentials
-        if: runner.os == 'Windows' && matrix.configuration == 'Release'
-        uses: actions/github-script@v7
+      - name: Set up compilation and dependency caches
+        uses: ./.github/actions/build-cache
+        continue-on-error: true
         with:
-          script: |
-            core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+          scope: ${{ github.job }}
       - name: Configure with MSVC
         if: runner.os == 'Windows'
         run: >-
           cmake -S . -B build/compiler-compat -G Ninja
           -DCMAKE_CXX_COMPILER=cl
-          -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.configuration == 'Release' && 'sccache' || '' }}
           -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded'
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows-static
@@ -434,11 +480,11 @@ jobs:
           $timer = [System.Diagnostics.Stopwatch]::StartNew()
           cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
           $buildExitCode = $LASTEXITCODE
-          if ($buildExitCode -ne 0 -and '${{ matrix.configuration }}' -eq 'Release')
+          if ($buildExitCode -ne 0 -and $env:CMAKE_CXX_COMPILER_LAUNCHER)
           {
             # The GitHub Actions sccache backend can return HTTP 503 / ServerBusy.
             # Retry without its launcher; genuine compiler errors still fail.
-            Write-Warning 'MSVC Release build failed; retrying without sccache'
+            Write-Warning 'MSVC build failed; retrying without sccache'
             cmake -S . -B build/compiler-compat '-DCMAKE_CXX_COMPILER_LAUNCHER='
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             cmake --build build/compiler-compat --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
@@ -448,15 +494,18 @@ jobs:
           $seconds = [math]::Round($timer.Elapsed.TotalSeconds, 1)
           "MSVC ${{ matrix.configuration }} compile: $seconds seconds" >> $env:GITHUB_STEP_SUMMARY
           if ($buildExitCode -ne 0) { exit $buildExitCode }
-      - name: Report sccache statistics
-        if: always() && runner.os == 'Windows' && matrix.configuration == 'Release'
-        run: sccache --show-stats
       - name: Compile Core suite with GCC
         if: runner.os == 'Linux'
         run: cmake --build build/compiler-compat --target SparkleCoreTestSuite --parallel 4
+      - name: Report compiler cache statistics
+        if: always()
+        continue-on-error: true
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
+
 
   coverage:
-    name: LLVM coverage
+    name: Test / Core+Graphics / Coverage / LLVM / Windows
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
@@ -464,12 +513,22 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+      - name: Set up compilation and dependency caches
+        uses: ./.github/actions/build-cache
+        continue-on-error: true
+        with:
+          scope: ${{ github.job }}
       - name: Set up software OpenGL and vcpkg
         run: |
-          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/TU/Graphics
+          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/Graphics
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
       - name: Build, test and produce coverage
         run: ./tools/coverage.ps1 -NoOpen -Triplet x64-windows-static
+      - name: Report compiler cache statistics
+        if: always()
+        continue-on-error: true
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
       - name: Upload coverage and image differences
         if: always()
         uses: actions/upload-artifact@v4
@@ -478,7 +537,7 @@ jobs:
           path: |
             build/coverage/reports/**/html
             build/coverage/reports/**/*.profdata
-            build/coverage/reports/**/results.xml
+            build/coverage/reports/**/results*.xml
             build/coverage/Testing
-            build/coverage/tests/TU/Graphics/results
+            build/coverage/tests/Graphics/results
             build/coverage/CMakeFiles/CMakeConfigureLog.yaml

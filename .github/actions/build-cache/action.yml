@@ -1,0 +1,58 @@
+name: Build caches
+description: Restore ABI-keyed vcpkg packages and enable optional sccache compiler launcher
+inputs:
+  scope:
+    description: Stable cache namespace for this build
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare vcpkg archive directory
+      id: archives
+      shell: pwsh
+      run: |
+        $path = Join-Path $env:GITHUB_WORKSPACE '.vcpkg-cache'
+        New-Item -ItemType Directory -Force $path | Out-Null
+        "VCPKG_DEFAULT_BINARY_CACHE=$path" >> $env:GITHUB_ENV
+        "VCPKG_BINARY_SOURCES=clear;files,$path,readwrite" >> $env:GITHUB_ENV
+        "image=$env:ImageVersion" >> $env:GITHUB_OUTPUT
+        "path=$path" >> $env:GITHUB_OUTPUT
+        if ('${{ inputs.scope }}' -like 'vcpkg-port*') {
+          $source = & ./tools/ci/package-source-fingerprint.ps1
+          "source=$source" >> $env:GITHUB_OUTPUT
+        }
+    - name: Restore vcpkg package archives
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.archives.outputs.path }}
+        key: vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}${{ steps.archives.outputs.source != '' && format('-{0}', steps.archives.outputs.source) || '' }}
+        restore-keys: |
+          vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}
+          vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-vcpkg-port-${{ steps.archives.outputs.source }}
+          vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-
+    - name: Configure GitHub Actions cache credentials
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+    - name: Install sccache
+      uses: mozilla-actions/sccache-action@v0.0.11
+      with:
+        version: 'v0.20.1'
+      env:
+        SCCACHE_GHA_ENABLED: 'true'
+        SCCACHE_IGNORE_SERVER_IO_ERROR: '1'
+    - name: Enable compiler launcher
+      shell: pwsh
+      run: |
+        $launcher = (Get-Command sccache -ErrorAction Stop).Source
+        "SCCACHE_GHA_ENABLED=true" >> $env:GITHUB_ENV
+        "SCCACHE_IGNORE_SERVER_IO_ERROR=1" >> $env:GITHUB_ENV
+        "CMAKE_CXX_COMPILER_LAUNCHER=$launcher" >> $env:GITHUB_ENV
+        Write-Host "Runner: $env:RUNNER_OS / $env:RUNNER_ARCH / $env:ImageVersion"
+        sccache --version
+        # vcpkg's isolated Windows build environment must receive the launcher
+        # and cache credentials. These are execution settings, not package ABI inputs.
+        $keep = @($env:VCPKG_KEEP_ENV_VARS, 'CMAKE_CXX_COMPILER_LAUNCHER', 'SCCACHE_GHA_ENABLED', 'SCCACHE_IGNORE_SERVER_IO_ERROR', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN') | Where-Object { $_ }
+        "VCPKG_KEEP_ENV_VARS=$($keep -join ';')" >> $env:GITHUB_ENV

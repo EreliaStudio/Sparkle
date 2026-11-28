@@ -41,7 +41,7 @@ New-Item -ItemType Directory -Force $root, $output | Out-Null
 
 Invoke-Checked git @('-C', $repo, 'archive', '--format=zip', '-o', "$root/source.zip", 'HEAD')
 Expand-Archive "$root/source.zip" $source -Force
-Copy-Item "$source/tests/package-consumer" "$root/test-consumer" -Recurse -Force
+Copy-Item "$source/tests/Packaging/TestLibraryConsumer" "$root/test-consumer" -Recurse -Force
 Copy-Item "$source/tools/ci/triplets" $triplets -Recurse -Force
 
 $toolchain = "$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"

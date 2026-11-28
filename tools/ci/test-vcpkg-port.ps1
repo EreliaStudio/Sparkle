@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([ValidateSet('Debug', 'Release')][string]$Configuration = 'Release')
+param(
+    [ValidateSet('Debug', 'Release')][string]$Configuration = 'Release',
+    [ValidateSet('All', 'Core', 'Graphics', 'TestLibrary')][string]$Component = 'All'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -12,6 +15,12 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 $root = Join-Path $repo 'build/vcpkg-port-check'
 $overlay = Join-Path $repo 'ports'
+# The port references the local checkout. Its ABI must depend on every
+# packaged input, but not unrelated CI/test/documentation changes.
+if ($env:GITHUB_ACTIONS -eq 'true') {
+    $fingerprint = & "$PSScriptRoot/package-source-fingerprint.ps1"
+    Set-Content -LiteralPath (Join-Path $overlay 'erelia-sparkle/ci-source-tree.txt') -Value $fingerprint -Encoding ascii
+}
 $toolchain = "$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $root | Out-Null
@@ -55,6 +64,7 @@ function Test-ManifestConsumer(
         '-DCMAKE_CXX_COMPILER=clang-cl',
         "-DCMAKE_BUILD_TYPE=$Configuration",
         '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>',
+        '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded',
         "-DCMAKE_TOOLCHAIN_FILE=$toolchain",
         '-DVCPKG_TARGET_TRIPLET=x64-windows-static',
         "-DVCPKG_INSTALLED_DIR=$installed",
@@ -69,8 +79,14 @@ function Test-ManifestConsumer(
     if ($CoreOnly) { Assert-CoreOnlyInstall $installed }
 }
 
-Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/package-core-consumer') $true
-Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/package-default')
-Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/package-consumer')
-'Core-only, graphics and test-library erelia-sparkle configurations passed through vcpkg manifest consumption.' |
+if ($Component -in @('All', 'Core')) {
+    Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/Packaging/CoreConsumer') $true
+}
+if ($Component -in @('All', 'Graphics')) {
+    Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/Packaging/GraphicsConsumer')
+}
+if ($Component -in @('All', 'TestLibrary')) {
+    Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/Packaging/TestLibraryConsumer')
+}
+"erelia-sparkle $Component configuration(s) passed through vcpkg manifest consumption." |
     Set-Content (Join-Path $root 'verification.log')

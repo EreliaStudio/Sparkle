@@ -3,7 +3,7 @@
 Builds Sparkle with LLVM coverage instrumentation and generates an HTML report.
 
 .DESCRIPTION
-Configures a dedicated Clang coverage build, runs every test in its own CTest process with a timeout, merges every generated raw profile, and writes an llvm-cov HTML report.
+Configures a dedicated Clang coverage build, runs functional and memory-safety tests with individual CTest timeouts, excluding golden images, benchmarks, performance and stress workloads, merges every generated raw profile, and writes an llvm-cov HTML report.
 
 .PARAMETER Clean
 Deletes the dedicated build/coverage directory before configuring.
@@ -36,7 +36,7 @@ if (-not $coverageBuildDirectory.StartsWith($expectedBuildPrefix, [System.String
     throw "Refusing to use coverage directory outside the repository build directory: $coverageBuildDirectory"
 }
 
-foreach ($command in @("cmake", "ctest", "clang++", "llvm-profdata", "llvm-cov")) {
+foreach ($command in @("cmake", "ctest", "clang-cl", "llvm-profdata", "llvm-cov")) {
     if ($null -eq (Get-Command $command -ErrorAction SilentlyContinue)) {
         throw "Required command '$command' was not found in PATH. Install LLVM and CMake/Ninja before running coverage."
     }
@@ -65,23 +65,38 @@ $indexPath = Join-Path $htmlDirectory "index.html"
 
 New-Item -ItemType Directory -Path $profileDirectory -Force | Out-Null
 
+# clang-cl avoids the -Xclang CRT/debug flags emitted by CMake's GNU
+# Clang Windows driver, which previously made coverage objects non-cacheable.
+$resourceDir = (& clang-cl -print-resource-dir).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Cannot locate the LLVM profile runtime' }
+$runtimeDirectory = Join-Path $resourceDir 'lib/windows'
+if (-not (Test-Path (Join-Path $runtimeDirectory 'clang_rt.profile-x86_64.lib'))) {
+    throw "LLVM profile runtime not found in $runtimeDirectory"
+}
+$env:LIB = "$env:LIB;$runtimeDirectory"
+
 $configureArguments = @(
     "-S", $repositoryRoot,
     "-B", $coverageBuildDirectory,
     "-G", "Ninja",
     "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded",
     "-DSPARKLE_BUILD_TESTS=ON",
     "-DVCPKG_MANIFEST_FEATURES=tests",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchainFile",
-    "-DCMAKE_CXX_COMPILER=clang++",
+    "-DCMAKE_CXX_COMPILER=clang-cl",
     "-DVCPKG_TARGET_TRIPLET=$Triplet",
     "-DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST",
-    "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping",
-    "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
+    "-DCMAKE_CXX_FLAGS=/EHsc -fprofile-instr-generate -fcoverage-mapping",
+    "-DCMAKE_EXE_LINKER_FLAGS=/DEFAULTLIB:clang_rt.profile-x86_64.lib"
 )
 
 if ($Triplet.EndsWith("-static")) {
     $configureArguments += '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+}
+
+if ($env:CMAKE_CXX_COMPILER_LAUNCHER) {
+    $configureArguments += "-DCMAKE_CXX_COMPILER_LAUNCHER=$env:CMAKE_CXX_COMPILER_LAUNCHER"
 }
 
 Write-Host "Configuring coverage build..."
@@ -91,14 +106,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Building Core and Graphics test suites..."
-& cmake --build $coverageBuildDirectory --target SparkleCoreTestSuite SparkleGraphicsTestSuite
+& cmake --build $coverageBuildDirectory --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
 if ($LASTEXITCODE -ne 0) {
     throw "Coverage build failed with exit code $LASTEXITCODE."
 }
 
-$coreTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Core/SparkleCoreTestSuite.exe"
-$graphicsTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleGraphicsTestSuite.exe"
-$clipboardTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleClipboardTestSuite.exe"
+$coreTestExecutable = Join-Path $coverageBuildDirectory "tests/Core/SparkleCoreTestSuite.exe"
+$graphicsTestExecutable = Join-Path $coverageBuildDirectory "tests/Graphics/SparkleGraphicsTestSuite.exe"
+$clipboardTestExecutable = Join-Path $coverageBuildDirectory "tests/Graphics/SparkleClipboardTestSuite.exe"
 foreach ($testExecutable in @($coreTestExecutable, $graphicsTestExecutable, $clipboardTestExecutable)) {
     if (-not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
         throw "The test executable was not produced: $testExecutable"
@@ -109,9 +124,13 @@ $previousProfilePattern = $env:LLVM_PROFILE_FILE
 $testExitCode = 0
 try {
     $env:LLVM_PROFILE_FILE = Join-Path $profileDirectory "sparkle-%p-%m.profraw"
-    Write-Host "Running the complete test suite..."
-    & ctest --test-dir $coverageBuildDirectory --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results.xml")
-    $testExitCode = $LASTEXITCODE
+    Write-Host "Running functional and memory-safety coverage tests..."
+    $excluded = '^(Golden|Benchmark|Performance|Stress)$'
+    & ctest --test-dir $coverageBuildDirectory -L '^Fast$' -LE $excluded --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit (Join-Path $runDirectory "results-fast.xml")
+    $fastExitCode = $LASTEXITCODE
+    & ctest --test-dir $coverageBuildDirectory -LE '^(Fast|Golden|Benchmark|Performance|Stress)$' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results.xml")
+    $serialExitCode = $LASTEXITCODE
+    $testExitCode = if ($fastExitCode -ne 0) { $fastExitCode } else { $serialExitCode }
 }
 finally {
     if ($null -eq $previousProfilePattern) {
