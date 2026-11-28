@@ -111,7 +111,7 @@ jobs:
         run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
       - name: Install software OpenGL for test discovery
         if: runner.os == 'Windows'
-        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/TU/Graphics
+        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Export reusable libraries and test bundles
         run: ./tools/ci/export-standard-build.ps1 -Configuration ${{ matrix.configuration }}
       - name: Upload Core test executable and registrations
@@ -319,7 +319,7 @@ jobs:
         run: ./tools/ci/restore-standard-build.ps1 -Suite Graphics -Configuration ${{ matrix.configuration }}
       - name: Install software OpenGL
         id: mesa
-        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/TU/Graphics
+        run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Run Release performance regressions and benchmarks
         if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.configuration == 'Release'
         id: performance
@@ -350,8 +350,8 @@ jobs:
         if: always()
         run: >-
           python tools/ci/image-diff-report.py
-          --results build/standard-test/tests/TU/Graphics/results
-          --references tests/TU/Graphics/resources/expectedImages
+          --results build/standard-test/tests/Graphics/results
+          --references tests/Graphics/resources/expectedImages
           --output build/visual-diffs
       - name: Upload visual comparisons
         if: always()
@@ -380,7 +380,7 @@ jobs:
             build/standard-test/*results.xml
             build/standard-test/performance-report.md
             build/standard-test/performance.log
-            build/standard-test/tests/TU/Graphics/results
+            build/standard-test/tests/Graphics/results
             build/standard-test/build-origin.json
 
   package:
@@ -528,7 +528,7 @@ jobs:
           arch: x64
       - name: Set up software OpenGL and vcpkg
         run: |
-          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/TU/Graphics
+          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/Graphics
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
       - name: Build, test and produce coverage
         run: ./tools/coverage.ps1 -NoOpen -Triplet x64-windows-static
@@ -542,5 +542,5 @@ jobs:
             build/coverage/reports/**/*.profdata
             build/coverage/reports/**/results.xml
             build/coverage/Testing
-            build/coverage/tests/TU/Graphics/results
+            build/coverage/tests/Graphics/results
             build/coverage/CMakeFiles/CMakeConfigureLog.yaml

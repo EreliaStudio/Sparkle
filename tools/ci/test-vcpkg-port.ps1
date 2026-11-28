@@ -69,8 +69,8 @@ function Test-ManifestConsumer(
     if ($CoreOnly) { Assert-CoreOnlyInstall $installed }
 }
 
-Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/package-core-consumer') $true
-Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/package-default')
-Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/package-consumer')
+Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/Packaging/CoreConsumer') $true
+Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/Packaging/GraphicsConsumer')
+Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/Packaging/TestLibraryConsumer')
 'Core-only, graphics and test-library erelia-sparkle configurations passed through vcpkg manifest consumption.' |
     Set-Content (Join-Path $root 'verification.log')

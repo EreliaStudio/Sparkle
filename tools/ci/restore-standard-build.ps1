@@ -20,7 +20,7 @@ if ($origin.image -ne $env:ImageVersion) {
     Write-Warning "Runner image changed from $($origin.image) to $env:ImageVersion; validating executable dependencies and inventory"
 }
 foreach ($name in $origin.executables) {
-    $executable = Join-Path $build "tests/TU/$Suite/$name"
+    $executable = Join-Path $build "tests/$Suite/$name"
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Missing $name" }
     if (-not $IsWindows) {
         & chmod +x $executable

@@ -22,7 +22,7 @@ $origin = [ordered]@{
 }
 
 function Export-TestSuite([string]$Suite, [string[]]$Executables) {
-    $relative = "tests/TU/$Suite"
+    $relative = "tests/$Suite"
     $source = Join-Path $build $relative
     $bundle = Join-Path $bundles $Suite
     $destination = Join-Path $bundle $relative
@@ -71,7 +71,7 @@ New-Item -ItemType Directory -Force $libraries | Out-Null
 $suffix = if ($Configuration -eq 'Debug') { 'd' } else { '' }
 if ($IsWindows) {
     $archives = @("sparkle_core$suffix.lib", "sparkle$suffix.lib",
-        "tests/TU/SparkleTestLibrary/SparkleTestLibrary$suffix.lib")
+        "tests/SparkleTestLibrary/SparkleTestLibrary$suffix.lib")
 } else {
     $archives = @("libsparkle_core$suffix.a")
 }

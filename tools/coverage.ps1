@@ -96,9 +96,9 @@ if ($LASTEXITCODE -ne 0) {
     throw "Coverage build failed with exit code $LASTEXITCODE."
 }
 
-$coreTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Core/SparkleCoreTestSuite.exe"
-$graphicsTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleGraphicsTestSuite.exe"
-$clipboardTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleClipboardTestSuite.exe"
+$coreTestExecutable = Join-Path $coverageBuildDirectory "tests/Core/SparkleCoreTestSuite.exe"
+$graphicsTestExecutable = Join-Path $coverageBuildDirectory "tests/Graphics/SparkleGraphicsTestSuite.exe"
+$clipboardTestExecutable = Join-Path $coverageBuildDirectory "tests/Graphics/SparkleClipboardTestSuite.exe"
 foreach ($testExecutable in @($coreTestExecutable, $graphicsTestExecutable, $clipboardTestExecutable)) {
     if (-not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
         throw "The test executable was not produced: $testExecutable"
