@@ -28,7 +28,7 @@ env:
 
 jobs:
   format-check:
-    name: Format / Changed C++ files
+    name: Format / C++
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
             xargs -0 -r clang-format --style=file --dry-run --Werror
 
   standard-build:
-    name: Build / Standard / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / ${{ matrix.configuration }}
+    name: Build / ${{ matrix.os == 'windows-2022' && 'Core+Graphics / Windows' || 'Core / Linux' }} / ${{ matrix.configuration }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -144,7 +144,7 @@ jobs:
           path: build/standard-test/CMakeFiles/CMakeConfigureLog.yaml
 
   core-unit-tests:
-    name: Tests / Core fast / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / ${{ matrix.configuration }}
+    name: Test / Core / Functional / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / ${{ matrix.configuration }}
     needs: standard-build
     if: always() && !cancelled()
     runs-on: ${{ matrix.os }}
@@ -176,7 +176,7 @@ jobs:
             build/standard-test/build-origin.json
 
   address-sanitizer:
-    name: Sanitizers / ${{ matrix.os == 'windows-2022' && 'ASan / Windows' || 'ASan+LSan / Linux' }}
+    name: Test / Core / ${{ matrix.os == 'windows-2022' && 'ASan / Windows' || 'ASan+LSan / Linux' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -267,7 +267,7 @@ jobs:
             build/asan/CMakeFiles/CMakeConfigureLog.yaml
 
   core-stress:
-    name: Tests / Core stress / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / Release
+    name: Test / Core / Stress / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / Release
     needs: standard-build
     if: always() && !cancelled()
     runs-on: ${{ matrix.os }}
@@ -308,7 +308,7 @@ jobs:
             build/standard-test/build-origin.json
 
   graphics-unit-tests:
-    name: Tests / Graphics / Windows / ${{ matrix.configuration }}
+    name: Test / Graphics / ${{ matrix.configuration == 'Release' && 'Correctness+Golden+Benchmark' || 'Correctness+Golden' }} / Windows / ${{ matrix.configuration }}
     needs: standard-build
     if: always() && !cancelled()
     runs-on: windows-2022
@@ -394,7 +394,7 @@ jobs:
             build/standard-test/build-origin.json
 
   package:
-    name: Package / Installed / ${{ matrix.configuration }}
+    name: Test / Package / Install+Relocation / Windows / ${{ matrix.configuration }}
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
@@ -430,7 +430,7 @@ jobs:
             build/package-check/**/consumer-fixture
 
   vcpkg-port:
-    name: Package / vcpkg consumers
+    name: Test / Package / vcpkg / Windows
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
@@ -462,7 +462,7 @@ jobs:
 
 
   compiler-compatibility:
-    name: Compiler / ${{ matrix.compiler == 'cl' && 'MSVC' || 'GCC' }} / ${{ matrix.configuration }}
+    name: Build / ${{ matrix.compiler == 'cl' && 'Core+Graphics / MSVC / Windows' || 'Core / GCC / Linux' }} / ${{ matrix.configuration }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -544,7 +544,7 @@ jobs:
 
 
   coverage:
-    name: Coverage / LLVM
+    name: Test / Core+Graphics / Coverage / LLVM / Windows
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
