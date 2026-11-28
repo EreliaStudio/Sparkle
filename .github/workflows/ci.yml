@@ -308,7 +308,7 @@ jobs:
             build/standard-test/build-origin.json
 
   graphics-unit-tests:
-    name: Test / Graphics / ${{ matrix.configuration == 'Release' && 'Correctness+Golden+Benchmark' || 'Correctness+Golden' }} / Windows / ${{ matrix.configuration }}
+    name: Test / Graphics / ${{ matrix.category }} / Windows / ${{ matrix.configuration }}
     needs: standard-build
     if: always() && !cancelled()
     runs-on: windows-2022
@@ -316,7 +316,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        configuration: [Debug, Release]
+        include:
+          - category: Functional
+            configuration: Debug
+          - category: Functional
+            configuration: Release
+          - category: Golden
+            configuration: Debug
+          - category: Golden
+            configuration: Release
+          - category: Benchmark
+            configuration: Release
     steps:
       - uses: actions/checkout@v4
       - name: Download compiled Graphics tests
@@ -331,28 +341,28 @@ jobs:
         id: mesa
         run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
       - name: Run Release performance regressions and benchmarks
-        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.configuration == 'Release'
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Benchmark'
         id: performance
         run: >-
           ctest --test-dir build/standard-test -L '^(Performance|Benchmark)$'
           --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit performance-results.xml
       - name: Publish measurements from the same execution
-        if: always() && !cancelled() && steps.performance.outcome != 'skipped'
+        if: always() && !cancelled() && matrix.category == 'Benchmark' && steps.performance.outcome != 'skipped'
         run: >-
           python tools/ci/performance-report.py
           --build build/standard-test --configuration Release
       - name: Run Graphics CPU correctness
-        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success'
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Functional'
         run: >-
           ctest --test-dir build/standard-test -L '^CPU$' -LE '^(Performance|Benchmark|Golden)$'
           --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit cpu-results.xml
       - name: Run Graphics functional and native tests
-        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success'
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Functional'
         run: >-
           ctest --test-dir build/standard-test -L '^Graphics$' -LE '^(CPU|Golden|Performance|Benchmark)$'
           --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
       - name: Run golden-image regression tests
-        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success'
+        if: always() && !cancelled() && steps.restore-graphics.outcome == 'success' && steps.mesa.outcome == 'success' && matrix.category == 'Golden'
         run: >-
           ctest --test-dir build/standard-test -L '^Golden$'
           --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit golden-results.xml
@@ -368,7 +378,7 @@ jobs:
         id: visual-diffs
         uses: actions/upload-artifact@v4
         with:
-          name: visual-diffs-${{ matrix.configuration }}
+          name: visual-diffs-${{ matrix.category }}-${{ matrix.configuration }}
           path: build/visual-diffs
           if-no-files-found: error
           retention-days: 30
@@ -377,14 +387,14 @@ jobs:
         env:
           ARTIFACT_URL: ${{ steps.visual-diffs.outputs.artifact-url }}
         run: |
-          "### Visual comparisons (${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
+          "### Visual comparisons (${{ matrix.category }} / ${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
           "[Download reference / actual / difference images]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
           'Extract the ZIP and open index.html for the gallery, or inspect the PNG folders directly.' >> $env:GITHUB_STEP_SUMMARY
       - name: Upload Graphics test logs and image differences
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: graphics-unit-tests-${{ matrix.configuration }}
+          name: graphics-unit-tests-${{ matrix.category }}-${{ matrix.configuration }}
           path: |
             build/standard-test/Testing
             build/standard-test/*results.xml

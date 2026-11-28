@@ -3,7 +3,7 @@
 Builds Sparkle with LLVM coverage instrumentation and generates an HTML report.
 
 .DESCRIPTION
-Configures a dedicated Clang coverage build, runs every test in its own CTest process with a timeout, merges every generated raw profile, and writes an llvm-cov HTML report.
+Configures a dedicated Clang coverage build, runs every registered test, batching only audited pure math cases and retaining individual CTest isolation elsewhere, merges every generated raw profile, and writes an llvm-cov HTML report.
 
 .PARAMETER Clean
 Deletes the dedicated build/coverage directory before configuring.
@@ -111,12 +111,64 @@ $testExitCode = 0
 try {
     $env:LLVM_PROFILE_FILE = Join-Path $profileDirectory "sparkle-%p-%m.profraw"
     Write-Host "Running the complete test suite..."
-    # Fast and its complement are disjoint and exhaustive. Do not run
-    # timing, native, stress or unaudited graphical workloads in parallel.
-    & ctest --test-dir $coverageBuildDirectory -L '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit (Join-Path $runDirectory "results-fast.xml")
+    # Batch only explicitly audited pure math cases. The full standard CI
+    # still runs every case in an isolated CTest process with its own timeout.
+    $batchExitCode = 0
+    $batchReport = Join-Path $runDirectory 'results-batch.xml'
+    try {
+        $json = & ctest --test-dir $coverageBuildDirectory -L '^CoverageBatch$' --show-only=json-v1
+        if ($LASTEXITCODE -ne 0) { throw 'Coverage batch discovery failed' }
+        $cases = @(($json -join [Environment]::NewLine | ConvertFrom-Json).tests)
+        if ($cases.Count -eq 0) { throw 'Empty coverage batch' }
+        $names = @($cases | ForEach-Object {
+            if ($_.name -notmatch '^Core\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+$') {
+                throw "Unexpected coverage batch case: $($_.name)"
+            }
+            $_.name.Substring(5)
+        })
+        if (@($names | Sort-Object -Unique).Count -ne $names.Count) { throw 'Duplicate coverage batch cases' }
+
+        $info = [System.Diagnostics.ProcessStartInfo]::new()
+        $info.FileName = $coreTestExecutable
+        $info.WorkingDirectory = Split-Path -Parent $coreTestExecutable
+        $info.UseShellExecute = $false
+        $info.ArgumentList.Add("--gtest_filter=$($names -join ':')")
+        $info.ArgumentList.Add("--gtest_output=xml:$batchReport")
+        $process = [System.Diagnostics.Process]::Start($info)
+        try {
+            # Stronger aggregate timeout: every case together gets at most 120 seconds.
+            if (-not $process.WaitForExit(120000)) {
+                $process.Kill($true)
+                $process.WaitForExit()
+                throw 'Coverage batch exceeded its 120 second timeout'
+            }
+            $batchExitCode = $process.ExitCode
+        }
+        finally { $process.Dispose() }
+
+        $report = [xml](Get-Content -LiteralPath $batchReport -Raw)
+        $executed = @($report.SelectNodes('//testcase[@status="run"]') | ForEach-Object {
+            "$($_.classname).$($_.name)"
+        } | Sort-Object)
+        $expected = @($names | Sort-Object)
+        if ($executed.Count -ne $expected.Count -or @(Compare-Object $expected $executed -SyncWindow 0).Count -ne 0) {
+            throw 'Coverage batch did not execute exactly its discovered cases'
+        }
+        Write-Host "Coverage batch executed $($executed.Count) cases"
+    }
+    catch {
+        Write-Warning $_
+        $batchExitCode = 1
+        # A failed batch must not cause any registered case to disappear.
+        & ctest --test-dir $coverageBuildDirectory -L '^CoverageBatch$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit $batchReport
+    }
+
+    # The other Fast cases and the non-Fast complement remain isolated.
+    & ctest --test-dir $coverageBuildDirectory -L '^Fast$' -LE '^CoverageBatch$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit (Join-Path $runDirectory "results-fast.xml")
     $fastExitCode = $LASTEXITCODE
     & ctest --test-dir $coverageBuildDirectory -LE '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results-serial.xml")
-    $testExitCode = if ($fastExitCode -ne 0) { $fastExitCode } else { $LASTEXITCODE }
+    $serialExitCode = $LASTEXITCODE
+    $testExitCode = if ($batchExitCode -ne 0) { $batchExitCode } elseif ($fastExitCode -ne 0) { $fastExitCode } else { $serialExitCode }
 }
 finally {
     if ($null -eq $previousProfilePattern) {
@@ -129,7 +181,7 @@ finally {
 
 # Merge JUnit cases without dropping failures from either phase.
 $combined = [xml] '<testsuites/>'
-foreach ($name in @('results-fast.xml', 'results-serial.xml')) {
+foreach ($name in @('results-batch.xml', 'results-fast.xml', 'results-serial.xml')) {
     $path = Join-Path $runDirectory $name
     if (Test-Path -LiteralPath $path) {
         $part = [xml](Get-Content -LiteralPath $path -Raw)
