@@ -72,11 +72,11 @@ TEST(ShadowMapMeshTest, FromGenericVerticesPreservesWindingIndicesAndSharedVerti
 
 	EXPECT_EQ(shadow.vertexCount(), 4u);
 	EXPECT_EQ(shadow.indexCount(), 6u);
-	EXPECT_EQ(shadow.layout().vertexBuffer().stride(), sizeof(spk::Vector3));
-	const auto positions = shadow.layout().vertexBuffer().cast<spk::Vector3>();
+	EXPECT_EQ(shadow.vertexLayout().stride(), sizeof(spk::Vector3));
+	const auto positions = shadow.vertices();
 	EXPECT_EQ(positions[2], (spk::Vector3{1.0f, 1.0f, 0.0f}));
-	const auto indices = shadow.layout().indexBuffer().cast<std::uint32_t>();
-	const auto original = source.layout().indexBuffer().cast<std::uint32_t>();
+	const auto indices = shadow.indices();
+	const auto original = source.indices();
 	for (std::size_t i = 0; i < indices.size(); ++i)
 	{
 		EXPECT_EQ(indices[i], original[i]);
@@ -101,9 +101,19 @@ TEST(ShadowMapMeshTest, RejectsIncompleteTrianglesInvalidIndicesAndNonFiniteCoor
 	auto incomplete = std::move(incompleteBuilder).build();
 	EXPECT_THROW((void)Mesh::from(incomplete, extractor), spk::Exception);
 
-	auto invalidIndex = makeSourceMesh();
-	auto &indexBuffer = const_cast<spk::IndexBuffer &>(invalidIndex.layout().indexBuffer());
-	indexBuffer.cast<std::uint32_t>()[2] = 100u; // Simulate malformed external mesh data.
+	// Simulate malformed external mesh data without mutating an immutable mesh.
+	class MalformedMesh : public spk::Mesh<spk::Texture3DVertex>
+	{
+	public:
+		explicit MalformedMesh(const spk::TextureMesh3D &source)
+		{
+			spk::Buffer::Builder indices;
+			indices.insert(source.indices());
+			indices.cast<std::uint32_t>()[2] = 100u;
+			_attachContent(std::make_shared<const spk::MeshData>(source.vertexBuffer(), std::move(indices).build(), source.vertexLayout()));
+		}
+	};
+	const MalformedMesh invalidIndex(makeSourceMesh());
 	EXPECT_THROW((void)Mesh::from(invalidIndex, extractor), spk::Exception);
 
 	for (float value : {NaN, Infinity, -Infinity})
@@ -133,8 +143,8 @@ TEST(ShadowMapMeshTest, EmptyMeshIsAllowedAndCopiesKeepImmutableContentAlive)
 		});
 	}
 	Mesh copy = retained;
-	EXPECT_EQ(std::addressof(copy.layout()), std::addressof(retained.layout()));
-	EXPECT_EQ(copy.layout().vertexBuffer().cast<spk::Vector3>()[1], (spk::Vector3{1.0f, 0.0f, 0.0f}));
+	EXPECT_EQ(std::addressof(copy.content()), std::addressof(retained.content()));
+	EXPECT_EQ(copy.vertices()[1], (spk::Vector3{1.0f, 0.0f, 0.0f}));
 }
 
 TEST(ShadowMapMeshFilterTest, DefaultAndEmptyBindRestoreIdentity)
@@ -175,7 +185,7 @@ TEST(ShadowMapMeshFilterTest, SharedMeshInstancesComposeEntityBaseAndLocalInThat
 	filter.bind(MeshFilter::Collection{{shared, first}, {shared, second}}, base);
 
 	ASSERT_EQ(filter.instances().size(), 2u);
-	EXPECT_EQ(std::addressof(filter.instances()[0].mesh.layout()), std::addressof(filter.instances()[1].mesh.layout()));
+	EXPECT_EQ(std::addressof(filter.instances()[0].mesh.content()), std::addressof(filter.instances()[1].mesh.content()));
 	EXPECT_EQ(filter.instances()[0].localTransform, first);
 	EXPECT_EQ(filter.instances()[1].localTransform, second);
 
@@ -241,7 +251,7 @@ TEST(ShadowMapMeshFilterTest, InvalidBaseAndInstanceMatricesLeaveBothFieldsAndNo
 		EXPECT_EQ(filter.baseTransform(), base);
 		ASSERT_EQ(filter.instances().size(), 1u);
 		EXPECT_EQ(filter.instances()[0].localTransform, initial[0].localTransform);
-		EXPECT_EQ(std::addressof(filter.instances()[0].mesh.layout()), std::addressof(mesh.layout()));
+		EXPECT_EQ(std::addressof(filter.instances()[0].mesh.content()), std::addressof(mesh.content()));
 		EXPECT_EQ(notifications, 0);
 	}
 }
@@ -263,7 +273,7 @@ TEST(ShadowMapMeshFilterTest, OldCollectionsRemainReadableAfterReplacementAndSou
 	filter.bind(Mesh{});
 	ASSERT_EQ(filter.instances().size(), 1u);
 	EXPECT_TRUE(filter.instances()[0].mesh.empty());
-	EXPECT_EQ(snapshot[0].mesh.layout().indexBuffer().cast<std::uint32_t>()[1], 2u);
+	EXPECT_EQ(snapshot[0].mesh.indices()[1], 2u);
 }
 
 TEST(ShadowMapContributorTest, InitialStateAndRegistryFollowEngineContext)
@@ -436,7 +446,7 @@ TEST(GenericMeshFilterTest, VisualMeshUsesSameInstanceAndBindingContractsWithout
 	EXPECT_EQ(filter.baseTransform(), base);
 	EXPECT_EQ(filter.instances()[0].localTransform, first);
 	EXPECT_EQ(filter.instances()[1].localTransform, second);
-	EXPECT_EQ(&filter.instances()[0].mesh.layout(), &filter.instances()[1].mesh.layout());
+	EXPECT_EQ(&filter.instances()[0].mesh.content(), &filter.instances()[1].mesh.content());
 	EXPECT_EQ(notifications, 1);
 
 	const auto previous = filter.instances();

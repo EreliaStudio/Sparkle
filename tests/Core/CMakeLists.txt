@@ -37,6 +37,7 @@ string(JOIN ":" stressSuites
     "DoubleBufferStressTest.*"
     "EntityHierarchyStressTest.*"
     "NetworkStressTest.*"
+    "MesherFixtures.*"
     "PublishableStressTest.*"
 )
 string(JOIN ":" memorySuites
@@ -61,8 +62,15 @@ sparkle_discover_category(SparkleCoreTestSuite Core
     "${memorySuites}" "Core;MemorySafety")
 sparkle_discover_category(SparkleCoreTestSuite Core
     "${lifecycleCases}" "Core;Fast;Integration;MemorySafety")
+string(JOIN ":" voxelPerformance
+    "VoxelChunkPerformanceTest.RandomizedHighExposureCubes16HardBudget"
+    "VoxelChunkPerformanceTest.RandomizedMixedShapes16HardBudget"
+)
+set(benchmarkSuites "PerlinPerformanceTest.*:VoxelChunkPerformanceTest.*")
 sparkle_discover_category(SparkleCoreTestSuite Core
-    "PerlinPerformanceTest.*" "Core;Benchmark" RUN_SERIAL TRUE)
+    "${voxelPerformance}" "Core;Performance;Benchmark;Randomized" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleCoreTestSuite Core
-    "*-${stressSuites}:${memorySuites}:${lifecycleCases}:PerlinPerformanceTest.*" "Core;Fast")
+    "${benchmarkSuites}-${voxelPerformance}" "Core;Benchmark" RUN_SERIAL TRUE)
+sparkle_discover_category(SparkleCoreTestSuite Core
+    "*-${stressSuites}:${memorySuites}:${lifecycleCases}:${benchmarkSuites}" "Core;Fast")
 

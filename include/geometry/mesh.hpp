@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -9,7 +11,8 @@
 #include <stdexcept>
 #include <utility>
 
-#include "graphics/opengl/layout_buffer.hpp"
+#include "container/buffer.hpp"
+#include "geometry/mesh_data.hpp"
 
 namespace spk
 {
@@ -21,15 +24,10 @@ namespace spk
 		using Index = std::uint32_t;
 
 	private:
-		struct Content
-		{
-			LayoutBuffer layout;
-		};
-
-		std::shared_ptr<const Content> _content;
+		std::shared_ptr<const MeshData> _content;
 
 	protected:
-		void _attachContent(std::shared_ptr<const Content> content)
+		void _attachContent(std::shared_ptr<const MeshData> content)
 		{
 			_content = std::move(content);
 		}
@@ -39,12 +37,15 @@ namespace spk
 		class Builder
 		{
 		private:
-			std::shared_ptr<Content> _content;
+			VertexLayout _layout;
+			bool _consumed = false;
+			Buffer::Builder _vertices;
+			Buffer::Builder _indices;
 			bool _attributesInitialized = false;
 
 			void _check() const
 			{
-				if (_content == nullptr)
+				if (_consumed)
 				{
 					throw std::logic_error("Mesh::Builder was already consumed");
 				}
@@ -57,26 +58,26 @@ namespace spk
 					return;
 				}
 
-				_setupAttributes(_content->layout.vertexBuffer());
+				_setupAttributes(_layout);
+				if (_layout.stride() != sizeof(Vertex))
+				{
+					throw std::logic_error("Mesh vertex type does not match the layout stride");
+				}
 				_attributesInitialized = true;
 			}
 
 		protected:
-			virtual void _setupAttributes(VertexBuffer &) = 0;
+			virtual void _setupAttributes(VertexLayout &) = 0;
 			[[nodiscard]] virtual std::size_t _vertexCount() const
 			{
-				return _content->layout.vertexBuffer().count();
+				return _vertices.size() / sizeof(Vertex);
 			}
 			virtual void _setupMesh(TMeshType &mesh)
 			{
 			}
 
 		public:
-			Builder() :
-				_content(std::make_shared<Content>())
-			{
-				_content->layout.indexBuffer().setType(IndexBuffer::Type::UnsignedInt);
-			}
+			Builder() = default;
 
 			virtual ~Builder() = default;
 
@@ -92,12 +93,12 @@ namespace spk
 					throw std::overflow_error("Mesh vertex index overflow");
 				}
 
-				_content->layout.vertexBuffer().pushBack(vertex);
+				_vertices.pushBack(vertex);
 
 				return static_cast<Index>(vertexCount);
 			}
 
-			// Batch writes avoid per-element GPU buffer state validation and resizing.
+			// Batch writes avoid per-element buffer resizing.
 			[[nodiscard]] Index addVertices(std::span<const Vertex> vertices)
 			{
 				_check();
@@ -109,7 +110,7 @@ namespace spk
 				{
 					throw std::overflow_error("Mesh vertex index overflow");
 				}
-				_content->layout.vertexBuffer().insert(vertices);
+				_vertices.insert(vertices);
 				return static_cast<Index>(first);
 			}
 
@@ -127,7 +128,7 @@ namespace spk
 					throw std::overflow_error("Mesh vertex index overflow");
 				}
 
-				auto &buffer = _content->layout.vertexBuffer();
+				auto &buffer = _vertices;
 				buffer.template resize<Vertex>(first + count);
 				auto output = buffer.template cast<Vertex>().subspan(first, count);
 				for (std::size_t index = 0; index < count; ++index)
@@ -140,14 +141,14 @@ namespace spk
 			void addIndices(std::span<const Index> indices)
 			{
 				_check();
-				const auto count = _content->layout.vertexBuffer().count();
+				const auto count = _vertices.size() / sizeof(Vertex);
 				if (std::any_of(indices.begin(), indices.end(), [count](Index index) {
 						return index >= count;
 					}))
 				{
 					throw std::out_of_range("Mesh index references a missing vertex");
 				}
-				_content->layout.indexBuffer().insert(indices);
+				_indices.insert(indices);
 			}
 
 			// Avoid an intermediate allocation when each vertex is already one triangle-list index.
@@ -159,8 +160,8 @@ namespace spk
 					throw std::out_of_range("Mesh sequential index references a missing vertex");
 				}
 
-				auto &buffer = _content->layout.indexBuffer();
-				const std::size_t previousCount = buffer.count();
+				auto &buffer = _indices;
+				const std::size_t previousCount = buffer.size() / sizeof(Index);
 				if (count > std::numeric_limits<std::size_t>::max() - previousCount)
 				{
 					throw std::overflow_error("Mesh index count overflow");
@@ -174,12 +175,12 @@ namespace spk
 			{
 				_check();
 
-				if (index >= _content->layout.vertexBuffer().count())
+				if (index >= _vertices.size() / sizeof(Vertex))
 				{
 					throw std::out_of_range("Mesh index references a missing vertex");
 				}
 
-				_content->layout.indexBuffer().pushBack(index);
+				_indices.pushBack(index);
 			}
 
 			void addTriangle(Index a, Index b, Index c)
@@ -210,8 +211,8 @@ namespace spk
 				_check();
 				_initializeAttributes();
 
-				_content->layout.vertexBuffer().template reserve<Vertex>(vertexCount);
-				_content->layout.indexBuffer().template reserve<Index>(indexCount);
+				_vertices.template reserve<Vertex>(vertexCount);
+				_indices.template reserve<Index>(indexCount);
 			}
 
 			template <typename... TArgs>
@@ -221,11 +222,12 @@ namespace spk
 				_check();
 				_initializeAttributes();
 
-				_content->layout.validate();
+				auto vertices = std::move(_vertices).build();
+				auto indices = std::move(_indices).build();
+				_consumed = true;
 
 				TMeshType result(std::forward<TArgs>(args)...);
-
-				result._attachContent(std::exchange(_content, nullptr));
+				result._attachContent(std::make_shared<const MeshData>(std::move(vertices), std::move(indices), std::move(_layout)));
 
 				_setupMesh(result);
 
@@ -235,29 +237,53 @@ namespace spk
 
 		Mesh() = default;
 
-		[[nodiscard]] const LayoutBuffer &layout() const
+		[[nodiscard]] const MeshData &content() const
 		{
 			if (_content == nullptr)
 			{
 				throw std::logic_error("Mesh is empty");
 			}
+			return *_content;
+		}
 
-			return _content->layout;
+		[[nodiscard]] std::uint64_t identifier() const noexcept
+		{
+			return _content ? _content->identifier() : 0;
+		}
+
+		[[nodiscard]] const Buffer::Immutable &vertexBuffer() const
+		{
+			return content().vertexBuffer();
+		}
+
+		[[nodiscard]] const Buffer::Immutable &indexBuffer() const
+		{
+			return content().indexBuffer();
+		}
+
+		[[nodiscard]] const VertexLayout &vertexLayout() const
+		{
+			return content().vertexLayout();
+		}
+
+		[[nodiscard]] std::span<const Vertex> vertices() const
+		{
+			return _content ? vertexBuffer().template cast<Vertex>() : std::span<const Vertex>{};
+		}
+
+		[[nodiscard]] std::span<const Index> indices() const
+		{
+			return _content ? indexBuffer().template cast<Index>() : std::span<const Index>{};
 		}
 
 		[[nodiscard]] std::size_t vertexCount() const noexcept
 		{
-			return _content ? _content->layout.vertexBuffer().count() : 0;
+			return _content ? _content->vertexBuffer().size() / sizeof(Vertex) : 0;
 		}
 
 		[[nodiscard]] std::size_t indexCount() const noexcept
 		{
-			return _content ? _content->layout.indexBuffer().count() : 0;
-		}
-
-		[[nodiscard]] IndexBuffer::Type indexType() const noexcept
-		{
-			return IndexBuffer::Type::UnsignedInt;
+			return _content ? _content->indexBuffer().size() / sizeof(Index) : 0;
 		}
 
 		[[nodiscard]] bool empty() const noexcept

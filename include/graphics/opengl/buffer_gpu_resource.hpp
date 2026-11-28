@@ -7,6 +7,7 @@
 #include <optional>
 #include <vector>
 
+#include "container/buffer.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
 
 namespace spk
@@ -30,25 +31,7 @@ namespace spk
 		class State : public GPUResource::State
 		{
 		private:
-			class Storage
-			{
-			private:
-				std::vector<std::max_align_t> _storage;
-				std::size_t _size = 0;
-
-				[[nodiscard]] static std::size_t _unitCount(std::size_t size) noexcept;
-
-			public:
-				void resize(std::size_t size);
-				void reserve(std::size_t size);
-				void append(const void *source, std::size_t size);
-				void clear();
-				[[nodiscard]] std::byte *data() noexcept;
-				[[nodiscard]] const std::byte *data() const noexcept;
-				[[nodiscard]] std::size_t size() const noexcept;
-			};
-
-			Storage _storage;
+			const Buffer *_buffer = nullptr;
 			Usage _usage = Usage::StaticDraw;
 
 			[[nodiscard]] Kind _kind() const noexcept override;
@@ -57,7 +40,11 @@ namespace spk
 		protected:
 			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override = 0;
 			[[nodiscard]] virtual GLenum _target() const noexcept = 0;
+			virtual void _validateBuffer(const Buffer &) const
+			{
+			}
 			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
+			[[nodiscard]] bool _needsSynchronization(const GPUResource::Instance &instance) const override;
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
@@ -68,7 +55,16 @@ namespace spk
 			}
 			[[nodiscard]] std::size_t size() const noexcept
 			{
-				return _storage.size();
+				return _buffer != nullptr ? _buffer->size() : 0;
+			}
+
+			[[nodiscard]] const Buffer *buffer() const noexcept
+			{
+				return _buffer;
+			}
+			[[nodiscard]] std::uint64_t dataVersion() const
+			{
+				return _buffer != nullptr ? _buffer->version() : 0;
 			}
 
 			friend class BufferGPUResource;
@@ -84,15 +80,13 @@ namespace spk
 		{
 		}
 
-		void _append(const void *data, std::size_t size);
-		void _write(const void *data, std::size_t size, std::size_t offset = 0);
-		void _resize(std::size_t size);
-		void _reserve(std::size_t size);
-		[[nodiscard]] std::byte *_data() noexcept;
-		[[nodiscard]] const std::byte *_data() const noexcept;
+		[[nodiscard]] const std::byte *_data() const;
 
 	public:
-		void clear();
+		// Non-owning: the CPU buffer must outlive this resource and every retained handle.
+		// Rebind after replacing the contents of the buffer object by assignment.
+		void bind(const Buffer *buffer);
+		[[nodiscard]] const Buffer *buffer() const noexcept;
 		void setUsage(Usage usage);
 		[[nodiscard]] Usage usage() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;

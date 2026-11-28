@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 #include "geometry/color_mesh_2d.hpp"
@@ -24,9 +25,9 @@ namespace
 		class Builder final : public spk::Mesh<SimpleVertex>::Builder<SimpleMesh>
 		{
 		private:
-			void _setupAttributes(spk::VertexBuffer &buffer) override
+			void _setupAttributes(spk::VertexLayout &buffer) override
 			{
-				buffer.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
+				buffer.addAttribute(0, spk::VertexLayout::Attribute::Type::Float, 2);
 			}
 		};
 	};
@@ -37,9 +38,9 @@ namespace
 		class Builder final : public spk::Mesh<SimpleVertex>::Builder<BoundaryMesh>
 		{
 		private:
-			void _setupAttributes(spk::VertexBuffer &buffer) override
+			void _setupAttributes(spk::VertexLayout &buffer) override
 			{
-				buffer.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
+				buffer.addAttribute(0, spk::VertexLayout::Attribute::Type::Float, 2);
 			}
 
 			[[nodiscard]] std::size_t _vertexCount() const override
@@ -57,23 +58,23 @@ namespace
 		std::uint32_t components,
 		std::size_t offset)
 	{
-		const auto attributes = mesh.layout().vertexBuffer().attributes();
+		const auto attributes = mesh.vertexLayout().attributes();
 		ASSERT_GT(attributes.size(), index);
 		EXPECT_EQ(attributes[index].attribute.location, location);
-		EXPECT_EQ(attributes[index].attribute.type, spk::VertexBuffer::Attribute::Type::Float);
+		EXPECT_EQ(attributes[index].attribute.type, spk::VertexLayout::Attribute::Type::Float);
 		EXPECT_EQ(attributes[index].attribute.componentCount, components);
 		EXPECT_EQ(attributes[index].offset, offset);
 	}
 }
 
-TEST(MeshTest, DefaultMeshIsEmptyAndHasNoReadableLayout)
+TEST(MeshTest, DefaultMeshIsEmptyAndHasNoReadableContent)
 {
 	SimpleMesh mesh;
 	EXPECT_TRUE(mesh.empty());
 	EXPECT_EQ(mesh.vertexCount(), 0u);
 	EXPECT_EQ(mesh.indexCount(), 0u);
-	EXPECT_EQ(mesh.indexType(), spk::IndexBuffer::Type::UnsignedInt);
-	EXPECT_THROW((void)mesh.layout(), std::logic_error);
+	static_assert(std::is_same_v<SimpleMesh::Index, std::uint32_t>);
+	EXPECT_THROW((void)mesh.content(), std::logic_error);
 }
 
 TEST(MeshTest, BuilderReservesBuildsQuadAndPreservesManualIndexOrder)
@@ -89,9 +90,9 @@ TEST(MeshTest, BuilderReservesBuildsQuadAndPreservesManualIndexOrder)
 	EXPECT_EQ(mesh.vertexCount(), 3u);
 	EXPECT_EQ(mesh.indexCount(), 3u);
 	EXPECT_FALSE(mesh.empty());
-	EXPECT_EQ(mesh.layout().vertexBuffer().stride(), sizeof(SimpleVertex));
-	EXPECT_EQ(mesh.layout().vertexBuffer().cast<SimpleVertex>()[1].x, 1.0f);
-	const auto indices = mesh.layout().indexBuffer().cast<std::uint32_t>();
+	EXPECT_EQ(mesh.vertexLayout().stride(), sizeof(SimpleVertex));
+	EXPECT_EQ(mesh.vertices()[1].x, 1.0f);
+	const auto indices = mesh.indices();
 	EXPECT_EQ(indices[0], third);
 	EXPECT_EQ(indices[1], second);
 	EXPECT_EQ(indices[2], first);
@@ -101,12 +102,12 @@ TEST(MeshTest, EmptyBuiltMeshHasLayoutAndSharedCopiesRetainContent)
 {
 	SimpleMesh mesh = std::move(SimpleMesh::Builder{}).build();
 	EXPECT_TRUE(mesh.empty());
-	EXPECT_NO_THROW((void)mesh.layout());
-	EXPECT_EQ(mesh.layout().vertexBuffer().stride(), sizeof(SimpleVertex));
+	EXPECT_NO_THROW((void)mesh.content());
+	EXPECT_EQ(mesh.vertexLayout().stride(), sizeof(SimpleVertex));
 
 	SimpleMesh copy = mesh;
 	EXPECT_EQ(copy.vertexCount(), 0u);
-	EXPECT_EQ(&copy.layout(), &mesh.layout());
+	EXPECT_EQ(&copy.content(), &mesh.content());
 }
 
 TEST(MeshTest, MissingVertexIndicesAndConsumedBuilderAreRejected)
@@ -133,14 +134,14 @@ TEST(ColorMesh2DTest, QuadRetainsPayloadIndicesAndExpectedAttributeLayout)
 
 	EXPECT_EQ(mesh.vertexCount(), 4u);
 	EXPECT_EQ(mesh.indexCount(), 6u);
-	const auto vertices = mesh.layout().vertexBuffer().cast<spk::ColorVertex2D>();
+	const auto vertices = mesh.vertices();
 	EXPECT_EQ(vertices[2].position, spk::Vector2(3.0f, 2.0f));
 	EXPECT_FLOAT_EQ(vertices[2].depth, -1.0f);
 	EXPECT_EQ(vertices[2].color, red);
 	expectStandardAttribute(mesh, 0, 0, 2, 0);
 	expectStandardAttribute(mesh, 1, 1, 1, sizeof(float) * 2);
 	expectStandardAttribute(mesh, 2, 2, 4, sizeof(float) * 3);
-	EXPECT_EQ(mesh.layout().vertexBuffer().stride(), sizeof(spk::ColorVertex2D));
+	EXPECT_EQ(mesh.vertexLayout().stride(), sizeof(spk::ColorVertex2D));
 }
 
 TEST(ColorMesh2DTest, OneVertexAndMultipleShapesRetainCountsAcrossCopiesAndMoves)
@@ -163,13 +164,13 @@ TEST(TextureMesh2DTest, PayloadAllowsBoundaryAndOutsideUVsWithExpectedLayout)
 	const auto c = builder.addVertex({{0.0f, 2.0f}, 0.75f, {0.0f, 2.0f}});
 	builder.addTriangle(a, b, c);
 	auto mesh = std::move(builder).build();
-	const auto vertices = mesh.layout().vertexBuffer().cast<spk::Texture2DVertex>();
+	const auto vertices = mesh.vertices();
 	EXPECT_EQ(vertices[0].uv, spk::Vector2(-1.0f, 0.0f));
 	EXPECT_EQ(vertices[2].uv, spk::Vector2(0.0f, 2.0f));
 	expectStandardAttribute(mesh, 0, 0, 2, 0);
 	expectStandardAttribute(mesh, 1, 1, 1, sizeof(float) * 2);
 	expectStandardAttribute(mesh, 2, 2, 2, sizeof(float) * 3);
-	EXPECT_EQ(mesh.layout().vertexBuffer().stride(), sizeof(spk::Texture2DVertex));
+	EXPECT_EQ(mesh.vertexLayout().stride(), sizeof(spk::Texture2DVertex));
 }
 
 TEST(TextureMesh3DTest, PayloadNormalsWindingUVsAndLayoutArePreserved)
@@ -181,17 +182,17 @@ TEST(TextureMesh3DTest, PayloadNormalsWindingUVsAndLayoutArePreserved)
 	builder.addTriangle(a, c, b);
 	auto mesh = std::move(builder).build();
 
-	const auto vertices = mesh.layout().vertexBuffer().cast<spk::Texture3DVertex>();
+	const auto vertices = mesh.vertices();
 	EXPECT_EQ(vertices[0].normal, spk::Vector3(0.0f, 0.0f, 0.0f));
 	EXPECT_EQ(vertices[1].normal, spk::Vector3(0.0f, 0.0f, 2.0f));
-	const auto indices = mesh.layout().indexBuffer().cast<std::uint32_t>();
+	const auto indices = mesh.indices();
 	EXPECT_EQ(indices[0], a);
 	EXPECT_EQ(indices[1], c);
 	EXPECT_EQ(indices[2], b);
 	expectStandardAttribute(mesh, 0, 0, 3, 0);
 	expectStandardAttribute(mesh, 1, 1, 3, sizeof(float) * 3);
 	expectStandardAttribute(mesh, 2, 2, 2, sizeof(float) * 6);
-	EXPECT_EQ(mesh.layout().vertexBuffer().stride(), sizeof(spk::Texture3DVertex));
+	EXPECT_EQ(mesh.vertexLayout().stride(), sizeof(spk::Texture3DVertex));
 }
 
 TEST(MeshTest, VertexIndexOverflowIsRejectedBeforeMutation)
@@ -214,8 +215,8 @@ TEST(MeshTest, BatchedVerticesAndIndicesPreservePayloadAndValidateBounds)
 	const auto mesh = std::move(builder).build();
 	EXPECT_EQ(mesh.vertexCount(), 4u);
 	EXPECT_EQ(mesh.indexCount(), indices.size());
-	EXPECT_EQ(mesh.layout().vertexBuffer().cast<SimpleVertex>()[3].y, 2.0f);
-	const auto actual = mesh.layout().indexBuffer().cast<std::uint32_t>();
+	EXPECT_EQ(mesh.vertices()[3].y, 2.0f);
+	const auto actual = mesh.indices();
 	EXPECT_TRUE(std::equal(actual.begin(), actual.end(), indices.begin()));
 }
 
@@ -237,8 +238,8 @@ TEST(MeshTest, GeneratedVerticesAndSequentialIndicesPreservePayload)
 	const auto mesh = std::move(builder).build();
 	EXPECT_EQ(mesh.vertexCount(), 4u);
 	EXPECT_EQ(mesh.indexCount(), 4u);
-	const auto vertices = mesh.layout().vertexBuffer().cast<SimpleVertex>();
-	const auto indices = mesh.layout().indexBuffer().cast<std::uint32_t>();
+	const auto vertices = mesh.vertices();
+	const auto indices = mesh.indices();
 	for (std::size_t index = 0; index < 4; ++index)
 	{
 		EXPECT_FLOAT_EQ(vertices[index].x, static_cast<float>(index));
@@ -261,4 +262,22 @@ TEST(MeshTest, GeneratedVertexOverflowAndSequentialIndexBoundsAreRejected)
 	EXPECT_THROW(builder.addSequentialIndices(2), std::out_of_range);
 	builder.addSequentialIndices(1);
 	EXPECT_EQ(std::move(builder).build().indexCount(), 1u);
+}
+
+TEST(MeshTest, PublishedMeshKeepsItsCpuBuffersAtStableAddresses)
+{
+	SimpleMesh::Builder builder;
+	(void)builder.addVertex({1.0f, 2.0f});
+	builder.addIndex(0);
+	auto mesh = std::move(builder).build();
+	auto copy = mesh;
+	const auto *vertices = &mesh.vertexBuffer();
+	const auto *indices = &mesh.indexBuffer();
+	ASSERT_NE(vertices, nullptr);
+	ASSERT_NE(indices, nullptr);
+	mesh = SimpleMesh{};
+	EXPECT_EQ(&copy.vertexBuffer(), vertices);
+	EXPECT_EQ(&copy.indexBuffer(), indices);
+	EXPECT_FLOAT_EQ(vertices->cast<SimpleVertex>()[0].y, 2.0f);
+	EXPECT_EQ(indices->cast<std::uint32_t>()[0], 0u);
 }

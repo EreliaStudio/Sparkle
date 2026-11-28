@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/state.hpp"
 #include "graphics/opengl/texture.hpp"
@@ -60,7 +61,7 @@ namespace spk
 		p.activate(context);
 		Uniform<bool>("uEncodeSRGB", _presentSRGB && !srgbTarget).activate(context);
 		_sampler.activate(context);
-		_mesh.layout().activate(context);
-		p.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+		MeshLayout::obtain(_mesh).activate(context);
+		p.render(Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 	}
 }

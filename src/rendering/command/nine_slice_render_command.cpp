@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/uniform_buffer.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
@@ -66,12 +67,6 @@ namespace spk
 		return *program;
 	}
 
-	UniformBuffer &NineSliceRenderCommand::_sharedBuffer()
-	{
-		static UniformBuffer buffer(RenderDataUBOBindingPoint, sizeof(RenderData));
-		return buffer;
-	}
-
 	NineSliceRenderCommand::NineSliceRenderCommand(
 		const SpriteSheet *spriteSheet,
 		Rect2D rect,
@@ -98,14 +93,23 @@ namespace spk
 		{
 			return;
 		}
-		auto &buffer = _sharedBuffer();
-		buffer.setData(_data);
-		buffer.validate();
+		static thread_local auto cpu = [] {
+			Buffer::Builder builder;
+			builder.resize<RenderData>(1);
+			return std::move(builder).buildMutable();
+		}();
+		static thread_local UniformBuffer buffer(RenderDataUBOBindingPoint, sizeof(RenderData));
+		if (buffer.buffer() == nullptr)
+		{
+			buffer.bind(&cpu);
+		}
+		cpu.cast<RenderData>()[0] = _data;
+		cpu.validate();
 		buffer.activate(context);
 		auto &program = _sharedProgram();
 		program.activate(context);
 		_sampler.activate(context);
-		_meshData.layout().activate(context);
-		program.render(Program::Primitive::Triangles, _meshData.indexType(), 0, _meshData.indexCount());
+		MeshLayout::obtain(_meshData).activate(context);
+		program.render(Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, _meshData.indexCount());
 	}
 }

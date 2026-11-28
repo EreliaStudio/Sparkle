@@ -85,16 +85,9 @@ endif()
 # Only audited context-free suites enter the parallel CPU partition.
 # New or unaudited Graphics tests remain in the conservative serial partition.
 string(JOIN ":" cpuSuites
-    "MesherGeometry.*"
-    "MesherTest.*"
-    "MesherMaterialIndices.*"
     "ShadowProjectionTest.*"
     "GraphicsColorTest.*"
     "BufferCPUStorageTest.*"
-    "MeshTest.*"
-    "ColorMesh2DTest.*"
-    "TextureMesh2DTest.*"
-    "TextureMesh3DTest.*"
     "EventTest.*"
     "MouseMovedEventTest.*"
     "EventDispatcherTest.*"
@@ -104,7 +97,6 @@ string(JOIN ":" cpuSuites
     "KeyboardTest.*"
     "MouseTest.*"
 )
-set(cpuStress "MesherFixtures.*")
 set(cpuGolden "PerlinNoiseGolden.*")
 
 string(JOIN ":" goldenSuites
@@ -136,8 +128,6 @@ string(JOIN ":" goldenSuites
 )
 
 string(JOIN ":" cpuPerformance
-    "VoxelChunkPerformanceTest.RandomizedHighExposureCubes16HardBudget"
-    "VoxelChunkPerformanceTest.RandomizedMixedShapes16HardBudget"
     "ShadowProjectionPerformance.Randomized128CastersHardBudget"
 )
 string(JOIN ":" graphicsPerformance
@@ -145,7 +135,6 @@ string(JOIN ":" graphicsPerformance
     "BiomeWorldPerformance.DirectionalCascadeDepthRebuildAndCacheHardBudget"
 )
 string(JOIN ":" benchmarkSuites
-    "VoxelChunkPerformanceTest.*"
     "ShadowProjectionPerformance.*"
     "ShadowRenderingPerformance.*"
     "BiomeWorldPerformance.*"
@@ -154,8 +143,6 @@ set(performanceCases "${cpuPerformance}:${graphicsPerformance}")
 
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuSuites}" "Graphics;CPU;Fast")
-sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-    "${cpuStress}" "Graphics;CPU;Stress")
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${cpuGolden}" "Graphics;CPU;Golden" RESOURCE_LOCK SparkleGraphics)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
@@ -167,6 +154,6 @@ sparkle_discover_category(SparkleGraphicsTestSuite Graphics
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
     "${benchmarkSuites}-${performanceCases}" "Graphics;Benchmark" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleGraphicsTestSuite Graphics
-    "*-${cpuSuites}:${cpuStress}:${cpuGolden}:${goldenSuites}:${benchmarkSuites}"
+    "*-${cpuSuites}:${cpuGolden}:${goldenSuites}:${benchmarkSuites}"
     "Graphics;Functional" RESOURCE_LOCK SparkleGraphics)
 

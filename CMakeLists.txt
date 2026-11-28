@@ -26,6 +26,7 @@ file(GLOB_RECURSE SPARKLE_CORE_SOURCES
     "${SPARKLE_SOURCE_DIR}/design_pattern/*.cpp"
     "${SPARKLE_SOURCE_DIR}/diagnostics/*.cpp"
     "${SPARKLE_SOURCE_DIR}/engine/*.cpp"
+    "${SPARKLE_SOURCE_DIR}/geometry/*.cpp"
     "${SPARKLE_SOURCE_DIR}/math/*.cpp"
     "${SPARKLE_SOURCE_DIR}/network/*.cpp"
     "${SPARKLE_SOURCE_DIR}/model3d/*.cpp"

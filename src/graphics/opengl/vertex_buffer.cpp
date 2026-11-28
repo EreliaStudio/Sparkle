@@ -10,106 +10,6 @@ namespace spk
 	{
 	}
 
-	std::size_t VertexBuffer::_typeSize(Attribute::Type type)
-	{
-		switch (type)
-		{
-		case Attribute::Type::Byte:
-			return sizeof(GLbyte);
-
-		case Attribute::Type::UnsignedByte:
-			return sizeof(GLubyte);
-
-		case Attribute::Type::Short:
-			return sizeof(GLshort);
-
-		case Attribute::Type::UnsignedShort:
-			return sizeof(GLushort);
-
-		case Attribute::Type::Int:
-			return sizeof(GLint);
-
-		case Attribute::Type::UnsignedInt:
-			return sizeof(GLuint);
-
-		case Attribute::Type::HalfFloat:
-			return sizeof(GLhalf);
-
-		case Attribute::Type::Float:
-			return sizeof(GLfloat);
-
-		case Attribute::Type::Double:
-			return sizeof(GLdouble);
-		}
-
-		throw std::invalid_argument("Unknown VertexBuffer attribute type");
-	}
-
-	bool VertexBuffer::_isIntegerType(Attribute::Type type) noexcept
-	{
-		switch (type)
-		{
-		case Attribute::Type::Byte:
-		case Attribute::Type::UnsignedByte:
-		case Attribute::Type::Short:
-		case Attribute::Type::UnsignedShort:
-		case Attribute::Type::Int:
-		case Attribute::Type::UnsignedInt:
-			return true;
-
-		case Attribute::Type::HalfFloat:
-		case Attribute::Type::Float:
-		case Attribute::Type::Double:
-			return false;
-		}
-
-		return false;
-	}
-
-	void VertexBuffer::_validateAttribute(const Attribute &attribute)
-	{
-		if (attribute.componentCount == 0 || attribute.componentCount > 4)
-		{
-			throw std::invalid_argument("VertexBuffer attribute component count must be between 1 and 4");
-		}
-
-		switch (attribute.interpretation)
-		{
-		case Interpretation::Floating:
-			if (attribute.type == Attribute::Type::Double)
-			{
-				throw std::invalid_argument("Double attributes require double interpretation");
-			}
-			if (attribute.normalized && !_isIntegerType(attribute.type))
-			{
-				throw std::invalid_argument("Only integer attribute types can be normalized");
-			}
-			break;
-
-		case Interpretation::Integer:
-			if (!_isIntegerType(attribute.type))
-			{
-				throw std::invalid_argument("Integer interpretation requires an integer attribute type");
-			}
-			if (attribute.normalized)
-			{
-				throw std::invalid_argument("Integer interpretation cannot use normalization");
-			}
-			break;
-
-		case Interpretation::Double:
-			if (attribute.type != Attribute::Type::Double)
-			{
-				throw std::invalid_argument("Double interpretation requires a double attribute type");
-			}
-			if (attribute.normalized)
-			{
-				throw std::invalid_argument("Double interpretation cannot use normalization");
-			}
-			break;
-		}
-	}
-
 	void VertexBuffer::_validateConfigurationEdition() const
 	{
 		if (size() != 0)
@@ -128,14 +28,12 @@ namespace spk
 		}
 	}
 
-	std::size_t VertexBuffer::_checkedSize(std::size_t count, std::size_t stride)
+	void VertexBuffer::State::_validateBuffer(const Buffer &buffer) const
 	{
-		if (stride != 0 && count > std::numeric_limits<std::size_t>::max() / stride)
+		if (!buffer.empty() && (_layout.stride() == 0 || buffer.size() % _layout.stride() != 0))
 		{
-			throw std::overflow_error("VertexBuffer size overflow");
+			throw std::logic_error("VertexBuffer data size does not match its configured stride");
 		}
-
-		return count * stride;
 	}
 
 	GLenum VertexBuffer::State::_target() const noexcept
@@ -143,35 +41,17 @@ namespace spk
 		return GL_ARRAY_BUFFER;
 	}
 
+	void VertexBuffer::setLayout(const VertexLayout &layout)
+	{
+		_validateConfigurationEdition();
+		state<State>()._layout = layout;
+		_touchConfiguration();
+	}
+
 	void VertexBuffer::addAttribute(Attribute attribute)
 	{
-		auto &content = state<State>();
 		_validateConfigurationEdition();
-		_validateAttribute(attribute);
-
-		for (const auto &element : content._attributes)
-		{
-			if (element.attribute.location == attribute.location)
-			{
-				throw std::invalid_argument("VertexBuffer attribute location is already configured");
-			}
-		}
-
-		const std::size_t typeSize = _typeSize(attribute.type);
-		if (attribute.componentCount > std::numeric_limits<std::size_t>::max() / typeSize)
-		{
-			throw std::overflow_error("VertexBuffer attribute size overflow");
-		}
-
-		const std::size_t attributeSize = typeSize * attribute.componentCount;
-		if (content._stride > std::numeric_limits<std::size_t>::max() - attributeSize)
-		{
-			throw std::overflow_error("VertexBuffer stride overflow");
-		}
-
-		content._attributes.push_back({.attribute = attribute, .offset = content._stride});
-
-		content._stride += attributeSize;
+		state<State>()._layout.addAttribute(attribute);
 		_touchConfiguration();
 	}
 
@@ -187,46 +67,34 @@ namespace spk
 
 	void VertexBuffer::addPadding(std::size_t byteCount)
 	{
-		auto &content = state<State>();
 		_validateConfigurationEdition();
-
-		if (content._stride > std::numeric_limits<std::size_t>::max() - byteCount)
+		if (byteCount != 0)
 		{
-			throw std::overflow_error("VertexBuffer stride overflow");
+			state<State>()._layout.addPadding(byteCount);
+			_touchConfiguration();
 		}
-
-		if (byteCount == 0)
-		{
-			return;
-		}
-
-		content._stride += byteCount;
-		_touchConfiguration();
 	}
 
 	void VertexBuffer::clearConfiguration()
 	{
-		auto &content = state<State>();
 		_validateConfigurationEdition();
-
-		if (content._attributes.empty() && content._stride == 0)
+		auto &layout = state<State>()._layout;
+		if (layout.attributes().empty() && layout.stride() == 0)
 		{
 			return;
 		}
-
-		content._attributes.clear();
-		content._stride = 0;
+		layout.clear();
 		_touchConfiguration();
 	}
 
 	std::size_t VertexBuffer::stride() const noexcept
 	{
-		return state<State>()._stride;
+		return state<State>()._layout.stride();
 	}
 
 	std::size_t VertexBuffer::count() const noexcept
 	{
-		const auto stride = state<State>()._stride;
+		const auto stride = state<State>()._layout.stride();
 		if (stride == 0)
 		{
 			return 0;
@@ -237,7 +105,7 @@ namespace spk
 
 	std::span<const VertexBuffer::ResolvedAttribute> VertexBuffer::attributes() const noexcept
 	{
-		return state<State>()._attributes;
+		return state<State>()._layout.attributes();
 	}
 
 	GPUResource::Generation VertexBuffer::configurationGeneration() const noexcept

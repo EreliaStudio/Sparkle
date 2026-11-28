@@ -43,7 +43,7 @@ namespace spk::ShadowMap
 				return empty;
 			}
 			std::call_once(_bounds->once, [this] {
-				const auto vertices = layout().vertexBuffer().cast<Vector3>();
+				const auto vertices = this->vertices();
 				if (vertices.empty())
 				{
 					return;
@@ -62,7 +62,7 @@ namespace spk::ShadowMap
 		class Builder final : public spk::Mesh<spk::Vector3>::Builder<Mesh>
 		{
 		private:
-			void _setupAttributes(spk::VertexBuffer &buffer) override;
+			void _setupAttributes(spk::VertexLayout &buffer) override;
 			void _setupMesh(Mesh &mesh) override
 			{
 				mesh._bounds = std::make_shared<BoundsCache>();
@@ -80,8 +80,8 @@ namespace spk::ShadowMap
 				return std::move(builder).build();
 			}
 
-			const auto vertices = source.layout().vertexBuffer().template cast<TVertex>();
-			const auto indices = source.layout().indexBuffer().template cast<std::uint32_t>();
+			const auto vertices = source.vertices();
+			const auto indices = source.indices();
 			if (indices.size() % 3 != 0)
 			{
 				throw spk::Exception("ShadowMap mesh requires triangle indices");

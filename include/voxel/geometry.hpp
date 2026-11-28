@@ -8,7 +8,6 @@
 
 #include "geometry/mesh.hpp"
 #include "geometry/shadow_mesh.hpp"
-#include "graphics/palette.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
 #include "voxel/definition.hpp"
@@ -34,7 +33,7 @@ namespace spk::Voxel
 			class Builder final : public spk::Mesh<Vertex>::Builder<SurfaceMesh>
 			{
 			private:
-				void _setupAttributes(spk::VertexBuffer &buffer) override;
+				void _setupAttributes(spk::VertexLayout &buffer) override;
 			};
 		};
 
@@ -63,7 +62,6 @@ namespace spk::Voxel
 		[[nodiscard]] const spk::ShadowMap::Mesh &depthMesh() const noexcept;
 		[[nodiscard]] const std::vector<Definition::Slot> &materialSlots() const noexcept;
 		[[nodiscard]] const MaterialIndices &materialIndices() const noexcept;
-		[[nodiscard]] bool isCompatible(const spk::Palette &palette) const noexcept;
 		[[nodiscard]] const Definition::Slot &materialSlot(std::uint32_t index) const;
 	};
 }

@@ -16,6 +16,9 @@
 namespace spk
 {
 	template <typename TElement>
+	class CapacityPool;
+
+	template <typename TElement>
 	class Pool
 	{
 	public:
@@ -23,6 +26,8 @@ namespace spk
 		using Factory = std::function<Element *()>;
 
 	private:
+		friend class CapacityPool<TElement>;
+
 		static void _setAcquired(Element *element)
 		{
 			if constexpr (std::derived_from<Element, LifeCycle>)
@@ -73,6 +78,7 @@ namespace spk
 			};
 
 			std::vector<Element *> _availableElements;
+			std::function<void(Element *)> _recycler;
 			std::shared_ptr<FactoryState> _factory;
 			mutable std::mutex _mutex;
 
@@ -120,7 +126,22 @@ namespace spk
 				return element;
 			}
 
+			void setRecycler(std::function<void(Element *)> recycler)
+			{
+				_recycler = std::move(recycler);
+			}
+
 			void recycle(Element *element) noexcept
+			{
+				if (_recycler)
+				{
+					_recycler(element);
+					return;
+				}
+				cache(element);
+			}
+
+			void cache(Element *element) noexcept
 			{
 				try
 				{

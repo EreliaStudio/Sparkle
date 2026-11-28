@@ -42,6 +42,7 @@ namespace spk
 				return std::make_unique<State>(*this);
 			}
 			[[nodiscard]] GLenum _target() const noexcept override;
+			void _validateBuffer(const Buffer &buffer) const override;
 
 		public:
 			[[nodiscard]] std::optional<Type> type() const noexcept
@@ -74,8 +75,6 @@ namespace spk
 			}
 		}
 
-		[[nodiscard]] static std::size_t _checkedSize(std::size_t count, std::size_t stride);
-
 	public:
 		IndexBuffer();
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
@@ -93,59 +92,10 @@ namespace spk
 		void clearConfiguration();
 
 		template <typename TIndex>
-		void resize(std::size_t count)
-		{
-			_validateType<TIndex>();
-			_resize(_checkedSize(count, state<State>()._stride));
-		}
-
-		template <typename TIndex>
-		void reserve(std::size_t count)
-		{
-			_validateType<TIndex>();
-			_reserve(_checkedSize(count, state<State>()._stride));
-		}
-
-		template <typename TIndex>
-		void pushBack(const TIndex &index)
-		{
-			_validateType<TIndex>();
-			_append(std::addressof(index), sizeof(TIndex));
-		}
-
-		template <typename TIndex, typename... TArguments>
-		void emplace(TArguments &&...arguments)
-		{
-			_validateType<TIndex>();
-			TIndex index(std::forward<TArguments>(arguments)...);
-			_append(std::addressof(index), sizeof(TIndex));
-		}
-
-		template <typename TIndex>
-		void insert(std::span<const TIndex> indices)
-		{
-			_validateType<TIndex>();
-			_append(indices.data(), indices.size_bytes());
-		}
-
-		template <typename TIndex>
-		void insert(std::initializer_list<TIndex> indices)
-		{
-			insert<TIndex>(std::span<const TIndex>(indices.begin(), indices.size()));
-		}
-
-		template <typename TIndex>
-		[[nodiscard]] std::span<TIndex> cast()
-		{
-			_validateType<TIndex>();
-			return {reinterpret_cast<TIndex *>(_data()), count()};
-		}
-
-		template <typename TIndex>
 		[[nodiscard]] std::span<const TIndex> cast() const
 		{
 			_validateType<TIndex>();
-			return {reinterpret_cast<const TIndex *>(_data()), count()};
+			return buffer() != nullptr ? buffer()->cast<TIndex>() : std::span<const TIndex>{};
 		}
 
 		[[nodiscard]] bool isConfigured() const noexcept;

@@ -7,6 +7,7 @@
 
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/state.hpp"
 
 namespace spk
@@ -90,7 +91,7 @@ namespace spk
 		OpenGL::State::Blend::disabled(context).apply(context);
 		_program.activate(context);
 		_albedo.activate(context);
-		_mesh.layout().activate(context);
-		_program.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+		MeshLayout::obtain(_mesh).activate(context);
+		_program.render(Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 	}
 }

@@ -25,6 +25,7 @@
 #include "engine/entity3d.hpp"
 #include "engine/transform3d.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/state.hpp"
 #include "graphics/opengl/uniform_buffer.hpp"
@@ -212,7 +213,7 @@ namespace
 				EXPECT_EQ(instances.front().mesh.indexCount(), depth.indexCount());
 				if (!depth.empty())
 				{
-					EXPECT_EQ(&instances.front().mesh.layout(), &depth.layout());
+					EXPECT_EQ(&instances.front().mesh.content(), &depth.content());
 				}
 			}
 		}
@@ -1002,10 +1003,10 @@ namespace
 			{
 				continue;
 			}
-			const auto vertices = opaque.layout().vertexBuffer().cast<spk::Voxel::Geometry::Vertex>();
-			const auto depthVertices = depth.layout().vertexBuffer().cast<spk::Vector3>();
-			const auto indices = opaque.layout().indexBuffer().cast<std::uint32_t>();
-			const auto depthIndices = depth.layout().indexBuffer().cast<std::uint32_t>();
+			const auto vertices = opaque.vertices();
+			const auto depthVertices = depth.vertices();
+			const auto indices = opaque.indices();
+			const auto depthIndices = depth.indices();
 			ASSERT_EQ(depthIndices.size() % 3, 0u);
 			for (const auto index : depthIndices)
 			{
@@ -1157,9 +1158,11 @@ namespace
 				raster.polygonOffsetUnits = variant.units;
 				raster.apply(context);
 				spk::OpenGL::State::Clear::depth(context);
+				spk::Buffer::Builder cameraBuilder;
+				cameraBuilder.pushBack(result.viewProjection[0]);
+				const auto cameraData = std::move(cameraBuilder).build();
 				spk::UniformBuffer cameraBuffer(4, sizeof(spk::Matrix4x4));
-				cameraBuffer.setData(result.viewProjection[0]);
-				cameraBuffer.validate();
+				cameraBuffer.bind(&cameraData);
 				cameraBuffer.activate(context);
 				program.activate(context);
 				for (auto &[coordinate, entry] : scene.chunks)
@@ -1173,12 +1176,14 @@ namespace
 						{
 							continue;
 						}
+						spk::Buffer::Builder modelBuilder;
+						modelBuilder.pushBack(base * instance.localTransform);
+						const auto modelData = std::move(modelBuilder).build();
 						spk::UniformBuffer modelBuffer(5, sizeof(spk::Matrix4x4));
-						modelBuffer.setData(base * instance.localTransform);
-						modelBuffer.validate();
+						modelBuffer.bind(&modelData);
 						modelBuffer.activate(context);
-						instance.mesh.layout().activate(context);
-						program.render(spk::Program::Primitive::Triangles, instance.mesh.indexType(), 0, instance.mesh.indexCount());
+						spk::MeshLayout::obtain(instance.mesh).activate(context);
+						program.render(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt, 0, instance.mesh.indexCount());
 					}
 				}
 			}

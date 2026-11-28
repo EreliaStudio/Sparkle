@@ -70,6 +70,10 @@ namespace spk
 			}
 			[[nodiscard]] virtual RecyclingScore _recyclingScore(const Instance &instance) const noexcept;
 			[[nodiscard]] virtual std::unique_ptr<Instance> _create(RenderContext &context) const = 0;
+			[[nodiscard]] virtual bool _needsSynchronization(const Instance &) const
+			{
+				return false;
+			}
 			virtual void _synchronize(Instance &instance, RenderContext &context) const = 0;
 			virtual void _bind(Instance &instance, RenderContext &context) const = 0;
 

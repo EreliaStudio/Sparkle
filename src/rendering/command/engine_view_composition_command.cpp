@@ -8,6 +8,7 @@
 
 #include "core/context/render_context.hpp"
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 
 namespace spk
@@ -77,7 +78,7 @@ namespace spk
 		GLint programID = 0;
 		glGetIntegerv(GL_CURRENT_PROGRAM, &programID);
 		glUniform1f(glGetUniformLocation(static_cast<GLuint>(programID), "uExposure"), _exposure);
-		_mesh.layout().activate(context);
-		program.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+		MeshLayout::obtain(_mesh).activate(context);
+		program.render(Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 	}
 }

@@ -85,12 +85,15 @@ namespace spk::Lighting
 
 		struct ShadowBindings
 		{
+			std::shared_ptr<const Buffer::Immutable> shadowData;
+			std::shared_ptr<const Buffer::Immutable> historicalData;
 			ShaderStorageBuffer buffer{ShadowBindingPoint, 0, sizeof(ShadowData)};
 			std::vector<Sampler> samplers;
 			std::unique_ptr<ShaderStorageBuffer> historicalLights;
 		};
 
 	private:
+		std::shared_ptr<const Buffer::Immutable> _lightBuffer;
 		ShaderStorageBuffer _lights;
 		Header _header;
 		std::vector<LightData> _lightData;
