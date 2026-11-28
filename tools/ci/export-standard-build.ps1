@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $build = 'build/standard-test'
 $bundles = 'build/ci-bundles'
-$compiler = if ($IsWindows) { 'clang-cl' } else { 'clang++' }
+$compiler = 'clang-cl'
 $compilerVersion = (& $compiler --version | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Could not identify the compiler' }
 $origin = [ordered]@{
@@ -17,8 +17,8 @@ $origin = [ordered]@{
     configuration = $Configuration
     compiler = $compiler
     compilerVersion = $compilerVersion
-    triplet = if ($IsWindows) { 'x64-windows-static' } else { 'x64-linux' }
-    runtime = if ($IsWindows) { 'static MSVC' } else { 'default' }
+    triplet = 'x64-windows-static'
+    runtime = 'static MSVC'
 }
 
 function Export-TestSuite([string]$Suite, [string[]]$Executables) {
@@ -59,23 +59,4 @@ function Export-TestSuite([string]$Suite, [string[]]$Executables) {
     Write-Host "Exported $Suite ($($names.Count) tests)"
 }
 
-$coreExecutable = if ($IsWindows) { 'SparkleCoreTestSuite.exe' } else { 'SparkleCoreTestSuite' }
-Export-TestSuite -Suite Core -Executables @($coreExecutable)
-if ($IsWindows) {
-    Export-TestSuite -Suite Graphics -Executables @('SparkleGraphicsTestSuite.exe', 'SparkleClipboardTestSuite.exe')
-}
-
-# Publish the static libraries separately; test jobs need only their executable bundles.
-$libraries = Join-Path $bundles 'Libraries'
-New-Item -ItemType Directory -Force $libraries | Out-Null
-$suffix = if ($Configuration -eq 'Debug') { 'd' } else { '' }
-if ($IsWindows) {
-    $archives = @("sparkle_core$suffix.lib", "sparkle$suffix.lib",
-        "tests/SparkleTestLibrary/SparkleTestLibrary$suffix.lib")
-} else {
-    $archives = @("libsparkle_core$suffix.a")
-}
-foreach ($archive in $archives) {
-    Copy-Item -LiteralPath (Join-Path $build $archive) -Destination $libraries
-}
-$origin | ConvertTo-Json | Set-Content (Join-Path $libraries 'build-origin.json') -Encoding utf8
+Export-TestSuite -Suite Graphics -Executables @('SparkleGraphicsTestSuite.exe', 'SparkleClipboardTestSuite.exe')

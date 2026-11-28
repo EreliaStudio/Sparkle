@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Core', 'Graphics')][string]$Suite,
+    [Parameter(Mandatory)][ValidateSet('Graphics')][string]$Suite,
     [Parameter(Mandatory)][ValidateSet('Debug', 'Release')][string]$Configuration
 )
 
@@ -17,19 +17,12 @@ if ($origin.workspace -ne (Resolve-Path .).Path -or
     throw 'The downloaded test bundle is incompatible with this checkout or configuration'
 }
 if ($origin.image -ne $env:ImageVersion) {
-    Write-Warning "Runner image changed from $($origin.image) to $env:ImageVersion; validating executable dependencies and inventory"
+    Write-Warning "Runner image changed from $($origin.image) to $env:ImageVersion; validating executable inventory"
 }
 foreach ($name in $origin.executables) {
     $executable = Join-Path $build "tests/$Suite/$name"
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Missing $name" }
-    if (-not $IsWindows) {
-        & chmod +x $executable
-        if ($LASTEXITCODE -ne 0) { throw "Could not restore executable permission: $name" }
-        $dependencies = & ldd $executable
-        if ($LASTEXITCODE -ne 0 -or ($dependencies -match 'not found')) {
-            throw "Unresolved runtime dependency: $name"
-        }
-    }
+
 }
 $inventoryJson = & ctest --test-dir $build --show-only=json-v1
 if ($LASTEXITCODE -ne 0) { throw 'Downloaded CTest registration is invalid' }

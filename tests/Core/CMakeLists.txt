@@ -44,9 +44,6 @@ string(JOIN ":" memorySuites
     "NetworkMemorySafetyTest.*"
     "PublishableMemorySafetyTest.*"
 )
-# These context-free math cases can share a process in the coverage run.
-# Normal test jobs still execute each case independently.
-set(coverageBatchSuites "Camera3DTest.*:MatrixTest.*:QuaternionTest.*:Rect2DTest.*:Vector2Test.*:Vector3Test.*:Vector4Test.*")
 set(lifecycleCases "NetworkConcurrencyTest.ClientDestructor*")
 set(repeatConcurrency "NetworkStressTest.ManyClientsConnectAndExchangeConcurrently")
 set(repeatRandomized "NetworkStressTest.SeededRandomPayloadsPreserveEveryByte")
@@ -65,7 +62,7 @@ sparkle_discover_category(SparkleCoreTestSuite Core
 sparkle_discover_category(SparkleCoreTestSuite Core
     "${lifecycleCases}" "Core;Fast;Integration;MemorySafety")
 sparkle_discover_category(SparkleCoreTestSuite Core
-    "${coverageBatchSuites}" "Core;Fast;CoverageBatch")
+    "PerlinPerformanceTest.*" "Core;Benchmark" RUN_SERIAL TRUE)
 sparkle_discover_category(SparkleCoreTestSuite Core
-    "*-${stressSuites}:${memorySuites}:${lifecycleCases}:${coverageBatchSuites}" "Core;Fast")
+    "*-${stressSuites}:${memorySuites}:${lifecycleCases}:PerlinPerformanceTest.*" "Core;Fast")
 

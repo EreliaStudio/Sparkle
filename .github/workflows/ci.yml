@@ -52,7 +52,7 @@ jobs:
             xargs -0 -r clang-format --style=file --dry-run --Werror
 
   standard-build:
-    name: Build / ${{ matrix.os == 'windows-2022' && 'Core+Graphics / Windows' || 'Core / Linux' }} / ${{ matrix.configuration }}
+    name: Build+Test / ${{ matrix.os == 'windows-2022' && 'Core+Graphics / Windows' || 'Core / Linux' }} / ${{ matrix.configuration }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -99,41 +99,30 @@ jobs:
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Build Core and Graphics test executables (Windows)
+        id: build-windows
         if: runner.os == 'Windows'
         run: cmake --build build/standard-test --target SparkleCoreTestSuite SparkleGraphicsTestSuite --parallel 4
       - name: Build Core test executable (Linux)
+        id: build-linux
         if: runner.os == 'Linux'
         run: cmake --build build/standard-test --target SparkleCoreTestSuite --parallel 4
       - name: Install software OpenGL for test discovery
         if: runner.os == 'Windows'
         run: ./tools/ci/install-mesa.ps1 -Destination build/standard-test/tests/Graphics
-      - name: Export reusable libraries and test bundles
+      - name: Export Graphics test bundle
+        if: runner.os == 'Windows'
         run: ./tools/ci/export-standard-build.ps1 -Configuration ${{ matrix.configuration }}
       - name: Report compiler cache statistics
         if: always()
         continue-on-error: true
         run: |
           if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
-      - name: Upload Core test executable and registrations
-        uses: actions/upload-artifact@v4
-        with:
-          name: standard-core-${{ matrix.os }}-${{ matrix.configuration }}
-          path: build/ci-bundles/Core
-          if-no-files-found: error
-          retention-days: 7
       - name: Upload Graphics test executables and registrations
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: standard-graphics-${{ matrix.os }}-${{ matrix.configuration }}
           path: build/ci-bundles/Graphics
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload compiled Sparkle libraries
-        uses: actions/upload-artifact@v4
-        with:
-          name: standard-libraries-${{ matrix.os }}-${{ matrix.configuration }}
-          path: build/ci-bundles/Libraries
           if-no-files-found: error
           retention-days: 7
       - name: Upload build diagnostics
@@ -143,37 +132,38 @@ jobs:
           name: standard-build-diagnostics-${{ matrix.os }}-${{ matrix.configuration }}
           path: build/standard-test/CMakeFiles/CMakeConfigureLog.yaml
 
-  core-unit-tests:
-    name: Test / Core / Functional / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / ${{ matrix.configuration }}
-    needs: standard-build
-    if: always() && !cancelled()
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, ubuntu-24.04]
-        configuration: [Debug, Release]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download compiled Core tests
-        uses: actions/download-artifact@v4
-        with:
-          name: standard-core-${{ matrix.os }}-${{ matrix.configuration }}
-          path: build/standard-test
-      - name: Verify executable origin and test inventory
-        run: ./tools/ci/restore-standard-build.ps1 -Suite Core -Configuration ${{ matrix.configuration }}
       - name: Run functional Core tests
-        run: ctest --test-dir build/standard-test -L '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success')
+        run: ctest --test-dir build/standard-test/tests/Core -L '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+      - name: Run Core stress suites
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^Stress$'
+          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit stress-results.xml
+      - name: Repeat concurrent networking workload
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^RepeatConcurrency$'
+          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
+      - name: Repeat deterministic randomized network workload
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^RepeatRandomized$'
+          --repeat until-fail:5 --output-on-failure --no-tests=error --timeout 120
+      - name: Run Core benchmark
+        if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success') && matrix.configuration == 'Release'
+        run: >-
+          ctest --test-dir build/standard-test/tests/Core -L '^Benchmark$'
+          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit benchmark-results.xml
       - name: Upload Core test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: core-unit-tests-${{ matrix.os }}-${{ matrix.configuration }}
+          name: core-tests-${{ matrix.os }}-${{ matrix.configuration }}
           path: |
-            build/standard-test/Testing
-            build/standard-test/results.xml
-            build/standard-test/build-origin.json
+            build/standard-test/tests/Core/Testing
+            build/standard-test/tests/Core/*results.xml
+
 
   address-sanitizer:
     name: Test / Core / ${{ matrix.os == 'windows-2022' && 'ASan / Windows' || 'ASan+LSan / Linux' }}
@@ -265,47 +255,6 @@ jobs:
             build/asan/Testing
             build/asan/results.xml
             build/asan/CMakeFiles/CMakeConfigureLog.yaml
-
-  core-stress:
-    name: Test / Core / Stress / ${{ matrix.os == 'windows-2022' && 'Windows' || 'Linux' }} / Release
-    needs: standard-build
-    if: always() && !cancelled()
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, ubuntu-24.04]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download compatible Release Core tests
-        uses: actions/download-artifact@v4
-        with:
-          name: standard-core-${{ matrix.os }}-Release
-          path: build/standard-test
-      - name: Verify executable origin and restore permissions
-        run: ./tools/ci/restore-standard-build.ps1 -Suite Core -Configuration Release
-      - name: Run stress suites
-        run: >-
-          ctest --test-dir build/standard-test -L '^Stress$'
-          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
-      - name: Repeat concurrent networking workload
-        run: >-
-          ctest --test-dir build/standard-test -L '^RepeatConcurrency$'
-          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
-      - name: Repeat deterministic randomized network workload
-        run: >-
-          ctest --test-dir build/standard-test -L '^RepeatRandomized$'
-          --repeat until-fail:5 --output-on-failure --no-tests=error --timeout 120
-      - name: Upload stress evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: core-stress-${{ matrix.os }}
-          path: |
-            build/standard-test/Testing
-            build/standard-test/results.xml
-            build/standard-test/build-origin.json
 
   graphics-unit-tests:
     name: Test / Graphics / ${{ matrix.category }} / Windows / ${{ matrix.configuration }}
@@ -440,9 +389,13 @@ jobs:
             build/package-check/**/consumer-fixture
 
   vcpkg-port:
-    name: Test / Package / vcpkg / Windows
+    name: Test / Package / vcpkg / ${{ matrix.component }} / Windows
     runs-on: windows-2022
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [Core, Graphics, TestLibrary]
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
@@ -452,9 +405,9 @@ jobs:
         uses: ./.github/actions/build-cache
         continue-on-error: true
         with:
-          scope: ${{ github.job }}
+          scope: vcpkg-port-${{ matrix.component }}
       - name: Validate erelia-sparkle overlay port
-        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release
+        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release -Component ${{ matrix.component }}
       - name: Report compiler cache statistics
         if: always()
         continue-on-error: true
@@ -464,7 +417,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vcpkg-port
+          name: vcpkg-port-${{ matrix.component }}
           path: |
             build/vcpkg-port-check/verification.log
             build/vcpkg-port-check/**/CMakeConfigureLog.yaml

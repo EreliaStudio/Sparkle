@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([ValidateSet('Debug', 'Release')][string]$Configuration = 'Release')
+param(
+    [ValidateSet('Debug', 'Release')][string]$Configuration = 'Release',
+    [ValidateSet('All', 'Core', 'Graphics', 'TestLibrary')][string]$Component = 'All'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -76,8 +79,14 @@ function Test-ManifestConsumer(
     if ($CoreOnly) { Assert-CoreOnlyInstall $installed }
 }
 
-Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/Packaging/CoreConsumer') $true
-Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/Packaging/GraphicsConsumer')
-Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/Packaging/TestLibraryConsumer')
-'Core-only, graphics and test-library erelia-sparkle configurations passed through vcpkg manifest consumption.' |
+if ($Component -in @('All', 'Core')) {
+    Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/Packaging/CoreConsumer') $true
+}
+if ($Component -in @('All', 'Graphics')) {
+    Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/Packaging/GraphicsConsumer')
+}
+if ($Component -in @('All', 'TestLibrary')) {
+    Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/Packaging/TestLibraryConsumer')
+}
+"erelia-sparkle $Component configuration(s) passed through vcpkg manifest consumption." |
     Set-Content (Join-Path $root 'verification.log')

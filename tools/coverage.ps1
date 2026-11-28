@@ -3,7 +3,7 @@
 Builds Sparkle with LLVM coverage instrumentation and generates an HTML report.
 
 .DESCRIPTION
-Configures a dedicated Clang coverage build, runs every registered test, batching only audited pure math cases and retaining individual CTest isolation elsewhere, merges every generated raw profile, and writes an llvm-cov HTML report.
+Configures a dedicated Clang coverage build, runs functional and memory-safety tests with individual CTest timeouts, excluding golden images, benchmarks, performance and stress workloads, merges every generated raw profile, and writes an llvm-cov HTML report.
 
 .PARAMETER Clean
 Deletes the dedicated build/coverage directory before configuring.
@@ -36,7 +36,7 @@ if (-not $coverageBuildDirectory.StartsWith($expectedBuildPrefix, [System.String
     throw "Refusing to use coverage directory outside the repository build directory: $coverageBuildDirectory"
 }
 
-foreach ($command in @("cmake", "ctest", "clang++", "llvm-profdata", "llvm-cov")) {
+foreach ($command in @("cmake", "ctest", "clang-cl", "llvm-profdata", "llvm-cov")) {
     if ($null -eq (Get-Command $command -ErrorAction SilentlyContinue)) {
         throw "Required command '$command' was not found in PATH. Install LLVM and CMake/Ninja before running coverage."
     }
@@ -65,6 +65,16 @@ $indexPath = Join-Path $htmlDirectory "index.html"
 
 New-Item -ItemType Directory -Path $profileDirectory -Force | Out-Null
 
+# clang-cl avoids the -Xclang CRT/debug flags emitted by CMake's GNU
+# Clang Windows driver, which previously made coverage objects non-cacheable.
+$resourceDir = (& clang-cl -print-resource-dir).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Cannot locate the LLVM profile runtime' }
+$runtimeDirectory = Join-Path $resourceDir 'lib/windows'
+if (-not (Test-Path (Join-Path $runtimeDirectory 'clang_rt.profile-x86_64.lib'))) {
+    throw "LLVM profile runtime not found in $runtimeDirectory"
+}
+$env:LIB = "$env:LIB;$runtimeDirectory"
+
 $configureArguments = @(
     "-S", $repositoryRoot,
     "-B", $coverageBuildDirectory,
@@ -74,15 +84,19 @@ $configureArguments = @(
     "-DSPARKLE_BUILD_TESTS=ON",
     "-DVCPKG_MANIFEST_FEATURES=tests",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchainFile",
-    "-DCMAKE_CXX_COMPILER=clang++",
+    "-DCMAKE_CXX_COMPILER=clang-cl",
     "-DVCPKG_TARGET_TRIPLET=$Triplet",
     "-DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST",
     "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping",
-    "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
+    "-DCMAKE_EXE_LINKER_FLAGS=/DEFAULTLIB:clang_rt.profile-x86_64.lib"
 )
 
 if ($Triplet.EndsWith("-static")) {
     $configureArguments += '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+}
+
+if ($env:CMAKE_CXX_COMPILER_LAUNCHER) {
+    $configureArguments += "-DCMAKE_CXX_COMPILER_LAUNCHER=$env:CMAKE_CXX_COMPILER_LAUNCHER"
 }
 
 Write-Host "Configuring coverage build..."
@@ -110,65 +124,13 @@ $previousProfilePattern = $env:LLVM_PROFILE_FILE
 $testExitCode = 0
 try {
     $env:LLVM_PROFILE_FILE = Join-Path $profileDirectory "sparkle-%p-%m.profraw"
-    Write-Host "Running the complete test suite..."
-    # Batch only explicitly audited pure math cases. The full standard CI
-    # still runs every case in an isolated CTest process with its own timeout.
-    $batchExitCode = 0
-    $batchReport = Join-Path $runDirectory 'results-batch.xml'
-    try {
-        $json = & ctest --test-dir $coverageBuildDirectory -L '^CoverageBatch$' --show-only=json-v1
-        if ($LASTEXITCODE -ne 0) { throw 'Coverage batch discovery failed' }
-        $cases = @(($json -join [Environment]::NewLine | ConvertFrom-Json).tests)
-        if ($cases.Count -eq 0) { throw 'Empty coverage batch' }
-        $names = @($cases | ForEach-Object {
-            if ($_.name -notmatch '^Core\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+$') {
-                throw "Unexpected coverage batch case: $($_.name)"
-            }
-            $_.name.Substring(5)
-        })
-        if (@($names | Sort-Object -Unique).Count -ne $names.Count) { throw 'Duplicate coverage batch cases' }
-
-        $info = [System.Diagnostics.ProcessStartInfo]::new()
-        $info.FileName = $coreTestExecutable
-        $info.WorkingDirectory = Split-Path -Parent $coreTestExecutable
-        $info.UseShellExecute = $false
-        $info.ArgumentList.Add("--gtest_filter=$($names -join ':')")
-        $info.ArgumentList.Add("--gtest_output=xml:$batchReport")
-        $process = [System.Diagnostics.Process]::Start($info)
-        try {
-            # Stronger aggregate timeout: every case together gets at most 120 seconds.
-            if (-not $process.WaitForExit(120000)) {
-                $process.Kill($true)
-                $process.WaitForExit()
-                throw 'Coverage batch exceeded its 120 second timeout'
-            }
-            $batchExitCode = $process.ExitCode
-        }
-        finally { $process.Dispose() }
-
-        $report = [xml](Get-Content -LiteralPath $batchReport -Raw)
-        $executed = @($report.SelectNodes('//testcase[@status="run"]') | ForEach-Object {
-            "$($_.classname).$($_.name)"
-        } | Sort-Object)
-        $expected = @($names | Sort-Object)
-        if ($executed.Count -ne $expected.Count -or @(Compare-Object $expected $executed -SyncWindow 0).Count -ne 0) {
-            throw 'Coverage batch did not execute exactly its discovered cases'
-        }
-        Write-Host "Coverage batch executed $($executed.Count) cases"
-    }
-    catch {
-        Write-Warning $_
-        $batchExitCode = 1
-        # A failed batch must not cause any registered case to disappear.
-        & ctest --test-dir $coverageBuildDirectory -L '^CoverageBatch$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit $batchReport
-    }
-
-    # The other Fast cases and the non-Fast complement remain isolated.
-    & ctest --test-dir $coverageBuildDirectory -L '^Fast$' -LE '^CoverageBatch$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit (Join-Path $runDirectory "results-fast.xml")
+    Write-Host "Running functional and memory-safety coverage tests..."
+    $excluded = '^(Golden|Benchmark|Performance|Stress)$'
+    & ctest --test-dir $coverageBuildDirectory -L '^Fast$' -LE $excluded --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit (Join-Path $runDirectory "results-fast.xml")
     $fastExitCode = $LASTEXITCODE
-    & ctest --test-dir $coverageBuildDirectory -LE '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results-serial.xml")
+    & ctest --test-dir $coverageBuildDirectory -LE '^(Fast|Golden|Benchmark|Performance|Stress)$' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results.xml")
     $serialExitCode = $LASTEXITCODE
-    $testExitCode = if ($batchExitCode -ne 0) { $batchExitCode } elseif ($fastExitCode -ne 0) { $fastExitCode } else { $serialExitCode }
+    $testExitCode = if ($fastExitCode -ne 0) { $fastExitCode } else { $serialExitCode }
 }
 finally {
     if ($null -eq $previousProfilePattern) {
@@ -178,20 +140,6 @@ finally {
         $env:LLVM_PROFILE_FILE = $previousProfilePattern
     }
 }
-
-# Merge JUnit cases without dropping failures from either phase.
-$combined = [xml] '<testsuites/>'
-foreach ($name in @('results-batch.xml', 'results-fast.xml', 'results-serial.xml')) {
-    $path = Join-Path $runDirectory $name
-    if (Test-Path -LiteralPath $path) {
-        $part = [xml](Get-Content -LiteralPath $path -Raw)
-        $suites = if ($part.DocumentElement.Name -eq 'testsuite') { @($part.DocumentElement) } else { @($part.DocumentElement.SelectNodes('testsuite')) }
-        foreach ($suite in $suites) {
-            [void]$combined.DocumentElement.AppendChild($combined.ImportNode($suite, $true))
-        }
-    }
-}
-$combined.Save((Join-Path $runDirectory 'results.xml'))
 
 $profilePaths = @(Get-ChildItem -LiteralPath $profileDirectory -Filter "*.profraw" -File | Select-Object -ExpandProperty FullName)
 if ($profilePaths.Count -eq 0) {

@@ -17,7 +17,7 @@ runs:
         "VCPKG_BINARY_SOURCES=clear;files,$path,readwrite" >> $env:GITHUB_ENV
         "image=$env:ImageVersion" >> $env:GITHUB_OUTPUT
         "path=$path" >> $env:GITHUB_OUTPUT
-        if ('${{ inputs.scope }}' -eq 'vcpkg-port') {
+        if ('${{ inputs.scope }}' -like 'vcpkg-port*') {
           $source = & ./tools/ci/package-source-fingerprint.ps1
           "source=$source" >> $env:GITHUB_OUTPUT
         }
@@ -28,6 +28,7 @@ runs:
         key: vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}${{ steps.archives.outputs.source != '' && format('-{0}', steps.archives.outputs.source) || '' }}
         restore-keys: |
           vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}
+          vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-vcpkg-port-${{ steps.archives.outputs.source }}
           vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-
     - name: Configure GitHub Actions cache credentials
       uses: actions/github-script@v7
