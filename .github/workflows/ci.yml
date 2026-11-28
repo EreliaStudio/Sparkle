@@ -131,7 +131,6 @@ jobs:
         with:
           name: standard-build-diagnostics-${{ matrix.os }}-${{ matrix.configuration }}
           path: build/standard-test/CMakeFiles/CMakeConfigureLog.yaml
-
       - name: Run functional Core tests
         if: always() && !cancelled() && (steps.build-windows.outcome == 'success' || steps.build-linux.outcome == 'success')
         run: ctest --test-dir build/standard-test/tests/Core -L '^Fast$' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
@@ -163,7 +162,6 @@ jobs:
           path: |
             build/standard-test/tests/Core/Testing
             build/standard-test/tests/Core/*results.xml
-
 
   address-sanitizer:
     name: Test / Core / ${{ matrix.os == 'windows-2022' && 'ASan / Windows' || 'ASan+LSan / Linux' }}

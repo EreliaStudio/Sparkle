@@ -112,6 +112,8 @@ string(JOIN ":" goldenSuites
     "BiomeWorldShadowDiagnostics.*"
     "ShadowRenderingGolden.*"
     "VoxelForwardLightingGolden.*"
+    "ArticulatedVoxelLightingGolden.*"
+    "*/ArticulatedVoxelLightingGolden.*"
     "VoxelTransparencyGolden.*"
     "VoxelTransparencyWindowGolden.*"
     "VoxelViewMaterialGoldenTest.*"

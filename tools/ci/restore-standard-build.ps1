@@ -22,7 +22,6 @@ if ($origin.image -ne $env:ImageVersion) {
 foreach ($name in $origin.executables) {
     $executable = Join-Path $build "tests/$Suite/$name"
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Missing $name" }
-
 }
 $inventoryJson = & ctest --test-dir $build --show-only=json-v1
 if ($LASTEXITCODE -ne 0) { throw 'Downloaded CTest registration is invalid' }
