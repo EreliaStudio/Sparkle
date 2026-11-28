@@ -21,9 +21,9 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.archives.outputs.path }}
-        key: vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}-${{ github.sha }}
+        key: vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}${{ inputs.scope == 'vcpkg-port' && format('-{0}', github.sha) || '' }}
         restore-keys: |
-          vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}-
+          vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-${{ hashFiles('**/vcpkg.json', 'vcpkg-configuration.json') }}-${{ inputs.scope }}
           vcpkg-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.archives.outputs.image }}-
     - name: Configure GitHub Actions cache credentials
       uses: actions/github-script@v7
