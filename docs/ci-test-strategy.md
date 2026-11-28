@@ -1,6 +1,6 @@
 # Sparkle CI test strategy
 
-The CI workflow retains the existing check names and platform/compiler matrix. It runs on pull requests, pushes to main or V0.1.5, and manual dispatch. Superseded runs are cancelled. The separate prebuilt Windows package workflow is unchanged. No protection rules are changed.
+The CI workflow retains the existing check names and platform/compiler matrix. It runs on pull requests, pushes to main, and manual dispatch. Superseded runs are cancelled. The separate prebuilt Windows package workflow is unchanged. No protection rules are changed.
 
 ## Test categories
 
