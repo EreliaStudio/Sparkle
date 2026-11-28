@@ -118,13 +118,13 @@ namespace
 
 	[[nodiscard]] std::vector<GeometryVertex> vertices(const spk::Voxel::Geometry::SurfaceMesh &mesh)
 	{
-		const auto values = mesh.layout().vertexBuffer().cast<GeometryVertex>();
+		const auto values = mesh.vertices();
 		return {values.begin(), values.end()};
 	}
 
 	[[nodiscard]] std::vector<std::uint32_t> indices(const spk::Voxel::Geometry::SurfaceMesh &mesh)
 	{
-		const auto values = mesh.layout().indexBuffer().cast<std::uint32_t>();
+		const auto values = mesh.indices();
 		return {values.begin(), values.end()};
 	}
 }
@@ -136,7 +136,7 @@ TEST(VoxelPaletteTest, BuildsPaletteBeforeGeometryExists)
 	const Geometry source = geometryWithSlots({{"stone", 1.0f}, {"glass", 0.3f}});
 	EXPECT_EQ(result.materials().size(), 2u);
 	EXPECT_FLOAT_EQ(source.materialSlots()[1].opacity, 0.3f);
-	EXPECT_TRUE(source.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, result));
 }
 
 TEST(VoxelPaletteTest, GeometryDetectsMissingRequiredMaterial)
@@ -145,9 +145,8 @@ TEST(VoxelPaletteTest, GeometryDetectsMissingRequiredMaterial)
 	const auto result = palette({{"stone", material(atlas)}});
 	const Geometry source = geometryWithSlots({{"stone", 1.0f}, {"glass", 0.3f}});
 	EXPECT_EQ(result.materials().size(), 1u);
-	EXPECT_FALSE(source.isCompatible(result));
-	EXPECT_TRUE(source.isCompatible(
-		palette({{"stone", material(atlas)}, {"glass", material(atlas)}})));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(source, result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, palette({{"stone", material(atlas)}, {"glass", material(atlas)}})));
 }
 
 TEST(VoxelPaletteTest, GeometryChecksFullyOccludedSlot)
@@ -168,9 +167,9 @@ TEST(VoxelPaletteTest, GeometryChecksFullyOccludedSlot)
 	}
 	Texture atlas;
 	const auto missing = palette({{"outside", material(atlas)}});
-	EXPECT_FALSE(source.isCompatible(missing));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(source, missing));
 	const auto complete = palette({{"outside", material(atlas)}, {"hidden", material(atlas)}});
-	EXPECT_TRUE(source.isCompatible(complete));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, complete));
 }
 
 TEST(VoxelPaletteTest, RejectsMaterialWithoutAlbedoAtSetTime)
@@ -191,7 +190,7 @@ TEST(VoxelPaletteTest, AcceptsDifferentUVRegionsOfSameAtlas)
 	const auto first = material(atlas, {{0.0f, 0.0f}, {0.5f, 1.0f}});
 	const auto second = material(atlas, {{0.5f, 0.0f}, {0.5f, 1.0f}});
 	const auto result = palette({{"left", first}, {"right", second}});
-	EXPECT_TRUE(source.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, result));
 	EXPECT_EQ(result.find("left")->find("albedo")->texture.identifier(), result.find("right")->find("albedo")->texture.identifier());
 	EXPECT_NE(result.find("left")->find("albedo")->section, result.find("right")->find("albedo")->section);
 }
@@ -215,7 +214,7 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesRegardlessOfGeometryOpacity)
 	VoxelBuilder builder;
 	builder.setMaterial("a", material(first));
 	EXPECT_THROW(builder.setMaterial("b", material(second)), spk::Exception);
-	EXPECT_FALSE(source.isCompatible(builder.build()));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(source, builder.build()));
 }
 
 TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
@@ -226,7 +225,7 @@ TEST(VoxelPaletteTest, RejectsDifferentAtlasesAcrossOpaqueAndTranslucentSlots)
 	VoxelBuilder builder;
 	builder.setMaterial("solid", material(opaque));
 	EXPECT_THROW(builder.setMaterial("glass", material(translucent)), spk::Exception);
-	EXPECT_FALSE(source.isCompatible(builder.build()));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(source, builder.build()));
 }
 
 TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByGeometry)
@@ -235,8 +234,8 @@ TEST(VoxelPaletteTest, AdditionalPaletteSlotsShareAtlasAndAreIgnoredByGeometry)
 	const Geometry other = geometryWithSlots({{"stone", 1.0f}, {"glass", 1.0f}, {"missing", 1.0f}});
 	Texture atlas;
 	const auto result = palette({{"stone", material(atlas)}, {"glass", material(atlas)}});
-	EXPECT_TRUE(first.isCompatible(result));
-	EXPECT_FALSE(other.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(first, result));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(other, result));
 }
 
 TEST(VoxelPaletteTest, FailedSetKeepsPreviousPaletteAndBuilder)
@@ -306,8 +305,8 @@ TEST(VoxelPaletteTest, SamePaletteWorksWithDifferentGeometryOpacities)
 	const auto result = palette({{"shared", material(atlas)}, {"extra", material(atlas)}});
 	const Geometry opaque = geometryWithSlots({{"shared", 1.0f}});
 	const Geometry translucent = geometryWithSlots({{"shared", 0.4f}, {"extra", 0.2f}});
-	EXPECT_TRUE(opaque.isCompatible(result));
-	EXPECT_TRUE(translucent.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(opaque, result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(translucent, result));
 	EXPECT_EQ(result.materials().size(), 2u);
 }
 
@@ -318,8 +317,8 @@ TEST(VoxelPaletteTest, OnePaletteWorksWithSeveralGeometrys)
 	const Geometry first = geometryWithSlots({{"shared", 1.0f}, {"left", 0.5f}});
 	const Geometry second = geometryWithSlots({{"shared", 1.0f}, {"right", 0.6f}});
 	EXPECT_EQ(result.materials().size(), 3u);
-	EXPECT_TRUE(first.isCompatible(result));
-	EXPECT_TRUE(second.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(first, result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(second, result));
 }
 
 TEST(VoxelPaletteTest, BuildsVariantFromExistingPalette)
@@ -333,8 +332,8 @@ TEST(VoxelPaletteTest, BuildsVariantFromExistingPalette)
 	const auto after = builder.build();
 	EXPECT_EQ(before.find("stone")->find("albedo")->texture.identifier(), original.handle().identifier());
 	EXPECT_EQ(after.find("stone")->find("albedo")->texture.identifier(), replacement.handle().identifier());
-	EXPECT_TRUE(source.isCompatible(before));
-	EXPECT_TRUE(source.isCompatible(after));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, before));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, after));
 }
 
 TEST(VoxelPaletteTest, CopiesShareImmutableData)
@@ -358,8 +357,8 @@ TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
 	ASSERT_FALSE(source.opaqueMesh().empty());
 	const auto beforeVertices = vertices(source.opaqueMesh());
 	const auto beforeIndices = indices(source.opaqueMesh());
-	const auto depthVerticesView = source.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-	const auto depthIndicesView = source.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+	const auto depthVerticesView = source.depthMesh().vertices();
+	const auto depthIndicesView = source.depthMesh().indices();
 	const std::vector<spk::Vector3> beforeDepthVertices{depthVerticesView.begin(), depthVerticesView.end()};
 	const std::vector<std::uint32_t> beforeDepthIndices{depthIndicesView.begin(), depthIndicesView.end()};
 	const auto beforeTransparentVertices = vertices(source.transparentMesh());
@@ -369,8 +368,8 @@ TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
 	Texture second;
 	const auto original = palette({{"stone", material(first)}});
 	const auto replacement = palette({{"stone", material(second)}});
-	EXPECT_TRUE(source.isCompatible(original));
-	EXPECT_TRUE(source.isCompatible(replacement));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, original));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, replacement));
 	EXPECT_EQ(&source.opaqueMesh(), &originalMesh);
 	EXPECT_EQ(indices(source.opaqueMesh()), beforeIndices);
 	EXPECT_EQ(vertices(source.opaqueMesh()).size(), beforeVertices.size());
@@ -384,8 +383,8 @@ TEST(VoxelPaletteTest, ChangingPaletteNeverMutatesBakedGeometry)
 	}
 	EXPECT_EQ(indices(source.transparentMesh()), beforeTransparentIndices);
 	EXPECT_EQ(vertices(source.transparentMesh()).size(), beforeTransparentVertices.size());
-	const auto depthVerticesAfter = source.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-	const auto depthIndicesAfter = source.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+	const auto depthVerticesAfter = source.depthMesh().vertices();
+	const auto depthIndicesAfter = source.depthMesh().indices();
 	EXPECT_EQ((std::vector<spk::Vector3>{depthVerticesAfter.begin(), depthVerticesAfter.end()}), beforeDepthVertices);
 	EXPECT_EQ((std::vector<std::uint32_t>{depthIndicesAfter.begin(), depthIndicesAfter.end()}), beforeDepthIndices);
 }
@@ -403,7 +402,7 @@ TEST(VoxelPaletteTest, FailedSetPreservesUsableBuilder)
 	const Geometry source = geometryWithSlots({{"stone", 1.0f}, {"glass", 0.5f}});
 	const auto result = builder.build();
 	EXPECT_EQ(result.materials().size(), 2u);
-	EXPECT_TRUE(source.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, result));
 }
 
 TEST(VoxelPaletteTest, MissingSlotIsIncompatibleButOpacityMayDiffer)
@@ -411,17 +410,17 @@ TEST(VoxelPaletteTest, MissingSlotIsIncompatibleButOpacityMayDiffer)
 	const Geometry source = geometryWithSlots({{"stone", 1.0f}});
 	const Geometry other = geometryWithSlots({{"stone", 0.3f}});
 	Texture atlas;
-	EXPECT_FALSE(source.isCompatible(Palette{}));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(source, Palette{}));
 	const auto matchingPalette = palette({{"stone", material(atlas)}});
-	EXPECT_TRUE(source.isCompatible(matchingPalette));
-	EXPECT_TRUE(other.isCompatible(matchingPalette));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, matchingPalette));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(other, matchingPalette));
 }
 
 TEST(VoxelPaletteTest, EmptyGeometryAcceptsEmptyPalette)
 {
 	const auto result = VoxelBuilder().build();
 	const Geometry source = geometryWithSlots({});
-	EXPECT_TRUE(source.isCompatible(result));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, result));
 	EXPECT_TRUE(result.materials().empty());
 }
 
@@ -434,8 +433,8 @@ TEST(VoxelPaletteTest, CanAddMoreSlotsAfterBuild)
 	builder.setMaterial("glass", material(atlas));
 	const auto second = builder.build();
 	const Geometry source = geometryWithSlots({{"stone", 1.0f}, {"glass", 0.5f}});
-	EXPECT_FALSE(source.isCompatible(first));
-	EXPECT_TRUE(source.isCompatible(second));
+	EXPECT_FALSE(spk::Voxel::Palette::isCompatible(source, first));
+	EXPECT_TRUE(spk::Voxel::Palette::isCompatible(source, second));
 }
 
 TEST(VoxelPaletteTest, ReplacingOneOfSeveralMaterialsMustKeepSharedAtlas)

@@ -109,13 +109,13 @@ namespace
 
 	[[nodiscard]] std::vector<Geometry::Vertex> vertices(const Geometry::SurfaceMesh &mesh)
 	{
-		const auto view = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
+		const auto view = mesh.vertices();
 		return {view.begin(), view.end()};
 	}
 
 	[[nodiscard]] std::vector<std::uint32_t> indices(const Geometry::SurfaceMesh &mesh)
 	{
-		const auto view = mesh.layout().indexBuffer().cast<std::uint32_t>();
+		const auto view = mesh.indices();
 		return {view.begin(), view.end()};
 	}
 
@@ -242,8 +242,8 @@ namespace
 
 	[[nodiscard]] float generatedBoundaryArea(const Geometry &model, Face face)
 	{
-		const auto verticesView = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
-		const auto indexView = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
+		const auto verticesView = model.opaqueMesh().vertices();
+		const auto indexView = model.opaqueMesh().indices();
 		const std::size_t axis = static_cast<std::size_t>(face) / 2;
 		const float plane = (static_cast<unsigned>(face) & 1U) ? 2.0f : 1.0f;
 		float area = 0;
@@ -272,10 +272,10 @@ namespace
 
 	void expectShadowGeometryMatchesOpaque(const Geometry &model)
 	{
-		const auto visualVertices = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
-		const auto visualIndices = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
-		const auto shadowVertices = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-		const auto shadowIndices = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+		const auto visualVertices = model.opaqueMesh().vertices();
+		const auto visualIndices = model.opaqueMesh().indices();
+		const auto shadowVertices = model.depthMesh().vertices();
+		const auto shadowIndices = model.depthMesh().indices();
 		ASSERT_LE(shadowIndices.size(), visualIndices.size());
 		ASSERT_EQ(shadowIndices.size() % 3, 0u);
 		if (shadowIndices.size() != visualIndices.size())
@@ -301,8 +301,8 @@ namespace
 
 	[[nodiscard]] float shadowArea(const Geometry &model)
 	{
-		const auto vertex = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-		const auto index = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+		const auto vertex = model.depthMesh().vertices();
+		const auto index = model.depthMesh().indices();
 		float result = 0.0f;
 		for (std::size_t i = 0; i < index.size(); i += 3)
 		{
@@ -316,8 +316,8 @@ namespace
 
 	[[nodiscard]] float visualArea(const Geometry::SurfaceMesh &mesh)
 	{
-		const auto vertex = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
-		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
+		const auto vertex = mesh.vertices();
+		const auto index = mesh.indices();
 		float result = 0.0f;
 		for (std::size_t i = 0; i < index.size(); i += 3)
 		{
@@ -331,8 +331,8 @@ namespace
 
 	void expectValidTriangles(const Geometry &model, const Geometry::SurfaceMesh &mesh, float opacity)
 	{
-		const auto vertex = mesh.layout().vertexBuffer().cast<Geometry::Vertex>();
-		const auto index = mesh.layout().indexBuffer().cast<std::uint32_t>();
+		const auto vertex = mesh.vertices();
+		const auto index = mesh.indices();
 		ASSERT_EQ(index.size() % 3, 0u);
 		for (std::size_t i = 0; i < index.size(); i += 3)
 		{
@@ -352,8 +352,8 @@ namespace
 
 	void expectNoShadowTrianglesOnPlane(const Geometry &model, Face face)
 	{
-		const auto vertex = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-		const auto index = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+		const auto vertex = model.depthMesh().vertices();
+		const auto index = model.depthMesh().indices();
 		const std::size_t axis = static_cast<std::size_t>(face) / 2;
 		const float plane = (static_cast<unsigned>(face) & 1U) ? 2.0f : 1.0f;
 		for (std::size_t i = 0; i < index.size(); i += 3)
@@ -490,8 +490,8 @@ TEST(MesherGeometry, SolidMixedMaterialChunkCollapsesToTwelveShadowTriangles)
 	const auto &bounds = model.depthMesh().bounds();
 	EXPECT_EQ(bounds.minimum, (spk::Vector3{0, 0, 0}));
 	EXPECT_EQ(bounds.maximum, (spk::Vector3{16, 16, 16}));
-	const auto positions = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-	const auto indices = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+	const auto positions = model.depthMesh().vertices();
+	const auto indices = model.depthMesh().indices();
 	for (std::size_t i = 0; i < indices.size(); i += 3)
 	{
 		const auto &a = positions[indices[i]];
@@ -543,8 +543,8 @@ TEST(MesherGeometry, SimplifiedShadowSurfacePreservesHoleAndWinding)
 	const Geometry model = Mesher().bake(builder.build());
 	EXPECT_LT(model.depthMesh().indexCount(), model.opaqueMesh().indexCount());
 	EXPECT_NEAR(shadowArea(model), 32.0f, 1.0e-5f);
-	const auto positions = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-	const auto indices = model.depthMesh().layout().indexBuffer().cast<std::uint32_t>();
+	const auto positions = model.depthMesh().vertices();
+	const auto indices = model.depthMesh().indices();
 	for (std::uint32_t z = 0; z < 3; ++z)
 	{
 		for (std::uint32_t x = 0; x < 3; ++x)
@@ -708,7 +708,7 @@ TEST(MesherTest, EmptyVolumeBuildsThreeEmptyMeshesAndNoSlots)
 	EXPECT_TRUE(model.transparentMesh().empty());
 	EXPECT_TRUE(model.depthMesh().empty());
 	EXPECT_TRUE(model.materialSlots().empty());
-	EXPECT_NO_THROW((void)model.opaqueMesh().layout());
+	EXPECT_NO_THROW((void)model.opaqueMesh().content());
 }
 
 TEST(MesherTest, CubeHasTwelveTrianglesAndMatchingDepthGeometryWithoutOpenGLContext)
@@ -718,14 +718,14 @@ TEST(MesherTest, CubeHasTwelveTrianglesAndMatchingDepthGeometryWithoutOpenGLCont
 	EXPECT_EQ(model.opaqueMesh().vertexCount(), 36u);
 	EXPECT_TRUE(model.transparentMesh().empty());
 	EXPECT_EQ(model.depthMesh().indexCount(), 36u);
-	const auto depth = model.depthMesh().layout().vertexBuffer().cast<spk::Vector3>();
-	const auto visual = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
+	const auto depth = model.depthMesh().vertices();
+	const auto visual = model.opaqueMesh().vertices();
 	ASSERT_EQ(depth.size(), visual.size());
 	for (std::size_t i = 0; i < depth.size(); ++i)
 	{
 		EXPECT_EQ(depth[i], visual[i].position);
 	}
-	EXPECT_EQ(model.depthMesh().layout().indexBuffer().cast<std::uint32_t>().size(), 36u);
+	EXPECT_EQ(model.depthMesh().indices().size(), 36u);
 }
 
 TEST(MesherTest, AdjacentOpaqueCubesCullBothSharedFaces)
@@ -889,9 +889,9 @@ TEST(MesherTest, GeometriesSharePublishedImmutableMeshData)
 	Mesher mesher;
 	const Geometry first = mesher.bake(volume);
 	const Geometry copy = first;
-	EXPECT_EQ(&first.opaqueMesh().layout(), &copy.opaqueMesh().layout());
+	EXPECT_EQ(&first.opaqueMesh().content(), &copy.opaqueMesh().content());
 	const auto other = mesher.bake(volume);
-	EXPECT_NE(&first.opaqueMesh().layout(), &other.opaqueMesh().layout());
+	EXPECT_NE(&first.opaqueMesh().content(), &other.opaqueMesh().content());
 	expectEqual(first, other);
 }
 
@@ -947,8 +947,8 @@ TEST(MesherTest, ClippedQuadPreservesAffineUVNormalsAndTriangleWinding)
 		Face::PositiveX);
 	const Geometry model = Mesher().bake(volume);
 	EXPECT_NEAR(generatedBoundaryArea(model, Face::PositiveX), 0.5f, 1.0e-5f);
-	const auto view = model.opaqueMesh().layout().vertexBuffer().cast<Geometry::Vertex>();
-	const auto triangles = model.opaqueMesh().layout().indexBuffer().cast<std::uint32_t>();
+	const auto view = model.opaqueMesh().vertices();
+	const auto triangles = model.opaqueMesh().indices();
 	std::size_t visibleSource = 0;
 	for (std::size_t i = 0; i < triangles.size(); i += 3)
 	{
@@ -1014,8 +1014,8 @@ TEST(MesherMaterialIndices, GeometryCopiesKeepTheirOriginalSlotIndices)
 {
 	const Geometry source = Mesher().bake(single(definition(fixture("cube"), "stone_")));
 	const Geometry copy = source;
-	EXPECT_EQ(&copy.opaqueMesh().layout(), &source.opaqueMesh().layout());
-	EXPECT_EQ(&copy.depthMesh().layout(), &source.depthMesh().layout());
+	EXPECT_EQ(&copy.opaqueMesh().content(), &source.opaqueMesh().content());
+	EXPECT_EQ(&copy.depthMesh().content(), &source.depthMesh().content());
 	for (const auto &vertex : vertices(copy.opaqueMesh()))
 	{
 		EXPECT_LT(vertex.materialIndex, copy.materialSlots().size());

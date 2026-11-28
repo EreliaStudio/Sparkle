@@ -19,7 +19,7 @@ namespace spk
 		class Builder : public Mesh<Texture3DVertex>::Builder<TextureMesh3D>
 		{
 		private:
-			void _setupAttributes(VertexBuffer &vertexBuffer) override;
+			void _setupAttributes(VertexLayout &vertexBuffer) override;
 		};
 	};
 }

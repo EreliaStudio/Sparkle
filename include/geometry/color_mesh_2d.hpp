@@ -5,7 +5,6 @@
 
 #include "geometry/mesh.hpp"
 #include "graphics/color.hpp"
-#include "graphics/opengl/layout_buffer.hpp"
 #include "math/vector2.hpp"
 
 namespace spk
@@ -23,7 +22,7 @@ namespace spk
 		class Builder : public Mesh<ColorVertex2D>::Builder<ColorMesh2D>
 		{
 		private:
-			void _setupAttributes(VertexBuffer &vertexBuffer) override;
+			void _setupAttributes(VertexLayout &vertexBuffer) override;
 		};
 	};
 }

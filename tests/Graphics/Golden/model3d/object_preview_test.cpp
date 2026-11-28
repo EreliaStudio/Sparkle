@@ -14,6 +14,7 @@
 #include "engine/transform3d.hpp"
 #include "geometry/texture_mesh_3d.hpp"
 #include "graphics/color.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/uniform.hpp"
 #include "model3d/object.hpp"
@@ -126,8 +127,8 @@ void main() { fragColor = vec4(uColor.rgb * vShade, uColor.a); }
 			program.activate(context);
 			spk::Uniform<spk::Matrix4x4>("uTransform", _transform).activate(context);
 			spk::Uniform<spk::Vector4>("uColor", {_color.r, _color.g, _color.b, _color.a}).activate(context);
-			_mesh.layout().activate(context);
-			program.render(spk::Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+			spk::MeshLayout::obtain(_mesh).activate(context);
+			program.render(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 		}
 	};
 
@@ -492,8 +493,8 @@ void main()
 			program.activate(context);
 			spk::Uniform<spk::Matrix4x4>("uTransform", _transform).activate(context);
 			spk::Uniform<spk::Vector4>("uColor", _linearColor).activate(context);
-			_mesh.layout().activate(context);
-			program.render(spk::Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+			spk::MeshLayout::obtain(_mesh).activate(context);
+			program.render(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 		}
 	};
 
@@ -539,8 +540,8 @@ void main()
 			program.activate(context);
 			spk::Uniform<spk::Matrix4x4>("uTransform", _transform).activate(context);
 			spk::Uniform<spk::Vector4>("uColor", _color).activate(context);
-			_mesh.layout().activate(context);
-			program.render(spk::Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+			spk::MeshLayout::obtain(_mesh).activate(context);
+			program.render(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 		}
 	};
 

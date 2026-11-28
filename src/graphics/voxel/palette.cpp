@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "exception.hpp"
+#include "voxel/geometry.hpp"
 
 namespace spk::Voxel::Palette
 {
@@ -33,6 +34,18 @@ namespace spk::Voxel::Palette
 				}
 			}
 		}
+	}
+
+	bool isCompatible(const Geometry &geometry, const spk::Palette &palette) noexcept
+	{
+		for (const auto &slot : geometry.materialSlots())
+		{
+			if (palette.find(slot.name) == nullptr)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	Builder::Builder() :

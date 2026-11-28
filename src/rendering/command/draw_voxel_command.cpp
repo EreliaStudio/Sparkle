@@ -10,6 +10,7 @@
 
 #include "exception.hpp"
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/state.hpp"
 
 namespace spk
@@ -199,8 +200,8 @@ namespace spk
 		_lighting->activate(context);
 		const auto shadows = _lighting->activateShadows(context);
 		_albedo.activate(context);
-		mesh.layout().activate(context);
+		MeshLayout::obtain(mesh).activate(context);
 		_program.renderInstanced(
-			Program::Primitive::Triangles, mesh.indexType(), 0, mesh.indexCount(), _instances.dynamicElementCount());
+			Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, mesh.indexCount(), _instances.dynamicElementCount());
 	}
 }

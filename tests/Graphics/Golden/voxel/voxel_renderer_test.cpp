@@ -250,8 +250,8 @@ TEST(VoxelRendererTest, RealVolumeBakesOpaqueGeometryAndSharesItsMesh)
 	EXPECT_EQ(geometry.opaqueMesh().indexCount(), 36u);
 	const auto copied = geometry;
 	EXPECT_EQ(
-		copied.opaqueMesh().layout().vertexBuffer().identifier(),
-		geometry.opaqueMesh().layout().vertexBuffer().identifier());
+		copied.opaqueMesh().identifier(),
+		geometry.opaqueMesh().identifier());
 }
 
 TEST(VoxelRendererTest, MissingMaterialNamesAreReportedWithoutPublishingInvalidBinding)

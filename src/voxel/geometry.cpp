@@ -7,13 +7,13 @@
 
 namespace spk::Voxel
 {
-	void Geometry::SurfaceMesh::Builder::_setupAttributes(spk::VertexBuffer &buffer)
+	void Geometry::SurfaceMesh::Builder::_setupAttributes(spk::VertexLayout &buffer)
 	{
-		using Type = spk::VertexBuffer::Attribute::Type;
+		using Type = spk::VertexLayout::Attribute::Type;
 		buffer.addAttribute(0, Type::Float, 3);
 		buffer.addAttribute(1, Type::Float, 3);
 		buffer.addAttribute(2, Type::Float, 2);
-		buffer.addAttribute(3, Type::UnsignedInt, 1, spk::VertexBuffer::Interpretation::Integer);
+		buffer.addAttribute(3, Type::UnsignedInt, 1, spk::VertexLayout::Interpretation::Integer);
 	}
 
 	Geometry::Geometry() :
@@ -63,18 +63,6 @@ namespace spk::Voxel
 	const Geometry::MaterialIndices &Geometry::materialIndices() const noexcept
 	{
 		return _data->materialIndices;
-	}
-
-	bool Geometry::isCompatible(const spk::Palette &palette) const noexcept
-	{
-		for (const auto &slot : materialSlots())
-		{
-			if (palette.find(slot.name) == nullptr)
-			{
-				return false;
-			}
-		}
-		return true;
 	}
 
 	const Definition::Slot &Geometry::materialSlot(std::uint32_t index) const

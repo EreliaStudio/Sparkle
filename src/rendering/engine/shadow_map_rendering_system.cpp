@@ -26,6 +26,7 @@
 #include "graphics/internal/resource.hpp"
 #include "graphics/opengl/cube_map.hpp"
 #include "graphics/opengl/framebuffer.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/state.hpp"
 #include "light/channel.hpp"
@@ -81,10 +82,7 @@ namespace spk::ShadowMap
 
 		[[nodiscard]] std::uint64_t casterSignature(const Caster &caster)
 		{
-			const auto &mesh = caster.mesh.layout();
-			std::uint64_t result = mix(mesh.vertexBuffer().identifier(), mesh.vertexBuffer().generation());
-			result = mix(result, mesh.indexBuffer().identifier());
-			result = mix(result, mesh.indexBuffer().generation());
+			std::uint64_t result = caster.mesh.identifier();
 			for (std::size_t column = 0; column < 4; ++column)
 			{
 				for (std::size_t row = 0; row < 4; ++row)
@@ -270,7 +268,7 @@ namespace spk::ShadowMap
 		class DepthBatch final
 		{
 		private:
-			using Key = std::tuple<GPUResource::Identifier, GPUResource::Generation, GPUResource::Identifier, GPUResource::Generation>;
+			using Key = std::uint64_t;
 			struct Range
 			{
 				GLsizei count;
@@ -287,8 +285,7 @@ namespace spk::ShadowMap
 
 			[[nodiscard]] static Key _key(const Mesh &mesh)
 			{
-				const auto &layout = mesh.layout();
-				return {layout.vertexBuffer().identifier(), layout.vertexBuffer().generation(), layout.indexBuffer().identifier(), layout.indexBuffer().generation()};
+				return mesh.identifier();
 			}
 
 			[[nodiscard]] bool _matches(const SourceCollection &sources) const
@@ -335,9 +332,8 @@ namespace spk::ShadowMap
 				std::size_t indexOffset = 0;
 				for (const auto &[key, mesh] : sources)
 				{
-					const auto &layout = mesh->layout();
-					const auto base = builder.addVertices(layout.vertexBuffer().cast<Vector3>());
-					const auto indices = layout.indexBuffer().cast<std::uint32_t>();
+					const auto base = builder.addVertices(mesh->vertices());
+					const auto indices = mesh->indices();
 					builder.addIndices(indices);
 					ranges.emplace(key, Range{static_cast<GLsizei>(indices.size()), indexOffset * sizeof(std::uint32_t), static_cast<GLint>(base)});
 					indexOffset += indices.size();
@@ -392,7 +388,7 @@ namespace spk::ShadowMap
 				{
 					model = projection * model;
 				}
-				_mesh.layout().activate(context);
+				MeshLayout::obtain(_mesh).activate(context);
 				for (std::size_t i = 0; i < _models.size(); ++i)
 				{
 					glUniformMatrix4fv(0, 1, GL_FALSE, &_models[i][0][0]);
@@ -511,8 +507,8 @@ void main()
 					const Caster &caster = casterRef(item);
 					const auto mvp = projection * caster.transform;
 					glUniformMatrix4fv(0, 1, GL_FALSE, &mvp[0][0]);
-					caster.mesh.layout().activate(_context);
-					program().render(Program::Primitive::Triangles, caster.mesh.indexType(), 0, caster.mesh.indexCount());
+					MeshLayout::obtain(caster.mesh).activate(_context);
+					program().render(Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, caster.mesh.indexCount());
 				}
 			}
 

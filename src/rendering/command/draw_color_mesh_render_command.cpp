@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/mesh_layout.hpp"
 #include "graphics/opengl/program.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
 
@@ -33,7 +34,7 @@ namespace spk
 		}
 		auto &p = _sharedProgram();
 		p.activate(context);
-		_mesh.layout().activate(context);
-		p.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
+		MeshLayout::obtain(_mesh).activate(context);
+		p.render(Program::Primitive::Triangles, IndexBuffer::Type::UnsignedInt, 0, _mesh.indexCount());
 	}
 }

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "engine/registry.hpp"
+#include "graphics/palette.hpp"
 #include "rendering/engine/rendering_component.hpp"
 #include "voxel/geometry.hpp"
 

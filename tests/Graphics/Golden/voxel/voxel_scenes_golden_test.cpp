@@ -784,7 +784,7 @@ namespace
 		case RoomView::SharedPaletteDifferentHouses:
 		{
 			const auto secondHouse = room(width, height, false, true);
-			ASSERT_NE(geometry.opaqueMesh().layout().vertexBuffer().identifier(), secondHouse.opaqueMesh().layout().vertexBuffer().identifier());
+			ASSERT_NE(geometry.opaqueMesh().identifier(), secondHouse.opaqueMesh().identifier());
 			ASSERT_NE(geometry.materialSlots().front().name, secondHouse.materialSlots().front().name);
 			scene.add(secondHouse, appearance, {center + 1, -floor, -center});
 			scene.lookAt({23, 14, 25}, {4, 0, 0});
@@ -918,7 +918,7 @@ namespace
 		ASSERT_NE(left.geometry(), nullptr);
 		ASSERT_NE(right.geometry(), nullptr);
 		EXPECT_EQ(
-			left.geometry()->opaqueMesh().layout().vertexBuffer().identifier(),
-			right.geometry()->opaqueMesh().layout().vertexBuffer().identifier());
+			left.geometry()->opaqueMesh().identifier(),
+			right.geometry()->opaqueMesh().identifier());
 	}
 }
