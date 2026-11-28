@@ -146,7 +146,7 @@ if(SPARKLE_BUILD_TEST_LIBRARY AND NOT SPARKLE_BUILD_GRAPHICS)
 endif()
 
 if(SPARKLE_BUILD_GRAPHICS AND (SPARKLE_BUILD_TEST_LIBRARY OR SPARKLE_BUILD_TESTS))
-    add_subdirectory(tests/TU/SparkleTestLibrary)
+    add_subdirectory(tests/SparkleTestLibrary)
 endif()
 
 if(SPARKLE_BUILD_TESTS)

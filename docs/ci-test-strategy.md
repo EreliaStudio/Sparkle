@@ -4,7 +4,7 @@ The CI workflow retains the existing check names and platform/compiler matrix. I
 
 ## Test categories
 
-Tests remain under tests/TU/Core and tests/TU/Graphics, with shared graphical test utilities in tests/TU/SparkleTestLibrary. Individual GoogleTest cases retain their original CTest names, timeouts, failure propagation and JUnit results.
+Tests are organized under `tests/Core` and `tests/Graphics` by validation category, with shared graphical test utilities in `tests/SparkleTestLibrary` and external consumer fixtures in `tests/Packaging`. Individual GoogleTest cases retain their original CTest names, timeouts, failure propagation and JUnit results.
 
 | CTest label | Responsibility |
 | --- | --- |
@@ -22,6 +22,15 @@ Tests remain under tests/TU/Core and tests/TU/Graphics, with shared graphical te
 | Benchmark | Measurement-oriented tests with their existing correctness assertions |
 
 Classification is an explicit list of GoogleTest suites/cases in the Core and Graphics CMakeLists.txt files. Add a new suite to the relevant list when it requires special routing. The complementary default registration prevents unclassified tests from silently disappearing. Do not select a test by a naming convention alone. Keep a test in exactly one discovery partition; labels may overlap. The Core client-destructor cases intentionally carry both Fast and MemorySafety. Graphics tests that are not audited as CPU-only retain a graphical resource lock. Clipboard and performance tests use RUN_SERIAL. Do not relax locks without proving that the tests do not share native resources, GL state or image output.
+
+## Source layout
+
+- Core: Unit, Integration, Stress and MemorySafety.
+- Graphics: Unit, Integration, Golden, Performance and Native.
+- Both suites keep subsystem directories inside each category, plus separate helpers and resources.
+- SparkleTestLibrary remains its own reusable target. Packaging contains CoreConsumer, GraphicsConsumer and TestLibraryConsumer.
+
+A source file containing several categories of test cases stays together when splitting it would duplicate substantial fixtures or obscure related tests. Examples include the double-buffer, publishable, network concurrency, entity tracking, voxel mesher, biome world, shadow projection/rendering and voxel renderer/material fixtures. File location is the primary purpose, not the CTest selection rule. Case-level labels in the CMake files remain authoritative, including mixed-category fixtures. No test cases, names, targets, thresholds or golden references are changed by the move.
 
 ## Local execution
 
