@@ -975,7 +975,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ## Cross-cutting suites and implementation order
 
-1. Add `gtest` to `vcpkg.json`; create `tests/TU/CMakeLists.txt`, a GoogleTest executable, discovery, labels, resource paths, and deterministic test utilities.
+1. Add `gtest` to `vcpkg.json`; create `tests/CMakeLists.txt`, a GoogleTest executable, discovery, labels, resource paths, and deterministic test utilities.
 2. Implement foundation, value types, containers, traits, JSON, and engine registries first; these require no native window or GPU and give fast feedback.
 3. Add event/layout/widget state tests using recorder subclasses and synthetic events.
 4. Add one shared hidden Win32/OpenGL fixture, then GPU resources, render commands, and pixel-golden helpers.
