@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <type_traits>
 
 #include "graphics/opengl/uniform_buffer.hpp"
@@ -35,6 +36,7 @@ namespace spk
 		static_assert(offsetof(CameraData, inverseView) == 128);
 		static_assert(offsetof(CameraData, viewProjection) == 192);
 
+		std::shared_ptr<const Buffer::Immutable> _data;
 		UniformBuffer _buffer;
 
 		[[nodiscard]] static CameraData _capture(const Camera3D &camera);

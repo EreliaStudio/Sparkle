@@ -30,7 +30,6 @@ namespace spk
 
 	private:
 		static Program &_sharedProgram();
-		static UniformBuffer &_sharedBuffer();
 
 		TextureMesh2D _mesh;
 		FontRenderData _data;

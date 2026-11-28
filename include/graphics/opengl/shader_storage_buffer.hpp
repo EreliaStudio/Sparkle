@@ -67,6 +67,15 @@ namespace spk
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
 		public:
+			[[nodiscard]] std::size_t dynamicElementCount() const noexcept
+			{
+				if (buffer() == nullptr)
+				{
+					return _dynamicElementCount;
+				}
+				return _dynamicElementSize != 0 && size() >= _fixedPartSize ? (size() - _fixedPartSize) / _dynamicElementSize : 0;
+			}
+
 			State() = default;
 			State(std::size_t bindingPoint, std::size_t fixedPartSize, std::size_t dynamicElementSize) :
 				_bindingPoint(bindingPoint),
@@ -210,14 +219,14 @@ namespace spk
 			if constexpr (std::is_void_v<TFixedPart>)
 			{
 				return {
-					.nbElement = content._dynamicElementCount,
+					.nbElement = content.dynamicElementCount(),
 					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + content._fixedPartSize)};
 			}
 			else
 			{
 				return {
 					.fixedPart = *reinterpret_cast<TFixedPart *>(_data()),
-					.nbElement = content._dynamicElementCount,
+					.nbElement = content.dynamicElementCount(),
 					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + content._fixedPartSize)};
 			}
 		}
@@ -231,14 +240,14 @@ namespace spk
 			if constexpr (std::is_void_v<TFixedPart>)
 			{
 				return {
-					.nbElement = content._dynamicElementCount,
+					.nbElement = content.dynamicElementCount(),
 					.dynamicArray = reinterpret_cast<const TDynamicElement *>(_data() + content._fixedPartSize)};
 			}
 			else
 			{
 				return {
 					.fixedPart = *reinterpret_cast<const TFixedPart *>(_data()),
-					.nbElement = content._dynamicElementCount,
+					.nbElement = content.dynamicElementCount(),
 					.dynamicArray = reinterpret_cast<const TDynamicElement *>(_data() + content._fixedPartSize)};
 			}
 		}
@@ -254,7 +263,7 @@ namespace spk
 			if constexpr (std::is_void_v<TFixedPart>)
 			{
 				GPUView<void, TDynamicElement> result{
-					.dynamicArray = std::vector<TDynamicElement>(content._dynamicElementCount)};
+					.dynamicArray = std::vector<TDynamicElement>(content.dynamicElementCount())};
 
 				if (!result.dynamicArray.empty())
 				{
@@ -270,7 +279,7 @@ namespace spk
 			{
 				GPUView<TFixedPart, TDynamicElement> result{
 					.fixedPart = {},
-					.dynamicArray = std::vector<TDynamicElement>(content._dynamicElementCount)};
+					.dynamicArray = std::vector<TDynamicElement>(content.dynamicElementCount())};
 
 				std::memcpy(
 					std::addressof(result.fixedPart),

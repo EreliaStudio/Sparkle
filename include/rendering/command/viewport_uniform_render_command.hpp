@@ -15,7 +15,6 @@ namespace spk
 		static constexpr std::size_t MatrixUBOBindingPoint = 0;
 
 	private:
-		[[nodiscard]] static UniformBuffer &_sharedBuffer();
 
 		Matrix4x4 _matrix;
 

@@ -98,6 +98,6 @@ namespace spk
 
 	std::size_t ShaderStorageBuffer::dynamicElementCount() const noexcept
 	{
-		return state<State>()._dynamicElementCount;
+		return state<State>().dynamicElementCount();
 	}
 }

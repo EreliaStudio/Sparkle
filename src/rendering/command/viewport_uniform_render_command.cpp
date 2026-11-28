@@ -7,11 +7,6 @@
 
 namespace spk
 {
-	UniformBuffer &ViewportUniformRenderCommand::_sharedBuffer()
-	{
-		static UniformBuffer buffer(MatrixUBOBindingPoint, sizeof(Matrix4x4));
-		return buffer;
-	}
 
 	ViewportUniformRenderCommand::ViewportUniformRenderCommand(const Rect2D &viewport)
 	{
@@ -24,9 +19,18 @@ namespace spk
 
 	void ViewportUniformRenderCommand::execute(RenderContext &context) const
 	{
-		auto &buffer = _sharedBuffer();
-		buffer.setData(_matrix);
-		buffer.validate();
+		static thread_local auto cpu = [] {
+			Buffer::Builder builder;
+			builder.resize<Matrix4x4>(1);
+			return std::move(builder).buildMutable();
+		}();
+		static thread_local UniformBuffer buffer(MatrixUBOBindingPoint, sizeof(Matrix4x4));
+		if (buffer.buffer() == nullptr)
+		{
+			buffer.bind(&cpu);
+		}
+		cpu.cast<Matrix4x4>()[0] = _matrix;
+		cpu.validate();
 		buffer.activate(context);
 	}
 }

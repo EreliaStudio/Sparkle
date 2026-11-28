@@ -31,7 +31,6 @@ namespace spk
 		static const SpriteSheet &_sheet(const SpriteSheet *);
 		static TextureMesh2D _mesh(Rect2D, Vector2UInt, float);
 		static Program &_sharedProgram();
-		static UniformBuffer &_sharedBuffer();
 
 		TextureMesh2D _meshData;
 		RenderData _data;

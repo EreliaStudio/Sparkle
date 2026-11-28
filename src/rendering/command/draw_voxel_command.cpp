@@ -136,9 +136,13 @@ namespace spk
 				throw spk::Exception("Voxel draw: material remap index out of range");
 			}
 		}
-		_materialRemap.resize(materialRemap.size());
-		_materialRemap.setDynamicData(std::span<const std::uint32_t>(materialRemap));
-		_materialRemap.validate();
+		const auto bind = [](auto &cpu, ShaderStorageBuffer &gpu, auto values) {
+			Buffer::Builder builder;
+			builder.insert(values);
+			cpu = std::make_shared<Buffer::Immutable>(std::move(builder).build());
+			gpu.bind(cpu.get());
+		};
+		bind(_remapData, _materialRemap, std::span<const std::uint32_t>(materialRemap));
 		if (_mode == Mode::Translucent)
 		{
 			std::vector<float> opacities;
@@ -147,16 +151,10 @@ namespace spk
 			{
 				opacities.push_back(slot.opacity);
 			}
-			_slotOpacities.resize(opacities.size());
-			_slotOpacities.setDynamicData(std::span<const float>(opacities));
-			_slotOpacities.validate();
+			bind(_opacityData, _slotOpacities, std::span<const float>(opacities));
 		}
-		_materials.resize(materials.size());
-		_materials.setDynamicData(std::span<const MaterialData>(materials));
-		_materials.validate();
-		_instances.resize(models.size());
-		_instances.setDynamicData(std::span<const Matrix4x4>(models));
-		_instances.validate();
+		bind(_materialData, _materials, std::span<const MaterialData>(materials));
+		bind(_instanceData, _instances, std::span<const Matrix4x4>(models));
 		if (!atlas)
 		{
 			throw spk::Exception("Voxel draw: no albedo atlas");

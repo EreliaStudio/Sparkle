@@ -68,10 +68,12 @@ namespace spk::Lighting
 
 		_header = header;
 		_lightData = data;
-		_lights.resize(data.size());
-		_lights.setFixedData(header);
-		_lights.setDynamicData(std::span<const LightData>(data));
-		_lights.validate();
+		Buffer::Builder builder;
+		builder.reserve(sizeof(Header) + data.size() * sizeof(LightData));
+		builder.pushBack(header);
+		builder.insert(std::span<const LightData>(data));
+		_lightBuffer = std::make_shared<Buffer::Immutable>(std::move(builder).build());
+		_lights.bind(_lightBuffer.get());
 	}
 
 	const ShaderStorageBuffer &System::buffer() const noexcept
@@ -209,15 +211,18 @@ namespace spk::Lighting
 		{
 			bindings->historicalLights = std::make_unique<ShaderStorageBuffer>(
 				BindingPoint, sizeof(Header), sizeof(LightData));
-			bindings->historicalLights->resize(historicalLights.size());
-			bindings->historicalLights->setFixedData(_header);
-			bindings->historicalLights->setDynamicData(std::span<const LightData>(historicalLights));
-			bindings->historicalLights->validate();
+			Buffer::Builder builder;
+			builder.reserve(sizeof(Header) + historicalLights.size() * sizeof(LightData));
+			builder.pushBack(_header);
+			builder.insert(std::span<const LightData>(historicalLights));
+			bindings->historicalData = std::make_shared<Buffer::Immutable>(std::move(builder).build());
+			bindings->historicalLights->bind(bindings->historicalData.get());
 			bindings->historicalLights->activate(context);
 		}
-		bindings->buffer.resize(data.size());
-		bindings->buffer.setDynamicData(std::span<const ShadowData>(data));
-		bindings->buffer.validate();
+		Buffer::Builder builder;
+		builder.insert(std::span<const ShadowData>(data));
+		bindings->shadowData = std::make_shared<Buffer::Immutable>(std::move(builder).build());
+		bindings->buffer.bind(bindings->shadowData.get());
 		bindings->buffer.activate(context);
 		for (auto &sampler : bindings->samplers)
 		{

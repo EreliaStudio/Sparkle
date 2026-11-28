@@ -28,8 +28,10 @@ namespace spk
 	CameraUniformRenderCommand::CameraUniformRenderCommand(CameraData data) :
 		_buffer(BindingPoint, sizeof(CameraData))
 	{
-		_buffer.setData(data);
-		_buffer.validate();
+		Buffer::Builder builder;
+		builder.pushBack(data);
+		_data = std::make_shared<Buffer::Immutable>(std::move(builder).build());
+		_buffer.bind(_data.get());
 	}
 
 	CameraUniformRenderCommand::CameraUniformRenderCommand(const Camera3D &camera) :

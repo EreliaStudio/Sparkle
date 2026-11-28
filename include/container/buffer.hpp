@@ -109,6 +109,7 @@ namespace spk
 		Immutable &operator=(Immutable &&) noexcept = default;
 	};
 
+	// Shared mutable storage. Owners must synchronize edits with all readers.
 	class Buffer::Mutable final : public Buffer
 	{
 		friend class Builder;
@@ -127,8 +128,8 @@ namespace spk
 		Mutable &operator=(const Mutable &) = default;
 		Mutable &operator=(Mutable &&) noexcept = default;
 
-		using Buffer::data;
 		using Buffer::cast;
+		using Buffer::data;
 
 		[[nodiscard]] std::byte *data();
 

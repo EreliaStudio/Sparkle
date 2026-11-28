@@ -66,11 +66,6 @@ namespace spk
 		return *program;
 	}
 
-	UniformBuffer &NineSliceRenderCommand::_sharedBuffer()
-	{
-		static UniformBuffer buffer(RenderDataUBOBindingPoint, sizeof(RenderData));
-		return buffer;
-	}
 
 	NineSliceRenderCommand::NineSliceRenderCommand(
 		const SpriteSheet *spriteSheet,
@@ -98,9 +93,18 @@ namespace spk
 		{
 			return;
 		}
-		auto &buffer = _sharedBuffer();
-		buffer.setData(_data);
-		buffer.validate();
+		static thread_local auto cpu = [] {
+			Buffer::Builder builder;
+			builder.resize<RenderData>(1);
+			return std::move(builder).buildMutable();
+		}();
+		static thread_local UniformBuffer buffer(RenderDataUBOBindingPoint, sizeof(RenderData));
+		if (buffer.buffer() == nullptr)
+		{
+			buffer.bind(&cpu);
+		}
+		cpu.cast<RenderData>()[0] = _data;
+		cpu.validate();
 		buffer.activate(context);
 		auto &program = _sharedProgram();
 		program.activate(context);

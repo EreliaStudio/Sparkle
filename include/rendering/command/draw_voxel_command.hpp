@@ -48,6 +48,10 @@ namespace spk
 		Mode _mode;
 		Voxel::Geometry _geometry;
 		Program _program;
+		std::shared_ptr<const Buffer::Immutable> _instanceData;
+		std::shared_ptr<const Buffer::Immutable> _materialData;
+		std::shared_ptr<const Buffer::Immutable> _remapData;
+		std::shared_ptr<const Buffer::Immutable> _opacityData;
 		ShaderStorageBuffer _instances;
 		ShaderStorageBuffer _materials;
 		ShaderStorageBuffer _materialRemap;
