@@ -87,7 +87,7 @@ $configureArguments = @(
     "-DCMAKE_CXX_COMPILER=clang-cl",
     "-DVCPKG_TARGET_TRIPLET=$Triplet",
     "-DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST",
-    "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping",
+    "-DCMAKE_CXX_FLAGS=/EHsc -fprofile-instr-generate -fcoverage-mapping",
     "-DCMAKE_EXE_LINKER_FLAGS=/DEFAULTLIB:clang_rt.profile-x86_64.lib"
 )
 
